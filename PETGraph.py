@@ -1,0 +1,134 @@
+import numpy as np
+from graph_tool.all import Graph
+from graph_tool.all import graph_draw, radial_tree_layout, minimize_nested_blockmodel_dl, draw_hierarchy, GraphView
+from graph_tool.search import bfs_iterator, dfs_iterator
+
+from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
+
+
+node_type_info = {
+    '0': {
+        'name': 'cu',
+        'color': 'white',
+        'shape': 'square'
+    },
+    '1': {
+        'name': 'func',
+        'color': 'gray',
+        'shape': 'pentagon'
+    },
+    '2': {
+        'name': 'loop',
+        'color': 'red',
+        'shape': 'circle'
+    },
+    '3': {
+        'name': 'dummy',
+        'color': 'black',
+        'shape': 'pie'
+    },
+}
+
+node_props = [
+    ('id', 'string', 'node.get("id")'),
+    ('type', 'string', 'node.get("type")'),
+    ('startsAtLine', 'string', 'node.get("startsAtLine")'),
+    ('endsAtLine', 'string', 'node.get("endsAtLine")'),
+    ('pipeline', 'float', '0'),
+
+    ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
+    ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
+]
+
+edge_props = [
+    ('type', 'string'),
+    ('viz_color', 'vector<double>'),
+    ('viz_dash_style', 'vector<double>')
+]
+
+GT_map_node_indices = dict()
+
+
+class PETGraph(object):
+    def __init__(self, cu_dict, dependences_list):
+        self.graph = Graph()
+
+        # Define the properties for each node
+        for prop in node_props:
+            self.graph.vertex_properties[prop[0]] = self.graph.new_vertex_property(prop[1])
+        for prop in edge_props:
+            self.graph.edge_properties[prop[0]] = self.graph.new_edge_property(prop[1])
+
+        # Adding vertices (CU nodes) to the graph
+        for node_id, node in cu_dict.items():
+            v = self.graph.add_vertex()
+            GT_map_node_indices[node_id] = self.graph.vertex_index[v]
+
+            for prop in node_props:
+                self.graph.vp[prop[0]][v] = eval(prop[2])
+
+        # Adding edges (successors and children) to the graph
+        for node_id, node in cu_dict.items():
+            source = self.graph.vertex(GT_map_node_indices[node_id])
+            if 'childrenNodes' in dir(node):
+                for child in node.childrenNodes:
+                    sink = self.graph.vertex(GT_map_node_indices[child])
+                    e = self.graph.add_edge(source, sink)
+                    self.graph.ep.type[e] = 'child'
+                    self.graph.ep.viz_color[e] = [0.179, 0.203 ,0.210, 0.8]
+            if 'successors' in dir(node) and 'CU' in dir(node.successors):
+                for successor in node.successors.CU:
+                    sink = self.graph.vertex(GT_map_node_indices[successor])
+                    e = self.graph.add_edge(source, sink)
+                    self.graph.ep.type[e] = 'successor'
+                    self.graph.ep.viz_color[e] = [0.579, 0.503 ,0.010, 0.8]
+
+        for dep in dependences_list:
+            sink_cu_ids = lineToCUIdMap[dep.sink] if dep.type == 'INIT' else readlineToCUIdMap[dep.sink]
+            source_cu_ids = writelineToCUIdMap[dep.source]
+            for sink_cu_id in sink_cu_ids:
+                if dep.type == 'INIT':
+                    pass  # TODO: nodeMap[sinkNodeId].Init.insert(dep.var);
+                else:
+                    for source_cu_id in source_cu_ids:
+                        if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
+                            continue
+                        elif sink_cu_id and source_cu_id:
+                            source_v = self.graph.vertex(GT_map_node_indices[source_cu_id])
+                            sink_v = self.graph.vertex(GT_map_node_indices[sink_cu_id])
+                            e = self.graph.add_edge(sink_v, source_v)
+                            self.graph.ep.type[e] = 'dependence'
+                            self.graph.ep.viz_dash_style[e] = [.01, .01, 0]
+                            self.graph.ep.viz_color[e] = [0.279, 0.203, 0.210, 0.8]
+
+        self.dep_graph = self.filter_view(edges_type='dependence')
+        self.children_graph = self.filter_view(edges_type='child')
+
+    def filter_view(self, nodes_id='*', edges_type='*'):
+        vfilter = None if nodes_id == '*' else lambda v: self.graph.vertex_index[v] in nodes_id
+        efilter = None if edges_type == '*' else lambda e: self.graph.ep.type[e] == edges_type
+
+        return GraphView(self.graph, vfilt=vfilter, efilt=efilter)
+
+    def get_root_node(self):
+        in_degrees = self.children_graph.get_in_degrees(self.children_graph.get_vertices())
+        root_idx = in_degrees.tolist().index(0)
+        return self.graph.vertex(root_idx)
+
+    def infer_level_dependences(self):
+        for level in bfs_iterator(self.children_graph, source=self.get_root_node()):
+            print(self.graph.vp.id[level.source()], self.graph.vp.id[level.target()])
+            # for depth in dfs_iterator()
+
+
+    def visualize(self, view=None):
+        view = view if view else self.graph
+
+        pos = radial_tree_layout(view, self.get_root_node())
+        graph_draw(view, pos=pos, vertex_shape=self.graph.vp.viz_shape,
+                   vertex_text=self.graph.vp.id,
+                   vertex_fill_color=self.graph.vp.viz_color,
+                   edge_marker_size=20,
+                   edge_color=self.graph.ep.viz_color,
+                   edge_dash_style=self.graph.ep.viz_dash_style,
+                   vertex_font_size=16, output='output.svg')

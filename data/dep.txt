@@ -1,0 +1,32 @@
+START 1:23
+1:79 BGN loop 9
+1:84 END loop
+1:75 BGN loop 9
+1:94 END loop
+1:82 BGN func 1:4
+1:81 BGN func 1:12
+1:77 BGN func 1:4
+1:8 END func
+1:17 END func
+1:41 NOM  INIT *|e2
+1:14 NOM  WAW 1:80|x.addr
+1:47 NOM  INIT *|a
+1:25 NOM  INIT *|x
+1:81 NOM  RAW 1:41|e2
+1:35 NOM  INIT *|a2
+1:79 NOM  RAW 1:41|e2 RAW 1:79|i2 WAR 1:79|i2 INIT *|i2
+1:82 NOM  RAW 1:34|a1 WAW 1:77|rdummy WAW 1:82|rdummy
+1:34 NOM  INIT *|a1
+1:80 NOM  RAW 1:6|x1 RAW 1:76|x1 WAW 1:14|xx INIT *|xx
+1:76 NOM  RAW 1:6|x0 WAW 1:6|x1 INIT *|x1
+1:40 NOM  WAW 1:31|e3
+1:42 NOM  RAW 1:40|e3 RAW 1:41|e2 WAW 1:28|d1
+1:77 NOM  RAW 1:35|a2 WAW 1:82|rdummy INIT *|rdummy
+1:31 NOM  INIT *|e3
+1:38 NOM  WAW 1:29|e1
+1:29 NOM  INIT *|e1
+1:75 NOM  RAW 1:40|e3 RAW 1:75|i3 WAR 1:75|i3 INIT *|i3
+1:6 NOM  WAR 1:76|x.addr WAR 1:80|x.addr INIT *|x.addr
+1:28 NOM  INIT *|d1
+1:27 NOM  INIT *|ai
+1:94 END program
