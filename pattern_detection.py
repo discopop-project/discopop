@@ -11,6 +11,10 @@ def find_subNodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
     return [e.target() for e in node.out_edges() if graph.ep.type[e] == criteria]
 
 
+def correlation_coefficient(v1, v2):
+    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+
+
 class PatternDetector(object):
     pet: PETGraph
 
@@ -18,16 +22,31 @@ class PatternDetector(object):
         self.pet = pet_graph
 
     def is_depending(self, v_source: Vertex, v_target: Vertex) -> bool:
-        # TODO RAW dependencies are not inherited (13->11 ...)
+        """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
+        """
         children = self.get_all_children(v_target)
         children.append(v_target)
 
-        for e in v_source.out_edges():
-            if self.pet.graph.ep.type[e] == 'dependence' and e.target() in children:
+        for dep in self.get_all_dependencies(v_source):
+            if dep in children:
                 return True
         return False
 
+    def get_all_dependencies(self, node: Vertex) -> List[Vertex]:
+        """Returns all data dependencies of the node and it's children
+        """
+        dep_set = set()
+        children = self.get_all_children(node)
+        children.append(node)
+        for v in children:
+            for e in v.out_edges():
+                if self.pet.graph.ep.type[e] == 'dependence':
+                    dep_set.add(e.target())
+        return dep_set
+
     def get_all_children(self, root: Vertex) -> List[Vertex]:
+        """Finds all children of the specified node
+        """
         res = []
         for e in root.out_edges():
             if self.pet.graph.ep.type[e] == 'child':
@@ -71,6 +90,7 @@ class PatternDetector(object):
             self.pet.graph.vp.pipeline[root] = -1
             return
 
+        # TODO inherit RAW dependencies in graph to enable auto matrix calculation
         # print(adjacency(loop_graph).todense())
 
         graph_vector = []
@@ -97,8 +117,7 @@ class PatternDetector(object):
         else:
             graph_vector.append(1)
             pipeline_vector.append(min_weight)
-        pipeline_scalar_value = np.dot(graph_vector, pipeline_vector) / (np.linalg.norm(graph_vector)
-                                                                         * np.linalg.norm(pipeline_vector))
+        pipeline_scalar_value = correlation_coefficient(graph_vector, pipeline_vector)
         self.pet.graph.vp.pipeline[root] = pipeline_scalar_value
         print('Pipeline at ', self.pet.graph.vp.id[root])
         print('start: ', self.pet.graph.vp.startsAtLine[root])
