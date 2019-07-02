@@ -66,14 +66,18 @@ class PatternDetector(object):
                     or c_start == r_end and c_end == r_end
                     or c_start == c_end and c_start in children_start_lines)
 
-    def __detect_pipelines(self):
+    def __detect_pipeline_loop(self):
         """Search for pipeline pattern
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
-            self.__detect_pipeline(node)
+            self.pet.graph.vp.pipeline[node] = self.__detect_pipeline(node)
+            if self.pet.graph.vp.pipeline[node] > 0:
+                print('Pipeline at ', self.pet.graph.vp.id[node])
+                print('start: ', self.pet.graph.vp.startsAtLine[node])
+                print('end: ', self.pet.graph.vp.endsAtLine[node])
 
-    def __detect_pipeline(self, root: Vertex) -> None:
-        """Calculate pipeline value for node
+    def __detect_pipeline(self, root: Vertex) -> float:
+        """Calculate pipeline value for node. Returns pipeline scalar value
         """
         # TODO faster iteration necessary?
 
@@ -88,9 +92,9 @@ class PatternDetector(object):
         # No chain of stages found
         if len(loop_subnodes) < 2:
             self.pet.graph.vp.pipeline[root] = -1
-            return
+            return 0
 
-        # TODO inherit RAW dependencies in graph to enable auto matrix calculation
+        # TODO backprop RAW dependencies in graph to enable auto matrix calculation
         # print(adjacency(loop_graph).todense())
 
         graph_vector = []
@@ -117,12 +121,7 @@ class PatternDetector(object):
         else:
             graph_vector.append(1)
             pipeline_vector.append(min_weight)
-        pipeline_scalar_value = correlation_coefficient(graph_vector, pipeline_vector)
-        self.pet.graph.vp.pipeline[root] = pipeline_scalar_value
-        print('Pipeline at ', self.pet.graph.vp.id[root])
-        print('start: ', self.pet.graph.vp.startsAtLine[root])
-        print('end: ', self.pet.graph.vp.endsAtLine[root])
-        print('stages: ', len(loop_subnodes))
+        return correlation_coefficient(graph_vector, pipeline_vector)
 
     def detect_patterns(self):
-        self.__detect_pipelines()
+        self.__detect_pipeline_loop()
