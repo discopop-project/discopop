@@ -1,7 +1,5 @@
 import numpy as np
-from graph_tool.util import find_edge, find_vertex
-from graph_tool.spectral import adjacency
-from graph_tool.search import dfs_iterator, bfs_iterator
+from graph_tool.util import find_vertex
 from graph_tool.all import Vertex, Graph, Edge
 from typing import List
 from PETGraph import PETGraph
@@ -28,7 +26,7 @@ class PatternDetector(object):
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
         """
-        children = self.get_all_children_of_type(v_target, '0')
+        children = self.get_subtree_of_type(v_target, '0')
         children.append(v_target)
 
         for dep in self.get_all_dependencies(v_source, root_loop):
@@ -37,6 +35,8 @@ class PatternDetector(object):
         return False
 
     def is_loop_index(self, e: Edge, loops_start_lines: List[str], children: List[Vertex]) -> bool:
+        """Checks if dependency is a loop index
+        """
 
         # TODO check all dependencies necessary?
         return (self.pet.graph.ep.source[e] == self.pet.graph.ep.sink[e]
@@ -47,21 +47,21 @@ class PatternDetector(object):
         """Returns all data dependencies of the node and it's children
         """
         dep_set = set()
-        children = self.get_all_children_of_type(node, '0')
+        children = self.get_subtree_of_type(node, '0')
         children.append(node)
 
         loops_start_lines = [self.pet.graph.vp.startsAtLine[v]
-                             for v in self.get_all_children_of_type(root_loop, '2')]
+                             for v in self.get_subtree_of_type(root_loop, '2')]
 
         for v in children:
             for e in v.out_edges():
                 if self.pet.graph.ep.type[e] == 'dependence':
-                    if not (self.is_loop_index(e, loops_start_lines, self.get_all_children_of_type(root_loop, '0'))):
+                    if not (self.is_loop_index(e, loops_start_lines, self.get_subtree_of_type(root_loop, '0'))):
                         dep_set.add(e.target())
         return dep_set
 
-    def get_all_children_of_type(self, root: Vertex, type: str) -> List[Vertex]:
-        """Finds all children of a given type of the specified node
+    def get_subtree_of_type(self, root: Vertex, type: str) -> List[Vertex]:
+        """Returns all nodes of a given type from a subtree
         """
         res = []
         if self.pet.graph.vp.type[root] == type:
@@ -69,7 +69,7 @@ class PatternDetector(object):
 
         for e in root.out_edges():
             if self.pet.graph.ep.type[e] == 'child':
-                res.extend(self.get_all_children_of_type(e.target(), type))
+                res.extend(self.get_subtree_of_type(e.target(), type))
         return res
 
     def is_pipeline_subnode(self, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
@@ -96,7 +96,6 @@ class PatternDetector(object):
     def __detect_pipeline(self, root: Vertex) -> float:
         """Calculate pipeline value for node. Returns pipeline scalar value
         """
-        # TODO faster iteration necessary?
 
         # TODO how deep
         children_start_lines = [self.pet.graph.vp.startsAtLine[v]
@@ -111,12 +110,8 @@ class PatternDetector(object):
             self.pet.graph.vp.pipeline[root] = -1
             return 0
 
-        # TODO backprop RAW dependencies in graph to enable auto matrix calculation
-        # print(adjacency(loop_graph).todense())
-
         graph_vector = []
         for i in range(0, len(loop_subnodes) - 1):
-            # Fix: the dependencies of loop-indices can be excluded, if they are read-only in loop body.
             graph_vector.append(1 if self.is_depending(loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
 
         pipeline_vector = []
