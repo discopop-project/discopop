@@ -135,5 +135,35 @@ class PatternDetector(object):
             pipeline_vector.append(min_weight)
         return correlation_coefficient(graph_vector, pipeline_vector)
 
+    def __detect_do_all_loop(self):
+        """Search for do_loop pattern
+        """
+        for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
+            val = self.__detect_do_all(node)
+            if val > 0:
+                self.pet.graph.vp.doAll[node] = val
+                print('Do All at ', self.pet.graph.vp.id[node])
+                print('Coefficient ', val)
+
+    def __detect_do_all(self, root: Vertex):
+        graph_vector = []
+
+        subnodes = find_subNodes(self.pet.graph, root, 'child')
+
+        for i in range(0, len(subnodes)):
+            for j in range(i, len(subnodes)):
+                if self.is_depending(subnodes[i], subnodes[j], root):
+                    graph_vector.append(0)
+                else:
+                    graph_vector.append(1)
+
+        pattern_vector = [1 for _ in graph_vector]
+
+        if np.linalg.norm(graph_vector) == 0:
+            return 0
+
+        return correlation_coefficient(graph_vector, pattern_vector)
+
     def detect_patterns(self):
         self.__detect_pipeline_loop()
+        self.__detect_do_all_loop()
