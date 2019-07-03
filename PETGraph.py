@@ -38,6 +38,9 @@ node_props = [
     ('startsAtLine', 'string', 'node.get("startsAtLine")'),
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
     ('pipeline', 'float', '0'),
+    ('doAll', 'float', '0'),
+    ('geomDecomp', 'bool', 'False'),
+    ('reduction', 'bool', 'False'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -45,6 +48,11 @@ node_props = [
 
 edge_props = [
     ('type', 'string'),
+    ('source', 'string'),
+    ('sink', 'string'),
+    ('var', 'string'),
+    ('dtype', 'string'),
+
     ('viz_color', 'vector<double>'),
     ('viz_dash_style', 'vector<double>')
 ]
@@ -105,6 +113,11 @@ class PETGraph(object):
                             sink_v = self.graph.vertex(GT_map_node_indices[sink_cu_id])
                             e = self.graph.add_edge(sink_v, source_v)
                             self.graph.ep.type[e] = 'dependence'
+                            self.graph.ep.source[e] = dep.source
+                            self.graph.ep.sink[e] = dep.sink
+                            self.graph.ep.dtype[e] = dep.type
+                            self.graph.ep.var[e] = dep.var_name
+
                             self.graph.ep.viz_dash_style[e] = [1, 1, 0]
                             self.graph.ep.viz_color[e] = [0.4, 0.4, 0.4, 0.5]
 

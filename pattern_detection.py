@@ -2,7 +2,7 @@ import numpy as np
 from graph_tool.util import find_edge, find_vertex
 from graph_tool.spectral import adjacency
 from graph_tool.search import dfs_iterator, bfs_iterator
-from graph_tool.all import Vertex, Graph
+from graph_tool.all import Vertex, Graph, Edge
 from typing import List
 from PETGraph import PETGraph
 
@@ -25,38 +25,51 @@ class PatternDetector(object):
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
 
-    def is_depending(self, v_source: Vertex, v_target: Vertex) -> bool:
+    def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
         """
-        children = self.get_all_children(v_target)
+        children = self.get_all_children_of_type(v_target, '0')
         children.append(v_target)
 
-        for dep in self.get_all_dependencies(v_source):
+        for dep in self.get_all_dependencies(v_source, root_loop):
             if dep in children:
                 return True
         return False
 
-    def get_all_dependencies(self, node: Vertex) -> List[Vertex]:
+    def is_loop_index(self, e: Edge, loops_start_lines: List[str], children: List[Vertex]) -> bool:
+
+        # TODO check all dependencies necessary?
+        return (self.pet.graph.ep.source[e] == self.pet.graph.ep.sink[e]
+                and self.pet.graph.ep.source[e] in loops_start_lines
+                and e.target() in children)
+
+    def get_all_dependencies(self, node: Vertex, root_loop: Vertex) -> List[Vertex]:
         """Returns all data dependencies of the node and it's children
         """
         dep_set = set()
-        children = self.get_all_children(node)
+        children = self.get_all_children_of_type(node, '0')
         children.append(node)
+
+        loops_start_lines = [self.pet.graph.vp.startsAtLine[v]
+                             for v in self.get_all_children_of_type(root_loop, '2')]
+
         for v in children:
             for e in v.out_edges():
                 if self.pet.graph.ep.type[e] == 'dependence':
-                    dep_set.add(e.target())
+                    if not (self.is_loop_index(e, loops_start_lines, self.get_all_children_of_type(root_loop, '0'))):
+                        dep_set.add(e.target())
         return dep_set
 
-    def get_all_children(self, root: Vertex) -> List[Vertex]:
-        """Finds all children of the specified node
+    def get_all_children_of_type(self, root: Vertex, type: str) -> List[Vertex]:
+        """Finds all children of a given type of the specified node
         """
         res = []
+        if self.pet.graph.vp.type[root] == type:
+            res.append(root)
+
         for e in root.out_edges():
             if self.pet.graph.ep.type[e] == 'child':
-                if self.pet.graph.vp.type[e.target()] == '0':
-                    res.append(e.target())
-                res.extend(self.get_all_children(e.target()))
+                res.extend(self.get_all_children_of_type(e.target(), type))
         return res
 
     def is_pipeline_subnode(self, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
@@ -104,7 +117,7 @@ class PatternDetector(object):
         graph_vector = []
         for i in range(0, len(loop_subnodes) - 1):
             # Fix: the dependencies of loop-indices can be excluded, if they are read-only in loop body.
-            graph_vector.append(1 if self.is_depending(loop_subnodes[i + 1], loop_subnodes[i]) else 0)
+            graph_vector.append(1 if self.is_depending(loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
 
         pipeline_vector = []
         for i in range(0, len(loop_subnodes) - 1):
@@ -113,7 +126,7 @@ class PatternDetector(object):
         min_weight = 1
         for i in range(0, len(loop_subnodes) - 1):
             for j in range(i + 1, len(loop_subnodes)):
-                if self.is_depending(loop_subnodes[i], loop_subnodes[j]):
+                if self.is_depending(loop_subnodes[i], loop_subnodes[j], root):
                     # TODO whose corresponding entry in the graph matrix is nonzero?
                     node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                     if min_weight > node_weight > 0:
@@ -127,5 +140,35 @@ class PatternDetector(object):
             pipeline_vector.append(min_weight)
         return correlation_coefficient(graph_vector, pipeline_vector)
 
+    def __detect_do_all_loop(self):
+        """Search for do_loop pattern
+        """
+        for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
+            val = self.__detect_do_all(node)
+            if val > 0:
+                self.pet.graph.vp.doAll[node] = val
+                print('Do All at ', self.pet.graph.vp.id[node])
+                print('Coefficient ', val)
+
+    def __detect_do_all(self, root: Vertex):
+        graph_vector = []
+
+        subnodes = find_subNodes(self.pet.graph, root, 'child')
+
+        for i in range(0, len(subnodes)):
+            for j in range(i, len(subnodes)):
+                if self.is_depending(subnodes[i], subnodes[j], root):
+                    graph_vector.append(0)
+                else:
+                    graph_vector.append(1)
+
+        pattern_vector = [1 for _ in graph_vector]
+
+        if np.linalg.norm(graph_vector) == 0:
+            return 0
+
+        return correlation_coefficient(graph_vector, pattern_vector)
+
     def detect_patterns(self):
         self.__detect_pipeline_loop()
+        self.__detect_do_all_loop()
