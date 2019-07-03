@@ -43,20 +43,39 @@ class PatternDetector(object):
                 and self.pet.graph.ep.source[e] in loops_start_lines
                 and e.target() in children)
 
+    def is_readonly_inside_loop_body(self, dep: Edge, root_loop: Vertex) -> bool:
+        loops_start_lines = [self.pet.graph.vp.startsAtLine[v]
+                             for v in self.get_subtree_of_type(root_loop, '2')]
+
+        children = self.get_subtree_of_type(root_loop, '0')
+
+        for v in children:
+            for e in v.out_edges():
+                if self.pet.graph.ep.dtype[e] == 'WAR' or self.pet.graph.ep.dtype[e] == 'WAW':
+                    if (self.pet.graph.ep.var[dep] == self.pet.graph.ep.var[e]
+                            and not (self.pet.graph.ep.sink[e] in loops_start_lines)):
+                        return False
+            for e in v.in_edges():
+                if self.pet.graph.ep.dtype[e] == 'RAW':
+                    if (self.pet.graph.ep.var[dep] == self.pet.graph.ep.var[e]
+                            and not (self.pet.graph.ep.source[e] in loops_start_lines)):
+                        return False
+        return True
+
     def get_all_dependencies(self, node: Vertex, root_loop: Vertex) -> List[Vertex]:
         """Returns all data dependencies of the node and it's children
         """
         dep_set = set()
         children = self.get_subtree_of_type(node, '0')
-        children.append(node)
 
         loops_start_lines = [self.pet.graph.vp.startsAtLine[v]
                              for v in self.get_subtree_of_type(root_loop, '2')]
 
         for v in children:
             for e in v.out_edges():
-                if self.pet.graph.ep.type[e] == 'dependence':
-                    if not (self.is_loop_index(e, loops_start_lines, self.get_subtree_of_type(root_loop, '0'))):
+                if self.pet.graph.ep.type[e] == 'dependence' and self.pet.graph.ep.dtype[e] == 'RAW':
+                    if not (self.is_loop_index(e, loops_start_lines, self.get_subtree_of_type(root_loop, '0'))
+                            and self.is_readonly_inside_loop_body(e, root_loop)):
                         dep_set.add(e.target())
         return dep_set
 
@@ -136,7 +155,7 @@ class PatternDetector(object):
         return correlation_coefficient(graph_vector, pipeline_vector)
 
     def __detect_do_all_loop(self):
-        """Search for do_loop pattern
+        """Search for do-all loop pattern
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             val = self.__detect_do_all(node)
@@ -146,6 +165,8 @@ class PatternDetector(object):
                 print('Coefficient ', val)
 
     def __detect_do_all(self, root: Vertex):
+        """Calculate do-all value for node. Returns dü-all scalar value
+        """
         graph_vector = []
 
         subnodes = find_subNodes(self.pet.graph, root, 'child')
