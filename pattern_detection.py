@@ -8,10 +8,14 @@ from PETGraph import PETGraph
 
 
 def find_subNodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
+    """ returns direct children of a given node
+    """
     return [e.target() for e in node.out_edges() if graph.ep.type[e] == criteria]
 
 
-def correlation_coefficient(v1, v2):
+def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
+    """ Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
+    """
     return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
 
 
@@ -56,7 +60,7 @@ class PatternDetector(object):
         return res
 
     def is_pipeline_subnode(self, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
-        """checks if node is a valid subnode for pipeline
+        """Checks if node is a valid subnode for pipeline
         """
         r_start = self.pet.graph.vp.startsAtLine[root]
         r_end = self.pet.graph.vp.endsAtLine[root]
@@ -67,7 +71,7 @@ class PatternDetector(object):
                     or c_start == c_end and c_start in children_start_lines)
 
     def __detect_pipeline_loop(self):
-        """Search for pipeline pattern
+        """Search pipeline pattern on all the loops within the application
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             self.pet.graph.vp.pipeline[node] = self.__detect_pipeline(node)

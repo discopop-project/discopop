@@ -98,7 +98,7 @@ class PETGraph(object):
                     pass  # TODO: nodeMap[sinkNodeId].Init.insert(dep.var);
                 else:
                     for source_cu_id in source_cu_ids:
-                        if dep.type == 'WAR' or dep.type == 'WAW':
+                        if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                             continue
                         elif sink_cu_id and source_cu_id:
                             source_v = self.graph.vertex(GT_map_node_indices[source_cu_id])
