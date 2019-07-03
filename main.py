@@ -34,16 +34,18 @@ if __name__ == "__main__":
     except SchemaError as e:
         exit(e)
 
-    cu_dict, dependences = parse_inputs(arguments['--cu-xml'], arguments['--dep-file'])
-    graph = PETGraph(cu_dict, dependences)
+    cu_dict, dependencies = parse_inputs(arguments['--cu-xml'], arguments['--dep-file'])
+    graph = PETGraph(cu_dict, dependencies)
 
-    gv = graph.filter_view(graph.graph.vertices(), 'child')
+    # graph.infer_level_dependences()
 
-    graph.infer_level_dependences()
-
-    graph.visualize(gv)
-
-
+    # visualize subgraphs
+    # graph.interactive_visualize(graph.graph)
+    # graph.interactive_visualize(graph.filter_view(edges_type='dependence'))
+    graph.visualize(graph.graph)
+    graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
+    graph.visualize(graph.filter_view(graph.graph.vertices(), 'dependence'), "dep.svg")
+    graph.visualize(graph.filter_view(graph.graph.vertices(), 'successor'), "suc.svg")
 
     start = time.time()
 

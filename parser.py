@@ -77,7 +77,7 @@ def __map_dummy_nodes(cu_dict):
 
 
 def __parse_dep_file(dep_fd):
-    dependences_list = []
+    dependencies_list = []
     for line in dep_fd.readlines():
         dep_fields = line.split()
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
@@ -87,15 +87,15 @@ def __parse_dep_file(dep_fd):
             type = dep_pair[0]
             source_fields = dep_pair[1].split('|')
             var_str = "" if len(source_fields) == 1 else source_fields[1]
-            dependences_list.append(DependenceItem(sink, source_fields[0], type, var_str))
+            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_str))
 
-    return dependences_list
+    return dependencies_list
 
 
 def parse_inputs(xml_fd, dependences_fd):
     cu_dict = __parse_xml_input(xml_fd)
     cu_dict = __map_dummy_nodes(cu_dict)
 
-    dependences = __parse_dep_file(dependences_fd)
+    dependencies = __parse_dep_file(dependences_fd)
 
-    return cu_dict, dependences
+    return cu_dict, dependencies
