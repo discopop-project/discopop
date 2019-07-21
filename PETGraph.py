@@ -41,6 +41,7 @@ node_props = [
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
+    ('mwType', 'string', 'NONE'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')

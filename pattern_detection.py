@@ -220,6 +220,7 @@ class PatternDetector(object):
         1.) all child nodes become first worker if they are not marked as worker before
         2.) if a child has dependence to more than one parent node, it will be marked as barrier
         """
+        pass
 # void PatternDetector::detectMWNode(Node &mainNode)
 # {
 #     // first insert all the direct children of mainnode in a queue to use it for the BFS
