@@ -1,3 +1,5 @@
+from queue import Queue
+
 import numpy as np
 from graph_tool.util import find_vertex
 from graph_tool.all import Vertex, Graph, Edge
@@ -220,28 +222,27 @@ class PatternDetector(object):
         1.) all child nodes become first worker if they are not marked as worker before
         2.) if a child has dependence to more than one parent node, it will be marked as barrier
         """
-        pass
-# void PatternDetector::detectMWNode(Node &mainNode)
-# {
-#     // first insert all the direct children of mainnode in a queue to use it for the BFS
-#     queue<string> queueNode;
-#     for (const auto &node : mainNode.directSubNodes)
-#         queueNode.push(node);
-#
-#     while (!queueNode.empty())
-#     {
-#         // find the node and then go through all its child dependencies to mark them as WORKER or BARRIERS
-#         string nodeID = queueNode.front();
-#         queueNode.pop();
-#         Node &node = nodeMapComputed.find(nodeID)->second;// mainNode.mergedChildren.find(nodeID)->second;
-#         // a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
-#         if (nodeMap.at(node.ID).mwType == NONE || nodeMap.at(node.ID).mwType == ROOT)
-#             nodeMap.at(node.ID).mwType = FORK;
-#
-#         // while using the node as the base child, we copy all the other children in a copy vector.
-#         // we do that because it could be possible that two children of the current node (two dependency) point to two different children of another child node which results that the childnode becomes BARRIER instead of WORKER
-#         // so we copy the whole other children in another vector and when one of the children of the current node does point to the other child node, we just adjust mwType and then we remove the node from the vector
-#         // Thus we prevent changing to BARRIER due of two dependencies pointing to two different children of the other node
+        # first insert all the direct children of mainnode in a queue to use it for the BFS
+        queue = Queue()
+        for n in find_subNodes(self.pet.graph, node, 'child'):
+            queue.put(n)
+
+        while not queue.empty():
+            current = queue.get()
+            # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
+            if self.pet.graph.vp.mwType[current] == 'NONE' or self.pet.graph.vp.mwType[current] == 'ROOT':
+                self.pet.graph.vp.mwType[current] == 'FORK'
+
+            # while using the node as the base child, we copy all the other children in a copy vector.
+            # we do that because it could be possible that two children of the current node (two dependency)
+            # point to two different children of another child node which results that the childnode becomes BARRIER
+            # instead of WORKER
+            # so we copy the whole other children in another vector and when one of the children of the current node
+            # does point to the other child node, we just adjust mwType and then we remove the node from the vector
+            # Thus we prevent changing to BARRIER due of two dependencies pointing to two different children of
+            # the other node
+
+            other_nodes = find_subNodes(self.pet.graph, current)
 #
 #         // create the copy vector and delete the current node from it so that it only contains the other nodes
 #         vector<string> otherNodes = mainNode.directSubNodes;
@@ -275,6 +276,9 @@ class PatternDetector(object):
 #         }
 #     }
 #
+
+
+
 #     // check for Barrier Worker pairs
 #     // if two barriers don't have any dependency to each other then they create a barrierWorker pair
 #     // so check every barrier pair that they don't have a dependency to each other -> barrierWorker

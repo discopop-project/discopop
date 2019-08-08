@@ -42,10 +42,10 @@ if __name__ == "__main__":
     # visualize subgraphs
     # graph.interactive_visualize(graph.graph)
     # graph.interactive_visualize(graph.filter_view(edges_type='dependence'))
-    graph.visualize(graph.graph)
-    graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
-    graph.visualize(graph.filter_view(graph.graph.vertices(), 'dependence'), "dep.svg")
-    graph.visualize(graph.filter_view(graph.graph.vertices(), 'successor'), "suc.svg")
+    # graph.visualize(graph.graph)
+    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
+    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'dependence'), "dep.svg")
+    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'successor'), "suc.svg")
 
     start = time.time()
 
