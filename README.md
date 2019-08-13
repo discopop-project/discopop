@@ -1,4 +1,4 @@
-# DiscoPoP Profiler
+# DiscoPoP - Discovery of Potential Parallelism
 DiscoPoP is an open source tool designed to suggest parallelizing programs. It identifies data dependences in a program, detects the basic blocks for the parallelization, finds parallel patterns which can be used to parallelize a code region, and finally suggests OpenMP constructs and clauses to programmers for the parallelization.
 
 It is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code which can be transferred into llvm IR.
@@ -42,3 +42,6 @@ To obtain data dependences, we need to instrument the target application. Runnin
 	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
 	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
 	./<APP_NAME>
+	
+#### Pattern Detection
+We will release the source code for pattern detection soon.
