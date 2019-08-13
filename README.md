@@ -46,5 +46,5 @@ To obtain data dependences, we need to instrument the target application. Runnin
 #### Pattern Detection
 We will release the source code for pattern detection soon.
 
-##License
+## License
 © Contributors Licensed under an BSD-3-Clause license.
