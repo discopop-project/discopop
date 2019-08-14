@@ -209,7 +209,7 @@ class PatternDetector(object):
             Two barriers can run in parallel if there is not a directed path from one to the other
         """
         for node in self.pet.graph.vertices():
-            #if (!node.childrenNodes.empty())
+            # if (!node.childrenNodes.empty())
             #   detectMWNode(node);
             self.detect_task_parallelism(node)
 
@@ -221,6 +221,7 @@ class PatternDetector(object):
         use Breadth First Search (BFS) to detect all barriers and workers.
         1.) all child nodes become first worker if they are not marked as worker before
         2.) if a child has dependence to more than one parent node, it will be marked as barrier
+        Returns list of BARRIER_WORKER pairs
         """
         # first insert all the direct children of mainnode in a queue to use it for the BFS
         queue = Queue()
@@ -231,7 +232,7 @@ class PatternDetector(object):
             current = queue.get()
             # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
             if self.pet.graph.vp.mwType[current] == 'NONE' or self.pet.graph.vp.mwType[current] == 'ROOT':
-                self.pet.graph.vp.mwType[current] == 'FORK'
+                self.pet.graph.vp.mwType[current] = 'FORK'
 
             # while using the node as the base child, we copy all the other children in a copy vector.
             # we do that because it could be possible that two children of the current node (two dependency)
@@ -242,81 +243,46 @@ class PatternDetector(object):
             # Thus we prevent changing to BARRIER due of two dependencies pointing to two different children of
             # the other node
 
-            other_nodes = find_subNodes(self.pet.graph, current)
-#
-#         // create the copy vector and delete the current node from it so that it only contains the other nodes
-#         vector<string> otherNodes = mainNode.directSubNodes;
-#         otherNodes.erase(std::remove(otherNodes.begin(), otherNodes.end(), nodeID), otherNodes.end());
-#
-#
-#         // All children are at least WORKER - if they have more then one parent then they are BARRIER
-#         for (auto dep : node.reverseRAWDepsOn)
-#         {
-#             // ignore dependencies pointing to the current node or one of its children
-#             if ((std::find(node.childrenNodes.begin(), node.childrenNodes.end(), dep.CUid) !=
-#                  node.childrenNodes.end()) || dep.CUid == node.ID)
-#                 continue;
-#
-#             // check if the dependency id is one of the subnodes of the directSubnodes
-#             for (const auto &otherNodesID : otherNodes)
-#             {
-#                 Node &otherNode = nodeMapComputed.find(otherNodesID)->second;
-#                 if (std::find(otherNode.childrenNodes.begin(), otherNode.childrenNodes.end(), dep.CUid) !=
-#                     otherNode.childrenNodes.end() || otherNode.ID == dep.CUid)
-#                 {
-#                     if (nodeMap.at(otherNode.ID).mwType == WORKER)
-#                         nodeMap.at(otherNode.ID).mwType = BARRIER;
-#                     else
-#                         nodeMap.at(otherNode.ID).mwType = WORKER;
-#                     // after setting just remove the childnode from the vector to prevent duplicate pointing to children of the child by the same other node
-#                     otherNodes.erase(std::remove(otherNodes.begin(), otherNodes.end(), otherNode.ID), otherNodes.end());
-#                     break;
-#                 }
-#             }
-#         }
-#     }
-#
+            # create the copy vector so that it only contains the other nodes
+            other_nodes = find_subNodes(self.pet.graph, current, 'child')
+            children = self.get_subtree_of_type(current, 'child')
 
+            # All children are at least WORKER - if they have more then one parent then they are BARRIER
+            for e in node.in_edges():
+                # ignore dependencies pointing to the current node or one of its children
+                if self.pet.graph.ep.dtype[e] == 'RAW' and not (e.source() in children):
+                    # check if the dependency id is one of the subnodes of the directSubnodes
+                    for other_node in other_nodes:
+                        other_children = self.get_subtree_of_type(other_node, 'child')
+                        if e.source() in other_children or e.source == node:
+                            if self.pet.graph.vp.mwType[other_node] == 'WORKER':
+                                self.pet.graph.vp.mwType[other_node] = 'BARRIER'
+                            else:
+                                self.pet.graph.vp.mwType[other_node] = 'WORKER'
+                            # after setting just remove the childnode from the vector
+                            # to prevent duplicate pointing to children of the child by the same other node
+                            other_nodes.remove(other_node)
+                            break
 
+        pairs = []
+        # check for Barrier Worker pairs
+        # if two barriers don't have any dependency to each other then they create a barrierWorker pair
+        # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
+        direct_subnodes = find_subNodes(self.pet.graph, node, 'child')
+        for n1 in direct_subnodes:
+            if self.pet.graph.vp.mwType[n1] == 'BARRIER':
+                for n2 in direct_subnodes:
+                    if self.pet.graph.vp.mwType[n2] == 'BARRIER' and n1 != n2:
+                        if n2 in [e.target() for e in n1.out_edges()] or n2 in [e.source() for e in n1.in_edges()]:
+                            break
+                        # so these two nodes are BarrierWorker, because there is no dependency between them
+                        pairs.append((n1, n2))
+                        self.pet.graph.vp.mwType[n1] = 'BARRIER_WORKER'
+                        self.pet.graph.vp.mwType[n2] = 'BARRIER_WORKER'
 
-#     // check for Barrier Worker pairs
-#     // if two barriers don't have any dependency to each other then they create a barrierWorker pair
-#     // so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-#     for (const auto &nodeID : mainNode.directSubNodes)
-#     {
-#         auto node = *nodeMapComputed.find(nodeID);
-#         //if (node.second.mwType == BARRIER) {
-#         if (nodeMap.at(node.first).mwType == BARRIER)
-#         {
-#             bool BW = true;
-#             for (const auto &nodeSecondID : mainNode.directSubNodes)
-#             {
-#                 if (nodeMap.at(node.first).mwType == BARRIER && nodeSecondID != node.first)
-#                 {
-#                     for (auto dep : node.second.RAWDepsOn)
-#                     {
-#                         if (dep.CUid == nodeSecondID)
-#                             goto NEXT_NODE;
-#                     }
-#                     for (auto dep : node.second.reverseRAWDepsOn)
-#                     {
-#                         if (dep.CUid == nodeSecondID)
-#                             goto NEXT_NODE;
-#                     }
-#                     // so these two nodes are BarrierWorker, because there is no dependency between them
-#                     vector<Node> pair = {node.second, nodeMapComputed.find(nodeSecondID)->second};
-#                     //mainNode.barrierWorkers.push_back(pair);
-#                     nodeMap.at(mainNode.ID).barrierWorkers.push_back(pair);
-#                     nodeMap.at(node.first).mwType = BARRIER_WORKER;
-#                     nodeMap.at(nodeSecondID).mwType = BARRIER_WORKER;
-#                 }
-#             }
-#             NEXT_NODE:;
-#         }
-#     }
-# }
+        return pairs
 
     def detect_patterns(self):
         self.__detect_pipeline_loop()
         self.__detect_do_all_loop()
-
+        self.__detect_task_parallelism_loop()
