@@ -12,6 +12,8 @@ Options:
 
 import os
 import time
+from preprocessing.for_loop_index_elimination import run as for_elim
+import importlib.util
 from docopt import docopt
 from schema import Schema, Use, SchemaError
 
@@ -25,6 +27,9 @@ docopt_schema = Schema({
         '--cu-xml': Use(open, error='XML should be readable'),
         '--dep-file': Use(open, error='Dependence file should be readable')
     })
+
+def preprocess(graph, modules):
+    return for_elim(graph)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__, version='DiscoPoP analyzer 0.1')
@@ -42,13 +47,16 @@ if __name__ == "__main__":
     # visualize subgraphs
     # graph.interactive_visualize(graph.graph)
     # graph.interactive_visualize(graph.filter_view(edges_type='dependence'))
-    # graph.visualize(graph.graph)
+    graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'dependence'), "dep.svg")
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'successor'), "suc.svg")
 
     start = time.time()
 
+    modules = []
+    graph = preprocess(graph, modules)
+    graph.visualize(graph.graph)
     pattern_detector = PatternDetector(graph)
     pattern_detector.detect_patterns()
 
