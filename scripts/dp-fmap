@@ -23,6 +23,6 @@ declare -i index=1
 
 for f in $SRC
 do
-        echo "$index    $f" >> FileMapping.txt
+        echo -e "$index\t$f" >> FileMapping.txt
         index+=1
 done
