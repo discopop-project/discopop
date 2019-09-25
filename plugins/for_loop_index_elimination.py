@@ -61,7 +61,9 @@ def get_all_dependencies(self, node: Vertex, root_loop: Vertex) -> List[Vertex]:
                     dep_set.add(e.target())
     return dep_set
 
+
 def run(pet):
-    for node in find_vertex(pet.graph, pet.graph.vp.type, '2'):
-        pass
+    print("LOOP DETECT")
+    #for node in find_vertex(pet.graph, pet.graph.vp.type, '2'):
+   #     pass
     return pet
