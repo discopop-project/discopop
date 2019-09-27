@@ -70,7 +70,7 @@ if __name__ == "__main__":
         print("executing plugin: " + plugin_name)
         graph = p.run(graph)
 
-    graph.visualize(graph.graph)
+    # graph.visualize(graph.graph)
     pattern_detector = PatternDetector(graph)
     pattern_detector.detect_patterns()
 
@@ -78,7 +78,22 @@ if __name__ == "__main__":
 
     print("Time taken for pattern detection: {0}".format(end - start))
 
+    '''
+    parseData(nodeFile);
+    mapDummyNodes();
+    mapDependences(depFile);
+    
+    //Generte data for CU Instatantiation pass
+    dataForCUInstanciation(rawname);
+    
+    //output Json output
+    outputJson(rawname + ".json");
 
+    initMain();
+    PatternDetector p;
+    p.detectPatterns(rawname);
+    
+    '''
 
 
 

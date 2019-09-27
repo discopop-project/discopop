@@ -6,6 +6,7 @@ from graph_tool.all import Vertex, Graph, Edge
 from typing import List
 from PETGraph import PETGraph
 
+do_all_threshold = 0.9
 
 def find_subNodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
     """ returns direct children of a given node
@@ -16,7 +17,8 @@ def find_subNodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     """ Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
     """
-    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
 class PatternDetector(object):
@@ -170,7 +172,7 @@ class PatternDetector(object):
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             val = self.__detect_do_all(node)
-            if val > 0:
+            if val > do_all_threshold:
                 self.pet.graph.vp.doAll[node] = val
                 print('Do All at ', self.pet.graph.vp.id[node])
                 print('Coefficient ', val)
@@ -209,12 +211,15 @@ class PatternDetector(object):
             Two barriers can run in parallel if there is not a directed path from one to the other
         """
         for node in self.pet.graph.vertices():
-            # if (!node.childrenNodes.empty())
-            #   detectMWNode(node);
-            self.detect_task_parallelism(node)
+            if self.get_subtree_of_type(node, 'child'):
+                self.detect_task_parallelism(node)
 
-            if self.pet.graph.vp.mwType[node] == 'NONE':
+            if self.pet.graph.vp.mwType[node] != 'NONE':
                 self.pet.graph.vp.mwType[node] = 'ROOT'
+
+        for node in self.pet.graph.vertices():
+            if self.pet.graph.vp.mwType[node] == 'None':
+                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])
 
     def detect_task_parallelism(self, node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it
@@ -272,7 +277,8 @@ class PatternDetector(object):
         for n1 in direct_subnodes:
             if self.pet.graph.vp.mwType[n1] == 'BARRIER':
                 for n2 in direct_subnodes:
-                    if self.pet.graph.vp.mwType[n2] == 'BARRIER' and n1 != n2:
+                    # TODO n1 -> n2
+                    if self.pet.graph.vp.mwType[n1] == 'BARRIER' and n1 != n2:
                         if n2 in [e.target() for e in n1.out_edges()] or n2 in [e.source() for e in n1.in_edges()]:
                             break
                         # so these two nodes are BarrierWorker, because there is no dependency between them
@@ -282,7 +288,132 @@ class PatternDetector(object):
 
         return pairs
 
+    '''
+    * function					: merges all children and
+    dependencies of the children of all nodes
+    * @param loopType			: if set to true -> then just look for
+    type = loop
+    * @param removeDummies		: don't regard the dummy nodes (type = 3)
+    Main Level:					   node1
+    .......... node2 ....
+                                            /			|
+    \ Level I:		child1		  child2		child3
+                            /    |    \		  / | \			/ | \
+    Level II: child11
+    ...
+    .
+    .
+    
+    * 1.) get node from nodeMap
+    *	I.) iterate through all children in Level I
+    *	II.) get the whole children nodes (Level II+) of the child in Level I
+    and save them in a vector under property node.wholeSubNodes *	III.) iterate
+    through all children nodes (Level II+) of the Level I child and adjust the
+    dependencies:
+    *		a.) the dependencies remain if they that are pointing to any
+    other node of the child node (Level I+) of the main node in the Main Level *
+    b.) dependencies pointing to any node out of the tree of the node in the Main
+    Level are removed
+    * 2.) do Step I for all nodes in nodeMap
+    '''
+
+    def __detect_task_parallelism_loop(self):
+        pass
+
+        '''
+        // iterate through all entries of the map -> Nodes
+  // set the ids of all children
+
+  for (auto node : nodeMap) {
+
+    // check if it is a loop
+    if (!loopType || node.second.type == 2) {
+      // if the main node is dummy and we should remove dummies, then do not
+      // insert it in nodeMapComputed
+      if (removeDummies && node.second.type == dummy) continue;
+
+      // if the directSubNode vector is not set already, then define it
+      if (node.second.directSubNodes.empty()) {
+        auto iter = node.second.childrenNodes.begin();
+        while (iter != node.second.childrenNodes.end()) {
+          if (!removeDummies) {
+            // insert all children of childrenNodes (dummy and not dummy) in
+            // directSubNodes (Because directSubNodes is empty -> childrenNodes
+            // does only contain direct child nodes of the node and not the
+            // indirect)
+            node.second.directSubNodes.push_back(*iter);
+            ++iter;
+          } else {
+            if (nodeMap.find(*iter)->second.type != dummy) {
+              // insert the node just if it is not dummy
+              node.second.directSubNodes.push_back(*iter);
+              ++iter;
+            } else
+              // if it is dummy we have to remove it also from the childrenNodes
+              iter = node.second.childrenNodes.erase(
+                  std::remove(node.second.childrenNodes.begin(),
+                              node.second.childrenNodes.end(), *iter),
+                  node.second.childrenNodes.end());
+          }
+        }
+      }
+      // now we have to merge the children of this node
+      // get the whole non-Dummy(if so specified, otherwise all types)
+      // childrenIDs
+
+      // copy the current node in a copy that we send in the function
+      // getChildIDs_Dependencies as an accumaltor to be filled but before
+      // sending we have to delete the childrenNodes -> This is important
+      // because we want to go recursively thru all children. If there is
+      // something already in the childrenNodes, it will not be iterated
+      // recursively again which has the problem that if this child has other
+      // children, they will be ignored an not inserted in the children Nodes
+      Node resultNode = node.second;
+      resultNode.childrenNodes.clear();
+
+      set<NodeID> visited_functions;
+      getChildIDs_Dependencies(node.second, resultNode, visited_functions,
+                               removeDummies);
+      // getChildIDs(node.second, wholeChildrenNodes, removeDummies);
+      node.second = resultNode;
+
+      // save the root loop node in the new computed map
+      this->nodeMapComputed.insert(std::make_pair(node.first, node.second));
+    }
+        '''
+
+
+
+
+
     def detect_patterns(self):
+
         self.__detect_pipeline_loop()
         self.__detect_do_all_loop()
         self.__detect_task_parallelism_loop()
+
+
+        '''
+void PatternDetector::detectPatterns(string filename) {
+  merge(false, true);
+  
+  for (auto& node : nodeMapComputed) {
+    // skip dummies
+    if (node.second.type == dummy) continue;
+
+    // adjust the dependencies of the children of this node
+    filterDeps(node.second);
+
+    detectDoAll(node.second);
+    detectReduction(node.second);
+  }
+  for (auto& node : nodeMapComputed) {
+    // skip dummies
+    if (node.second.type == dummy) continue;
+
+    detectGeometricDecomposition(node.second);
+    detectDoMW(node.second);
+    detectPipeline(node.second);
+  }
+}
+'''
