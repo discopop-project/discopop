@@ -317,57 +317,51 @@ class PatternDetector(object):
     * 2.) do Step I for all nodes in nodeMap
     '''
 
-    def __detect_task_parallelism_loop(self):
-        pass
+    def __merge(self, loopType, removeDummies):
+        # iterate through all entries of the map -> Nodes
+        # set the ids of all children
+        for node in self.pet.graph.vertices():
+            if not loopType or self.pet.graph.vp.type[node] == '2':
+                # if the main node is dummy and we should remove dummies, then do not
+                # insert it in nodeMapComputed
+                if removeDummies and self.pet.graph.vp.type[node] == '3':
+                    continue
+
+                sub_nodes = []
+                for e in node.out_edges():
+                    if self.pet.graph.ep.type[e] == 'child':
+                        if removeDummies and self.pet.graph.ep.type[e.target()] == '3':
+                            pass
+                            # if it is dummy we have to remove it also from the childrenNodes
+                            # TODO remove edge
+                        else:
+                            sub_nodes.append(e.target())
+            pass
+
+            # now we have to merge the children of this node
+            # get the whole non-Dummy(if so specified, otherwise all types)
+            # childrenIDs
+
+            # copy the current node in a copy that we send in the function
+            # getChildIDs_Dependencies as an accumaltor to be filled but before
+            # sending we have to delete the childrenNodes -> This is important
+            # because we want to go recursively thru all children. If there is
+            # something already in the childrenNodes, it will not be iterated
+            # recursively again which has the problem that if this child has other
+            # children, they will be ignored an not inserted in the children Nodes
+
+
+
+
 
         '''
-        // iterate through all entries of the map -> Nodes
-  // set the ids of all children
+        
 
   for (auto node : nodeMap) {
 
     // check if it is a loop
     if (!loopType || node.second.type == 2) {
-      // if the main node is dummy and we should remove dummies, then do not
-      // insert it in nodeMapComputed
-      if (removeDummies && node.second.type == dummy) continue;
-
-      // if the directSubNode vector is not set already, then define it
-      if (node.second.directSubNodes.empty()) {
-        auto iter = node.second.childrenNodes.begin();
-        while (iter != node.second.childrenNodes.end()) {
-          if (!removeDummies) {
-            // insert all children of childrenNodes (dummy and not dummy) in
-            // directSubNodes (Because directSubNodes is empty -> childrenNodes
-            // does only contain direct child nodes of the node and not the
-            // indirect)
-            node.second.directSubNodes.push_back(*iter);
-            ++iter;
-          } else {
-            if (nodeMap.find(*iter)->second.type != dummy) {
-              // insert the node just if it is not dummy
-              node.second.directSubNodes.push_back(*iter);
-              ++iter;
-            } else
-              // if it is dummy we have to remove it also from the childrenNodes
-              iter = node.second.childrenNodes.erase(
-                  std::remove(node.second.childrenNodes.begin(),
-                              node.second.childrenNodes.end(), *iter),
-                  node.second.childrenNodes.end());
-          }
-        }
-      }
-      // now we have to merge the children of this node
-      // get the whole non-Dummy(if so specified, otherwise all types)
-      // childrenIDs
-
-      // copy the current node in a copy that we send in the function
-      // getChildIDs_Dependencies as an accumaltor to be filled but before
-      // sending we have to delete the childrenNodes -> This is important
-      // because we want to go recursively thru all children. If there is
-      // something already in the childrenNodes, it will not be iterated
-      // recursively again which has the problem that if this child has other
-      // children, they will be ignored an not inserted in the children Nodes
+    
       Node resultNode = node.second;
       resultNode.childrenNodes.clear();
 
@@ -381,10 +375,6 @@ class PatternDetector(object):
       this->nodeMapComputed.insert(std::make_pair(node.first, node.second));
     }
         '''
-
-
-
-
 
     def detect_patterns(self):
 
