@@ -330,53 +330,17 @@ class PatternDetector(object):
                 sub_nodes = []
                 for e in node.out_edges():
                     if self.pet.graph.ep.type[e] == 'child':
-                        if removeDummies and self.pet.graph.ep.type[e.target()] == '3':
-                            pass
-                            # if it is dummy we have to remove it also from the childrenNodes
-                            # TODO remove edge
+                        if removeDummies and self.pet.graph.vp.type[e.target()] == '3':
+                            self.pet.graph.remove_edge(e)
                         else:
                             sub_nodes.append(e.target())
+
+            # TODO copy all dependency edges to the root node
             pass
 
-            # now we have to merge the children of this node
-            # get the whole non-Dummy(if so specified, otherwise all types)
-            # childrenIDs
-
-            # copy the current node in a copy that we send in the function
-            # getChildIDs_Dependencies as an accumaltor to be filled but before
-            # sending we have to delete the childrenNodes -> This is important
-            # because we want to go recursively thru all children. If there is
-            # something already in the childrenNodes, it will not be iterated
-            # recursively again which has the problem that if this child has other
-            # children, they will be ignored an not inserted in the children Nodes
-
-
-
-
-
-        '''
-        
-
-  for (auto node : nodeMap) {
-
-    // check if it is a loop
-    if (!loopType || node.second.type == 2) {
-    
-      Node resultNode = node.second;
-      resultNode.childrenNodes.clear();
-
-      set<NodeID> visited_functions;
-      getChildIDs_Dependencies(node.second, resultNode, visited_functions,
-                               removeDummies);
-      // getChildIDs(node.second, wholeChildrenNodes, removeDummies);
-      node.second = resultNode;
-
-      // save the root loop node in the new computed map
-      this->nodeMapComputed.insert(std::make_pair(node.first, node.second));
-    }
-        '''
-
     def detect_patterns(self):
+        self.__merge(False, True)
+
 
         self.__detect_pipeline_loop()
         self.__detect_do_all_loop()
