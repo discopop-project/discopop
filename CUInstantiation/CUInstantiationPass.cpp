@@ -83,14 +83,14 @@ namespace {
 
     struct CUInstantiation : public ModulePass {
         static char ID;
-        
+
         LLVMContext* ThisModuleContext;
 
-        //structures to get list of global variables 
+        //structures to get list of global variables
         Module *ThisModule;
 
         // used to get variable names. Originally appeared in DiscoPoP code!
-        //map<string, int> signature; 
+        //map<string, int> signature;
 
          // Callbacks to run-time library
         Function *CUInstFinalize, *CUInstInitialize;
@@ -136,8 +136,8 @@ namespace {
         int isLastCall(LID line, string fName, int index);
 
         bool doInitialization(Module &M);
-        virtual bool runOnModule(Module &M);    
-        StringRef getPassName() const;    
+        virtual bool runOnModule(Module &M);
+        StringRef getPassName() const;
         void getAnalysisUsage(AnalysisUsage &Info) const;
 
         CUInstantiation() : ModulePass(ID) {}
@@ -148,7 +148,7 @@ namespace {
 /*****************************   DiscoPoP Functions  ***********************************/
 
 string CUInstantiation::determineVariableName(Instruction* I) {
-    
+
     assert(I && "Instruction cannot be NULL \n");
     int index = isa<StoreInst>(I) ? 1 : 0;
     Value* operand = I->getOperand(index);
@@ -258,7 +258,7 @@ bool CUInstantiation::isaCallOrInvoke(Instruction* BI) {
 }
 
 string CUInstantiation::getFunctionName(Instruction *instruction){
-    
+
     string name;
 
     Function* f;
@@ -272,7 +272,7 @@ string CUInstantiation::getFunctionName(Instruction *instruction){
         f = (cast<InvokeInst>(instruction))->getCalledFunction();
         v = (cast<InvokeInst>(instruction))->getCalledValue();
     }
-                   
+
     // For ordinary function calls, F has a name.
     // However, sometimes the function being called
     // in IR is encapsulated by "bitcast()" due to
@@ -304,14 +304,12 @@ void CUInstantiation::setupCallbacks() {
      * NULL
      */
 
-    CUInstInitialize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationInitialize", 
+    CUInstInitialize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationInitialize",
         Void,
-        CharPtr,
-        (Type*)0));
+        CharPtr));
 
-    CUInstFinalize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationFinalize", 
-        Void,
-        (Type*)0));
+    CUInstFinalize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationFinalize",
+        Void));
 
     CUInstRead = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationRead",
             Void,
@@ -319,8 +317,7 @@ void CUInstantiation::setupCallbacks() {
             Int32,
             Int64,
             CharPtr,
-            CharPtr,
-            (Type*)0));
+            CharPtr));
 
     CUInstWrite = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationWrite",
             Void,
@@ -328,23 +325,20 @@ void CUInstantiation::setupCallbacks() {
             Int32,
             Int64,
             CharPtr,
-            CharPtr,
-            (Type*)0));
+            CharPtr));
 
     CUInstCallBefore = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallBefore",
             Void,
-            Int32,
-            (Type*)0));
+            Int32));
 
     CUInstCallAfter = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallAfter",
             Void,
             Int32,
-            Int32,
-            (Type*)0));
+            Int32));
 }
 
 bool CUInstantiation::doInitialization(Module &M) {
-    
+
     // Export M to the outside
     ThisModule = &M;
     ThisModuleContext = &(M.getContext());
@@ -371,7 +365,7 @@ vector<string> CUInstantiation::split(const string &s, const char delim) {
 
 
 /* *********************** Helper functions ************************ */
-void CUInstantiation::readLineNumberPairs(const char* fileName) 
+void CUInstantiation::readLineNumberPairs(const char* fileName)
 {
     ifstream inputFileStream;
     inputFileStream.open(fileName);
@@ -381,7 +375,7 @@ void CUInstantiation::readLineNumberPairs(const char* fileName)
     }
     string line;
 
-    while (std::getline(inputFileStream, line)) 
+    while (std::getline(inputFileStream, line))
     {
         istringstream iss(line);
         string FName;
@@ -395,7 +389,7 @@ void CUInstantiation::readLineNumberPairs(const char* fileName)
         for(auto i:split(callLines, ',')){
             callLineToFNameMap[encodeLID(i)].push_back(pair<string,int>(FName,PIDIndex));
         }
-        
+
         for(auto dep:split(deps, ',')){
 
             vector<string> i = split(dep, '|');
@@ -411,7 +405,7 @@ void CUInstantiation::readLineNumberPairs(const char* fileName)
                     writeLineToVarNameMap[encodeLID(i.front())].insert(p); // i.front is the write location and i.back variable name
                     writeLineToVarNameMap[encodeLID(i[2])].insert(p); // i[2] is the write location and i.back variable name
                 }
-                
+
         }
         PIDIndex++;
 
@@ -436,12 +430,12 @@ void CUInstantiation::insertInitializeInst(Function &F){
         }
     }
     BasicBlock &entryBB = F.getEntryBlock();
-    int32_t lid = 0;    
+    int32_t lid = 0;
     vector<Value*> args;
 
     IRBuilder<> builder(&*entryBB.begin());
     Value *vName = builder.CreateGlobalStringPtr(StringRef(allFunctionIndices.c_str()), ".str");
-    args.push_back(vName); 
+    args.push_back(vName);
     // We always want to insert __CUInstInitialize at the beginning
     // of the main function to initialize our data structures in the instrumentation library, but we need the first valid LID to
     // get the entry line of the function.
@@ -449,9 +443,9 @@ void CUInstantiation::insertInitializeInst(Function &F){
         lid = getLID(&*BI, fileID);
         if (lid > 0 && !isa<PHINode>(&*BI)) {
             //IRBuilder<> IRB(entryBB.begin());
-            //IRB.CreateCall2(CUInstInitialize);
-            //CallInst::Create(CUInstInitialize, args, "")->insertAfter(BI);    
+            //CallInst::Create(CUInstInitialize, args, "")->insertAfter(BI);
             CallInst::Create(CUInstInitialize, args, "", &*BI);
+
             break;
         }
     }
@@ -464,7 +458,7 @@ void CUInstantiation::insertFinalizeInst(Instruction *before){
 
 void CUInstantiation::instrumentLoadInst(Instruction *toInstrument, int pidIndex){
     vector<Value*> args;
-    
+
 
     int32_t lid = getLID(toInstrument, fileID);
     if (lid == 0) return;
@@ -474,14 +468,14 @@ void CUInstantiation::instrumentLoadInst(Instruction *toInstrument, int pidIndex
 
     Value* memAddr = PtrToIntInst::CreatePointerCast(cast<LoadInst>(toInstrument)->getPointerOperand(),
             Int64, "", toInstrument);
-    args.push_back(memAddr);    
+    args.push_back(memAddr);
 
     IRBuilder<> builder(toInstrument);
     Value *fName;
 
     if(toInstrument->getParent()->getParent()->hasName()){
         fName = builder.CreateGlobalStringPtr(string(toInstrument->getParent()->getParent()->getName().data()).c_str(), ".str");
-        args.push_back(fName);      
+        args.push_back(fName);
     } else {
         fName = builder.CreateGlobalStringPtr(string("NULL").c_str(), ".str");
         args.push_back(fName);
@@ -491,7 +485,7 @@ void CUInstantiation::instrumentLoadInst(Instruction *toInstrument, int pidIndex
     //if (varName.find(".addr") != varName.npos)
     //  varName.erase(varName.find(".addr"), 5);
     Value *vName = builder.CreateGlobalStringPtr(varName.c_str(), ".str");
-    args.push_back(vName);      
+    args.push_back(vName);
 
     CallInst::Create(CUInstRead, args, "", toInstrument);
 }
@@ -504,19 +498,19 @@ void CUInstantiation::instrumentStoreInst(Instruction *toInstrument, int pidInde
     if (lid == 0) return;
 
     args.push_back(ConstantInt::get(Int32, lid));
-    
+
     args.push_back(ConstantInt::get(Int32, pidIndex));
 
     Value* memAddr = PtrToIntInst::CreatePointerCast(cast<StoreInst>(toInstrument)->getPointerOperand(),
             Int64, "", toInstrument);
-    args.push_back(memAddr);   
+    args.push_back(memAddr);
 
     IRBuilder<> builder(toInstrument);
     Value *fName;
 
     if(toInstrument->getParent()->getParent()->hasName()){
         fName = builder.CreateGlobalStringPtr(string(toInstrument->getParent()->getParent()->getName().data()).c_str(), ".str");
-        args.push_back(fName);      
+        args.push_back(fName);
     } else {
         fName = builder.CreateGlobalStringPtr(string("NULL").c_str(), ".str");
         args.push_back(fName);
@@ -537,7 +531,7 @@ void CUInstantiation::instrumentCallInst(Instruction *toInstrument, int index, i
 
     //IRBuilder<> builder(toInstrument);
     //Value *vName = builder.CreateGlobalStringPtr(StringRef(fName.c_str()), ".str");
-    //args.push_back(vName); 
+    //args.push_back(vName);
 
     //it creates a call "CUInstCallBefore" and inserts it before the toInstrument instruction
     CallInst::Create(CUInstCallBefore, args, "", toInstrument);
@@ -548,7 +542,7 @@ void CUInstantiation::instrumentCallInst(Instruction *toInstrument, int index, i
         args.push_back(ConstantInt::get(Int32, 0));
 
     //it first creates a call "CUInstCallAfter" and then inserts it after the toInstrument instruction
-    CallInst::Create(CUInstCallAfter, args, "")->insertAfter(toInstrument); 
+    CallInst::Create(CUInstCallAfter, args, "")->insertAfter(toInstrument);
 
 }
 
@@ -574,7 +568,6 @@ bool CUInstantiation::runOnModule(Module &M){
         errs() << "Input file name empty\n";
         exit(0);
     }
-
     const char* fileName = inputFileName.data();
     readLineNumberPairs(fileName);
 
@@ -582,23 +575,20 @@ bool CUInstantiation::runOnModule(Module &M){
     {
         determineFileID(*func, fileID);
 
-
         if (func->hasName() && func->getName().equals("main")){
             insertInitializeInst(*func);
         }
-
-        for (inst_iterator i = inst_begin(*func); i!=inst_end(*func); ++i) 
+        for (inst_iterator i = inst_begin(*func); i!=inst_end(*func); ++i)
         {
             Instruction *inst = &*i;
             LID line = getLID(inst, fileID);
-            
             if(isa<LoadInst>(inst)){
                 if(readLineToVarNameMap.find(line) != readLineToVarNameMap.end()){
                     string varName = determineVariableName(inst);
                     for(auto i:readLineToVarNameMap[line]){
                         if(i.first == varName){
                             instrumentLoadInst(inst, i.second);
-                        }       
+                        }
                     }
                 }
             } else if(isa<StoreInst>(inst)){
@@ -607,7 +597,7 @@ bool CUInstantiation::runOnModule(Module &M){
                     for(auto i:writeLineToVarNameMap[line]){
                         if(i.first == varName){
                             instrumentStoreInst(inst, i.second);
-                        }       
+                        }
                     }
                 }
             } else if(isaCallOrInvoke(inst)){
@@ -621,17 +611,17 @@ bool CUInstantiation::runOnModule(Module &M){
                             int isLast = isLastCall(line, fName, temp);
                             instrumentCallInst(inst, temp, isLast);
                             break;
-                        }       
+                        }
                         ind++;
                     }
                 }
-            } 
+            }
             else if (isa<ReturnInst>(inst)) {
                 if (func->getName().equals("main")) {   // returning from main
                 insertFinalizeInst(inst);
                 }
             }
-            
+
         }
     }
     return false;
