@@ -1,6 +1,7 @@
 from queue import Queue
 
 import numpy as np
+from graph_tool.topology import shortest_path
 from graph_tool.util import find_vertex
 from graph_tool.all import Vertex, Graph, Edge
 from typing import List, Dict, Set
@@ -25,12 +26,27 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
 class PatternDetector(object):
     pet: PETGraph
     loop_iterations: Dict[str, int]
-    reduction_vars: List
+    reduction_vars: List[str]
+    loop_data: Dict[str, int]
+    main_node: Vertex
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
         self.do_all_threshold = 0.9
         self.loop_iterations = {}
+        for node in pet_graph.graph.vertices():
+            if pet_graph.graph.vp.name[node] == 'main':
+                self.main_node = node
+                break
+
+        # parse loop iterations
+        self.loop_data = {}
+        with open('./data/loop_counter_output.txt') as f:
+            content = f.readlines()
+        for line in content:
+            s = line.split(' ')
+            # line = FileId + LineNr
+            self.loop_data[s[0] + ':' + s[1]] = int(s[2])
 
         # parse reduction variables
         with open('./data/reduction.txt') as f:
@@ -404,6 +420,7 @@ class PatternDetector(object):
             val = self.__detect_geometric_decomposition(node)
             if val:
                 self.pet.graph.vp.geomDecomp[node] = val
+                id = self.pet.graph.vp.id[node]
                 if self.__test_chunk_limit(node):
                     print('Geometric decomposition at ', self.pet.graph.vp.id[node])
 
@@ -416,7 +433,15 @@ class PatternDetector(object):
         min_iterations_count = 9999999999999
         inner_loop_iter = {}
 
-        for child in self.get_subtree_of_type(node, '2'):
+        children = [e.target() for e in node.out_edges() if self.pet.graph.ep.type[e] == 'child'
+                    and self.pet.graph.vp.type[e.target()] == '2']
+        for func_child in [e.target() for e in node.out_edges() if self.pet.graph.ep.type[e] == 'child'
+                                                                   and self.pet.graph.vp.type[e.target()] == '1']:
+            children.extend([e.target() for e in func_child.out_edges() if self.pet.graph.ep.type[e] == 'child'
+                    and self.pet.graph.vp.type[e.target()] == '2'])
+
+        for child in children:
+            id = self.pet.graph.vp.id[child]
             inner_loop_iter[self.pet.graph.vp.startsAtLine[child]] = self.__iterations_count(child)
 
         for k, v in inner_loop_iter.items():
@@ -430,11 +455,45 @@ class PatternDetector(object):
         :param node: the loop node
         :return: number of iterations
         """
+        id = self.pet.graph.vp.id[node]
         if not (node in self.loop_iterations):
-            # TODO count iterations
-            return 0
+            loop_iter = self.__get_loop_iterations(self.pet.graph.vp.startsAtLine[node])
+            parent_iter = self.__get_parent_iterations(node)
+
+            if loop_iter < parent_iter:
+                self.loop_iterations[node] = loop_iter
+            elif loop_iter == 0 or parent_iter == 0:
+                self.loop_iterations[node] = 0
+            else:
+                self.loop_iterations[node] = loop_iter // parent_iter
 
         return self.loop_iterations[node]
+
+    def __get_loop_iterations(self, line: str) -> int:
+        """
+        Calculates the number of iterations in specified loop
+        :param line: start line of the loop
+        :return: number of iterations
+        """
+        return self.loop_data.get(line, 0)
+
+    def __get_parent_iterations(self, node: Vertex) -> int:
+        """
+         Calculates the number of iterations in parent of loop
+        :param node:
+        :return:
+        """
+        parent = [e.source() for e in node.in_edges() if self.pet.graph.ep.type[e] == 'child']
+
+        max_iter = 1
+        while parent:
+            node = parent[0]
+            if self.pet.graph.vp.type[node] == '2':
+                max_iter = max(1, self.__get_loop_iterations(self.pet.graph.vp.startsAtLine[node]))
+                break
+            parent = [e.source() for e in node.in_edges() if self.pet.graph.ep.type[e] == 'child']
+
+        return max_iter
 
     def __detect_geometric_decomposition(self, root: Vertex) -> bool:
         """

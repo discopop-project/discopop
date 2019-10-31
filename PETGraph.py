@@ -37,6 +37,7 @@ node_props = [
     ('type', 'string', 'node.get("type")'),
     ('startsAtLine', 'string', 'node.get("startsAtLine")'),
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
+    ('name', 'string', 'node.get("name")'),
     ('pipeline', 'float', '0'),
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
