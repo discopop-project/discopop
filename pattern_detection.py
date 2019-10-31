@@ -63,6 +63,8 @@ class PatternDetector(object):
             print(self.pet.graph.vp.id[v])
 
     def depends(self, source, target):
+        if source == target:
+            return False
         target_nodes = self.get_subtree_of_type(target, '*')
 
         for node in self.get_subtree_of_type(source, '*'):
@@ -266,18 +268,19 @@ class PatternDetector(object):
                 self.pet.graph.vp.mwType[node] = 'ROOT'
 
         for node in self.pet.graph.vertices():
-            if self.pet.graph.vp.type[node] != '3':
-                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
+            #if self.pet.graph.vp.type[node] != '3':
+            print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
 
     def detect_task_parallelism(self, main_node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it
         use Breadth First Search (BFS) to detect all barriers and workers.
         1.) all child nodes become first worker if they are not marked as worker before
         2.) if a child has dependence to more than one parent node, it will be marked as barrier
-        Returns list of BARRIER_WORKER pairs
+        Returns list of BARRIER_WORKER pairs 2
         """
 
         id = self.pet.graph.vp.id[main_node]
+        # print("working:", id)
         # first insert all the direct children of mainnode in a queue to use it for the BFS
         for node in find_subnodes(self.pet.graph, main_node, 'child'):
             # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
@@ -299,11 +302,11 @@ class PatternDetector(object):
 
             for other_node in other_nodes:
                 if self.depends(other_node, node):
+                    # print("\t" + self.pet.graph.vp.id[node] + "<--" + self.pet.graph.vp.id[other_node])
                     if self.pet.graph.vp.mwType[other_node] == 'WORKER':
                         self.pet.graph.vp.mwType[other_node] = 'BARRIER'
                     else:
                         self.pet.graph.vp.mwType[other_node] = 'WORKER'
-                    break
 
         pairs = []
         # check for Barrier Worker pairs
