@@ -31,11 +31,9 @@ class PatternDetector(object):
         self.reduction_vars = []
         for line in content:
             s = line.split(' ')
-            var = {'loop_line': s[8], 'name': s[17]}
+            var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
             self.reduction_vars.append(var)
 
-
-        # TODO get vars
 
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
@@ -364,7 +362,7 @@ class PatternDetector(object):
         """
         if self.pet.graph.vp.type[root] != '2':
             return False
-
+        id = self.pet.graph.vp.id[root]
         vars = set()
         for node in self.get_subtree_of_type(root, '0'):
             for v in self.pet.graph.vp.localVars[node]:
@@ -372,8 +370,8 @@ class PatternDetector(object):
             for v in self.pet.graph.vp.globalVars[node]:
                 vars.add(v)
 
-        reduction_vars =  [v for v in vars if self.__is_reduction_var(self.pet.graph.vp.startsAtLine[root], v)]
-        return not reduction_vars
+        reduction_vars = [v for v in vars if self.__is_reduction_var(self.pet.graph.vp.startsAtLine[root], v)]
+        return reduction_vars
 
     def detect_patterns(self):
         self.__merge(False, True)
