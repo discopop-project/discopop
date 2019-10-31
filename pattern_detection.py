@@ -63,6 +63,12 @@ class PatternDetector(object):
             print(self.pet.graph.vp.id[v])
 
     def depends(self, source, target):
+        target_nodes = self.get_subtree_of_type(target, '*')
+
+        for node in self.get_subtree_of_type(source, '*'):
+            for dep in [e.target() for e in node.out_edges() if self.pet.graph.ep.dtype[e] == 'RAW']:
+                if dep in target_nodes:
+                    return True
         return False
 
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
@@ -250,6 +256,8 @@ class PatternDetector(object):
             Two barriers can run in parallel if there is not a directed path from one to the other
         """
         for node in self.pet.graph.vertices():
+            if self.pet.graph.vp.type[node] == '3':
+                continue
             if find_subnodes(self.pet.graph, node, 'child'):
                 #print(self.pet.graph.vp.id[node])
                 self.detect_task_parallelism(node)
@@ -258,8 +266,8 @@ class PatternDetector(object):
                 self.pet.graph.vp.mwType[node] = 'ROOT'
 
         for node in self.pet.graph.vertices():
-            if self.pet.graph.vp.type[node] != 'dummy':
-                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])
+            if self.pet.graph.vp.type[node] != '3':
+                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
 
     def detect_task_parallelism(self, main_node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it
@@ -289,24 +297,13 @@ class PatternDetector(object):
             other_nodes = find_subnodes(self.pet.graph, main_node, 'child')
             other_nodes.remove(node)
 
-            children = self.get_subtree_of_type(node, '*')
-
-            # All children are at least WORKER - if they have more then one parent then they are BARRIER
-            for e in node.in_edges():
-                # ignore dependencies pointing to the current node or one of its children
-                if self.pet.graph.ep.dtype[e] == 'RAW' and not (e.source() in children):
-                    # check if the dependency id is one of the subnodes of the directSubnodes
-                    for other_node in other_nodes:
-                        other_children = self.get_subtree_of_type(other_node, 'child')
-                        if e.source() in other_children or e.source == main_node:
-                            if self.pet.graph.vp.mwType[other_node] == 'WORKER':
-                                self.pet.graph.vp.mwType[other_node] = 'BARRIER'
-                            else:
-                                self.pet.graph.vp.mwType[other_node] = 'WORKER'
-                            # after setting just remove the childnode from the vector
-                            # to prevent duplicate pointing to children of the child by the same other node
-                            other_nodes.remove(other_node)
-                            break
+            for other_node in other_nodes:
+                if self.depends(other_node, node):
+                    if self.pet.graph.vp.mwType[other_node] == 'WORKER':
+                        self.pet.graph.vp.mwType[other_node] = 'BARRIER'
+                    else:
+                        self.pet.graph.vp.mwType[other_node] = 'WORKER'
+                    break
 
         pairs = []
         # check for Barrier Worker pairs
