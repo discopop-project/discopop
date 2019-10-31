@@ -152,9 +152,9 @@ class PatternDetector(object):
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             self.pet.graph.vp.pipeline[node] = self.__detect_pipeline(node)
             if self.pet.graph.vp.pipeline[node] > 0:
-                print('Pipeline at ', self.pet.graph.vp.id[node])
-                print('start: ', self.pet.graph.vp.startsAtLine[node])
-                print('end: ', self.pet.graph.vp.endsAtLine[node])
+                print('Pipeline at', self.pet.graph.vp.id[node])
+                print('start:', self.pet.graph.vp.startsAtLine[node])
+                print('end:', self.pet.graph.vp.endsAtLine[node])
 
     def __detect_pipeline(self, root: Vertex) -> float:
         """Calculate pipeline value for node. Returns pipeline scalar value
@@ -206,8 +206,8 @@ class PatternDetector(object):
             if val > self.do_all_threshold:
                 self.pet.graph.vp.doAll[node] = val
                 if not self.pet.graph.vp.reduction[node]:
-                    print('Do All at ', self.pet.graph.vp.id[node])
-                    print('Coefficient ', val)
+                    print('Do All at', self.pet.graph.vp.id[node])
+                    print('Coefficient', val)
 
     def __detect_do_all(self, root: Vertex):
         """Calculate do-all value for node. Returns dü-all scalar value
@@ -390,7 +390,7 @@ class PatternDetector(object):
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             if self.__detect_reduction(node):
                 self.pet.graph.vp.reduction[node] = True
-                print('Reduction at ', self.pet.graph.vp.id[node])
+                print('Reduction at', self.pet.graph.vp.id[node])
 
     def __detect_reduction(self, root: Vertex) -> bool:
         """
@@ -417,12 +417,13 @@ class PatternDetector(object):
         :return:
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '1'):
+            id = self.pet.graph.vp.id[node]
             val = self.__detect_geometric_decomposition(node)
             if val:
                 self.pet.graph.vp.geomDecomp[node] = val
                 id = self.pet.graph.vp.id[node]
                 if self.__test_chunk_limit(node):
-                    print('Geometric decomposition at ', self.pet.graph.vp.id[node])
+                    print('Geometric decomposition at', self.pet.graph.vp.id[node])
 
     def __test_chunk_limit(self, node: Vertex) -> bool:
         """
@@ -501,14 +502,14 @@ class PatternDetector(object):
         :param root: root node
         :return: true if GD pattern was discovered
         """
-        for child in find_subnodes(self.pet.graph, root, '2'):
-            if (self.pet.graph.vp.doAll[child] < self.doAllThreshold
+        for child in self.get_subtree_of_type(root, '2'):
+            if (self.pet.graph.vp.doAll[child] < self.do_all_threshold
                     and not self.pet.graph.vp.reduction[child]):
                 return False
 
         for child in find_subnodes(self.pet.graph, root, '1'):
             for child2 in find_subnodes(self.pet.graph, child, '2'):
-                if (self.pet.graph.vp.doAll[child2] < self.doAllThreshold
+                if (self.pet.graph.vp.doAll[child2] < self.do_all_threshold
                         and not self.pet.graph.vp.reduction[child2]):
                     return False
 
