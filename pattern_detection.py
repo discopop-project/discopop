@@ -26,6 +26,16 @@ class PatternDetector(object):
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
+        with open('./data/reduction.txt') as f:
+            content = f.readlines()
+        self.reduction_vars = []
+        for line in content:
+            s = line.split(' ')
+            var = {'loop_line': s[8], 'name': s[17]}
+            self.reduction_vars.append(var)
+
+
+        # TODO get vars
 
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
@@ -338,36 +348,38 @@ class PatternDetector(object):
             # TODO copy all dependency edges to the root node
             pass
 
+    def __is_reduction_var(self, line, name):
+        return any(r for r in self.reduction_vars if r['loop_line'] == line and r['name'] == name)
+
+    def __detect_reduction_loop(self):
+        """Search for reduction pattern
+        """
+        for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
+            if self.__detect_reduction(node):
+                self.pet.graph.vp.reduction[node] = True
+                print('Reduction at ', self.pet.graph.vp.id[node])
+
+    def __detect_reduction(self, root: Vertex):
+        """Calculate do-all value for node. Returns do-all scalar value
+        """
+        if self.pet.graph.vp.type[root] != '2':
+            return False
+
+        vars = set()
+        for node in self.get_subtree_of_type(root, '0'):
+            for v in self.pet.graph.vp.localVars[node]:
+                vars.add(v)
+            for v in self.pet.graph.vp.globalVars[node]:
+                vars.add(v)
+
+        reduction_vars =  [v for v in vars if self.__is_reduction_var(self.pet.graph.vp.startsAtLine[root], v)]
+        return not reduction_vars
+
     def detect_patterns(self):
         self.__merge(False, True)
 
-
         self.__detect_pipeline_loop()
         self.__detect_do_all_loop()
+        self.__detect_reduction_loop()
         self.__detect_task_parallelism_loop()
 
-
-        '''
-void PatternDetector::detectPatterns(string filename) {
-  merge(false, true);
-  
-  for (auto& node : nodeMapComputed) {
-    // skip dummies
-    if (node.second.type == dummy) continue;
-
-    // adjust the dependencies of the children of this node
-    filterDeps(node.second);
-
-    detectDoAll(node.second);
-    detectReduction(node.second);
-  }
-  for (auto& node : nodeMapComputed) {
-    // skip dummies
-    if (node.second.type == dummy) continue;
-
-    detectGeometricDecomposition(node.second);
-    detectDoMW(node.second);
-    detectPipeline(node.second);
-  }
-}
-'''

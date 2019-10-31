@@ -42,6 +42,8 @@ node_props = [
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
     ('mwType', 'string', 'node.get("mwType")'),
+    ('localVars', 'object', '[]'),
+    ('globalVars', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -82,6 +84,13 @@ class PETGraph(object):
 
             for prop in node_props:
                 self.graph.vp[prop[0]][v] = eval(prop[2])
+
+            if node.get("type") == '0':
+                if hasattr(node.localVariables, 'local'):
+                    self.graph.vp.localVars[v] = [v.text for v in node.localVariables.local]
+
+                if hasattr(node.globalVariables, 'global'):
+                    self.graph.vp.globalVars[v] = [v.text for v in getattr(node.globalVariables, 'global')]
 
         # Adding edges (successors and children) to the graph
         for node_id, node in cu_dict.items():
