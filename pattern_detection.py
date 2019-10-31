@@ -3,12 +3,13 @@ from queue import Queue
 import numpy as np
 from graph_tool.util import find_vertex
 from graph_tool.all import Vertex, Graph, Edge
-from typing import List, Dict
+from typing import List, Dict, Set
 from PETGraph import PETGraph
 
-do_all_threshold = 0.9
 
-def find_subNodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
+
+
+def find_subnodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
     """ returns direct children of a given node
     """
     return [e.target() for e in node.out_edges() if graph.ep.type[e] == criteria]
@@ -23,11 +24,12 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
 
 class PatternDetector(object):
     pet: PETGraph
-    loop_iterations: Dict
+    loop_iterations: Dict[str, int]
     reduction_vars: List
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
+        self.do_all_threshold = 0.9
         self.loop_iterations = {}
 
         # parse reduction variables
@@ -88,7 +90,7 @@ class PatternDetector(object):
                         return False
         return True
 
-    def get_all_dependencies(self, node: Vertex, root_loop: Vertex) -> List[Vertex]:
+    def get_all_dependencies(self, node: Vertex, root_loop: Vertex) -> Set[Vertex]:
         """Returns all data dependencies of the node and it's children
         """
         dep_set = set()
@@ -144,10 +146,10 @@ class PatternDetector(object):
 
         # TODO how deep
         children_start_lines = [self.pet.graph.vp.startsAtLine[v]
-                                for v in find_subNodes(self.pet.graph, root, 'child')
+                                for v in find_subnodes(self.pet.graph, root, 'child')
                                 if self.pet.graph.vp.type[v] == '2']
 
-        loop_subnodes = [v for v in find_subNodes(self.pet.graph, root, 'child')
+        loop_subnodes = [v for v in find_subnodes(self.pet.graph, root, 'child')
                          if self.is_pipeline_subnode(root, v, children_start_lines)]
 
         # No chain of stages found
@@ -185,7 +187,7 @@ class PatternDetector(object):
         """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '2'):
             val = self.__detect_do_all(node)
-            if val > do_all_threshold:
+            if val > self.do_all_threshold:
                 self.pet.graph.vp.doAll[node] = val
                 if not self.pet.graph.vp.reduction[node]:
                     print('Do All at ', self.pet.graph.vp.id[node])
@@ -196,7 +198,7 @@ class PatternDetector(object):
         """
         graph_vector = []
 
-        subnodes = find_subNodes(self.pet.graph, root, 'child')
+        subnodes = find_subnodes(self.pet.graph, root, 'child')
 
         for i in range(0, len(subnodes)):
             for j in range(i, len(subnodes)):
@@ -244,7 +246,7 @@ class PatternDetector(object):
         """
         # first insert all the direct children of mainnode in a queue to use it for the BFS
         queue = Queue()
-        for n in find_subNodes(self.pet.graph, node, 'child'):
+        for n in find_subnodes(self.pet.graph, node, 'child'):
             queue.put(n)
 
         while not queue.empty():
@@ -263,7 +265,7 @@ class PatternDetector(object):
             # the other node
 
             # create the copy vector so that it only contains the other nodes
-            other_nodes = find_subNodes(self.pet.graph, current, 'child')
+            other_nodes = find_subnodes(self.pet.graph, current, 'child')
             children = self.get_subtree_of_type(current, 'child')
 
             # All children are at least WORKER - if they have more then one parent then they are BARRIER
@@ -287,7 +289,7 @@ class PatternDetector(object):
         # check for Barrier Worker pairs
         # if two barriers don't have any dependency to each other then they create a barrierWorker pair
         # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-        direct_subnodes = find_subNodes(self.pet.graph, node, 'child')
+        direct_subnodes = find_subnodes(self.pet.graph, node, 'child')
         for n1 in direct_subnodes:
             if self.pet.graph.vp.mwType[n1] == 'BARRIER':
                 for n2 in direct_subnodes:
@@ -330,6 +332,7 @@ class PatternDetector(object):
     Level are removed
     * 2.) do Step I for all nodes in nodeMap
     '''
+
     def __merge(self, loop_type: bool, remove_dummies: bool):
         """
         Removes dummy nodes
@@ -428,7 +431,7 @@ class PatternDetector(object):
         :return: number of iterations
         """
         if not (node in self.loop_iterations):
-            #TODO count iterations
+            # TODO count iterations
             return 0
 
         return self.loop_iterations[node]
@@ -439,13 +442,13 @@ class PatternDetector(object):
         :param root: root node
         :return: true if GD pattern was discovered
         """
-        for child in find_subNodes(self.pet.graph, root, '2'):
+        for child in find_subnodes(self.pet.graph, root, '2'):
             if (self.pet.graph.vp.doAll[child] < self.doAllThreshold
                     and not self.pet.graph.vp.reduction[child]):
                 return False
 
-        for child in find_subNodes(self.pet.graph, root, '1'):
-            for child2 in find_subNodes(self.pet.graph, child, '2'):
+        for child in find_subnodes(self.pet.graph, root, '1'):
+            for child2 in find_subnodes(self.pet.graph, child, '2'):
                 if (self.pet.graph.vp.doAll[child2] < self.doAllThreshold
                         and not self.pet.graph.vp.reduction[child2]):
                     return False
