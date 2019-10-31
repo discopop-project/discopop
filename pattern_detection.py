@@ -3,7 +3,7 @@ from queue import Queue
 import numpy as np
 from graph_tool.util import find_vertex
 from graph_tool.all import Vertex, Graph, Edge
-from typing import List
+from typing import List, Dict
 from PETGraph import PETGraph
 
 do_all_threshold = 0.9
@@ -23,18 +23,22 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
 
 class PatternDetector(object):
     pet: PETGraph
+    loop_iterations: Dict
+    reduction_vars: List
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
-        self.loop_iterations = dict
+        self.loop_iterations = {}
+
+        # parse reduction variables
         with open('./data/reduction.txt') as f:
             content = f.readlines()
         self.reduction_vars = []
         for line in content:
             s = line.split(' ')
+            # line = FileId + LineNr
             var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
             self.reduction_vars.append(var)
-
 
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
@@ -183,8 +187,9 @@ class PatternDetector(object):
             val = self.__detect_do_all(node)
             if val > do_all_threshold:
                 self.pet.graph.vp.doAll[node] = val
-                #print('Do All at ', self.pet.graph.vp.id[node])
-                #print('Coefficient ', val)
+                if not self.pet.graph.vp.reduction[node]:
+                    print('Do All at ', self.pet.graph.vp.id[node])
+                    print('Coefficient ', val)
 
     def __detect_do_all(self, root: Vertex):
         """Calculate do-all value for node. Returns dü-all scalar value
@@ -325,30 +330,40 @@ class PatternDetector(object):
     Level are removed
     * 2.) do Step I for all nodes in nodeMap
     '''
-
-    def __merge(self, loopType, removeDummies):
+    def __merge(self, loop_type: bool, remove_dummies: bool):
+        """
+        Removes dummy nodes
+        :param loop_type: loops only
+        :param remove_dummies: remove dummy nodes
+        :return:
+        """
         # iterate through all entries of the map -> Nodes
         # set the ids of all children
         for node in self.pet.graph.vertices():
-            if not loopType or self.pet.graph.vp.type[node] == '2':
+            if not loop_type or self.pet.graph.vp.type[node] == '2':
                 # if the main node is dummy and we should remove dummies, then do not
                 # insert it in nodeMapComputed
-                if removeDummies and self.pet.graph.vp.type[node] == '3':
+                if remove_dummies and self.pet.graph.vp.type[node] == '3':
                     continue
 
                 sub_nodes = []
                 for e in node.out_edges():
                     if self.pet.graph.ep.type[e] == 'child':
-                        if removeDummies and self.pet.graph.vp.type[e.target()] == '3':
+                        if remove_dummies and self.pet.graph.vp.type[e.target()] == '3':
                             self.pet.graph.remove_edge(e)
                         else:
                             sub_nodes.append(e.target())
 
-            # TODO copy all dependency edges to the root node
-            pass
+            # TODO optimization opportunity: copy all dependency edges to the root node
 
-    def __is_reduction_var(self, line, name):
-        return any(r for r in self.reduction_vars if r['loop_line'] == line and r['name'] == name)
+    def __is_reduction_var(self, line: str, name: str) -> bool:
+        """
+        determines, whether or not the given variable is reduction variable
+        :param line: loop line number
+        :param name: variable name
+        :return: true if is reduction variable
+        """
+        return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
     def __detect_reduction_loop(self):
         """Search for reduction pattern
@@ -358,12 +373,15 @@ class PatternDetector(object):
                 self.pet.graph.vp.reduction[node] = True
                 print('Reduction at ', self.pet.graph.vp.id[node])
 
-    def __detect_reduction(self, root: Vertex):
-        """Calculate do-all value for node. Returns do-all scalar value
+    def __detect_reduction(self, root: Vertex) -> bool:
+        """
+        Detects reduction pattern in loop
+        :param root: the loop node
+        :return: true if is reduction loop
         """
         if self.pet.graph.vp.type[root] != '2':
             return False
-        id = self.pet.graph.vp.id[root]
+
         vars = set()
         for node in self.get_subtree_of_type(root, '0'):
             for v in self.pet.graph.vp.localVars[node]:
@@ -372,9 +390,13 @@ class PatternDetector(object):
                 vars.add(v)
 
         reduction_vars = [v for v in vars if self.__is_reduction_var(self.pet.graph.vp.startsAtLine[root], v)]
-        return reduction_vars
+        return bool(reduction_vars)
 
     def __detect_geometric_decomposition_loop(self):
+        """
+        Detects geometric decomposition
+        :return:
+        """
         for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '1'):
             val = self.__detect_geometric_decomposition(node)
             if val:
@@ -382,10 +404,14 @@ class PatternDetector(object):
                 if self.__test_chunk_limit(node):
                     print('Geometric decomposition at ', self.pet.graph.vp.id[node])
 
-    def __test_chunk_limit(self, node):
+    def __test_chunk_limit(self, node: Vertex) -> bool:
+        """
+        Tests, whether or not the node satisfies chunk limit
+        :param node: the node
+        :return:
+        """
         min_iterations_count = 9999999999999
-
-        inner_loop_iter = dict
+        inner_loop_iter = {}
 
         for child in self.get_subtree_of_type(node, '2'):
             inner_loop_iter[self.pet.graph.vp.startsAtLine[child]] = self.__iterations_count(child)
@@ -395,14 +421,24 @@ class PatternDetector(object):
 
         return inner_loop_iter and min_iterations_count > 0
 
-    def __iterations_count(self, node):
-        if node not in self.loop_iterations:
+    def __iterations_count(self, node: Vertex) -> int:
+        """
+        Counts the iterations in the specified node
+        :param node: the loop node
+        :return: number of iterations
+        """
+        if not (node in self.loop_iterations):
             #TODO count iterations
             return 0
 
         return self.loop_iterations[node]
 
     def __detect_geometric_decomposition(self, root: Vertex) -> bool:
+        """
+        Detects geometric decomposition pattern
+        :param root: root node
+        :return: true if GD pattern was discovered
+        """
         for child in find_subNodes(self.pet.graph, root, '2'):
             if (self.pet.graph.vp.doAll[child] < self.doAllThreshold
                     and not self.pet.graph.vp.reduction[child]):
@@ -417,15 +453,17 @@ class PatternDetector(object):
         return True
 
     def detect_patterns(self):
+        """
+        Runs pattern discovery on the CU graph
+        :return:
+        """
         self.__merge(False, True)
 
         self.__detect_pipeline_loop()
-        self.__detect_do_all_loop()
+
+        # reduction before doall!
         self.__detect_reduction_loop()
+        self.__detect_do_all_loop()
+
         self.__detect_task_parallelism_loop()
         self.__detect_geometric_decomposition_loop()
-
-        for node in self.pet.graph.vertices():
-            if self.pet.graph.vp.doAll[node] > do_all_threshold and not self.pet.graph.vp.reduction[node]:
-                print('Do All at ', self.pet.graph.vp.id[node])
-
