@@ -182,8 +182,8 @@ class PatternDetector(object):
             val = self.__detect_do_all(node)
             if val > do_all_threshold:
                 self.pet.graph.vp.doAll[node] = val
-                print('Do All at ', self.pet.graph.vp.id[node])
-                print('Coefficient ', val)
+                #print('Do All at ', self.pet.graph.vp.id[node])
+                #print('Coefficient ', val)
 
     def __detect_do_all(self, root: Vertex):
         """Calculate do-all value for node. Returns dü-all scalar value
@@ -373,6 +373,27 @@ class PatternDetector(object):
         reduction_vars = [v for v in vars if self.__is_reduction_var(self.pet.graph.vp.startsAtLine[root], v)]
         return reduction_vars
 
+    def __detect_geometric_decomposition_loop(self):
+        for node in find_vertex(self.pet.graph, self.pet.graph.vp.type, '1'):
+            val = self.__detect_geometric_decomposition(node)
+            if val:
+                self.pet.graph.vp.geomDecomp[node] = val
+                print('Geometric decomposition at ', self.pet.graph.vp.id[node])
+
+    def __detect_geometric_decomposition(self, root: Vertex) -> bool:
+        for child in find_subNodes(self.pet.graph, root, '2'):
+            if (self.pet.graph.vp.doAll[child] < self.doAllThreshold
+                    and not self.pet.graph.vp.reduction[child]):
+                return False
+
+        for child in find_subNodes(self.pet.graph, root, '1'):
+            for child2 in find_subNodes(self.pet.graph, child, '2'):
+                if (self.pet.graph.vp.doAll[child2] < self.doAllThreshold
+                        and not self.pet.graph.vp.reduction[child2]):
+                    return False
+
+        return True
+
     def detect_patterns(self):
         self.__merge(False, True)
 
@@ -380,4 +401,9 @@ class PatternDetector(object):
         self.__detect_do_all_loop()
         self.__detect_reduction_loop()
         self.__detect_task_parallelism_loop()
+        self.__detect_geometric_decomposition_loop()
+
+        for node in self.pet.graph.vertices():
+            if self.pet.graph.vp.doAll[node] > do_all_threshold and not self.pet.graph.vp.reduction[node]:
+                print('Do All at ', self.pet.graph.vp.id[node])
 
