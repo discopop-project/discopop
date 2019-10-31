@@ -268,8 +268,8 @@ class PatternDetector(object):
                 self.pet.graph.vp.mwType[node] = 'ROOT'
 
         for node in self.pet.graph.vertices():
-            #if self.pet.graph.vp.type[node] != '3':
-            print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
+            if self.pet.graph.vp.type[node] != '3':
+                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
 
     def detect_task_parallelism(self, main_node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it

@@ -42,7 +42,7 @@ node_props = [
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
-    ('mwType', 'string', '\'NONE\''),
+    ('mwType', 'string', '\'FORK\''),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
 
