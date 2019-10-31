@@ -317,7 +317,7 @@ class PatternDetector(object):
             if self.pet.graph.vp.mwType[n1] == 'BARRIER':
                 for n2 in direct_subnodes:
                     # TODO n1 -> n2
-                    if self.pet.graph.vp.mwType[n1] == 'BARRIER' and n1 != n2:
+                    if self.pet.graph.vp.mwType[n2] == 'BARRIER' and n1 != n2:
                         if n2 in [e.target() for e in n1.out_edges()] or n2 in [e.source() for e in n1.in_edges()]:
                             break
                         # so these two nodes are BarrierWorker, because there is no dependency between them
