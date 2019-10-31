@@ -58,6 +58,13 @@ class PatternDetector(object):
             var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
             self.reduction_vars.append(var)
 
+    def __print(self, lst):
+        for v in lst:
+            print(self.pet.graph.vp.id[v])
+
+    def depends(self, source, target):
+        return False
+
     def is_depending(self, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
         """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
         """
@@ -127,7 +134,7 @@ class PatternDetector(object):
         """Returns all nodes of a given type from a subtree
         """
         res = []
-        if self.pet.graph.vp.type[root] == type:
+        if self.pet.graph.vp.type[root] == type or type == '*':
             res.append(root)
 
         for e in root.out_edges():
@@ -243,33 +250,31 @@ class PatternDetector(object):
             Two barriers can run in parallel if there is not a directed path from one to the other
         """
         for node in self.pet.graph.vertices():
-            if self.get_subtree_of_type(node, 'child'):
+            if find_subnodes(self.pet.graph, node, 'child'):
+                #print(self.pet.graph.vp.id[node])
                 self.detect_task_parallelism(node)
 
-            if self.pet.graph.vp.mwType[node] != 'NONE':
+            if self.pet.graph.vp.mwType[node] == 'NONE':
                 self.pet.graph.vp.mwType[node] = 'ROOT'
 
         for node in self.pet.graph.vertices():
-            if self.pet.graph.vp.mwType[node] == 'None':
+            if self.pet.graph.vp.type[node] != 'dummy':
                 print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])
 
-    def detect_task_parallelism(self, node: Vertex):
+    def detect_task_parallelism(self, main_node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it
         use Breadth First Search (BFS) to detect all barriers and workers.
         1.) all child nodes become first worker if they are not marked as worker before
         2.) if a child has dependence to more than one parent node, it will be marked as barrier
         Returns list of BARRIER_WORKER pairs
         """
-        # first insert all the direct children of mainnode in a queue to use it for the BFS
-        queue = Queue()
-        for n in find_subnodes(self.pet.graph, node, 'child'):
-            queue.put(n)
 
-        while not queue.empty():
-            current = queue.get()
+        id = self.pet.graph.vp.id[main_node]
+        # first insert all the direct children of mainnode in a queue to use it for the BFS
+        for node in find_subnodes(self.pet.graph, main_node, 'child'):
             # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
-            if self.pet.graph.vp.mwType[current] == 'NONE' or self.pet.graph.vp.mwType[current] == 'ROOT':
-                self.pet.graph.vp.mwType[current] = 'FORK'
+            if self.pet.graph.vp.mwType[node] == 'NONE' or self.pet.graph.vp.mwType[node] == 'ROOT':
+                self.pet.graph.vp.mwType[node] = 'FORK'
 
             # while using the node as the base child, we copy all the other children in a copy vector.
             # we do that because it could be possible that two children of the current node (two dependency)
@@ -281,8 +286,10 @@ class PatternDetector(object):
             # the other node
 
             # create the copy vector so that it only contains the other nodes
-            other_nodes = find_subnodes(self.pet.graph, current, 'child')
-            children = self.get_subtree_of_type(current, 'child')
+            other_nodes = find_subnodes(self.pet.graph, main_node, 'child')
+            other_nodes.remove(node)
+
+            children = self.get_subtree_of_type(node, '*')
 
             # All children are at least WORKER - if they have more then one parent then they are BARRIER
             for e in node.in_edges():
@@ -291,7 +298,7 @@ class PatternDetector(object):
                     # check if the dependency id is one of the subnodes of the directSubnodes
                     for other_node in other_nodes:
                         other_children = self.get_subtree_of_type(other_node, 'child')
-                        if e.source() in other_children or e.source == node:
+                        if e.source() in other_children or e.source == main_node:
                             if self.pet.graph.vp.mwType[other_node] == 'WORKER':
                                 self.pet.graph.vp.mwType[other_node] = 'BARRIER'
                             else:
@@ -305,7 +312,7 @@ class PatternDetector(object):
         # check for Barrier Worker pairs
         # if two barriers don't have any dependency to each other then they create a barrierWorker pair
         # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-        direct_subnodes = find_subnodes(self.pet.graph, node, 'child')
+        direct_subnodes = find_subnodes(self.pet.graph, main_node, 'child')
         for n1 in direct_subnodes:
             if self.pet.graph.vp.mwType[n1] == 'BARRIER':
                 for n2 in direct_subnodes:
