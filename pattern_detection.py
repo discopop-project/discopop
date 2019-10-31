@@ -26,6 +26,7 @@ class PatternDetector(object):
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
+        self.loop_iterations = dict
         with open('./data/reduction.txt') as f:
             content = f.readlines()
         self.reduction_vars = []
@@ -378,7 +379,28 @@ class PatternDetector(object):
             val = self.__detect_geometric_decomposition(node)
             if val:
                 self.pet.graph.vp.geomDecomp[node] = val
-                print('Geometric decomposition at ', self.pet.graph.vp.id[node])
+                if self.__test_chunk_limit(node):
+                    print('Geometric decomposition at ', self.pet.graph.vp.id[node])
+
+    def __test_chunk_limit(self, node):
+        min_iterations_count = 9999999999999
+
+        inner_loop_iter = dict
+
+        for child in self.get_subtree_of_type(node, '2'):
+            inner_loop_iter[self.pet.graph.vp.startsAtLine[child]] = self.__iterations_count(child)
+
+        for k, v in inner_loop_iter.items():
+            min_iterations_count = min(min_iterations_count, v)
+
+        return inner_loop_iter and min_iterations_count > 0
+
+    def __iterations_count(self, node):
+        if node not in self.loop_iterations:
+            #TODO count iterations
+            return 0
+
+        return self.loop_iterations[node]
 
     def __detect_geometric_decomposition(self, root: Vertex) -> bool:
         for child in find_subNodes(self.pet.graph, root, '2'):
