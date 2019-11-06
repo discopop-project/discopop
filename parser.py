@@ -1,9 +1,10 @@
-from lxml import objectify
 from collections import defaultdict
 
-readlineToCUIdMap = defaultdict(set) #Map to record which line belongs to read set of nodes. LID -> NodeIds
-writelineToCUIdMap = defaultdict(set) #Map to record which line belongs to write set of nodes. LID -> NodeIds
-lineToCUIdMap = defaultdict(set) #Map to record which line belongs to set of nodes. LID -> NodeIds
+from lxml import objectify
+
+readlineToCUIdMap = defaultdict(set)  # Map to record which line belongs to read set of nodes. LID -> NodeIds
+writelineToCUIdMap = defaultdict(set)  # Map to record which line belongs to write set of nodes. LID -> NodeIds
+lineToCUIdMap = defaultdict(set)  # Map to record which line belongs to set of nodes. LID -> NodeIds
 
 
 class DependenceItem(object):
@@ -38,26 +39,27 @@ def __parse_xml_input(xml_fd):
 
     return cu_dict
 
+
 def __map_dummy_nodes(cu_dict):
-    dummyNodeArgsToIdMap = defaultdict(list)
-    funcNodeArgsToIdMap = dict()
-    dummyToFuncIdsMap = dict()
+    dummy_node_args_to_id_map = defaultdict(list)
+    func_node_args_to_id_map = dict()
+    dummy_to_func_ids_map = dict()
     for node_id, node in cu_dict.items():
         if node.get('type') == '3' or node.get('type') == '1':
             key = node.get('name')
             if 'arg' in dir(node.funcArguments):
                 for i in node.funcArguments.arg:
-                    key = key+i.get('type')
+                    key = key + i.get('type')
                 if node.get('type') == '3':
-                    dummyNodeArgsToIdMap[key].append(node_id)
+                    dummy_node_args_to_id_map[key].append(node_id)
                 else:
-                    funcNodeArgsToIdMap[key] = node_id
+                    func_node_args_to_id_map[key] = node_id
 
     # iterate over all real functions
-    for func in funcNodeArgsToIdMap:
-        if func in dummyNodeArgsToIdMap:
-            for dummyID in dummyNodeArgsToIdMap[func]:
-                dummyToFuncIdsMap[dummyID] = funcNodeArgsToIdMap[func]
+    for func in func_node_args_to_id_map:
+        if func in dummy_node_args_to_id_map:
+            for dummyID in dummy_node_args_to_id_map[func]:
+                dummy_to_func_ids_map[dummyID] = func_node_args_to_id_map[func]
                 cu_dict.pop(dummyID)
 
     # now go through all the nodes and update the mapped dummys to real funcs
@@ -65,14 +67,14 @@ def __map_dummy_nodes(cu_dict):
         # check dummy in all the children nodes
         if 'childrenNodes' in dir(node):
             for child_idx, child in enumerate(node.childrenNodes):
-                if child in dummyToFuncIdsMap:
-                    cu_dict[node_id].childrenNodes[child_idx] = dummyToFuncIdsMap[child]
+                if child in dummy_to_func_ids_map:
+                    cu_dict[node_id].childrenNodes[child_idx] = dummy_to_func_ids_map[child]
 
             # Also do the same in callLineToFunctionMap
             if 'callsNode' in dir(node):
                 for idx, i in enumerate(node.callsNode.nodeCalled):
-                    if i in dummyToFuncIdsMap:
-                        cu_dict[node_id].callsNode.nodeCalled[idx] = dummyToFuncIdsMap[i]
+                    if i in dummy_to_func_ids_map:
+                        cu_dict[node_id].callsNode.nodeCalled[idx] = dummy_to_func_ids_map[i]
     return cu_dict
 
 

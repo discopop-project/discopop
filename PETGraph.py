@@ -1,11 +1,7 @@
-import numpy as np
-from graph_tool import Graph, GraphView
 from graph_tool.all import Graph
-from graph_tool.all import graph_draw, minimize_nested_blockmodel_dl, draw_hierarchy, GraphView, graphviz_draw, \
-    interactive_window
-from graph_tool.search import bfs_iterator, dfs_iterator
-from graph_tool.draw import sfdp_layout, fruchterman_reingold_layout, arf_layout, planar_layout, random_layout, \
-    radial_tree_layout
+from graph_tool.all import graph_draw, GraphView, interactive_window
+from graph_tool.draw import arf_layout
+from graph_tool.search import bfs_iterator
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
 

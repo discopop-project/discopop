@@ -11,23 +11,21 @@ Options:
     --version               Show version.
 """
 
-import os
 import time
-from docopt import docopt
-from schema import Schema, Use, SchemaError
-from pluginbase import PluginBase
 
-from parser import parse_inputs
+from docopt import docopt
+from pluginbase import PluginBase
+from schema import Schema, Use, SchemaError
+
 from PETGraph import PETGraph
+from parser import parse_inputs
 from pattern_detection import PatternDetector
-from graph_tool.search import dfs_iterator
 
 docopt_schema = Schema({
     '--cu-xml': Use(open, error='XML should be readable'),
     '--dep-file': Use(open, error='Dependence file should be readable'),
     '--plugins': Use(str)
 })
-
 
 if __name__ == "__main__":
     arguments = docopt(__doc__, version='DiscoPoP analyzer 0.1')
