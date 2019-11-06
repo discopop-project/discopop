@@ -48,7 +48,7 @@
 #include <map>
 #include <cstdlib>
 
-#define DP_DEBUG true
+#define DP_DEBUG false
 
 using namespace llvm;
 using namespace std;
