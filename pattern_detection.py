@@ -8,8 +8,6 @@ from typing import List, Dict, Set
 from PETGraph import PETGraph
 
 
-
-
 def find_subnodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
     """ returns direct children of a given node
     """
@@ -29,10 +27,12 @@ class PatternDetector(object):
     reduction_vars: List[str]
     loop_data: Dict[str, int]
     main_node: Vertex
+    forks: Set[Vertex]
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
         self.do_all_threshold = 0.9
+        self.forks = set()
         self.loop_iterations = {}
         for node in pet_graph.graph.vertices():
             if pet_graph.graph.vp.name[node] == 'main':
@@ -261,15 +261,26 @@ class PatternDetector(object):
             if self.pet.graph.vp.type[node] == '3':
                 continue
             if find_subnodes(self.pet.graph, node, 'child'):
-                #print(self.pet.graph.vp.id[node])
+                # print(self.pet.graph.vp.id[node])
                 self.detect_task_parallelism(node)
 
             if self.pet.graph.vp.mwType[node] == 'NONE':
                 self.pet.graph.vp.mwType[node] = 'ROOT'
 
-        for node in self.pet.graph.vertices():
-            if self.pet.graph.vp.type[node] != '3':
-                print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])# + ' ' + self.pet.graph.vp.type[node])
+        self.create_task_tree(self.main_node)
+        #ct = [self.pet.graph.vp.id[v] for v in self.pet.graph.vp.childrenTasks[self.main_node]]
+        #ctt = [self.pet.graph.vp.id[v] for v in self.forks]
+
+        #for fork in self.forks:
+        #    self.merge_tasks(fork)
+        #    if fork.children_nodes:
+         #       print("Task Parallelism")
+        #        print("start line:", self.pet.graph.vp.startsAtLine[fork.children_nodes[0]], "end line:",
+         #             self.pet.graph.vp.endsAtLine[fork.children_nodes[-1]])
+
+        # for node in self.pet.graph.vertices():
+        # if self.pet.graph.vp.type[node] != '3':
+        # print(self.pet.graph.vp.id[node] + ' ' + self.pet.graph.vp.mwType[node])
 
     def detect_task_parallelism(self, main_node: Vertex):
         """The mainNode we want to compute the Task Parallelism Pattern for it
@@ -281,7 +292,7 @@ class PatternDetector(object):
 
         id = self.pet.graph.vp.id[main_node]
         # print("working:", id)
-        # first insert all the direct children of mainnode in a queue to use it for the BFS
+        # first insert all the direct children of main node in a queue to use it for the BFS
         for node in find_subnodes(self.pet.graph, main_node, 'child'):
             # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
             if self.pet.graph.vp.mwType[node] == 'NONE' or self.pet.graph.vp.mwType[node] == 'ROOT':
@@ -316,7 +327,6 @@ class PatternDetector(object):
         for n1 in direct_subnodes:
             if self.pet.graph.vp.mwType[n1] == 'BARRIER':
                 for n2 in direct_subnodes:
-                    # TODO n1 -> n2
                     if self.pet.graph.vp.mwType[n2] == 'BARRIER' and n1 != n2:
                         if n2 in [e.target() for e in n1.out_edges()] or n2 in [e.source() for e in n1.in_edges()]:
                             break
@@ -446,7 +456,7 @@ class PatternDetector(object):
         for func_child in [e.target() for e in node.out_edges() if self.pet.graph.ep.type[e] == 'child'
                                                                    and self.pet.graph.vp.type[e.target()] == '1']:
             children.extend([e.target() for e in func_child.out_edges() if self.pet.graph.ep.type[e] == 'child'
-                    and self.pet.graph.vp.type[e.target()] == '2'])
+                             and self.pet.graph.vp.type[e.target()] == '2'])
 
         for child in children:
             id = self.pet.graph.vp.id[child]
@@ -537,3 +547,31 @@ class PatternDetector(object):
 
         self.__detect_task_parallelism_loop()
         self.__detect_geometric_decomposition_loop()
+
+    def create_task_tree(self, root: Vertex):
+        self.forks.add(root)
+        # TODO create task and save
+        self.create_task_tree_helper(root, root, [])
+
+    def create_task_tree_helper(self, current, root, visited_func):
+        if self.pet.graph.vp.type[current] == '1':
+            if current in visited_func:
+                return
+            else:
+                visited_func.append(current)
+
+        for child in find_subnodes(self.pet.graph, root, 'child'):
+            if self.pet.graph.vp.type[child] == '3':
+                pass #continue
+            mw_type = self.pet.graph.vp.mwType[child]
+
+            if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER', 'FORK']:
+                # TODO create task and save
+                if mw_type == 'FORK' and not self.pet.graph.vp.startsAtLine[child].endswith('16383'):
+                    self.forks.add(child)
+                    #self.create_task_tree_helper(child, child, visited_func)
+                else:
+                    self.pet.graph.vp.childrenTasks[root].add(child)
+                self.create_task_tree_helper(child, child, visited_func)
+            else:
+                self.create_task_tree_helper(child, root, visited_func)

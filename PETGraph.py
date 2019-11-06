@@ -45,6 +45,7 @@ node_props = [
     ('mwType', 'string', '\'FORK\''),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
+    ('childrenTasks', 'object', 'set()'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
