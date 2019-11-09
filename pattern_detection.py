@@ -1,7 +1,3 @@
-from typing import List, Dict, Set
-
-from graph_tool.all import Vertex
-
 from PETGraph import PETGraph
 from pattern_detectors.do_all_detector import run_detection as detect_do_all
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
@@ -12,11 +8,6 @@ from pattern_detectors.task_parallelism_detector import run_detection as detect_
 
 class PatternDetector(object):
     pet: PETGraph
-    loop_iterations: Dict[str, int]
-    reduction_vars: List[str]
-    loop_data: Dict[str, int]
-    main_node: Vertex
-    forks: Set[Vertex]
 
     def __init__(self, pet_graph: PETGraph):
         self.pet = pet_graph
