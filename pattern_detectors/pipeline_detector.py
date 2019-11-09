@@ -3,7 +3,7 @@ from typing import List
 from graph_tool import Vertex, Graph
 from graph_tool.util import find_vertex
 
-from Utils import find_subnodes, is_depending, correlation_coefficient
+from utils import find_subnodes, is_depending, correlation_coefficient
 
 
 def is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:

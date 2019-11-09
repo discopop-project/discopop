@@ -1,7 +1,7 @@
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
-from Utils import find_subnodes, get_subtree_of_type
+from utils import find_subnodes, get_subtree_of_type
 from pattern_detectors.do_all_detector import do_all_threshold
 
 loop_iterations = {}

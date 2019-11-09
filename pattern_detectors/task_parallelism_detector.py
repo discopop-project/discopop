@@ -1,6 +1,6 @@
 from graph_tool import Vertex, Graph
 
-from Utils import find_subnodes, depends
+from utils import find_subnodes, depends
 
 forks = set()
 workloadThreshold = 10000

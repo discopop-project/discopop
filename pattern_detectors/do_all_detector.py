@@ -2,7 +2,7 @@ import numpy as np
 from graph_tool import Vertex, Graph
 from graph_tool.util import find_vertex
 
-from Utils import find_subnodes, is_depending, correlation_coefficient
+from utils import find_subnodes, is_depending, correlation_coefficient
 
 do_all_threshold = 0.9
 

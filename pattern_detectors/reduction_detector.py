@@ -1,7 +1,7 @@
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
-from Utils import get_subtree_of_type
+from utils import get_subtree_of_type
 
 reduction_vars = []
 
