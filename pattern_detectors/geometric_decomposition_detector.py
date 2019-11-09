@@ -29,7 +29,7 @@ def run_detection(graph: Graph):
     """
     __init_data()
 
-    for node in find_vertex(graph, graph.vp.type, '1'):
+    for node in find_vertex(graph, graph.vp.type, 'func'):
         val = __detect_geometric_decomposition(graph, node)
         if val:
             graph.vp.geomDecomp[node] = val
@@ -48,14 +48,14 @@ def __test_chunk_limit(graph: Graph, node: Vertex) -> bool:
     inner_loop_iter = {}
 
     children = [e.target() for e in node.out_edges() if graph.ep.type[e] == 'child'
-                and graph.vp.type[e.target()] == '2']
+                and graph.vp.type[e.target()] == 'loop']
 
     for func_child in [e.target()
                        for e in node.out_edges()
-                       if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == '1']:
+                       if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == 'func']:
         children.extend([e.target()
                          for e in func_child.out_edges()
-                         if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == '2'])
+                         if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == 'loop'])
 
     for child in children:
         inner_loop_iter[graph.vp.startsAtLine[child]] = __iterations_count(graph, child)
@@ -108,7 +108,7 @@ def __get_parent_iterations(graph: Graph, node: Vertex) -> int:
     max_iter = 1
     while parent:
         node = parent[0]
-        if graph.vp.type[node] == '2':
+        if graph.vp.type[node] == 'loop':
             max_iter = max(1, __get_loop_iterations(graph.vp.startsAtLine[node]))
             break
         parent = [e.source() for e in node.in_edges() if graph.ep.type[e] == 'child']
@@ -123,13 +123,13 @@ def __detect_geometric_decomposition(graph: Graph, root: Vertex) -> bool:
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for child in get_subtree_of_type(graph, root, '2'):
+    for child in get_subtree_of_type(graph, root, 'loop'):
         if (graph.vp.doAll[child] < do_all_threshold
                 and not graph.vp.reduction[child]):
             return False
 
-    for child in find_subnodes(graph, root, '1'):
-        for child2 in find_subnodes(graph, child, '2'):
+    for child in find_subnodes(graph, root, 'func'):
+        for child2 in find_subnodes(graph, child, 'loop'):
             if (graph.vp.doAll[child2] < do_all_threshold
                     and not graph.vp.reduction[child2]):
                 return False

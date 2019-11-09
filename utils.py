@@ -45,7 +45,7 @@ def is_depending(graph: Graph, v_source: Vertex, v_target: Vertex, root_loop: Ve
     :param v_target: target of dependency
     :return: true, if there is RAW dependency
     """
-    children = get_subtree_of_type(graph, v_target, '0')
+    children = get_subtree_of_type(graph, v_target, 'cu')
     children.append(v_target)
 
     for dep in get_all_dependencies(graph, v_source, root_loop):
@@ -71,9 +71,9 @@ def is_readonly_inside_loop_body(graph: Graph, dep: Edge, root_loop: Vertex) -> 
     """Checks, whether a variable is read only in loop body
     """
     loops_start_lines = [graph.vp.startsAtLine[v]
-                         for v in get_subtree_of_type(graph, root_loop, '2')]
+                         for v in get_subtree_of_type(graph, root_loop, 'loop')]
 
-    children = get_subtree_of_type(graph, root_loop, '0')
+    children = get_subtree_of_type(graph, root_loop, 'cu')
 
     for v in children:
         for e in v.out_edges():
@@ -99,15 +99,15 @@ def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[V
     This method ignores loop index and read only variables
     """
     dep_set = set()
-    children = get_subtree_of_type(graph, node, '0')
+    children = get_subtree_of_type(graph, node, 'cu')
 
     loops_start_lines = [graph.vp.startsAtLine[v]
-                         for v in get_subtree_of_type(graph, root_loop, '2')]
+                         for v in get_subtree_of_type(graph, root_loop, 'loop')]
 
     for v in children:
         for e in v.out_edges():
             if graph.ep.type[e] == 'dependence' and graph.ep.dtype[e] == 'RAW':
-                if not (is_loop_index(graph, e, loops_start_lines, get_subtree_of_type(graph, root_loop, '0'))
+                if not (is_loop_index(graph, e, loops_start_lines, get_subtree_of_type(graph, root_loop, 'cu'))
                         and is_readonly_inside_loop_body(graph, e, root_loop)):
                     dep_set.add(e.target())
     return dep_set

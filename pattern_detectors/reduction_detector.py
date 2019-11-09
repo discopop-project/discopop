@@ -31,7 +31,7 @@ def run_detection(graph: Graph):
         var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
         __reduction_vars.append(var)
 
-    for node in find_vertex(graph, graph.vp.type, '2'):
+    for node in find_vertex(graph, graph.vp.type, 'loop'):
         if __detect_reduction(graph, node):
             graph.vp.reduction[node] = True
             print('Reduction at', graph.vp.id[node])
@@ -44,11 +44,11 @@ def __detect_reduction(graph: Graph, root: Vertex) -> bool:
     :param root: the loop node
     :return: true if is reduction loop
     """
-    if graph.vp.type[root] != '2':
+    if graph.vp.type[root] != 'loop':
         return False
 
     all_vars = set()
-    for node in get_subtree_of_type(graph, root, '0'):
+    for node in get_subtree_of_type(graph, root, 'cu'):
         for v in graph.vp.localVars[node]:
             all_vars.add(v)
         for v in graph.vp.globalVars[node]:

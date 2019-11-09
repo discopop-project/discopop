@@ -28,9 +28,16 @@ node_type_info = {
     },
 }
 
+type_map = {
+    '0': 'cu',
+    '1': 'func',
+    '2': 'loop',
+    '3': 'dummy'
+}
+
 node_props = [
     ('id', 'string', 'node.get("id")'),
-    ('type', 'string', 'node.get("type")'),
+    ('type', 'string', 'type_map[node.get("type")]'),
     ('startsAtLine', 'string', 'node.get("startsAtLine")'),
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
     ('name', 'string', 'node.get("name")'),

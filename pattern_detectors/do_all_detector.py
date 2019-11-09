@@ -10,7 +10,7 @@ do_all_threshold = 0.9
 def run_detection(graph: Graph):
     """Search for do-all loop pattern
     """
-    for node in find_vertex(graph, graph.vp.type, '2'):
+    for node in find_vertex(graph, graph.vp.type, 'loop'):
         val = __detect_do_all(graph, node)
         if val > do_all_threshold:
             graph.vp.doAll[node] = val

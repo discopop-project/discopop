@@ -51,16 +51,16 @@ class PatternDetector(object):
         # iterate through all entries of the map -> Nodes
         # set the ids of all children
         for node in self.pet.graph.vertices():
-            if not loop_type or self.pet.graph.vp.type[node] == '2':
+            if not loop_type or self.pet.graph.vp.type[node] == 'loop':
                 # if the main node is dummy and we should remove dummies, then do not
                 # insert it in nodeMapComputed
-                if remove_dummies and self.pet.graph.vp.type[node] == '3':
+                if remove_dummies and self.pet.graph.vp.type[node] == 'dummy':
                     continue
 
                 sub_nodes = []
                 for e in node.out_edges():
                     if self.pet.graph.ep.type[e] == 'child':
-                        if remove_dummies and self.pet.graph.vp.type[e.target()] == '3':
+                        if remove_dummies and self.pet.graph.vp.type[e.target()] == 'dummy':
                             self.pet.graph.remove_edge(e)
                         else:
                             sub_nodes.append(e.target())

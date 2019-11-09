@@ -24,7 +24,7 @@ def run_detection(graph: Graph):
         Two barriers can run in parallel if there is not a directed path from one to the other
     """
     for node in graph.vertices():
-        if graph.vp.type[node] == '3':
+        if graph.vp.type[node] == 'dummy':
             continue
         if find_subnodes(graph, node, 'child'):
             # print(graph.vp.id[node])
@@ -53,7 +53,7 @@ def run_detection(graph: Graph):
     #             graph.vp.endsAtLine[fork.children_nodes[-1]])
 
     # for node in graph.vertices():
-    # if graph.vp.type[node] != '3':
+    # if graph.vp.type[node] != 'dummy':
     # print(graph.vp.id[node] + ' ' + graph.vp.mwType[node])
 
 
@@ -118,7 +118,7 @@ def __create_task_tree(graph: Graph, root: Vertex):
 
 
 def __create_task_tree_helper(graph: Graph, current, root, visited_func):
-    if graph.vp.type[current] == '1':
+    if graph.vp.type[current] == 'func':
         if current in visited_func:
             return
         else:

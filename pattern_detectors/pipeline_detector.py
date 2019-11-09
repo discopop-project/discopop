@@ -21,7 +21,7 @@ def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_
 def run_detection(graph: Graph):
     """Search pipeline pattern on all the loops within the application
     """
-    for node in find_vertex(graph, graph.vp.type, '2'):
+    for node in find_vertex(graph, graph.vp.type, 'loop'):
         graph.vp.pipeline[node] = detect_pipeline(graph, node)
         if graph.vp.pipeline[node] > 0:
             print('Pipeline at', graph.vp.id[node])
@@ -36,7 +36,7 @@ def detect_pipeline(graph: Graph, root: Vertex) -> float:
     # TODO how deep
     children_start_lines = [graph.vp.startsAtLine[v]
                             for v in find_subnodes(graph, root, 'child')
-                            if graph.vp.type[v] == '2']
+                            if graph.vp.type[v] == 'loop']
 
     loop_subnodes = [v for v in find_subnodes(graph, root, 'child')
                      if __is_pipeline_subnode(graph, root, v, children_start_lines)]
