@@ -1,3 +1,5 @@
+import math
+
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
@@ -37,20 +39,23 @@ def run_detection(graph: Graph):
 
 def test_chunk_limit(graph: Graph, node: Vertex) -> bool:
     """
-    Tests, whether or not the node satisfies chunk limit
+    Tests, whether or not the node has inner loops with and none of them have 0 iterations
     :param graph: cu graph
     :param node: the node
     :return:
     """
-    min_iterations_count = 9999999999999
+    min_iterations_count = math.inf
     inner_loop_iter = {}
 
     children = [e.target() for e in node.out_edges() if graph.ep.type[e] == 'child'
                 and graph.vp.type[e.target()] == '2']
-    for func_child in [e.target() for e in node.out_edges()
+
+    for func_child in [e.target()
+                       for e in node.out_edges()
                        if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == '1']:
-        children.extend([e.target() for e in func_child.out_edges() if graph.ep.type[e] == 'child'
-                         and graph.vp.type[e.target()] == '2'])
+        children.extend([e.target()
+                         for e in func_child.out_edges()
+                         if graph.ep.type[e] == 'child' and graph.vp.type[e.target()] == '2'])
 
     for child in children:
         inner_loop_iter[graph.vp.startsAtLine[child]] = iterations_count(graph, child)

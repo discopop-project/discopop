@@ -18,6 +18,13 @@ def find_subnodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
 
 
 def depends(graph: Graph, source, target):
+    """
+    Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+    :param graph: CU graph
+    :param source: source node for dependency detection
+    :param target: target of dependency
+    :return: true, if there is RAW dependency
+    """
     if source == target:
         return False
     target_nodes = get_subtree_of_type(graph, target, '*')
@@ -30,7 +37,13 @@ def depends(graph: Graph, source, target):
 
 
 def is_depending(graph: Graph, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
-    """Detect if source vertex or one of it's children depends on target vertex or on one of it's children
+    """
+    Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+    The loop index and readonly variables are ignored
+    :param graph: CU graph
+    :param v_source: source node for dependency detection
+    :param v_target: target of dependency
+    :return: true, if there is RAW dependency
     """
     children = get_subtree_of_type(graph, v_target, '0')
     children.append(v_target)
@@ -81,7 +94,9 @@ def is_readonly_inside_loop_body(graph: Graph, dep: Edge, root_loop: Vertex) -> 
 
 
 def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[Vertex]:
-    """Returns all data dependencies of the node and it's children
+    """
+    Returns all data dependencies of the node and it's children
+    This method ignores loop index and read only variables
     """
     dep_set = set()
     children = get_subtree_of_type(graph, node, '0')
