@@ -1,5 +1,6 @@
 #custom test data
 data*/
+plugins/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
