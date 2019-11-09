@@ -1,3 +1,5 @@
+from typing import List
+
 from graph_tool import Vertex, Graph
 
 from utils import find_subnodes, depends
@@ -12,7 +14,7 @@ def __merge_tasks(graph: Graph, fork: Vertex):
 
 
 def run_detection(graph: Graph):
-    """computes the Task Parallelism Pattern for a node:
+    """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
         of their children nodes and the list of the children nodes (saved in node.childrenNodes)
@@ -22,6 +24,8 @@ def run_detection(graph: Graph):
         c.) if a child has dependence to more than one parent node, it will be marked as barrier
     3.) if two barriers can run in parallel they are marked as barrierWorkers.
         Two barriers can run in parallel if there is not a directed path from one to the other
+
+        :param graph: CU graph
     """
     for node in graph.vertices():
         if graph.vp.type[node] == 'dummy':
@@ -63,6 +67,8 @@ def __detect_task_parallelism(graph: Graph, main_node: Vertex):
     1.) all child nodes become first worker if they are not marked as worker before
     2.) if a child has dependence to more than one parent node, it will be marked as barrier
     Returns list of BARRIER_WORKER pairs 2
+    :param graph: CU graph
+    :param main_node: root node
     """
 
     # first insert all the direct children of main node in a queue to use it for the BFS
@@ -108,16 +114,28 @@ def __detect_task_parallelism(graph: Graph, main_node: Vertex):
                     graph.vp.mwType[n1] = 'BARRIER_WORKER'
                     graph.vp.mwType[n2] = 'BARRIER_WORKER'
 
-    return pairs
+    # return pairs
 
 
 def __create_task_tree(graph: Graph, root: Vertex):
+    """generates task tree data from root node
+
+    :param graph: CU graph
+    :param root: root node
+    """
     __forks.add(root)
     # TODO create task and save
     __create_task_tree_helper(graph, root, root, [])
 
 
-def __create_task_tree_helper(graph: Graph, current, root, visited_func):
+def __create_task_tree_helper(graph: Graph, current: Vertex, root: Vertex, visited_func: List[Vertex]):
+    """generates task tree data recursively
+
+    :param graph: CU graph
+    :param current: current vertex to process
+    :param root: root of the subtree
+    :param visited_func: visited function nodes
+    """
     if graph.vp.type[current] == 'func':
         if current in visited_func:
             return

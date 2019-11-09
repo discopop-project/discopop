@@ -6,20 +6,29 @@ from graph_tool.all import Vertex, Graph, Edge
 
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     """ Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
+
+    :param v1: first vector
+    :param v2: second vector
+    :return: correlation coefficient, 0 if one of the norms is 0
     """
     norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
 def find_subnodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
-    """ returns direct children of a given node
+    """ Returns direct children of a given node
+
+    :param graph: CU graph
+    :param node: node
+    :param criteria: type of dependency
+    :return: list of children nodes
     """
     return [e.target() for e in node.out_edges() if graph.ep.type[e] == criteria]
 
 
-def depends(graph: Graph, source, target):
-    """
-    Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+def depends(graph: Graph, source: Vertex, target: Vertex) -> bool:
+    """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+
     :param graph: CU graph
     :param source: source node for dependency detection
     :param target: target of dependency
@@ -37,12 +46,13 @@ def depends(graph: Graph, source, target):
 
 
 def is_depending(graph: Graph, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
-    """
-    Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+    """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
     The loop index and readonly variables are ignored
+
     :param graph: CU graph
     :param v_source: source node for dependency detection
     :param v_target: target of dependency
+    :param root_loop: root loop
     :return: true, if there is RAW dependency
     """
     children = get_subtree_of_type(graph, v_target, 'cu')
@@ -54,21 +64,32 @@ def is_depending(graph: Graph, v_source: Vertex, v_target: Vertex, root_loop: Ve
     return False
 
 
-def is_loop_index(graph: Graph, e: Edge, loops_start_lines: List[str], children: List[Vertex]) -> bool:
+def is_loop_index(graph: Graph, edge: Edge, loops_start_lines: List[str], children: List[Vertex]) -> bool:
     """Checks, whether the variable is a loop index.
+
+    :param graph: CU graph
+    :param edge: RAW dependency
+    :param loops_start_lines: start lines of the loops
+    :param children: children nodes of the loops
+    :return: true if edge represents loop index
     """
 
     # TODO check all dependencies necessary?
 
     # If there is a raw dependency for var, the source cu is part of the loop
     # and the dependency occurs in loop header, then var is loop index+
-    return (graph.ep.source[e] == graph.ep.sink[e]
-            and graph.ep.source[e] in loops_start_lines
-            and e.target() in children)
+    return (graph.ep.source[edge] == graph.ep.sink[edge]
+            and graph.ep.source[edge] in loops_start_lines
+            and edge.target() in children)
 
 
 def is_readonly_inside_loop_body(graph: Graph, dep: Edge, root_loop: Vertex) -> bool:
-    """Checks, whether a variable is read only in loop body
+    """Checks, whether a variable is read-only in loop body
+
+    :param graph: CU graph
+    :param dep: dependency variable
+    :param root_loop: root loop
+    :return: true if variable is read-only in loop body
     """
     loops_start_lines = [graph.vp.startsAtLine[v]
                          for v in get_subtree_of_type(graph, root_loop, 'loop')]
@@ -94,9 +115,12 @@ def is_readonly_inside_loop_body(graph: Graph, dep: Edge, root_loop: Vertex) -> 
 
 
 def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[Vertex]:
-    """
-    Returns all data dependencies of the node and it's children
+    """Returns all data dependencies of the node and it's children
     This method ignores loop index and read only variables
+    :param graph: CU graph
+    :param node: node
+    :param root_loop: root loop
+    :return: list of all RAW dependencies of the node
     """
     dep_set = set()
     children = get_subtree_of_type(graph, node, 'cu')
@@ -113,14 +137,19 @@ def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[V
     return dep_set
 
 
-def get_subtree_of_type(graph: Graph, root: Vertex, type: str) -> List[Vertex]:
+def get_subtree_of_type(graph: Graph, root: Vertex, node_type: str) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
+
+    :param graph: CU graph
+    :param root: root node
+    :param node_type: specific type of nodes or '*' for wildcard
+    :return: list of nodes of specified type from subtree
     """
     res = []
-    if graph.vp.type[root] == type or type == '*':
+    if graph.vp.type[root] == node_type or node_type == '*':
         res.append(root)
 
     for e in root.out_edges():
         if graph.ep.type[e] == 'child':
-            res.extend(get_subtree_of_type(graph, e.target(), type))
+            res.extend(get_subtree_of_type(graph, e.target(), node_type))
     return res

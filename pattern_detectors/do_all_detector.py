@@ -9,6 +9,8 @@ do_all_threshold = 0.9
 
 def run_detection(graph: Graph):
     """Search for do-all loop pattern
+
+    :param graph: CU graph
     """
     for node in find_vertex(graph, graph.vp.type, 'loop'):
         val = __detect_do_all(graph, node)
@@ -20,7 +22,11 @@ def run_detection(graph: Graph):
 
 
 def __detect_do_all(graph: Graph, root: Vertex):
-    """Calculate do-all value for node. Returns dü-all scalar value
+    """Calculate do-all value for node
+
+    :param graph: CU graph
+    :param root: root node
+    :return: do-all scalar value
     """
     graph_vector = []
 

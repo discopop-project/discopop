@@ -8,6 +8,12 @@ from utils import find_subnodes, is_depending, correlation_coefficient
 
 def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
+
+    :param graph: CU graph
+    :param root: root node
+    :param current: current node
+    :param children_start_lines: start lines of children loops
+    :return: true if valid
     """
     r_start = graph.vp.startsAtLine[root]
     r_end = graph.vp.endsAtLine[root]
@@ -19,7 +25,9 @@ def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_
 
 
 def run_detection(graph: Graph):
-    """Search pipeline pattern on all the loops within the application
+    """Search for pipeline pattern on all the loops in the graph
+
+    :param graph: CU graph
     """
     for node in find_vertex(graph, graph.vp.type, 'loop'):
         graph.vp.pipeline[node] = detect_pipeline(graph, node)
@@ -30,7 +38,11 @@ def run_detection(graph: Graph):
 
 
 def detect_pipeline(graph: Graph, root: Vertex) -> float:
-    """Calculate pipeline value for node. Returns pipeline scalar value
+    """Calculate pipeline value for node
+
+    :param graph: CU graph
+    :param root: current node
+    :return: Pipeline scalar value
     """
 
     # TODO how deep

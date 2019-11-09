@@ -1,4 +1,5 @@
 import os
+from typing import Dict, List
 
 from PETGraph import PETGraph
 from pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -11,8 +12,15 @@ from pattern_detectors.task_parallelism_detector import run_detection as detect_
 class PatternDetector(object):
     pet: PETGraph
     path: str
+    reduction_vars: List[Dict[str, str]]
+    loop_data: Dict[str, int]
 
     def __init__(self, pet_graph: PETGraph, path):
+        """This class runs detection algorithms on CU graph
+
+        :param pet_graph: CU graph
+        :param path: directory with input data
+        """
         self.pet = pet_graph
         self.path = path
         self.reduction_vars = []
@@ -35,42 +43,11 @@ class PatternDetector(object):
             var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
             self.reduction_vars.append(var)
 
-
-    '''
-    * function					: merges all children and
-    dependencies of the children of all nodes
-    * @param loopType			: if set to true -> then just look for
-    type = loop
-    * @param removeDummies		: don't regard the dummy nodes (type = 3)
-    Main Level:					   node1
-    .......... node2 ....
-                                            /			|
-    \ Level I:		child1		  child2		child3
-                            /    |    \		  / | \			/ | \
-    Level II: child11
-    ...
-    .
-    .
-    
-    * 1.) get node from nodeMap
-    *	I.) iterate through all children in Level I
-    *	II.) get the whole children nodes (Level II+) of the child in Level I
-    and save them in a vector under property node.wholeSubNodes *	III.) iterate
-    through all children nodes (Level II+) of the Level I child and adjust the
-    dependencies:
-    *		a.) the dependencies remain if they that are pointing to any
-    other node of the child node (Level I+) of the main node in the Main Level *
-    b.) dependencies pointing to any node out of the tree of the node in the Main
-    Level are removed
-    * 2.) do Step I for all nodes in nodeMap
-    '''
-
     def __merge(self, loop_type: bool, remove_dummies: bool):
-        """
-        Removes dummy nodes
+        """Removes dummy nodes
+
         :param loop_type: loops only
         :param remove_dummies: remove dummy nodes
-        :return:
         """
         # iterate through all entries of the map -> Nodes
         # set the ids of all children
@@ -92,9 +69,7 @@ class PatternDetector(object):
             # TODO optimization opportunity: copy all dependency edges to the root node
 
     def detect_patterns(self):
-        """
-        Runs pattern discovery on the CU graph
-        :return:
+        """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
 

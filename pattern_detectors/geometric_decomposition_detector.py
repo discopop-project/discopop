@@ -1,19 +1,23 @@
 import math
+from typing import Dict
 
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
-from utils import find_subnodes, get_subtree_of_type
 from pattern_detectors.do_all_detector import do_all_threshold
+from utils import find_subnodes, get_subtree_of_type
 
-__loop_iterations = {}
-__loop_data = {}
+# cache
+__loop_iterations: Dict[str, int] = {}
+# passed iterations data
+__loop_data: Dict[str, int] = {}
 
 
-def run_detection(graph: Graph, loop_data):
-    """
-    Detects geometric decomposition
-    :return:
+def run_detection(graph: Graph, loop_data: Dict[str, int]):
+    """Detects geometric decomposition
+
+    :param graph: CU graph
+    :param loop_data: loop iteration data
     """
     global __loop_data
     __loop_data = loop_data
@@ -26,11 +30,11 @@ def run_detection(graph: Graph, loop_data):
 
 
 def __test_chunk_limit(graph: Graph, node: Vertex) -> bool:
-    """
-    Tests, whether or not the node has inner loops with and none of them have 0 iterations
-    :param graph: cu graph
+    """Tests, whether or not the node has inner loops with and none of them have 0 iterations
+
+    :param graph: CU graph
     :param node: the node
-    :return:
+    :return: true if node satisfies condition
     """
     min_iterations_count = math.inf
     inner_loop_iter = {}
@@ -55,8 +59,8 @@ def __test_chunk_limit(graph: Graph, node: Vertex) -> bool:
 
 
 def __iterations_count(graph: Graph, node: Vertex) -> int:
-    """
-    Counts the iterations in the specified node
+    """Counts the iterations in the specified node
+
     :param graph: cu graph
     :param node: the loop node
     :return: number of iterations
@@ -76,8 +80,8 @@ def __iterations_count(graph: Graph, node: Vertex) -> int:
 
 
 def __get_loop_iterations(line: str) -> int:
-    """
-    Calculates the number of iterations in specified loop
+    """Calculates the number of iterations in specified loop
+
     :param line: start line of the loop
     :return: number of iterations
     """
@@ -85,11 +89,11 @@ def __get_loop_iterations(line: str) -> int:
 
 
 def __get_parent_iterations(graph: Graph, node: Vertex) -> int:
-    """
-     Calculates the number of iterations in parent of loop
+    """Calculates the number of iterations in parent of loop
+
     :param graph: cu graph
     :param node: current node
-    :return:
+    :return: number of iterations
     """
     parent = [e.source() for e in node.in_edges() if graph.ep.type[e] == 'child']
 
@@ -105,8 +109,8 @@ def __get_parent_iterations(graph: Graph, node: Vertex) -> int:
 
 
 def __detect_geometric_decomposition(graph: Graph, root: Vertex) -> bool:
-    """
-    Detects geometric decomposition pattern
+    """Detects geometric decomposition pattern
+
     :param graph: cu graph
     :param root: root node
     :return: true if GD pattern was discovered
