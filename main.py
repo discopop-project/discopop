@@ -4,7 +4,7 @@ Usage:
     main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>]
 
 Options:
-    --path=<path>           Directory with input data
+    --path=<path>           Directory with input data [default: ./]
     --cu-xml=<cuxml>        CU node xml file [default: Data.xml].
     --dep-file=<depfile>    Dependencies text file [default: dep.txt].
     --plugins=<plugs>       Plugins to execute
@@ -24,8 +24,8 @@ from pattern_detection import PatternDetector
 
 docopt_schema = Schema({
     '--path': Use(str),
-    '--cu-xml': Use(str, error='XML should be readable'),
-    '--dep-file': Use(str, error='Dependence file should be readable'),
+    '--cu-xml': Use(str),
+    '--dep-file': Use(str),
     '--plugins': Use(str)
 })
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     except SchemaError as e:
         exit(e)
 
-    path = '' if arguments['--path'] == 'None' else arguments['--path']
+    path = arguments['--path']
     cu_xml = arguments['--cu-xml'] if os.path.isabs(arguments['--cu-xml']) else os.path.join(path, arguments['--cu-xml'])
     dep_file = arguments['--dep-file'] if os.path.isabs(arguments['--dep-file']) else os.path.join(path, arguments['--dep-file'])
 
@@ -46,8 +46,6 @@ if __name__ == "__main__":
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
     graph = PETGraph(cu_dict, dependencies)
-
-    # graph.infer_level_dependences()
 
     # visualize subgraphs
     # graph.interactive_visualize(graph.graph)
@@ -69,7 +67,6 @@ if __name__ == "__main__":
         print("executing plugin: " + plugin_name)
         graph = p.run(graph)
 
-    # graph.visualize(graph.graph)
     pattern_detector = PatternDetector(graph, path)
     pattern_detector.detect_patterns()
 
