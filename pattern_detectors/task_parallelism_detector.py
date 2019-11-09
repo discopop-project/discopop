@@ -10,7 +10,7 @@ def merge_tasks(graph: Graph, fork: Vertex):
     pass
 
 
-def detect_task_parallelism_loop(graph: Graph):
+def run_detection(graph: Graph):
     """computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies

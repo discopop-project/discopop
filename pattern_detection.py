@@ -3,11 +3,11 @@ from typing import List, Dict, Set
 from graph_tool.all import Vertex
 
 from PETGraph import PETGraph
-from do_all_detector import detect_do_all_loop
-from geometric_decomposition_detector import detect_geometric_decomposition_loop
-from pipeline_detector import detect_pipeline_loop
-from reduction_detector import detect_reduction_loop
-from task_parallelism_detector import detect_task_parallelism_loop
+from pattern_detectors.do_all_detector import run_detection as detect_do_all
+from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
+from pattern_detectors.pipeline_detector import run_detection as detect_pipeline
+from pattern_detectors.reduction_detector import run_detection as detect_reduction
+from pattern_detectors.task_parallelism_detector import run_detection as detect_tp
 
 
 class PatternDetector(object):
@@ -83,11 +83,11 @@ class PatternDetector(object):
         """
         self.__merge(False, True)
 
-        detect_pipeline_loop(self.pet.graph)
+        detect_pipeline(self.pet.graph)
 
         # reduction before doall!
-        detect_reduction_loop(self.pet.graph)
-        detect_do_all_loop(self.pet.graph)
+        detect_reduction(self.pet.graph)
+        detect_do_all(self.pet.graph)
 
-        detect_task_parallelism_loop(self.pet.graph)
-        detect_geometric_decomposition_loop(self.pet.graph)
+        detect_tp(self.pet.graph)
+        detect_gd(self.pet.graph)

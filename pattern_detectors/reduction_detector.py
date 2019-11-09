@@ -16,7 +16,7 @@ def is_reduction_var(line: str, name: str) -> bool:
     return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
 
-def detect_reduction_loop(graph: Graph):
+def run_detection(graph: Graph):
     """Search for reduction pattern
     """
 

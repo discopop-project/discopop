@@ -18,7 +18,7 @@ def is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_st
                 or c_start == c_end and c_start in children_start_lines)
 
 
-def detect_pipeline_loop(graph: Graph):
+def run_detection(graph: Graph):
     """Search pipeline pattern on all the loops within the application
     """
     for node in find_vertex(graph, graph.vp.type, '2'):

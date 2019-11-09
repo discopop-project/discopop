@@ -7,7 +7,7 @@ from Utils import find_subnodes, is_depending, correlation_coefficient
 do_all_threshold = 0.9
 
 
-def detect_do_all_loop(graph: Graph):
+def run_detection(graph: Graph):
     """Search for do-all loop pattern
     """
     for node in find_vertex(graph, graph.vp.type, '2'):

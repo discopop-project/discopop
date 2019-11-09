@@ -2,7 +2,7 @@ from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
 from Utils import find_subnodes, get_subtree_of_type
-from do_all_detector import do_all_threshold
+from pattern_detectors.do_all_detector import do_all_threshold
 
 loop_iterations = {}
 loop_data = {}
@@ -20,7 +20,7 @@ def init_data():
         loop_data[s[0] + ':' + s[1]] = int(s[2])
 
 
-def detect_geometric_decomposition_loop(graph: Graph):
+def run_detection(graph: Graph):
     """
     Detects geometric decomposition
     :return:
