@@ -10,25 +10,13 @@ __loop_iterations = {}
 __loop_data = {}
 
 
-def __init_data():
-    __loop_iterations.clear()
-    __loop_data.clear()
-
-    with open('./data/loop_counter_output.txt') as f:
-        content = f.readlines()
-    for line in content:
-        s = line.split(' ')
-        # line = FileId + LineNr
-        __loop_data[s[0] + ':' + s[1]] = int(s[2])
-
-
-def run_detection(graph: Graph):
+def run_detection(graph: Graph, loop_data):
     """
     Detects geometric decomposition
     :return:
     """
-    __init_data()
-
+    global __loop_data
+    __loop_data = loop_data
     for node in find_vertex(graph, graph.vp.type, 'func'):
         val = __detect_geometric_decomposition(graph, node)
         if val:

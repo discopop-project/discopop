@@ -1,3 +1,5 @@
+import os
+
 from PETGraph import PETGraph
 from pattern_detectors.do_all_detector import run_detection as detect_do_all
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
@@ -8,9 +10,31 @@ from pattern_detectors.task_parallelism_detector import run_detection as detect_
 
 class PatternDetector(object):
     pet: PETGraph
+    path: str
 
-    def __init__(self, pet_graph: PETGraph):
+    def __init__(self, pet_graph: PETGraph, path):
         self.pet = pet_graph
+        self.path = path
+        self.reduction_vars = []
+        self.loop_data = {}
+
+        with open(os.path.join(path, 'loop_counter_output.txt')) as f:
+            content = f.readlines()
+        for line in content:
+            s = line.split(' ')
+            # line = FileId + LineNr
+            self.loop_data[s[0] + ':' + s[1]] = int(s[2])
+
+        # parse reduction variables
+        with open(os.path.join(path, 'reduction.txt')) as f:
+            content = f.readlines()
+
+        for line in content:
+            s = line.split(' ')
+            # line = FileId + LineNr
+            var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
+            self.reduction_vars.append(var)
+
 
     '''
     * function					: merges all children and
@@ -77,8 +101,8 @@ class PatternDetector(object):
         detect_pipeline(self.pet.graph)
 
         # reduction before doall!
-        detect_reduction(self.pet.graph)
+        detect_reduction(self.pet.graph, self.reduction_vars)
         detect_do_all(self.pet.graph)
 
         detect_tp(self.pet.graph)
-        detect_gd(self.pet.graph)
+        detect_gd(self.pet.graph, self.loop_data)

@@ -1,16 +1,17 @@
 """Discopop analyzer.
 
 Usage:
-    main.py --cu-xml <cuxml> --dep-file <depfile> [--plugins <plugs>]
+    main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>]
 
 Options:
+    --path=<path>           Directory with input data
     --cu-xml=<cuxml>        CU node xml file [default: Data.xml].
-    --dep-file=<depfile>    Dependencies text file
+    --dep-file=<depfile>    Dependencies text file [default: dep.txt].
     --plugins=<plugs>       Plugins to execute
     -h --help               Show this screen.
     --version               Show version.
 """
-
+import os
 import time
 
 from docopt import docopt
@@ -22,8 +23,9 @@ from parser import parse_inputs
 from pattern_detection import PatternDetector
 
 docopt_schema = Schema({
-    '--cu-xml': Use(open, error='XML should be readable'),
-    '--dep-file': Use(open, error='Dependence file should be readable'),
+    '--path': Use(str),
+    '--cu-xml': Use(str, error='XML should be readable'),
+    '--dep-file': Use(str, error='Dependence file should be readable'),
     '--plugins': Use(str)
 })
 
@@ -35,7 +37,11 @@ if __name__ == "__main__":
     except SchemaError as e:
         exit(e)
 
-    cu_dict, dependencies = parse_inputs(arguments['--cu-xml'], arguments['--dep-file'])
+    path = '' if arguments['--path'] == 'None' else arguments['--path']
+    cu_xml = arguments['--cu-xml'] if os.path.isabs(arguments['--cu-xml']) else os.path.join(path, arguments['--cu-xml'])
+    dep_file = arguments['--dep-file'] if os.path.isabs(arguments['--dep-file']) else os.path.join(path, arguments['--dep-file'])
+
+    cu_dict, dependencies = parse_inputs(open(cu_xml), open(dep_file))
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
@@ -64,7 +70,7 @@ if __name__ == "__main__":
         graph = p.run(graph)
 
     # graph.visualize(graph.graph)
-    pattern_detector = PatternDetector(graph)
+    pattern_detector = PatternDetector(graph, path)
     pattern_detector.detect_patterns()
 
     end = time.time()
