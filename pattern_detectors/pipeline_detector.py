@@ -6,7 +6,7 @@ from graph_tool.util import find_vertex
 from utils import find_subnodes, is_depending, correlation_coefficient
 
 
-def is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
+def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
     """
     r_start = graph.vp.startsAtLine[root]
@@ -39,7 +39,7 @@ def detect_pipeline(graph: Graph, root: Vertex) -> float:
                             if graph.vp.type[v] == '2']
 
     loop_subnodes = [v for v in find_subnodes(graph, root, 'child')
-                     if is_pipeline_subnode(graph, root, v, children_start_lines)]
+                     if __is_pipeline_subnode(graph, root, v, children_start_lines)]
 
     # No chain of stages found
     if len(loop_subnodes) < 2:

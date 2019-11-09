@@ -11,7 +11,7 @@ def run_detection(graph: Graph):
     """Search for do-all loop pattern
     """
     for node in find_vertex(graph, graph.vp.type, '2'):
-        val = detect_do_all(graph, node)
+        val = __detect_do_all(graph, node)
         if val > do_all_threshold:
             graph.vp.doAll[node] = val
             if not graph.vp.reduction[node]:
@@ -19,7 +19,7 @@ def run_detection(graph: Graph):
                 print('Coefficient', val)
 
 
-def detect_do_all(graph: Graph, root: Vertex):
+def __detect_do_all(graph: Graph, root: Vertex):
     """Calculate do-all value for node. Returns dü-all scalar value
     """
     graph_vector = []

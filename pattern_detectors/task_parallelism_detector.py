@@ -2,11 +2,12 @@ from graph_tool import Vertex, Graph
 
 from utils import find_subnodes, depends
 
-forks = set()
-workloadThreshold = 10000
-minParallelism = 3
+__forks = set()
+__workloadThreshold = 10000
+__minParallelism = 3
 
-def merge_tasks(graph: Graph, fork: Vertex):
+
+def __merge_tasks(graph: Graph, fork: Vertex):
     pass
 
 
@@ -27,7 +28,7 @@ def run_detection(graph: Graph):
             continue
         if find_subnodes(graph, node, 'child'):
             # print(graph.vp.id[node])
-            detect_task_parallelism(graph, node)
+            __detect_task_parallelism(graph, node)
 
         if graph.vp.mwType[node] == 'NONE':
             graph.vp.mwType[node] = 'ROOT'
@@ -38,14 +39,14 @@ def run_detection(graph: Graph):
             main_node = node
             break
 
-    forks.clear()
-    create_task_tree(graph, main_node)
+    __forks.clear()
+    __create_task_tree(graph, main_node)
 
     # ct = [graph.vp.id[v] for v in graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]
 
-    for fork in forks:
-        merge_tasks(graph, fork)
+    for fork in __forks:
+        __merge_tasks(graph, fork)
     #    if fork.children_nodes:
     #       print("Task Parallelism")
     #        print("start line:", graph.vp.startsAtLine[fork.children_nodes[0]], "end line:",
@@ -56,7 +57,7 @@ def run_detection(graph: Graph):
     # print(graph.vp.id[node] + ' ' + graph.vp.mwType[node])
 
 
-def detect_task_parallelism(graph: Graph, main_node: Vertex):
+def __detect_task_parallelism(graph: Graph, main_node: Vertex):
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before
@@ -110,13 +111,13 @@ def detect_task_parallelism(graph: Graph, main_node: Vertex):
     return pairs
 
 
-def create_task_tree(graph: Graph, root: Vertex):
-    forks.add(root)
+def __create_task_tree(graph: Graph, root: Vertex):
+    __forks.add(root)
     # TODO create task and save
-    create_task_tree_helper(graph, root, root, [])
+    __create_task_tree_helper(graph, root, root, [])
 
 
-def create_task_tree_helper(graph: Graph, current, root, visited_func):
+def __create_task_tree_helper(graph: Graph, current, root, visited_func):
     if graph.vp.type[current] == '1':
         if current in visited_func:
             return
@@ -129,9 +130,9 @@ def create_task_tree_helper(graph: Graph, current, root, visited_func):
         if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER', 'FORK']:
             # TODO create task and save
             if mw_type == 'FORK' and not graph.vp.startsAtLine[child].endswith('16383'):
-                forks.add(child)
+                __forks.add(child)
             else:
                 graph.vp.childrenTasks[root].add(child)
-            create_task_tree_helper(graph, child, child, visited_func)
+            __create_task_tree_helper(graph, child, child, visited_func)
         else:
-            create_task_tree_helper(graph, child, root, visited_func)
+            __create_task_tree_helper(graph, child, root, visited_func)
