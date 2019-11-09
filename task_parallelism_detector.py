@@ -3,6 +3,11 @@ from graph_tool import Vertex, Graph
 from Utils import find_subnodes, depends
 
 forks = set()
+workloadThreshold = 10000
+minParallelism = 3
+
+def merge_tasks(graph: Graph, fork: Vertex):
+    pass
 
 
 def detect_task_parallelism_loop(graph: Graph):
@@ -39,8 +44,8 @@ def detect_task_parallelism_loop(graph: Graph):
     # ct = [graph.vp.id[v] for v in graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]
 
-    # for fork in forks:
-    #    merge_tasks(fork)
+    for fork in forks:
+        merge_tasks(graph, fork)
     #    if fork.children_nodes:
     #       print("Task Parallelism")
     #        print("start line:", graph.vp.startsAtLine[fork.children_nodes[0]], "end line:",
