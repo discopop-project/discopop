@@ -6,6 +6,34 @@ from graph_tool.util import find_vertex
 from utils import find_subnodes, is_depending, correlation_coefficient
 
 
+class PipelineInfo(object):
+    """Class, that contains pipeline detection result
+    """
+    node: Vertex
+    node_id: str
+    coefficient: float
+    start_line: str
+    end_line: str
+
+    def __init__(self, graph: Graph, node: Vertex, coefficient: float):
+        """
+        :param graph: CU graph
+        :param node: node, where pipeline was detected
+        :param coefficient: correlation coefficient
+        """
+        self.node = node
+        self.node_id = graph.vp.id[node]
+        self.coefficient = coefficient
+        self.start_line = graph.vp.startsAtLine[node]
+        self.end_line = graph.vp.endsAtLine[node]
+
+    def __str__(self):
+        return f'Pipeline at: {self.node_id}\n' \
+               f'Coefficient: {self.coefficient}\n' \
+               f'Start line: {self.start_line}\n' \
+               f'End line: {self.end_line}'
+
+
 def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
@@ -24,20 +52,22 @@ def __is_pipeline_subnode(graph: Graph, root: Vertex, current: Vertex, children_
                 or c_start == c_end and c_start in children_start_lines)
 
 
-def run_detection(graph: Graph):
+def run_detection(graph: Graph) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
 
     :param graph: CU graph
+    :return: List of detected pattern info
     """
+    result = []
     for node in find_vertex(graph, graph.vp.type, 'loop'):
-        graph.vp.pipeline[node] = detect_pipeline(graph, node)
+        graph.vp.pipeline[node] = __detect_pipeline(graph, node)
         if graph.vp.pipeline[node] > 0:
-            print('Pipeline at', graph.vp.id[node])
-            print('start:', graph.vp.startsAtLine[node])
-            print('end:', graph.vp.endsAtLine[node])
+            result.append(PipelineInfo(graph, node, graph.vp.pipeline[node]))
+
+    return result
 
 
-def detect_pipeline(graph: Graph, root: Vertex) -> float:
+def __detect_pipeline(graph: Graph, root: Vertex) -> float:
     """Calculate pipeline value for node
 
     :param graph: CU graph

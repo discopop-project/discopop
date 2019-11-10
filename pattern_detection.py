@@ -73,11 +73,22 @@ class PatternDetector(object):
         """
         self.__merge(False, True)
 
-        detect_pipeline(self.pet.graph)
+        print('===DETECTING PIPELINE===')
+        for pipeline in detect_pipeline(self.pet.graph):
+            print(pipeline, '\n')
 
+        print('===DETECTING REDUCTION===')
         # reduction before doall!
-        detect_reduction(self.pet.graph, self.reduction_vars)
-        detect_do_all(self.pet.graph)
+        for reduction in detect_reduction(self.pet.graph, self.reduction_vars):
+            print(reduction, '\n')
 
+        print('===DETECTING DO ALL===')
+        for do_all in detect_do_all(self.pet.graph):
+            print(do_all, '\n')
+
+        print('===DETECTING TASK PARALLELISM===')
         detect_tp(self.pet.graph)
-        detect_gd(self.pet.graph, self.loop_data)
+
+        print('===DETECTING GEOMETRIC DECOMPOSITION===')
+        for gd in detect_gd(self.pet.graph, self.loop_data):
+            print(gd, '\n')

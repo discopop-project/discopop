@@ -6,6 +6,30 @@ from graph_tool.util import find_vertex
 from utils import get_subtree_of_type
 
 
+class ReductionInfo(object):
+    """Class, that contains reduction detection result
+    """
+    node: Vertex
+    node_id: str
+    start_line: str
+    end_line: str
+
+    def __init__(self, graph: Graph, node: Vertex):
+        """
+        :param graph: CU graph
+        :param node: node, where reduction was detected
+        """
+        self.node = node
+        self.node_id = graph.vp.id[node]
+        self.start_line = graph.vp.startsAtLine[node]
+        self.end_line = graph.vp.endsAtLine[node]
+
+    def __str__(self):
+        return f'Reduction at: {self.node_id}\n' \
+               f'Start line: {self.start_line}\n' \
+               f'End line: {self.end_line}'
+
+
 def __is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]]) -> bool:
     """Determines, whether or not the given variable is reduction variable
 
@@ -17,16 +41,21 @@ def __is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]
     return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
 
-def run_detection(graph: Graph, reduction_vars: List[Dict[str, str]]):
+def run_detection(graph: Graph, reduction_vars: List[Dict[str, str]]) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param graph: CU graph
     :param reduction_vars: List of reduction variables
+    :return: List of detected pattern info
     """
+    result = []
+
     for node in find_vertex(graph, graph.vp.type, 'loop'):
         if __detect_reduction(graph, node, reduction_vars):
             graph.vp.reduction[node] = True
-            print('Reduction at', graph.vp.id[node])
+            result.append(ReductionInfo(graph, node))
+
+    return result
 
 
 def __detect_reduction(graph: Graph, root: Vertex, reduction_vars: List[Dict[str, str]]) -> bool:

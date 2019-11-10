@@ -1,5 +1,5 @@
 import math
-from typing import Dict
+from typing import Dict, List
 
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
@@ -13,12 +13,38 @@ __loop_iterations: Dict[str, int] = {}
 __loop_data: Dict[str, int] = {}
 
 
-def run_detection(graph: Graph, loop_data: Dict[str, int]):
+class GdInfo(object):
+    """Class, that contains geometric decomposition detection result
+    """
+    node: Vertex
+    node_id: str
+    start_line: str
+    end_line: str
+
+    def __init__(self, graph: Graph, node: Vertex):
+        """
+        :param graph: CU graph
+        :param node: node, where geometric decomposition was detected
+        """
+        self.node = node
+        self.node_id = graph.vp.id[node]
+        self.start_line = graph.vp.startsAtLine[node]
+        self.end_line = graph.vp.endsAtLine[node]
+
+    def __str__(self):
+        return f'Geometric decomposition at: {self.node_id}\n' \
+               f'Start line: {self.start_line}\n' \
+               f'End line: {self.end_line}'
+
+
+def run_detection(graph: Graph, loop_data: Dict[str, int]) -> List[GdInfo]:
     """Detects geometric decomposition
 
     :param graph: CU graph
     :param loop_data: loop iteration data
+    :return: List of detected pattern info
     """
+    result = []
     global __loop_data
     __loop_data = loop_data
     for node in find_vertex(graph, graph.vp.type, 'func'):
@@ -26,7 +52,9 @@ def run_detection(graph: Graph, loop_data: Dict[str, int]):
         if val:
             graph.vp.geomDecomp[node] = val
             if __test_chunk_limit(graph, node):
-                print('Geometric decomposition at', graph.vp.id[node])
+                result.append(GdInfo(graph, node))
+
+    return result
 
 
 def __test_chunk_limit(graph: Graph, node: Vertex) -> bool:
