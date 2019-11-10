@@ -153,3 +153,14 @@ def get_subtree_of_type(graph: Graph, root: Vertex, node_type: str) -> List[Vert
         if graph.ep.type[e] == 'child':
             res.extend(get_subtree_of_type(graph, e.target(), node_type))
     return res
+
+
+def find_main_node(graph: Graph) -> Vertex:
+    """Return main node of the graph
+
+    :param graph: CU graph
+    :return: main node
+    """
+    for node in graph.vertices():
+        if graph.vp.name[node] == 'main':
+            return node

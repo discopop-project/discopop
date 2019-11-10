@@ -87,7 +87,8 @@ class PatternDetector(object):
             print(do_all, '\n')
 
         print('===DETECTING TASK PARALLELISM===')
-        detect_tp(self.pet.graph)
+        for tp in detect_tp(self.pet.graph):
+            print(tp, '\n')
 
         print('===DETECTING GEOMETRIC DECOMPOSITION===')
         for gd in detect_gd(self.pet.graph, self.loop_data):

@@ -2,7 +2,7 @@ from typing import List
 
 from graph_tool import Vertex, Graph
 
-from utils import find_subnodes, depends
+from utils import find_subnodes, depends, find_main_node
 
 __forks = set()
 __workloadThreshold = 10000
@@ -10,10 +10,39 @@ __minParallelism = 3
 
 
 def __merge_tasks(graph: Graph, fork: Vertex):
+    """Merges the tasks into having required workload.
+
+    :param graph: CU graph
+    :param fork: task node
+    """
     pass
 
 
-def run_detection(graph: Graph):
+class TaskParallelismInfo(object):
+    """Class, that contains task parallelism detection result
+    """
+    node: Vertex
+    node_id: str
+    start_line: str
+    end_line: str
+
+    def __init__(self, graph: Graph, node: Vertex):
+        """
+        :param graph: CU graph
+        :param node: node, where task parallelism was detected
+        """
+        self.node = node
+        self.node_id = graph.vp.id[node]
+        self.start_line = graph.vp.startsAtLine[node]
+        self.end_line = graph.vp.endsAtLine[node]
+
+    def __str__(self):
+        return f'Task parallelism at: {self.node_id}\n' \
+               f'Start line: {self.start_line}\n' \
+               f'End line: {self.end_line}'
+
+
+def run_detection(graph: Graph) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -26,7 +55,10 @@ def run_detection(graph: Graph):
         Two barriers can run in parallel if there is not a directed path from one to the other
 
         :param graph: CU graph
+        :return: List of detected pattern info
     """
+    result = []
+
     for node in graph.vertices():
         if graph.vp.type[node] == 'dummy':
             continue
@@ -37,14 +69,8 @@ def run_detection(graph: Graph):
         if graph.vp.mwType[node] == 'NONE':
             graph.vp.mwType[node] = 'ROOT'
 
-    main_node = None
-    for node in graph.vertices():
-        if graph.vp.name[node] == 'main':
-            main_node = node
-            break
-
     __forks.clear()
-    __create_task_tree(graph, main_node)
+    __create_task_tree(graph, find_main_node(graph))
 
     # ct = [graph.vp.id[v] for v in graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]
@@ -56,9 +82,7 @@ def run_detection(graph: Graph):
     #        print("start line:", graph.vp.startsAtLine[fork.children_nodes[0]], "end line:",
     #             graph.vp.endsAtLine[fork.children_nodes[-1]])
 
-    # for node in graph.vertices():
-    # if graph.vp.type[node] != 'dummy':
-    # print(graph.vp.id[node] + ' ' + graph.vp.mwType[node])
+    return result
 
 
 def __detect_task_parallelism(graph: Graph, main_node: Vertex):
