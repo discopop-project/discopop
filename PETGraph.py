@@ -41,6 +41,8 @@ node_props = [
     ('startsAtLine', 'string', 'node.get("startsAtLine")'),
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
     ('name', 'string', 'node.get("name")'),
+    ('instructionsCount', 'int', 'node.get("instructionsCount", 0)'),
+    ('BasicBlockID', 'string', 'node.get("BasicBlockID", \'\')'),
     ('pipeline', 'float', '0'),
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
@@ -48,7 +50,6 @@ node_props = [
     ('mwType', 'string', '\'FORK\''),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
-    ('childrenTasks', 'object', 'set()'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -96,6 +97,8 @@ class PETGraph(object):
 
                 if hasattr(node.globalVariables, 'global'):
                     self.graph.vp.globalVars[v] = [v.text for v in getattr(node.globalVariables, 'global')]
+
+                self.graph.vp.instructionsCount[v] = node.instructionsCount
 
         # Adding edges (successors and children) to the graph
         for node_id, node in cu_dict.items():

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set, Any
 
 from graph_tool import Vertex, Graph
 
@@ -9,12 +9,34 @@ __workloadThreshold = 10000
 __minParallelism = 3
 
 
+class Task(object):
+    def __init__(self, graph: Graph, node: Vertex):
+        self.nodes = [node]
+        self.start_line = graph.vp.startsAtLine[node]
+        self.end_line = graph.vp.endsAtLine[node]
+        self.mw_type = graph.vp.mwType[node]
+        self.instruction_count = graph.vp.instructionsCount[node]
+        self.workload = 0  # todo
+        self.child_tasks = []
+
+
 def __merge_tasks(graph: Graph, fork: Vertex):
     """Merges the tasks into having required workload.
 
     :param graph: CU graph
     :param fork: task node
     """
+    for i in range(len(graph.vp.childrenTasks[fork])):
+        child_task = graph.vp.childrenTasks[fork][i]
+        if child_task.workload < __workloadThreshold:  # todo workload
+            if i > 0:
+                pass
+            if i + 1 < len(graph.vp.childrenTasks[fork]) - 1:  # todo off by one?, elif?
+                pass
+            graph.vp.childrenTasks[fork].remove(child_task)
+            __merge_tasks(graph, fork)
+            return
+
     pass
 
 
@@ -147,17 +169,17 @@ def __create_task_tree(graph: Graph, root: Vertex):
     :param graph: CU graph
     :param root: root node
     """
-    __forks.add(root)
-    # TODO create task and save
-    __create_task_tree_helper(graph, root, root, [])
+    root_task = Task(graph, root)
+    __forks.add(root_task)
+    __create_task_tree_helper(graph, root, root_task, [])
 
 
-def __create_task_tree_helper(graph: Graph, current: Vertex, root: Vertex, visited_func: List[Vertex]):
+def __create_task_tree_helper(graph: Graph, current: Vertex, root: Task, visited_func: List[Vertex]):
     """generates task tree data recursively
 
     :param graph: CU graph
     :param current: current vertex to process
-    :param root: root of the subtree
+    :param root: root task for subtree
     :param visited_func: visited function nodes
     """
     if graph.vp.type[current] == 'func':
@@ -166,15 +188,16 @@ def __create_task_tree_helper(graph: Graph, current: Vertex, root: Vertex, visit
         else:
             visited_func.append(current)
 
-    for child in find_subnodes(graph, root, 'child'):
+    for child in find_subnodes(graph, current, 'child'):
         mw_type = graph.vp.mwType[child]
 
-        if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER', 'FORK']:
-            # TODO create task and save
-            if mw_type == 'FORK' and not graph.vp.startsAtLine[child].endswith('16383'):
-                __forks.add(child)
-            else:
-                graph.vp.childrenTasks[root].add(child)
-            __create_task_tree_helper(graph, child, child, visited_func)
+        if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER']:
+            task = Task(graph, child)
+            root.child_tasks.append(task)
+            __create_task_tree_helper(graph, child, task, visited_func)
+        elif mw_type == 'FORK' and not graph.vp.startsAtLine[child].endswith('16383'):
+            task = Task(graph, child)
+            __forks.add(task)
+            __create_task_tree_helper(graph, child, task, visited_func)
         else:
             __create_task_tree_helper(graph, child, root, visited_func)

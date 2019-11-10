@@ -137,6 +137,7 @@ def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[V
     return dep_set
 
 
+# TODO set or list?
 def get_subtree_of_type(graph: Graph, root: Vertex, node_type: str) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
@@ -164,3 +165,35 @@ def find_main_node(graph: Graph) -> Vertex:
     for node in graph.vertices():
         if graph.vp.name[node] == 'main':
             return node
+
+
+def total_instructions_count(graph: Graph, node: Vertex) -> int:
+    """Calculates total number of the instructions in the subtree of a given node
+
+    :param graph: CU graph
+    :param node: root node
+    :return: number of instructions
+    """
+    res = 0
+    for node in get_subtree_of_type(graph, node, 'CU'):
+        res += graph.vp.instructionsCount[node]
+    return res
+
+
+def calculate_workload(graph: Graph, node: Vertex) -> int:
+    """Calculates workload for a given node
+
+    :param graph: CU graph
+    :param node: root node
+    :return: workload
+    """
+    res = 0
+    for node in get_subtree_of_type(graph, node, 'CU'):
+        res += graph.vp.instructionsCount[node]
+    for node in get_subtree_of_type(graph, node, 'loop'):
+        res += graph.vp.instructionsCount[node]
+    return res
+
+
+def __calculate_loop_workload(graph, node):
+    pass
