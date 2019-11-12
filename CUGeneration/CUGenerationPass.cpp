@@ -202,8 +202,7 @@ namespace
         void collectGlobalVariables();
 
         //functions to get recursive functions (Mo 5.11.2019)
-        bool isRecursive(Function* F);
-        bool isRecursiveHelper(const CallGraphNode* n, Function* F, const CallGraph *CG, set<Function*> *checkedFunctions);
+        bool isRecursive(Function &F, CallGraph &CG);
 
         //Populate variable sets global to BB
         void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
@@ -909,7 +908,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 }
 
                 //Recursive functions (Mo 5.11.2019)
-                if(isRecursive(f)){
+                CallGraphWrapperPass* CGWP = &(getAnalysis<CallGraphWrapperPass>());
+                if(isRecursive(*f, CGWP->getCallGraph())){
                     int lid = getLID(&*instruction, fileID);
                     n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
                 }
@@ -1088,22 +1088,16 @@ void CUGeneration::initializeCUIDCounter()
     }
 }
 
-bool CUGeneration::isRecursive(Function* F){
-  CallGraph *CG = &getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  const CallGraphNode *root = (*CG)[F];
-  return isRecursiveHelper(root, F, CG, new set<Function*>());
-}
-
-bool CUGeneration::isRecursiveHelper(const CallGraphNode* n, Function* F, const CallGraph *CG, set<Function*> *checkedFunctions){
-  checkedFunctions->insert(n->getFunction());
-  for(auto cgn : *n){
-    if(cgn.second->getFunction() == F){
-      return true;
+bool CUGeneration::isRecursive(Function &F, CallGraph &CG)
+{
+    auto callNode = CG[&F];
+    for (unsigned i = 0; i < callNode->size(); i++)
+    {
+        if ((*callNode)[i]->getFunction() == &F)
+            return true;
     }
-    if(checkedFunctions->find(cgn.second->getFunction()) == checkedFunctions->end())
-      return isRecursiveHelper(cgn.second, F, CG, checkedFunctions);
-  }
-  return false;
+
+    return false;
 }
 
 void CUGeneration::getAnalysisUsage(AnalysisUsage &AU) const
@@ -1187,10 +1181,6 @@ bool CUGeneration::runOnFunction(Function &F)
     fillStartEndLineNumbers(root);
 
     secureStream();
-
-    if(isRecursive(&F)){
-       errs()<< "===============recursive functions: " << F.getName() << "\n"; 
-    }
     
     printOriginalVariables(originalVariablesSet);
 
