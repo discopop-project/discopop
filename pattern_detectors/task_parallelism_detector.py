@@ -2,7 +2,7 @@ from typing import List, Set, Any
 
 from graph_tool import Vertex, Graph
 
-from utils import find_subnodes, depends, find_main_node
+from utils import find_subnodes, depends, find_main_node, calculate_workload
 
 __forks = set()
 __workloadThreshold = 10000
@@ -10,34 +10,84 @@ __minParallelism = 3
 
 
 class Task(object):
+    """This class represents task in task parallelism pattern
+    """
+    nodes: List[Vertex]
+    child_tasks: List['Task']
+    start_line: str
+    end_line: str
+
     def __init__(self, graph: Graph, node: Vertex):
         self.nodes = [node]
         self.start_line = graph.vp.startsAtLine[node]
         self.end_line = graph.vp.endsAtLine[node]
         self.mw_type = graph.vp.mwType[node]
         self.instruction_count = graph.vp.instructionsCount[node]
-        self.workload = 0  # todo
+        self.workload = calculate_workload(graph, node)
         self.child_tasks = []
 
+    def aggregate(self, other: 'Task'):
+        """Aggregates given task into current task
 
-def __merge_tasks(graph: Graph, fork: Vertex):
+        :param other: task to aggregate
+        """
+        self.nodes.extend(other.nodes)
+        self.end_line = other.end_line
+        self.workload += other.workload
+        self.instruction_count += other.instruction_count
+        self.mw_type = 'BARRIER_WORKER' if other.mw_type == 'BARRIER_WORKER' else 'WORKER'
+
+
+def __merge_tasks(graph: Graph, task: Task):
     """Merges the tasks into having required workload.
 
     :param graph: CU graph
-    :param fork: task node
+    :param task: task node
     """
-    for i in range(len(graph.vp.childrenTasks[fork])):
-        child_task = graph.vp.childrenTasks[fork][i]
-        if child_task.workload < __workloadThreshold:  # todo workload
+    for i in range(len(task.child_tasks)):
+        child_task: Task = task.child_tasks[i]
+        if child_task.workload < __workloadThreshold:  # todo child child_tasks?
             if i > 0:
-                pass
-            if i + 1 < len(graph.vp.childrenTasks[fork]) - 1:  # todo off by one?, elif?
-                pass
-            graph.vp.childrenTasks[fork].remove(child_task)
-            __merge_tasks(graph, fork)
+                pred: Task = task.child_tasks[i - 1]
+                if __neighbours(pred, child_task):
+                    pred.aggregate(child_task)
+                    pred.child_tasks.remove(child_task)
+                    __merge_tasks(graph, task)
+                    return
+            if i + 1 < len(task.child_tasks) - 1:  # todo off by one?, elif?
+                succ: Task = task.child_tasks[i + 1]
+                if __neighbours(child_task, succ):
+                    child_task.aggregate(succ)  # todo odd aggregation in c++
+                    task.child_tasks.remove(succ)
+                    __merge_tasks(graph, task)
+                    return
+            task.child_tasks.remove(child_task)
+            __merge_tasks(graph, task)
             return
 
-    pass
+    if task.child_tasks and len(task.child_tasks) < __minParallelism:
+        max_workload_task = max(task.child_tasks, key=lambda t: t.workload)
+        task.child_tasks.extend(max_workload_task.child_tasks)
+        task.child_tasks.remove(max_workload_task)
+        __merge_tasks(graph, task)
+        return
+
+    for child in task.child_tasks:
+        if graph.vp.type[child.nodes[0]] == 'loop':
+            pass  # todo add loops?
+
+
+
+def __neighbours(first: Task, second: Task):
+    """Checks if second task immediately follows first task
+
+    :param first: predecessor task
+    :param second: successor task
+    :return: true if second task immediately follows first task
+    """
+    fel = int(first.end_line.split(':')[1])
+    ssl = int(second.start_line.split(':')[1])
+    return fel == ssl or fel + 1 == ssl or fel + 2 == ssl
 
 
 class TaskParallelismInfo(object):
@@ -99,10 +149,8 @@ def run_detection(graph: Graph) -> List[TaskParallelismInfo]:
 
     for fork in __forks:
         __merge_tasks(graph, fork)
-    #    if fork.children_nodes:
-    #       print("Task Parallelism")
-    #        print("start line:", graph.vp.startsAtLine[fork.children_nodes[0]], "end line:",
-    #             graph.vp.endsAtLine[fork.children_nodes[-1]])
+        if fork.child_tasks:
+            print("Task Parallelism")
 
     return result
 
