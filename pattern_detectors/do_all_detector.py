@@ -4,7 +4,7 @@ import numpy as np
 from graph_tool import Vertex, Graph
 from graph_tool.util import find_vertex
 
-from utils import find_subnodes, is_depending, correlation_coefficient
+from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
 
 do_all_threshold = 0.9
 
@@ -67,7 +67,7 @@ def __detect_do_all(graph: Graph, root: Vertex):
 
     for i in range(0, len(subnodes)):
         for j in range(i, len(subnodes)):
-            if is_depending(graph, subnodes[i], subnodes[j], root):
+            if depends_ignore_readonly(graph, subnodes[i], subnodes[j], root):
                 graph_vector.append(0)
             else:
                 graph_vector.append(1)

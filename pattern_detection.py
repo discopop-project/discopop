@@ -7,13 +7,14 @@ from pattern_detectors.geometric_decomposition_detector import run_detection as 
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline
 from pattern_detectors.reduction_detector import run_detection as detect_reduction
 from pattern_detectors.task_parallelism_detector import run_detection as detect_tp
+from utils import loop_data
 
 
 class PatternDetector(object):
     pet: PETGraph
     path: str
     reduction_vars: List[Dict[str, str]]
-    loop_data: Dict[str, int]
+    # loop_data: Dict[str, int]
 
     def __init__(self, pet_graph: PETGraph, path):
         """This class runs detection algorithms on CU graph
@@ -24,14 +25,14 @@ class PatternDetector(object):
         self.pet = pet_graph
         self.path = path
         self.reduction_vars = []
-        self.loop_data = {}
+        #self.loop_data = {}
 
         with open(os.path.join(path, 'loop_counter_output.txt')) as f:
             content = f.readlines()
         for line in content:
             s = line.split(' ')
             # line = FileId + LineNr
-            self.loop_data[s[0] + ':' + s[1]] = int(s[2])
+            loop_data[s[0] + ':' + s[1]] = int(s[2])
 
         # parse reduction variables
         with open(os.path.join(path, 'reduction.txt')) as f:
@@ -91,5 +92,5 @@ class PatternDetector(object):
             print(tp, '\n')
 
         print('===DETECTING GEOMETRIC DECOMPOSITION===')
-        for gd in detect_gd(self.pet.graph, self.loop_data):
+        for gd in detect_gd(self.pet.graph, loop_data):
             print(gd, '\n')

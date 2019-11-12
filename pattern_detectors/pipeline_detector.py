@@ -3,7 +3,7 @@ from typing import List
 from graph_tool import Vertex, Graph
 from graph_tool.util import find_vertex
 
-from utils import find_subnodes, is_depending, correlation_coefficient
+from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
 
 
 class PipelineInfo(object):
@@ -90,7 +90,7 @@ def __detect_pipeline(graph: Graph, root: Vertex) -> float:
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1 if is_depending(graph, loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
+        graph_vector.append(1 if depends_ignore_readonly(graph, loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):
@@ -99,7 +99,7 @@ def __detect_pipeline(graph: Graph, root: Vertex) -> float:
     min_weight = 1
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if is_depending(graph, loop_subnodes[i], loop_subnodes[j], root):
+            if depends_ignore_readonly(graph, loop_subnodes[i], loop_subnodes[j], root):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:

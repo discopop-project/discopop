@@ -4,8 +4,11 @@ import numpy as np
 from graph_tool.all import Vertex, Graph, Edge
 
 
+loop_data = {}
+
+
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
-    """ Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
+    """Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
 
     :param v1: first vector
     :param v2: second vector
@@ -16,7 +19,7 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
 
 
 def find_subnodes(graph: Graph, node: Vertex, criteria: str) -> List[Vertex]:
-    """ Returns direct children of a given node
+    """Returns direct children of a given node
 
     :param graph: CU graph
     :param node: node
@@ -45,20 +48,20 @@ def depends(graph: Graph, source: Vertex, target: Vertex) -> bool:
     return False
 
 
-def is_depending(graph: Graph, v_source: Vertex, v_target: Vertex, root_loop: Vertex) -> bool:
+def depends_ignore_readonly(graph: Graph, source: Vertex, target: Vertex, root_loop: Vertex) -> bool:
     """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
     The loop index and readonly variables are ignored
 
     :param graph: CU graph
-    :param v_source: source node for dependency detection
-    :param v_target: target of dependency
+    :param source: source node for dependency detection
+    :param target: target of dependency
     :param root_loop: root loop
     :return: true, if there is RAW dependency
     """
-    children = get_subtree_of_type(graph, v_target, 'cu')
-    children.append(v_target)
+    children = get_subtree_of_type(graph, target, 'cu')
+    children.append(target)
 
-    for dep in get_all_dependencies(graph, v_source, root_loop):
+    for dep in get_all_dependencies(graph, source, root_loop):
         if dep in children:
             return True
     return False
@@ -75,7 +78,6 @@ def is_loop_index(graph: Graph, edge: Edge, loops_start_lines: List[str], childr
     """
 
     # TODO check all dependencies necessary?
-
     # If there is a raw dependency for var, the source cu is part of the loop
     # and the dependency occurs in loop header, then var is loop index+
     return (graph.ep.source[edge] == graph.ep.sink[edge]
@@ -117,6 +119,7 @@ def is_readonly_inside_loop_body(graph: Graph, dep: Edge, root_loop: Vertex) -> 
 def get_all_dependencies(graph: Graph, node: Vertex, root_loop: Vertex) -> Set[Vertex]:
     """Returns all data dependencies of the node and it's children
     This method ignores loop index and read only variables
+
     :param graph: CU graph
     :param node: node
     :param root_loop: root loop
@@ -188,12 +191,28 @@ def calculate_workload(graph: Graph, node: Vertex) -> int:
     :return: workload
     """
     res = 0
-    for node in get_subtree_of_type(graph, node, 'CU'):
+    if graph.vp.instructionsCount[node] == 'dummy':
+        return 0
+    elif graph.vp.instructionsCount[node] == 'CU':
         res += graph.vp.instructionsCount[node]
-    for node in get_subtree_of_type(graph, node, 'loop'):
-        res += graph.vp.instructionsCount[node]
+    elif graph.vp.instructionsCount[node] == 'func':
+        for child in find_subnodes(graph, node, 'child'):
+            res += calculate_workload(graph, child)
+    elif graph.vp.instructionsCount[node] == 'loop':
+        for child in get_subtree_of_type(graph, node, 'CU'):
+            if 'for.inc' in graph.vp.BasicBlockID[child]:
+                res += graph.vp.instructionsCount[node]
+            elif 'for.cond' in graph.vp.BasicBlockID[child]:
+                res += graph.vp.instructionsCount[node] * (get_loop_iterations(graph.vp.startsAtLine[node]) + 1)
+            else:
+                res += graph.vp.instructionsCount[node] * get_loop_iterations(graph.vp.startsAtLine[node])
     return res
 
 
-def __calculate_loop_workload(graph, node):
-    pass
+def get_loop_iterations(line: str) -> int:
+    """Calculates the number of iterations in specified loop
+
+    :param line: start line of the loop
+    :return: number of iterations
+    """
+    return loop_data.get(line, 0)

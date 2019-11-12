@@ -5,7 +5,7 @@ from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
 from pattern_detectors.do_all_detector import do_all_threshold
-from utils import find_subnodes, get_subtree_of_type
+from utils import find_subnodes, get_subtree_of_type, get_loop_iterations
 
 # cache
 __loop_iterations: Dict[str, int] = {}
@@ -94,7 +94,7 @@ def __iterations_count(graph: Graph, node: Vertex) -> int:
     :return: number of iterations
     """
     if not (node in __loop_iterations):
-        loop_iter = __get_loop_iterations(graph.vp.startsAtLine[node])
+        loop_iter = get_loop_iterations(graph.vp.startsAtLine[node])
         parent_iter = __get_parent_iterations(graph, node)
 
         if loop_iter < parent_iter:
@@ -105,15 +105,6 @@ def __iterations_count(graph: Graph, node: Vertex) -> int:
             __loop_iterations[node] = loop_iter // parent_iter
 
     return __loop_iterations[node]
-
-
-def __get_loop_iterations(line: str) -> int:
-    """Calculates the number of iterations in specified loop
-
-    :param line: start line of the loop
-    :return: number of iterations
-    """
-    return __loop_data.get(line, 0)
 
 
 def __get_parent_iterations(graph: Graph, node: Vertex) -> int:
@@ -129,7 +120,7 @@ def __get_parent_iterations(graph: Graph, node: Vertex) -> int:
     while parent:
         node = parent[0]
         if graph.vp.type[node] == 'loop':
-            max_iter = max(1, __get_loop_iterations(graph.vp.startsAtLine[node]))
+            max_iter = max(1, get_loop_iterations(graph.vp.startsAtLine[node]))
             break
         parent = [e.source() for e in node.in_edges() if graph.ep.type[e] == 'child']
 
