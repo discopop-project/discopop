@@ -2,7 +2,7 @@ from typing import List, Set, Any
 
 from graph_tool import Vertex, Graph
 
-from utils import find_subnodes, depends, find_main_node, calculate_workload
+from utils import find_subnodes, depends, find_main_node, calculate_workload, total_instructions_count
 
 __forks = set()
 __workloadThreshold = 10000
@@ -18,11 +18,12 @@ class Task(object):
     end_line: str
 
     def __init__(self, graph: Graph, node: Vertex):
+        self.node_id = graph.vp.id[node]
         self.nodes = [node]
         self.start_line = graph.vp.startsAtLine[node]
         self.end_line = graph.vp.endsAtLine[node]
         self.mw_type = graph.vp.mwType[node]
-        self.instruction_count = graph.vp.instructionsCount[node]
+        self.instruction_count = total_instructions_count(graph, node)
         self.workload = calculate_workload(graph, node)
         self.child_tasks = []
 
@@ -146,11 +147,11 @@ def run_detection(graph: Graph) -> List[TaskParallelismInfo]:
 
     # ct = [graph.vp.id[v] for v in graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]
-
-    for fork in __forks:
-        __merge_tasks(graph, fork)
+    fs = [f for f in __forks if f.node_id == '130:0']
+    for fork in fs:
+        # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
-            print("Task Parallelism")
+            result.append(TaskParallelismInfo(graph, fork.nodes[0]))
 
     return result
 

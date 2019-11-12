@@ -170,15 +170,17 @@ def find_main_node(graph: Graph) -> Vertex:
             return node
 
 
-def total_instructions_count(graph: Graph, node: Vertex) -> int:
+def total_instructions_count(graph: Graph, root: Vertex) -> int:
     """Calculates total number of the instructions in the subtree of a given node
 
     :param graph: CU graph
-    :param node: root node
+    :param root: root node
     :return: number of instructions
     """
     res = 0
-    for node in get_subtree_of_type(graph, node, 'CU'):
+    for node in get_subtree_of_type(graph, root, 'cu'):
+        r = graph.vp.instructionsCount[node]
+        i = graph.vp.id[node]
         res += graph.vp.instructionsCount[node]
     return res
 
@@ -193,13 +195,13 @@ def calculate_workload(graph: Graph, node: Vertex) -> int:
     res = 0
     if graph.vp.instructionsCount[node] == 'dummy':
         return 0
-    elif graph.vp.instructionsCount[node] == 'CU':
+    elif graph.vp.instructionsCount[node] == 'cu':
         res += graph.vp.instructionsCount[node]
     elif graph.vp.instructionsCount[node] == 'func':
         for child in find_subnodes(graph, node, 'child'):
             res += calculate_workload(graph, child)
     elif graph.vp.instructionsCount[node] == 'loop':
-        for child in get_subtree_of_type(graph, node, 'CU'):
+        for child in get_subtree_of_type(graph, node, 'cu'):
             if 'for.inc' in graph.vp.BasicBlockID[child]:
                 res += graph.vp.instructionsCount[node]
             elif 'for.cond' in graph.vp.BasicBlockID[child]:
