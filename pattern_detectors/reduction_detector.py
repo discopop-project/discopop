@@ -1,8 +1,9 @@
 from typing import List, Dict
 
-from graph_tool import Graph, Vertex
+from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
+import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import get_subtree_of_type
 
@@ -11,12 +12,12 @@ class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result
     """
 
-    def __init__(self, graph: Graph, node: Vertex):
+    def __init__(self, pet: PETGraph, node: Vertex):
         """
-        :param graph: CU graph
+        :param pet: PET graph
         :param node: node, where reduction was detected
         """
-        PatternInfo.__init__(self, graph, node)
+        PatternInfo.__init__(self, pet, node)
 
     def __str__(self):
         return f'Reduction at: {self.node_id}\n' \
@@ -35,39 +36,37 @@ def __is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]
     return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
 
-def run_detection(graph: Graph, reduction_vars: List[Dict[str, str]]) -> List[ReductionInfo]:
+def run_detection(pet: PETGraph) -> List[ReductionInfo]:
     """Search for reduction pattern
 
-    :param graph: CU graph
-    :param reduction_vars: List of reduction variables
+    :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
 
-    for node in find_vertex(graph, graph.vp.type, 'loop'):
-        if __detect_reduction(graph, node, reduction_vars):
-            graph.vp.reduction[node] = True
-            result.append(ReductionInfo(graph, node))
+    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
+        if __detect_reduction(pet, node):
+            pet.graph.vp.reduction[node] = True
+            result.append(ReductionInfo(pet, node))
 
     return result
 
 
-def __detect_reduction(graph: Graph, root: Vertex, reduction_vars: List[Dict[str, str]]) -> bool:
+def __detect_reduction(pet: PETGraph, root: Vertex) -> bool:
     """Detects reduction pattern in loop
 
-    :param graph: cu graph
+    :param pet: PET graph
     :param root: the loop node
-    :param reduction_vars: List of reduction variables
     :return: true if is reduction loop
     """
-    if graph.vp.type[root] != 'loop':
+    if pet.graph.vp.type[root] != 'loop':
         return False
 
     all_vars = set()
-    for node in get_subtree_of_type(graph, root, 'cu'):
-        for v in graph.vp.localVars[node]:
+    for node in get_subtree_of_type(pet, root, 'cu'):
+        for v in pet.graph.vp.localVars[node]:
             all_vars.add(v)
-        for v in graph.vp.globalVars[node]:
+        for v in pet.graph.vp.globalVars[node]:
             all_vars.add(v)
 
-    return bool([v for v in all_vars if __is_reduction_var(graph.vp.startsAtLine[root], v, reduction_vars)])
+    return bool([v for v in all_vars if __is_reduction_var(pet.graph.vp.startsAtLine[root], v, pet.reduction_vars)])

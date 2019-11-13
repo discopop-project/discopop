@@ -1,9 +1,10 @@
 from typing import List
 
 import numpy as np
-from graph_tool import Vertex, Graph
+from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
+import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
 
@@ -15,13 +16,13 @@ class DoAllInfo(PatternInfo):
     """
     coefficient: float
 
-    def __init__(self, graph: Graph, node: Vertex, coefficient: float):
+    def __init__(self, pet: PETGraph, node: Vertex, coefficient: float):
         """
-        :param graph: CU graph
+        :param pet: PET graph
         :param node: node, where do-all was detected
         :param coefficient: correlation coefficient
         """
-        PatternInfo.__init__(self, graph, node)
+        PatternInfo.__init__(self, pet, node)
         self.coefficient = coefficient
 
     def __str__(self):
@@ -31,37 +32,37 @@ class DoAllInfo(PatternInfo):
                f'End line: {self.end_line}'
 
 
-def run_detection(graph: Graph) -> List[DoAllInfo]:
+def run_detection(pet: PETGraph) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
-    :param graph: CU graph
+    :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
-    for node in find_vertex(graph, graph.vp.type, 'loop'):
-        val = __detect_do_all(graph, node)
+    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
+        val = __detect_do_all(pet, node)
         if val > do_all_threshold:
-            graph.vp.doAll[node] = val
-            if not graph.vp.reduction[node]:
-                result.append(DoAllInfo(graph, node, graph.vp.doAll[node]))
+            pet.graph.vp.doAll[node] = val
+            if not pet.graph.vp.reduction[node]:
+                result.append(DoAllInfo(pet, node, pet.graph.vp.doAll[node]))
 
     return result
 
 
-def __detect_do_all(graph: Graph, root: Vertex):
+def __detect_do_all(pet: PETGraph, root: Vertex):
     """Calculate do-all value for node
 
-    :param graph: CU graph
+    :param pet: PET graph
     :param root: root node
     :return: do-all scalar value
     """
     graph_vector = []
 
-    subnodes = find_subnodes(graph, root, 'child')
+    subnodes = find_subnodes(pet, root, 'child')
 
     for i in range(0, len(subnodes)):
         for j in range(i, len(subnodes)):
-            if depends_ignore_readonly(graph, subnodes[i], subnodes[j], root):
+            if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root):
                 graph_vector.append(0)
             else:
                 graph_vector.append(1)

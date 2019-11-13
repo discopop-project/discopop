@@ -3,6 +3,8 @@ from graph_tool.all import graph_draw, GraphView, interactive_window
 from graph_tool.draw import arf_layout
 from graph_tool.search import bfs_iterator
 
+from typing import Dict, List
+
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
 
 node_type_info = {
@@ -70,12 +72,16 @@ GT_map_node_indices = dict()
 
 
 class PETGraph(object):
+    reduction_vars: List[Dict[str, str]]
+    loop_data: Dict[str, int]
     children_graph: GraphView
     dep_graph: GraphView
     graph: Graph
 
-    def __init__(self, cu_dict, dependences_list):
+    def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
         self.graph = Graph()
+        self.loop_data = loop_data
+        self.reduction_vars = reduction_vars
 
         # Define the properties for each node
         for prop in node_props:
@@ -116,7 +122,7 @@ class PETGraph(object):
                     self.graph.ep.type[e] = 'successor'
                     self.graph.ep.viz_color[e] = [0.0, 0.5, 0.0, 0.5]
 
-        for dep in dependences_list:
+        for dep in dependencies_list:
             sink_cu_ids = lineToCUIdMap[dep.sink] if dep.type == 'INIT' else readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
             for sink_cu_id in sink_cu_ids:

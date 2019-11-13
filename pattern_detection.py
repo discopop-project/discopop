@@ -1,48 +1,23 @@
-import os
-from typing import Dict, List
-
+import utils
 from PETGraph import PETGraph
 from pattern_detectors.do_all_detector import run_detection as detect_do_all
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline
 from pattern_detectors.reduction_detector import run_detection as detect_reduction
 from pattern_detectors.task_parallelism_detector import run_detection as detect_tp
-from utils import loop_data
 
 
 class PatternDetector(object):
     pet: PETGraph
-    path: str
-    reduction_vars: List[Dict[str, str]]
-    # loop_data: Dict[str, int]
 
-    def __init__(self, pet_graph: PETGraph, path):
+    def __init__(self, pet_graph: PETGraph):
         """This class runs detection algorithms on CU graph
 
         :param pet_graph: CU graph
-        :param path: directory with input data
         """
         self.pet = pet_graph
-        self.path = path
-        self.reduction_vars = []
-        #self.loop_data = {}
 
-        with open(os.path.join(path, 'loop_counter_output.txt')) as f:
-            content = f.readlines()
-        for line in content:
-            s = line.split(' ')
-            # line = FileId + LineNr
-            loop_data[s[0] + ':' + s[1]] = int(s[2])
-
-        # parse reduction variables
-        with open(os.path.join(path, 'reduction.txt')) as f:
-            content = f.readlines()
-
-        for line in content:
-            s = line.split(' ')
-            # line = FileId + LineNr
-            var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
-            self.reduction_vars.append(var)
+        utils.loop_data = pet_graph.loop_data
 
     def __merge(self, loop_type: bool, remove_dummies: bool):
         """Removes dummy nodes
@@ -75,22 +50,31 @@ class PatternDetector(object):
         self.__merge(False, True)
 
         print('===DETECTING PIPELINE===')
-        for pipeline in detect_pipeline(self.pet.graph):
+        for pipeline in detect_pipeline(self.pet):
             print(pipeline, '\n')
 
         print('===DETECTING REDUCTION===')
         # reduction before doall!
-        for reduction in detect_reduction(self.pet.graph, self.reduction_vars):
-            print(reduction, '\n')
+        if self.pet.reduction_vars is not None:
+            for reduction in detect_reduction(self.pet):
+                print(reduction, '\n')
+        else:
+            print('reduction variables are required for this detector\n')
 
         print('===DETECTING DO ALL===')
-        for do_all in detect_do_all(self.pet.graph):
+        for do_all in detect_do_all(self.pet):
             print(do_all, '\n')
 
         print('===DETECTING TASK PARALLELISM===')
-        for tp in detect_tp(self.pet.graph):
-            print(tp, '\n')
+        if self.pet.loop_data is not None:
+            for tp in detect_tp(self.pet):
+                print(tp, '\n')
+        else:
+            print('loop iteration data is required for this detector\n')
 
         print('===DETECTING GEOMETRIC DECOMPOSITION===')
-        for gd in detect_gd(self.pet.graph, loop_data):
-            print(gd, '\n')
+        if self.pet.loop_data is not None:
+            for gd in detect_gd(self.pet):
+                print(gd, '\n')
+        else:
+            print('loop iteration data is required for this detector\n')

@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 
 from lxml import objectify
@@ -94,10 +95,36 @@ def __parse_dep_file(dep_fd):
     return dependencies_list
 
 
-def parse_inputs(xml_fd, dependences_fd):
+def parse_inputs(xml_fd, dependences_fd, loop_counter, reduction_file):
     cu_dict = __parse_xml_input(xml_fd)
     cu_dict = __map_dummy_nodes(cu_dict)
 
     dependencies = __parse_dep_file(dependences_fd)
 
-    return cu_dict, dependencies
+    if os.path.exists(loop_counter):
+        loop_data = {}
+        with open(loop_counter) as f:
+            content = f.readlines()
+        for line in content:
+            s = line.split(' ')
+            # line = FileId + LineNr
+            loop_data[s[0] + ':' + s[1]] = int(s[2])
+    else:
+        loop_data = None
+
+    if os.path.exists(reduction_file):
+        reduction_vars = []
+
+        # parse reduction variables
+        with open(reduction_file) as f:
+            content = f.readlines()
+
+        for line in content:
+            s = line.split(' ')
+            # line = FileId + LineNr
+            var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
+            reduction_vars.append(var)
+    else:
+        reduction_vars = None
+
+    return cu_dict, dependencies, loop_data, reduction_vars
