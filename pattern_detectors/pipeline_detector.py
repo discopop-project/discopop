@@ -3,17 +3,14 @@ from typing import List
 from graph_tool import Vertex, Graph
 from graph_tool.util import find_vertex
 
+from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
 
 
-class PipelineInfo(object):
+class PipelineInfo(PatternInfo):
     """Class, that contains pipeline detection result
     """
-    node: Vertex
-    node_id: str
     coefficient: float
-    start_line: str
-    end_line: str
 
     def __init__(self, graph: Graph, node: Vertex, coefficient: float):
         """
@@ -21,11 +18,8 @@ class PipelineInfo(object):
         :param node: node, where pipeline was detected
         :param coefficient: correlation coefficient
         """
-        self.node = node
-        self.node_id = graph.vp.id[node]
+        PatternInfo.__init__(self, graph, node)
         self.coefficient = coefficient
-        self.start_line = graph.vp.startsAtLine[node]
-        self.end_line = graph.vp.endsAtLine[node]
 
     def __str__(self):
         return f'Pipeline at: {self.node_id}\n' \

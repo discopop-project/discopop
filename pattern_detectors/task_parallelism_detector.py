@@ -2,6 +2,7 @@ from typing import List, Set, Any
 
 from graph_tool import Vertex, Graph
 
+from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends, find_main_node, calculate_workload, total_instructions_count
 
 __forks = set()
@@ -91,23 +92,16 @@ def __neighbours(first: Task, second: Task):
     return fel == ssl or fel + 1 == ssl or fel + 2 == ssl
 
 
-class TaskParallelismInfo(object):
+class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
-    node: Vertex
-    node_id: str
-    start_line: str
-    end_line: str
 
     def __init__(self, graph: Graph, node: Vertex):
         """
         :param graph: CU graph
         :param node: node, where task parallelism was detected
         """
-        self.node = node
-        self.node_id = graph.vp.id[node]
-        self.start_line = graph.vp.startsAtLine[node]
-        self.end_line = graph.vp.endsAtLine[node]
+        PatternInfo.__init__(self, graph, node)
 
     def __str__(self):
         return f'Task parallelism at: {self.node_id}\n' \

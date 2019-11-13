@@ -3,26 +3,20 @@ from typing import List, Dict
 from graph_tool import Graph, Vertex
 from graph_tool.util import find_vertex
 
+from pattern_detectors.PatternInfo import PatternInfo
 from utils import get_subtree_of_type
 
 
-class ReductionInfo(object):
+class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result
     """
-    node: Vertex
-    node_id: str
-    start_line: str
-    end_line: str
 
     def __init__(self, graph: Graph, node: Vertex):
         """
         :param graph: CU graph
         :param node: node, where reduction was detected
         """
-        self.node = node
-        self.node_id = graph.vp.id[node]
-        self.start_line = graph.vp.startsAtLine[node]
-        self.end_line = graph.vp.endsAtLine[node]
+        PatternInfo.__init__(self, graph, node)
 
     def __str__(self):
         return f'Reduction at: {self.node_id}\n' \
