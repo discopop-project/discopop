@@ -49,6 +49,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Analysis/CallGraph.h"
 
 #include "DPUtils.h"
 
@@ -112,6 +113,9 @@ namespace
 
         vector<Node_struct *> childrenNodes;
         Node_struct *parentNode;
+
+        //isRecursive function (Mo 5.11.2019)
+        string recursiveFunctionCall = "";
 
         Node_struct()
         {
@@ -196,6 +200,9 @@ namespace
         bool doInitialization(Module &ThisModule);
         bool doFinalization(Module &M);
         void collectGlobalVariables();
+
+        //functions to get recursive functions (Mo 5.11.2019)
+        bool isRecursive(Function &F, CallGraph &CG);
 
         //Populate variable sets global to BB
         void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
@@ -583,8 +590,11 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<callsNode>" << endl;
             for (auto i : (cu->callLineTofunctionMap))
             {
-                for (auto ii : i.second)
+                for (auto ii : i.second){
                     *outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\">" << ii->ID << "</nodeCalled>" << endl;
+                    // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
+                    *outCUs << "\t\t\t\t<recursiveFunctionCall>" << ii->recursiveFunctionCall << "</recursiveFunctionCall>" << endl;
+                }
             }
             *outCUs << "\t\t</callsNode>" << endl;
         }
@@ -866,7 +876,6 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 //get function name and parameters
                 Function *f = (cast<CallInst>(instruction))->getCalledFunction();
 
-
                 // For ordinary function calls, F has a name.
                 // However, sometimes the function being called
                 // in IR is encapsulated by "bitcast()" due to
@@ -896,6 +905,13 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     Value *sv = v->stripPointerCasts();
                     StringRef  fname = sv->getName();
                     n->name = fname;
+                }
+
+                //Recursive functions (Mo 5.11.2019)
+                CallGraphWrapperPass* CGWP = &(getAnalysis<CallGraphWrapperPass>());
+                if(isRecursive(*f, CGWP->getCallGraph())){
+                    int lid = getLID(&*instruction, fileID);
+                    n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
                 }
 
                 vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
@@ -1072,6 +1088,17 @@ void CUGeneration::initializeCUIDCounter()
     }
 }
 
+bool CUGeneration::isRecursive(Function &F, CallGraph &CG)
+{
+    auto callNode = CG[&F];
+    for (unsigned i = 0; i < callNode->size(); i++)
+    {
+        if ((*callNode)[i]->getFunction() == &F)
+            return true;
+    }
+
+    return false;
+}
 
 void CUGeneration::getAnalysisUsage(AnalysisUsage &AU) const
 {
@@ -1079,6 +1106,8 @@ void CUGeneration::getAnalysisUsage(AnalysisUsage &AU) const
     //NOTE: changed 'LoopInfo' to 'LoopInfoWrapperPass'
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
+    //Get recursive functions called in loops. (Mo 5.11.2019)
+    AU.addRequired<CallGraphWrapperPass>();
     AU.setPreservesAll();
 }
 
@@ -1152,7 +1181,7 @@ bool CUGeneration::runOnFunction(Function &F)
     fillStartEndLineNumbers(root);
 
     secureStream();
-
+    
     printOriginalVariables(originalVariablesSet);
 
     printData(root);
