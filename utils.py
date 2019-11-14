@@ -60,7 +60,7 @@ def depends_ignore_readonly(pet: PETGraph, source: Vertex, target: Vertex, root_
     :return: true, if there is RAW dependency
     """
     children = get_subtree_of_type(pet, target, 'cu')
-    children.append(target)
+    # todo children.append(target)
 
     for dep in get_all_dependencies(pet, source, root_loop):
         if dep in children:
@@ -78,12 +78,18 @@ def is_loop_index(pet: PETGraph, edge: Edge, loops_start_lines: List[str], child
     :return: true if edge represents loop index
     """
 
-    # TODO check all dependencies necessary?
     # If there is a raw dependency for var, the source cu is part of the loop
     # and the dependency occurs in loop header, then var is loop index+
-    return (pet.graph.ep.source[edge] == pet.graph.ep.sink[edge]
-            and pet.graph.ep.source[edge] in loops_start_lines
-            and edge.target() in children)
+
+    for c in children:
+        for dep in c.out_edges():
+            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == pet.graph.ep.var[edge]:
+                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
+                        and pet.graph.ep.source[dep] in loops_start_lines
+                        and dep.target() in children):
+                    return True
+
+    return False
 
 
 def is_readonly_inside_loop_body(pet: PETGraph, dep: Edge, root_loop: Vertex) -> bool:
@@ -131,10 +137,11 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
     loops_start_lines = [pet.graph.vp.startsAtLine[v]
                          for v in get_subtree_of_type(pet, root_loop, 'loop')]
-
+    tt = [pet.graph.vp.id[e.target()] for e in children[0].out_edges() if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW']
     for v in children:
         for e in v.out_edges():
             if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW':
+                ro = is_readonly_inside_loop_body(pet, e, root_loop)
                 if not (is_loop_index(pet, e, loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
                         and is_readonly_inside_loop_body(pet, e, root_loop)):
                     dep_set.add(e.target())

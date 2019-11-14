@@ -27,7 +27,7 @@ class PipelineInfo(PatternInfo):
 
     def __str__(self):
         return f'Pipeline at: {self.node_id}\n' \
-               f'Coefficient: {self.coefficient}\n' \
+               f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}'
 
