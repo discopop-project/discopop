@@ -8,6 +8,9 @@ from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
 
 
+__pipeline_threshold = 0.9
+
+
 class PipelineInfo(PatternInfo):
     """Class, that contains pipeline detection result
     """
@@ -56,7 +59,7 @@ def run_detection(pet: PETGraph) -> List[PipelineInfo]:
     result = []
     for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
         pet.graph.vp.pipeline[node] = __detect_pipeline(pet, node)
-        if pet.graph.vp.pipeline[node] > 0:
+        if pet.graph.vp.pipeline[node] > __pipeline_threshold:
             result.append(PipelineInfo(pet, node, pet.graph.vp.pipeline[node]))
 
     return result
