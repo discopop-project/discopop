@@ -1,11 +1,9 @@
-import numpy as np
-from graph_tool import Graph, GraphView
 from graph_tool.all import Graph
-from graph_tool.all import graph_draw, minimize_nested_blockmodel_dl, draw_hierarchy, GraphView, graphviz_draw, \
-    interactive_window
-from graph_tool.search import bfs_iterator, dfs_iterator
-from graph_tool.draw import sfdp_layout, fruchterman_reingold_layout, arf_layout, planar_layout, random_layout, \
-    radial_tree_layout
+from graph_tool.all import graph_draw, GraphView, interactive_window
+from graph_tool.draw import arf_layout
+from graph_tool.search import bfs_iterator
+
+from typing import Dict, List
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
 
@@ -32,15 +30,28 @@ node_type_info = {
     },
 }
 
+type_map = {
+    '0': 'cu',
+    '1': 'func',
+    '2': 'loop',
+    '3': 'dummy'
+}
+
 node_props = [
     ('id', 'string', 'node.get("id")'),
-    ('type', 'string', 'node.get("type")'),
+    ('type', 'string', 'type_map[node.get("type")]'),
     ('startsAtLine', 'string', 'node.get("startsAtLine")'),
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
+    ('name', 'string', 'node.get("name")'),
+    ('instructionsCount', 'int', 'node.get("instructionsCount", 0)'),
+    ('BasicBlockID', 'string', 'node.get("BasicBlockID", \'\')'),
     ('pipeline', 'float', '0'),
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
+    ('mwType', 'string', '\'FORK\''),
+    ('localVars', 'object', '[]'),
+    ('globalVars', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -61,12 +72,16 @@ GT_map_node_indices = dict()
 
 
 class PETGraph(object):
+    reduction_vars: List[Dict[str, str]]
+    loop_data: Dict[str, int]
     children_graph: GraphView
     dep_graph: GraphView
     graph: Graph
 
-    def __init__(self, cu_dict, dependences_list):
+    def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
         self.graph = Graph()
+        self.loop_data = loop_data
+        self.reduction_vars = reduction_vars
 
         # Define the properties for each node
         for prop in node_props:
@@ -81,6 +96,15 @@ class PETGraph(object):
 
             for prop in node_props:
                 self.graph.vp[prop[0]][v] = eval(prop[2])
+
+            if node.get("type") == '0':
+                if hasattr(node.localVariables, 'local'):
+                    self.graph.vp.localVars[v] = [v.text for v in node.localVariables.local]
+
+                if hasattr(node.globalVariables, 'global'):
+                    self.graph.vp.globalVars[v] = [v.text for v in getattr(node.globalVariables, 'global')]
+
+                self.graph.vp.instructionsCount[v] = node.instructionsCount
 
         # Adding edges (successors and children) to the graph
         for node_id, node in cu_dict.items():
@@ -98,7 +122,7 @@ class PETGraph(object):
                     self.graph.ep.type[e] = 'successor'
                     self.graph.ep.viz_color[e] = [0.0, 0.5, 0.0, 0.5]
 
-        for dep in dependences_list:
+        for dep in dependencies_list:
             sink_cu_ids = lineToCUIdMap[dep.sink] if dep.type == 'INIT' else readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
             for sink_cu_id in sink_cu_ids:
