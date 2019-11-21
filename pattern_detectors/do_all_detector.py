@@ -51,7 +51,7 @@ def run_detection(pet: PETGraph) -> List[DoAllInfo]:
         val = __detect_do_all(pet, node)
         if val > do_all_threshold:
             pet.graph.vp.doAll[node] = val
-            if not pet.graph.vp.reduction[node]:
+            if not pet.graph.vp.reduction[node] and get_loop_iterations(pet.graph.vp.startsAtLine[node]) > 0:
                 result.append(DoAllInfo(pet, node, pet.graph.vp.doAll[node]))
 
     return result
