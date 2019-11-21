@@ -209,13 +209,16 @@ def calculate_workload(pet: PETGraph, node: Vertex) -> int:
         for child in find_subnodes(pet, node, 'child'):
             res += calculate_workload(pet, child)
     elif pet.graph.vp.type[node] == 'loop':
-        for child in get_subtree_of_type(pet, node, 'cu'):
-            if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[child]
-            elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[child] * (get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+        for child in find_subnodes(pet, node, 'child'):
+            if pet.graph.vp.type[child] == 'cu':
+                if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
+                    res += pet.graph.vp.instructionsCount[child]
+                elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
+                    res += pet.graph.vp.instructionsCount[child] * (get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+                else:
+                    res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
             else:
-                res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                res += calculate_workload(pet, child) * get_loop_iterations(pet.graph.vp.startsAtLine[node])
     return res
 
 
@@ -223,6 +226,5 @@ def get_loop_iterations(line: str) -> int:
     """Calculates the number of iterations in specified loop
 
     :param line: start line of the loop
-    :return: number of iterations
     """
     return loop_data.get(line, 0)

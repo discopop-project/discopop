@@ -44,7 +44,7 @@ node_props = [
     ('endsAtLine', 'string', 'node.get("endsAtLine")'),
     ('name', 'string', 'node.get("name")'),
     ('instructionsCount', 'int', 'node.get("instructionsCount", 0)'),
-    ('BasicBlockID', 'string', 'node.get("BasicBlockID", \'\')'),
+    ('BasicBlockID', 'string', '\'\''),
     ('pipeline', 'float', '0'),
     ('doAll', 'float', '0'),
     ('geomDecomp', 'bool', 'False'),
@@ -105,6 +105,7 @@ class PETGraph(object):
                     self.graph.vp.globalVars[v] = [v.text for v in getattr(node.globalVariables, 'global')]
 
                 self.graph.vp.instructionsCount[v] = node.instructionsCount
+                self.graph.vp.BasicBlockID[v] = node.BasicBlockID
 
         # Adding edges (successors and children) to the graph
         for node_id, node in cu_dict.items():
