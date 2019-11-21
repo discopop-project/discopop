@@ -25,10 +25,6 @@ class DoAllInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
         self.coefficient = coefficient
-        self.iterations_count = get_loop_iterations(self.start_line)
-        self.instruction_count = total_instructions_count(pet, node)
-        self.workload = calculate_workload(pet, node)
-        # self.parent_iterations =
 
     def __str__(self):
         return f'Do-all at: {self.node_id}\n' \

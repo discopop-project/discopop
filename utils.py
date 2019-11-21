@@ -137,11 +137,9 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
     loops_start_lines = [pet.graph.vp.startsAtLine[v]
                          for v in get_subtree_of_type(pet, root_loop, 'loop')]
-    tt = [pet.graph.vp.id[e.target()] for e in children[0].out_edges() if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW']
     for v in children:
         for e in v.out_edges():
             if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW':
-                ro = is_readonly_inside_loop_body(pet, e, root_loop)
                 if not (is_loop_index(pet, e, loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
                         and is_readonly_inside_loop_body(pet, e, root_loop)):
                     dep_set.add(e.target())
@@ -195,6 +193,7 @@ def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
 
 def calculate_workload(pet: PETGraph, node: Vertex) -> int:
     """Calculates workload for a given node
+    The workload is the number of instructions multiplied by respective number of iterations
 
     :param pet: PET graph
     :param node: root node
