@@ -201,21 +201,21 @@ def calculate_workload(pet: PETGraph, node: Vertex) -> int:
     :return: workload
     """
     res = 0
-    if pet.graph.vp.instructionsCount[node] == 'dummy':
+    if pet.graph.vp.type[node] == 'dummy':
         return 0
-    elif pet.graph.vp.instructionsCount[node] == 'cu':
+    elif pet.graph.vp.type[node] == 'cu':
         res += pet.graph.vp.instructionsCount[node]
-    elif pet.graph.vp.instructionsCount[node] == 'func':
+    elif pet.graph.vp.type[node] == 'func':
         for child in find_subnodes(pet, node, 'child'):
             res += calculate_workload(pet, child)
-    elif pet.graph.vp.instructionsCount[node] == 'loop':
+    elif pet.graph.vp.type[node] == 'loop':
         for child in get_subtree_of_type(pet, node, 'cu'):
             if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[node]
+                res += pet.graph.vp.instructionsCount[child]
             elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[node] * (get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+                res += pet.graph.vp.instructionsCount[child] * (get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
             else:
-                res += pet.graph.vp.instructionsCount[node] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
     return res
 
 

@@ -6,7 +6,8 @@ from graph_tool.util import find_vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
+from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_loop_iterations, \
+    total_instructions_count, calculate_workload
 
 do_all_threshold = 0.9
 
@@ -24,12 +25,19 @@ class DoAllInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
         self.coefficient = coefficient
+        self.iterations_count = get_loop_iterations(self.start_line)
+        self.instruction_count = total_instructions_count(pet, node)
+        self.workload = calculate_workload(pet, node)
+        # self.parent_iterations =
 
     def __str__(self):
         return f'Do-all at: {self.node_id}\n' \
                f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}'
+               f'End line: {self.end_line}\n' \
+               f'iterations: {self.iterations_count}\n' \
+               f'instructions: {self.instruction_count}\n' \
+               f'workload: {self.workload}'
 
 
 def run_detection(pet: PETGraph) -> List[DoAllInfo]:
