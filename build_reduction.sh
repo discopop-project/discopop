@@ -19,8 +19,8 @@ $CXX -c -g -emit-llvm ../mlp_lib/loop_counter.cpp -o loop_counter_lib.bc
 
 cd ..
 python3 ./gen_file_mapping.py
-$CC -g -O0 -c -emit-llvm -fno-discard-value-names reduction_test.c -o reduction_test.bc
-export BC_IN="reduction_test.bc"
+$CC -g -O0 -c -emit-llvm -fno-discard-value-names $1 -o $1_out.bc
+export BC_IN="$1_out.bc"
 export MODULE_LIB="build/libModuleFunc.so"
 export LOOP_COUNTER_LIB="build/loop_counter_lib.bc"
 ./reduction.sh
