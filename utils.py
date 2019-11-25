@@ -227,3 +227,45 @@ def get_loop_iterations(line: str) -> int:
     :param line: start line of the loop
     """
     return loop_data.get(line, 0)
+
+
+def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[str], List[str], List[str], List[str], List[str]):
+    first_private = []
+    private = []
+    last_private = []
+    shared = []
+    reduction = []
+
+    lst = __get_left_right_subtree(pet, loop, False)
+    rst = __get_left_right_subtree(pet, loop, True)
+    sub = get_subtree_of_type(pet, loop, 'cu')
+
+    vars_old = __get_variables(pet, sub)
+
+
+def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool) -> List[Vertex]:
+    stack = [find_main_node(pet)]
+    res = []
+
+    while stack:
+        current = stack.pop()
+
+        if current == target:
+            return res
+        if pet.graph.vp.type[current] == 'cu':
+            res.append(current)
+
+        stack.extend(find_subnodes(pet, current, 'child') if right_subtree else reversed(find_subnodes(pet, current, 'child')))
+
+    return res
+
+
+def __get_variables(pet: PETGraph, nodes: List[Vertex]) -> Set[str]:
+    res = set()
+    for node in nodes:
+        for v in pet.graph.vp.localVars[node]:
+            res.add(v)
+        for v in pet.graph.vp.globalVars[node]:
+            res.add(v)
+    return res
+
