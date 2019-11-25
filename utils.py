@@ -240,7 +240,45 @@ def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[str], List[str
     rst = __get_left_right_subtree(pet, loop, True)
     sub = get_subtree_of_type(pet, loop, 'cu')
 
-    vars_old = __get_variables(pet, sub)
+    vars = __get_variables(pet, sub)
+
+    raw = []
+    war = []
+    waw = []
+    rev_raw = []
+
+    for sub_node in sub:
+        raw.extend(__get_dep_of_type(pet, sub_node, 'RAW', False))
+        war.extend(__get_dep_of_type(pet, sub_node, 'WAR', False))
+        waw.extend(__get_dep_of_type(pet, sub_node, 'WAW', False))
+        rev_raw.extend(__get_dep_of_type(pet, sub_node, 'RAW', True))
+
+    for var in vars:
+        if is_loop_index2(pet, loop, var):
+            private.append(var)
+
+    return first_private, private, last_private, shared, reduction
+
+
+def is_loop_index2(pet: PETGraph, root_loop: Vertex, var_name: str) -> bool:
+    loops_start_lines = [pet.graph.vp.startsAtLine[v]
+                         for v in get_subtree_of_type(pet, root_loop, 'loop')]
+    loops_start_lines.append(pet.graph.vp.startsAtLine[root_loop])
+    children = get_subtree_of_type(pet, root_loop, 'cu')
+
+    for c in children:
+        for dep in c.out_edges():
+            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
+                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
+                        and pet.graph.ep.source[dep] in loops_start_lines
+                        and dep.target() in children):
+                    return True
+
+    return False
+
+
+def __get_dep_of_type(pet: PETGraph, node: Vertex, dep_type: str, reversed: bool) -> List[Edge]:
+    return [e for e in (node.in_edges() if reversed else node.out_edges()) if pet.graph.ep.dtype == dep_type]
 
 
 def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool) -> List[Vertex]:
