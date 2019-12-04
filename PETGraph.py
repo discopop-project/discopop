@@ -1,9 +1,10 @@
+from typing import Dict, List
+
+from graph_tool import Vertex
 from graph_tool.all import Graph
 from graph_tool.all import graph_draw, GraphView, interactive_window
 from graph_tool.draw import arf_layout
 from graph_tool.search import bfs_iterator
-
-from typing import Dict, List
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
 
@@ -52,6 +53,7 @@ node_props = [
     ('mwType', 'string', '\'FORK\''),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
+    ('args', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -71,12 +73,25 @@ edge_props = [
 GT_map_node_indices = dict()
 
 
+class Variable(object):
+    def __init__(self, type, name):
+        self.type = type
+        self.name = name
+
+    def __hash__(self):
+        return hash(self.name)  # hash(self.type + self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, Variable) and self.name == other.name  # and self.type == other.type
+
+
 class PETGraph(object):
     reduction_vars: List[Dict[str, str]]
     loop_data: Dict[str, int]
     children_graph: GraphView
     dep_graph: GraphView
     graph: Graph
+    main: Vertex
 
     def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
         self.graph = Graph()
@@ -97,12 +112,16 @@ class PETGraph(object):
             for prop in node_props:
                 self.graph.vp[prop[0]][v] = eval(prop[2])
 
+            if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
+                self.graph.vp.args[v] = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
+
             if node.get("type") == '0':
                 if hasattr(node.localVariables, 'local'):
-                    self.graph.vp.localVars[v] = [v.text for v in node.localVariables.local]
+                    self.graph.vp.localVars[v] = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
 
                 if hasattr(node.globalVariables, 'global'):
-                    self.graph.vp.globalVars[v] = [v.text for v in getattr(node.globalVariables, 'global')]
+                    self.graph.vp.globalVars[v] = [Variable(v.get('type'), v.text) for v in
+                                                   getattr(node.globalVariables, 'global')]
 
                 self.graph.vp.instructionsCount[v] = node.instructionsCount
                 self.graph.vp.BasicBlockID[v] = node.BasicBlockID
@@ -148,6 +167,12 @@ class PETGraph(object):
 
         self.dep_graph = self.filter_view(edges_type='dependence')
         self.children_graph = self.filter_view(edges_type='child')
+
+        self.main = None
+        for v in self.graph.vertices():
+            if self.graph.vp.name[v] == 'main':
+                self.main = v
+                break
 
     def filter_view(self, nodes_id='*', edges_type='*'):
         vfilter = None if nodes_id == '*' else lambda v: self.graph.vertex_index[v] in nodes_id

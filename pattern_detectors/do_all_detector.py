@@ -7,9 +7,9 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_loop_iterations, \
-    total_instructions_count, calculate_workload, classify_loop_variables
+    classify_loop_variables
 
-do_all_threshold = 0.9
+do_all_threshold = 0.95
 
 
 class DoAllInfo(PatternInfo):
@@ -26,7 +26,11 @@ class DoAllInfo(PatternInfo):
         PatternInfo.__init__(self, pet, node)
         self.coefficient = coefficient
         a, b, c, d, e = classify_loop_variables(pet, node)
-        self.first_private = b
+        self.first_private = a
+        self.private = b
+        self.last_private = c
+        self.shared = d
+        self.reduction = e
 
     def __str__(self):
         return f'Do-all at: {self.node_id}\n' \
@@ -36,7 +40,12 @@ class DoAllInfo(PatternInfo):
                f'iterations: {self.iterations_count}\n' \
                f'instructions: {self.instruction_count}\n' \
                f'workload: {self.workload}\n' \
-               f'first_priv: {self.first_private}'
+               'pragma: "#pragma omp parallel for"\n' \
+               f'private: {[v.name for v in self.private]}\n' \
+               f'shared: {[v.name for v in self.shared]}\n' \
+               f'first_priv: {[v.name for v in self.first_private]}\n' \
+               f'reduction: {[v.name for v in self.reduction]}\n' \
+               f'last_private: {[v.name for v in self.last_private]}'
 
 
 def run_detection(pet: PETGraph) -> List[DoAllInfo]:

@@ -7,7 +7,7 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations
+from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables
 
 # cache
 __loop_iterations: Dict[str, int] = {}
@@ -23,11 +23,23 @@ class GDInfo(PatternInfo):
         :param node: node, where geometric decomposition was detected
         """
         PatternInfo.__init__(self, pet, node)
+        self.pet = pet
+
+        child_loops = [sn for sn in find_subnodes(pet, node, 'child') if pet.graph.vp.type[sn] == 'loop']
+        for sn in find_subnodes(pet, node, 'child'):
+            if pet.graph.vp.type[sn] == 'func':
+                child_loops.extend([n for n in find_subnodes(pet, sn, 'child') if pet.graph.vp.type[n] == 'loop'])
+
+        self.do_all_children = [n for n in child_loops if pet.graph.vp.doAll[n] >= do_all_threshold]
+        self.reduction_children = [n for n in child_loops if pet.graph.vp.reduction[n]]
+        # TODO task var classification
 
     def __str__(self):
         return f'Geometric decomposition at: {self.node_id}\n' \
                f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}'
+               f'End line: {self.end_line}\n' \
+               f'Do-All loops: {[self.pet.graph.vp.id[n] for n in self.do_all_children]}\n' \
+               f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n' \
 
 
 def run_detection(pet: PETGraph) -> List[GDInfo]:
