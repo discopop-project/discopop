@@ -40,12 +40,12 @@ class DoAllInfo(PatternInfo):
                f'iterations: {self.iterations_count}\n' \
                f'instructions: {self.instruction_count}\n' \
                f'workload: {self.workload}\n' \
-               'pragma: "#pragma omp parallel for"\n' \
+               f'pragma: "#pragma omp parallel for"\n' \
                f'private: {[v.name for v in self.private]}\n' \
                f'shared: {[v.name for v in self.shared]}\n' \
-               f'first_priv: {[v.name for v in self.first_private]}\n' \
+               f'first private: {[v.name for v in self.first_private]}\n' \
                f'reduction: {[v.name for v in self.reduction]}\n' \
-               f'last_private: {[v.name for v in self.last_private]}'
+               f'last private: {[v.name for v in self.last_private]}'
 
 
 def run_detection(pet: PETGraph) -> List[DoAllInfo]:
