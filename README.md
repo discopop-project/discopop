@@ -37,12 +37,27 @@ To obtain the computational units (CU) graph of the target application, please r
 	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File>
 
 #### DiscoPoP Profiling
-To obtain data dependences, we need to instrument the target application. Running the instrumented application will result in a text file containing all the dependences located in the present working directory.
+To obtain data dependences, we need to instrument the target application: 
 
-	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
-	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
-	./<APP_NAME>
+	clang -g -O0 -S -emit-llvm -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPVariableNamePass.so -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.ll
+
+(OPTIONAL) Use llvm-link to link multiple .ll files into one:
+
+	llvm-link $out.ll other.ll -o out.ll
+
+(OPTIONAL) You may run the DPInstrumentationOmission pass to omit non-essential instructions from profiling to improve performance:
+
+	opt -S -load=<PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentationOmission.so -dp-instrumentation-omission -stats out.ll -o out.ll
+
+Make the application executable:
 	
+	clang++ out.ll-L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread -o <APP_NAME>
+
+ Running the application will result in a text file containing all the dependences located in the present working directory
+
+	./<APP_NAME>
+
+
 #### Pattern Detection
 We will release the source code for pattern detection soon.
 
