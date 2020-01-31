@@ -149,7 +149,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNodes=[]) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
     :param pet: PET graph
@@ -160,10 +160,17 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Ver
     res = []
     if pet.graph.vp.type[root] == node_type or node_type == '*':
         res.append(root)
+        if not root in visitedNodes:
+            visitedNodes.append(root)
 
     for e in root.out_edges():
+        if e.target() in visitedNodes:
+            continue
+        else:
+            if not e.target() in visitedNodes:
+                visitedNodes.append(e.target())
         if pet.graph.ep.type[e] == 'child':
-            res.extend(get_subtree_of_type(pet, e.target(), node_type))
+            res.extend(get_subtree_of_type(pet, e.target(), node_type, visitedNodes))
     return res
 
 
