@@ -4,7 +4,7 @@ from graph_tool import Vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends, find_main_node, calculate_workload, total_instructions_count
+from utils import find_subnodes, depends, find_main_node, calculate_workload, total_instructions_count, classify_task_variables
 
 __forks = set()
 __workloadThreshold = 10000
@@ -147,6 +147,145 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0]))
 
+    result = result + __test_suggestions(pet)
+
+    return result
+
+
+def __test_suggestions(pet: PETGraph):
+    """TODO, returns a list of TaskParallelismInfo"""
+    # TODO replace / merge with __detect_task_parallelism
+
+     #// read RAW vars from CUInstResult
+      #// get function scopes -> make suggenstions only inside scopes -> no start / end
+      #// get modifier for each RAW Var
+      #// get source line for OMP suggestion
+
+      #//suggestions contains a map from LID to a set of suggestions. This is required to
+      #//detect multiple suggestions for a single line of source code.
+    suggestions = dict() # LID -> set<list<set<string>>>
+        #// list[0] -> task / taskwait
+        #// list[1] -> firstprivate Clause
+        #// list[2] -> private clause
+        #// list[3] -> shared clause
+
+    ompSuggestions = ""
+
+    for it in pet.graph.vertices():
+        currentSuggestions = []
+        currentSuggestions.append([])
+        currentSuggestions.append([])
+        currentSuggestions.append([])
+        currentSuggestions.append([])
+
+        #//only include cu and func nodes
+        if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
+            continue
+
+        if pet.graph.vp.mwType[it] == "NONE":
+            # //suggest nothing
+            pass
+
+        if pet.graph.vp.mwType[it] == "ROOT":
+            #//suggest nothing
+            pass
+
+        if pet.graph.vp.mwType[it] == "FORK":
+            #suggest nothing
+            firstPrivateVars = []
+            privateVars = []
+            lastprivateVars = []
+            sharedVars = []
+            dependInVars = []
+            dependOutVars = []
+            dependInOutVars = []
+            reductionVars = []
+            inDeps = []
+            outDeps = []
+            #classify_task_variables(pet, it, "", firstPrivateVars, privateVars,
+            #                        sharedVars, dependInVars, dependOutVars,
+            #                        dependInOutVars, reductionVars,
+            #                        inDeps, outDeps)
+            #currentSuggestions[0].append("task")
+
+            for vid in firstPrivateVars:
+                pass
+            #    currentSuggestions[1].append(vid.name)
+            for vid in privateVars:
+                pass
+            #    currentSuggestions[2].append(vid.name)
+            for vid in sharedVars:
+                pass
+            #    currentSuggestions[3].append(vid.name)
+
+            if not pet.graph.vp.startsAtLine[it] in suggestions:
+                # LID not contained in suggestions
+                pass
+                #tmpSet = []
+                #suggestions[it] = tmpSet
+                #suggestions[it].append(currentSuggestions)
+            else:
+                #suggestions[it].append(currentSuggestions)
+                pass
+
+
+        if pet.graph.vp.mwType[it] == "WORKER":
+            # suggest task
+            firstPrivateVars = []
+            privateVars = []
+            lastPrivateVars = []
+            sharedVars = []
+            dependInVars = []
+            dependOutVars = []
+            dependInOutVars = []
+            reductionVars = []
+            inDeps = []
+            outDeps = []
+            classify_task_variables(pet, it, "", firstPrivateVars, privateVars,
+                                    sharedVars, dependInVars, dependOutVars,
+                                    dependInOutVars, reductionVars,
+                                    inDeps, outDeps)
+            #suggest task
+            currentSuggestions[0].append("task")
+            for vid in firstPrivateVars:
+                currentSuggestions[1].append(vid.name)
+            for vid in privateVars:
+                currentSuggestions[2].append(vid.name)
+            for vid in sharedVars:
+                currentSuggestions[3].append(vid.name)
+
+        if pet.graph.vp.mwType[it] == "BARRIER":
+            currentSuggestions[0].append("taskwait")
+
+        if pet.graph.vp.mwType[it] == "BARRIER_WORKER":
+            currentSuggestions[0].append("taskwait")
+
+        # insert currentSuggestions into suggestions
+        # check, if currentSuggestions contains an element
+        if len(currentSuggestions[0]) >= 1:
+            #currentSuggestions contains something
+            if not pet.graph.vp.startsAtLine[it] in suggestions:
+                # LID not contained in suggestions
+                tmpSet = []
+                suggestions[it] = tmpSet
+                suggestions[it].append(currentSuggestions)
+            else:
+                # LID already contained in suggestions
+                suggestions[it].append(currentSuggestions)
+    # end of for loop
+
+    # construct return value (list of TaskParallelismInfo)
+    result = []
+    for it in suggestions:
+        for singleSuggestions in suggestions[it]:
+            pragma = singleSuggestions[0]
+            firstPrivate = singleSuggestions[1]
+            private = singleSuggestions[2]
+            shared = singleSuggestions[3]
+            result.append(TaskParallelismInfo(pet, it, pragma, firstPrivate, private, shared))
+
+            # TODO REMOVE FILTERING !!
+    print("#### DEBUG VERSION!!! ONLY WORKERS SUGGESTED AS TASKS! ####")
     return result
 
 
