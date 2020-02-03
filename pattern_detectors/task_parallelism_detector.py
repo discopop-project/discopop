@@ -153,7 +153,14 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
 
 
 def __test_suggestions(pet: PETGraph):
-    """TODO, returns a list of TaskParallelismInfo"""
+    """creates task parallelism suggestions and returns them as a list of
+    TaskParallelismInfo objects.
+    Currently relies on previous processing steps and suggests WORKER CUs
+    as Tasks and BARRIER/BARRIER_WORKER as Taskwaits.
+
+    :param pet: PET graph
+    :return List[TaskParallelismInfo]
+    """
     # TODO replace / merge with __detect_task_parallelism
 
      #// read RAW vars from CUInstResult
