@@ -4,7 +4,7 @@ from graph_tool import Vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends, find_main_node, calculate_workload, total_instructions_count
+from utils import find_subnodes, depends, calculate_workload, total_instructions_count
 
 __forks = set()
 __workloadThreshold = 10000
@@ -137,7 +137,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
             pet.graph.vp.mwType[node] = 'ROOT'
 
     __forks.clear()
-    __create_task_tree(pet, find_main_node(pet))
+    __create_task_tree(pet, pet.main)
 
     # ct = [graph.vp.id[v] for v in pet.graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]

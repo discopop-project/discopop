@@ -5,8 +5,7 @@ from graph_tool.util import find_vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient
-
+from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type
 
 __pipeline_threshold = 0.9
 
@@ -24,15 +23,54 @@ class PipelineInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
         self.coefficient = coefficient
+        self.pet = pet
+        children_start_lines = [pet.graph.vp.startsAtLine[v]
+                                for v in find_subnodes(pet, node, 'child')
+                                if pet.graph.vp.type[v] == 'loop']
+
+        self.stages = [v for v in find_subnodes(pet, node, 'child')
+                       if is_pipeline_subnode(pet, node, v, children_start_lines)]
+
+    def __InDep(self, node: Vertex):
+        raw = []
+        for n in get_subtree_of_type(self.pet, node, 'cu'):
+            raw.extend(e for e in n.out_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
+
+        nodes_before = []
+        for i in range(self.stages.index(node)):
+            nodes_before.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
+
+        return set([self.pet.graph.ep.var[dep] for dep in raw if dep.target() in nodes_before])
+
+    def __OutDep(self, node: Vertex):
+        raw = []
+        for n in get_subtree_of_type(self.pet, node, 'cu'):
+            raw.extend(e for e in n.in_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
+
+        nodes_after = []
+        for i in range(self.stages.index(node)+1, len(self.stages)):
+            nodes_after.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
+
+        return set([self.pet.graph.ep.var[dep] for dep in raw if dep.source() in nodes_after])
+
+    def __output_stage(self, node: Vertex) -> str:
+        return f'\tNode: {self.pet.graph.vp.id[node]}\n' \
+               f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \
+               f'\tEnd line: {self.pet.graph.vp.endsAtLine[node]}\n' \
+               f'\tpragma: "#pragma omp task"\n' \
+               f'\tInDeps: {self.__InDep(node)}\n' \
+               f'\tOutDeps: {self.__OutDep(node)}'
 
     def __str__(self):
+        s = "\n\n".join([self.__output_stage(s) for s in self.stages])
         return f'Pipeline at: {self.node_id}\n' \
                f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}'
+               f'End line: {self.end_line}\n' \
+               f'Stages:\n{s.replace("set()", "{}")}'
 
 
-def __is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param pet: PET graph
@@ -79,7 +117,7 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
                             if pet.graph.vp.type[v] == 'loop']
 
     loop_subnodes = [v for v in find_subnodes(pet, root, 'child')
-                     if __is_pipeline_subnode(pet, root, v, children_start_lines)]
+                     if is_pipeline_subnode(pet, root, v, children_start_lines)]
 
     # No chain of stages found
     if len(loop_subnodes) < 2:
