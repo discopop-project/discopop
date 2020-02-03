@@ -1,7 +1,9 @@
-from typing import List, Set
+import itertools
+from typing import List, Set, Dict, Any
 
 import numpy as np
 from graph_tool.all import Vertex, Edge
+from graph_tool.topology import shortest_path
 
 import PETGraph
 
@@ -137,11 +139,9 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
     loops_start_lines = [pet.graph.vp.startsAtLine[v]
                          for v in get_subtree_of_type(pet, root_loop, 'loop')]
-    tt = [pet.graph.vp.id[e.target()] for e in children[0].out_edges() if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW']
     for v in children:
         for e in v.out_edges():
             if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW':
-                ro = is_readonly_inside_loop_body(pet, e, root_loop)
                 if not (is_loop_index(pet, e, loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
                         and is_readonly_inside_loop_body(pet, e, root_loop)):
                     dep_set.add(e.target())
@@ -149,7 +149,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNodes=[]) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
     :param pet: PET graph
@@ -160,22 +160,18 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Ver
     res = []
     if pet.graph.vp.type[root] == node_type or node_type == '*':
         res.append(root)
+        if not root in visitedNodes:
+            visitedNodes.append(root)
 
     for e in root.out_edges():
+        if e.target() in visitedNodes:
+            continue
+        else:
+            if not e.target() in visitedNodes:
+                visitedNodes.append(e.target())
         if pet.graph.ep.type[e] == 'child':
-            res.extend(get_subtree_of_type(pet, e.target(), node_type))
+            res.extend(get_subtree_of_type(pet, e.target(), node_type, visitedNodes))
     return res
-
-
-def find_main_node(pet: PETGraph) -> Vertex:
-    """Return main node of the graph
-
-    :param pet: PET graph
-    :return: main node
-    """
-    for node in pet.graph.vertices():
-        if pet.graph.vp.name[node] == 'main':
-            return node
 
 
 def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
@@ -187,35 +183,38 @@ def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
     """
     res = 0
     for node in get_subtree_of_type(pet, root, 'cu'):
-        r = pet.graph.vp.instructionsCount[node]
-        i = pet.graph.vp.id[node]
         res += pet.graph.vp.instructionsCount[node]
     return res
 
 
 def calculate_workload(pet: PETGraph, node: Vertex) -> int:
     """Calculates workload for a given node
+    The workload is the number of instructions multiplied by respective number of iterations
 
     :param pet: PET graph
     :param node: root node
     :return: workload
     """
     res = 0
-    if pet.graph.vp.instructionsCount[node] == 'dummy':
+    if pet.graph.vp.type[node] == 'dummy':
         return 0
-    elif pet.graph.vp.instructionsCount[node] == 'cu':
+    elif pet.graph.vp.type[node] == 'cu':
         res += pet.graph.vp.instructionsCount[node]
-    elif pet.graph.vp.instructionsCount[node] == 'func':
+    elif pet.graph.vp.type[node] == 'func':
         for child in find_subnodes(pet, node, 'child'):
             res += calculate_workload(pet, child)
-    elif pet.graph.vp.instructionsCount[node] == 'loop':
-        for child in get_subtree_of_type(pet, node, 'cu'):
-            if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[node]
-            elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
-                res += pet.graph.vp.instructionsCount[node] * (get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+    elif pet.graph.vp.type[node] == 'loop':
+        for child in find_subnodes(pet, node, 'child'):
+            if pet.graph.vp.type[child] == 'cu':
+                if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
+                    res += pet.graph.vp.instructionsCount[child]
+                elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
+                    res += pet.graph.vp.instructionsCount[child] * (
+                            get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+                else:
+                    res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
             else:
-                res += pet.graph.vp.instructionsCount[node] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                res += calculate_workload(pet, child) * get_loop_iterations(pet.graph.vp.startsAtLine[node])
     return res
 
 
@@ -223,7 +222,6 @@ def get_loop_iterations(line: str) -> int:
     """Calculates the number of iterations in specified loop
 
     :param line: start line of the loop
-    :return: number of iterations
     """
     return loop_data.get(line, 0)
 
