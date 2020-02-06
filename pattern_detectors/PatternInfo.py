@@ -1,7 +1,8 @@
 from graph_tool import Vertex
 
 import PETGraph
-from utils import get_loop_iterations, total_instructions_count, calculate_workload
+from utils import get_loop_iterations, total_instructions_count, \
+    calculate_workload
 
 
 class PatternInfo(object):
