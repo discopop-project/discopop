@@ -31,7 +31,7 @@ class PipelineInfo(PatternInfo):
         self.stages = [v for v in find_subnodes(pet, node, 'child')
                        if is_pipeline_subnode(pet, node, v, children_start_lines)]
 
-    def __InDep(self, node: Vertex):
+    def __in_dep(self, node: Vertex):
         raw = []
         for n in get_subtree_of_type(self.pet, node, 'cu'):
             raw.extend(e for e in n.out_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
@@ -42,7 +42,7 @@ class PipelineInfo(PatternInfo):
 
         return set([self.pet.graph.ep.var[dep] for dep in raw if dep.target() in nodes_before])
 
-    def __OutDep(self, node: Vertex):
+    def __out_dep(self, node: Vertex):
         raw = []
         for n in get_subtree_of_type(self.pet, node, 'cu'):
             raw.extend(e for e in n.in_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
@@ -58,8 +58,8 @@ class PipelineInfo(PatternInfo):
                f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \
                f'\tEnd line: {self.pet.graph.vp.endsAtLine[node]}\n' \
                f'\tpragma: "#pragma omp task"\n' \
-               f'\tInDeps: {self.__InDep(node)}\n' \
-               f'\tOutDeps: {self.__OutDep(node)}'
+               f'\tInDeps: {self.__in_dep(node)}\n' \
+               f'\tOutDeps: {self.__out_dep(node)}'
 
     def __str__(self):
         s = "\n\n".join([self.__output_stage(s) for s in self.stages])

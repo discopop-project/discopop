@@ -39,7 +39,7 @@ class GDInfo(PatternInfo):
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
                f'Do-All loops: {[self.pet.graph.vp.id[n] for n in self.do_all_children]}\n' \
-               f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n' \
+               f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n'
 
 
 def run_detection(pet: PETGraph) -> List[GDInfo]:

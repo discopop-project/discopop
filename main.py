@@ -59,7 +59,8 @@ if __name__ == "__main__":
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
 
-    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file), loop_counter_file, reduction_file)
+    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file),
+                                                                    loop_counter_file, reduction_file)
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 

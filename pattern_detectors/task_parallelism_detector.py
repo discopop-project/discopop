@@ -163,18 +163,18 @@ def __test_suggestions(pet: PETGraph):
     """
     # TODO replace / merge with __detect_task_parallelism
 
-     #// read RAW vars from CUInstResult
-      #// get function scopes -> make suggenstions only inside scopes -> no start / end
-      #// get modifier for each RAW Var
-      #// get source line for OMP suggestion
+    # read RAW vars from CUInstResult
+    # get function scopes -> make suggenstions only inside scopes -> no start / end
+    # get modifier for each RAW Var
+    # get source line for OMP suggestion
 
-      #//suggestions contains a map from LID to a set of suggestions. This is required to
-      #//detect multiple suggestions for a single line of source code.
-    suggestions = dict() # LID -> set<list<set<string>>>
-        #// list[0] -> task / taskwait
-        #// list[1] -> firstprivate Clause
-        #// list[2] -> private clause
-        #// list[3] -> shared clause
+    # suggestions contains a map from LID to a set of suggestions. This is required to
+    # detect multiple suggestions for a single line of source code.
+    suggestions = dict()  # LID -> set<list<set<string>>>
+    # list[0] -> task / taskwait
+    # list[1] -> firstprivate Clause
+    # list[2] -> private clause
+    # list[3] -> shared clause
 
     ompSuggestions = ""
 
@@ -185,20 +185,20 @@ def __test_suggestions(pet: PETGraph):
         currentSuggestions.append([])
         currentSuggestions.append([])
 
-        #//only include cu and func nodes
+        #only include cu and func nodes
         if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
             continue
 
         if pet.graph.vp.mwType[it] == "NONE":
-            # //suggest nothing
+            #suggest nothing
             pass
 
         if pet.graph.vp.mwType[it] == "ROOT":
-            #//suggest nothing
+            #suggest nothing
             pass
 
         if pet.graph.vp.mwType[it] == "FORK":
-            #suggest nothing
+            # suggest nothing
             firstPrivateVars = []
             privateVars = []
             lastprivateVars = []
@@ -209,11 +209,11 @@ def __test_suggestions(pet: PETGraph):
             reductionVars = []
             inDeps = []
             outDeps = []
-            #classify_task_variables(pet, it, "", firstPrivateVars, privateVars,
+            # classify_task_variables(pet, it, "", firstPrivateVars, privateVars,
             #                        sharedVars, dependInVars, dependOutVars,
             #                        dependInOutVars, reductionVars,
             #                        inDeps, outDeps)
-            #currentSuggestions[0].append("task")
+            # currentSuggestions[0].append("task")
 
             for vid in firstPrivateVars:
                 pass
@@ -228,13 +228,12 @@ def __test_suggestions(pet: PETGraph):
             if not pet.graph.vp.startsAtLine[it] in suggestions:
                 # LID not contained in suggestions
                 pass
-                #tmpSet = []
-                #suggestions[it] = tmpSet
-                #suggestions[it].append(currentSuggestions)
+                # tmpSet = []
+                # suggestions[it] = tmpSet
+                # suggestions[it].append(currentSuggestions)
             else:
-                #suggestions[it].append(currentSuggestions)
+                # suggestions[it].append(currentSuggestions)
                 pass
-
 
         if pet.graph.vp.mwType[it] == "WORKER":
             # suggest task
@@ -252,7 +251,7 @@ def __test_suggestions(pet: PETGraph):
                                     sharedVars, dependInVars, dependOutVars,
                                     dependInOutVars, reductionVars,
                                     inDeps, outDeps)
-            #suggest task
+            # suggest task
             currentSuggestions[0].append("task")
             for vid in firstPrivateVars:
                 currentSuggestions[1].append(vid.name)
@@ -270,7 +269,7 @@ def __test_suggestions(pet: PETGraph):
         # insert currentSuggestions into suggestions
         # check, if currentSuggestions contains an element
         if len(currentSuggestions[0]) >= 1:
-            #currentSuggestions contains something
+            # currentSuggestions contains something
             if not pet.graph.vp.startsAtLine[it] in suggestions:
                 # LID not contained in suggestions
                 tmpSet = []

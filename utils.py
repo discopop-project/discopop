@@ -149,7 +149,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNodes=[]) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNodes = []) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
     :param pet: PET graph
@@ -501,7 +501,7 @@ def is_read_in_rst(pet: PETGraph, var: str, rev_raw: Set[Edge], rst: List[Vertex
     return False
 
 
-cu_cache = {} # node -> CUs
+cu_cache = {}  # node -> CUs
 
 
 def getCUsIn(pet: PETGraph, node: Vertex):
@@ -539,7 +539,7 @@ def getCUsIn(pet: PETGraph, node: Vertex):
     return childCUs
 
 
-#def getVariables(pet : PETGraph, childCUs):
+# def getVariables(pet : PETGraph, childCUs):
 #    """
 #    Based on: DataSharingClauseDetector:getVariables.
 #    Returns all variables contained in the provided CUs.
@@ -578,7 +578,6 @@ def getChildLoops(pet: PETGraph, node: Vertex, doAll, reduction):
                         reduction.append(funcChild)
 
 
-
 def isDependInOut(pet: PETGraph, var, inDeps, outDeps):
     """based on DataSharingClauseDetector:isDependInOut"""
     for inDep in inDeps:
@@ -588,7 +587,7 @@ def isDependInOut(pet: PETGraph, var, inDeps, outDeps):
     return False
 
 
-def isWrittenInDepTaskAndReadInTask(pet: PETGraph, var, inDeps,RAWDepsOn):
+def isWrittenInDepTaskAndReadInTask(pet: PETGraph, var, inDeps, RAWDepsOn):
     """based on DataSharingClauseDetector:isWrittenInDepTaskAndReadInTask"""
 
     for inDep in inDeps:
@@ -605,7 +604,7 @@ def isWrittenInTaskAndReadInDepTask(pet: PETGraph, var, reverseRAWDepsOn, outDep
     return False
 
 
-def __isGlobal(pet: PETGraph, var:str):
+def __isGlobal(pet: PETGraph, var: str):
     for node in pet.graph.vertices():
         if pet.graph.vp.type[node] == "cu":
             for gv in pet.graph.vp.globalVars[node]:
@@ -616,21 +615,21 @@ def __isGlobal(pet: PETGraph, var:str):
 
 def isReadIn(pet, var, RAWDepsOn, WARDepsOn, reverseRAWDepsOn, reverseWARDepsOn, t):
     """based on DataSharingClauseDetector:isReadIn"""
-    #Check all reverse RAW dependencies (since we know that var is written in
-    #loop, because isFirstWritten returned true)
+    # Check all reverse RAW dependencies (since we know that var is written in
+    # loop, because isFirstWritten returned true)
 
     for dep in RAWDepsOn:
-        #If there is a reverse raw dependency for var and the sink cu is not part
-        #of the loop, then var is read in rst
+        # If there is a reverse raw dependency for var and the sink cu is not part
+        # of the loop, then var is read in rst
         if var.name == pet.graph.ep.var[dep]:
             return True
     for dep in WARDepsOn:
         if var.name == pet.graph.ep.var[dep] and dep.target() in t:
             return True
     for dep in reverseRAWDepsOn:
-        #If there is a reverse raw dependency for var and the sink cu is not part
-        #of the loop, then var is read in rst
-        if var.name == pet.graph.ep.var[dep] and  dep.target() in t:
+        # If there is a reverse raw dependency for var and the sink cu is not part
+        # of the loop, then var is read in rst
+        if var.name == pet.graph.ep.var[dep] and dep.target() in t:
             return True
     for dep in reverseWARDepsOn:
         if var.name == pet.graph.ep.var[dep]:
@@ -655,19 +654,19 @@ def isFirstWrittenNew(pet, var, RAWDeps, WARDeps, reverseRAWDeps, reverseWARDeps
 
 
 def classify_task_variables(pet, task, type,
-        firstPrivateVars, privateVars, sharedVars,
-        dependInVars, dependOutVars, dependInOutVars, reductionVars,
-        inDeps, outDeps):
+                            firstPrivateVars, privateVars, sharedVars,
+                            dependInVars, dependOutVars, dependInOutVars, reductionVars,
+                            inDeps, outDeps):
     # based on DataSharingClauseDetector::classifyTaskVariables
     # TODO: documentation
 
-    #print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task], " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
+    # print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task], " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
     leftSubTree = __get_left_right_subtree(pet, task, False)
     t = getCUsIn(pet, task)
     # TODO: check if previous call could be replaced by get_subtree_of_type(pet, task, "cu")
     rightSubTree = __get_left_right_subtree(pet, task, True)
 
-    vars = []  #must be a set<Vars>
+    vars = []  # must be a set<Vars>
     if "func" in pet.graph.vp.type[task]:
         tmp = __get_variables(pet, t);
         varsStrings = []
@@ -680,7 +679,7 @@ def classify_task_variables(pet, task, type,
                 continue
             name = ""
             if "." in v.name:
-                name = v.name[0 : v.name.index(".")]  # substring before '.'
+                name = v.name[0: v.name.index(".")]  # substring before '.'
             else:
                 name = v.name
 
@@ -733,7 +732,7 @@ def classify_task_variables(pet, task, type,
             if is_loop_index(pet, edge, loops_start_lines, loop_children):
                 varIsLoopIndex = True
                 break
-        if(varIsLoopIndex):
+        if (varIsLoopIndex):
             privateVars.append(var)
         elif ("GeometricDecomposition" in type or "PipeLine" in type) \
                 and is_reduction_var(pet.graph.vp.startsAtLine[var], var.name, pet.reduction_vars):
@@ -745,8 +744,8 @@ def classify_task_variables(pet, task, type,
         elif isWrittenInTaskAndReadInDepTask(pet, var, reverseRAWDepsOn, outDeps):
             dependOutVars.append(var)
         elif ((is_written_in_lst(pet, var, RAWDepsOn, WAWDepsOn, leftSubTree) or \
-                (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and \
-                is_readonly(pet, var.name, WARDepsOn, WAWDepsOn, reverseRAWDepsOn)):
+               (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and \
+              is_readonly(pet, var.name, WARDepsOn, WAWDepsOn, reverseRAWDepsOn)):
             if __isGlobal(pet, var.name):
                 sharedVars.append(var)
             else:
