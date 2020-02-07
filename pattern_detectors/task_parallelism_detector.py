@@ -97,17 +97,6 @@ class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex):
-        """
-        :param pet: PET graph
-        :param node: node, where task parallelism was detected
-        """
-        PatternInfo.__init__(self, pet, node)
-        self.pragma = "INVALID"
-        self.first_private = []
-        self.private = []
-        self.shared = []
-
     def __init__(self, pet: PETGraph, node: Vertex, pragma, first_private, private, shared):
         """
         :param pet: PET graph
@@ -169,7 +158,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     for fork in fs:
         # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0]))
+            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], []))
 
     result = result + __test_suggestions(pet)
 
