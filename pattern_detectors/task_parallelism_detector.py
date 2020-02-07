@@ -213,6 +213,13 @@ def __test_suggestions(pet: PETGraph):
         if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
             continue
 
+        #debug
+        i = 0
+        while i < len(pet.graph.vp.recursiveFunctionCalls[it]):
+            print("Debug: Recursive Function Calls: ", pet.graph.vp.recursiveFunctionCalls[it][i])
+            i += 1
+
+
         if pet.graph.vp.mwType[it] == "WORKER":
             # suggest task
             first_private_vars = []
@@ -269,6 +276,7 @@ def __test_suggestions(pet: PETGraph):
             result.append(TaskParallelismInfo(pet, it, pragma, first_private, private, shared))
 
     print("#### DEBUG VERSION!!! ONLY WORKERS SUGGESTED AS TASKS! ####")
+    print("#### IDEA: suggest recursive calls as tasks which are contained in at least one of the suggested CUs.")
     return result
 
 

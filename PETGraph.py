@@ -54,6 +54,7 @@ node_props = [
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
     ('args', 'object', '[]'),
+    ('recursiveFunctionCalls', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
     ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
@@ -114,6 +115,9 @@ class PETGraph(object):
 
             if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
                 self.graph.vp.args[v] = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
+
+            if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
+                self.graph.vp.recursiveFunctionCalls[v] = [v.text for v in node.callsNode.recursiveFunctionCall]
 
             if node.get("type") == '0':
                 if hasattr(node.localVariables, 'local'):
