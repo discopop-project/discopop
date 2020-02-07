@@ -114,6 +114,7 @@ class TaskParallelismInfo(PatternInfo):
         :param pet: PET graph
         :param node: node, where task parallelism was detected
         :param pragma: pragma to be used (task / taskwait)
+        :param pragma_line: line prior to which the pragma shall be inserted
         :param first_private: list of varNames
         :param private: list of varNames
         :param shared: list of varNames
@@ -199,41 +200,72 @@ def __test_suggestions(pet: PETGraph):
     # detect multiple suggestions for a single line of source code.
     suggestions = dict()  # LID -> set<list<set<string>>>
     # list[0] -> task / taskwait
-    # list[1] -> pragma line number
-    # list[2] -> first_private Clause
-    # list[3] -> private clause
-    # list[4] -> shared clause
+    # list[1] -> vertex
+    # list[2] -> pragma line number
+    # list[3] -> first_private Clause
+    # list[4] -> private clause
+    # list[5] -> shared clause
 
     # get a list of cus classified as WORKER
     worker_cus = []
+    barrier_cus = []
+    barrier_worker_cus = []
+    for v in pet.graph.vertices():
+        print("type: ", pet.graph.vp.mwType[v])
+
     for v in pet.graph.vertices():
         if pet.graph.vp.mwType[v] == "WORKER":
             worker_cus.append(v)
+        if pet.graph.vp.mwType[v] == "BARRIER":
+            barrier_cus.append(v)
+        if pet.graph.vp.mwType[v] == "BARRIER_WORKER":
+            barrier_worker_cus.append(v)
 
+    print("WORKER: "+str(len(worker_cus)))
+    print("BARR: "+str(len(barrier_cus)))
+    print("BARWOR: "+str(len(barrier_worker_cus)))
+
+    # SUGGEST TASKWAIT
+    for v in barrier_cus+barrier_worker_cus:
+        tmp_suggestion = [["taskwait"], v, pet.graph.vp.startsAtLine[v], [], [], []]
+        print("FOUND BARRIER")
+        if pet.graph.vp.startsAtLine[v] not in suggestions:
+            # no entry for source code line contained in suggestions
+            tmp_set = []
+            suggestions[pet.graph.vp.startsAtLine[v]] = tmp_set
+            suggestions[pet.graph.vp.startsAtLine[v]].append(tmp_suggestion)
+        else:
+            # entry for source code line already contained in suggestions
+            suggestions[pet.graph.vp.startsAtLine[v]].append(tmp_suggestion)
+
+    # SUGGEST TASKS
     for it in pet.graph.vertices():
         # iterate over all entries in recursiveFunctionCalls
-
+        # in order to find task suggestions
         for i in range(0, len(pet.graph.vp.recursiveFunctionCalls[it])):
             function_call_string = pet.graph.vp.recursiveFunctionCalls[it][i]
+            if not type(function_call_string) == str:
+                continue
             contained_in = __recursive_function_call_contained_in_worker_cu(
                 pet, function_call_string, worker_cus)
             if contained_in is not None:
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
-                pragma_line = function_call_string[function_call_string.index(":") + 1:]
+                pragma_line = function_call_string[
+                    function_call_string.index(":") + 1:]
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
-                print("Debug: possible task: ", pet.graph.vp.recursiveFunctionCalls[it][i])
-                print("pragma line: ", pragma_line)
 
                 current_suggestions = []
                 current_suggestions.append([])
+                current_suggestions.append(None)
                 current_suggestions.append(None)
                 current_suggestions.append([])
                 current_suggestions.append([])
                 current_suggestions.append([])
 
                 # only include cu and func nodes
-                if not ('func' in pet.graph.vp.type[contained_in] or "cu" in pet.graph.vp.type[contained_in]):
+                if not ('func' in pet.graph.vp.type[contained_in] or
+                        "cu" in pet.graph.vp.type[contained_in]):
                     continue
 
                 if pet.graph.vp.mwType[contained_in] == "WORKER":
@@ -248,38 +280,35 @@ def __test_suggestions(pet: PETGraph):
                     reduction_vars = []
                     in_deps = []
                     out_deps = []
-                    classify_task_variables(pet, contained_in, "", first_private_vars, private_vars,
-                                            shared_vars, depend_in_vars, depend_out_vars,
+                    classify_task_variables(pet, contained_in, "",
+                                            first_private_vars, private_vars,
+                                            shared_vars, depend_in_vars,
+                                            depend_out_vars,
                                             depend_in_out_vars, reduction_vars,
                                             in_deps, out_deps)
                     # suggest task
                     current_suggestions[0].append("task")
-                    current_suggestions[1] = pragma_line
+                    current_suggestions[1] = it
+                    current_suggestions[2] = pragma_line
                     for vid in first_private_vars:
-                        current_suggestions[2].append(vid.name)
-                    for vid in private_vars:
                         current_suggestions[3].append(vid.name)
-                    for vid in shared_vars:
+                    for vid in private_vars:
                         current_suggestions[4].append(vid.name)
-
-                if pet.graph.vp.mwType[contained_in] == "BARRIER":
-                    current_suggestions[0].append("taskwait")
-
-                if pet.graph.vp.mwType[contained_in] == "BARRIER_WORKER":
-                    current_suggestions[0].append("taskwait")
+                    for vid in shared_vars:
+                        current_suggestions[5].append(vid.name)
 
                 # insert current_suggestions into suggestions
                 # check, if current_suggestions contains an element
                 if len(current_suggestions[0]) >= 1:
                     # current_suggestions contains something
-                    if not pet.graph.vp.startsAtLine[contained_in] in suggestions:
+                    if pragma_line not in suggestions:
                         # LID not contained in suggestions
                         tmp_set = []
-                        suggestions[contained_in] = tmp_set
-                        suggestions[contained_in].append(current_suggestions)
+                        suggestions[pragma_line] = tmp_set
+                        suggestions[pragma_line].append(current_suggestions)
                     else:
                         # LID already contained in suggestions
-                        suggestions[contained_in].append(current_suggestions)
+                        suggestions[pragma_line].append(current_suggestions)
     # end of for loop
 
     # construct return value (list of TaskParallelismInfo)
@@ -287,19 +316,20 @@ def __test_suggestions(pet: PETGraph):
     for it in suggestions:
         for single_suggestions in suggestions[it]:
             pragma = single_suggestions[0]
-            pragma_line = single_suggestions[1]
-            first_private = single_suggestions[2]
-            private = single_suggestions[3]
-            shared = single_suggestions[4]
-            result.append(TaskParallelismInfo(pet, it, pragma, pragma_line,
+            node = single_suggestions[1]
+            pragma_line = single_suggestions[2]
+            first_private = single_suggestions[3]
+            private = single_suggestions[4]
+            shared = single_suggestions[5]
+            result.append(TaskParallelismInfo(pet, node, pragma, pragma_line,
                                               first_private, private, shared))
 
-    print("#### DEBUG VERSION!!! ONLY WORKERS SUGGESTED AS TASKS! ####")
-    print("#### IDEA: suggest recursive calls as tasks which are contained in at least one of the suggested CUs.")
     return result
 
 
-def __recursive_function_call_contained_in_worker_cu(pet: PETGraph, function_call_string: str, worker_cus: [Vertex]):
+def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
+                                                     function_call_string: str,
+                                                     worker_cus: [Vertex]):
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -333,8 +363,11 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph, function_cal
         cur_w_file_id = cur_w_starts_at_line[:cur_w_starts_at_line.index(":")]
         # check if file_id is equal
         if file_id == cur_w_file_id:
-            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1:]
-            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1:]
+            # trim to line numbers only
+            cur_w_starts_at_line = cur_w_starts_at_line[
+                cur_w_starts_at_line.index(":") + 1:]
+            cur_w_ends_at_line = cur_w_ends_at_line[
+                cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) and \
                     int(line_number) <= int(cur_w_ends_at_line):
