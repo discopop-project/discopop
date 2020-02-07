@@ -150,7 +150,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNodes = []) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visited_nodes = None) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
     :param pet: PET graph
@@ -158,20 +158,22 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visitedNode
     :param node_type: specific type of nodes or '*' for wildcard
     :return: list of nodes of specified type from subtree
     """
+    if visited_nodes is None:
+        visited_nodes = []
     res = []
     if pet.graph.vp.type[root] == node_type or node_type == '*':
         res.append(root)
-        if not root in visitedNodes:
-            visitedNodes.append(root)
+        if root not in visited_nodes:
+            visited_nodes.append(root)
 
     for e in root.out_edges():
-        if e.target() in visitedNodes:
+        if e.target() in visited_nodes:
             continue
         else:
-            if not e.target() in visitedNodes:
-                visitedNodes.append(e.target())
+            if not e.target() in visited_nodes:
+                visited_nodes.append(e.target())
         if pet.graph.ep.type[e] == 'child':
-            res.extend(get_subtree_of_type(pet, e.target(), node_type, visitedNodes))
+            res.extend(get_subtree_of_type(pet, e.target(), node_type, visited_nodes))
     return res
 
 
