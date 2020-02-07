@@ -200,9 +200,24 @@ def __test_suggestions(pet: PETGraph):
     # list[2] -> private clause
     # list[3] -> shared clause
 
+    # get a list of cus classified as WORKER
+    worker_cus = []
+    for v in pet.graph.vertices():
+        if pet.graph.vp.mwType[v] == "WORKER":
+            worker_cus.append(v)
+
     omp_suggestions = ""
 
     for it in pet.graph.vertices():
+        # TEST
+        i = 0
+        while i < len(pet.graph.vp.recursiveFunctionCalls[it]):
+            print("Debug: Recursive Function Calls: ", pet.graph.vp.recursiveFunctionCalls[it][i])
+            __recursive_function_call_contained_in_worker(pet, pet.graph.vp.recursiveFunctionCalls[it][i], worker_cus)
+            i += 1
+        #/TEST
+
+
         current_suggestions = []
         current_suggestions.append([])
         current_suggestions.append([])
@@ -212,13 +227,6 @@ def __test_suggestions(pet: PETGraph):
         # only include cu and func nodes
         if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
             continue
-
-        #debug
-        i = 0
-        while i < len(pet.graph.vp.recursiveFunctionCalls[it]):
-            print("Debug: Recursive Function Calls: ", pet.graph.vp.recursiveFunctionCalls[it][i])
-            i += 1
-
 
         if pet.graph.vp.mwType[it] == "WORKER":
             # suggest task
@@ -278,6 +286,49 @@ def __test_suggestions(pet: PETGraph):
     print("#### DEBUG VERSION!!! ONLY WORKERS SUGGESTED AS TASKS! ####")
     print("#### IDEA: suggest recursive calls as tasks which are contained in at least one of the suggested CUs.")
     return result
+
+
+def __recursive_function_call_contained_in_worker(pet: PETGraph, function_call_string: str, worker_cus: [Vertex]):
+    """check if submitted function call is contained in at least one WORKER cu.
+    Returns the vertex identifier of the containing cu.
+    If no cu contains the function call, None is returned.
+    Note: The Strings stored in recursiveFunctionCalls might contain multiple function calls at once.
+          in order to apply this function correctly, make sure to split Strings in advance and supply
+          one call at a time.
+    :param pet: PET graph
+    :param function_call_string: String representation of the recursive function call to be checked
+            Ex.: fib 7:35,  (might contain ,)
+    :param worker_cus: List of vertices
+    """
+    # remove , and whitespaces at start / end
+    function_call_string = function_call_string.replace(",", "")
+    while function_call_string.startswith(" "):
+        function_call_string = function_call_string[1:]
+    while function_call_string.endswith(" "):
+        function_call_string = function_call_string[:-1]
+    # function_call_string looks now like like: 'fib 7:52'
+
+    # split String into function_name. file_id and line_number
+    function_name = function_call_string[0:function_call_string.index(" ")]
+    file_id = function_call_string[
+        function_call_string.index(" ") + 1:
+        function_call_string.index(":")]
+    line_number = function_call_string[function_call_string.index(":") + 1:]
+
+    # iterate over worker_cus
+    for cur_w in worker_cus:
+        cur_w_starts_at_line = pet.graph.vp.startsAtLine[cur_w]
+        cur_w_ends_at_line = pet.graph.vp.endsAtLine[cur_w]
+        cur_w_file_id = cur_w_starts_at_line[:cur_w_starts_at_line.index(":")]
+        # check if file_id is equal
+        if file_id == cur_w_file_id:
+            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1:]
+            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1:]
+            # check if line_number is contained
+            if int(cur_w_starts_at_line) <= int(line_number) and \
+                    int(line_number) <= int(cur_w_ends_at_line):
+                return cur_w
+    return None
 
 
 def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
