@@ -188,7 +188,7 @@ def __test_suggestions(pet: PETGraph):
     # TODO replace / merge with __detect_task_parallelism
 
     # read RAW vars from CUInstResult
-    # get function scopes -> make suggenstions only inside scopes -> no start / end
+    # get function scopes -> make suggestions only inside scopes -> no start / end
     # get modifier for each RAW Var
     # get source line for OMP suggestion
 
@@ -200,14 +200,10 @@ def __test_suggestions(pet: PETGraph):
     # list[2] -> private clause
     # list[3] -> shared clause
 
-    omp_suggestions = ""
+    # omp_suggestions = ""
 
     for it in pet.graph.vertices():
-        current_suggestions = []
-        current_suggestions.append([])
-        current_suggestions.append([])
-        current_suggestions.append([])
-        current_suggestions.append([])
+        current_suggestions = [[], [], [], []]
 
         # only include cu and func nodes
         if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
@@ -217,7 +213,7 @@ def __test_suggestions(pet: PETGraph):
             # suggest task
             first_private_vars = []
             private_vars = []
-            lastprivate_vars = []
+            last_private_vars = []
             shared_vars = []
             depend_in_vars = []
             depend_out_vars = []
@@ -290,7 +286,7 @@ def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
 
         # while using the node as the base child, we copy all the other children in a copy vector.
         # we do that because it could be possible that two children of the current node (two dependency)
-        # point to two different children of another child node which results that the childnode becomes BARRIER
+        # point to two different children of another child node which results that the child node becomes BARRIER
         # instead of WORKER
         # so we copy the whole other children in another vector and when one of the children of the current node
         # does point to the other child node, we just adjust mwType and then we remove the node from the vector
