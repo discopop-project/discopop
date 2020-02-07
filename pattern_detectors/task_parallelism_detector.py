@@ -103,12 +103,13 @@ class TaskParallelismInfo(PatternInfo):
         :param node: node, where task parallelism was detected
         """
         PatternInfo.__init__(self, pet, node)
+        self.pragma_line = 0
         self.pragma = "INVALID"
         self.first_private = []
         self.private = []
         self.shared = []
 
-    def __init__(self, pet: PETGraph, node: Vertex, pragma, first_private, private, shared):
+    def __init__(self, pet: PETGraph, node: Vertex, pragma, pragma_line, first_private, private, shared):
         """
         :param pet: PET graph
         :param node: node, where task parallelism was detected
@@ -119,14 +120,16 @@ class TaskParallelismInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
         self.pragma = pragma
+        self.pragma_line = pragma_line
         self.first_private = first_private
         self.private = private
         self.shared = shared
 
     def __str__(self):
-        return f'Task parallelism at: {self.node_id}\n' \
-               f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}\n' \
+        return f'Task parallelism at CU: {self.node_id}\n' \
+               f'CU Start line: {self.start_line}\n' \
+               f'CU End line: {self.end_line}\n' \
+               f'pragma prior to line: {self.pragma_line}\n' \
                f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
                f'first_private: {" ".join(self.first_private)}\n' \
                f'private: {" ".join(self.private)}\n' \
@@ -196,9 +199,10 @@ def __test_suggestions(pet: PETGraph):
     # detect multiple suggestions for a single line of source code.
     suggestions = dict()  # LID -> set<list<set<string>>>
     # list[0] -> task / taskwait
-    # list[1] -> first_private Clause
-    # list[2] -> private clause
-    # list[3] -> shared clause
+    # list[1] -> pragma line number
+    # list[2] -> first_private Clause
+    # list[3] -> private clause
+    # list[4] -> shared clause
 
     # get a list of cus classified as WORKER
     worker_cus = []
@@ -206,71 +210,76 @@ def __test_suggestions(pet: PETGraph):
         if pet.graph.vp.mwType[v] == "WORKER":
             worker_cus.append(v)
 
-    omp_suggestions = ""
-
     for it in pet.graph.vertices():
-        # TEST
-        i = 0
-        while i < len(pet.graph.vp.recursiveFunctionCalls[it]):
-            print("Debug: Recursive Function Calls: ", pet.graph.vp.recursiveFunctionCalls[it][i])
-            __recursive_function_call_contained_in_worker(pet, pet.graph.vp.recursiveFunctionCalls[it][i], worker_cus)
-            i += 1
-        #/TEST
+        # iterate over all entries in recursiveFunctionCalls
 
+        for i in range(0, len(pet.graph.vp.recursiveFunctionCalls[it])):
+            function_call_string = pet.graph.vp.recursiveFunctionCalls[it][i]
+            contained_in = __recursive_function_call_contained_in_worker_cu(
+                pet, function_call_string, worker_cus)
+            if contained_in is not None:
+                # recursive Function call contained in worker cu
+                # -> issue task suggestion
+                pragma_line = function_call_string[function_call_string.index(":") + 1:]
+                pragma_line = pragma_line.replace(",", "").replace(" ", "")
+                print("Debug: possible task: ", pet.graph.vp.recursiveFunctionCalls[it][i])
+                print("pragma line: ", pragma_line)
 
-        current_suggestions = []
-        current_suggestions.append([])
-        current_suggestions.append([])
-        current_suggestions.append([])
-        current_suggestions.append([])
+                current_suggestions = []
+                current_suggestions.append([])
+                current_suggestions.append(None)
+                current_suggestions.append([])
+                current_suggestions.append([])
+                current_suggestions.append([])
 
-        # only include cu and func nodes
-        if not ('func' in pet.graph.vp.type[it] or "cu" in pet.graph.vp.type[it]):
-            continue
+                # only include cu and func nodes
+                if not ('func' in pet.graph.vp.type[contained_in] or "cu" in pet.graph.vp.type[contained_in]):
+                    continue
 
-        if pet.graph.vp.mwType[it] == "WORKER":
-            # suggest task
-            first_private_vars = []
-            private_vars = []
-            lastprivate_vars = []
-            shared_vars = []
-            depend_in_vars = []
-            depend_out_vars = []
-            depend_in_out_vars = []
-            reduction_vars = []
-            in_deps = []
-            out_deps = []
-            classify_task_variables(pet, it, "", first_private_vars, private_vars,
-                                    shared_vars, depend_in_vars, depend_out_vars,
-                                    depend_in_out_vars, reduction_vars,
-                                    in_deps, out_deps)
-            # suggest task
-            current_suggestions[0].append("task")
-            for vid in first_private_vars:
-                current_suggestions[1].append(vid.name)
-            for vid in private_vars:
-                current_suggestions[2].append(vid.name)
-            for vid in shared_vars:
-                current_suggestions[3].append(vid.name)
+                if pet.graph.vp.mwType[contained_in] == "WORKER":
+                    # suggest task
+                    first_private_vars = []
+                    private_vars = []
+                    lastprivate_vars = []
+                    shared_vars = []
+                    depend_in_vars = []
+                    depend_out_vars = []
+                    depend_in_out_vars = []
+                    reduction_vars = []
+                    in_deps = []
+                    out_deps = []
+                    classify_task_variables(pet, contained_in, "", first_private_vars, private_vars,
+                                            shared_vars, depend_in_vars, depend_out_vars,
+                                            depend_in_out_vars, reduction_vars,
+                                            in_deps, out_deps)
+                    # suggest task
+                    current_suggestions[0].append("task")
+                    current_suggestions[1] = pragma_line
+                    for vid in first_private_vars:
+                        current_suggestions[2].append(vid.name)
+                    for vid in private_vars:
+                        current_suggestions[3].append(vid.name)
+                    for vid in shared_vars:
+                        current_suggestions[4].append(vid.name)
 
-        if pet.graph.vp.mwType[it] == "BARRIER":
-            current_suggestions[0].append("taskwait")
+                if pet.graph.vp.mwType[contained_in] == "BARRIER":
+                    current_suggestions[0].append("taskwait")
 
-        if pet.graph.vp.mwType[it] == "BARRIER_WORKER":
-            current_suggestions[0].append("taskwait")
+                if pet.graph.vp.mwType[contained_in] == "BARRIER_WORKER":
+                    current_suggestions[0].append("taskwait")
 
-        # insert current_suggestions into suggestions
-        # check, if current_suggestions contains an element
-        if len(current_suggestions[0]) >= 1:
-            # current_suggestions contains something
-            if not pet.graph.vp.startsAtLine[it] in suggestions:
-                # LID not contained in suggestions
-                tmp_set = []
-                suggestions[it] = tmp_set
-                suggestions[it].append(current_suggestions)
-            else:
-                # LID already contained in suggestions
-                suggestions[it].append(current_suggestions)
+                # insert current_suggestions into suggestions
+                # check, if current_suggestions contains an element
+                if len(current_suggestions[0]) >= 1:
+                    # current_suggestions contains something
+                    if not pet.graph.vp.startsAtLine[contained_in] in suggestions:
+                        # LID not contained in suggestions
+                        tmp_set = []
+                        suggestions[contained_in] = tmp_set
+                        suggestions[contained_in].append(current_suggestions)
+                    else:
+                        # LID already contained in suggestions
+                        suggestions[contained_in].append(current_suggestions)
     # end of for loop
 
     # construct return value (list of TaskParallelismInfo)
@@ -278,17 +287,19 @@ def __test_suggestions(pet: PETGraph):
     for it in suggestions:
         for single_suggestions in suggestions[it]:
             pragma = single_suggestions[0]
-            first_private = single_suggestions[1]
-            private = single_suggestions[2]
-            shared = single_suggestions[3]
-            result.append(TaskParallelismInfo(pet, it, pragma, first_private, private, shared))
+            pragma_line = single_suggestions[1]
+            first_private = single_suggestions[2]
+            private = single_suggestions[3]
+            shared = single_suggestions[4]
+            result.append(TaskParallelismInfo(pet, it, pragma, pragma_line,
+                                              first_private, private, shared))
 
     print("#### DEBUG VERSION!!! ONLY WORKERS SUGGESTED AS TASKS! ####")
     print("#### IDEA: suggest recursive calls as tasks which are contained in at least one of the suggested CUs.")
     return result
 
 
-def __recursive_function_call_contained_in_worker(pet: PETGraph, function_call_string: str, worker_cus: [Vertex]):
+def __recursive_function_call_contained_in_worker_cu(pet: PETGraph, function_call_string: str, worker_cus: [Vertex]):
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
