@@ -503,44 +503,6 @@ def is_read_in_rst(pet: PETGraph, var: str, rev_raw: Set[Edge], rst: List[Vertex
     return False
 
 
-cu_cache = {}  # node -> CUs
-
-
-def get_cus_in(pet: PETGraph, node: Vertex):
-    """returns a list of child CUs for the given node.
-    TODO: documentation
-    TODO: implement caching
-        Based on DataSharingClauseDetector:get_cus_in"""
-
-    # retrieve CUs from cache if already present
-    if node in cu_cache:
-        return cu_cache[node]
-    visited_functions = []  # set<Nodes>
-    node_stack = []
-    child_cus = []
-    node_stack.append(node)
-    visited = []  # used to suppress looping
-
-    while len(node_stack) > 0:
-        tmp = node_stack.pop()
-        if "cu" in pet.graph.vp.type[tmp]:
-            child_cus.append(tmp)
-        elif "func" in pet.graph.vp.type[tmp]:
-            visited_functions.append(tmp)
-            visited_functions = list(set(visited_functions))
-        children_nodes = [e.target() for e in tmp.out_edges()]
-        for child in children_nodes:
-            if child in visited_functions:
-                continue
-            elif child in visited:  # suppress looping
-                continue
-            else:
-                node_stack.append(child)
-                visited.append(child)  # suppress looping
-    cu_cache[node] = child_cus
-    return child_cus
-
-
 # def getVariables(pet : PETGraph, child_cus):
 #    """
 #    Based on: DataSharingClauseDetector:getVariables.
@@ -664,7 +626,7 @@ def classify_task_variables(pet, task, type,
 
     # print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task], " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
     left_sub_tree = __get_left_right_subtree(pet, task, False)
-    t = get_cus_in(pet, task)
+    t = get_subtree_of_type(pet, task, "cu")
     # TODO: check if previous call could be replaced by get_subtree_of_type(pet, task, "cu")
     right_sub_tree = __get_left_right_subtree(pet, task, True)
 
