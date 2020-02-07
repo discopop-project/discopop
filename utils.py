@@ -4,7 +4,6 @@ from typing import List, Set, Dict, Any
 import numpy as np
 from graph_tool.all import Vertex, Edge
 from graph_tool.topology import shortest_path
-from pattern_detectors.do_all_detector import do_all_threshold
 
 import PETGraph
 
