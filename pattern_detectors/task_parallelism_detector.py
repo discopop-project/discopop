@@ -97,18 +97,6 @@ class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex):
-        """
-        :param pet: PET graph
-        :param node: node, where task parallelism was detected
-        """
-        PatternInfo.__init__(self, pet, node)
-        self.pragma_line = 0
-        self.pragma = "INVALID"
-        self.first_private = []
-        self.private = []
-        self.shared = []
-
     def __init__(self, pet: PETGraph, node: Vertex, pragma, pragma_line, first_private, private, shared):
         """
         :param pet: PET graph
@@ -173,7 +161,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     for fork in fs:
         # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0]))
+            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], []))
 
     result = result + __test_suggestions(pet)
 
@@ -192,7 +180,7 @@ def __test_suggestions(pet: PETGraph):
     # TODO replace / merge with __detect_task_parallelism
 
     # read RAW vars from CUInstResult
-    # get function scopes -> make suggenstions only inside scopes -> no start / end
+    # get function scopes -> make suggestions only inside scopes -> no start / end
     # get modifier for each RAW Var
     # get source line for OMP suggestion
 
@@ -226,7 +214,7 @@ def __test_suggestions(pet: PETGraph):
     print("BARWOR: "+str(len(barrier_worker_cus)))
 
     # SUGGEST TASKWAIT
-    for v in barrier_cus+barrier_worker_cus:
+    for v in barrier_cus + barrier_worker_cus:
         tmp_suggestion = [["taskwait"], v, pet.graph.vp.startsAtLine[v], [], [], []]
         print("FOUND BARRIER")
         if pet.graph.vp.startsAtLine[v] not in suggestions:
@@ -249,19 +237,12 @@ def __test_suggestions(pet: PETGraph):
             contained_in = __recursive_function_call_contained_in_worker_cu(
                 pet, function_call_string, worker_cus)
             if contained_in is not None:
+                current_suggestions = [[], None, None, [], [], []]
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
                 pragma_line = function_call_string[
                     function_call_string.index(":") + 1:]
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
-
-                current_suggestions = []
-                current_suggestions.append([])
-                current_suggestions.append(None)
-                current_suggestions.append(None)
-                current_suggestions.append([])
-                current_suggestions.append([])
-                current_suggestions.append([])
 
                 # only include cu and func nodes
                 if not ('func' in pet.graph.vp.type[contained_in] or
@@ -272,7 +253,7 @@ def __test_suggestions(pet: PETGraph):
                     # suggest task
                     first_private_vars = []
                     private_vars = []
-                    lastprivate_vars = []
+                    last_private_vars = []
                     shared_vars = []
                     depend_in_vars = []
                     depend_out_vars = []
@@ -393,7 +374,7 @@ def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
 
         # while using the node as the base child, we copy all the other children in a copy vector.
         # we do that because it could be possible that two children of the current node (two dependency)
-        # point to two different children of another child node which results that the childnode becomes BARRIER
+        # point to two different children of another child node which results that the child node becomes BARRIER
         # instead of WORKER
         # so we copy the whole other children in another vector and when one of the children of the current node
         # does point to the other child node, we just adjust mwType and then we remove the node from the vector

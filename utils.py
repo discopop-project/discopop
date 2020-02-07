@@ -149,9 +149,11 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str, visited_nodes = None) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str,
+                        visited_nodes: List[Vertex] = None) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
+    :param visited_nodes: already visited nodes
     :param pet: PET graph
     :param root: root node
     :param node_type: specific type of nodes or '*' for wildcard
@@ -329,7 +331,7 @@ def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool)
     """Searches for all subnodes of main which are to the left or to the right of the specified node
 
     :param pet: CU graph
-    :param target: node that devides the tree
+    :param target: node that divides the tree
     :param right_subtree: true - right subtree, false - left subtree
     :return: list of nodes in the subtree
     """
@@ -546,29 +548,29 @@ def is_depend_in_out(pet: PETGraph, var, in_deps, out_deps):
     """based on DataSharingClauseDetector:is_depend_in_out"""
     for in_dep in in_deps:
         for out_dep in out_deps:
-            if (var.name is pet.graph.ep.var[in_dep] and pet.graph.ep.var[in_dep] is pet.graph.ep.var[out_dep]):
-                return True;
+            if var.name is pet.graph.ep.var[in_dep] and pet.graph.ep.var[in_dep] is pet.graph.ep.var[out_dep]:
+                return True
     return False
 
 
-def is_writtenin_dep_task_and_read_in_task(pet: PETGraph, var, in_deps, RAW_deps_on):
-    """based on DataSharingClauseDetector:is_writtenin_dep_task_and_read_in_task"""
+def is_written_in_dep_task_and_read_in_task(pet: PETGraph, var, in_deps, raw_deps_on):
+    """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_task"""
 
     for in_dep in in_deps:
-        if pet.graph.ep.var[in_dep] is var.name and in_dep in RAW_deps_on:
+        if pet.graph.ep.var[in_dep] is var.name and in_dep in raw_deps_on:
             return True
     return False
 
 
-def is_written_in_task_and_readin_dep_task(pet: PETGraph, var, reverseRAW_deps_on, out_deps):
-    """based on DataSharingClauseDetector:isWrittenin_depTaskAndReadin_depTask"""
+def is_written_in_task_and_read_in_dep_task(pet: PETGraph, var, reverse_raw_deps_on, out_deps):
+    """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_dep_task"""
     for dep in out_deps:
-        if pet.graph.ep.var[dep] is var.name and dep in reverseRAW_deps_on:
+        if pet.graph.ep.var[dep] is var.name and dep in reverse_raw_deps_on:
             return True
     return False
 
 
-def __isGlobal(pet: PETGraph, var: str):
+def __is_global2(pet: PETGraph, var: str):
     for node in pet.graph.vertices():
         if pet.graph.vp.type[node] == "cu":
             for gv in pet.graph.vp.globalVars[node]:
@@ -577,38 +579,38 @@ def __isGlobal(pet: PETGraph, var: str):
     return False
 
 
-def is_read_in(pet, var, RAW_deps_on, WAR_deps_on, reverseRAW_deps_on, reverseWAR_deps_on, t):
+def is_read_in(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, t):
     """based on DataSharingClauseDetector:is_read_in"""
     # Check all reverse RAW dependencies (since we know that var is written in
     # loop, because isFirstWritten returned true)
 
-    for dep in RAW_deps_on:
+    for dep in raw_deps_on:
         # If there is a reverse raw dependency for var and the sink cu is not part
         # of the loop, then var is read in rst
         if var.name == pet.graph.ep.var[dep]:
             return True
-    for dep in WAR_deps_on:
+    for dep in war_deps_on:
         if var.name == pet.graph.ep.var[dep] and dep.target() in t:
             return True
-    for dep in reverseRAW_deps_on:
+    for dep in reverse_raw_deps_on:
         # If there is a reverse raw dependency for var and the sink cu is not part
         # of the loop, then var is read in rst
         if var.name == pet.graph.ep.var[dep] and dep.target() in t:
             return True
-    for dep in reverseWAR_deps_on:
+    for dep in reverse_war_deps_on:
         if var.name == pet.graph.ep.var[dep]:
             return True
     return False
 
 
-def is_first_written_new(pet, var, RAW_deps, WAR_deps, reverseRAW_deps, reverseWAR_deps, t):
-    """based on DataSharingClauseDetector:isFristWrittenNew"""
+def is_first_written_new(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, t):
+    """based on DataSharingClauseDetector:is_first_written_new"""
     result = False
-    is_read = is_read_in(pet, var, RAW_deps, WAR_deps, reverseRAW_deps, reverseWAR_deps, t)
-    for dep in RAW_deps:
+    is_read = is_read_in(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, t)
+    for dep in raw_deps:
         if var.name in pet.graph.ep.var[dep] and dep.target() in t:
             result = True
-            for warDep in WAR_deps:
+            for warDep in war_deps:
                 if var.name in pet.graph.ep.var[warDep] \
                         and dep.target() in t \
                         and pet.graph.ep.source[dep] == pet.graph.ep.sink[warDep]:
@@ -618,21 +620,22 @@ def is_first_written_new(pet, var, RAW_deps, WAR_deps, reverseRAW_deps, reverseW
 
 
 def classify_task_variables(pet, task, type,
-                            firstprivate_vars, private_vars, shared_vars,
+                            first_private_vars, private_vars, shared_vars,
                             depend_in_vars, depend_out_vars, depend_in_out_vars, reduction_vars,
                             in_deps, out_deps):
     # based on DataSharingClauseDetector::classifyTaskVariables
     # TODO: documentation
 
-    # print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task], " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
+    # print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task],
+    # " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
     left_sub_tree = __get_left_right_subtree(pet, task, False)
     t = get_subtree_of_type(pet, task, "cu")
     # TODO: check if previous call could be replaced by get_subtree_of_type(pet, task, "cu")
-    right_sub_tree = __get_left_right_subtree(pet, task, True)
+    # right_sub_tree = __get_left_right_subtree(pet, task, True)
 
     vars = []  # must be a set<Vars>
     if "func" in pet.graph.vp.type[task]:
-        tmp = __get_variables(pet, t);
+        tmp = __get_variables(pet, t)
         vars_strings = []
 
         for v in pet.graph.vp.args[task]:
@@ -641,7 +644,7 @@ def classify_task_variables(pet, task, type,
             # None may occur because __get_variables doesn't check for actual elements
             if v.name is None:
                 continue
-            name = ""
+
             if "." in v.name:
                 name = v.name[0: v.name.index(".")]  # substring before '.'
             else:
@@ -650,33 +653,31 @@ def classify_task_variables(pet, task, type,
             if name in vars_strings:
                 vars.append(v)
     else:
-        tmp = []
-        tmp.append(task)
-        vars = __get_variables(pet, tmp)
+        vars = __get_variables(pet, [task])
 
-    RAW_deps_on = set()  # set<Dependence>
-    WAR_deps_on = set()
-    WAW_deps_on = set()
+    raw_deps_on = set()  # set<Dependence>
+    war_deps_on = set()
+    waw_deps_on = set()
 
-    reverseRAW_deps_on = set()
-    reverseWAR_deps_on = set()
-    reverseWAW_deps_on = set()
-    init = []  # set<String>
+    reverse_raw_deps_on = set()
+    reverse_war_deps_on = set()
+    reverse_waw_deps_on = set()
+    # init = []  # set<String>
 
     for child_cu in t:
         # insert all entries from child_cu.RAW_deps_on into RAW_deps_on etc.
-        RAW_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", False))
-        WAR_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", False))
-        WAW_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", False))
+        raw_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", False))
+        war_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", False))
+        waw_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", False))
 
-        reverseRAW_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", True))
-        reverseWAR_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", True))
-        reverseWAW_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", True))
+        reverse_raw_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", True))
+        reverse_war_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", True))
+        reverse_waw_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", True))
 
     reduction_loops = []
     do_all_loops = []
-    get_child_loops(pet, task, do_all_loops, reduction_loops);
-    reduction_result = ""
+    get_child_loops(pet, task, do_all_loops, reduction_loops)
+    # reduction_result = ""
 
     if "loop" in pet.graph.vp.type[task]:
         if pet.graph.vp.reduction[task]:
@@ -690,31 +691,31 @@ def classify_task_variables(pet, task, type,
 
     for var in vars:
         var_is_loop_index = False
-        # get RAW dependences for var
-        tmp_deps = [dep for dep in RAW_deps_on if pet.graph.ep.var[dep] is var.name]
+        # get RAW dependencies for var
+        tmp_deps = [dep for dep in raw_deps_on if pet.graph.ep.var[dep] is var.name]
         for edge in tmp_deps:
             if is_loop_index(pet, edge, loops_start_lines, loop_children):
                 var_is_loop_index = True
                 break
-        if (var_is_loop_index):
+        if var_is_loop_index:
             private_vars.append(var)
         elif ("GeometricDecomposition" in type or "PipeLine" in type) \
                 and is_reduction_var(pet.graph.vp.startsAtLine[var], var.name, pet.reduction_vars):
             reduction_vars.append(var.name)
         elif is_depend_in_out(pet, var, in_deps, out_deps):
             depend_in_out_vars.append(var)
-        elif is_writtenin_dep_task_and_read_in_task(pet, var, in_deps, RAW_deps_on):
+        elif is_written_in_dep_task_and_read_in_task(pet, var, in_deps, raw_deps_on):
             depend_in_vars.append(var)
-        elif is_written_in_task_and_readin_dep_task(pet, var, reverseRAW_deps_on, out_deps):
+        elif is_written_in_task_and_read_in_dep_task(pet, var, reverse_raw_deps_on, out_deps):
             depend_out_vars.append(var)
-        elif ((is_written_in_lst(pet, var, RAW_deps_on, WAW_deps_on, left_sub_tree) or \
-               (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and \
-              is_readonly(pet, var.name, WAR_deps_on, WAW_deps_on, reverseRAW_deps_on)):
-            if __isGlobal(pet, var.name):
+        elif ((is_written_in_lst(pet, var, raw_deps_on, waw_deps_on, left_sub_tree) or
+               (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
+              is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
+            if __is_global2(pet, var.name):
                 shared_vars.append(var)
             else:
-                firstprivate_vars.append(var)
-        elif is_first_written_new(pet, var, RAW_deps_on, WAR_deps_on, reverseRAW_deps_on, reverseWAR_deps_on, t):
+                first_private_vars.append(var)
+        elif is_first_written_new(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, t):
             if is_scalar_val(var):
                 private_vars.append(var)
             else:
