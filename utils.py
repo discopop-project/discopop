@@ -149,8 +149,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 
 
 # TODO set or list?
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str,
-                        visited_nodes: List[Vertex] = None) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
     :param visited_nodes: already visited nodes
@@ -159,22 +158,30 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str,
     :param node_type: specific type of nodes or '*' for wildcard
     :return: list of nodes of specified type from subtree
     """
-    if visited_nodes is None:
-        visited_nodes = []
+    queue = []
     res = []
-    if pet.graph.vp.type[root] == node_type or node_type == '*':
-        res.append(root)
-        if root not in visited_nodes:
-            visited_nodes.append(root)
+    visited = []  # differs from res, if node_type != '*'
 
-    for e in root.out_edges():
-        if e.target() in visited_nodes:
+    if pet.graph.vp.type[root] == node_type or node_type == '*':
+        queue.append(root)
+
+    while len(queue) > 0:
+        cur_node = queue.pop(0)
+        if cur_node in visited:
+            # node already visited
             continue
         else:
-            if not e.target() in visited_nodes:
-                visited_nodes.append(e.target())
-        if pet.graph.ep.type[e] == 'child':
-            res.extend(get_subtree_of_type(pet, e.target(), node_type, visited_nodes))
+            # node unseen
+            # append to visited
+            visited.append(cur_node)
+            # append to res if type matches
+            if pet.graph.vp.type[cur_node] == node_type or node_type == '*':
+                res.append(cur_node)
+            # append children to queue if not already visited
+            for e in root.out_edges():
+                if pet.graph.ep.type[e] == 'child':
+                    if not e.target() in visited:
+                        queue.append(e.target())
     return res
 
 

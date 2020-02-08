@@ -198,8 +198,6 @@ def __test_suggestions(pet: PETGraph):
     worker_cus = []
     barrier_cus = []
     barrier_worker_cus = []
-    for v in pet.graph.vertices():
-        print("type: ", pet.graph.vp.mwType[v])
 
     for v in pet.graph.vertices():
         if pet.graph.vp.mwType[v] == "WORKER":
@@ -209,14 +207,9 @@ def __test_suggestions(pet: PETGraph):
         if pet.graph.vp.mwType[v] == "BARRIER_WORKER":
             barrier_worker_cus.append(v)
 
-    print("WORKER: "+str(len(worker_cus)))
-    print("BARR: "+str(len(barrier_cus)))
-    print("BARWOR: "+str(len(barrier_worker_cus)))
-
     # SUGGEST TASKWAIT
     for v in barrier_cus + barrier_worker_cus:
         tmp_suggestion = [["taskwait"], v, pet.graph.vp.startsAtLine[v], [], [], []]
-        print("FOUND BARRIER")
         if pet.graph.vp.startsAtLine[v] not in suggestions:
             # no entry for source code line contained in suggestions
             tmp_set = []
