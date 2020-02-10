@@ -161,7 +161,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     for fork in fs:
         # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], []))
+            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
 
     result = result + __test_suggestions(pet)
 
