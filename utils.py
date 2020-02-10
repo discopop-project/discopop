@@ -4,6 +4,7 @@ from typing import List, Set, Dict, Any
 import numpy as np
 from graph_tool.all import Vertex, Edge
 from graph_tool.topology import shortest_path
+from graph_tool.search import dfs_iterator, bfs_iterator
 
 import PETGraph
 
@@ -152,36 +153,20 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
 def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Vertex]:
     """Returns all nodes of a given type from a subtree
 
-    :param visited_nodes: already visited nodes
     :param pet: PET graph
     :param root: root node
     :param node_type: specific type of nodes or '*' for wildcard
     :return: list of nodes of specified type from subtree
     """
-    queue = []
     res = []
-    visited = []  # differs from res, if node_type != '*'
-
     if pet.graph.vp.type[root] == node_type or node_type == '*':
-        queue.append(root)
+        res.append(root)
 
-    while len(queue) > 0:
-        cur_node = queue.pop(0)
-        if cur_node in visited:
-            # node already visited
-            continue
-        else:
-            # node unseen
-            # append to visited
-            visited.append(cur_node)
-            # append to res if type matches
-            if pet.graph.vp.type[cur_node] == node_type or node_type == '*':
-                res.append(cur_node)
-            # append children to queue if not already visited
-            for e in root.out_edges():
-                if pet.graph.ep.type[e] == 'child':
-                    if not e.target() in visited:
-                        queue.append(e.target())
+    for e in dfs_iterator(pet.children_graph, root):
+        t = e.target()
+        if pet.graph.vp.type[t] == node_type or node_type == '*':
+            res.append(pet.graph.vertex(t))
+
     return res
 
 
