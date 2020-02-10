@@ -7,7 +7,7 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables
+from utils import find_subnodes, get_subtree_of_type, get_loop_iterations
 
 # cache
 __loop_iterations: Dict[str, int] = {}

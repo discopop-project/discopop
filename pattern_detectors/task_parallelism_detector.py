@@ -343,8 +343,7 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
             cur_w_ends_at_line = cur_w_ends_at_line[
                 cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
-            if int(cur_w_starts_at_line) <= int(line_number) and \
-                    int(line_number) <= int(cur_w_ends_at_line):
+            if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 return cur_w
     return None
 

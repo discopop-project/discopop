@@ -4,7 +4,7 @@ from typing import List, Set, Dict, Any
 import numpy as np
 from graph_tool.all import Vertex, Edge
 from graph_tool.topology import shortest_path
-from graph_tool.search import dfs_iterator, bfs_iterator
+from graph_tool.search import dfs_iterator
 
 import PETGraph
 
@@ -165,6 +165,7 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Ver
     for e in dfs_iterator(pet.children_graph, root):
         t = e.target()
         if pet.graph.vp.type[t] == node_type or node_type == '*':
+            # use original vertex without filter
             res.append(pet.graph.vertex(t))
 
     return res
