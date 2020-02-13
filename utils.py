@@ -72,11 +72,11 @@ def depends_ignore_readonly(pet: PETGraph, source: Vertex, target: Vertex, root_
     return False
 
 
-def is_loop_index(pet: PETGraph, edge: Edge, loops_start_lines: List[str], children: List[Vertex]) -> bool:
+def is_loop_index(pet: PETGraph, var_name: str, loops_start_lines: List[str], children: List[Vertex]) -> bool:
     """Checks, whether the variable is a loop index.
 
     :param pet: PET graph
-    :param edge: RAW dependency
+    :param var_name: name of the variable
     :param loops_start_lines: start lines of the loops
     :param children: children nodes of the loops
     :return: true if edge represents loop index
@@ -87,7 +87,7 @@ def is_loop_index(pet: PETGraph, edge: Edge, loops_start_lines: List[str], child
 
     for c in children:
         for dep in c.out_edges():
-            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == pet.graph.ep.var[edge]:
+            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
                 if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
                         and pet.graph.ep.source[dep] in loops_start_lines
                         and dep.target() in children):
@@ -107,17 +107,8 @@ def is_loop_index2(pet: PETGraph, root_loop: Vertex, var_name: str) -> bool:
     loops_start_lines = [pet.graph.vp.startsAtLine[v]
                          for v in get_subtree_of_type(pet, root_loop, 'loop')]
     loops_start_lines.append(pet.graph.vp.startsAtLine[root_loop])
-    children = get_subtree_of_type(pet, root_loop, 'cu')
 
-    for c in children:
-        for dep in c.out_edges():
-            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
-                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
-                        and pet.graph.ep.source[dep] in loops_start_lines
-                        and dep.target() in children):
-                    return True
-
-    return False
+    return is_loop_index(pet, var_name, loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
 
 
 def is_readonly_inside_loop_body(pet: PETGraph, dep: Edge, root_loop: Vertex) -> bool:
@@ -168,7 +159,7 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
     for v in children:
         for e in v.out_edges():
             if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW':
-                if not (is_loop_index(pet, e, loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
+                if not (is_loop_index(pet, pet.graph.ep.var[e], loops_start_lines, get_subtree_of_type(pet, root_loop, 'cu'))
                         and is_readonly_inside_loop_body(pet, e, root_loop)):
                     dep_set.add(e.target())
     return dep_set
@@ -688,7 +679,7 @@ def classify_task_variables(pet, task, type,
         # get RAW dependencies for var
         tmp_deps = [dep for dep in raw_deps_on if pet.graph.ep.var[dep] is var.name]
         for edge in tmp_deps:
-            if is_loop_index(pet, edge, loops_start_lines, loop_children):
+            if is_loop_index(pet, pet.graph.ep.var[edge], loops_start_lines, loop_children):
                 var_is_loop_index = True
                 break
         if var_is_loop_index:
