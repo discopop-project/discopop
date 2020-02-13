@@ -9,6 +9,7 @@ from graph_tool.search import dfs_iterator
 import PETGraph
 
 loop_data = {}
+do_all_threshold = 0.95
 
 
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
@@ -87,6 +88,30 @@ def is_loop_index(pet: PETGraph, edge: Edge, loops_start_lines: List[str], child
     for c in children:
         for dep in c.out_edges():
             if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == pet.graph.ep.var[edge]:
+                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
+                        and pet.graph.ep.source[dep] in loops_start_lines
+                        and dep.target() in children):
+                    return True
+
+    return False
+
+
+def is_loop_index2(pet: PETGraph, root_loop: Vertex, var_name: str) -> bool:
+    """Checks, whether the variable is a loop index.
+
+    :param pet: CU graph
+    :param root_loop: root loop
+    :param var_name: name of the variable
+    :return: true if variable is index of the loop
+    """
+    loops_start_lines = [pet.graph.vp.startsAtLine[v]
+                         for v in get_subtree_of_type(pet, root_loop, 'loop')]
+    loops_start_lines.append(pet.graph.vp.startsAtLine[root_loop])
+    children = get_subtree_of_type(pet, root_loop, 'cu')
+
+    for c in children:
+        for dep in c.out_edges():
+            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
                 if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
                         and pet.graph.ep.source[dep] in loops_start_lines
                         and dep.target() in children):
@@ -282,30 +307,6 @@ def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[Any], List[Any
                     shared.append(var)
 
     return first_private, private, last_private, shared, reduction
-
-
-def is_loop_index2(pet: PETGraph, root_loop: Vertex, var_name: str) -> bool:
-    """Checks, whether the variable is a loop index.
-
-    :param pet: CU graph
-    :param root_loop: root loop
-    :param var_name: name of the variable
-    :return: true if variable is index of the loop
-    """
-    loops_start_lines = [pet.graph.vp.startsAtLine[v]
-                         for v in get_subtree_of_type(pet, root_loop, 'loop')]
-    loops_start_lines.append(pet.graph.vp.startsAtLine[root_loop])
-    children = get_subtree_of_type(pet, root_loop, 'cu')
-
-    for c in children:
-        for dep in c.out_edges():
-            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
-                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
-                        and pet.graph.ep.source[dep] in loops_start_lines
-                        and dep.target() in children):
-                    return True
-
-    return False
 
 
 def __get_dep_of_type(pet: PETGraph, node: Vertex, dep_type: str, reversed: bool) -> List[Edge]:
