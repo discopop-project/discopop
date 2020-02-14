@@ -6,8 +6,8 @@ from graph_tool.util import find_vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_loop_iterations, \
-    classify_loop_variables
+from utils import find_subnodes, depends_ignore_readonly, \
+    correlation_coefficient, get_loop_iterations, classify_loop_variables
 
 do_all_threshold = 0.95
 

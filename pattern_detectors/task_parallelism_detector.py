@@ -4,7 +4,8 @@ from graph_tool import Vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends, calculate_workload, total_instructions_count
+from utils import find_subnodes, depends, calculate_workload, \
+    total_instructions_count, classify_task_variables
 
 __forks = set()
 __workloadThreshold = 10000
@@ -96,17 +97,32 @@ class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex):
+    def __init__(self, pet: PETGraph, node: Vertex, pragma, pragma_line, first_private, private, shared):
         """
         :param pet: PET graph
         :param node: node, where task parallelism was detected
+        :param pragma: pragma to be used (task / taskwait)
+        :param pragma_line: line prior to which the pragma shall be inserted
+        :param first_private: list of varNames
+        :param private: list of varNames
+        :param shared: list of varNames
         """
         PatternInfo.__init__(self, pet, node)
+        self.pragma = pragma
+        self.pragma_line = pragma_line
+        self.first_private = first_private
+        self.private = private
+        self.shared = shared
 
     def __str__(self):
-        return f'Task parallelism at: {self.node_id}\n' \
-               f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}'
+        return f'Task parallelism at CU: {self.node_id}\n' \
+               f'CU Start line: {self.start_line}\n' \
+               f'CU End line: {self.end_line}\n' \
+               f'pragma prior to line: {self.pragma_line}\n' \
+               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
+               f'first_private: {" ".join(self.first_private)}\n' \
+               f'private: {" ".join(self.private)}\n' \
+               f'shared: {" ".join(self.shared)}'
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
@@ -145,9 +161,191 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     for fork in fs:
         # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0]))
+            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
+
+    result = result + __test_suggestions(pet)
 
     return result
+
+
+def __test_suggestions(pet: PETGraph):
+    """creates task parallelism suggestions and returns them as a list of
+    TaskParallelismInfo objects.
+    Currently relies on previous processing steps and suggests WORKER CUs
+    as Tasks and BARRIER/BARRIER_WORKER as Taskwaits.
+
+    :param pet: PET graph
+    :return List[TaskParallelismInfo]
+    """
+    # TODO replace / merge with __detect_task_parallelism
+
+    # read RAW vars from CUInstResult
+    # get function scopes -> make suggestions only inside scopes -> no start / end
+    # get modifier for each RAW Var
+    # get source line for OMP suggestion
+
+    # suggestions contains a map from LID to a set of suggestions. This is required to
+    # detect multiple suggestions for a single line of source code.
+    suggestions = dict()  # LID -> set<list<set<string>>>
+    # list[0] -> task / taskwait
+    # list[1] -> vertex
+    # list[2] -> pragma line number
+    # list[3] -> first_private Clause
+    # list[4] -> private clause
+    # list[5] -> shared clause
+
+    # get a list of cus classified as WORKER
+    worker_cus = []
+    barrier_cus = []
+    barrier_worker_cus = []
+
+    for v in pet.graph.vertices():
+        if pet.graph.vp.mwType[v] == "WORKER":
+            worker_cus.append(v)
+        if pet.graph.vp.mwType[v] == "BARRIER":
+            barrier_cus.append(v)
+        if pet.graph.vp.mwType[v] == "BARRIER_WORKER":
+            barrier_worker_cus.append(v)
+
+    # SUGGEST TASKWAIT
+    for v in barrier_cus + barrier_worker_cus:
+        tmp_suggestion = [["taskwait"], v, pet.graph.vp.startsAtLine[v], [], [], []]
+        if pet.graph.vp.startsAtLine[v] not in suggestions:
+            # no entry for source code line contained in suggestions
+            tmp_set = []
+            suggestions[pet.graph.vp.startsAtLine[v]] = tmp_set
+            suggestions[pet.graph.vp.startsAtLine[v]].append(tmp_suggestion)
+        else:
+            # entry for source code line already contained in suggestions
+            suggestions[pet.graph.vp.startsAtLine[v]].append(tmp_suggestion)
+
+    # SUGGEST TASKS
+    for it in pet.graph.vertices():
+        # iterate over all entries in recursiveFunctionCalls
+        # in order to find task suggestions
+        for i in range(0, len(pet.graph.vp.recursiveFunctionCalls[it])):
+            function_call_string = pet.graph.vp.recursiveFunctionCalls[it][i]
+            if not type(function_call_string) == str:
+                continue
+            contained_in = __recursive_function_call_contained_in_worker_cu(
+                pet, function_call_string, worker_cus)
+            if contained_in is not None:
+                current_suggestions = [[], None, None, [], [], []]
+                # recursive Function call contained in worker cu
+                # -> issue task suggestion
+                pragma_line = function_call_string[
+                    function_call_string.index(":") + 1:]
+                pragma_line = pragma_line.replace(",", "").replace(" ", "")
+
+                # only include cu and func nodes
+                if not ('func' in pet.graph.vp.type[contained_in] or
+                        "cu" in pet.graph.vp.type[contained_in]):
+                    continue
+
+                if pet.graph.vp.mwType[contained_in] == "WORKER":
+                    # suggest task
+                    first_private_vars = []
+                    private_vars = []
+                    last_private_vars = []
+                    shared_vars = []
+                    depend_in_vars = []
+                    depend_out_vars = []
+                    depend_in_out_vars = []
+                    reduction_vars = []
+                    in_deps = []
+                    out_deps = []
+                    classify_task_variables(pet, contained_in, "",
+                                            first_private_vars, private_vars,
+                                            shared_vars, depend_in_vars,
+                                            depend_out_vars,
+                                            depend_in_out_vars, reduction_vars,
+                                            in_deps, out_deps)
+                    # suggest task
+                    current_suggestions[0].append("task")
+                    current_suggestions[1] = it
+                    current_suggestions[2] = pragma_line
+                    for vid in first_private_vars:
+                        current_suggestions[3].append(vid.name)
+                    for vid in private_vars:
+                        current_suggestions[4].append(vid.name)
+                    for vid in shared_vars:
+                        current_suggestions[5].append(vid.name)
+
+                # insert current_suggestions into suggestions
+                # check, if current_suggestions contains an element
+                if len(current_suggestions[0]) >= 1:
+                    # current_suggestions contains something
+                    if pragma_line not in suggestions:
+                        # LID not contained in suggestions
+                        tmp_set = []
+                        suggestions[pragma_line] = tmp_set
+                        suggestions[pragma_line].append(current_suggestions)
+                    else:
+                        # LID already contained in suggestions
+                        suggestions[pragma_line].append(current_suggestions)
+    # end of for loop
+
+    # construct return value (list of TaskParallelismInfo)
+    result = []
+    for it in suggestions:
+        for single_suggestions in suggestions[it]:
+            pragma = single_suggestions[0]
+            node = single_suggestions[1]
+            pragma_line = single_suggestions[2]
+            first_private = single_suggestions[3]
+            private = single_suggestions[4]
+            shared = single_suggestions[5]
+            result.append(TaskParallelismInfo(pet, node, pragma, pragma_line,
+                                              first_private, private, shared))
+
+    return result
+
+
+def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
+                                                     function_call_string: str,
+                                                     worker_cus: [Vertex]):
+    """check if submitted function call is contained in at least one WORKER cu.
+    Returns the vertex identifier of the containing cu.
+    If no cu contains the function call, None is returned.
+    Note: The Strings stored in recursiveFunctionCalls might contain multiple function calls at once.
+          in order to apply this function correctly, make sure to split Strings in advance and supply
+          one call at a time.
+    :param pet: PET graph
+    :param function_call_string: String representation of the recursive function call to be checked
+            Ex.: fib 7:35,  (might contain ,)
+    :param worker_cus: List of vertices
+    """
+    # remove , and whitespaces at start / end
+    function_call_string = function_call_string.replace(",", "")
+    while function_call_string.startswith(" "):
+        function_call_string = function_call_string[1:]
+    while function_call_string.endswith(" "):
+        function_call_string = function_call_string[:-1]
+    # function_call_string looks now like like: 'fib 7:52'
+
+    # split String into function_name. file_id and line_number
+    function_name = function_call_string[0:function_call_string.index(" ")]
+    file_id = function_call_string[
+        function_call_string.index(" ") + 1:
+        function_call_string.index(":")]
+    line_number = function_call_string[function_call_string.index(":") + 1:]
+
+    # iterate over worker_cus
+    for cur_w in worker_cus:
+        cur_w_starts_at_line = pet.graph.vp.startsAtLine[cur_w]
+        cur_w_ends_at_line = pet.graph.vp.endsAtLine[cur_w]
+        cur_w_file_id = cur_w_starts_at_line[:cur_w_starts_at_line.index(":")]
+        # check if file_id is equal
+        if file_id == cur_w_file_id:
+            # trim to line numbers only
+            cur_w_starts_at_line = cur_w_starts_at_line[
+                cur_w_starts_at_line.index(":") + 1:]
+            cur_w_ends_at_line = cur_w_ends_at_line[
+                cur_w_ends_at_line.index(":") + 1:]
+            # check if line_number is contained
+            if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
+                return cur_w
+    return None
 
 
 def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
@@ -168,7 +366,7 @@ def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
 
         # while using the node as the base child, we copy all the other children in a copy vector.
         # we do that because it could be possible that two children of the current node (two dependency)
-        # point to two different children of another child node which results that the childnode becomes BARRIER
+        # point to two different children of another child node which results that the child node becomes BARRIER
         # instead of WORKER
         # so we copy the whole other children in another vector and when one of the children of the current node
         # does point to the other child node, we just adjust mwType and then we remove the node from the vector
