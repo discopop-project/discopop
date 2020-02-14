@@ -278,7 +278,7 @@ def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[Any], List[Any
                                                                pet.reduction_vars):
             reduction.append(var)
             # TODO grouping
-        elif (is_written_in_lst(pet, var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
+        elif (is_written_in_subtree(pet, var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
               and is_scalar_val(var)) and is_readonly(pet, var.name, war, waw, rev_raw):
             if is_global(pet, var.name, sub):
                 private.append(var)
@@ -286,7 +286,7 @@ def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[Any], List[Any
                 first_private.append(var)
         elif is_first_written(pet, var.name, raw, war, sub):
             # TODO simplify
-            if is_read_in_rst(pet, var.name, rev_raw, rst):
+            if is_read_in_subtree(pet, var.name, rev_raw, rst):
                 if is_scalar_val(var):
                     last_private.append(var)
                 else:
@@ -370,18 +370,18 @@ def is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]])
     return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
 
-def is_written_in_lst(pet: PETGraph, var: str, raw: Set[Edge], waw: Set[Edge], lst: List[Vertex]) -> bool:
-    """ Checks if variable is written in left subtree
+def is_written_in_subtree(pet: PETGraph, var: str, raw: Set[Edge], waw: Set[Edge], tree: List[Vertex]) -> bool:
+    """ Checks if variable is written in subtree
 
     :param pet: CU graph
     :param var: variable name
     :param raw: raw dependencies of the loop
     :param waw: waw dependencies of the loop
-    :param lst: left subtree
+    :param tree: subtree
     :return: true if is written
     """
     for e in itertools.chain(raw, waw):
-        if pet.graph.ep.var[e] == var and e.target() in lst:
+        if pet.graph.ep.var[e] == var and e.target() in tree:
             return True
     return False
 
@@ -475,17 +475,17 @@ def is_first_written(pet: PETGraph, var: str, raw: Set[Edge], war: Set[Edge], su
     return True
 
 
-def is_read_in_rst(pet: PETGraph, var: str, rev_raw: Set[Edge], rst: List[Vertex]) -> bool:
-    """Checks if variable is read in right subtree
+def is_read_in_subtree(pet: PETGraph, var: str, rev_raw: Set[Edge], tree: List[Vertex]) -> bool:
+    """Checks if variable is read in subtree
 
     :param pet: CU graph
     :param var: variable name
     :param rev_raw: reversed raw dependencies of the loop
-    :param rst: right subtree
+    :param tree: subtree
     :return: true if read in right subtree
     """
     for e in rev_raw:
-        if pet.graph.ep.var[e] == var and e.target() in rst:
+        if pet.graph.ep.var[e] == var and e.target() in tree:
             return True
     return False
 
@@ -693,7 +693,7 @@ def classify_task_variables(pet, task, type,
             depend_in_vars.append(var)
         elif is_written_in_task_and_read_in_dep_task(pet, var, reverse_raw_deps_on, out_deps):
             depend_out_vars.append(var)
-        elif ((is_written_in_lst(pet, var, raw_deps_on, waw_deps_on, left_sub_tree) or
+        elif ((is_written_in_subtree(pet, var, raw_deps_on, waw_deps_on, left_sub_tree) or
                (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
               is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
             if __is_global2(pet, var.name):
