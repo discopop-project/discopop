@@ -1,7 +1,8 @@
 """Discopop analyzer.
 
 Usage:
-    main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>]
+    main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
+[--loop-counter <loopcount>] [--reduction <reduction>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
