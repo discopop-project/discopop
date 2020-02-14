@@ -6,6 +6,7 @@
 set(DiscoPoP_SOURCES
   iFunctions.cpp
   signature.cpp
+  loop_counter.cpp
   #../share/lib/DPUtils.cpp
   )
   
