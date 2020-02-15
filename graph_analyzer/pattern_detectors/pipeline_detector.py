@@ -6,7 +6,7 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
-    classify_loop_variables
+    classify_loop_variables, classify_task_vars
 
 __pipeline_threshold = 0.9
 
@@ -41,7 +41,7 @@ class PipelineInfo(PatternInfo):
         for i in range(self.stages.index(node)):
             nodes_before.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
 
-        return set([self.pet.graph.ep.var[dep] for dep in raw if dep.target() in nodes_before])
+        return [dep for dep in raw if dep.target() in nodes_before]
 
     def __out_dep(self, node: Vertex):
         raw = []
@@ -52,15 +52,17 @@ class PipelineInfo(PatternInfo):
         for i in range(self.stages.index(node)+1, len(self.stages)):
             nodes_after.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
 
-        return set([self.pet.graph.ep.var[dep] for dep in raw if dep.source() in nodes_after])
+        return [dep for dep in raw if dep.source() in nodes_after]
 
     def __output_stage(self, node: Vertex) -> str:
-        fp, p, lp, s, r = classify_loop_variables(self.pet, node)
-        in_dep = self.__in_dep(node)
-        out_dep = self.__out_dep(node)
-        in_out_dep = [d for d in in_dep if d in out_dep]
-        in_dep = [d for d in in_dep if d not in in_out_dep]
-        out_dep = [d for d in out_dep if d not in in_out_dep]
+        fp, p, lp, s, r = [], [], [], [], []
+        in_d = self.__in_dep(node)
+        out_d = self.__out_dep(node)
+        in_dep = []
+        out_dep = []
+        in_out_dep = []
+
+        classify_task_vars(self.pet, node, "PipeLine", fp, p, s, in_dep, out_dep, in_out_dep, r, in_d, out_d)
 
         return f'\tNode: {self.pet.graph.vp.id[node]}\n' \
                f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \

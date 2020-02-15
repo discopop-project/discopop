@@ -3,8 +3,8 @@ from typing import List, Set, Dict, Any
 
 import numpy as np
 from graph_tool.all import Vertex, Edge
-from graph_tool.topology import shortest_path
 from graph_tool.search import dfs_iterator
+from graph_tool.topology import shortest_path
 
 import PETGraph
 
@@ -639,6 +639,112 @@ def classify_task_variables(pet, task, type,
                 vars.append(v)
     else:
         vars = __get_variables(pet, [task])
+
+    raw_deps_on = set()  # set<Dependence>
+    war_deps_on = set()
+    waw_deps_on = set()
+
+    reverse_raw_deps_on = set()
+    reverse_war_deps_on = set()
+    reverse_waw_deps_on = set()
+    # init = []  # set<String>
+
+    for child_cu in t:
+        # insert all entries from child_cu.RAW_deps_on into RAW_deps_on etc.
+        raw_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", False))
+        war_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", False))
+        waw_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", False))
+
+        reverse_raw_deps_on.update(__get_dep_of_type(pet, child_cu, "RAW", True))
+        reverse_war_deps_on.update(__get_dep_of_type(pet, child_cu, "WAR", True))
+        reverse_waw_deps_on.update(__get_dep_of_type(pet, child_cu, "WAW", True))
+
+    reduction_loops = []
+    do_all_loops = []
+    get_child_loops(pet, task, do_all_loops, reduction_loops)
+    # reduction_result = ""
+
+    if "loop" in pet.graph.vp.type[task]:
+        if pet.graph.vp.reduction[task]:
+            reduction_loops.append(task)
+        else:
+            do_all_loops.append(task)
+
+    loop_nodes = [n for n in pet.graph.vertices() if "loop" in pet.graph.vp.type[n]]
+    loops_start_lines = [pet.graph.vp.startsAtLine[n] for n in loop_nodes]
+    loop_children = [e.target() for n in loop_nodes for e in n.out_edges()]
+
+    for var in vars:
+        var_is_loop_index = False
+        # get RAW dependencies for var
+        tmp_deps = [dep for dep in raw_deps_on if pet.graph.ep.var[dep] is var.name]
+        for edge in tmp_deps:
+            if is_loop_index(pet, pet.graph.ep.var[edge], loops_start_lines, loop_children):
+                var_is_loop_index = True
+                break
+        if var_is_loop_index:
+            private_vars.append(var)
+        elif ("GeometricDecomposition" in type or "PipeLine" in type) \
+                and is_reduction_var(pet.graph.vp.startsAtLine[var], var.name, pet.reduction_vars):
+            reduction_vars.append(var.name)
+        elif is_depend_in_out(pet, var, in_deps, out_deps):
+            depend_in_out_vars.append(var)
+        elif is_written_in_dep_task_and_read_in_task(pet, var, in_deps, raw_deps_on):
+            depend_in_vars.append(var)
+        elif is_written_in_task_and_read_in_dep_task(pet, var, reverse_raw_deps_on, out_deps):
+            depend_out_vars.append(var)
+        elif ((is_written_in_subtree(pet, var, raw_deps_on, waw_deps_on, left_sub_tree) or
+               (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
+              is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
+            if __is_global2(pet, var.name):
+                shared_vars.append(var)
+            else:
+                first_private_vars.append(var)
+        elif is_first_written_new(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, t):
+            if is_scalar_val(var):
+                private_vars.append(var)
+            else:
+                shared_vars.append(var)
+
+
+def classify_task_vars(pet, task, type,
+                            first_private_vars, private_vars, shared_vars,
+                            depend_in_vars, depend_out_vars, depend_in_out_vars, reduction_vars,
+                            in_deps, out_deps):
+    # based on DataSharingClauseDetector::classifyTaskVariables
+    # TODO: documentation
+
+    # print("Node-ID: ", pet.graph.vp.id[task], " Node-StartLine: ", pet.graph.vp.startsAtLine[task],
+    # " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
+    left_sub_tree = __get_left_right_subtree(pet, task, False)
+    t = get_subtree_of_type(pet, task, "cu")
+    # right_sub_tree = __get_left_right_subtree(pet, task, True)
+
+    vars = []  # must be a set<Vars>
+    print(pet.graph.vp.type[task])
+    if pet.graph.vp.type[task] == 'func':
+        # TODO check
+        tmp = __get_variables(pet, t)
+        vars_strings = []
+        for v in pet.graph.vp.args[task]:
+            vars_strings.append(v.name)
+        for v in tmp:
+            # None may occur because __get_variables doesn't check for actual elements
+            if v.name is None:
+                continue
+
+            if "." in v.name:
+                name = v.name[0: v.name.index(".")]  # substring before '.'
+            else:
+                name = v.name
+
+            if name in vars_strings:
+                vars.append(v)
+    else:
+        vars = __get_variables(pet, get_subtree_of_type(pet, task, 'cu'))
+
+    print("Vars:")
+    print([v.name for v in vars])
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()

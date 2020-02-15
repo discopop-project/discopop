@@ -93,7 +93,6 @@ class GDInfo(PatternInfo):
         return s
 
 
-
 def run_detection(pet: PETGraph) -> List[GDInfo]:
     """Detects geometric decomposition
 
