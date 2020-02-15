@@ -5,7 +5,8 @@ from graph_tool.util import find_vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type
+from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
+    classify_loop_variables
 
 __pipeline_threshold = 0.9
 
@@ -54,12 +55,24 @@ class PipelineInfo(PatternInfo):
         return set([self.pet.graph.ep.var[dep] for dep in raw if dep.source() in nodes_after])
 
     def __output_stage(self, node: Vertex) -> str:
+        fp, p, lp, s, r = classify_loop_variables(self.pet, node)
+        in_dep = self.__in_dep(node)
+        out_dep = self.__out_dep(node)
+        in_out_dep = [d for d in in_dep if d in out_dep]
+        in_dep = [d for d in in_dep if d not in in_out_dep]
+        out_dep = [d for d in out_dep if d not in in_out_dep]
+
         return f'\tNode: {self.pet.graph.vp.id[node]}\n' \
                f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \
                f'\tEnd line: {self.pet.graph.vp.endsAtLine[node]}\n' \
                f'\tpragma: "#pragma omp task"\n' \
-               f'\tInDeps: {self.__in_dep(node)}\n' \
-               f'\tOutDeps: {self.__out_dep(node)}'
+               f'\tfirst private: {[v.name for v in fp]}\n' \
+               f'\tprivate: {[v.name for v in p]}\n' \
+               f'\tshared: {[v.name for v in s]}\n' \
+               f'\treduction: {[v.name for v in r]}\n' \
+               f'\tInDeps: {in_dep}\n' \
+               f'\tOutDeps: {out_dep}\n' \
+               f'\tInOutDeps: {in_out_dep}'
 
     def __str__(self):
         s = "\n\n".join([self.__output_stage(s) for s in self.stages])
@@ -67,7 +80,7 @@ class PipelineInfo(PatternInfo):
                f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
-               f'Stages:\n{s.replace("set()", "{}")}'
+               f'Stages:\n{s}'
 
 
 def is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
