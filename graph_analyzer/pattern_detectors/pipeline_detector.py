@@ -55,14 +55,11 @@ class PipelineInfo(PatternInfo):
         return [dep for dep in raw if dep.source() in nodes_after]
 
     def __output_stage(self, node: Vertex) -> str:
-        fp, p, lp, s, r = [], [], [], [], []
+
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
-        in_dep = []
-        out_dep = []
-        in_out_dep = []
 
-        classify_task_vars(self.pet, node, "PipeLine", fp, p, s, in_dep, out_dep, in_out_dep, r, in_d, out_d)
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(self.pet, node, "PipeLine", in_d, out_d)
 
         return f'\tNode: {self.pet.graph.vp.id[node]}\n' \
                f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \
@@ -126,7 +123,6 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
     :return: Pipeline scalar value
     """
 
-    # TODO how deep
     children_start_lines = [pet.graph.vp.startsAtLine[v]
                             for v in find_subnodes(pet, root, 'child')
                             if pet.graph.vp.type[v] == 'loop']

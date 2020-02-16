@@ -8,7 +8,7 @@ import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
 from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables, \
-    calculate_workload, classify_task_variables
+    calculate_workload, classify_task_vars
 
 # cache
 __loop_iterations: Dict[str, int] = {}
@@ -29,17 +29,17 @@ class GdSubLoopInfo(PatternInfo):
         self.base = base
         if not reduction:
             self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
-            a, b, c, d, e = [], [], [], [], []
-            classify_task_variables(pet, node, "GeometricDecompositionPattern", a, b, d, [], [], [], e, [], [])
+            lp = []
+            fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(self.pet, node, "PipeLine", [], [])
         else:
             self.pragma = "#pragma omp taskloop num_tasks(num-tasks) for (i = 0; i < num-tasks; i++)"
-            a, b, c, d, e = classify_loop_variables(pet, node)
+            fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.num_tasks = "N/A"
-        self.first_private = a
-        self.private = b
-        self.last_private = c
-        self.shared = d
-        self.reduction = e
+        self.first_private = fp
+        self.private = p
+        self.last_private = lp
+        self.shared = s
+        self.reduction = r
 
     def __str__(self):
         return f'\tNode: {self.node_id}\n' \

@@ -42,8 +42,6 @@ class PatternDetector(object):
                         else:
                             sub_nodes.append(e.target())
 
-            # TODO optimization opportunity: copy all dependency edges to the root node
-
     def detect_patterns(self):
         """Runs pattern discovery on the CU graph
         """

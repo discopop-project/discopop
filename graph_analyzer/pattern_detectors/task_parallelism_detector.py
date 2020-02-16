@@ -5,7 +5,7 @@ from graph_tool import Vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends, calculate_workload, \
-    total_instructions_count, classify_task_variables
+    total_instructions_count, classify_task_vars
 
 __forks = set()
 __workloadThreshold = 10000
@@ -234,7 +234,7 @@ def __test_suggestions(pet: PETGraph):
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
                 pragma_line = function_call_string[
-                    function_call_string.index(":") + 1:]
+                              function_call_string.index(":") + 1:]
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
 
                 # only include cu and func nodes
@@ -254,12 +254,12 @@ def __test_suggestions(pet: PETGraph):
                     reduction_vars = []
                     in_deps = []
                     out_deps = []
-                    classify_task_variables(pet, contained_in, "",
-                                            first_private_vars, private_vars,
-                                            shared_vars, depend_in_vars,
-                                            depend_out_vars,
-                                            depend_in_out_vars, reduction_vars,
-                                            in_deps, out_deps)
+                    classify_task_vars(pet, contained_in, "",
+                                       first_private_vars, private_vars,
+                                       shared_vars, depend_in_vars,
+                                       depend_out_vars,
+                                       depend_in_out_vars, reduction_vars,
+                                       in_deps, out_deps)
                     # suggest task
                     current_suggestions[0].append("task")
                     current_suggestions[1] = it
@@ -326,8 +326,8 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
     # split String into function_name. file_id and line_number
     function_name = function_call_string[0:function_call_string.index(" ")]
     file_id = function_call_string[
-        function_call_string.index(" ") + 1:
-        function_call_string.index(":")]
+              function_call_string.index(" ") + 1:
+              function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1:]
 
     # iterate over worker_cus
@@ -339,9 +339,9 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
         if file_id == cur_w_file_id:
             # trim to line numbers only
             cur_w_starts_at_line = cur_w_starts_at_line[
-                cur_w_starts_at_line.index(":") + 1:]
+                                   cur_w_starts_at_line.index(":") + 1:]
             cur_w_ends_at_line = cur_w_ends_at_line[
-                cur_w_ends_at_line.index(":") + 1:]
+                                 cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 return cur_w

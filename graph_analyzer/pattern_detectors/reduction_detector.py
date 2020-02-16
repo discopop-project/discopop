@@ -18,12 +18,12 @@ class ReductionInfo(PatternInfo):
         :param node: node, where reduction was detected
         """
         PatternInfo.__init__(self, pet, node)
-        a, b, c, d, e = classify_loop_variables(pet, node)
-        self.first_private = a
-        self.private = b
-        self.last_private = c
-        self.shared = d
-        self.reduction = e
+        fp, p, lp, s, r = classify_loop_variables(pet, node)
+        self.first_private = fp
+        self.private = p
+        self.last_private = lp
+        self.shared = s
+        self.reduction = r
 
     def __str__(self):
         return f'Reduction at: {self.node_id}\n' \
