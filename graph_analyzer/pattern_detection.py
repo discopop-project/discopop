@@ -69,7 +69,7 @@ class PatternDetector(object):
                 print(gd, '\n')
         else:
             print('loop iteration data is required for this detector\n')
-        return
+
         print('===DETECTING TASK PARALLELISM===')
         if self.pet.loop_data is not None:
             for tp in detect_tp(self.pet):
