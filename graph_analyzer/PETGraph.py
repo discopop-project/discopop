@@ -7,6 +7,7 @@ from graph_tool.draw import arf_layout
 from graph_tool.search import bfs_iterator
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
+from variable import Variable
 
 node_type_info = {
     '0': {
@@ -72,18 +73,6 @@ edge_props = [
 ]
 
 GT_map_node_indices = dict()
-
-
-class Variable(object):
-    def __init__(self, type, name):
-        self.type = type
-        self.name = name
-
-    def __hash__(self):
-        return hash(self.name)  # hash(self.type + self.name)
-
-    def __eq__(self, other):
-        return isinstance(other, Variable) and self.name == other.name  # and self.type == other.type
 
 
 class PETGraph(object):

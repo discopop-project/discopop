@@ -7,6 +7,7 @@ from graph_tool.search import dfs_iterator
 from graph_tool.topology import shortest_path
 
 import PETGraph
+from variable import Variable
 
 loop_data = {}
 do_all_threshold = 0.95
@@ -343,7 +344,7 @@ def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool)
     return res
 
 
-def __get_variables(pet: PETGraph, nodes: List[Vertex]) -> Set[Any]:
+def __get_variables(pet: PETGraph, nodes: List[Vertex]) -> Set[Variable]:
     """Gets all variables in nodes
 
     :param pet: CU graph
@@ -540,7 +541,7 @@ def is_depend_in_out(pet: PETGraph, var, in_deps, out_deps):
     return False
 
 
-def is_written_in_dep_task_and_read_in_task(pet: PETGraph, var, in_deps, raw_deps_on):
+def is_written_in_dep_task_and_read_in_task(pet: PETGraph, var: Variable, in_deps, raw_deps_on):
     """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_task"""
 
     for in_dep in in_deps:
@@ -549,7 +550,7 @@ def is_written_in_dep_task_and_read_in_task(pet: PETGraph, var, in_deps, raw_dep
     return False
 
 
-def is_written_in_task_and_read_in_dep_task(pet: PETGraph, var, reverse_raw_deps_on, out_deps):
+def is_written_in_task_and_read_in_dep_task(pet: PETGraph, var: Variable, reverse_raw_deps_on, out_deps):
     """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_dep_task"""
     for dep in out_deps:
         if pet.graph.ep.var[dep] is var.name and dep in reverse_raw_deps_on:
@@ -568,7 +569,7 @@ def __is_global2(pet: PETGraph, var: str):
     return False
 
 
-def is_read_in(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, t):
+def is_read_in(pet, var: Variable, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, t):
     """based on DataSharingClauseDetector:is_read_in"""
     # Check all reverse RAW dependencies (since we know that var is written in
     # loop, because isFirstWritten returned true)
@@ -592,7 +593,7 @@ def is_read_in(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_
     return False
 
 
-def is_first_written_new(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, t):
+def is_first_written_new(pet, var: Variable, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, t):
     """based on DataSharingClauseDetector:is_first_written_new"""
     result = False
     is_read = is_read_in(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, t)
@@ -720,8 +721,9 @@ def classify_task_vars(pet, task, type,
     # " Node-EndLine: ", pet.graph.vp.endsAtLine[task])
     left_sub_tree = __get_left_right_subtree(pet, task, False)
     t = get_subtree_of_type(pet, task, "cu")
+    t_loop = get_subtree_of_type(pet, task, "loop")
 
-    vars = []  # must be a set<Vars>
+    vars: List[Variable] = []  # must be a set<Vars>
     print(pet.graph.vp.type[task])
     if pet.graph.vp.type[task] == 'func':
         # TODO check
@@ -775,7 +777,7 @@ def classify_task_vars(pet, task, type,
         else:
             do_all_loops.append(task)
 
-    loop_nodes = [n for n in pet.graph.vertices() if pet.graph.vp.type[n] == 'loop']
+    loop_nodes = [n for n in t_loop]
     loops_start_lines = [pet.graph.vp.startsAtLine[n] for n in loop_nodes]
     loop_children = [e.target() for n in loop_nodes for e in n.out_edges()]
 
@@ -798,7 +800,7 @@ def classify_task_vars(pet, task, type,
             depend_in_vars.append(var)
         elif is_written_in_task_and_read_in_dep_task(pet, var, reverse_raw_deps_on, out_deps):
             depend_out_vars.append(var)
-        elif ((is_written_in_subtree(pet, var, raw_deps_on, waw_deps_on, left_sub_tree) or
+        elif ((is_written_in_subtree(pet, var.name, raw_deps_on, waw_deps_on, left_sub_tree) or
                (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
               is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
             if __is_global2(pet, var.name):
