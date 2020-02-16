@@ -11,6 +11,8 @@ from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, class
     calculate_workload, classify_task_vars, get_child_loops
 
 # cache
+from variable import Variable
+
 __loop_iterations: Dict[str, int] = {}
 
 
@@ -19,21 +21,26 @@ class GdSubLoopInfo(PatternInfo):
     """
     coefficient: float
 
-    def __init__(self, pet: PETGraph, node: Vertex, reduction: bool, base: Vertex):
+    def __init__(self, pet: PETGraph, base: Vertex, use_tasks: bool):
         """
+
         :param pet: PET graph
         :param node: node, where do-all was detected
         """
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, pet, base)
         self.pet = pet
         self.base = base
-        if not reduction:
+
+        if use_tasks:
             self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
             lp = []
-            fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(self.pet, node, "PipeLine", [], [])
+            fp, p, s, in_dep, out_dep, in_out_dep, r = \
+                classify_task_vars(self.pet, base, "GeometricDecomposition", [], [])
+            fp.append(Variable('int', 'i'))
         else:
+            # TODO classify task loop vars
             self.pragma = "#pragma omp taskloop num_tasks(num-tasks) for (i = 0; i < num-tasks; i++)"
-            fp, p, lp, s, r = classify_loop_variables(pet, node)
+            fp, p, lp, s, r = classify_loop_variables(pet, base)
         self.num_tasks = "N/A"
         self.first_private = fp
         self.private = p
@@ -52,7 +59,7 @@ class GdSubLoopInfo(PatternInfo):
                f'\tprivate: {[v.name for v in self.private]}\n' \
                f'\tshared: {[v.name for v in self.shared]}\n' \
                f'\tfirst private: {[v.name for v in self.first_private]}\n' \
-               f'\treduction: {[v.name for v in self.reduction]}\n' \
+               f'\treduction: {[v for v in self.reduction]}\n' \
                f'\tlast private: {[v.name for v in self.last_private]}'
 
 
@@ -70,8 +77,7 @@ class GDInfo(PatternInfo):
 
         self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
-        self.sub_loop_info = [GdSubLoopInfo(pet, n, False, node) for n in self.do_all_children]
-        self.sub_loop_info.extend([GdSubLoopInfo(pet, n, True, node) for n in self.reduction_children])
+        self.sub_loop_info = [GdSubLoopInfo(pet, node, True)]
 
     def __str__(self):
         s = f'Geometric decomposition at: {self.node_id}\n' \

@@ -372,6 +372,21 @@ def is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]])
     return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
 
+def is_reduction_any(possible_lines: List[str], name: str, reduction_vars: List[Dict[str, str]]) -> bool:
+    """Determines, whether or not the given variable is reduction variable
+
+    :param possible_lines: possible loop line number
+    :param name: variable name
+    :param reduction_vars: List of reduction variables
+    :return: true if is reduction variable
+    """
+    for line in possible_lines:
+        if is_reduction_var(line, name, reduction_vars):
+            return True
+
+    return False
+
+
 def is_written_in_subtree(pet: PETGraph, var: str, raw: Set[Edge], waw: Set[Edge], tree: List[Vertex]) -> bool:
     """ Checks if variable is written in subtree
 
@@ -796,7 +811,7 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
         else:
             do_all_loops.append(task)
 
-    loop_nodes = [n for n in t_loop]
+    loop_nodes = [n for n in t_loop if pet.graph.vp.reduction[n]]
     loops_start_lines = [pet.graph.vp.startsAtLine[n] for n in loop_nodes]
     loop_children = [e.target() for n in loop_nodes for e in n.out_edges()]
 
@@ -811,7 +826,7 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
         if var_is_loop_index:
             private_vars.append(var)
         elif ("GeometricDecomposition" in type or "PipeLine" in type) \
-                and is_reduction_var(pet.graph.vp.startsAtLine[task], var.name, pet.reduction_vars):
+                and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars):
             reduction_vars.append(var.name)
         elif is_depend_in_out(pet, var, in_deps, out_deps):
             depend_in_out_vars.append(var)
