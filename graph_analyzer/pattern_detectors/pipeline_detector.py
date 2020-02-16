@@ -6,7 +6,7 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
-    classify_loop_variables, classify_task_vars
+    classify_task_vars
 
 __pipeline_threshold = 0.9
 
@@ -49,7 +49,7 @@ class PipelineInfo(PatternInfo):
             raw.extend(e for e in n.in_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
 
         nodes_after = []
-        for i in range(self.stages.index(node)+1, len(self.stages)):
+        for i in range(self.stages.index(node) + 1, len(self.stages)):
             nodes_after.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
 
         return [dep for dep in raw if dep.source() in nodes_after]

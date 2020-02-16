@@ -93,4 +93,3 @@ if __name__ == "__main__":
     end = time.time()
 
     print("Time taken for pattern detection: {0}".format(end - start))
-

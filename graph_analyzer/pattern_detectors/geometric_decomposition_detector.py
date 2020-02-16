@@ -7,7 +7,7 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables,\
+from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables, \
     calculate_workload, classify_task_variables
 
 # cache
@@ -82,11 +82,11 @@ class GDInfo(PatternInfo):
 
     def __str__(self):
         s = f'Geometric decomposition at: {self.node_id}\n' \
-               f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}\n' \
-               f'Type: Geometric Decomposition Pattern\n' \
-               f'Do-All loops: {[self.pet.graph.vp.id[n] for n in self.do_all_children]}\n' \
-               f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n\n'
+            f'Start line: {self.start_line}\n' \
+            f'End line: {self.end_line}\n' \
+            f'Type: Geometric Decomposition Pattern\n' \
+            f'Do-All loops: {[self.pet.graph.vp.id[n] for n in self.do_all_children]}\n' \
+            f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n\n'
         for t in self.sub_loop_info:
             s += str(t) + '\n\n'
 
