@@ -531,7 +531,7 @@ def get_child_loops(pet: PETGraph, node: Vertex) -> (List[Vertex], List[Vertex])
     children_nodes = [e.target() for e in node.out_edges()]
     for child in children_nodes:
         if pet.graph.vp.type[child] == 'loop':
-            if pet.graph.vp.do_all[child] >= do_all_threshold:
+            if pet.graph.vp.doAll[child] >= do_all_threshold:
                 do_all.append(child)
             elif pet.graph.vp.reduction[child]:
                 reduction.append(child)
@@ -539,7 +539,7 @@ def get_child_loops(pet: PETGraph, node: Vertex) -> (List[Vertex], List[Vertex])
             child_children = [e.target() for e in child.out_edges()]
             for func_child in child_children:
                 if pet.graph.vp.type[func_child] == 'loop':
-                    if pet.graph.vp.do_all[func_child] >= do_all_threshold:
+                    if pet.graph.vp.doAll[func_child] >= do_all_threshold:
                         do_all.append(func_child)
                     elif pet.graph.vp.reduction[func_child]:
                         reduction.append(func_child)

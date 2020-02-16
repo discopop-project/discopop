@@ -8,7 +8,7 @@ import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
 from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables, \
-    calculate_workload, classify_task_vars
+    calculate_workload, classify_task_vars, get_child_loops
 
 # cache
 __loop_iterations: Dict[str, int] = {}
@@ -68,13 +68,7 @@ class GDInfo(PatternInfo):
         PatternInfo.__init__(self, pet, node)
         self.pet = pet
 
-        child_loops = [sn for sn in find_subnodes(pet, node, 'child') if pet.graph.vp.type[sn] == 'loop']
-        for sn in find_subnodes(pet, node, 'child'):
-            if pet.graph.vp.type[sn] == 'func':
-                child_loops.extend([n for n in find_subnodes(pet, sn, 'child') if pet.graph.vp.type[n] == 'loop'])
-
-        self.do_all_children = [n for n in child_loops if pet.graph.vp.doAll[n] >= do_all_threshold]
-        self.reduction_children = [n for n in child_loops if pet.graph.vp.reduction[n]]
+        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
         self.sub_loop_info = [GdSubLoopInfo(pet, n, False, node) for n in self.do_all_children]
         self.sub_loop_info.extend([GdSubLoopInfo(pet, n, True, node) for n in self.reduction_children])

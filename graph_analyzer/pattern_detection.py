@@ -63,16 +63,16 @@ class PatternDetector(object):
         for pipeline in detect_pipeline(self.pet):
             print(pipeline, '\n')
 
-        print('===DETECTING TASK PARALLELISM===')
-        if self.pet.loop_data is not None:
-            for tp in detect_tp(self.pet):
-                print(tp, '\n')
-        else:
-            print('loop iteration data is required for this detector\n')
-
         print('===DETECTING GEOMETRIC DECOMPOSITION===')
         if self.pet.loop_data is not None:
             for gd in detect_gd(self.pet):
                 print(gd, '\n')
+        else:
+            print('loop iteration data is required for this detector\n')
+        return
+        print('===DETECTING TASK PARALLELISM===')
+        if self.pet.loop_data is not None:
+            for tp in detect_tp(self.pet):
+                print(tp, '\n')
         else:
             print('loop iteration data is required for this detector\n')
