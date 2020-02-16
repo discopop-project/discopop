@@ -49,10 +49,6 @@ class PatternDetector(object):
         """
         self.__merge(False, True)
 
-        print('===DETECTING PIPELINE===')
-        for pipeline in detect_pipeline(self.pet):
-            print(pipeline, '\n')
-
         print('===DETECTING REDUCTION===')
         # reduction before doall!
         if self.pet.reduction_vars is not None:
@@ -64,6 +60,10 @@ class PatternDetector(object):
         print('===DETECTING DO ALL===')
         for do_all in detect_do_all(self.pet):
             print(do_all, '\n')
+
+        print('===DETECTING PIPELINE===')
+        for pipeline in detect_pipeline(self.pet):
+            print(pipeline, '\n')
 
         print('===DETECTING TASK PARALLELISM===')
         if self.pet.loop_data is not None:

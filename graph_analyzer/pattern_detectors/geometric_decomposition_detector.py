@@ -23,7 +23,6 @@ class GdSubLoopInfo(PatternInfo):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
-        :param coefficient: correlation coefficient
         """
         PatternInfo.__init__(self, pet, node)
         self.pet = pet
