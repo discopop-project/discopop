@@ -516,12 +516,12 @@ def get_child_loops(pet: PETGraph, node: Vertex):
     reduction = []
     children_nodes = [e.target() for e in node.out_edges()]
     for child in children_nodes:
-        if "loop" in pet.graph.vp.type[child]:
+        if "loop" == pet.graph.vp.type[child]:
             if pet.graph.vp.do_all[child] >= do_all_threshold:
                 do_all.append(child)
             else:
                 reduction.append(child)
-        elif "func" in pet.graph.vp.type[child]:
+        elif "func" == pet.graph.vp.type[child]:
             child_children = [e.target() for e in child.out_edges()]
             for func_child in child_children:
                 if "loop" in pet.graph.vp.type[func_child]:
@@ -536,7 +536,7 @@ def is_depend_in_out(pet: PETGraph, var, in_deps, out_deps):
     """based on DataSharingClauseDetector:is_depend_in_out"""
     for in_dep in in_deps:
         for out_dep in out_deps:
-            if var.name is pet.graph.ep.var[in_dep] and pet.graph.ep.var[in_dep] is pet.graph.ep.var[out_dep]:
+            if var.name == pet.graph.ep.var[in_dep] and pet.graph.ep.var[in_dep] == pet.graph.ep.var[out_dep]:
                 return True
     return False
 
@@ -545,15 +545,15 @@ def is_written_in_dep_task_and_read_in_task(pet: PETGraph, var: Variable, in_dep
     """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_task"""
 
     for in_dep in in_deps:
-        if pet.graph.ep.var[in_dep] is var.name and in_dep in raw_deps_on:
+        if pet.graph.ep.var[in_dep] == var.name and in_dep in raw_deps_on:
             return True
     return False
 
 
-def is_written_in_task_and_read_in_dep_task(pet: PETGraph, var: Variable, reverse_raw_deps_on, out_deps):
+def is_written_in_task_and_read_in_dep_task(pet: PETGraph, var: Variable, reverse_raw_deps_on, out_deps: List[Edge]):
     """based on DataSharingClauseDetector:is_written_in_dep_task_and_read_in_dep_task"""
     for dep in out_deps:
-        if pet.graph.ep.var[dep] is var.name and dep in reverse_raw_deps_on:
+        if pet.graph.ep.var[dep] == var.name and dep in reverse_raw_deps_on:
             return True
     return False
 
@@ -680,7 +680,7 @@ def classify_task_variables(pet, task, type,
     for var in vars:
         var_is_loop_index = False
         # get RAW dependencies for var
-        tmp_deps = [dep for dep in raw_deps_on if pet.graph.ep.var[dep] is var.name]
+        tmp_deps = [dep for dep in raw_deps_on if pet.graph.ep.var[dep] == var.name]
         for edge in tmp_deps:
             if is_loop_index(pet, pet.graph.ep.var[edge], loops_start_lines, loop_children):
                 var_is_loop_index = True
@@ -713,7 +713,7 @@ def classify_task_variables(pet, task, type,
 def classify_task_vars(pet, task, type,
                             first_private_vars, private_vars, shared_vars,
                             depend_in_vars, depend_out_vars, depend_in_out_vars, reduction_vars,
-                            in_deps, out_deps):
+                            in_deps: List[Edge], out_deps: List[Edge]):
     # based on DataSharingClauseDetector::classifyTaskVariables
     # TODO: documentation
 
