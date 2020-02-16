@@ -71,10 +71,10 @@ class PipelineInfo(PatternInfo):
                f'\tfirst private: {[v.name for v in fp]}\n' \
                f'\tprivate: {[v.name for v in p]}\n' \
                f'\tshared: {[v.name for v in s]}\n' \
-               f'\treduction: {[v.name for v in r]}\n' \
-               f'\tInDeps: {in_dep}\n' \
-               f'\tOutDeps: {out_dep}\n' \
-               f'\tInOutDeps: {in_out_dep}'
+               f'\treduction: {[v for v in r]}\n' \
+               f'\tInDeps: {[v.name for v in in_dep]}\n' \
+               f'\tOutDeps: {[v.name for v in out_dep]}\n' \
+               f'\tInOutDeps: {[v.name for v in in_out_dep]}'
 
     def __str__(self):
         s = "\n\n".join([self.__output_stage(s) for s in self.stages])
