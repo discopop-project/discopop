@@ -128,10 +128,10 @@ class TaskParallelismInfo(PatternInfo):
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
                f'pragma prior to line: {self.pragma_line}\n' \
-               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n'
-               #f'first_private: {" ".join(self.first_private)}\n' \
-               #f'private: {" ".join(self.private)}\n' \
-               #f'shared: {" ".join(self.shared)}'
+               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
+               f'first_private: {" ".join(self.first_private)}\n' \
+               f'private: {" ".join(self.private)}\n' \
+               f'shared: {" ".join(self.shared)}'
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
@@ -156,7 +156,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
             continue
         if find_subnodes(pet, node, 'child'):
             # print(graph.vp.id[node])
-            __detect_task_parallelism(pet, node)
+            __detect_mw_types(pet, node)
 
         if pet.graph.vp.mwType[node] == 'NONE':
             pet.graph.vp.mwType[node] = 'ROOT'
@@ -172,12 +172,12 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
 
-    result = result + __test_suggestions(pet)
+    result = result + __detect_task_suggestions(pet)
 
     return result
 
 
-def __test_suggestions(pet: PETGraph):
+def __detect_task_suggestions(pet: PETGraph):
     """creates task parallelism suggestions and returns them as a list of
     TaskParallelismInfo objects.
     Currently relies on previous processing steps and suggests WORKER CUs
@@ -186,13 +186,6 @@ def __test_suggestions(pet: PETGraph):
     :param pet: PET graph
     :return List[TaskParallelismInfo]
     """
-    # TODO replace / merge with __detect_task_parallelism
-
-    # read RAW vars from CUInstResult
-    # get function scopes -> make suggestions only inside scopes -> no start / end
-    # get modifier for each RAW Var
-    # get source line for OMP suggestion
-
     # suggestions contains a map from LID to a set of suggestions. This is required to
     # detect multiple suggestions for a single line of source code.
     suggestions = dict()  # LID -> set<list<set<string>>>
@@ -229,11 +222,11 @@ def __test_suggestions(pet: PETGraph):
             suggestions[pet.graph.vp.startsAtLine[v]].append(tmp_suggestion)
 
     # SUGGEST TASKS
-    for it in pet.graph.vertices():
+    for vx in pet.graph.vertices():
         # iterate over all entries in recursiveFunctionCalls
         # in order to find task suggestions
-        for i in range(0, len(pet.graph.vp.recursiveFunctionCalls[it])):
-            function_call_string = pet.graph.vp.recursiveFunctionCalls[it][i]
+        for i in range(0, len(pet.graph.vp.recursiveFunctionCalls[vx])):
+            function_call_string = pet.graph.vp.recursiveFunctionCalls[vx][i]
             if not type(function_call_string) == str:
                 continue
             contained_in = __recursive_function_call_contained_in_worker_cu(
@@ -253,32 +246,17 @@ def __test_suggestions(pet: PETGraph):
 
                 if pet.graph.vp.mwType[contained_in] == "WORKER":
                     # suggest task
-                    first_private_vars = []
-                    private_vars = []
-                    last_private_vars = []
-                    shared_vars = []
-                    depend_in_vars = []
-                    depend_out_vars = []
-                    depend_in_out_vars = []
-                    reduction_vars = []
-                    in_deps = []
-                    out_deps = []
-                    classify_task_vars(pet, contained_in, "",
-                                       first_private_vars, private_vars,
-                                       shared_vars, depend_in_vars,
-                                       depend_out_vars,
-                                       depend_in_out_vars, reduction_vars,
-                                       in_deps, out_deps)
-                    # suggest task
+                    fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
+                        classify_task_vars(pet, contained_in, "", [], [])
                     current_suggestions[0].append("task")
-                    current_suggestions[1] = it
+                    current_suggestions[1] = vx
                     current_suggestions[2] = pragma_line
-                    for vid in first_private_vars:
-                        current_suggestions[3].append(vid.name)
-                    for vid in private_vars:
-                        current_suggestions[4].append(vid.name)
-                    for vid in shared_vars:
-                        current_suggestions[5].append(vid.name)
+                    for var_id in fpriv:
+                        current_suggestions[3].append(var_id.name)
+                    for var_id in priv:
+                        current_suggestions[4].append(var_id.name)
+                    for var_id in shared:
+                        current_suggestions[5].append(var_id.name)
 
                 # insert current_suggestions into suggestions
                 # check, if current_suggestions contains an element
@@ -296,17 +274,16 @@ def __test_suggestions(pet: PETGraph):
 
     # construct return value (list of TaskParallelismInfo)
     result = []
-    for it in suggestions:
-        for single_suggestions in suggestions[it]:
-            pragma = single_suggestions[0]
-            node = single_suggestions[1]
-            pragma_line = single_suggestions[2]
-            first_private = single_suggestions[3]
-            private = single_suggestions[4]
-            shared = single_suggestions[5]
+    for key in suggestions:
+        for single_suggestion in suggestions[key]:
+            pragma = single_suggestion[0]
+            node = single_suggestion[1]
+            pragma_line = single_suggestion[2]
+            first_private = single_suggestion[3]
+            private = single_suggestion[4]
+            shared = single_suggestion[5]
             result.append(TaskParallelismInfo(pet, node, pragma, pragma_line,
                                               first_private, private, shared))
-
     return result
 
 
@@ -357,7 +334,7 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
     return None
 
 
-def __detect_task_parallelism(pet: PETGraph, main_node: Vertex):
+def __detect_mw_types(pet: PETGraph, main_node: Vertex):
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before
