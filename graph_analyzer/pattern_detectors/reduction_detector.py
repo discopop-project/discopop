@@ -1,3 +1,12 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2019, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# a BSD-style license.  See the LICENSE file in the package base
+# directory for details.
+
+
 from typing import List
 
 from graph_tool import Vertex
