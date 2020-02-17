@@ -128,10 +128,10 @@ class TaskParallelismInfo(PatternInfo):
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
                f'pragma prior to line: {self.pragma_line}\n' \
-               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
-               f'first_private: {" ".join(self.first_private)}\n' \
-               f'private: {" ".join(self.private)}\n' \
-               f'shared: {" ".join(self.shared)}'
+               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n'
+               #f'first_private: {" ".join(self.first_private)}\n' \
+               #f'private: {" ".join(self.private)}\n' \
+               #f'shared: {" ".join(self.shared)}'
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
