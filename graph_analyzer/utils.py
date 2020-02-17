@@ -468,14 +468,13 @@ def is_global(pet: PETGraph, var: str, tree: List[Vertex]) -> bool:
     :return: true if global
     """
     return False
-    # # TODO all or local global
-    # # TODO from tmp global vars
-    # for node in tree:
-    #     if pet.graph.vp.type[node] == 'cu':
-    #         for gv in pet.graph.vp.globalVars[node]:
-    #             if gv.name == var:
-    #                 return True
-    # return False
+    # TODO from tmp global vars
+    for node in tree:
+        if pet.graph.vp.type[node] == 'cu':
+            for gv in pet.graph.vp.globalVars[node]:
+                if gv.name == var:
+                    return True
+    return False
 
 
 def is_first_written(pet: PETGraph, var: str, raw: Set[Edge], war: Set[Edge], sub: List[Vertex]) -> bool:
@@ -846,7 +845,7 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
         elif ((is_written_in_subtree(pet, var.name, raw_deps_on, waw_deps_on, left_sub_tree) or
                (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
               is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
-            if is_global(pet, var.name, pet.graph.vertices()):
+            if is_global(pet, var.name, subtree):
                 shared_vars.append(var)
             else:
                 first_private_vars.append(var)

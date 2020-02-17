@@ -30,7 +30,7 @@ class GdSubLoopInfo(PatternInfo):
     """
     coefficient: float
 
-    def __init__(self, pet: PETGraph, base: Vertex, use_tasks: bool):
+    def __init__(self, pet: PETGraph, base: Vertex, use_tasks: bool, min_iter):
         """
 
         :param pet: PET graph
@@ -39,6 +39,20 @@ class GdSubLoopInfo(PatternInfo):
         PatternInfo.__init__(self, pet, base)
         self.pet = pet
         self.base = base
+
+        self.min_iter_number = min_iter
+        mi_sqrt = math.sqrt(min_iter)
+        wl = math.sqrt(calculate_workload(pet, base))
+        nt = 1.1 * mi_sqrt + 0.0002 * wl - 0.0000002 * mi_sqrt * wl - 10
+
+        if nt >= 1000:
+            self.num_tasks = math.floor(nt/100)*100
+        elif nt >= 100:
+            self.num_tasks = math.floor(nt/10)*10
+        elif nt < 0:
+            self.num_tasks = 2
+        else:
+            self.num_tasks = math.floor(nt)
 
         if use_tasks:
             self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
@@ -50,7 +64,6 @@ class GdSubLoopInfo(PatternInfo):
             # TODO classify task loop vars
             self.pragma = "#pragma omp taskloop num_tasks(num-tasks) for (i = 0; i < num-tasks; i++)"
             fp, p, lp, s, r = classify_loop_variables(pet, base)
-        self.num_tasks = "N/A"
         self.first_private = fp
         self.private = p
         self.last_private = lp
@@ -63,7 +76,7 @@ class GdSubLoopInfo(PatternInfo):
                f'\tEnd line: {self.end_line}\n' \
                f'\tType: Geometric Decomposition Pattern\n' \
                f'\tNumber of tasks: {self.num_tasks}\n' \
-               f'\tChunk limits: {calculate_workload(self.pet, self.node)}\n' \
+               f'\tChunk limits: {self.min_iter_number}\n' \
                f'\tpragma: {self.pragma}]\n' \
                f'\tprivate: {[v.name for v in self.private]}\n' \
                f'\tshared: {[v.name for v in self.shared]}\n' \
@@ -76,7 +89,7 @@ class GDInfo(PatternInfo):
     """Class, that contains geometric decomposition detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex):
+    def __init__(self, pet: PETGraph, node: Vertex, min_iter: int):
         """
         :param pet: PET graph
         :param node: node, where geometric decomposition was detected
@@ -86,7 +99,7 @@ class GDInfo(PatternInfo):
 
         self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
-        self.sub_loop_info = [GdSubLoopInfo(pet, node, True)]
+        self.sub_loop_info = [GdSubLoopInfo(pet, node, True, min_iter)]
 
     def __str__(self):
         s = f'Geometric decomposition at: {self.node_id}\n' \
@@ -112,18 +125,19 @@ def run_detection(pet: PETGraph) -> List[GDInfo]:
         val = __detect_geometric_decomposition(pet, node)
         if val:
             pet.graph.vp.geomDecomp[node] = val
-            if __test_chunk_limit(pet, node):
-                result.append(GDInfo(pet, node))
+            test, iter = __test_chunk_limit(pet, node)
+            if test:
+                result.append(GDInfo(pet, node, iter))
 
     return result
 
 
-def __test_chunk_limit(pet: PETGraph, node: Vertex) -> bool:
+def __test_chunk_limit(pet: PETGraph, node: Vertex) -> (bool, int):
     """Tests, whether or not the node has inner loops with and none of them have 0 iterations
 
     :param pet: PET graph
     :param node: the node
-    :return: true if node satisfies condition
+    :return: true if node satisfies condition, min iteration number
     """
     min_iterations_count = math.inf
     inner_loop_iter = {}
@@ -143,8 +157,7 @@ def __test_chunk_limit(pet: PETGraph, node: Vertex) -> bool:
 
     for k, v in inner_loop_iter.items():
         min_iterations_count = min(min_iterations_count, v)
-
-    return inner_loop_iter and min_iterations_count > 0
+    return inner_loop_iter and min_iterations_count > 0, min_iterations_count
 
 
 def __iterations_count(pet: PETGraph, node: Vertex) -> int:
