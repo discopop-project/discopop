@@ -128,10 +128,10 @@ class TaskParallelismInfo(PatternInfo):
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
                f'pragma prior to line: {self.pragma_line}\n' \
-               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n'
-               #f'first_private: {" ".join(self.first_private)}\n' \
-               #f'private: {" ".join(self.private)}\n' \
-               #f'shared: {" ".join(self.shared)}'
+               f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
+               f'first_private: {" ".join(self.first_private)}\n' \
+               f'private: {" ".join(self.private)}\n' \
+               f'shared: {" ".join(self.shared)}'
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
@@ -253,32 +253,17 @@ def __test_suggestions(pet: PETGraph):
 
                 if pet.graph.vp.mwType[contained_in] == "WORKER":
                     # suggest task
-                    first_private_vars = []
-                    private_vars = []
-                    last_private_vars = []
-                    shared_vars = []
-                    depend_in_vars = []
-                    depend_out_vars = []
-                    depend_in_out_vars = []
-                    reduction_vars = []
-                    in_deps = []
-                    out_deps = []
-                    classify_task_vars(pet, contained_in, "",
-                                       first_private_vars, private_vars,
-                                       shared_vars, depend_in_vars,
-                                       depend_out_vars,
-                                       depend_in_out_vars, reduction_vars,
-                                       in_deps, out_deps)
-                    # suggest task
+                    fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
+                        classify_task_vars(pet, contained_in, "", [], [])
                     current_suggestions[0].append("task")
                     current_suggestions[1] = it
                     current_suggestions[2] = pragma_line
-                    for vid in first_private_vars:
-                        current_suggestions[3].append(vid.name)
-                    for vid in private_vars:
-                        current_suggestions[4].append(vid.name)
-                    for vid in shared_vars:
-                        current_suggestions[5].append(vid.name)
+                    for var_id in fpriv:
+                        current_suggestions[3].append(var_id.name)
+                    for var_id in priv:
+                        current_suggestions[4].append(var_id.name)
+                    for var_id in shared:
+                        current_suggestions[5].append(var_id.name)
 
                 # insert current_suggestions into suggestions
                 # check, if current_suggestions contains an element
