@@ -377,7 +377,7 @@ def __detect_mw_types(pet: PETGraph, main_node: Vertex):
                     raw_targets = []
                     for e in other_node.out_edges():
                         if e.target() == node:
-                            if pet.graph.ep.dtype[e] =='RAW':
+                            if pet.graph.ep.dtype[e] == 'RAW':
                                 raw_targets.append(pet.graph.vp.id[e.target()])
                     # remove entries which occur less than two times
                     raw_targets = [t for t in raw_targets if raw_targets.count(t) > 1]

@@ -5,10 +5,11 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
-
+import json
 
 import utils
 from PETGraph import PETGraph
+from json_serializer import PatternInfoSerializer
 from pattern_detectors.do_all_detector import run_detection as detect_do_all
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline
@@ -60,7 +61,8 @@ class PatternDetector(object):
         # reduction before doall!
         if self.pet.reduction_vars is not None:
             for reduction in detect_reduction(self.pet):
-                print(reduction, '\n')
+                print(json.dumps(reduction, indent=2,
+                                 cls=PatternInfoSerializer))
         else:
             print('reduction variables are required for this detector\n')
 

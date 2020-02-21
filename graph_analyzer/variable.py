@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
+from json import JSONEncoder
 
 
 class Variable(object):
@@ -17,3 +18,6 @@ class Variable(object):
 
     def __eq__(self, other):
         return isinstance(other, Variable) and self.name == other.name  # and self.type == other.type
+
+    def __str__(self):
+        return self.name

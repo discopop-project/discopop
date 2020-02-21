@@ -18,7 +18,6 @@ from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
 from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables, \
     calculate_workload, classify_task_vars, get_child_loops
-
 # cache
 from variable import Variable
 
@@ -46,9 +45,9 @@ class GdSubLoopInfo(PatternInfo):
         nt = 1.1 * mi_sqrt + 0.0002 * wl - 0.0000002 * mi_sqrt * wl - 10
 
         if nt >= 1000:
-            self.num_tasks = math.floor(nt/100)*100
+            self.num_tasks = math.floor(nt / 100) * 100
         elif nt >= 100:
-            self.num_tasks = math.floor(nt/10)*10
+            self.num_tasks = math.floor(nt / 10) * 10
         elif nt < 0:
             self.num_tasks = 2
         else:
@@ -125,9 +124,9 @@ def run_detection(pet: PETGraph) -> List[GDInfo]:
         val = __detect_geometric_decomposition(pet, node)
         if val:
             pet.graph.vp.geomDecomp[node] = val
-            test, iter = __test_chunk_limit(pet, node)
+            test, min_iter = __test_chunk_limit(pet, node)
             if test:
-                result.append(GDInfo(pet, node, iter))
+                result.append(GDInfo(pet, node, min_iter))
 
     return result
 
