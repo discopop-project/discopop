@@ -5,8 +5,6 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
-import itertools
-import json
 from typing import List
 
 import utils

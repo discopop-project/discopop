@@ -50,7 +50,6 @@ class PipelineStage(object):
                f'\tInOutDeps: {[v.name for v in self.in_out_deps]}'
 
 
-
 class PipelineInfo(PatternInfo):
     """Class, that contains pipeline detection result
     """
