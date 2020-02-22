@@ -16,72 +16,11 @@ from graph_tool.util import find_vertex
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.do_all_detector import do_all_threshold
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_loop_variables, \
-    calculate_workload, classify_task_vars, get_child_loops
+from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_task_vars, get_child_loops
 # cache
 from variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
-
-
-class GdSubLoopInfo(PatternInfo):
-    """Class, that contains do-all detection result
-    """
-    coefficient: float
-
-    def __init__(self, pet: PETGraph, base: Vertex, use_tasks: bool, min_iter):
-        """
-
-        :param pet: PET graph
-        :param node: node, where do-all was detected
-        """
-        PatternInfo.__init__(self, pet, base)
-        self.pet = pet
-        self.base = base
-
-        self.min_iter_number = min_iter
-        mi_sqrt = math.sqrt(min_iter)
-        wl = math.sqrt(calculate_workload(pet, base))
-        nt = 1.1 * mi_sqrt + 0.0002 * wl - 0.0000002 * mi_sqrt * wl - 10
-
-        if nt >= 1000:
-            self.num_tasks = math.floor(nt / 100) * 100
-        elif nt >= 100:
-            self.num_tasks = math.floor(nt / 10) * 10
-        elif nt < 0:
-            self.num_tasks = 2
-        else:
-            self.num_tasks = math.floor(nt)
-
-        if use_tasks:
-            self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
-            lp = []
-            fp, p, s, in_dep, out_dep, in_out_dep, r = \
-                classify_task_vars(self.pet, base, "GeometricDecomposition", [], [])
-            fp.append(Variable('int', 'i'))
-        else:
-            # TODO classify task loop vars
-            self.pragma = "#pragma omp taskloop num_tasks(num-tasks) for (i = 0; i < num-tasks; i++)"
-            fp, p, lp, s, r = classify_loop_variables(pet, base)
-        self.first_private = fp
-        self.private = p
-        self.last_private = lp
-        self.shared = s
-        self.reduction = r
-
-    def __str__(self):
-        return f'\tNode: {self.node_id}\n' \
-               f'\tStart line: {self.start_line}\n' \
-               f'\tEnd line: {self.end_line}\n' \
-               f'\tType: Geometric Decomposition Pattern\n' \
-               f'\tNumber of tasks: {self.num_tasks}\n' \
-               f'\tChunk limits: {self.min_iter_number}\n' \
-               f'\tpragma: {self.pragma}]\n' \
-               f'\tprivate: {[v.name for v in self.private]}\n' \
-               f'\tshared: {[v.name for v in self.shared]}\n' \
-               f'\tfirst private: {[v.name for v in self.first_private]}\n' \
-               f'\treduction: {[v for v in self.reduction]}\n' \
-               f'\tlast private: {[v.name for v in self.last_private]}'
 
 
 class GDInfo(PatternInfo):
@@ -94,23 +33,52 @@ class GDInfo(PatternInfo):
         :param node: node, where geometric decomposition was detected
         """
         PatternInfo.__init__(self, pet, node)
-        self.pet = pet
 
-        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
+        do_all, reduction = get_child_loops(pet, node)
+        self.do_all_children = [pet.graph.vp.id[v] for v in do_all]
+        self.reduction_children = [pet.graph.vp.id[v] for v in reduction]
 
-        self.sub_loop_info = [GdSubLoopInfo(pet, node, True, min_iter)]
+        self.min_iter_number = min_iter
+        mi_sqrt = math.sqrt(min_iter)
+        wl = math.sqrt(self.workload)
+        nt = 1.1 * mi_sqrt + 0.0002 * wl - 0.0000002 * mi_sqrt * wl - 10
+
+        if nt >= 1000:
+            self.num_tasks = math.floor(nt / 100) * 100
+        elif nt >= 100:
+            self.num_tasks = math.floor(nt / 10) * 10
+        elif nt < 0:
+            self.num_tasks = 2
+        else:
+            self.num_tasks = math.floor(nt)
+
+        self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
+        lp = []
+        fp, p, s, in_dep, out_dep, in_out_dep, r = \
+            classify_task_vars(pet, node, "GeometricDecomposition", [], [])
+        fp.append(Variable('int', 'i'))
+
+        self.first_private = fp
+        self.private = p
+        self.last_private = lp
+        self.shared = s
+        self.reduction = r
 
     def __str__(self):
-        s = f'Geometric decomposition at: {self.node_id}\n' \
-            f'Start line: {self.start_line}\n' \
-            f'End line: {self.end_line}\n' \
-            f'Type: Geometric Decomposition Pattern\n' \
-            f'Do-All loops: {[self.pet.graph.vp.id[n] for n in self.do_all_children]}\n' \
-            f'Reduction loops: {[self.pet.graph.vp.id[n] for n in self.reduction_children]}\n\n'
-        for t in self.sub_loop_info:
-            s += str(t) + '\n\n'
-
-        return s
+        return f'Geometric decomposition at: {self.node_id}\n' \
+               f'Start line: {self.start_line}\n' \
+               f'End line: {self.end_line}\n' \
+               f'Type: Geometric Decomposition Pattern\n' \
+               f'Do-All loops: {[n for n in self.do_all_children]}\n' \
+               f'Reduction loops: {[n for n in self.reduction_children]}\n' \
+               f'\tNumber of tasks: {self.num_tasks}\n' \
+               f'\tChunk limits: {self.min_iter_number}\n' \
+               f'\tpragma: {self.pragma}]\n' \
+               f'\tprivate: {[v.name for v in self.private]}\n' \
+               f'\tshared: {[v.name for v in self.shared]}\n' \
+               f'\tfirst private: {[v.name for v in self.first_private]}\n' \
+               f'\treduction: {[v for v in self.reduction]}\n' \
+               f'\tlast private: {[v.name for v in self.last_private]}'
 
 
 def run_detection(pet: PETGraph) -> List[GDInfo]:

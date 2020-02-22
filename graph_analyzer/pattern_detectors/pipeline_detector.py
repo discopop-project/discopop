@@ -20,6 +20,37 @@ from utils import find_subnodes, depends_ignore_readonly, correlation_coefficien
 __pipeline_threshold = 0.9
 
 
+class PipelineStage(object):
+    def __init__(self, pet, node, in_dep, out_dep):
+        self.node = pet.graph.vp.id[node]
+        self.startsAtLine = pet.graph.vp.startsAtLine[node]
+        self.endsAtLine = pet.graph.vp.endsAtLine[node]
+
+        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(pet, node, "PipeLine", in_dep, out_dep)
+
+        self.first_private = fp
+        self.private = p
+        self.shared = s
+        self.reduction = r
+        self.in_deps = in_deps
+        self.out_deps = out_deps
+        self.in_out_deps = in_out_deps
+
+    def __str__(self):
+        return f'\tNode: {self.node}\n' \
+               f'\tStart line: {self.startsAtLine}\n' \
+               f'\tEnd line: {self.endsAtLine}\n' \
+               f'\tpragma: "#pragma omp task"\n' \
+               f'\tfirst private: {[v.name for v in self.first_private]}\n' \
+               f'\tprivate: {[v.name for v in self.private]}\n' \
+               f'\tshared: {[v.name for v in self.shared]}\n' \
+               f'\treduction: {[v for v in self.reduction]}\n' \
+               f'\tInDeps: {[v.name for v in self.in_deps]}\n' \
+               f'\tOutDeps: {[v.name for v in self.out_deps]}\n' \
+               f'\tInOutDeps: {[v.name for v in self.in_out_deps]}'
+
+
+
 class PipelineInfo(PatternInfo):
     """Class, that contains pipeline detection result
     """
@@ -32,58 +63,49 @@ class PipelineInfo(PatternInfo):
         :param coefficient: correlation coefficient
         """
         PatternInfo.__init__(self, pet, node)
-        self.coefficient = coefficient
-        self.pet = pet
+        self._pet = pet
+        self.coefficient = round(coefficient, 3)
+
         children_start_lines = [pet.graph.vp.startsAtLine[v]
                                 for v in find_subnodes(pet, node, 'child')
                                 if pet.graph.vp.type[v] == 'loop']
 
-        self.stages = [v for v in find_subnodes(pet, node, 'child')
-                       if is_pipeline_subnode(pet, node, v, children_start_lines)]
+        self._stages = [v for v in find_subnodes(pet, node, 'child')
+                        if is_pipeline_subnode(pet, node, v, children_start_lines)]
+
+        self.stages = [self.__output_stage(s) for s in self._stages]
 
     def __in_dep(self, node: Vertex):
         raw = []
-        for n in get_subtree_of_type(self.pet, node, 'cu'):
-            raw.extend(e for e in n.out_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
+        for n in get_subtree_of_type(self._pet, node, 'cu'):
+            raw.extend(e for e in n.out_edges() if self._pet.graph.ep.dtype[e] == 'RAW')
 
         nodes_before = []
-        for i in range(self.stages.index(node)):
-            nodes_before.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
+        for i in range(self._stages.index(node)):
+            nodes_before.extend(get_subtree_of_type(self._pet, self._stages[i], 'cu'))
 
         return [dep for dep in raw if dep.target() in nodes_before]
 
     def __out_dep(self, node: Vertex):
         raw = []
-        for n in get_subtree_of_type(self.pet, node, 'cu'):
-            raw.extend(e for e in n.in_edges() if self.pet.graph.ep.dtype[e] == 'RAW')
+        for n in get_subtree_of_type(self._pet, node, 'cu'):
+            raw.extend(e for e in n.in_edges() if self._pet.graph.ep.dtype[e] == 'RAW')
 
         nodes_after = []
-        for i in range(self.stages.index(node) + 1, len(self.stages)):
-            nodes_after.extend(get_subtree_of_type(self.pet, self.stages[i], 'cu'))
+        for i in range(self._stages.index(node) + 1, len(self._stages)):
+            nodes_after.extend(get_subtree_of_type(self._pet, self._stages[i], 'cu'))
 
         return [dep for dep in raw if dep.source() in nodes_after]
 
-    def __output_stage(self, node: Vertex) -> str:
+    def __output_stage(self, node: Vertex) -> PipelineStage:
 
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
 
-        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(self.pet, node, "PipeLine", in_d, out_d)
-
-        return f'\tNode: {self.pet.graph.vp.id[node]}\n' \
-               f'\tStart line: {self.pet.graph.vp.startsAtLine[node]}\n' \
-               f'\tEnd line: {self.pet.graph.vp.endsAtLine[node]}\n' \
-               f'\tpragma: "#pragma omp task"\n' \
-               f'\tfirst private: {[v.name for v in fp]}\n' \
-               f'\tprivate: {[v.name for v in p]}\n' \
-               f'\tshared: {[v.name for v in s]}\n' \
-               f'\treduction: {[v for v in r]}\n' \
-               f'\tInDeps: {[v.name for v in in_dep]}\n' \
-               f'\tOutDeps: {[v.name for v in out_dep]}\n' \
-               f'\tInOutDeps: {[v.name for v in in_out_dep]}'
+        return PipelineStage(self._pet, node, in_d, out_d)
 
     def __str__(self):
-        s = "\n\n".join([self.__output_stage(s) for s in self.stages])
+        s = "\n\n".join([str(s) for s in self.stages])
         return f'Pipeline at: {self.node_id}\n' \
                f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \

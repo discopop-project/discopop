@@ -1,6 +1,8 @@
 from json import JSONEncoder
 
+from pattern_detection import DetectionResult
 from pattern_detectors.PatternInfo import PatternInfo
+from pattern_detectors.pipeline_detector import PipelineStage
 from variable import Variable
 
 
@@ -31,6 +33,10 @@ class PatternInfoSerializer(JSONEncoder):
         if isinstance(o, Variable):
             return o.name
         if isinstance(o, PatternInfo):
+            return filter_members(o.__dict__)
+        if isinstance(o, DetectionResult):
+            return filter_members(o.__dict__)
+        if isinstance(o, PipelineStage):
             return filter_members(o.__dict__)
 
         # Let the base class default method raise the TypeError
