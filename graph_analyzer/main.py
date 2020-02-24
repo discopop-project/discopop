@@ -6,22 +6,24 @@
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
 
-"""Discopop analyzer.
+"""Discopop analyzer
 
 Usage:
     main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
-    --cu-xml=<cuxml>            CU node xml file [default: Data.xml].
-    --dep-file=<depfile>        Dependencies text file [default: dep.txt].
-    --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt].
-    --reduction=<reduction>     Reduction variables file [default: reduction.txt].
+    --cu-xml=<cuxml>            CU node xml file [default: Data.xml]
+    --dep-file=<depfile>        Dependencies text file [default: dep.txt]
+    --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
+    --reduction=<reduction>     Reduction variables file [default: reduction.txt]
+    --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
-    -h --help                   Show this screen.
-    --version                   Show version.
+    -h --help                   Show this screen
+    --version                   Show version
 """
+import json
 import os
 import time
 
@@ -30,8 +32,9 @@ from pluginbase import PluginBase
 from schema import Schema, Use, SchemaError
 
 from PETGraph import PETGraph
+from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
-from pattern_detection import PatternDetector
+from pattern_detection import PatternDetector, DetectionResult
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -39,7 +42,8 @@ docopt_schema = Schema({
     '--dep-file': Use(str),
     '--loop-counter': Use(str),
     '--reduction': Use(str),
-    '--plugins': Use(str)
+    '--plugins': Use(str),
+    '--json': Use(str)
 })
 
 
@@ -96,7 +100,13 @@ if __name__ == "__main__":
         graph = p.run(graph)
 
     pattern_detector = PatternDetector(graph)
-    pattern_detector.detect_patterns()
+    res: DetectionResult = pattern_detector.detect_patterns()
+
+    if arguments['--json'] == 'None':
+        print(str(res))
+    else:
+        with open(arguments['--json'], 'w') as f:
+            json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     end = time.time()
 

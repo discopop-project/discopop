@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
-
+import json
 
 from graph_tool import Vertex
 
@@ -17,7 +17,7 @@ from utils import get_loop_iterations, total_instructions_count, \
 class PatternInfo(object):
     """Base class for pattern detection info
     """
-    node: Vertex
+    _node: Vertex
     node_id: str
     start_line: str
     end_line: str
@@ -30,10 +30,19 @@ class PatternInfo(object):
         :param pet: PET graph
         :param node: node, where pipeline was detected
         """
-        self.node = node
+        self._node = node
         self.node_id = pet.graph.vp.id[node]
         self.start_line = pet.graph.vp.startsAtLine[node]
         self.end_line = pet.graph.vp.endsAtLine[node]
         self.iterations_count = get_loop_iterations(self.start_line)
         self.instruction_count = total_instructions_count(pet, node)
         self.workload = calculate_workload(pet, node)
+
+    def to_json(self):
+        dic = self.__dict__
+        keys = [k for k in dic.keys()]
+        for key in keys:
+            if key.startswith('_'):
+                del dic[key]
+
+        return json.dumps(dic, indent=2, default=lambda o: '<not serializable>')

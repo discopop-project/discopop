@@ -659,13 +659,13 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
     :param in_deps: in dependencies
     :param out_deps: out dependencies
     """
-    first_private_vars: List[Variable] = []
-    private_vars: List[Variable] = []
-    shared_vars: List[Variable] = []
-    depend_in_vars: List[Variable] = []
-    depend_out_vars: List[Variable] = []
-    depend_in_out_vars: List[Variable] = []
-    reduction_vars: List[str] = []
+    first_private: List[Variable] = []
+    private: List[Variable] = []
+    shared: List[Variable] = []
+    depend_in: List[Variable] = []
+    depend_out: List[Variable] = []
+    depend_in_out: List[Variable] = []
+    reduction: List[str] = []
 
     left_sub_tree = __get_left_right_subtree(pet, task, False)
     subtree = get_subtree_of_type(pet, task, "cu")
@@ -733,29 +733,28 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
                 var_is_loop_index = True
                 break
         if var_is_loop_index:
-            private_vars.append(var)
+            private.append(var)
         elif ("GeometricDecomposition" in type or "PipeLine" in type) \
                 and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars):
-            reduction_vars.append(var.name)
+            reduction.append(var.name)
         elif is_depend_in_out(pet, var, in_deps, out_deps):
-            depend_in_out_vars.append(var)
+            depend_in_out.append(var)
         elif is_depend_in_var(pet, var, in_deps, raw_deps_on):
-            depend_in_vars.append(var)
+            depend_in.append(var)
         elif is_depend_out_var(pet, var, reverse_raw_deps_on, out_deps):
-            depend_out_vars.append(var)
+            depend_out.append(var)
         elif ((is_written_in_subtree(pet, var.name, raw_deps_on, waw_deps_on, left_sub_tree) or
                (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
               is_readonly(pet, var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
             if is_global(pet, var.name, subtree):
-                shared_vars.append(var)
+                shared.append(var)
             else:
-                first_private_vars.append(var)
+                first_private.append(var)
         elif is_first_written_new(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on,
                                   subtree):
             if is_scalar_val(var):
-                private_vars.append(var)
+                private.append(var)
             else:
-                shared_vars.append(var)
+                shared.append(var)
 
-    return first_private_vars, private_vars, shared_vars, depend_in_vars, depend_out_vars, depend_in_out_vars, \
-        reduction_vars
+    return first_private, private, shared, depend_in, depend_out, depend_in_out, reduction

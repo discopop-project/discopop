@@ -5,8 +5,6 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
-
-
 from typing import List
 
 import numpy as np
@@ -33,7 +31,7 @@ class DoAllInfo(PatternInfo):
         :param coefficient: correlation coefficient
         """
         PatternInfo.__init__(self, pet, node)
-        self.coefficient = coefficient
+        self.coefficient = round(coefficient, 3)
         fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.first_private = fp
         self.private = p

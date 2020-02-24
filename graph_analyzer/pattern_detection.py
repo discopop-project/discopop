@@ -5,15 +5,29 @@
 # This software may be modified and distributed under the terms of
 # a BSD-style license.  See the LICENSE file in the package base
 # directory for details.
-
+from typing import List
 
 import utils
 from PETGraph import PETGraph
-from pattern_detectors.do_all_detector import run_detection as detect_do_all
-from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
-from pattern_detectors.pipeline_detector import run_detection as detect_pipeline
-from pattern_detectors.reduction_detector import run_detection as detect_reduction
-from pattern_detectors.task_parallelism_detector import run_detection as detect_tp
+from pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
+from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
+from pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
+from pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
+from pattern_detectors.task_parallelism_detector import run_detection as detect_tp, TaskParallelismInfo
+
+
+class DetectionResult(object):
+    reduction: List[ReductionInfo]
+    do_all: List[DoAllInfo]
+    pipeline: List[PipelineInfo]
+    geometric_decomposition: List[GDInfo]
+    task_parallelism: List[TaskParallelismInfo]
+
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return '\n\n\n'.join(["\n\n".join([str(v2) for v2 in v]) for v in self.__dict__.values() if v is not None])
 
 
 class PatternDetector(object):
@@ -56,32 +70,31 @@ class PatternDetector(object):
         """
         self.__merge(False, True)
 
+        res = DetectionResult()
+
         print('===DETECTING REDUCTION===')
         # reduction before doall!
         if self.pet.reduction_vars is not None:
-            for reduction in detect_reduction(self.pet):
-                print(reduction, '\n')
+            res.reduction = detect_reduction(self.pet)
         else:
             print('reduction variables are required for this detector\n')
 
         print('===DETECTING DO ALL===')
-        for do_all in detect_do_all(self.pet):
-            print(do_all, '\n')
+        res.do_all = detect_do_all(self.pet)
 
         print('===DETECTING PIPELINE===')
-        for pipeline in detect_pipeline(self.pet):
-            print(pipeline, '\n')
+        res.pipeline = detect_pipeline(self.pet)
 
         print('===DETECTING GEOMETRIC DECOMPOSITION===')
         if self.pet.loop_data is not None:
-            for gd in detect_gd(self.pet):
-                print(gd, '\n')
+            res.geometric_decomposition = detect_gd(self.pet)
         else:
             print('loop iteration data is required for this detector\n')
 
         print('===DETECTING TASK PARALLELISM===')
         if self.pet.loop_data is not None:
-            for tp in detect_tp(self.pet):
-                print(tp, '\n')
+            res.task_parallelism = detect_tp(self.pet)
         else:
             print('loop iteration data is required for this detector\n')
+
+        return res
