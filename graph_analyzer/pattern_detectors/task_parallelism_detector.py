@@ -371,6 +371,22 @@ def __detect_mw_types(pet: PETGraph, main_node: Vertex):
                 else:
                     pet.graph.vp.mwType[other_node] = 'WORKER'
 
+                    # check if other_node has > 1 RAW dependencies to node
+                    # -> not detected in previous step, since other_node is only
+                    #    dependent of a single CU
+                    raw_targets = []
+                    for e in other_node.out_edges():
+                        if e.target() == node:
+                            if pet.graph.ep.dtype[e] =='RAW':
+                                raw_targets.append(pet.graph.vp.id[e.target()])
+                    # remove entries which occur less than two times
+                    raw_targets = [t for t in raw_targets if raw_targets.count(t) > 1]
+                    # remove duplicates from list
+                    raw_targets = list(set(raw_targets))
+                    # if elements remaining, mark other_node as BARRIER
+                    if len(raw_targets) > 0:
+                        pet.graph.vp.mwType[other_node] = 'BARRIER'
+
     pairs = []
     # check for Barrier Worker pairs
     # if two barriers don't have any dependency to each other then they create a barrierWorker pair
