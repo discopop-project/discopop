@@ -6,7 +6,7 @@ Currently five patterns are supported:
 * Do-All
 * Pipeline
 * Geometric Decomposition
-* Task Parallelism*
+* Task Parallelism
 
 ## Getting started
 ### Requirements
@@ -56,7 +56,7 @@ To run parallelism detection you need to run
 
 You can specify specific path for each file, by default the analyser will search in directory provided as path
 
-    `main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>]`
+    `main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>]`
 
 Options:
 ```
@@ -66,6 +66,7 @@ Options:
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt].
     --reduction=<reduction>     Reduction variables file [default: reduction.txt].
     --plugins=<plugs>           Plugins to execute
+    --json                      Output result as a json file to spicified path
     -h --help                   Show this screen.
     --version                   Show version.
 ```
