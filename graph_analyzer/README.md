@@ -72,3 +72,21 @@ Options:
 ```
 
 The **example/** folder contains some precomputed inputs for testing e.g. atax from polybench.
+
+###Simple example
+Here is example workflow you can try out.
+
+**example/reduction/** contains source code and precomputed discopop output for a simple reduction loop.
+The loop itself just sums up all numbers from 1 to n.
+
+You can run discopop on **main.c** or just use included output.
+
+After that you can run **main.py** from **graph_analyzer**. The **--path** argument should point to the output of the discopop.
+
+In this example the output for reduction will point to the lines 6-9. And it will suggest **pragma omp parallel for** pragma for the loop.
+
+Also you will find **i** classified as private variable and **sum** as reduction variable. Which results in the following code
+
+```#pragma omp parallel for private(i) reduction(+:sum)```
+
+The suggested pattern is demonstrated in **mainp.c**
