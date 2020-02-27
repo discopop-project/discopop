@@ -1,7 +1,6 @@
-# Graph Analyzer
-Pattern detection and CU graph analysis. The graph-analyzer is an open source tool designed to detect potential parallelism in programs and suggest parallelization pattern.
-
-Currently five patterns are supported:
+# DiscoPoP Graph Analyzer
+DiscoPoP profiler is accompanied by a Python framework, specifically designed to analyze the profiler output files, generate a CU graph, detect potential parallel patterns, and suggest OpenMP parallelizations.
+Currently, the following five patterns can be detected:
 * Reduction
 * Do-All
 * Pipeline
@@ -9,52 +8,24 @@ Currently five patterns are supported:
 * Task Parallelism
 
 ## Getting started
-### Requirements
-graph_analyzer uses python3.6
+We assume that you have already run DiscoPoP profiler on the target sequential application, and the following files are created in the current working directory:
+* `Data.xml` (CU information in XML format created by *CUGeneration* pass)
+* `<app_name>_dep.txt` (Data dependences created by *DPInstrumentation* pass)
+* `reduction.txt` and `loop_counter_output.txt` (Reduction operations and loop iteration data identified by *DPReduction* pass)
+In case any of the files mentioned above are missing, please follow the [DiscoPoP manual](../README.md) to generate them.
 
-you need to install necessary requirements
-
+### Pre-requisites
+To use the graph analyzer tool, you need to have Python 3.6+ installed on your system. Further python dependencies can be installed using the following command:
 `pip install -r requirements.txt`
 
-For graph representation we use graph-tool https://graph-tool.skewed.de/
-You can compile it from sources or install from a repository
-
-CU-graph-analyzer uses the output provided by DiscoPoP. In order to run pattern discovery you need at least **CU** and **dependencies output** from DiscoPoP. Follow DiscoPoP manual to generate necessary files for your code.
-
-Some pattern require additional data, that can be generated using reduction pass. It will generate **loop counter** and **reduction**, which are required for Geometric Decomposition, Task Parallelism and Reduction.
-
-Here is input overview using default names:
-* Data.xml - CU nodes
-* dep.txt - data dependencies
-* loop_counter_output.txt - loop iteration data
-* reduction.txt - reduction variables
-
+For graph manipulation, we use [graph-tool](https://graph-tool.skewed.de) package. You can compile it from source or install the binary version. We recommend installing the binary release, as it is far easier than installing from source.
 
 ### Usage
-First generate input files like this
-```
-DP_PATH="<path to discopop build>"
-
-echo "===FILE MAPPING==="
-$DP_PATH"/scripts/dp-fmap"
-
-echo "===GENERATE CU==="
-clang++-8 -g -O0 -fno-discard-value-names -Xclang -load -Xclang $DP_PATH/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c $1 -o out.o
-echo "===GENERATE DEPENDENCIES==="
-clang++-8 -g -O0 -fno-discard-value-names -Xclang -load -Xclang $DP_PATH/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c $1 -o out.o
-clang++-8 out.o -L $DP_PATH/rtlib/ -lDiscoPoP_RT -lpthread
-./a.out
-echo "===REDUCTION PASS==="
-clang++-8 -g -O0 -fno-discard-value-names -Xclang -load -Xclang $DP_PATH/libi/LLVMDPReduction.so -mllvm -fmap -mllvm ./FileMapping.txt -c $1 -o out.o
-clang++-8 out.o -L $DP_PATH/rtlib/ -lDiscoPoP_RT -lpthread
-./a.out
-```
-
-To run parallelism detection you need to run 
+To run the graph analyzer, you can use the following command:
 
 `python3 main.py --path <path-to-your-output>`
 
-You can specify specific path for each file, by default the analyser will search in directory provided as path
+You can specify the path to DiscoPoP output files. Then, the Python script searches within this path to find the required files. Nevertheless, if you are interested in passing a specific location to each file, here is the detailed usage:
 
     `main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>]`
 
@@ -71,21 +42,21 @@ Options:
     --version                   Show version.
 ```
 
-The **example/** folder contains some precomputed inputs for testing e.g. atax from polybench.
+By default, running the graph analyzer will print out the list of patterns along with OpenMP parallelization suggestions to the standard output. You can also obtain the results in JSON format by passing `--json` argument to the Python script.
 
-###Simple example
-Here is example workflow you can try out.
+### Walkthrough Example
+The **test/** folder contains a number of precomputed inputs for testing the tool, e.g., *atax* from Polybench benchmark suite.
+Here is an example workflow that you can try it out by yourself.
 
-**example/reduction/** contains source code and precomputed discopop output for a simple reduction loop.
-The loop itself just sums up all numbers from 1 to n.
+**test/reduction/** contains source code and precomputed DiscoPoP output for a simple reduction loop.
+The loop itself sums up all numbers from 1 to n.
 
-You can run discopop on **main.c** or just use included output.
+You can run DiscoPoP on **main.c** or just use included output.
 
-After that you can run **main.py** from **graph_analyzer**. The **--path** argument should point to the output of the discopop.
+After that, you can run **main.py** from **graph_analyzer**. The **--path** argument should point to the output of the DiscoPoP.
 
-In this example the output for reduction will point to the lines 6-9. And it will suggest **pragma omp parallel for** pragma for the loop.
-
-Also you will find **i** classified as private variable and **sum** as reduction variable. Which results in the following code
+In this example, the output for reduction will point to the lines 6-9. And it will suggest **pragma omp parallel for** OpenMP directive for parallizing the loop.
+You will also find **i** classified as a private variable and **sum** as a reduction variable. Thus, the parallelization directive would be suggested as following:
 
 ```#pragma omp parallel for private(i) reduction(+:sum)```
 
