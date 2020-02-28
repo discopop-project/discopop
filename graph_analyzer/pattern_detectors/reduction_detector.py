@@ -27,6 +27,8 @@ class ReductionInfo(PatternInfo):
         :param node: node, where reduction was detected
         """
         PatternInfo.__init__(self, pet, node)
+        self.pragma = "#pragma omp parallel for"
+
         fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.first_private = fp
         self.private = p
@@ -38,7 +40,7 @@ class ReductionInfo(PatternInfo):
         return f'Reduction at: {self.node_id}\n' \
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
-               f'pragma: "#pragma omp parallel for"\n' \
+               f'pragma: {self.pragma}\n' \
                f'private: {[v.name for v in self.private]}\n' \
                f'shared: {[v.name for v in self.shared]}\n' \
                f'first private: {[v.name for v in self.first_private]}\n' \

@@ -1,3 +1,16 @@
+  
+/*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2019, Technische Universitaet Darmstadt, Germany
+ * Copyright (c) 2012-2015, German Research School for Simulation Sciences GmbH, Juelich/Aachen, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * a BSD-style license.  See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -106,7 +119,7 @@ StringRef DPReduction::getPassName() const
 
 // == Options ==================================================================
 static llvm::cl::opt<std::string> fmap_file(
-    "fmap", llvm::cl::desc("<file mapping file>"), llvm::cl::Required);
+    "fm-path", llvm::cl::desc("<file mapping file>"), llvm::cl::Required);
 
 // == Implementation ===========================================================
 
