@@ -178,7 +178,7 @@ class PETGraph(object):
 
     def filter_view(self, nodes_id='*', edges_type='*'):
         vfilter = None if nodes_id == '*' else lambda v: self.graph.vertex_index[v] in nodes_id
-        efilter = None if edges_type == '*' else lambda e: self.graph.ep.type[e] == edges_type
+        efilter = None if edges_type == '*' else lambda e: self.graph.ep.type[e] in edges_type
 
         return GraphView(self.graph, vfilt=vfilter, efilt=efilter)
 
