@@ -194,8 +194,17 @@ class PETGraph(object):
 
     def interactive_visualize(self, view=None):
         view = view if view else self.graph
+
+        vprop_label = self.graph.new_vertex_property("string")
+        for v in self.graph.vertices():
+            startLine = self.graph.vp.startsAtLine[v]
+            startLine = startLine[startLine.index(":") + 1:]
+            endLine = self.graph.vp.endsAtLine[v]
+            endLine = endLine[endLine.index(":") + 1:]
+            vprop_label[v] = self.graph.vp.id[v] + \
+                "[" + startLine + "-" + endLine + "]"
         interactive_window(view,
-                           vprops={'text': self.graph.vp.id,
+                           vprops={'text': vprop_label,
                                    'fill_color': self.graph.vp.viz_color,
                                    'shape': self.graph.vp.viz_shape},
                            eprops={'color': self.graph.ep.viz_color})
