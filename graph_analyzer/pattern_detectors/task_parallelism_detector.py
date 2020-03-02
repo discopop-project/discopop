@@ -127,7 +127,7 @@ class TaskParallelismInfo(PatternInfo):
         return f'Task parallelism at CU: {self.node_id}\n' \
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
-               f'pragma prior to line: {self.pragma_line}\n' \
+               f'pragma at line: {self.pragma_line}\n' \
                f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
                f'first_private: {" ".join(self.first_private)}\n' \
                f'private: {" ".join(self.private)}\n' \
@@ -173,6 +173,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
 
     result = result + __detect_task_suggestions(pet)
+    result = __remove_useless_barrier_suggestions(pet, result)
 
     return result
 
@@ -206,7 +207,7 @@ def __detect_task_suggestions(pet: PETGraph):
     # SUGGEST TASKWAIT
     for v in barrier_cus + barrier_worker_cus:
         tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
-                                             pet.graph.vp.startsAtLine[v],
+                                             pet.graph.vp.endsAtLine[v],
                                              [], [], [])
         if pet.graph.vp.startsAtLine[v] not in suggestions:
             # no entry for source code line contained in suggestions
@@ -270,6 +271,101 @@ def __detect_task_suggestions(pet: PETGraph):
         for single_suggestion in suggestions[key]:
             result.append(single_suggestion)
     return result
+
+
+def __remove_useless_barrier_suggestions(pet: PETGraph,
+                                         suggestions: [TaskParallelismInfo]):
+    """remove suggested barriers which are not contained in the same
+    function body with at least one suggested task.
+    Returns the filtered version of the list given as a parameter.
+    :param pet: PET graph
+    :param suggestions: List[TaskParallelismInfo]
+    :return List[TaskParallelismInfo]
+    """
+    # split suggestions into task and taskwait suggestions
+    taskwait_suggestions = []
+    task_suggestions = []
+    for single_suggestion in suggestions:
+        if single_suggestion.pragma[0] == "taskwait":
+            taskwait_suggestions.append(single_suggestion)
+        else:
+            task_suggestions.append(single_suggestion)
+    # get map of function body cus containing task suggestions to line number
+    # of task pragmas
+    relevant_function_bodies = {}
+    for ts in task_suggestions:
+        # get first parent cu with type function using bfs
+        parent = __get_first_parent_of_type(pet, ts._node, "func", "child")
+        if parent not in relevant_function_bodies:
+            relevant_function_bodies[parent] = [ts.pragma_line]
+        else:
+            relevant_function_bodies[parent].append(ts.pragma_line)
+    # remove suggested barriers which are no descedants of relevant functions
+    suggestions = task_suggestions
+    for tws in taskwait_suggestions:
+        tws_line_number = tws.pragma_line
+        tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
+        for rel_func_body in relevant_function_bodies.keys():
+#            if __get_first_parent_of_type(pet, tws._node, "func", "child") == \
+#                    rel_func_body:
+            if __check_reachability(pet, tws._node, rel_func_body, "child"):
+                # remove suggested barriers where line number smaller than
+                # pragma line number of task
+                for line_number in relevant_function_bodies[rel_func_body]:
+                    if line_number <= tws_line_number:
+                        suggestions.append(tws)
+                        break
+    return suggestions
+
+
+def __check_reachability(pet: PETGraph, target: Vertex,
+                         source: Vertex, edge_type: str):
+    """check if target is reachable from source via edges of type edge_type.
+    :param pet: PET graph
+    :param source: Vertex
+    :param target: Vertex
+    :param edge_type: str
+    :return Boolean"""
+    visited = []
+    queue = [target]
+    while len(queue) > 0:
+        cur_node = queue.pop(0)
+        visited.append(cur_node)
+        tmpList = [e for e in cur_node.in_edges()
+                   if e.source() not in visited and
+                   pet.graph.ep.type[e] == edge_type]
+        for e in tmpList:
+            if e.source() == source:
+                return True
+            else:
+                if e.source() not in visited:
+                    queue.append(e.source())
+    return False
+
+
+def __get_first_parent_of_type(pet: PETGraph, node: Vertex,
+                               parent_type: str, edge_type: str):
+    """return first parent cu node of node with type parent_type accessible via
+    edges of type edge_type.
+    :param pet: PET graph
+    :param node: Vertex, root for the search
+    :param parent_type: String, type of target node
+    :param edge_type: String, type of usable edges
+    :return Vertex"""
+    visited = []
+    queue = [node]
+    while len(queue) > 0:
+        cur_node = queue.pop(0)
+        visited.append(cur_node)
+        tmpList = [e for e in cur_node.in_edges()
+                   if e.source() not in visited and
+                   pet.graph.ep.type[e] == edge_type]
+        for e in tmpList:
+            if pet.graph.vp.type[e.source()] == parent_type:
+                return e.source()
+            else:
+                if e.source() not in visited:
+                    queue.append(e.source())
 
 
 def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
