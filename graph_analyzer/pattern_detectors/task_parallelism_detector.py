@@ -188,13 +188,7 @@ def __detect_task_suggestions(pet: PETGraph):
     """
     # suggestions contains a map from LID to a set of suggestions. This is required to
     # detect multiple suggestions for a single line of source code.
-    suggestions = dict()  # LID -> set<list<set<string>>>
-    # list[0] -> task / taskwait
-    # list[1] -> vertex
-    # list[2] -> pragma line number
-    # list[3] -> first_private Clause
-    # list[4] -> private clause
-    # list[5] -> shared clause
+    suggestions = dict() # LID -> List[TaskParallelismInfo]
 
     # get a list of cus classified as WORKER
     worker_cus = []
@@ -211,7 +205,9 @@ def __detect_task_suggestions(pet: PETGraph):
 
     # SUGGEST TASKWAIT
     for v in barrier_cus + barrier_worker_cus:
-        tmp_suggestion = [["taskwait"], v, pet.graph.vp.startsAtLine[v], [], [], []]
+        tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+                                             pet.graph.vp.startsAtLine[v],
+                                             [], [], [])
         if pet.graph.vp.startsAtLine[v] not in suggestions:
             # no entry for source code line contained in suggestions
             tmp_set = []
@@ -232,7 +228,7 @@ def __detect_task_suggestions(pet: PETGraph):
             contained_in = __recursive_function_call_contained_in_worker_cu(
                 pet, function_call_string, worker_cus)
             if contained_in is not None:
-                current_suggestions = [[], None, None, [], [], []]
+                current_suggestions = None
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
                 pragma_line = function_call_string[
@@ -248,19 +244,15 @@ def __detect_task_suggestions(pet: PETGraph):
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [])
-                    current_suggestions[0].append("task")
-                    current_suggestions[1] = vx
-                    current_suggestions[2] = pragma_line
-                    for var_id in fpriv:
-                        current_suggestions[3].append(var_id.name)
-                    for var_id in priv:
-                        current_suggestions[4].append(var_id.name)
-                    for var_id in shared:
-                        current_suggestions[5].append(var_id.name)
+                    current_suggestions = TaskParallelismInfo(pet, vx, ["task"],
+                                            pragma_line,
+                                            [v.name for v in fpriv],
+                                            [v.name for v in priv],
+                                            [v.name for v in shared])
 
                 # insert current_suggestions into suggestions
                 # check, if current_suggestions contains an element
-                if len(current_suggestions[0]) >= 1:
+                if current_suggestions is not None:
                     # current_suggestions contains something
                     if pragma_line not in suggestions:
                         # LID not contained in suggestions
@@ -276,14 +268,7 @@ def __detect_task_suggestions(pet: PETGraph):
     result = []
     for key in suggestions:
         for single_suggestion in suggestions[key]:
-            pragma = single_suggestion[0]
-            node = single_suggestion[1]
-            pragma_line = single_suggestion[2]
-            first_private = single_suggestion[3]
-            private = single_suggestion[4]
-            shared = single_suggestion[5]
-            result.append(TaskParallelismInfo(pet, node, pragma, pragma_line,
-                                              first_private, private, shared))
+            result.append(single_suggestion)
     return result
 
 
