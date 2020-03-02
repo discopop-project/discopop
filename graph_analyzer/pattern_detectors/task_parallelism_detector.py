@@ -306,8 +306,6 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
         tws_line_number = tws.pragma_line
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
         for rel_func_body in relevant_function_bodies.keys():
-#            if __get_first_parent_of_type(pet, tws._node, "func", "child") == \
-#                    rel_func_body:
             if __check_reachability(pet, tws._node, rel_func_body, "child"):
                 # remove suggested barriers where line number smaller than
                 # pragma line number of task
