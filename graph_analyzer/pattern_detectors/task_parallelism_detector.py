@@ -351,29 +351,26 @@ def __suggest_parallel_regions(pet: PETGraph,
         parents += __get_parent_of_type(pet, ts._node, "func", "child", False)
     # remove duplicates
     parents = list(set(parents))
-    print("TASKS:", [pet.graph.vp.id[t._node] for t in task_suggestions])
-    print("PARENTS\t", [pet.graph.vp.id[p] for p in parents])
     # get outer-most parents of suggested tasks
     outer_parents = []
     # iterate over entries in parents.
     while len(parents) > 0:
         p = parents.pop(0)
-        res = __get_parent_of_type(pet, p, "func", "child", False)
-        if res == []:
+        p_parents = __get_parent_of_type(pet, p, "func", "child", False)
+        if p_parents == []:
             # p is outer
             outer_parents.append(p)
         else:
             # append p´s parents to queue, filter out entries if already
             # present in outer_parents
-            res = [r for r in res if r not in outer_parents]
-            parents += res
+            parents += [x for x in p_parents if x not in outer_parents]
 
-    print("OUTER:\t", [pet.graph.vp.id[op] for op in outer_parents])
     # create region suggestions based on detected outer parents
     region_suggestions = []
     for op in outer_parents:
-        par_reg_info = ParallelRegionInfo(pet, op, pet.graph.vp.startsAtLine[op], pet.graph.vp.endsAtLine[op])
-        region_suggestions.append(par_reg_info)
+        region_suggestions.append(ParallelRegionInfo(pet, op,
+                                  pet.graph.vp.startsAtLine[op],
+                                  pet.graph.vp.endsAtLine[op]))
     return region_suggestions
 
 
