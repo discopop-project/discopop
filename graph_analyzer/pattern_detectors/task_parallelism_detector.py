@@ -313,6 +313,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
         parent = __get_parent_of_type(pet, ts._node, "func", "child", True)
+        parent = parent[0][0]  # parent like [(parent, last_node)]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
@@ -355,22 +356,24 @@ def __suggest_parallel_regions(pet: PETGraph,
     outer_parents = []
     # iterate over entries in parents.
     while len(parents) > 0:
-        p = parents.pop(0)
+        (p, last_node) = parents.pop(0)
         p_parents = __get_parent_of_type(pet, p, "func", "child", False)
         if p_parents == []:
             # p is outer
-            outer_parents.append(p)
+            # get last cu before p
+            outer_parents.append((p, last_node))
         else:
             # append p´s parents to queue, filter out entries if already
             # present in outer_parents
-            parents += [x for x in p_parents if x not in outer_parents]
+            first_elements = [x[0] for x in outer_parents]
+            parents += [x for x in p_parents if x[0] not in first_elements]
 
     # create region suggestions based on detected outer parents
     region_suggestions = []
-    for op in outer_parents:
-        region_suggestions.append(ParallelRegionInfo(pet, op,
-                                  pet.graph.vp.startsAtLine[op],
-                                  pet.graph.vp.endsAtLine[op]))
+    for parent, last_node in outer_parents:
+        region_suggestions.append(ParallelRegionInfo(pet, parent,
+                                  pet.graph.vp.startsAtLine[last_node],
+                                  pet.graph.vp.endsAtLine[last_node]))
     return region_suggestions
 
 
@@ -401,20 +404,23 @@ def __check_reachability(pet: PETGraph, target: Vertex,
 
 def __get_parent_of_type(pet: PETGraph, node: Vertex,
                          parent_type: str, edge_type: str, only_first: bool):
-    """return parent cu nodes of node with type parent_type accessible via
-    edges of type edge_type.
+    """return parent cu nodes and the last node of the path to them as a tuple
+    for the given node with type parent_type
+    accessible via edges of type edge_type.
     :param pet: PET graph
     :param node: Vertex, root for the search
     :param parent_type: String, type of target node
     :param edge_type: String, type of usable edges
     :param only_first: Bool, if true, return only first parent.
         Else, return first parent for each incoming edge of node.
-    :return [Vertex]"""
+    :return [(Vertex, Vertex)]"""
     visited = []
-    queue = [node]
+    queue = [(node, None)]
     res = []
     while len(queue) > 0:
-        cur_node = queue.pop(0)
+        tmp = queue.pop(0)
+        (cur_node, last_node) = tmp
+        last_node = cur_node
         visited.append(cur_node)
         tmpList = [e for e in cur_node.in_edges()
                    if e.source() not in visited and
@@ -422,13 +428,13 @@ def __get_parent_of_type(pet: PETGraph, node: Vertex,
         for e in tmpList:
             if pet.graph.vp.type[e.source()] == parent_type:
                 if only_first is True:
-                    return e.source()
+                    return [(e.source(), last_node)]
                 else:
-                    res.append(e.source())
+                    res.append((e.source(), last_node))
                     visited.append(e.source())
             else:
                 if e.source() not in visited:
-                    queue.append(e.source())
+                    queue.append((e.source(), last_node))
     return res
 
 
