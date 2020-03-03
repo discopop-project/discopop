@@ -134,6 +134,22 @@ class TaskParallelismInfo(PatternInfo):
                f'shared: {" ".join(self.shared)}'
 
 
+class ParallelRegionInfo(PatternInfo):
+    """Class, that contains parallel region info.
+    """
+    def __init__(self, pet: PETGraph, node: Vertex, region_start_line, region_end_line):
+        PatternInfo.__init__(self, pet, node)
+        self.region_start_line = region_start_line
+        self.region_end_line = region_end_line
+
+    def __str__(self):
+        return f'Task Parallel Region at CU: {self.node_id}\n' \
+               f'CU Start line: {self.start_line}\n' \
+               f'CU End line: {self.end_line}\n' \
+               f'Parallel Region Start line: {self.region_start_line}\n' \
+               f'Parallel Region End line {self.region_end_line}\n'
+
+
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
@@ -174,6 +190,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
 
     result = result + __detect_task_suggestions(pet)
     result = __remove_useless_barrier_suggestions(pet, result)
+    result += __suggest_parallel_regions(pet, result)
 
     return result
 
@@ -295,7 +312,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
     relevant_function_bodies = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent = __get_first_parent_of_type(pet, ts._node, "func", "child")
+        parent = __get_parent_of_type(pet, ts._node, "func", "child", True)
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
@@ -314,6 +331,50 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
                         suggestions.append(tws)
                         break
     return suggestions
+
+
+def __suggest_parallel_regions(pet: PETGraph,
+                               suggestions: [TaskParallelismInfo]):
+    """create suggestions for parallel regions based on suggested tasks.
+    Parallel regions are suggested aroung each outer-most function call
+    possibly leading to the creation of tasks.
+    To obtain these, the child-graph is traversed in reverse,
+    starting from each suggested task.
+    :param pet: PET graph
+    :param suggestions: List[TaskParallelismInfo]
+    :return List[TaskParallelismInfo]"""
+    # get task suggestions from suggestions
+    task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
+    # start search for each suggested task
+    parents = []
+    for ts in task_suggestions:
+        parents += __get_parent_of_type(pet, ts._node, "func", "child", False)
+    # remove duplicates
+    parents = list(set(parents))
+    print("TASKS:", [pet.graph.vp.id[t._node] for t in task_suggestions])
+    print("PARENTS\t", [pet.graph.vp.id[p] for p in parents])
+    # get outer-most parents of suggested tasks
+    outer_parents = []
+    # iterate over entries in parents.
+    while len(parents) > 0:
+        p = parents.pop(0)
+        res = __get_parent_of_type(pet, p, "func", "child", False)
+        if res == []:
+            # p is outer
+            outer_parents.append(p)
+        else:
+            # append p´s parents to queue, filter out entries if already
+            # present in outer_parents
+            res = [r for r in res if r not in outer_parents]
+            parents += res
+
+    print("OUTER:\t", [pet.graph.vp.id[op] for op in outer_parents])
+    # create region suggestions based on detected outer parents
+    region_suggestions = []
+    for op in outer_parents:
+        par_reg_info = ParallelRegionInfo(pet, op, pet.graph.vp.startsAtLine[op], pet.graph.vp.endsAtLine[op])
+        region_suggestions.append(par_reg_info)
+    return region_suggestions
 
 
 def __check_reachability(pet: PETGraph, target: Vertex,
@@ -341,17 +402,20 @@ def __check_reachability(pet: PETGraph, target: Vertex,
     return False
 
 
-def __get_first_parent_of_type(pet: PETGraph, node: Vertex,
-                               parent_type: str, edge_type: str):
-    """return first parent cu node of node with type parent_type accessible via
+def __get_parent_of_type(pet: PETGraph, node: Vertex,
+                         parent_type: str, edge_type: str, only_first: bool):
+    """return parent cu nodes of node with type parent_type accessible via
     edges of type edge_type.
     :param pet: PET graph
     :param node: Vertex, root for the search
     :param parent_type: String, type of target node
     :param edge_type: String, type of usable edges
-    :return Vertex"""
+    :param only_first: Bool, if true, return only first parent.
+        Else, return first parent for each incoming edge of node.
+    :return [Vertex]"""
     visited = []
     queue = [node]
+    res = []
     while len(queue) > 0:
         cur_node = queue.pop(0)
         visited.append(cur_node)
@@ -360,10 +424,15 @@ def __get_first_parent_of_type(pet: PETGraph, node: Vertex,
                    pet.graph.ep.type[e] == edge_type]
         for e in tmpList:
             if pet.graph.vp.type[e.source()] == parent_type:
-                return e.source()
+                if only_first is True:
+                    return e.source()
+                else:
+                    res.append(e.source())
+                    visited.append(e.source())
             else:
                 if e.source() not in visited:
                     queue.append(e.source())
+    return res
 
 
 def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
