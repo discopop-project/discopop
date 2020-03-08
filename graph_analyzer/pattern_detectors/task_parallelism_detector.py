@@ -33,6 +33,11 @@ class Task(object):
         self.node_id = pet.graph.vp.id[node]
         self.nodes = [node]
         self.start_line = pet.graph.vp.startsAtLine[node]
+        if ":" in self.start_line:
+            self.region_start_line = self.start_line[self.start_line.index(":") + 1 :]
+        else:
+            self.region_start_line = self.start_line
+        self.region_end_line = None
         self.end_line = pet.graph.vp.endsAtLine[node]
         self.mw_type = pet.graph.vp.mwType[node]
         self.instruction_count = total_instructions_count(pet, node)
@@ -119,6 +124,11 @@ class TaskParallelismInfo(PatternInfo):
         PatternInfo.__init__(self, pet, node)
         self.pragma = pragma
         self.pragma_line = pragma_line
+        if ":" in self.pragma_line:
+            self.region_start_line = self.pragma_line[self.pragma_line.index(":")+1:]
+        else:
+            self.region_start_line = self.pragma_line
+        self.region_end_line = None
         self.first_private = first_private
         self.private = private
         self.shared = shared
@@ -128,6 +138,8 @@ class TaskParallelismInfo(PatternInfo):
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
                f'pragma at line: {self.pragma_line}\n' \
+               f'pragma region start line: {self.region_start_line}\n' \
+               f'pragma region end line: {self.region_end_line}\n' \
                f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
                f'first_private: {" ".join(self.first_private)}\n' \
                f'private: {" ".join(self.private)}\n' \
@@ -192,6 +204,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = result + __detect_task_suggestions(pet)
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
+    result = __set_task_contained_lines(pet, result)
 
     return result
 
@@ -289,6 +302,55 @@ def __detect_task_suggestions(pet: PETGraph):
         for single_suggestion in suggestions[key]:
             result.append(single_suggestion)
     return result
+
+
+def __set_task_contained_lines(pet: PETGraph,
+                               suggestions: [TaskParallelismInfo]):
+    """set region_start_line and region_end_line properties of
+    TaskParallelismInfo objects in suggestions and return the modified list.
+    Suggested Taskwaits keep None as the value for both variables.
+    Regions are determined by checking, if a CU contains multiple Tasks or
+    Barriers and splitting up the contained source code lines accordingly.
+    :param pet: PET graph
+    :param suggestions: List[TaskParallelismInfo]
+    :return List[TaskParallelismInfo]"""
+    # group suggestions by parent CU
+    output = []
+    cu_to_suggestions_map = dict()
+    for s in suggestions:
+        # filter out non task / taskwait suggestions and append to output
+        if not(type(s) == Task or type(s) == TaskParallelismInfo):
+            output.append(s)
+            continue
+        if s.node_id in cu_to_suggestions_map:
+            cu_to_suggestions_map[s.node_id].append(s)
+        else:
+            cu_to_suggestions_map[s.node_id] = [s]
+    # order suggestions for each CU by first affected line
+    for cu in cu_to_suggestions_map:
+        sorted = cu_to_suggestions_map[cu]
+        sorted.sort(key=lambda s: s.region_start_line)
+        cu_to_suggestions_map[cu] = sorted
+    # iterate over suggestions. set region_end_line to end of cu or
+        # beginning of next suggestion
+    for cu in cu_to_suggestions_map:
+        for idx, s in enumerate(cu_to_suggestions_map[cu]):
+            # check if next element exists
+            if idx + 1 < len(cu_to_suggestions_map[cu]):
+                # if so, set end to line prior to start of next suggestion
+                end = int(cu_to_suggestions_map[cu][idx + 1].region_start_line)
+                end = end - 1
+                s.region_end_line = end
+            else:
+                # if not, set end to end of cu
+                s.region_end_line = s.end_line[s.end_line.index(":") + 1:]
+            # overwrite entry in cu_to_suggestions_map for s
+            cu_to_suggestions_map[cu][idx] = s
+    # append suggestions to output
+    for cu in cu_to_suggestions_map:
+        for s in cu_to_suggestions_map[cu]:
+            output.append(s)
+    return output
 
 
 def __remove_useless_barrier_suggestions(pet: PETGraph,
