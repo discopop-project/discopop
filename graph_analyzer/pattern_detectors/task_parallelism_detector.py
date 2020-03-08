@@ -146,7 +146,7 @@ class ParallelRegionInfo(PatternInfo):
         return f'Task Parallel Region at CU: {self.node_id}\n' \
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
-               f'pragma: "#pragma omp parallel"\n' \
+               f'pragma: \n\t#pragma omp parallel\n\t#pragma omp single\n' \
                f'Parallel Region Start line: {self.region_start_line}\n' \
                f'Parallel Region End line {self.region_end_line}\n'
 
