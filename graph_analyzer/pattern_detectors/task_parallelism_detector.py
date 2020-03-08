@@ -201,7 +201,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
 
-    result = result + __detect_task_suggestions(pet)
+    result += __detect_task_suggestions(pet)
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(pet, result)
@@ -306,10 +306,9 @@ def __detect_task_suggestions(pet: PETGraph):
 
 def __set_task_contained_lines(pet: PETGraph,
                                suggestions: [TaskParallelismInfo]):
-    """set region_start_line and region_end_line properties of
-    TaskParallelismInfo objects in suggestions and return the modified list.
-    Suggested Taskwaits keep None as the value for both variables.
-    Regions are determined by checking, if a CU contains multiple Tasks or
+    """set region_end_line property of TaskParallelismInfo objects
+    in suggestions and return the modified list.
+    Regions are determined by checking if a CU contains multiple Tasks or
     Barriers and splitting up the contained source code lines accordingly.
     :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
@@ -319,9 +318,10 @@ def __set_task_contained_lines(pet: PETGraph,
     cu_to_suggestions_map = dict()
     for s in suggestions:
         # filter out non task / taskwait suggestions and append to output
-        if not(type(s) == Task or type(s) == TaskParallelismInfo):
+        if not (type(s) == Task or type(s) == TaskParallelismInfo):
             output.append(s)
             continue
+        # fill cu_to_suggestions_map
         if s.node_id in cu_to_suggestions_map:
             cu_to_suggestions_map[s.node_id].append(s)
         else:
@@ -332,7 +332,7 @@ def __set_task_contained_lines(pet: PETGraph,
         sorted.sort(key=lambda s: s.region_start_line)
         cu_to_suggestions_map[cu] = sorted
     # iterate over suggestions. set region_end_line to end of cu or
-        # beginning of next suggestion
+    # beginning of next suggestion
     for cu in cu_to_suggestions_map:
         for idx, s in enumerate(cu_to_suggestions_map[cu]):
             # check if next element exists
