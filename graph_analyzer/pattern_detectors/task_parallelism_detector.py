@@ -205,6 +205,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(pet, result)
+    result = __detect_taskloop_reduction(pet, result)
 
     return result
 
@@ -302,6 +303,80 @@ def __detect_task_suggestions(pet: PETGraph):
         for single_suggestion in suggestions[key]:
             result.append(single_suggestion)
     return result
+
+
+def __detect_taskloop_reduction(pet: PETGraph,
+                                suggestions: [TaskParallelismInfo]):
+    """detect suggested tasks which can and should be replaced by
+    taskloop reduction.
+    return the modified list of suggestions.
+    Idea:   1. check if suggested task inside loop body
+            2. check if outer loop is reduction loop
+                3. if so, build reduction clause and modify suggested task
+    :param pet: PET graph
+    :param suggestions: List[TaskParallelismInfo]
+    :return List[TaskParallelismInfo]
+    """
+    output = []
+    # iterate over suggestions
+    for s in suggestions:
+        # ignore others than tasks
+        if not (type(s) == Task or type(s) == TaskParallelismInfo):
+            output.append(s)
+            continue
+        # check if s contained in reduction loop body
+        red_vars_entry = __task_contained_in_reduction_loop(pet, s)
+        if red_vars_entry is None:
+            # s not contained in reduction loop body
+            output.append(s)
+        else:
+            # s contained in reduction loop body
+            # modify task s
+            reduction_clause = "reduction("
+            reduction_clause += red_vars_entry["operation"] + ":"
+            reduction_clause += red_vars_entry["name"].replace(".addr", "")
+            reduction_clause += ")"
+            s.pragma = ["taskloop", reduction_clause]
+            # append modified task to output
+            output.append(s)
+    return output
+
+
+def __task_contained_in_reduction_loop(pet: PETGraph,
+                                       task: TaskParallelismInfo):
+    """detect if task is contained in loop body of a reduction loop.
+    return None, if task is not contained in reduction loop.
+    else, return reduction_vars entry of parent reduction loop.
+    :param pet: PET graph
+    :param task: TaskParallelismInfo
+    :return None / {loop_line, name, reduction_line, operation}
+    """
+    # check if task contained in loop body
+    parents = __get_parent_of_type(pet, task._node, "loop", "child", False)
+    contained_in = []
+    if len(parents) == 0:
+        return None
+    else:
+        # check if task is actually contained in one of the parents
+        for parent_loop, last_node in parents:
+            p_start_line = pet.graph.vp.startsAtLine[parent_loop]
+            p_start_line = p_start_line[p_start_line.index(":") + 1:]
+            p_end_line = pet.graph.vp.endsAtLine[parent_loop]
+            p_end_line = p_end_line[p_end_line.index(":") + 1:]
+            t_start_line = task.start_line
+            t_start_line = t_start_line[t_start_line.index(":") + 1:]
+            t_end_line = task.end_line
+            t_end_line = t_end_line[t_end_line.index(":") + 1:]
+            if p_start_line <= t_start_line and p_end_line >= t_end_line:
+                contained_in.append(parent_loop)
+    # check if task is contained in a reduction loop
+    for parent in contained_in:
+        if pet.graph.vp.reduction[parent]:
+            # get correct entry for loop from pet.reduction_vars
+            for rv in pet.reduction_vars:
+                if rv["loop_line"] == pet.graph.vp.startsAtLine[parent]:
+                    return rv
+    return None
 
 
 def __set_task_contained_lines(pet: PETGraph,
