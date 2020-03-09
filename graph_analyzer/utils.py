@@ -721,6 +721,8 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
             do_all_loops.append(task)
 
     loop_nodes = [n for n in t_loop if pet.graph.vp.reduction[n]]
+    if pet.graph.vp.reduction[task]:
+        loop_nodes.append(task)
     loops_start_lines = [pet.graph.vp.startsAtLine[n] for n in loop_nodes]
     loop_children = [e.target() for n in loop_nodes for e in n.out_edges()]
 
