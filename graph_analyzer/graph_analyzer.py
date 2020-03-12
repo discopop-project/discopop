@@ -15,7 +15,7 @@ Usage:
 Options:
     --path=<path>               Directory with input data [default: ./]
     --cu-xml=<cuxml>            CU node xml file [default: Data.xml]
-    --dep-file=<depfile>        Dependencies text file [default: dep.txt]
+    --dep-file=<depfile>        Dependencies text file [default: dp_run_dep.txt]
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
     --json=<json_out>           Json output
