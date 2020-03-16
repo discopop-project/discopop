@@ -238,8 +238,18 @@ def __detect_task_suggestions(pet: PETGraph):
 
     # SUGGEST TASKWAIT
     for v in barrier_cus + barrier_worker_cus:
+        # get line number of first dependency. suggest taskwait prior to that
+        first_dependency_line = pet.graph.vp.endsAtLine[v]
+        first_dependency_line_number = first_dependency_line[
+            first_dependency_line.index(":") + 1:]
+        for e in v.out_edges():
+            if pet.graph.ep.type[e] == "dependence":
+                dep_line = pet.graph.ep.sink[e]
+                dep_line_number = dep_line[dep_line.index(":") + 1:]
+                if dep_line_number < first_dependency_line_number:
+                    first_dependency_line = dep_line
         tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
-                                             pet.graph.vp.endsAtLine[v],
+                                             first_dependency_line,
                                              [], [], [])
         if pet.graph.vp.startsAtLine[v] not in suggestions:
             # no entry for source code line contained in suggestions
@@ -460,6 +470,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
     suggestions = task_suggestions
     for tws in taskwait_suggestions:
         tws_line_number = tws.pragma_line
+        print("TWS_LINE", tws_line_number)
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
         for rel_func_body in relevant_function_bodies.keys():
             if __check_reachability(pet, tws._node, rel_func_body, "child"):
