@@ -355,7 +355,8 @@ def __detect_barrier_suggestions(pet: PETGraph,
         for v in pet.graph.vertices():
             # check step 1
             out_dep_edges = [e for e in v.out_edges() if
-                             pet.graph.ep.type[e] == "dependence"]
+                             pet.graph.ep.type[e] == "dependence" and
+                             e.target() != v]
             v_first_line = pet.graph.vp.startsAtLine[v]
             v_first_line = v_first_line[v_first_line.index(":") + 1:]
             task_count = 0
