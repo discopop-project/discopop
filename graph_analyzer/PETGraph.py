@@ -67,7 +67,11 @@ node_props = [
     ('recursiveFunctionCalls', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
-    ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
+    ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]'),
+
+    ('viz_contains_task', 'string', 'False'),
+    ('viz_contains_taskwait', 'string', 'False'),
+    ('viz_omittable', 'string', 'False')
 ]
 
 edge_props = [
@@ -207,11 +211,33 @@ class PETGraph(object):
             endLine = endLine[endLine.index(":") + 1:]
             vprop_label[v] = self.graph.vp.id[v] + \
                 "[" + startLine + "-" + endLine + "]"
+        vprop_color = self.graph.new_vertex_property("string")
+        for v in self.graph.vertices():
+            if self.graph.vp.viz_contains_task[v] == 'True':
+                vprop_color[v] = "green"
+            elif self.graph.vp.viz_contains_taskwait[v] == 'True':
+                vprop_color[v] = "red"
+            elif self.graph.vp.viz_omittable[v] == 'True':
+                vprop_color[v] = "magenta"
+            else:
+                vprop_color[v] = "white"
+        eprop_label = self.graph.new_edge_property("string")
+        for e in self.graph.edges():
+            if self.graph.ep.type[e] == "dependence":
+                sourceLine = self.graph.ep.source[e]
+                sourceLine = sourceLine[sourceLine.index(":") + 1:]
+                sinkLine = self.graph.ep.sink[e]
+                sinkLine = sinkLine[sinkLine.index(":") + 1:]
+                eprop_label[e] = self.graph.ep.var[e] + \
+                    "[" + sinkLine + "->" + sourceLine + "]"
+            else:
+                eprop_label[e] = ""
         interactive_window(view,
                            vprops={'text': vprop_label,
-                                   'fill_color': self.graph.vp.viz_color,
+                                   'fill_color': vprop_color, # self.graph.vp.viz_color,
                                    'shape': self.graph.vp.viz_shape},
-                           eprops={'color': self.graph.ep.viz_color})
+                           eprops={'color': self.graph.ep.viz_color,
+                                   'text': eprop_label})
 
     def visualize(self, view=None, filename='output.svg'):
         view = view if view else self.graph

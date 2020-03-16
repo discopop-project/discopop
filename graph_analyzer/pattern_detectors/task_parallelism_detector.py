@@ -206,6 +206,10 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(pet, result)
     result = __detect_taskloop_reduction(pet, result)
+    result = __detect_barrier_suggestions(pet, result)
+
+    # TODO: data sharing protection clauses (including omittable)
+    # TODO: combine omittable with tasks
 
     return result
 
@@ -235,9 +239,10 @@ def __detect_task_suggestions(pet: PETGraph):
             barrier_cus.append(v)
         if pet.graph.vp.mwType[v] == "BARRIER_WORKER":
             barrier_worker_cus.append(v)
+    worker_cus = worker_cus + barrier_worker_cus
 
     # SUGGEST TASKWAIT
-    for v in barrier_cus + barrier_worker_cus:
+    for v in barrier_cus:
         # get line number of first dependency. suggest taskwait prior to that
         first_dependency_line = pet.graph.vp.endsAtLine[v]
         first_dependency_line_number = first_dependency_line[
@@ -283,7 +288,8 @@ def __detect_task_suggestions(pet: PETGraph):
                         "cu" in pet.graph.vp.type[contained_in]):
                     continue
 
-                if pet.graph.vp.mwType[contained_in] == "WORKER":
+                if pet.graph.vp.mwType[contained_in] == "WORKER" or \
+                        pet.graph.vp.mwType[contained_in] == "BARRIER_WORKER":
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [])
@@ -313,6 +319,111 @@ def __detect_task_suggestions(pet: PETGraph):
         for single_suggestion in suggestions[key]:
             result.append(single_suggestion)
     return result
+
+
+def __detect_barrier_suggestions(pet: PETGraph,
+                                 suggestions: [TaskParallelismInfo]):
+    """detect barriers which have not been detected by __detect_mw_types,
+    especially marks WORKER as BARRIER_WORKER if it has depencies to two or
+    more CUs which are contained in a path to a CU containing at least one
+    suggested Task.
+    function executed is repeated until convergence.
+    steps:
+    1.) mark node as Barrier, if dependences only to task-containing-paths
+    """
+    # split suggestions into task and taskwait suggestions
+    taskwait_suggestions = []
+    task_suggestions = []
+    for single_suggestion in suggestions:
+        if type(single_suggestion) == ParallelRegionInfo:
+            continue
+        if single_suggestion.pragma[0] == "taskwait":
+            taskwait_suggestions.append(single_suggestion)
+        else:
+            task_suggestions.append(single_suggestion)
+    for s in task_suggestions:
+        pet.graph.vp.viz_contains_task[s._node] = 'True'
+    for s in taskwait_suggestions:
+        pet.graph.vp.viz_contains_taskwait[s._node] = 'True'
+    task_nodes = [t._node for t in task_suggestions]
+    barrier_nodes = [t._node for t in taskwait_suggestions]
+
+    transformation_happened = True
+    # let run until convergence
+    while transformation_happened:
+        transformation_happened = False
+        for v in pet.graph.vertices():
+            # check step 1
+            out_dep_edges = [e for e in v.out_edges() if
+                             pet.graph.ep.type[e] == "dependence"]
+            v_first_line = pet.graph.vp.startsAtLine[v]
+            v_first_line = v_first_line[v_first_line.index(":") + 1:]
+            task_count = 0
+            barrier_count = 0
+            normal_count = 0
+            for e in out_dep_edges:
+                if e.target() in task_nodes:
+                    task_count += 1
+                elif e.target() in barrier_nodes:
+                    barrier_count += 1
+                else:
+                    normal_count += 1
+            if task_count == 1 and barrier_count == 0:
+                if pet.graph.vp.viz_omittable[v] == 'False':
+                    #actual change
+                    pet.graph.vp.viz_omittable[v] = 'True'
+                    transformation_happened = True
+            elif barrier_count != 0 and task_count != 0:
+                # check if child barrier(s) cover each child task
+                child_barriers = [e.target() for e in out_dep_edges if
+                                  pet.graph.vp.viz_contains_taskwait[e.target()] ==
+                                  'True']
+                child_tasks = [e.target() for e in out_dep_edges if
+                               pet.graph.vp.viz_contains_task[e.target()] ==
+                               'True']
+                uncovered_task_exists = False
+                for ct in child_tasks:
+                    ct_start_line = pet.graph.vp.startsAtLine[ct]
+                    ct_start_line = ct_start_line[ct_start_line.index(":") + 1:]
+                    ct_end_line = pet.graph.vp.endsAtLine[ct]
+                    ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
+                    # check if ct covered by a barrier
+                    for cb in child_barriers:
+                        cb_start_line = pet.graph.vp.startsAtLine[cb]
+                        cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
+                        cb_end_line = pet.graph.vp.endsAtLine[cb]
+                        cb_end_line = cb_end_line[cb_end_line.index(":") + 1:]
+                        if not (cb_start_line > ct_start_line and
+                                cb_end_line > ct_end_line):
+                            uncovered_task_exists = True
+                if uncovered_task_exists:
+                    # suggest barrier
+                    if pet.graph.vp.viz_contains_taskwait[v] == 'False':
+                        # actual change
+                        pet.graph.vp.viz_contains_taskwait[v] = 'True'
+                        barrier_nodes.append(v)
+                        transformation_happened = True
+                        tmp_suggestion = TaskParallelismInfo(pet, v,
+                                                             ["taskwait"],
+                                                             v_first_line,
+                                                             [], [], [])
+                        suggestions.append(tmp_suggestion)
+                else:
+                    # no barrier needed
+                    pass
+            elif task_count != 0:
+                if pet.graph.vp.viz_contains_taskwait[v] == 'False':
+                    # actual change
+                    pet.graph.vp.viz_contains_taskwait[v] = 'True'
+                    barrier_nodes.append(v)
+                    transformation_happened = True
+                    tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+                                                         v_first_line,
+                                                         [], [], [])
+                    suggestions.append(tmp_suggestion)
+#
+
+    return suggestions
 
 
 def __detect_taskloop_reduction(pet: PETGraph,
@@ -470,7 +581,6 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
     suggestions = task_suggestions
     for tws in taskwait_suggestions:
         tws_line_number = tws.pragma_line
-        print("TWS_LINE", tws_line_number)
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
         for rel_func_body in relevant_function_bodies.keys():
             if __check_reachability(pet, tws._node, rel_func_body, "child"):
@@ -702,7 +812,6 @@ def __detect_mw_types(pet: PETGraph, main_node: Vertex):
                     pairs.append((n1, n2))
                     pet.graph.vp.mwType[n1] = 'BARRIER_WORKER'
                     pet.graph.vp.mwType[n2] = 'BARRIER_WORKER'
-
     # return pairs
 
 
