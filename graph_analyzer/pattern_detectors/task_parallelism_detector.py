@@ -373,6 +373,8 @@ def __combine_omittable_cus(pet: PETGraph,
             try:
                 if single_suggestion.pragma[0] == "task":
                     task_suggestions.append(single_suggestion)
+                else:
+                    result.append(single_suggestion)
             except Exception:
                 result.append(single_suggestion)
 
@@ -457,7 +459,10 @@ def __detect_dependency_clauses(pet: PETGraph,
         else:
             try:
                 if single_suggestion.pragma[0] == "task":
+                    print("pragma : ", single_suggestion.pragma[0])
                     task_suggestions.append(single_suggestion)
+                else:
+                    result.append(single_suggestion)
             except Exception:
                 result.append(single_suggestion)
 
