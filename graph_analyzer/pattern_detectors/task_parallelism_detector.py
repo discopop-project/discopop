@@ -132,6 +132,9 @@ class TaskParallelismInfo(PatternInfo):
         self.first_private = first_private
         self.private = private
         self.shared = shared
+        self.in_dep = []
+        self.out_dep = []
+        self.in_out_dep = []
 
     def __str__(self):
         return f'Task parallelism at CU: {self.node_id}\n' \
@@ -143,7 +146,10 @@ class TaskParallelismInfo(PatternInfo):
                f'pragma: "#pragma omp {" ".join(self.pragma)}"\n' \
                f'first_private: {" ".join(self.first_private)}\n' \
                f'private: {" ".join(self.private)}\n' \
-               f'shared: {" ".join(self.shared)}'
+               f'shared: {" ".join(self.shared)}\n' \
+               f'in_dep: {" ".join(self.in_dep)}\n' \
+               f'out_dep: {" ".join(self.out_dep)}\n' \
+               f'in_out_dep: {" ".join(self.in_out_dep)}\n'
 
 
 class ParallelRegionInfo(PatternInfo):
@@ -173,12 +179,18 @@ class OmittableCuInfo(PatternInfo):
         PatternInfo.__init__(self, pet, node)
         self.combine_with_node = combine_with_node
         self.cwn_id = pet.graph.vp.id[combine_with_node]
+        self.in_dep = []
+        self.out_dep = []
+        self.in_out_dep = []
 
     def __str__(self):
         return f'Omittable CU: {self.node_id}\n' \
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
-               f'Combinable with: {self.cwn_id}\n'
+               f'Combinable with: {self.cwn_id}\n' \
+               f'in_dep: {" ".join(self.in_dep)}\n' \
+               f'out_dep: {" ".join(self.out_dep)}\n' \
+               f'in_out_dep: {" ".join(self.in_out_dep)}\n'
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
@@ -225,6 +237,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __set_task_contained_lines(pet, result)
     result = __detect_taskloop_reduction(pet, result)
     result = __detect_barrier_suggestions(pet, result)
+    result = __detect_dependency_clauses(pet, result)
 
     # TODO: data sharing protection clauses (including omittable)
     # TODO: combine omittable with tasks
@@ -339,6 +352,60 @@ def __detect_task_suggestions(pet: PETGraph):
     return result
 
 
+def __detect_dependency_clauses(pet: PETGraph,
+                                suggestions: [PatternInfo]):
+    """detect in, out and inout dependencies for tasks and omittable CUs and
+    add this information to the respective suggestions.
+    Return the modified list of suggestions.
+    :param TODO
+    :return TODO
+    """
+    omittable_suggestions = []
+    task_suggestions = []
+    result = []
+    for single_suggestion in suggestions:
+        if type(single_suggestion) == OmittableCuInfo:
+            omittable_suggestions.append(single_suggestion)
+        else:
+            try:
+                if single_suggestion.pragma[0] == "task":
+                    task_suggestions.append(single_suggestion)
+            except Exception:
+                result.append(single_suggestion)
+
+    for s in omittable_suggestions + task_suggestions:
+        # out/in_dep_edges are based on the dependency graph and thus inverse
+        # to the omp dependency clauses
+        # only consider those dependencies to/from Task/Omittable CUs
+        out_dep_edges = [e for e in s._node.out_edges() if
+                         pet.graph.ep.type[e] == "dependence" and
+                         (pet.graph.vp.viz_contains_task[e.target()] == 'True' or
+                         pet.graph.vp.viz_omittable[e.target()] == 'True')]
+        in_dep_edges = [e for e in s._node.in_edges() if
+                        pet.graph.ep.type[e] == "dependence" and
+                        (pet.graph.vp.viz_contains_task[e.source()] == 'True' or
+                        pet.graph.vp.viz_omittable[e.source()] == 'True')]
+        # set iversed dependencies
+        length_in = 0
+        length_out = 0
+        for ode in out_dep_edges:
+            var = pet.graph.ep.var[ode]
+            s.in_dep.append(var)
+        for ide in in_dep_edges:
+            var = pet.graph.ep.var[ide]
+            s.out_dep.append(var)
+        # find and set in_out_dependencies
+        if length_in < length_out:  # just for performance
+            s.in_out_dep = [var for var in s.in_dep if var in s.out_dep]
+        else:
+            s.in_out_dep = [var for var in s.out_dep if var in s.in_dep]
+        # remove in_out_deps from in_dep and out_dep
+        for in_out_var in s.in_out_dep:
+            s.in_dep = [var for var in s.in_dep if not var == in_out_var]
+            s.out_dep = [var for var in s.out_dep if not var == in_out_var]
+        result.append(s)
+    return result
+
 def __detect_barrier_suggestions(pet: PETGraph,
                                  suggestions: [TaskParallelismInfo]):
     """detect barriers which have not been detected by __detect_mw_types,
@@ -350,6 +417,8 @@ def __detect_barrier_suggestions(pet: PETGraph,
     function executed is repeated until convergence.
     steps:
     1.) mark node as Barrier, if dependences only to task-containing-paths
+    :param TODO
+    :return TODO
     """
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
