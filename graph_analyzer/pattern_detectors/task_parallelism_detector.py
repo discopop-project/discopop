@@ -163,6 +163,24 @@ class ParallelRegionInfo(PatternInfo):
                f'Parallel Region End line {self.region_end_line}\n'
 
 
+class OmittableCuInfo(PatternInfo):
+    """Class, that contains information on omittable CUs (such that can be
+    combined with a suggested task).
+    Objects of this type are only intermediate and will not show up in the
+    final suggestions.
+    """
+    def __init__(self, pet: PETGraph, node: Vertex, combine_with_node: Vertex):
+        PatternInfo.__init__(self, pet, node)
+        self.combine_with_node = combine_with_node
+        self.cwn_id = pet.graph.vp.id[combine_with_node]
+
+    def __str__(self):
+        return f'Omittable CU: {self.node_id}\n' \
+               f'CU Start line: {self.start_line}\n' \
+               f'CU End line: {self.end_line}\n' \
+               f'Combinable with: {self.cwn_id}\n'
+
+
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
@@ -327,6 +345,8 @@ def __detect_barrier_suggestions(pet: PETGraph,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
     suggested Task.
+    If omittable CUs are found in the process, they will be marked in the
+    pet graph and an intermediate entry in suggestions will be created.
     function executed is repeated until convergence.
     steps:
     1.) mark node as Barrier, if dependences only to task-containing-paths
@@ -373,6 +393,13 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 if pet.graph.vp.viz_omittable[v] == 'False':
                     #actual change
                     pet.graph.vp.viz_omittable[v] = 'True'
+                    combine_with_node = [e.target() for e in out_dep_edges if
+                                         e.target() in task_nodes]
+                    if len(combine_with_node) < 1:
+                        raise ValueException("length combine_with_node < 1!")
+                    combine_with_node = combine_with_node[0]
+                    suggestions.append(OmittableCuInfo(pet, v,
+                                                       combine_with_node))
                     transformation_happened = True
             elif barrier_count != 0 and task_count != 0:
                 # check if child barrier(s) cover each child task
