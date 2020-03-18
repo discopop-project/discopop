@@ -178,6 +178,7 @@ class OmittableCuInfo(PatternInfo):
     def __init__(self, pet: PETGraph, node: Vertex, combine_with_node: Vertex):
         PatternInfo.__init__(self, pet, node)
         self.combine_with_node = combine_with_node
+        # only for printing
         self.cwn_id = pet.graph.vp.id[combine_with_node]
         self.in_dep = []
         self.out_dep = []
@@ -238,6 +239,7 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_taskloop_reduction(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __detect_dependency_clauses(pet, result)
+    result = __combine_omittable_cus(pet, result)
 
     # TODO: data sharing protection clauses (including omittable)
     # TODO: combine omittable with tasks
@@ -352,10 +354,96 @@ def __detect_task_suggestions(pet: PETGraph):
     return result
 
 
+def __combine_omittable_cus(pet: PETGraph,
+                            suggestions: [PatternInfo]):
+    """execute combination of tasks suggestions with omittable cus.
+    Returns the modified list of suggestions.
+    Omittable CU suggetions are removed from the list.
+    Removes duplicates in in/out/in_out dependency lists.
+    :param TODO
+    :return TODO
+    """
+    omittable_suggestions = []
+    task_suggestions = []
+    result = []
+    for single_suggestion in suggestions:
+        if type(single_suggestion) == OmittableCuInfo:
+            omittable_suggestions.append(single_suggestion)
+        else:
+            try:
+                if single_suggestion.pragma[0] == "task":
+                    task_suggestions.append(single_suggestion)
+            except Exception:
+                result.append(single_suggestion)
+
+    # prepare dict to find target suggestions for combination
+    task_suggestions_dict = dict()
+    for ts in task_suggestions:
+        if ts._node in task_suggestions_dict:
+            task_suggestions_dict[ts._node].append(ts)
+        else:
+            task_suggestions_dict[ts._node] = [ts]
+
+    for omit_s in omittable_suggestions:
+        # process in_out dependencies of omit_s
+        # -> lazy, let following statements take care
+        for omit_in_out_var in omit_s.in_out_dep:
+            omit_s.in_dep.append(omit_in_out_var)
+            omit_s.out_dep.append(omit_in_out_var)
+
+        # find target task_suggestion for omit_s, based on in / out dep matches
+        omit_target_task_idx = 0
+        if len(task_suggestions_dict[omit_s.combine_with_node]) != 1:
+            # search for matching in/out dependency pair
+            for idx, ts in enumerate(task_suggestions_dict[omit_s.combine_with_node]):
+                intersect = [v for v in omit_s.in_dep if v in ts.out_dep]
+                if len(intersect) == len(omit_s.in_dep):
+                    # all in_deps covered
+                    omit_target_task_idx = idx
+                    break
+
+        # note: dependencies of task nodes can contain multiples
+        # process out dependencies of omit_s
+        for omit_out_var in omit_s.out_dep:
+            task_suggestions_dict[omit_s.combine_with_node][
+                omit_target_task_idx].out_dep.append(omit_out_var)
+            # omit_s.combine_with_node.out_dep.append(omit_out_var)
+        # process in dependencies of omit_s
+        for omit_in_var in omit_s.in_dep:
+            # note: only dependencies to target node allowed
+            task_suggestions_dict[omit_s.combine_with_node][
+                omit_target_task_idx].out_dep.remove(omit_in_var)
+            # omit_s.combine_with_node.out_dep.remove(omit_in_var)
+
+        # increase size of pragma region if needed
+        if omit_s.end_line > task_suggestions_dict[omit_s.combine_with_node][
+                omit_target_task_idx].region_end_line:
+            task_suggestions_dict[omit_s.combine_with_node][
+                omit_target_task_idx].region_end_line = omit_s.end_line
+
+    # remove duplicates from dependency lists and append to result
+    for key in task_suggestions_dict:
+        for ts in task_suggestions_dict[key]:
+            # remove duplicates
+            ts.in_dep = list(set(ts.in_dep))
+            ts.out_dep = list(set(ts.out_dep))
+            # reset in_out_dep, might have changed due to combination
+            if len(ts.in_dep) < len(ts.out_dep):  # just for performance
+                ts.in_out_dep = [var for var in ts.in_dep if var in ts.out_dep]
+            else:
+                ts.in_out_dep = [var for var in ts.out_dep if var in ts.in_dep]
+            ts.in_out_dep = list(set(ts.in_out_dep))
+            result.append(ts)
+
+    return result
+
+
 def __detect_dependency_clauses(pet: PETGraph,
                                 suggestions: [PatternInfo]):
     """detect in, out and inout dependencies for tasks and omittable CUs and
     add this information to the respective suggestions.
+    dependencies are written into a list, result in multiple entries for a
+    value in case of multiple dependencies.
     Return the modified list of suggestions.
     :param TODO
     :return TODO
@@ -380,11 +468,13 @@ def __detect_dependency_clauses(pet: PETGraph,
         out_dep_edges = [e for e in s._node.out_edges() if
                          pet.graph.ep.type[e] == "dependence" and
                          (pet.graph.vp.viz_contains_task[e.target()] == 'True' or
-                         pet.graph.vp.viz_omittable[e.target()] == 'True')]
+                         pet.graph.vp.viz_omittable[e.target()] == 'True') and
+                         e.target() != s._node]  # exclude self-dependencies
         in_dep_edges = [e for e in s._node.in_edges() if
                         pet.graph.ep.type[e] == "dependence" and
                         (pet.graph.vp.viz_contains_task[e.source()] == 'True' or
-                        pet.graph.vp.viz_omittable[e.source()] == 'True')]
+                        pet.graph.vp.viz_omittable[e.source()] == 'True') and
+                        e.source() != s._node]  # exclude self-dependencies
         # set iversed dependencies
         length_in = 0
         length_out = 0
@@ -405,6 +495,7 @@ def __detect_dependency_clauses(pet: PETGraph,
             s.out_dep = [var for var in s.out_dep if not var == in_out_var]
         result.append(s)
     return result
+
 
 def __detect_barrier_suggestions(pet: PETGraph,
                                  suggestions: [TaskParallelismInfo]):
