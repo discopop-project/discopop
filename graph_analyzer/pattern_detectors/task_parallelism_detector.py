@@ -378,6 +378,21 @@ def __combine_omittable_cus(pet: PETGraph,
             except Exception:
                 result.append(single_suggestion)
 
+    # remove omittable suggestion if cu is no direct child in the
+    # successor graph of a node containing a task suggestion
+    useful_omittable_suggestions = []
+    for os in omittable_suggestions:
+        in_succ_edges = [e for e in os._node.in_edges() if
+                         pet.graph.ep.type[e] == "successor"]
+        parent_task_nodes = [e.source() for e in in_succ_edges if
+                             pet.graph.vp.viz_contains_task[e.source()] == 'True']
+        if len(parent_task_nodes) != 0:
+            useful_omittable_suggestions.append(os)
+        else:
+            # un-mark node as omittable
+            pet.graph.vp.viz_omittable[os._node] = 'False'
+    omittable_suggestions = useful_omittable_suggestions
+
     # prepare dict to find target suggestions for combination
     task_suggestions_dict = dict()
     for ts in task_suggestions:
