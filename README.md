@@ -45,7 +45,7 @@ To obtain data dependences, we need to instrument the target application:
 
 	llvm-link $out.ll other.ll -o out.ll
 
-(OPTIONAL) You may run the DPInstrumentationOmission pass to omit non-essential instructions from profiling to improve performance:
+(OPTIONAL) You may run the DPInstrumentationOmission pass to omit non-essential instructions from profiling to improve performance. To preserve input-sensitivity of the profiler, add the -input-sensitive flag.
 
 	opt -S -load=<PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentationOmission.so -dp-instrumentation-omission -stats out.ll -o out.ll
 
