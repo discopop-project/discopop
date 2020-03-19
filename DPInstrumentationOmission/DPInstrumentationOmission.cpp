@@ -12,6 +12,11 @@ static cl::opt<bool> DumpToDot(
   cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden
 );
 
+static cl::opt<bool> InputSensitive(
+  "input-sensitive", cl::init(false),
+  cl::desc("Conserve input sensitivity through event-driven dependence monitoring"), cl::Hidden
+);
+
 StringRef DPInstrumentationOmission::getPassName() const{
   return "DPInstrumentationOmission";
 }
@@ -22,8 +27,8 @@ void DPInstrumentationOmission::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool DPInstrumentationOmission::runOnModule(Module &M) {
-  int bbDepCount = 0;
-  string bbDepString;
+  int edDepCount = 0;
+  string depString;
 
   for(Function &F: M){
     if(F.getInstructionCount() == 0) continue;
@@ -75,13 +80,13 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
     }}
 
     if(DP_DEBUG){
-      errs() << "--- Local Values ---\n";
+      errs() << "--- SPA Values ---\n";
       for(auto V: staticallyPredictableValues){
         errs() << VNF->getVarName(V) << "\n";
       }
     }
 
-    // Perform the SPA dependence analysis
+    // Instrument Event-Driven Dependence Monitoring Instructions
     map<BasicBlock*, set<string>> conditionalBBDepMap;
     map<BasicBlock*, map<BasicBlock*, set<string>>> conditionalBBPairDepMap;
 
@@ -98,26 +103,30 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       if(isa<AllocaInst>(Dst)) V = dyn_cast<Value>(Dst);
 
       if(staticallyPredictableValues.find(V) == staticallyPredictableValues.end()) continue;
-      bool dominates = DT.dominates(Dst, Src);
-      bool postDominates = PDT.properlyDominates(Src->getParent(), Dst->getParent());
-      if(Src != Dst && (dominates || postDominates)){
-        BasicBlock* BB = dominates ? Src->getParent() : Dst->getParent();
-        if(!conditionalBBDepMap.count(BB)){
-          set<string> tmp;
-          conditionalBBDepMap[BB] = tmp;
+      if(InputSensitive){
+        bool dominates = DT.dominates(Dst, Src);
+        bool postDominates = PDT.properlyDominates(Src->getParent(), Dst->getParent());
+        if(Src != Dst && (dominates || postDominates)){
+          BasicBlock* BB = dominates ? Src->getParent() : Dst->getParent();
+          if(!conditionalBBDepMap.count(BB)){
+            set<string> tmp;
+            conditionalBBDepMap[BB] = tmp;
+          }
+          conditionalBBDepMap[BB].insert(DG.edgeToDPDep(edge));
         }
-        conditionalBBDepMap[BB].insert(DG.edgeToDPDep(edge));
-      }
-      else{
-        if(!conditionalBBPairDepMap.count(Dst->getParent())){
-          map<BasicBlock*, set<string>> tmp;
-          conditionalBBPairDepMap[Dst->getParent()] = tmp;
+        else{
+          if(!conditionalBBPairDepMap.count(Dst->getParent())){
+            map<BasicBlock*, set<string>> tmp;
+            conditionalBBPairDepMap[Dst->getParent()] = tmp;
+          }
+          if(!conditionalBBPairDepMap[Dst->getParent()].count(Src->getParent())){
+            set<string> tmp;
+            conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
+          }
+          conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(DG.edgeToDPDep(edge));
         }
-        if(!conditionalBBPairDepMap[Dst->getParent()].count(Src->getParent())){
-          set<string> tmp;
-          conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
-        }
-        conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(DG.edgeToDPDep(edge));
+      }else{
+        depString += DG.edgeToDPDep(edge) + ";";
       }
       omittableInstructions.insert(Src);
       omittableInstructions.insert(Dst);
@@ -140,20 +149,20 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       }
       auto CI = CallInst::Create(
         ReportBB, 
-        ConstantInt::get(Int32, bbDepCount),
+        ConstantInt::get(Int32, edDepCount),
         "",
         insertionPoint
       );
       
-      // ---- Insert deps into string ----
-      bbDepString += to_string(bbDepCount) + "=";
+      // ---- Insert deps into string ---- (TODO: allocate array for this in IR)
+      depString += to_string(edDepCount) + "=";
       for(auto dep: pair.second){
-        bbDepString += dep;
-        bbDepString += ",";
+        depString += dep;
+        depString += ",";
       }
-      bbDepString += "/";
+      depString += ";";
       // ---------------------------------
-      ++bbDepCount;
+      ++edDepCount;
     }
 
     // Add observation of in-order execution of pairs of basic blocks
@@ -169,7 +178,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       
         auto LI = new LoadInst(AI, Twine(""), false, insertionPoint);
-        ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, bbDepCount)});
+        ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, edDepCount)});
         CallInst::Create(
           ReportBBPair,
           arguments,
@@ -177,15 +186,15 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
           insertionPoint
         );
 
-        // ---- Insert deps into string ----
-        bbDepString += to_string(bbDepCount) + "=";
+        // ---- Insert deps into string ---- (TODO: allocate array for this in IR)
+        depString += to_string(edDepCount) + "=";
         for(auto dep: pair2.second){
-          bbDepString += dep;
-          bbDepString += ",";
+          depString += dep;
+          depString += ",";
         }
-        bbDepString += "/";
+        depString += ";";
         // ----------------------------------
-        ++bbDepCount;
+        ++edDepCount;
       }
       // Insert semaphore update to true
       new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator());
@@ -264,11 +273,17 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
           if(Function *Fun = call_inst->getCalledFunction()){
             if(Fun->getName() == "__dp_finalize"){
               IRBuilder<> builder(call_inst);
-              Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
-              CallInst::Create(
-                cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr)),
-                V, "", call_inst
-              );
+              Value *V = builder.CreateGlobalStringPtr(StringRef(depString), ".dp_static_deps");
+              if(InputSensitive)
+                CallInst::Create(
+                  cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_event_driven_deps", Void, CharPtr)),
+                  V, "", call_inst
+                );
+              else
+                CallInst::Create(
+                  cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_static_deps", Void, CharPtr)),
+                  V, "", call_inst
+                );
             }
           }
         }

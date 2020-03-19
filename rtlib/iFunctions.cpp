@@ -824,12 +824,12 @@ namespace __dp
             }
         }
 
-        void __dp_add_bb_deps(char* depStringPtr){
+        void __dp_add_event_driven_deps(char* depStringPtr){
             string depString(depStringPtr);
             
             while (depString.size()) {
                 string currentDeps;
-                int e1 = depString.find("/");
+                int e1 = depString.find(";");
                 currentDeps = depString.substr(0, e1);
                 
                 int e2 = currentDeps.find("=");
@@ -855,6 +855,27 @@ namespace __dp
                     (*outPutDeps)[src].insert(dep);
                 }
             }
+        }
+
+        void __dp_add_static_deps(char* depStringPtr){
+            cout << "Adding static deps" << endl;
+            string depString(depStringPtr);
+            
+            while (depString.size()) {
+                int e1 = depString.find(";");
+                string currentDep = depString.substr(0, e1);
+                depString = depString.substr(e1 + 1, depString.size());
+                
+                int e2 = currentDep.find(" ");
+                string src = currentDep.substr(0, e2);
+                string dep = currentDep.substr(e2+1, currentDep.size());
+                    if(outPutDeps->count(src) == 0){
+                    set<string> depSet;
+                    (*outPutDeps)[src] = depSet;
+                }
+                (*outPutDeps)[src].insert(dep);
+            }
+            cout << "Done" << endl;
         }
 
         void __dp_call(LID lid)
