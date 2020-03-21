@@ -241,9 +241,6 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
 
-    # TODO: data sharing protection clauses (including omittable)
-    # TODO: combine omittable with tasks
-
     return result
 
 
@@ -360,8 +357,9 @@ def __combine_omittable_cus(pet: PETGraph,
     Returns the modified list of suggestions.
     Omittable CU suggetions are removed from the list.
     Removes duplicates in in/out/in_out dependency lists.
-    :param TODO
-    :return TODO
+    :param pet: PET graph
+    :param suggestions: List [PatternInfo]
+    :return List[PatternInfo]
     """
     omittable_suggestions = []
     task_suggestions = []
@@ -462,8 +460,9 @@ def __detect_dependency_clauses(pet: PETGraph,
     dependencies are written into a list, result in multiple entries for a
     value in case of multiple dependencies.
     Return the modified list of suggestions.
-    :param TODO
-    :return TODO
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
     """
     omittable_suggestions = []
     task_suggestions = []
@@ -527,8 +526,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
     function executed is repeated until convergence.
     steps:
     1.) mark node as Barrier, if dependences only to task-containing-paths
-    :param TODO
-    :return TODO
+    :param pet: PET Graph
+    :param suggestions: List[TaskParallelismInfo]
+    :return List[TaskParallelismInfo]
     """
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
@@ -550,11 +550,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
     transformation_happened = True
     # let run until convergence
     queue = list(pet.graph.vertices())
-    count = 0
     while transformation_happened or len(queue) > 0:
         transformation_happened = False
         v = queue.pop(0)
-        count += 1
         # check step 1
         out_dep_edges = [e for e in v.out_edges() if
                          pet.graph.ep.type[e] == "dependence" and
@@ -573,7 +571,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 normal_count += 1
         if task_count == 1 and barrier_count == 0:
             if pet.graph.vp.viz_omittable[v] == 'False':
-                #actual change
+                # actual change
                 pet.graph.vp.viz_omittable[v] = 'True'
                 combine_with_node = [e.target() for e in out_dep_edges if
                                      e.target() in task_nodes]
