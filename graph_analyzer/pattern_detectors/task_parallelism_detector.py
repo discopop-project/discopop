@@ -474,7 +474,6 @@ def __detect_dependency_clauses(pet: PETGraph,
         else:
             try:
                 if single_suggestion.pragma[0] == "task":
-                    print("pragma : ", single_suggestion.pragma[0])
                     task_suggestions.append(single_suggestion)
                 else:
                     result.append(single_suggestion)
@@ -550,76 +549,65 @@ def __detect_barrier_suggestions(pet: PETGraph,
 
     transformation_happened = True
     # let run until convergence
-    while transformation_happened:
+    queue = list(pet.graph.vertices())
+    count = 0
+    while transformation_happened or len(queue) > 0:
         transformation_happened = False
-        for v in pet.graph.vertices():
-            # check step 1
-            out_dep_edges = [e for e in v.out_edges() if
-                             pet.graph.ep.type[e] == "dependence" and
-                             e.target() != v]
-            v_first_line = pet.graph.vp.startsAtLine[v]
-            v_first_line = v_first_line[v_first_line.index(":") + 1:]
-            task_count = 0
-            barrier_count = 0
-            normal_count = 0
-            for e in out_dep_edges:
-                if e.target() in task_nodes:
-                    task_count += 1
-                elif e.target() in barrier_nodes:
-                    barrier_count += 1
-                else:
-                    normal_count += 1
-            if task_count == 1 and barrier_count == 0:
-                if pet.graph.vp.viz_omittable[v] == 'False':
-                    #actual change
-                    pet.graph.vp.viz_omittable[v] = 'True'
-                    combine_with_node = [e.target() for e in out_dep_edges if
-                                         e.target() in task_nodes]
-                    if len(combine_with_node) < 1:
-                        raise ValueException("length combine_with_node < 1!")
-                    combine_with_node = combine_with_node[0]
-                    suggestions.append(OmittableCuInfo(pet, v,
-                                                       combine_with_node))
-                    transformation_happened = True
-            elif barrier_count != 0 and task_count != 0:
-                # check if child barrier(s) cover each child task
-                child_barriers = [e.target() for e in out_dep_edges if
-                                  pet.graph.vp.viz_contains_taskwait[e.target()] ==
-                                  'True']
-                child_tasks = [e.target() for e in out_dep_edges if
-                               pet.graph.vp.viz_contains_task[e.target()] ==
-                               'True']
-                uncovered_task_exists = False
-                for ct in child_tasks:
-                    ct_start_line = pet.graph.vp.startsAtLine[ct]
-                    ct_start_line = ct_start_line[ct_start_line.index(":") + 1:]
-                    ct_end_line = pet.graph.vp.endsAtLine[ct]
-                    ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
-                    # check if ct covered by a barrier
-                    for cb in child_barriers:
-                        cb_start_line = pet.graph.vp.startsAtLine[cb]
-                        cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
-                        cb_end_line = pet.graph.vp.endsAtLine[cb]
-                        cb_end_line = cb_end_line[cb_end_line.index(":") + 1:]
-                        if not (cb_start_line > ct_start_line and
-                                cb_end_line > ct_end_line):
-                            uncovered_task_exists = True
-                if uncovered_task_exists:
-                    # suggest barrier
-                    if pet.graph.vp.viz_contains_taskwait[v] == 'False':
-                        # actual change
-                        pet.graph.vp.viz_contains_taskwait[v] = 'True'
-                        barrier_nodes.append(v)
-                        transformation_happened = True
-                        tmp_suggestion = TaskParallelismInfo(pet, v,
-                                                             ["taskwait"],
-                                                             v_first_line,
-                                                             [], [], [])
-                        suggestions.append(tmp_suggestion)
-                else:
-                    # no barrier needed
-                    pass
-            elif task_count != 0:
+        v = queue.pop(0)
+        count += 1
+        # check step 1
+        out_dep_edges = [e for e in v.out_edges() if
+                         pet.graph.ep.type[e] == "dependence" and
+                         e.target() != v]
+        v_first_line = pet.graph.vp.startsAtLine[v]
+        v_first_line = v_first_line[v_first_line.index(":") + 1:]
+        task_count = 0
+        barrier_count = 0
+        normal_count = 0
+        for e in out_dep_edges:
+            if e.target() in task_nodes:
+                task_count += 1
+            elif e.target() in barrier_nodes:
+                barrier_count += 1
+            else:
+                normal_count += 1
+        if task_count == 1 and barrier_count == 0:
+            if pet.graph.vp.viz_omittable[v] == 'False':
+                #actual change
+                pet.graph.vp.viz_omittable[v] = 'True'
+                combine_with_node = [e.target() for e in out_dep_edges if
+                                     e.target() in task_nodes]
+                if len(combine_with_node) < 1:
+                    raise ValueException("length combine_with_node < 1!")
+                combine_with_node = combine_with_node[0]
+                suggestions.append(OmittableCuInfo(pet, v,
+                                                   combine_with_node))
+                transformation_happened = True
+        elif barrier_count != 0 and task_count != 0:
+            # check if child barrier(s) cover each child task
+            child_barriers = [e.target() for e in out_dep_edges if
+                              pet.graph.vp.viz_contains_taskwait[e.target()] ==
+                              'True']
+            child_tasks = [e.target() for e in out_dep_edges if
+                           pet.graph.vp.viz_contains_task[e.target()] ==
+                           'True']
+            uncovered_task_exists = False
+            for ct in child_tasks:
+                ct_start_line = pet.graph.vp.startsAtLine[ct]
+                ct_start_line = ct_start_line[ct_start_line.index(":") + 1:]
+                ct_end_line = pet.graph.vp.endsAtLine[ct]
+                ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
+                # check if ct covered by a barrier
+                for cb in child_barriers:
+                    cb_start_line = pet.graph.vp.startsAtLine[cb]
+                    cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
+                    cb_end_line = pet.graph.vp.endsAtLine[cb]
+                    cb_end_line = cb_end_line[cb_end_line.index(":") + 1:]
+                    if not (cb_start_line > ct_start_line and
+                            cb_end_line > ct_end_line):
+                        uncovered_task_exists = True
+            if uncovered_task_exists:
+                # suggest barrier
                 if pet.graph.vp.viz_contains_taskwait[v] == 'False':
                     # actual change
                     pet.graph.vp.viz_contains_taskwait[v] = 'True'
@@ -629,7 +617,25 @@ def __detect_barrier_suggestions(pet: PETGraph,
                                                          v_first_line,
                                                          [], [], [])
                     suggestions.append(tmp_suggestion)
-#
+            else:
+                # no barrier needed
+                pass
+        elif task_count != 0:
+            if pet.graph.vp.viz_contains_taskwait[v] == 'False':
+                # actual change
+                pet.graph.vp.viz_contains_taskwait[v] = 'True'
+                barrier_nodes.append(v)
+                transformation_happened = True
+                tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+                                                     v_first_line,
+                                                     [], [], [])
+                suggestions.append(tmp_suggestion)
+        # append neighbors of modified node to queue
+        if transformation_happened:
+            for e in out_dep_edges:
+                if not e.target() == v:
+                    queue.append(e.target())
+            queue = list(set(queue))
 
     return suggestions
 
