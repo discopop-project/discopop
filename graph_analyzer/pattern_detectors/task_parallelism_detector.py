@@ -630,9 +630,13 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 suggestions.append(tmp_suggestion)
         # append neighbors of modified node to queue
         if transformation_happened:
+            in_dep_edges = [e for e in v.in_edges() if
+                            pet.graph.ep.type[e] == "dependence" and
+                            e.source() != v]
             for e in out_dep_edges:
-                if not e.target() == v:
-                    queue.append(e.target())
+                queue.append(e.target())
+            for e in in_dep_edges:
+                queue.append(e.source())
             queue = list(set(queue))
 
     return suggestions
