@@ -119,7 +119,7 @@ class PETGraph(object):
                 self.graph.vp.args[v] = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
 
             if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
-                self.graph.vp.recursiveFunctionCalls[v] = [v.text for v in node.callsNode.recursiveFunctionCall]
+                self.graph.vp.recursiveFunctionCalls[v] = [n.text for n in node.callsNode.recursiveFunctionCall]
 
             if node.get("type") == '0':
                 if hasattr(node.localVariables, 'local'):
