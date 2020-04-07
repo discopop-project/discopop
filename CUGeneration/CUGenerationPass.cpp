@@ -312,18 +312,18 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
                 {
                     ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
                     uint64_t memberIdx = *(idxPtr->getValue().getRawData());
-
-                    string strName(structType->getStructName().data());
-                    map<string, MDNode *>::iterator it = Structs.find(strName);
-                    if (it != Structs.end())
-                    {
-                        std::string ret = findStructMemberName(it->second, memberIdx, builder);
-                        if (ret.size() > 0)
-                            return ret;
-                        else
-                            return getOrInsertVarName("", builder);
-                        //return ret;
-
+                    if(!(cast<StructType>(structType))->isLiteral()){
+                        string strName(structType->getStructName().data());
+                        map<string, MDNode *>::iterator it = Structs.find(strName);
+                        if (it != Structs.end())
+                        {
+                            std::string ret = findStructMemberName(it->second, memberIdx, builder);
+                            if (ret.size() > 0)
+                                return ret;
+                            else
+                                return getOrInsertVarName("", builder);
+                            //return ret;
+                        }
                     }
                 }
             }

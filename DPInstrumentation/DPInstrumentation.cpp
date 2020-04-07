@@ -614,13 +614,16 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
                     ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
                     uint64_t memberIdx = *(idxPtr->getValue().getRawData());
 
-                    string strName(structType->getStructName().data());
-                    map<string, MDNode *>::iterator it = Structs.find(strName);
-                    if (it != Structs.end())
-                    {
-                        Value *ret = findStructMemberName(it->second, memberIdx, builder);
-                        if (ret)
-                            return ret;
+                    StructType *STy = cast<StructType>(structType);
+                    if(!STy ->isLiteral()){
+                        string strName(structType->getStructName().data());
+                        map<string, MDNode *>::iterator it = Structs.find(strName);
+                        if (it != Structs.end())
+                        {
+                            Value *ret = findStructMemberName(it->second, memberIdx, builder);
+                            if (ret)
+                                return ret;
+                        }
                     }
                 }
             }
