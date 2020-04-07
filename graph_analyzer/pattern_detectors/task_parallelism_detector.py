@@ -155,16 +155,18 @@ class TaskParallelismInfo(PatternInfo):
 class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info.
     """
-    def __init__(self, pet: PETGraph, node: Vertex, region_start_line, region_end_line):
+    def __init__(self, pet: PETGraph, node: Vertex,
+                 region_start_line, region_end_line):
         PatternInfo.__init__(self, pet, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
+        self.pragma = "#pragma omp parallel\n\t#pragma omp single"
 
     def __str__(self):
         return f'Task Parallel Region at CU: {self.node_id}\n' \
                f'CU Start line: {self.start_line}\n' \
                f'CU End line: {self.end_line}\n' \
-               f'pragma: \n\t#pragma omp parallel\n\t#pragma omp single\n' \
+               f'pragma: \n\t{self.pragma}\n' \
                f'Parallel Region Start line: {self.region_start_line}\n' \
                f'Parallel Region End line {self.region_end_line}\n'
 
@@ -240,8 +242,35 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_barrier_suggestions(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
+    result = __remove_duplicates(pet, result)
     result = __sort_output(pet, result)
 
+    return result
+
+
+def __remove_duplicates(pet: PETGraph, suggestions: [PatternInfo]):
+    """removes duplicates from the list of suggestions and return the modified
+    list.
+    CU-ID is not considered.
+    Removes a suggestion, if one with identical region_start_line,
+    region_end_line and pragma exists.
+
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
+    """
+    buffer = []  # list of tuples containing region_start_line,
+    # region_end_line and pragma, representing suggestions
+    result = []
+    for sug in suggestions:
+        representing_tuple = (sug.region_start_line,
+                              sug.region_end_line,
+                              sug.pragma)
+        if representing_tuple in buffer:
+            continue
+        else:
+            buffer.append(representing_tuple)
+            result.append(sug)
     return result
 
 
@@ -251,6 +280,7 @@ def __sort_output(pet: PETGraph, suggestions: [PatternInfo]):
     Returns the sorted list of suggestions
 
     :param pet: PET graph
+    :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
     """
     sorted_suggestions = []
