@@ -240,8 +240,42 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_barrier_suggestions(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
+    result = __sort_output(pet, result)
 
     return result
+
+
+def __sort_output(pet: PETGraph, suggestions: [PatternInfo]):
+    """orders the list of suggestions by the respective properties:
+    order by: file-id, then line-number (descending).
+    Returns the sorted list of suggestions
+
+    :param pet: PET graph
+    :return List[PatternInfo]
+    """
+    sorted_suggestions = []
+    tmp_dict = dict()
+    for sug in suggestions:
+        # get start_line and file_id for sug
+        start_line = ""
+        file_id = ""
+        if ":" not in sug.region_start_line:
+            start_line = sug.region_start_line
+            file_id = sug.start_line[0:sug.start_line.index(":")]
+        else:
+            start_line = sug.region_start_line
+            file_id = start_line[0:start_line.index(":")]
+            start_line = start_line[start_line.index(":") + 1:]
+        # split suggestions by file-id
+        if file_id not in tmp_dict:
+            tmp_dict[file_id] = []
+        tmp_dict[file_id].append((start_line, sug))
+    # sort suggestions by line-number (descending)
+    for key in tmp_dict:
+        sorted_list = sorted(tmp_dict[key], key=lambda x: x[0], reverse=True)
+        sorted_list = [elem[1] for elem in sorted_list]
+        sorted_suggestions += sorted_list
+    return sorted_suggestions
 
 
 def __detect_task_suggestions(pet: PETGraph):
