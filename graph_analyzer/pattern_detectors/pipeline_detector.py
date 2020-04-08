@@ -188,4 +188,6 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
     else:
         graph_vector.append(1)
         pipeline_vector.append(min_weight)
+    #print(pet.graph.vp.id[root] + " " + str(graph_vector) + " : " + str(pipeline_vector))
+    #print( correlation_coefficient(graph_vector, pipeline_vector))
     return correlation_coefficient(graph_vector, pipeline_vector)

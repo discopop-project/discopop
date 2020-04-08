@@ -102,8 +102,8 @@ if __name__ == "__main__":
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin: " + plugin_name)
-        graph = p.run(graph)
+        print("executing plugin before: " + plugin_name)
+        graph = p.run_before(graph)
 
     pattern_detector = PatternDetector(graph)
     res: DetectionResult = pattern_detector.detect_patterns()
@@ -113,6 +113,11 @@ if __name__ == "__main__":
     else:
         with open(arguments['--json'], 'w') as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
+
+    for plugin_name in plugins:
+        p = plugin_source.load_plugin(plugin_name)
+        print("executing plugin after: " + plugin_name)
+        graph = p.run_after(graph)
 
     end = time.time()
 

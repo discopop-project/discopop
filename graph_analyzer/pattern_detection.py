@@ -27,7 +27,7 @@ class DetectionResult(object):
         pass
 
     def __str__(self):
-        return '\n\n\n'.join(["\n\n".join([str(v2) for v2 in v]) for v in self.__dict__.values() if v])
+        return "\n\n".join([str(v2) for v2 in self.pipeline])
 
 
 class PatternDetector(object):
