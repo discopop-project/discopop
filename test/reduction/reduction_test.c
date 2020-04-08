@@ -1,6 +1,14 @@
-// 23 26 29 32 35 38 43 46 49 52 55 61 65 69 74 77 83 87 89 94 96 102 108 112
-// 116 119 122 125 130 134
-//
+/*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
 #define N 10000
 int global_array[N];
 int global_var = 0;
