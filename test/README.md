@@ -32,6 +32,6 @@ Besides the list of reduction loops, this step generates two important files nam
 
 5) To obtain the list of patterns and OpenMP parallelization suggestions, run the python script:
 
-    `python3 main.py --path .`
+    `python3 main.py --cu-xml=SimplePipelineData.xml --dep-file=SimplePipelineDep.txt`
 
 You should now be able to see the pipeline pattern found in the target application along with its stages and OpenMP constructs for parallelization. You can access a sample output in [patterns.txt](simple_pipeline/data/patterns.txt).
