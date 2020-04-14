@@ -738,6 +738,47 @@ def __detect_barrier_suggestions(pet: PETGraph,
                                                      v_first_line,
                                                      [], [], [])
                 suggestions.append(tmp_suggestion)
+        if omittable_count == 1 and \
+                pet.graph.vp.viz_contains_task[v] == 'False' and \
+                pet.graph.vp.viz_contains_taskwait[v] == 'False':
+            # omittable node appended to prior omittable node
+            # get parent task
+            parent_task = None
+            for e in out_dep_edges:
+                if pet.graph.vp.viz_omittable[e.target()] == 'True':
+                    parent_task = e.target().combine_with_node
+            violation = False
+            # check if only dependences to self, parent omittable node or path to target task exists
+            for e in out_dep_edges:
+                if e.target() == v:
+                    continue
+                elif pet.graph.vp.viz_omittable[e.target()] == 'True':
+                    continue
+                elif __check_reachability(pet, parent_task, v, "dependence"):
+                    continue
+                else:
+                    violation = True
+            # check if node is a direct successor of an omittable node or a task node
+            in_succ_edges = [e for e in v.in_edges() if
+                             pet.graph.ep.type[e] == "successor"]
+            is_successor = False
+            for e in in_succ_edges:
+                if pet.graph.vp.viz_omittable[e.source()] == 'True':
+                    is_successor = True
+                elif pet.graph.vp.viz_contains_task[e.source()] == 'True':
+                    is_successor = True
+            if not is_successor:
+                violation = True
+            # suggest omittable cu if no violation occured
+            if not violation:
+                if pet.graph.vp.viz_omittable[v] == 'False':
+                    # actual change
+                    pet.graph.vp.viz_omittable[v] = 'True'
+                    omittable_nodes.append(v)
+                    suggestions.append(OmittableCuInfo(pet, v,
+                                                       parent_task))
+                    transformation_happened = True
+
         # append neighbors of modified node to queue
         if transformation_happened:
             in_dep_edges = [e for e in v.in_edges() if
