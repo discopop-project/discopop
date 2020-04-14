@@ -597,10 +597,13 @@ def __detect_barrier_suggestions(pet: PETGraph,
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
     task_suggestions = []
+    omittable_suggestions = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == ParallelRegionInfo:
             continue
-        if single_suggestion.pragma[0] == "taskwait":
+        elif type(single_suggestion) == OmittableCuInfo:
+            omittable_suggestions.append(single_suggestion)
+        elif single_suggestion.pragma[0] == "taskwait":
             taskwait_suggestions.append(single_suggestion)
         else:
             task_suggestions.append(single_suggestion)
@@ -610,6 +613,8 @@ def __detect_barrier_suggestions(pet: PETGraph,
         pet.graph.vp.viz_contains_taskwait[s._node] = 'True'
     task_nodes = [t._node for t in task_suggestions]
     barrier_nodes = [t._node for t in taskwait_suggestions]
+    omittable_nodes = []
+
 
     transformation_happened = True
     # let run until convergence
@@ -621,18 +626,57 @@ def __detect_barrier_suggestions(pet: PETGraph,
         out_dep_edges = [e for e in v.out_edges() if
                          pet.graph.ep.type[e] == "dependence" and
                          e.target() != v]
+        # ignore cyclic dependences on the same variable
+        to_remove = []
+        for dep_edge in out_dep_edges:
+            targets_cyclic_dep_edges = [e for e in dep_edge.target().out_edges() if
+                                    pet.graph.ep.type[e] == "dependence" and
+                                    e.target() == dep_edge.source() and
+                                    pet.graph.ep.var[e] == pet.graph.ep.var[dep_edge]]
+            if len(targets_cyclic_dep_edges) != 0:
+                to_remove.append(dep_edge)
+        for e in to_remove:
+            print("ignoring cyclic dependence edge: ", (pet.graph.vp.id[e.source()], pet.graph.vp.id[e.target()], pet.graph.ep.var[e]))
+            out_dep_edges.remove(e)
+
         v_first_line = pet.graph.vp.startsAtLine[v]
         v_first_line = v_first_line[v_first_line.index(":") + 1:]
         task_count = 0
         barrier_count = 0
+        omittable_count = 0
         normal_count = 0
+        task_buffer = []
+        barrier_buffer = []
+        omittable_parent_buffer = []
         for e in out_dep_edges:
             if e.target() in task_nodes:
-                task_count += 1
+                # only count distinct tasks
+                if pet.graph.vp.id[e.target()] not in task_buffer:
+                    task_buffer.append(pet.graph.vp.id[e.target()])
+                    task_count += 1
+                else:
+                    pass
             elif e.target() in barrier_nodes:
-                barrier_count += 1
+                # only count distinct barriers
+                if e.target() not in barrier_buffer:
+                    barrier_buffer.append(e.target())
+                    barrier_count += 1
+                else:
+                    pass
+            elif e.target() in omittable_nodes:
+                # treat omittable cus like their parent tasks
+                tmp_omit_suggestions = [s for s in suggestions if type(s) == OmittableCuInfo]
+                parent_task = [tos for tos in tmp_omit_suggestions if tos._node == e.target()][0].combine_with_node
+                if pet.graph.vp.id[parent_task] not in omittable_parent_buffer:
+                    omittable_parent_buffer.append(pet.graph.vp.id[parent_task])
+                    omittable_count += 1
+    #                if pet.graph.vp.id[parent_task] not in task_buffer:
+    #                    task_count += 1     # TODO check if increasing both is a good idea
+                else:
+                    pass
             else:
                 normal_count += 1
+        print(pet.graph.vp.id[v], "->", "bar:", barrier_count, "task: ", task_count, "omittable:", omittable_count)
         if task_count == 1 and barrier_count == 0:
             if pet.graph.vp.viz_omittable[v] == 'False':
                 # actual change
@@ -642,6 +686,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 if len(combine_with_node) < 1:
                     raise ValueException("length combine_with_node < 1!")
                 combine_with_node = combine_with_node[0]
+                omittable_nodes.append(v)
                 suggestions.append(OmittableCuInfo(pet, v,
                                                    combine_with_node))
                 transformation_happened = True
@@ -682,9 +727,10 @@ def __detect_barrier_suggestions(pet: PETGraph,
             else:
                 # no barrier needed
                 pass
-        elif task_count != 0:
+        elif omittable_count == 0 and task_count > 1:  # connected to at least two distinct task nodes
             if pet.graph.vp.viz_contains_taskwait[v] == 'False':
                 # actual change
+                print(pet.graph.vp.id[v], "---->", task_count, "----->", task_buffer)
                 pet.graph.vp.viz_contains_taskwait[v] = 'True'
                 barrier_nodes.append(v)
                 transformation_happened = True
