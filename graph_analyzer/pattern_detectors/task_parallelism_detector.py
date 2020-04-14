@@ -495,8 +495,8 @@ def __combine_omittable_cus(pet: PETGraph,
             # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
         # increase size of pragma region if needed
-        if omit_s.end_line > task_suggestions_dict[omit_s.combine_with_node][
-                omit_target_task_idx].region_end_line:
+        if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > int(task_suggestions_dict[omit_s.combine_with_node][
+                omit_target_task_idx].region_end_line):
             task_suggestions_dict[omit_s.combine_with_node][
                 omit_target_task_idx].region_end_line = omit_s.end_line
 
