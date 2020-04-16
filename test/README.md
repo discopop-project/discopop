@@ -1,5 +1,5 @@
 # Walk-through example
-The following walk-through example demonstrates how to use DiscoPoP to analyze a sample sequential application and identify its parallelization opportunities. In this example, we use the program `SimplePipeline`. As its name suggests, this program involves a pipeline pattern. We assume that you have successfully installed DiscoPoP.
+The following walk-through example demonstrates how to use DiscoPoP to analyze a sequential sample application and identify its parallelization opportunities. In this example, we use the program `SimplePipeline`. As its name suggests, this program involves a pipeline pattern. We assume that you have successfully installed DiscoPoP.
 
 First, switch to the `simple_pipeline` folder which contains the program `SimplePipeline.c`. Then, please run the following commands step-by-step to obtain the desired results.
 
@@ -20,7 +20,7 @@ The output is an XML file, which contains all the CU nodes. You should be able t
     ./out
 ```
 The output is a text file that contains all the dependences. You should be able to obtain a CU graph as in [`SimplePipelineDep.txt`](simple_pipeline/data/SimplePipelineDep.txt).
-A data dependence is represented as a triple `<sink, type, source>`. `type` is the dependence type (`RAW`, `WAR` or `WAW`). Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory accesse, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region, respectively.
+A data dependence is represented as a triple `<sink, type, source>`. `type` is the dependence type (`RAW`, `WAR` or `WAW`). Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region, respectively.
 
 4) Although there is no reduction pattern in SimplePipeline, we suggest that you run the reduction analysis to avoid missing any pattern and obtain necessary loop information. To obtain the list of reduction operations, we need to instrument the target application. Running the instrumented application will result in a text file containing all the reductions located in the present working directory.
 ```
@@ -28,10 +28,10 @@ A data dependence is represented as a triple `<sink, type, source>`. `type` is t
     clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
     ./out
 ```
-Besides the list of reduction loops, this step generates two important files named `loop_counter_output.txt` and `loop_meta.txt`. These files along with CU graph and dependences are required for pattern analysis in the next step.
+Besides the list of reduction loops, this step generates two important files named `loop_counter_output.txt` and `loop_meta.txt`. These files along with CU graph and dependences are required for the pattern analysis in the next step.
 
-5) To obtain the list of patterns and OpenMP parallelization suggestions, run the python script:
+5) To obtain the list of patterns and OpenMP parallelization suggestions, run the Python script:
 
     `python3 main.py --cu-xml=SimplePipelineData.xml --dep-file=SimplePipelineDep.txt`
 
-You should now be able to see the pipeline pattern found in the target application along with its stages alongside suitable OpenMP constructs for parallelization. You can access a sample output in [patterns.txt](simple_pipeline/data/patterns.txt).
+You should now be able to see the pipeline pattern found in the target application along with its stages plus suitable OpenMP constructs for parallelization. You can access a sample output in [patterns.txt](simple_pipeline/data/patterns.txt).
