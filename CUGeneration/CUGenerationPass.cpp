@@ -1,10 +1,10 @@
 /*
  * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
  *
- * Copyright (c) 2019, Technische Universitaet Darmstadt, Germany
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
  * This software may be modified and distributed under the terms of
- * a BSD-style license.  See the LICENSE file in the package base
+ * the 3-Clause BSD License. See the LICENSE file in the package base
  * directory for details.
  *
  */
@@ -312,18 +312,18 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
                 {
                     ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
                     uint64_t memberIdx = *(idxPtr->getValue().getRawData());
-
-                    string strName(structType->getStructName().data());
-                    map<string, MDNode *>::iterator it = Structs.find(strName);
-                    if (it != Structs.end())
-                    {
-                        std::string ret = findStructMemberName(it->second, memberIdx, builder);
-                        if (ret.size() > 0)
-                            return ret;
-                        else
-                            return getOrInsertVarName("", builder);
-                        //return ret;
-
+                    if(!(cast<StructType>(structType))->isLiteral()){
+                        string strName(structType->getStructName().data());
+                        map<string, MDNode *>::iterator it = Structs.find(strName);
+                        if (it != Structs.end())
+                        {
+                            std::string ret = findStructMemberName(it->second, memberIdx, builder);
+                            if (ret.size() > 0)
+                                return ret;
+                            else
+                                return getOrInsertVarName("", builder);
+                            //return ret;
+                        }
                     }
                 }
             }
