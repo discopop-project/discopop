@@ -11,6 +11,7 @@ from typing import List
 
 from graph_tool import Vertex
 
+import copy
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends, calculate_workload, \
@@ -418,6 +419,7 @@ def __detect_task_suggestions(pet: PETGraph):
 def __combine_omittable_cus(pet: PETGraph,
                             suggestions: [PatternInfo]):
     """execute combination of tasks suggestions with omittable cus.
+    Adds modified version of the respective Parent suggestions to the list.
     Returns the modified list of suggestions.
     Omittable CU suggetions are removed from the list.
     Removes duplicates in in/out/in_out dependency lists.
@@ -455,6 +457,12 @@ def __combine_omittable_cus(pet: PETGraph,
             pet.graph.vp.viz_omittable[os._node] = 'False'
     omittable_suggestions = useful_omittable_suggestions
 
+    # create copies of original Task suggestion versions
+    for omit_s in omittable_suggestions:
+        for ts in task_suggestions:
+            if omit_s.combine_with_node == ts._node:
+                result.append(copy.copy(ts))
+
     # prepare dict to find target suggestions for combination
     task_suggestions_dict = dict()
     for ts in task_suggestions:
@@ -471,34 +479,37 @@ def __combine_omittable_cus(pet: PETGraph,
             omit_s.out_dep.append(omit_in_out_var)
 
         # find target task_suggestion for omit_s, based on in / out dep matches
-        omit_target_task_idx = 0
+        omit_target_task_indices = []
         if len(task_suggestions_dict[omit_s.combine_with_node]) != 1:
             # search for matching in/out dependency pair
             for idx, ts in enumerate(task_suggestions_dict[omit_s.combine_with_node]):
                 intersect = [v for v in omit_s.in_dep if v in ts.out_dep]
                 if len(intersect) == len(omit_s.in_dep):
                     # all in_deps covered
-                    omit_target_task_idx = idx
-                    break
+                    omit_target_task_indices.append(idx)
+        else:
+            omit_target_task_indices = [0]
 
-        # note: dependencies of task nodes can contain multiples
-        # process out dependencies of omit_s
-        for omit_out_var in omit_s.out_dep:
-            task_suggestions_dict[omit_s.combine_with_node][
-                omit_target_task_idx].out_dep.append(omit_out_var)
-            # omit_s.combine_with_node.out_dep.append(omit_out_var)
-        # process in dependencies of omit_s
-        for omit_in_var in omit_s.in_dep:
-            # note: only dependencies to target node allowed
-            task_suggestions_dict[omit_s.combine_with_node][
-                omit_target_task_idx].out_dep.remove(omit_in_var)
-            # omit_s.combine_with_node.out_dep.remove(omit_in_var)
+        for omit_target_task_idx in omit_target_task_indices:
+            # note: dependencies of task nodes can contain multiples
+            # process out dependencies of omit_s
+            for omit_out_var in omit_s.out_dep:
+                task_suggestions_dict[omit_s.combine_with_node][
+                    omit_target_task_idx].out_dep.append(omit_out_var)
+                # omit_s.combine_with_node.out_dep.append(omit_out_var)
+            # process in dependencies of omit_s
+            for omit_in_var in omit_s.in_dep:
+                # note: only dependencies to target node allowed
+                task_suggestions_dict[omit_s.combine_with_node][
+                    omit_target_task_idx].out_dep.remove(omit_in_var)
+                # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
-        # increase size of pragma region if needed
-        if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > int(task_suggestions_dict[omit_s.combine_with_node][
-                omit_target_task_idx].region_end_line):
-            task_suggestions_dict[omit_s.combine_with_node][
-                omit_target_task_idx].region_end_line = omit_s.end_line
+            # increase size of pragma region if needed
+            if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
+                    int(task_suggestions_dict[omit_s.combine_with_node][
+                    omit_target_task_idx].region_end_line):
+                task_suggestions_dict[omit_s.combine_with_node][
+                    omit_target_task_idx].region_end_line = omit_s.end_line
 
     # remove duplicates from dependency lists and append to result
     for key in task_suggestions_dict:
@@ -636,7 +647,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
             if len(targets_cyclic_dep_edges) != 0:
                 to_remove.append(dep_edge)
         for e in to_remove:
-            print("ignoring cyclic dependence edge: ", (pet.graph.vp.id[e.source()], pet.graph.vp.id[e.target()], pet.graph.ep.var[e]))
+            # print("ignoring cyclic dependence edge: ", (pet.graph.vp.id[e.source()], pet.graph.vp.id[e.target()], pet.graph.ep.var[e]))
             out_dep_edges.remove(e)
 
         v_first_line = pet.graph.vp.startsAtLine[v]
@@ -676,7 +687,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                     pass
             else:
                 normal_count += 1
-        print(pet.graph.vp.id[v], "->", "bar:", barrier_count, "task: ", task_count, "omittable:", omittable_count)
+        #print(pet.graph.vp.id[v], "->", "bar:", barrier_count, "task: ", task_count, "omittable:", omittable_count)
         if task_count == 1 and barrier_count == 0:
             if pet.graph.vp.viz_omittable[v] == 'False':
                 # actual change
