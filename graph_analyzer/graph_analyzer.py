@@ -100,6 +100,7 @@ if __name__ == "__main__":
     plugin_source = plugin_base.make_plugin_source(
         searchpath=['./plugins'])
 
+    plugins = []
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin: " + plugin_name)

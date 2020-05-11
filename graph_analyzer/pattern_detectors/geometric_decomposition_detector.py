@@ -15,7 +15,6 @@ from graph_tool.util import find_vertex
 
 import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
-from pattern_detectors.do_all_detector import do_all_threshold
 from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_task_vars, get_child_loops
 # cache
 from variable import Variable
@@ -176,14 +175,12 @@ def __detect_geometric_decomposition(pet: PETGraph, root: Vertex) -> bool:
     :return: true if GD pattern was discovered
     """
     for child in get_subtree_of_type(pet, root, 'loop'):
-        if (pet.graph.vp.doAll[child] < do_all_threshold
-                and not pet.graph.vp.reduction[child]):
+        if not pet.graph.vp.doAll[child] and not pet.graph.vp.reduction[child]:
             return False
 
     for child in find_subnodes(pet, root, 'func'):
         for child2 in find_subnodes(pet, child, 'loop'):
-            if (pet.graph.vp.doAll[child2] < do_all_threshold
-                    and not pet.graph.vp.reduction[child2]):
+            if not pet.graph.vp.doAll[child2] and not pet.graph.vp.reduction[child2]:
                 return False
 
     return True

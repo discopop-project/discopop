@@ -16,9 +16,6 @@ from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, \
     correlation_coefficient, get_loop_iterations, classify_loop_variables
 
-do_all_threshold = 0.95
-
-
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result
     """
@@ -63,9 +60,8 @@ def run_detection(pet: PETGraph) -> List[DoAllInfo]:
     """
     result = []
     for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
-        val = __detect_do_all(pet, node)
-        if val > do_all_threshold:
-            pet.graph.vp.doAll[node] = val
+        if __detect_do_all(pet, node):
+            pet.graph.vp.doAll[node] = True
             if not pet.graph.vp.reduction[node] and get_loop_iterations(pet.graph.vp.startsAtLine[node]) > 0:
                 result.append(DoAllInfo(pet, node, pet.graph.vp.doAll[node]))
 
@@ -79,20 +75,11 @@ def __detect_do_all(pet: PETGraph, root: Vertex):
     :param root: root node
     :return: do-all scalar value
     """
-    graph_vector = []
-
     subnodes = find_subnodes(pet, root, 'child')
 
     for i in range(0, len(subnodes)):
         for j in range(i, len(subnodes)):
             if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root):
-                graph_vector.append(0)
-            else:
-                graph_vector.append(1)
+                return False
 
-    pattern_vector = [1 for _ in graph_vector]
-
-    if np.linalg.norm(graph_vector) == 0:
-        return 0
-
-    return correlation_coefficient(graph_vector, pattern_vector)
+    return True
