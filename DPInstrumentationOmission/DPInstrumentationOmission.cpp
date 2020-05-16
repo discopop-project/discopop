@@ -59,23 +59,13 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
             ++totalInstrumentations;
           }
           for(uint i = 0; i < call_inst->getNumOperands() - 1; ++i){
-            V = call_inst->getArgOperand(i);
-            for(Value *w: staticallyPredictableValues){
-              if(w == V){
-                staticallyPredictableValues.erase(V);
-              }
-            }
+            staticallyPredictableValues.erase(call_inst->getArgOperand(i));
           }
         }
       }
       // Remove values from locals if dereferenced
       if(isa<StoreInst>(I)){
-        V = I.getOperand(0);
-        for(Value *w: staticallyPredictableValues){
-          if(w == V){
-            staticallyPredictableValues.erase(V);
-          }
-        }
+        staticallyPredictableValues.erase(I.getOperand(0));
       }
     }}
 
