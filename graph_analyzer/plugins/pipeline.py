@@ -1,11 +1,16 @@
 from copy import deepcopy
-from typing import List
+from typing import List, Any
 
 from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
 import PETGraph
 from utils import find_subnodes, correlation_coefficient, depends_ignore_readonly
+
+
+total = 0
+before = []
+after = []
 
 
 def run_before(pet):
@@ -15,6 +20,10 @@ def run_before(pet):
 def run_after(pet):
     for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
         check_pipeline(pet, node)
+
+    print(f'Total: {total}')
+    print(" ".join([str(x) for x in before]))
+    print(" ".join([str(x) for x in after]))
     return pet
 
 
@@ -27,7 +36,9 @@ def check_pipeline(pet: PETGraph, root: Vertex):
     :param root: current node
     :return: Pipeline scalar value
     """
-
+    global total
+    global before
+    global after
     children_start_lines = [pet.graph.vp.startsAtLine[v]
                             for v in find_subnodes(pet, root, 'child')
                             if pet.graph.vp.type[v] == 'loop']
@@ -40,6 +51,8 @@ def check_pipeline(pet: PETGraph, root: Vertex):
     initial_matrix = deepcopy(matrix)
     initial_coef = get_correlation_coefficient(matrix)
 
+    if initial_coef < 0.999:
+        total += 1
     independent_cus = get_independent_lines(matrix)
     delete_lines(matrix, loop_subnodes, independent_cus)
 
@@ -49,8 +62,9 @@ def check_pipeline(pet: PETGraph, root: Vertex):
     delete_lines(matrix, loop_subnodes, mergeable_cus)
 
     new_coef = get_correlation_coefficient(matrix)
-
     if new_coef > initial_coef:
+        before.append(initial_coef)
+        after.append(new_coef)
         print("Pipeline improvement opportunity:")
         print("Node: " + pet.graph.vp.id[root])
         print("Lines: " + pet.graph.vp.startsAtLine[root] + "-" + pet.graph.vp.endsAtLine[root])
