@@ -11,8 +11,8 @@ from typing import Dict, List
 
 from graph_tool import Vertex
 from graph_tool.all import Graph
-from graph_tool.all import graph_draw, GraphView, interactive_window
-from graph_tool.draw import arf_layout
+from graph_tool.all import graph_draw, GraphView, show_config, GraphWindow
+from graph_tool.draw import arf_layout, interactive_window
 from graph_tool.search import bfs_iterator
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
@@ -82,6 +82,9 @@ edge_props = [
 ]
 
 GT_map_node_indices = dict()
+
+
+
 
 
 class PETGraph(object):
@@ -192,13 +195,28 @@ class PETGraph(object):
             print(self.graph.vp.id[level.source()], self.graph.vp.id[level.target()])
             # for depth in dfs_iterator()
 
+    def key_pressed_callback(self, g, keyval, picked, pos, vprops, eprops, arg):
+        path = "/home/wntgd/Documents/test_data/do_all_bug/test.c"
+        with open(path) as f:
+            lines = f.readlines()
+        print(self.graph.vp.id[pos])
+        start = int(self.graph.vp.startsAtLine[pos].split(':')[1]) - 1
+        end = int(self.graph.vp.endsAtLine[pos].split(':')[1])
+        for i in range(start, end):
+            print(lines[i].replace('\n', ''))
+
     def interactive_visualize(self, view=None):
         view = view if view else self.graph
-        interactive_window(view,
-                           vprops={'text': self.graph.vp.id,
-                                   'fill_color': self.graph.vp.viz_color,
-                                   'shape': self.graph.vp.viz_shape},
-                           eprops={'color': self.graph.ep.viz_color})
+        layout = arf_layout(view)
+        graph_draw(view,
+                   pos=layout,
+                   vprops={'text': self.graph.vp.id,
+                           'fill_color': self.graph.vp.viz_color,
+                           'shape': self.graph.vp.viz_shape},
+                   eprops={'color': self.graph.ep.viz_color},
+                   key_press_callback=self.key_pressed_callback
+                   )
+
 
     def visualize(self, view=None, filename='output.svg'):
         view = view if view else self.graph

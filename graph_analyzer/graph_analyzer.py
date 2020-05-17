@@ -86,7 +86,7 @@ if __name__ == "__main__":
     graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
 
     # visualize subgraphs
-    # graph.interactive_visualize(graph.graph)
+    graph.interactive_visualize(graph.graph)
 
     # graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
