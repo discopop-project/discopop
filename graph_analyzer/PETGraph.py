@@ -9,10 +9,11 @@
 import os
 from typing import Dict, List
 
+from gi.repository import Gtk
 from graph_tool import Vertex
-from graph_tool.all import Graph
-from graph_tool.all import graph_draw, GraphView, show_config, GraphWindow
-from graph_tool.draw import arf_layout, interactive_window
+from graph_tool.all import Graph, GraphWidget
+from graph_tool.all import graph_draw, GraphView, GraphWindow
+from graph_tool.draw import arf_layout, radial_tree_layout
 from graph_tool.search import bfs_iterator
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
@@ -82,9 +83,6 @@ edge_props = [
 ]
 
 GT_map_node_indices = dict()
-
-
-
 
 
 class PETGraph(object):
@@ -196,9 +194,10 @@ class PETGraph(object):
             print(self.graph.vp.id[level.source()], self.graph.vp.id[level.target()])
             # for depth in dfs_iterator()
 
-    def key_pressed_callback(self, g, keyval, picked, pos, vprops, eprops, arg):
+    def key_pressed_callback(self, widget, graph: Graph, picked, pos: Vertex, vprops, vpropsdic, eprops):
         file_id = self.graph.vp.startsAtLine[pos].split(':')[0]
-
+        graph.set_edge_filter(None)
+        self.visible.a = False
         if file_id in self.file_mapping:
             with open(self.file_mapping[file_id]) as f:
                 lines = f.readlines()
@@ -206,7 +205,7 @@ class PETGraph(object):
             print(f'Name: {self.graph.vp.name[pos]}')
             print(f'Type: {self.graph.vp.type[pos]}')
             start = int(self.graph.vp.startsAtLine[pos].split(':')[1]) - 1
-            #TODO inclusive or exclusive
+            # TODO inclusive or exclusive
             end = int(self.graph.vp.endsAtLine[pos].split(':')[1])
             for i in range(start, end):
                 print(lines[i].replace('\n', ''))
@@ -214,19 +213,42 @@ class PETGraph(object):
         else:
             print(f'Unknown file id: {file_id}')
 
+        for e in graph.edges():
+            self.visible[e] = graph.ep.type[e] != 'dependence'
+        for e in pos.out_edges():
+            self.visible[e] = True
+        for e in pos.in_edges():
+            self.visible[e] = True
+
+        graph.set_edge_filter(self.visible, inverted=False)
+
+        self.win.graph.regenerate_surface()
+        self.win.graph.queue_draw()
+
     def interactive_visualize(self, view=None, file_mapping=None):
         view = view if view else self.graph
         self.parse_mapping(file_mapping)
-        layout = arf_layout(view)
+        layout = radial_tree_layout(view, self.main)
+        # layout = fruchterman_reingold_layout(view)
+
+        self.visible = view.new_edge_property("bool")
+        self.visible.a = False
+        for e in view.edges():
+            self.visible[e] = view.ep.type[e] != 'dependence'
+        view.set_edge_filter(self.visible, inverted=False)
         print('Hover over the node and press any key to display source lines')
-        graph_draw(view,
-                   pos=layout,
-                   vprops={'text': self.graph.vp.id,
-                           'fill_color': self.graph.vp.viz_color,
-                           'shape': self.graph.vp.viz_shape},
-                   eprops={'color': self.graph.ep.viz_color, 'text': self.graph.ep.var},
-                   key_press_callback=self.key_pressed_callback
-                   )
+        self.win = GraphWindow(view, layout, geometry=(1000, 1000),
+                               edge_color=[0.6, 0.6, 0.6, 1],
+                               vprops={'text': self.graph.vp.id,
+                                       'fill_color': self.graph.vp.viz_color,
+                                       'shape': self.graph.vp.viz_shape},
+                               eprops={'color': self.graph.ep.viz_color,
+                                       'text': self.graph.ep.var},
+                               key_press_callback=self.key_pressed_callback)
+
+        self.win.connect("delete_event", Gtk.main_quit)
+        self.win.show_all()
+        Gtk.main()
 
     def parse_mapping(self, path):
         self.file_mapping.clear()
