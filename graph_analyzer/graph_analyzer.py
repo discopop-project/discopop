@@ -27,8 +27,8 @@ Options:
 """
 import json
 import os
-import time
 import sys
+import time
 
 from docopt import docopt
 from pluginbase import PluginBase
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # visualize subgraphs
 
     if arguments['--interactive'] == 'True':
-        graph.interactive_visualize(graph.graph, file_mapping)
+        graph.interactive_visualize(file_mapping)
 
     # graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")

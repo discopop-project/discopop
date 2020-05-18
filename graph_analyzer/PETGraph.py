@@ -9,9 +9,13 @@
 import os
 from typing import Dict, List
 
+import gi
+
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+
 from graph_tool import Vertex
-from graph_tool.all import Graph, GraphWidget
+from graph_tool.all import Graph
 from graph_tool.all import graph_draw, GraphView, GraphWindow
 from graph_tool.draw import arf_layout, radial_tree_layout
 from graph_tool.search import bfs_iterator
@@ -225,19 +229,17 @@ class PETGraph(object):
         self.win.graph.regenerate_surface()
         self.win.graph.queue_draw()
 
-    def interactive_visualize(self, view=None, file_mapping=None):
-        view = view if view else self.graph
+    def interactive_visualize(self, file_mapping=None):
         self.parse_mapping(file_mapping)
-        layout = radial_tree_layout(view, self.main)
-        # layout = fruchterman_reingold_layout(view)
+        layout = radial_tree_layout(self.graph, self.main)
 
-        self.visible = view.new_edge_property("bool")
+        self.visible = self.graph.new_edge_property("bool")
         self.visible.a = False
-        for e in view.edges():
-            self.visible[e] = view.ep.type[e] != 'dependence'
-        view.set_edge_filter(self.visible, inverted=False)
-        print('Hover over the node and press any key to display source lines')
-        self.win = GraphWindow(view, layout, geometry=(1000, 1000),
+        for e in self.graph.edges():
+            self.visible[e] = self.graph.ep.type[e] != 'dependence'
+        self.graph.set_edge_filter(self.visible, inverted=False)
+        print('Hover over the node and press any key to display source lines and dependencies')
+        self.win = GraphWindow(self.graph, layout, geometry=(1000, 1000),
                                vprops={'text': self.graph.vp.id,
                                        'fill_color': self.graph.vp.viz_color,
                                        'shape': self.graph.vp.viz_shape},
