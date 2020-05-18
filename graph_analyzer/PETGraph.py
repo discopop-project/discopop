@@ -238,7 +238,6 @@ class PETGraph(object):
         view.set_edge_filter(self.visible, inverted=False)
         print('Hover over the node and press any key to display source lines')
         self.win = GraphWindow(view, layout, geometry=(1000, 1000),
-                               edge_color=[0.6, 0.6, 0.6, 1],
                                vprops={'text': self.graph.vp.id,
                                        'fill_color': self.graph.vp.viz_color,
                                        'shape': self.graph.vp.viz_shape},
