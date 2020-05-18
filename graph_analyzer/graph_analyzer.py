@@ -10,7 +10,7 @@
 
 Usage:
     graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]  [--interactive]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -20,8 +20,9 @@ Options:
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
+    -i --interactive               Show interactive graph window
     -h --help                   Show this screen
-    --version                   Show version
+    -v --version                   Show version
 """
 import json
 import os
@@ -44,7 +45,8 @@ docopt_schema = Schema({
     '--loop-counter': Use(str),
     '--reduction': Use(str),
     '--plugins': Use(str),
-    '--json': Use(str)
+    '--json': Use(str),
+    '--interactive': Use(str)
 })
 
 
@@ -86,7 +88,9 @@ if __name__ == "__main__":
     graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
 
     # visualize subgraphs
-    graph.interactive_visualize(graph.graph)
+
+    if arguments['--interactive'] == 'True':
+        graph.interactive_visualize(graph.graph)
 
     # graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
