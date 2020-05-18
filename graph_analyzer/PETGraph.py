@@ -224,7 +224,7 @@ class PETGraph(object):
                    vprops={'text': self.graph.vp.id,
                            'fill_color': self.graph.vp.viz_color,
                            'shape': self.graph.vp.viz_shape},
-                   eprops={'color': self.graph.ep.viz_color},
+                   eprops={'color': self.graph.ep.viz_color, 'text': self.graph.ep.var},
                    key_press_callback=self.key_pressed_callback
                    )
 
