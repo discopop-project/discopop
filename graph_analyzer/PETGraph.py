@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-
+import os
 from typing import Dict, List
 
 from graph_tool import Vertex
@@ -96,6 +96,7 @@ class PETGraph(object):
     main: Vertex
 
     def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
+        self.file_mapping = {}
         self.graph = Graph()
         self.loop_data = loop_data
         self.reduction_vars = reduction_vars
@@ -196,18 +197,28 @@ class PETGraph(object):
             # for depth in dfs_iterator()
 
     def key_pressed_callback(self, g, keyval, picked, pos, vprops, eprops, arg):
-        path = "/home/wntgd/Documents/test_data/do_all_bug/test.c"
-        with open(path) as f:
-            lines = f.readlines()
-        print(self.graph.vp.id[pos])
-        start = int(self.graph.vp.startsAtLine[pos].split(':')[1]) - 1
-        end = int(self.graph.vp.endsAtLine[pos].split(':')[1])
-        for i in range(start, end):
-            print(lines[i].replace('\n', ''))
+        file_id = self.graph.vp.startsAtLine[pos].split(':')[0]
 
-    def interactive_visualize(self, view=None):
+        if file_id in self.file_mapping:
+            with open(self.file_mapping[file_id]) as f:
+                lines = f.readlines()
+            print(f'Node: {self.graph.vp.id[pos]}')
+            print(f'Name: {self.graph.vp.name[pos]}')
+            print(f'Type: {self.graph.vp.type[pos]}')
+            start = int(self.graph.vp.startsAtLine[pos].split(':')[1]) - 1
+            #TODO inclusive or exclusive
+            end = int(self.graph.vp.endsAtLine[pos].split(':')[1])
+            for i in range(start, end):
+                print(lines[i].replace('\n', ''))
+            print()
+        else:
+            print(f'Unknown file id: {file_id}')
+
+    def interactive_visualize(self, view=None, file_mapping=None):
         view = view if view else self.graph
+        self.parse_mapping(file_mapping)
         layout = arf_layout(view)
+        print('Hover over the node and press any key to display source lines')
         graph_draw(view,
                    pos=layout,
                    vprops={'text': self.graph.vp.id,
@@ -217,6 +228,15 @@ class PETGraph(object):
                    key_press_callback=self.key_pressed_callback
                    )
 
+    def parse_mapping(self, path):
+        self.file_mapping.clear()
+        if os.path.isfile(path):
+            with open(path) as f:
+                for line in f.readlines():
+                    split = line.split('\t')
+                    self.file_mapping[split[0]] = split[1].strip()
+        else:
+            print(f'File mapping not found at {path}')
 
     def visualize(self, view=None, filename='output.svg'):
         view = view if view else self.graph

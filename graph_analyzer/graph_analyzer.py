@@ -10,7 +10,7 @@
 
 Usage:
     graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]  [--interactive]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]  [--interactive] [--fmap <fmap>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -18,6 +18,7 @@ Options:
     --dep-file=<depfile>        Dependencies text file [default: dp_run_dep.txt]
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
+    --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
     -i --interactive               Show interactive graph window
@@ -44,6 +45,7 @@ docopt_schema = Schema({
     '--dep-file': Use(str),
     '--loop-counter': Use(str),
     '--reduction': Use(str),
+    '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
     '--interactive': Use(str)
@@ -74,6 +76,7 @@ if __name__ == "__main__":
     dep_file = get_path(path, arguments['--dep-file'])
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
+    file_mapping = get_path(path, 'FileMapping.txt')
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
         if not os.path.isfile(file):
@@ -90,7 +93,7 @@ if __name__ == "__main__":
     # visualize subgraphs
 
     if arguments['--interactive'] == 'True':
-        graph.interactive_visualize(graph.graph)
+        graph.interactive_visualize(graph.graph, file_mapping)
 
     # graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
