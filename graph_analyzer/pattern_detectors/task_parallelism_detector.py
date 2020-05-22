@@ -10,9 +10,11 @@
 from typing import List
 
 from graph_tool import Vertex
+from parser import parse_inputs
 
 import copy
 import PETGraph
+from PETGraph import PETGraph
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends, calculate_workload, \
     total_instructions_count, classify_task_vars
@@ -195,6 +197,19 @@ class OmittableCuInfo(PatternInfo):
                f'in_dep: {" ".join(self.in_dep)}\n' \
                f'out_dep: {" ".join(self.out_dep)}\n' \
                f'in_out_dep: {" ".join(self.in_out_dep)}\n'
+
+
+def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_file, reduction_file):
+    """execute preprocessing of given cu xml file and construct a new cu graph.
+    execute run_detection on newly constructed graph afterwards
+    TODO proper description"""
+    # TODO execute preprocessor
+    preprocessed_cu_xml = cu_xml
+
+    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(preprocessed_cu_xml), open(dep_file),
+                                                                    loop_counter_file, reduction_file)
+    preprocessed_graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    return run_detection(preprocessed_graph)
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
