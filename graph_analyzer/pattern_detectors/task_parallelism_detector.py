@@ -1278,12 +1278,66 @@ def cu_xml_preprocessing(cu_xml):
     f.close()
     # DEBUG
 
-    cu_dict = dict()
-    for node in parsed_cu.Node:
-        if node.get('type') == '0':
-            # find CU nodes with > 1 recursiveFunctionCalls in own code region
-            if __preprocessor_cu_contains_at_least_two_recursive_calls(node):
-                print("FOUND CU WITH >= 2 CONTAINED RECURSIVE CALLS!")
+    iterate_over_cus = True  # used to enable re-starting
+    while iterate_over_cus:
+        used_node_ids = []
+        for node in parsed_cu.Node:
+            used_node_ids.append(node.get("id"))
+
+        for node in parsed_cu.Node:
+            if node.get('type') == '0':  # iterate over CU nodes
+                # find CU nodes with > 1 recursiveFunctionCalls in own code region
+                if __preprocessor_cu_contains_at_least_two_recursive_calls(node):
+                    # Preprocessor Step 1
+                    tmp_CN_entry = None  # (recursiveFunctionCall, nodeCalled)
+                    for cne_idx, calls_node_entry in enumerate(node.callsNode):
+                        # get first matching entry of node.callsNode
+                        try:
+                            for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
+                                rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
+                                if str(rec_call_line) in str(rec_call):
+                                    tmp_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                    break
+                        except:
+                            continue
+                    if tmp_CN_entry is None:
+                        raise Exception("no matching entries for callsNode found!")
+
+                    parent = node
+                    tmp_CN_entry[0].getparent().remove(tmp_CN_entry[0])
+                    tmp_CN_entry[1].getparent().remove(tmp_CN_entry[1])
+                    parent_copy = copy.copy(parent)
+                    parsed_cu.insert(parsed_cu.index(parent), parent_copy)
+
+                    # Preprocessor Step 2
+                    incremented_id = None
+                    if "-" in parent_copy.get("id"):
+                        tmp_id = parent_copy.get("id")
+                        incremented_id = tmp_id[0:tmp_id.rfind("-") + 1]
+                        incremented_id += str(int(
+                            tmp_id[tmp_id.rfind("-") + 1:]) + 1)
+                        if incremented_id in used_node_ids:
+                            incremented_id = parent_copy.get("id")+"-1"
+                        else:
+                            pass
+                    else:
+                        incremented_id = parent_copy.get("id")+"-1"
+                    parent.set("id", incremented_id)
+
+                    # Preprocessor Step 3
+                    parent_copy.callsNode.clear()
+                    parent_copy.callsNode.append(tmp_CN_entry[1])
+                    parent_copy.callsNode.append(tmp_CN_entry[0])
+
+                    parent_copy.successors.clear()
+                    etree.SubElement(parent_copy.successors, "CU")
+                    parent_copy.successors.CU._setText(parent.get("id"))
+
+
+                else:
+                    continue
+        iterate_over_cus = False  # disable restarting, preprocessing finished
 
     # print modified Data.xml to file
     modified_cu_xml = cu_xml.replace(".xml", "-preprocessed.xml")
@@ -1296,7 +1350,9 @@ def cu_xml_preprocessing(cu_xml):
 
 
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
-    """TODO"""
+    """Check if >= 2 recursive funciton calls are contained in a cu's code region.
+    Returns True, if so.
+    Returns False, else."""
     starts_at_line = node.get("startsAtLine").split(":")
     ends_at_line = node.get("endsAtLine").split(":")
     file_id = starts_at_line[0]
