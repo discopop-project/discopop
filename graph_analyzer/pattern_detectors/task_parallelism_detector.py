@@ -217,6 +217,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
+    PETGraph.interactive_visualize(preprocessed_graph)
     return run_detection(preprocessed_graph)
 
 
@@ -1285,81 +1286,223 @@ def cu_xml_preprocessing(cu_xml):
             used_node_ids.append(node.get("id"))
 
         for node in parsed_cu.Node:
-            if node.get('type') == '0':  # iterate over CU nodes
-                # find CU nodes with > 1 recursiveFunctionCalls in own code region
-                if __preprocessor_cu_contains_at_least_two_recursive_calls(node):
-                    # Preprocessor Step 1
-                    tmp_CN_entry = None  # (recursiveFunctionCall, nodeCalled)
-                    for cne_idx, calls_node_entry in enumerate(node.callsNode):
-                        # get first matching entry of node.callsNode
-                        try:
-                            for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
-                                rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
-                                rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
-                                if str(rec_call_line) in str(rec_call):
-                                    tmp_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
-                                    break
-                        except:
-                            continue
-                    if tmp_CN_entry is None:
-                        raise Exception("no matching entries for callsNode found!")
+            inner_iteration = True
+            remaining_recursive_call_in_parent = False
+            while inner_iteration:
+                if node.get('type') == '0':  # iterate over CU nodes
+                    # find CU nodes with > 1 recursiveFunctionCalls in own code region
+                    if __preprocessor_cu_contains_at_least_two_recursive_calls(node) or remaining_recursive_call_in_parent:
+                        remaining_recursive_call_in_parent = False
+                        # Preprocessor Step 1
+                        tmp_CN_entry = None  # (recursiveFunctionCall, nodeCalled)
+                        for cne_idx, calls_node_entry in enumerate(node.callsNode):
+                            # get first matching entry of node.callsNode
+                            try:
+                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                    rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
+                                    if str(rec_call_line) in str(rec_call):
+                                        tmp_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        break
+                            except:
+                                continue
+                        if tmp_CN_entry is None:
+                            raise Exception("no matching entries for callsNode found!")
 
-                    parent = node
-                    tmp_CN_entry[0].getparent().remove(tmp_CN_entry[0])
-                    tmp_CN_entry[1].getparent().remove(tmp_CN_entry[1])
-                    parent_copy = copy.copy(parent)
-                    parsed_cu.insert(parsed_cu.index(parent), parent_copy)
+                        parent = node
+                        tmp_CN_entry[0].getparent().remove(tmp_CN_entry[0])
+                        tmp_CN_entry[1].getparent().remove(tmp_CN_entry[1])
+                        parent_copy = copy.copy(parent)
+                        parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
-                    # Preprocessor Step 2
-                    incremented_id = None
-                    if "-" in parent_copy.get("id"):
-                        tmp_id = parent_copy.get("id")
-                        incremented_id = tmp_id[0:tmp_id.rfind("-") + 1]
-                        incremented_id += str(int(
-                            tmp_id[tmp_id.rfind("-") + 1:]) + 1)
-                        if incremented_id in used_node_ids:
-                            incremented_id = parent_copy.get("id")+"-1"
+                        # Preprocessor Step 2
+                        incremented_id = None
+                        if "-" in parent_copy.get("id"):
+                            tmp_id = parent_copy.get("id")
+                            incremented_id = tmp_id[0:tmp_id.rfind("-") + 1]
+                            incremented_id += str(int(
+                                tmp_id[tmp_id.rfind("-") + 1:]) + 1)
+                            if incremented_id in used_node_ids:
+                                incremented_id = parent_copy.get("id")+"-1"
+                            else:
+                                pass
                         else:
-                            pass
+                            incremented_id = parent_copy.get("id")+"-1"
+                        parent.set("id", incremented_id)
+
+                        # Preprocessor Step 3
+                        parent_copy.callsNode.clear()
+                        parent_copy.callsNode.append(tmp_CN_entry[1])
+                        parent_copy.callsNode.append(tmp_CN_entry[0])
+
+                        parent_copy.successors.clear()
+                        etree.SubElement(parent_copy.successors, "CU")
+                        parent_copy.successors.CU._setText(parent.get("id"))
+
+                        tmp_cu_id = tmp_CN_entry[1].text
+                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id+",", ""))
+                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
+
+                        # set parent_copy.childrenNodes
+                        parent_copy.childrenNodes._setText("")
+                        for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
+                            try:
+                                for node_call in calls_node_entry.nodeCalled:
+                                    try:
+                                        if not node_call.text in parent_copy.childrenNodes.text:
+                                            print("HERE2: ", node_call.text, "id.", node.get("id"))
+                                            parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text + "," + node_call.text)
+                                            if parent_copy.childrenNodes.text.startswith(","):
+                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
+                                            if parent_copy.childrenNodes.text.endswith(","):
+                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
+                                            continue
+                                    except Exception as e1:
+                                        print(e1)
+                                        continue
+                            except Exception as e2:
+                                print(e2)
+                                continue
+
+                        # Preprocessor Step 4
+                        # update startsAtLine and endsAtLine
+                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                parent.instructionLines.text:
+                            parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                            parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
+                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                parent.readPhaseLines.text:
+                            parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                            parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
+                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                parent.writePhaseLines.text:
+                            parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                            parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
+
+                        separator_line = parent.get("startsAtLine")
+                        parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
+                        parent_copy.set("endsAtLine", separator_line)
+
+                        # update instruction/readPhase/writePhase lines
+                        for tmp_line in parent_copy.instructionLines.text.split(","):
+                            if not __preprocessor_line_contained_in_region(
+                                    tmp_line,
+                                    parent_copy.get("startsAtLine"),
+                                    parent_copy.get("endsAtLine")):
+                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
+                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line, ""))
+                                if parent_copy.instructionLines.text.endswith(","):
+                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
+                                parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) - 1))
+                        for tmp_line in parent_copy.readPhaseLines.text.split(","):
+                            if not __preprocessor_line_contained_in_region(
+                                    tmp_line,
+                                    parent_copy.get("startsAtLine"),
+                                    parent_copy.get("endsAtLine")):
+                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
+                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line, ""))
+                                if parent_copy.readPhaseLines.text.endswith(","):
+                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
+                                parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) - 1))
+                        for tmp_line in parent_copy.writePhaseLines.text.split(","):
+                            if not __preprocessor_line_contained_in_region(
+                                    tmp_line,
+                                    parent_copy.get("startsAtLine"),
+                                    parent_copy.get("endsAtLine")):
+                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
+                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line, ""))
+                                if parent_copy.writePhaseLines.text.endswith(","):
+                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
+                                parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) - 1))
+
+                        # insert separator line to parent_copys instruction, read and writePhaseLines if not already present
+                        if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
+                            parent_copy.instructionLines._setText(parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
+                            if parent_copy.instructionLines.text.startswith(","):
+                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
+                            parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) + 1))
+                        if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
+                            parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
+                            if parent_copy.readPhaseLines.text.startswith(","):
+                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
+                            parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) + 1))
+                        if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
+                            parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
+                            if parent_copy.writePhaseLines.text.startswith(","):
+                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
+                            parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) + 1))
+                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,",","))
+                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,",","))
+                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,",","))
+
+                        # insert line after separator line to parent_copys instruction, read and writePhaseLines if not already present
+                        if not parent.get("startsAtLine") in parent.instructionLines.text:
+                            parent.instructionLines._setText(parent.instructionLines.text + "," + parent.get("startsAtLine"))
+                            if parent.instructionLines.text.startswith(","):
+                                parent.instructionLines._setText(parent.instructionLines.text[1:])
+                            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
+                        if not parent.get("startsAtLine") in parent.readPhaseLines.text:
+                            parent.readPhaseLines._setText(parent.readPhaseLines.text + "," + parent.get("startsAtLine"))
+                            if parent.readPhaseLines.text.startswith(","):
+                                parent.readPhaseLines._setText(parent.readPhaseLines.text[1:])
+                            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
+                        if not parent.get("startsAtLine") in parent.writePhaseLines.text:
+                            parent.writePhaseLines._setText(parent.writePhaseLines.text + "," + parent.get("startsAtLine"))
+                            if parent.writePhaseLines.text.startswith(","):
+                                parent.writePhaseLines._setText(parent.writePhaseLines.text[1:])
+                            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
+                        parent.instructionLines._setText(parent.instructionLines.text.replace(",,",","))
+                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,",","))
+                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,",","))
+
+                        # add parent.id to parent_function.childrenNodes
+                        parent_function = None
+                        for tmp_node in parsed_cu.Node:
+                            if tmp_node.get('type') == '1':
+                                if __preprocessor_line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")) and \
+                                        __preprocessor_line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                    parent_function = tmp_node
+                        if parent_function is None:
+                            raise Exception("No parent function found for cu node: ", parent.get("id"))
+                        parent_function.childrenNodes._setText(parent_function.childrenNodes.text + "," + parent.get("id"))
+                        if parent_function.childrenNodes.text.startswith(","):
+                            parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
+
+                        # Preprocessor Step 5 (looping)
+                        parent_further_CN_entry = None
+                        for cne_idx, calls_node_entry in enumerate(parent.callsNode):
+                            # get first matching entry of node.callsNode
+                            try:
+                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                    rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
+                                    if str(rec_call_line) in str(rec_call):
+                                        parent_further_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        break
+                            except:
+                                continue
+                        if parent_further_CN_entry is None:
+                            # parent has no further recursive call, restart outer loop
+                            inner_iteration = False
+                            iterate_over_cus = True
+                            continue
+                        else:
+                            # parent still has recursive calls
+                            print("rec calls left")
+                            inner_iteration = True
+                            node = parent
+                            remaining_recursive_call_in_parent = True
+                            continue
+
                     else:
-                        incremented_id = parent_copy.get("id")+"-1"
-                    parent.set("id", incremented_id)
-
-                    # Preprocessor Step 3
-                    parent_copy.callsNode.clear()
-                    parent_copy.callsNode.append(tmp_CN_entry[1])
-                    parent_copy.callsNode.append(tmp_CN_entry[0])
-
-                    parent_copy.successors.clear()
-                    etree.SubElement(parent_copy.successors, "CU")
-                    parent_copy.successors.CU._setText(parent.get("id"))
-
-                    tmp_cu_id = tmp_CN_entry[1].text
-                    parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id+",", ""))
-                    parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
-
-                    # Preprocessor Step 4
-                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                            parent.instructionLines.text:
-                        parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                        parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                        parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
-                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                            parent.readPhaseLines.text:
-                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                        parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
-                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                            parent.writePhaseLines.text:
-                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                        parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
-
-                    separator_line = parent.get("startsAtLine")
-                    parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
-                    parent_copy.set("endsAtLine", separator_line)
-                    
+                        inner_iteration = False
+                        continue
                 else:
+                    # node not of type CU, go to next node
+                    inner_iteration = False
                     continue
         iterate_over_cus = False  # disable restarting, preprocessing finished
 
@@ -1372,6 +1515,22 @@ def cu_xml_preprocessing(cu_xml):
     f.close()
     return modified_cu_xml
 
+
+def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
+    """check if line is contained in [startLine, endLine].
+    Return True if so. False else."""
+    test_line_file_id = test_line.split(":")[0]
+    test_line_line = test_line.split(":")[1]
+    start_line_file_id = start_line.split(":")[0]
+    start_line_line = start_line.split(":")[1]
+    end_line_file_id = end_line.split(":")[0]
+    end_line_line = end_line.split(":")[1]
+    if test_line_file_id == start_line_file_id and \
+            start_line_file_id == end_line_file_id and \
+            test_line_line >= start_line_line and \
+            test_line_line <= end_line_line:
+        return True
+    return False
 
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
     """Check if >= 2 recursive funciton calls are contained in a cu's code region.
