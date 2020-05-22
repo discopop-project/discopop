@@ -1334,7 +1334,31 @@ def cu_xml_preprocessing(cu_xml):
                     etree.SubElement(parent_copy.successors, "CU")
                     parent_copy.successors.CU._setText(parent.get("id"))
 
+                    tmp_cu_id = tmp_CN_entry[1].text
+                    parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id+",", ""))
+                    parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
 
+                    # Preprocessor Step 4
+                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                            parent.instructionLines.text:
+                        parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                        parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                        parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
+                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                            parent.readPhaseLines.text:
+                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                        parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
+                    if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                            parent.writePhaseLines.text:
+                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                        parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
+
+                    separator_line = parent.get("startsAtLine")
+                    parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
+                    parent_copy.set("endsAtLine", separator_line)
+                    
                 else:
                     continue
         iterate_over_cus = False  # disable restarting, preprocessing finished
