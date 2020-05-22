@@ -1339,6 +1339,7 @@ def cu_xml_preprocessing(cu_xml):
                         etree.SubElement(parent_copy.successors, "CU")
                         parent_copy.successors.CU._setText(parent.get("id"))
 
+                        # delete childrenNodes-entry from parent
                         tmp_cu_id = tmp_CN_entry[1].text
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id+",", ""))
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
@@ -1350,7 +1351,6 @@ def cu_xml_preprocessing(cu_xml):
                                 for node_call in calls_node_entry.nodeCalled:
                                     try:
                                         if not node_call.text in parent_copy.childrenNodes.text:
-                                            print("HERE2: ", node_call.text, "id.", node.get("id"))
                                             parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text + "," + node_call.text)
                                             if parent_copy.childrenNodes.text.startswith(","):
                                                 parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
@@ -1440,19 +1440,19 @@ def cu_xml_preprocessing(cu_xml):
 
                         # insert line after separator line to parent_copys instruction, read and writePhaseLines if not already present
                         if not parent.get("startsAtLine") in parent.instructionLines.text:
-                            parent.instructionLines._setText(parent.instructionLines.text + "," + parent.get("startsAtLine"))
-                            if parent.instructionLines.text.startswith(","):
-                                parent.instructionLines._setText(parent.instructionLines.text[1:])
+                            parent.instructionLines._setText(parent.get("startsAtLine") + "," + parent.instructionLines.text)
+                            if parent.instructionLines.text.endswith(","):
+                                parent.instructionLines._setText(parent.instructionLines.text[:-1])
                             parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
                         if not parent.get("startsAtLine") in parent.readPhaseLines.text:
-                            parent.readPhaseLines._setText(parent.readPhaseLines.text + "," + parent.get("startsAtLine"))
-                            if parent.readPhaseLines.text.startswith(","):
-                                parent.readPhaseLines._setText(parent.readPhaseLines.text[1:])
+                            parent.readPhaseLines._setText(parent.get("startsAtLine") + "," + parent.readPhaseLines.text)
+                            if parent.readPhaseLines.text.endswith(","):
+                                parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
                             parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
                         if not parent.get("startsAtLine") in parent.writePhaseLines.text:
-                            parent.writePhaseLines._setText(parent.writePhaseLines.text + "," + parent.get("startsAtLine"))
-                            if parent.writePhaseLines.text.startswith(","):
-                                parent.writePhaseLines._setText(parent.writePhaseLines.text[1:])
+                            parent.writePhaseLines._setText(parent.get("startsAtLine") + "," + parent.writePhaseLines.text)
+                            if parent.writePhaseLines.text.endswith(","):
+                                parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
                             parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
                         parent.instructionLines._setText(parent.instructionLines.text.replace(",,",","))
                         parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,",","))
@@ -1491,7 +1491,6 @@ def cu_xml_preprocessing(cu_xml):
                             continue
                         else:
                             # parent still has recursive calls
-                            print("rec calls left")
                             inner_iteration = True
                             node = parent
                             remaining_recursive_call_in_parent = True
