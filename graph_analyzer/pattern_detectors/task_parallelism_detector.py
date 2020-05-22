@@ -19,6 +19,10 @@ from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends, calculate_workload, \
     total_instructions_count, classify_task_vars
 
+from lxml import objectify
+from lxml import etree
+import os
+
 __forks = set()
 __workloadThreshold = 10000
 __minParallelism = 3
@@ -203,12 +207,16 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards
     TODO proper description"""
-    # TODO execute preprocessor
-    preprocessed_cu_xml = cu_xml
+    # TODO switch to production
+    # production:
+    preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
+    # debug:
+    #preprocessed_cu_xml = cu_xml
 
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(preprocessed_cu_xml), open(dep_file),
                                                                     loop_counter_file, reduction_file)
-    preprocessed_graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    preprocessed_graph = PETGraph(cu_dict, dependencies,
+                                  loop_data, reduction_vars)
     return run_detection(preprocessed_graph)
 
 
@@ -1246,3 +1254,75 @@ def __create_task_tree_helper(pet: PETGraph, current: Vertex, root: Task, visite
             __create_task_tree_helper(pet, child, task, visited_func)
         else:
             __create_task_tree_helper(pet, child, root, visited_func)
+
+
+def cu_xml_preprocessing(cu_xml):
+    """executes CU XML Preprocessiong.
+    Returns file name of modified cu xml file."""
+    xml_fd = open(cu_xml)
+    xml_content = ""
+    for line in xml_fd.readlines():
+        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+            xml_content = xml_content + line
+
+    xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
+
+    parsed_cu = objectify.fromstring(xml_content)
+
+    # DEBUG write parsed cu to file to compare modifications against
+    debug_cu_xml = cu_xml.replace(".xml", "-debug-formatted.xml")
+    if os.path.exists(debug_cu_xml):
+        os.remove(debug_cu_xml)
+    f = open(debug_cu_xml, "w+")
+    f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
+    f.close()
+    # DEBUG
+
+    cu_dict = dict()
+    for node in parsed_cu.Node:
+        if node.get('type') == '0':
+            # find CU nodes with > 1 recursiveFunctionCalls in own code region
+            if __preprocessor_cu_contains_at_least_two_recursive_calls(node):
+                print("FOUND CU WITH >= 2 CONTAINED RECURSIVE CALLS!")
+
+    # print modified Data.xml to file
+    modified_cu_xml = cu_xml.replace(".xml", "-preprocessed.xml")
+    if os.path.exists(modified_cu_xml):
+        os.remove(modified_cu_xml)
+    f = open(modified_cu_xml, "w+")
+    f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
+    f.close()
+    return modified_cu_xml
+
+
+def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
+    """TODO"""
+    starts_at_line = node.get("startsAtLine").split(":")
+    ends_at_line = node.get("endsAtLine").split(":")
+    file_id = starts_at_line[0]
+    if file_id != ends_at_line[0]:
+        raise Exception("error in Data.xml: FileIds of startsAtLine and endsAtLine not matching!")
+    starts_at_line = starts_at_line[1]
+    ends_at_line = ends_at_line[1]
+
+    # count contained recursive Function calls
+    contained_recursive_calls = 0
+    for calls_node_entry in node.callsNode:
+        try:
+            for i in calls_node_entry.recursiveFunctionCall:
+                rec_func_calls = [s for s in str(i).split(",") if len(s) > 0]
+                if len(rec_func_calls) != 0:
+                    for rec_func_call in rec_func_calls:
+                        rec_func_call = rec_func_call.split(" ")[1]
+                        rfc_file_id = rec_func_call.split(":")[0]
+                        rfc_line = rec_func_call.split(":")[1]
+                        # test if recursiveFunctionCall is inside CU region
+                        if rfc_file_id == file_id and \
+                                rfc_line >= starts_at_line and \
+                                rfc_line <= ends_at_line:
+                            contained_recursive_calls += 1
+        except Exception as ex:
+            pass
+    if contained_recursive_calls >= 2:
+        return True
+    return False
