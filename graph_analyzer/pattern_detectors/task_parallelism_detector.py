@@ -207,17 +207,12 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards
     TODO proper description"""
-    # TODO switch to production
-    # production:
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
-    # debug:
-    #preprocessed_cu_xml = cu_xml
-
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(preprocessed_cu_xml), open(dep_file),
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
-    PETGraph.interactive_visualize(preprocessed_graph)
+    # PETGraph.interactive_visualize(preprocessed_graph)
     return run_detection(preprocessed_graph)
 
 
@@ -765,7 +760,6 @@ def __detect_barrier_suggestions(pet: PETGraph,
         elif omittable_count == 0 and task_count > 1:  # connected to at least two distinct task nodes
             if pet.graph.vp.viz_contains_taskwait[v] == 'False':
                 # actual change
-                print(pet.graph.vp.id[v], "---->", task_count, "----->", task_buffer)
                 pet.graph.vp.viz_contains_taskwait[v] = 'True'
                 barrier_nodes.append(v)
                 transformation_happened = True
@@ -781,6 +775,8 @@ def __detect_barrier_suggestions(pet: PETGraph,
             parent_task = None
             for e in out_dep_edges:
                 if pet.graph.vp.viz_omittable[e.target()] == 'True':
+                    # TODO bug in nqueens
+                    # reason: e.target() of type vertex, has no combine_with_node
                     parent_task = e.target().combine_with_node
             violation = False
             # check if only dependences to self, parent omittable node or path to target task exists
@@ -1366,74 +1362,109 @@ def cu_xml_preprocessing(cu_xml):
 
                         # Preprocessor Step 4
                         # update startsAtLine and endsAtLine
-                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                parent.instructionLines.text:
-                            parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                            parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
-                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                parent.readPhaseLines.text:
-                            parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                            parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
-                        if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                parent.writePhaseLines.text:
-                            parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                            parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
-                            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
+                        try:
+                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                    parent.instructionLines.text:
+                                parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                                parent.instructionLines._setText(parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
+                        except TypeError as te:
+                            parent.instructionLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+                            parent.instructionLines.set("count", "1")
+
+                        try:
+                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                    parent.readPhaseLines.text:
+                                parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                                parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
+                        except TypeError as te:
+                            parent.readPhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+                            parent.readPhaseLines.set("count", "1")
+
+                        try:
+                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                                    parent.writePhaseLines.text:
+                                parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+                                parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
+                        except TypeError as te:
+                            parent.writePhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+                            parent.writePhaseLines.set("count", "1")
 
                         separator_line = parent.get("startsAtLine")
                         parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
-                        for tmp_line in parent_copy.instructionLines.text.split(","):
-                            if not __preprocessor_line_contained_in_region(
-                                    tmp_line,
-                                    parent_copy.get("startsAtLine"),
-                                    parent_copy.get("endsAtLine")):
-                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
-                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line, ""))
-                                if parent_copy.instructionLines.text.endswith(","):
-                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
-                                parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) - 1))
-                        for tmp_line in parent_copy.readPhaseLines.text.split(","):
-                            if not __preprocessor_line_contained_in_region(
-                                    tmp_line,
-                                    parent_copy.get("startsAtLine"),
-                                    parent_copy.get("endsAtLine")):
-                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
-                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line, ""))
-                                if parent_copy.readPhaseLines.text.endswith(","):
-                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
-                                parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) - 1))
-                        for tmp_line in parent_copy.writePhaseLines.text.split(","):
-                            if not __preprocessor_line_contained_in_region(
-                                    tmp_line,
-                                    parent_copy.get("startsAtLine"),
-                                    parent_copy.get("endsAtLine")):
-                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
-                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line, ""))
-                                if parent_copy.writePhaseLines.text.endswith(","):
-                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
-                                parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) - 1))
+                        try:
+                            for tmp_line in parent_copy.instructionLines.text.split(","):
+                                if not __preprocessor_line_contained_in_region(
+                                        tmp_line,
+                                        parent_copy.get("startsAtLine"),
+                                        parent_copy.get("endsAtLine")):
+                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
+                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(tmp_line, ""))
+                                    if parent_copy.instructionLines.text.endswith(","):
+                                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
+                                    parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) - 1))
+                        except AttributeError:
+                            pass
+                        try:
+                            for tmp_line in parent_copy.readPhaseLines.text.split(","):
+                                if not __preprocessor_line_contained_in_region(
+                                        tmp_line,
+                                        parent_copy.get("startsAtLine"),
+                                        parent_copy.get("endsAtLine")):
+                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
+                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(tmp_line, ""))
+                                    if parent_copy.readPhaseLines.text.endswith(","):
+                                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
+                                    parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) - 1))
+                        except AttributeError:
+                            pass
+                        try:
+                            for tmp_line in parent_copy.writePhaseLines.text.split(","):
+                                if not __preprocessor_line_contained_in_region(
+                                        tmp_line,
+                                        parent_copy.get("startsAtLine"),
+                                        parent_copy.get("endsAtLine")):
+                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
+                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(tmp_line, ""))
+                                    if parent_copy.writePhaseLines.text.endswith(","):
+                                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
+                                    parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) - 1))
+                        except AttributeError:
+                            pass
 
                         # insert separator line to parent_copys instruction, read and writePhaseLines if not already present
-                        if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
-                            parent_copy.instructionLines._setText(parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
-                            if parent_copy.instructionLines.text.startswith(","):
-                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
-                            parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) + 1))
-                        if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
-                            parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                            if parent_copy.readPhaseLines.text.startswith(","):
-                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
-                            parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) + 1))
-                        if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
-                            parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                            if parent_copy.writePhaseLines.text.startswith(","):
-                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
-                            parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) + 1))
+                        try:
+                            if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
+                                parent_copy.instructionLines._setText(parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
+                                if parent_copy.instructionLines.text.startswith(","):
+                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
+                                parent_copy.instructionLines.set("count", str(int(parent_copy.instructionLines.get("count")) + 1))
+                        except TypeError:
+                            parent_copy.instructionLines._setText(parent_copy.get("endsAtLine"))
+                            parent_copy.instructionLines.set("count", "1")
+                        try:
+                            if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
+                                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
+                                if parent_copy.readPhaseLines.text.startswith(","):
+                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
+                                parent_copy.readPhaseLines.set("count", str(int(parent_copy.readPhaseLines.get("count")) + 1))
+                        except TypeError:
+                            parent_copy.readPhaseLines._setText(parent_copy.get("endsAtLine"))
+                            parent_copy.readPhaseLines.set("count", "1")
+                        try:
+                            if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
+                                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
+                                if parent_copy.writePhaseLines.text.startswith(","):
+                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
+                                parent_copy.writePhaseLines.set("count", str(int(parent_copy.writePhaseLines.get("count")) + 1))
+                        except TypeError:
+                            parent_copy.writePhaseLines._setText(parent_copy.get("endsAtLine"))
+                            parent_copy.writePhaseLines.set("count", "1")
                         parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,",","))
                         parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,",","))
                         parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,",","))
