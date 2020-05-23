@@ -1499,14 +1499,16 @@ def cu_xml_preprocessing(cu_xml):
                         parent_function = None
                         for tmp_node in parsed_cu.Node:
                             if tmp_node.get('type') == '1':
-                                if __preprocessor_line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")) and \
-                                        __preprocessor_line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
-                                    parent_function = tmp_node
+                                if __preprocessor_line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                    if __preprocessor_line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                        parent_function = tmp_node
+                                        break
                         if parent_function is None:
-                            raise Exception("No parent function found for cu node: ", parent.get("id"))
-                        parent_function.childrenNodes._setText(parent_function.childrenNodes.text + "," + parent.get("id"))
-                        if parent_function.childrenNodes.text.startswith(","):
-                            parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
+                            print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
+                        else:
+                            parent_function.childrenNodes._setText(parent_function.childrenNodes.text + "," + parent.get("id"))
+                            if parent_function.childrenNodes.text.startswith(","):
+                                parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
                         # Preprocessor Step 5 (looping)
                         parent_further_CN_entry = None
@@ -1555,12 +1557,12 @@ def cu_xml_preprocessing(cu_xml):
 def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
     """check if line is contained in [startLine, endLine].
     Return True if so. False else."""
-    test_line_file_id = test_line.split(":")[0]
-    test_line_line = test_line.split(":")[1]
-    start_line_file_id = start_line.split(":")[0]
-    start_line_line = start_line.split(":")[1]
-    end_line_file_id = end_line.split(":")[0]
-    end_line_line = end_line.split(":")[1]
+    test_line_file_id = int(test_line.split(":")[0])
+    test_line_line = int(test_line.split(":")[1])
+    start_line_file_id = int(start_line.split(":")[0])
+    start_line_line = int(start_line.split(":")[1])
+    end_line_file_id = int(end_line.split(":")[0])
+    end_line_line = int(end_line.split(":")[1])
     if test_line_file_id == start_line_file_id and \
             start_line_file_id == end_line_file_id and \
             test_line_line >= start_line_line and \
