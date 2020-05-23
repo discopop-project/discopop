@@ -1438,22 +1438,28 @@ def cu_xml_preprocessing(cu_xml):
                         parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,",","))
                         parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,",","))
 
-                        # insert line after separator line to parent_copys instruction, read and writePhaseLines if not already present
-                        if not parent.get("startsAtLine") in parent.instructionLines.text:
-                            parent.instructionLines._setText(parent.get("startsAtLine") + "," + parent.instructionLines.text)
-                            if parent.instructionLines.text.endswith(","):
-                                parent.instructionLines._setText(parent.instructionLines.text[:-1])
-                            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
-                        if not parent.get("startsAtLine") in parent.readPhaseLines.text:
-                            parent.readPhaseLines._setText(parent.get("startsAtLine") + "," + parent.readPhaseLines.text)
-                            if parent.readPhaseLines.text.endswith(","):
-                                parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
-                            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
-                        if not parent.get("startsAtLine") in parent.writePhaseLines.text:
-                            parent.writePhaseLines._setText(parent.get("startsAtLine") + "," + parent.writePhaseLines.text)
-                            if parent.writePhaseLines.text.endswith(","):
-                                parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
-                            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
+                        # insert all lines contained in parent to instruction, read and writePhaseLines
+                        cur_line = parent.get("startsAtLine")
+                        while __preprocessor_line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
+                            if not cur_line in parent.instructionLines.text:
+                                parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
+                                if parent.instructionLines.text.endswith(","):
+                                    parent.instructionLines._setText(parent.instructionLines.text[:-1])
+                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
+                            if not cur_line in parent.readPhaseLines.text:
+                                parent.readPhaseLines._setText(cur_line + "," + parent.readPhaseLines.text)
+                                if parent.readPhaseLines.text.endswith(","):
+                                    parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
+                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
+                            if not cur_line in parent.writePhaseLines.text:
+                                parent.writePhaseLines._setText(cur_line + "," + parent.writePhaseLines.text)
+                                if parent.writePhaseLines.text.endswith(","):
+                                    parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
+                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
+                            # increment cur_line by one
+                            cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(int(cur_line[cur_line.rfind(":") + 1:]) + 1)
+                            continue
+
                         parent.instructionLines._setText(parent.instructionLines.text.replace(",,",","))
                         parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,",","))
                         parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,",","))
