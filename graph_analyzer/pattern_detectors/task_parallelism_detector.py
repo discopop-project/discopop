@@ -693,7 +693,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                     barrier_count += 1
                 else:
                     pass
-            elif e.target() in omittable_nodes:
+            elif e.target() in [e[0] for e in omittable_nodes]:
                 # treat omittable cus like their parent tasks
                 tmp_omit_suggestions = [s for s in suggestions if type(s) == OmittableCuInfo]
                 parent_task = [tos for tos in tmp_omit_suggestions if tos._node == e.target()][0].combine_with_node
@@ -716,7 +716,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 if len(combine_with_node) < 1:
                     raise ValueException("length combine_with_node < 1!")
                 combine_with_node = combine_with_node[0]
-                omittable_nodes.append(v)
+                omittable_nodes.append((v, combine_with_node))
                 suggestions.append(OmittableCuInfo(pet, v,
                                                    combine_with_node))
                 transformation_happened = True
@@ -775,9 +775,15 @@ def __detect_barrier_suggestions(pet: PETGraph,
             parent_task = None
             for e in out_dep_edges:
                 if pet.graph.vp.viz_omittable[e.target()] == 'True':
-                    # TODO bug in nqueens
-                    # reason: e.target() of type vertex, has no combine_with_node
-                    parent_task = e.target().combine_with_node
+                    # if viz_omittable is set, a omittable_suggestion has to exists.
+                    # find this suggestion and extract combine_with_node
+                    found_cwn = False
+                    for (tmp_omit, tmp_cwn) in omittable_nodes:
+                        if e.target() == tmp_omit:
+                            parent_task = tmp_cwn
+                            found_cwn = True
+                    if not found_cwn:
+                        raise Exception("No parent task for omittable node found!")
             violation = False
             # check if only dependences to self, parent omittable node or path to target task exists
             for e in out_dep_edges:
@@ -805,7 +811,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 if pet.graph.vp.viz_omittable[v] == 'False':
                     # actual change
                     pet.graph.vp.viz_omittable[v] = 'True'
-                    omittable_nodes.append(v)
+                    omittable_nodes.append((v, parent_task))
                     suggestions.append(OmittableCuInfo(pet, v,
                                                        parent_task))
                     transformation_happened = True
