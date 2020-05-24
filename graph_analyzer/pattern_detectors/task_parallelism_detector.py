@@ -212,8 +212,9 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
+    suggestions = run_detection(preprocessed_graph)
     # PETGraph.interactive_visualize(preprocessed_graph)
-    return run_detection(preprocessed_graph)
+    return suggestions
 
 
 def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
