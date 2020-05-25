@@ -13,7 +13,7 @@ First, switch to the `/test/simple_pipeline` folder which contains the program `
 
     `clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c SimplePipeline.c`
 
-The output is an XML file, which contains all the CU nodes. You should be able to obtain an XML file as in [`SimplePipelineData.xml`](simple_pipeline/data/SimplePipelineData.xml). Using the information in this file, we can generate a CU Graph.
+The output is an XML file, which contains all the CU nodes. You should be able to obtain an XML file as in [`SimplePipelineData.xml`](/test/simple_pipeline/data/SimplePipelineData.xml). Using the information in this file, we can generate a CU Graph.
 
 3) To obtain data dependences, we need to instrument the application and run it. 
 ```
@@ -21,7 +21,7 @@ The output is an XML file, which contains all the CU nodes. You should be able t
     clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
     ./out
 ```
-The output is a text file that contains all the dependences. You should be able to obtain a CU graph as in [`SimplePipelineDep.txt`](simple_pipeline/data/SimplePipelineDep.txt).
+The output is a text file that contains all the dependences. You should be able to obtain a CU graph as in [`SimplePipelineDep.txt`](/test/simple_pipeline/data/SimplePipelineDep.txt).
 A data dependence is represented as a triple `<sink, type, source>`. `type` is the dependence type (`RAW`, `WAR` or `WAW`). Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region, respectively.
 
 4) Although there is no reduction pattern in SimplePipeline, we strongly suggest that you run the reduction analysis to avoid missing any pattern and obtain necessary loop information. This pass instruments the target application and analyzes its loops to identify their iteration counts and obtain the list of potential reduction operations. Running the instrumented application will result in a text file containing all the reductions located in the working directory.
@@ -36,4 +36,4 @@ Besides the list of reduction loops, this step generates two important files nam
 
     `python3 graph_analyzer.py --cu-xml=SimplePipelineData.xml --dep-file=SimplePipelineDep.txt`
 
-You should now be able to see the pipeline pattern found in the target application along with its stages plus suitable OpenMP constructs for parallelization. You can access a sample output in [patterns.txt](simple_pipeline/data/patterns.txt). Using these hints you can start parallelizing the target application.
+You should now be able to see the pipeline pattern found in the target application along with its stages plus suitable OpenMP constructs for parallelization. You can access a sample output in [patterns.txt](/test/simple_pipeline/data/patterns.txt). Using these hints you can start parallelizing the target application.
