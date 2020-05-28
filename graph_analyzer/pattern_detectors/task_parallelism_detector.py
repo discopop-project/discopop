@@ -213,7 +213,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     suggestions = run_detection(preprocessed_graph)
-    # PETGraph.interactive_visualize(preprocessed_graph)
+    PETGraph.interactive_visualize(preprocessed_graph)
     return suggestions
 
 
@@ -311,10 +311,15 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
                     dependence_count_dict[key] += 1
 
         # if validated, append bs to result
+        validation_successful = False
         for key in dependence_count_dict:
             if dependence_count_dict[key] > 1:
                 result.append(bs)
+                validation_successful = True
                 break
+        # if not validated, unmark node as containing a taskwait in the graph
+        if not validation_successful:
+            pet.graph.vp.viz_contains_taskwait[bs._node] = "False"
 
     return result
 
