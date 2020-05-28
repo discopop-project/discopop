@@ -264,9 +264,82 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __remove_duplicates(pet, result)
+    result = __validate_barriers(pet, result)
     result = __sort_output(pet, result)
 
     return result
+
+
+def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
+    """TODO
+    check if >= 2 dependences exist from same successor path. Eliminate those
+    barrier suggestions that violate this requirement."""
+    barrier_suggestions = []
+    result = []
+    for single_suggestion in suggestions:
+        try:
+            if single_suggestion.pragma[0] == "taskwait":
+                barrier_suggestions.append(single_suggestion)
+            else:
+                result.append(single_suggestion)
+        except Exception:
+            result.append(single_suggestion)
+
+    for bs in barrier_suggestions:
+        # create "path lists" for each incoming successor edge
+        in_succ_edges = [e for e in bs._node.in_edges() if
+                         pet.graph.ep.type[e] == "successor" and
+                         e.source() != bs._node]
+        predecessors_dict = dict()
+        for e in in_succ_edges:
+            visited_nodes = []
+            tmp, visited_nodes = __get_predecessor_nodes(pet, e.source(), visited_nodes)
+            predecessors_dict[e] = tmp
+        # iterate over outgoing dependence edges and increase dependence counts
+        # for those paths that contain the dependence target CU
+        out_dep_edges = [e for e in bs._node.out_edges() if
+                         pet.graph.ep.type[e] == "dependence" and
+                         e.target() != bs._node]
+        dependence_count_dict = dict()
+
+        for key in predecessors_dict:
+            dependence_count_dict[key] = 0
+
+        for key in predecessors_dict:
+            for e in out_dep_edges:
+                if e.target() in predecessors_dict[key]:
+                    dependence_count_dict[key] += 1
+
+        # if validated, append bs to result
+        for key in dependence_count_dict:
+            if dependence_count_dict[key] > 1:
+                result.append(bs)
+                break
+
+    return result
+
+
+def __get_predecessor_nodes(pet: PETGraph, root: Vertex, visited_nodes: [Vertex]):
+    """return a list of reachable predecessor nodes.
+    generate list recursively.
+    stop recursion if a node of type "function" is found or root is a barrier
+    (predecessing barrier of the original root node, further predecessors are
+    already covered by this barrier and thus can be ignored)."""
+    result = [root]
+    visited_nodes.append(root)
+    if pet.graph.vp.type[root] == "1" or pet.graph.vp.viz_contains_taskwait[root] == "True":
+        # root of type "function" or root is a barrier
+        return result, visited_nodes
+    in_succ_edges = [e for e in root.in_edges() if
+                     pet.graph.ep.type[e] == "successor" and
+                     e.source() != root and e.source() not in visited_nodes]
+    for e in in_succ_edges:
+        tmp, visited_nodes = __get_predecessor_nodes(pet, e.source(), visited_nodes)
+        result += tmp
+
+    return result, visited_nodes
+
+
 
 
 def __remove_duplicates(pet: PETGraph, suggestions: [PatternInfo]):
