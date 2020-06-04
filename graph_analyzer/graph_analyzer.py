@@ -9,7 +9,7 @@
 """Discopop analyzer
 
 Usage:
-    main.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
+    graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]
 
 Options:
@@ -26,6 +26,7 @@ Options:
 import json
 import os
 import time
+import sys
 
 from docopt import docopt
 from pluginbase import PluginBase
@@ -71,6 +72,11 @@ if __name__ == "__main__":
     dep_file = get_path(path, arguments['--dep-file'])
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
+
+    for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
+        if not os.path.isfile(file):
+            print(f"File not found: \"{file}\"")
+            sys.exit()
 
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file),
                                                                     loop_counter_file, reduction_file)

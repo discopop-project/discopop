@@ -73,23 +73,10 @@ class PatternDetector(object):
         res = DetectionResult()
 
         # reduction before doall!
-        if self.pet.reduction_vars is not None:
-            res.reduction = detect_reduction(self.pet)
-        else:
-            print('reduction variables are required for this detector\n')
-
+        res.reduction = detect_reduction(self.pet)
         res.do_all = detect_do_all(self.pet)
-
         res.pipeline = detect_pipeline(self.pet)
-
-        if self.pet.loop_data is not None:
-            res.geometric_decomposition = detect_gd(self.pet)
-        else:
-            print('loop iteration data is required for this detector\n')
-
-        if self.pet.loop_data is not None:
-            res.task_parallelism = detect_tp(self.pet)
-        else:
-            print('loop iteration data is required for this detector\n')
+        res.geometric_decomposition = detect_gd(self.pet)
+        res.task_parallelism = detect_tp(self.pet)
 
         return res

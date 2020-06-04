@@ -57,7 +57,7 @@ node_props = [
     ('instructionsCount', 'int', 'node.get("instructionsCount", 0)'),
     ('BasicBlockID', 'string', '\'\''),
     ('pipeline', 'float', '0'),
-    ('doAll', 'float', '0'),
+    ('doAll', 'bool', 'False'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
     ('mwType', 'string', '\'FORK\''),
