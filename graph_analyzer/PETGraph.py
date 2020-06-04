@@ -133,6 +133,9 @@ class PETGraph(object):
             source = self.graph.vertex(GT_map_node_indices[node_id])
             if 'childrenNodes' in dir(node):
                 for child in node.childrenNodes:
+                    if child not in GT_map_node_indices:
+                        print("Skipping dummy node " + str(child))
+                        continue
                     sink = self.graph.vertex(GT_map_node_indices[child])
                     e = self.graph.add_edge(source, sink)
                     self.graph.ep.type[e] = 'child'

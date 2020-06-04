@@ -420,6 +420,9 @@ def is_func_arg(pet: PETGraph, var: str, node: Vertex) -> bool:
     :param node: loop node
     :return: true if variable is argument
     """
+    # None may occur because __get_variables doesn't check for actual elements
+    if var is None:
+        return False
     if '.' not in var:
         return False
 
@@ -514,6 +517,9 @@ def is_first_written_new(pet, var: Variable, raw_deps: Set[Edge], war_deps: Set[
     :return: true if first written
     """
     result = False
+    # None may occur because __get_variables doesn't check for actual elements
+    if var.name is None:
+        return False
     is_read = is_read_in(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
     for dep in raw_deps:
         if var.name in pet.graph.ep.var[dep] and dep.target() in tree:
