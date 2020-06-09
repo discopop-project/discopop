@@ -10,23 +10,25 @@
 
 Usage:
     graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]  [--interactive] [--fmap <fmap>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
     --cu-xml=<cuxml>            CU node xml file [default: Data.xml]
-    --dep-file=<depfile>        Dependencies text file [default: dep.txt]
+    --dep-file=<depfile>        Dependencies text file [default: dp_run_dep.txt]
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
+    --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
+    -i --interactive               Show interactive graph window
     -h --help                   Show this screen
-    --version                   Show version
+    -v --version                   Show version
 """
 import json
 import os
-import time
 import sys
+import time
 
 from docopt import docopt
 from pluginbase import PluginBase
@@ -43,8 +45,10 @@ docopt_schema = Schema({
     '--dep-file': Use(str),
     '--loop-counter': Use(str),
     '--reduction': Use(str),
+    '--fmap': Use(str),
     '--plugins': Use(str),
-    '--json': Use(str)
+    '--json': Use(str),
+    '--interactive': Use(str)
 })
 
 
@@ -72,6 +76,7 @@ if __name__ == "__main__":
     dep_file = get_path(path, arguments['--dep-file'])
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
+    file_mapping = get_path(path, 'FileMapping.txt')
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
         if not os.path.isfile(file):
@@ -86,7 +91,9 @@ if __name__ == "__main__":
     graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
 
     # visualize subgraphs
-    # graph.interactive_visualize(graph.graph)
+
+    if arguments['--interactive'] == 'True':
+        graph.interactive_visualize(file_mapping)
 
     # graph.visualize(graph.graph)
     # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
@@ -102,8 +109,8 @@ if __name__ == "__main__":
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin: " + plugin_name)
-        graph = p.run(graph)
+        print("executing plugin before: " + plugin_name)
+        graph = p.run_before(graph)
 
     pattern_detector = PatternDetector(graph)
     res: DetectionResult = pattern_detector.detect_patterns()
@@ -113,6 +120,11 @@ if __name__ == "__main__":
     else:
         with open(arguments['--json'], 'w') as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
+
+    for plugin_name in plugins:
+        p = plugin_source.load_plugin(plugin_name)
+        print("executing plugin after: " + plugin_name)
+        graph = p.run_after(graph)
 
     end = time.time()
 
