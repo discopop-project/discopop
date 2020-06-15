@@ -35,6 +35,7 @@ from pluginbase import PluginBase
 from schema import Schema, Use, SchemaError
 
 from PETGraph import PETGraph
+from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
 from pattern_detection import PatternDetector, DetectionResult
@@ -88,17 +89,20 @@ if __name__ == "__main__":
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    #graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
 
+    graph = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+
+    for n in graph.graph.nodes:
+        print(str(n))
+
+    graph.show()
+    print("end of program")
+    exit(0)
     # visualize subgraphs
 
     if arguments['--interactive'] == 'True':
         graph.interactive_visualize(file_mapping)
-
-    # graph.visualize(graph.graph)
-    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'child'), "child.svg")
-    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'dependence'), "dep.svg")
-    # graph.visualize(graph.filter_view(graph.graph.vertices(), 'successor'), "suc.svg")
 
     start = time.time()
 
