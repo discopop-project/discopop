@@ -129,16 +129,18 @@ class PETGraphX(object):
                         print(f"WARNING: no successor node {successor} found")
                     self.graph.add_edge(source, successor, data=Dependency(DepType.SUCCESSOR))
 
+        # calculate position before dependencies affect them
+        # self.pos = nx.shell_layout(self.graph) # maybe
+        # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
+        self.pos = nx.planar_layout(self.graph) # good
+
+        # TODO deps
+
     def show(self):
         print("showing")
         plt.subplot(111)
-        # pos = nx.shell_layout(self.graph)
-        # pos = nx.fruchterman_reingold_layout(self.graph)
-        pos = nx.kamada_kawai_layout(self.graph)
+        pos = self.pos
 
-        #nx.draw(self.graph, with_labels=True, font_weight='bold', pos=pos)
-        # labels = [str(self.graph.nodes[n]['data']) for n in self.graph.nodes]
-        # nx.draw_networkx_labels(self.graph, pos=pos, labels=labels)
         # draw nodes
         nx.draw_networkx_nodes(self.graph, pos=pos, node_color='#2B85FD', node_shape='o',
                                nodelist=[n for n in self.graph.nodes if self.node_at(n).type == CuType.CU])
