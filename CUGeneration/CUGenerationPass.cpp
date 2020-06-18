@@ -778,7 +778,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 //varName = refineVarName(determineVariableName(instruction));
                 varName = determineVariableName(&*instruction);
                 varType = determineVariableType(&*instruction);
-                if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
+                // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                 {
                     suspiciousVariables.insert(varName);
                     if (lid > 0)
