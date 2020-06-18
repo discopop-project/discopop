@@ -71,14 +71,9 @@ def __detect_reduction(pet: PETGraphX, root: Vertex) -> bool:
     :param root: the loop node
     :return: true if is reduction loop
     """
-    if pet.graph.vp.type[root] != 'loop':
-        return False
-
     all_vars = []
-    for node in get_subtree_of_type(pet, root, 'cu'):
-        for v in pet.graph.vp.localVars[node]:
-            all_vars.append(v)
-        for v in pet.graph.vp.globalVars[node]:
-            all_vars.append(v)
+    for node in pet.subtree_of_type(root, CuType.CU):
+        all_vars.extend(node.local_vars)
+        all_vars.extend(node.global_vars)
 
     return bool([v for v in all_vars if is_reduction_var(pet.graph.vp.startsAtLine[root], v.name, pet.reduction_vars)])

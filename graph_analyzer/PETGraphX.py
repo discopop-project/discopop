@@ -13,6 +13,7 @@ import networkx as nx
 from lxml.objectify import ObjectifiedElement
 from enum import IntEnum, Enum
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap, DependenceItem
+from variable import Variable
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -83,11 +84,15 @@ class CuNode:
     instructions_count: int
     loop_iterations: int
     reduction: bool
+    local_vars: List[Variable]
+    global_vars: List[Variable]
 
     def __init__(self, id: str):
         self.id = id
         self.file_id, self.node_id = parse_id(id)
         self.loop_iterations = 0
+        self.local_vars = []
+        self.global_vars = []
 
     def start_position(self) -> str:
         return f'{self.source_file}:{self.start_line}'
@@ -114,7 +119,14 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
     n.instructions_count = node.get("instructionsCount", 0)
     # TODO func args
     # TODO recursive calls
-    # TODO variables
+    if n.type == CuType.CU:
+        if hasattr(node.localVariables, 'local'):
+            n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
+        if hasattr(node.globalVariables, 'global'):
+            n.global_vars = [Variable(v.get('type'), v.text) for v in getattr(node.globalVariables, 'global')]
+
+        # TODO self.graph.vp.instructionsCount[v] = node.instructionsCount
+        # TODO self.graph.vp.BasicBlockID[v] = node.BasicBlockID
     return n
 
 
@@ -176,8 +188,6 @@ class PETGraphX(object):
                     elif sink_cu_id and source_cu_id:
                         self.g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
 
-        # TODO deps
-
     def show(self):
         print("showing")
         plt.plot()
@@ -221,3 +231,10 @@ class PETGraphX(object):
     def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
+    def subtree_of_type(self, root: CuNode, type: CuType) -> List[CuNode]:
+        res = []
+        if root.type == type:
+            res.append(root)
+        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
+            res.extend(self.subtree_of_type(self.node_at(t), type))
+        return res
