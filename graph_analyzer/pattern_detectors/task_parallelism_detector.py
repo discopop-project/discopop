@@ -213,7 +213,6 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     suggestions = run_detection(preprocessed_graph)
-    PETGraph.interactive_visualize(preprocessed_graph)
     return suggestions
 
 
@@ -319,7 +318,7 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
                 break
         # if not validated, unmark node as containing a taskwait in the graph
         if not validation_successful:
-            pet.graph.vp.viz_contains_taskwait[bs._node] = "False"
+            pet.graph.vp.tp_contains_taskwait[bs._node] = "False"
 
     return result
 
@@ -332,7 +331,7 @@ def __get_predecessor_nodes(pet: PETGraph, root: Vertex, visited_nodes: [Vertex]
     already covered by this barrier and thus can be ignored)."""
     result = [root]
     visited_nodes.append(root)
-    if pet.graph.vp.type[root] == "1" or pet.graph.vp.viz_contains_taskwait[root] == "True":
+    if pet.graph.vp.type[root] == "1" or pet.graph.vp.tp_contains_taskwait[root] == "True":
         # root of type "function" or root is a barrier
         return result, visited_nodes
     in_succ_edges = [e for e in root.in_edges() if
@@ -547,12 +546,12 @@ def __combine_omittable_cus(pet: PETGraph,
         in_succ_edges = [e for e in os._node.in_edges() if
                          pet.graph.ep.type[e] == "successor"]
         parent_task_nodes = [e.source() for e in in_succ_edges if
-                             pet.graph.vp.viz_contains_task[e.source()] == 'True']
+                             pet.graph.vp.tp_contains_task[e.source()] == 'True']
         if len(parent_task_nodes) != 0:
             useful_omittable_suggestions.append(os)
         else:
             # un-mark node as omittable
-            pet.graph.vp.viz_omittable[os._node] = 'False'
+            pet.graph.vp.tp_omittable[os._node] = 'False'
     omittable_suggestions = useful_omittable_suggestions
 
     # create copies of original Task suggestion versions
@@ -658,13 +657,13 @@ def __detect_dependency_clauses(pet: PETGraph,
         # only consider those dependencies to/from Task/Omittable CUs
         out_dep_edges = [e for e in s._node.out_edges() if
                          pet.graph.ep.type[e] == "dependence" and
-                         (pet.graph.vp.viz_contains_task[e.target()] == 'True' or
-                         pet.graph.vp.viz_omittable[e.target()] == 'True') and
+                         (pet.graph.vp.tp_contains_task[e.target()] == 'True' or
+                         pet.graph.vp.tp_omittable[e.target()] == 'True') and
                          e.target() != s._node]  # exclude self-dependencies
         in_dep_edges = [e for e in s._node.in_edges() if
                         pet.graph.ep.type[e] == "dependence" and
-                        (pet.graph.vp.viz_contains_task[e.source()] == 'True' or
-                        pet.graph.vp.viz_omittable[e.source()] == 'True') and
+                        (pet.graph.vp.tp_contains_task[e.source()] == 'True' or
+                        pet.graph.vp.tp_omittable[e.source()] == 'True') and
                         e.source() != s._node]  # exclude self-dependencies
         # set iversed dependencies
         length_in = 0
@@ -717,9 +716,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
         else:
             task_suggestions.append(single_suggestion)
     for s in task_suggestions:
-        pet.graph.vp.viz_contains_task[s._node] = 'True'
+        pet.graph.vp.tp_contains_task[s._node] = 'True'
     for s in taskwait_suggestions:
-        pet.graph.vp.viz_contains_taskwait[s._node] = 'True'
+        pet.graph.vp.tp_contains_taskwait[s._node] = 'True'
     task_nodes = [t._node for t in task_suggestions]
     barrier_nodes = [t._node for t in taskwait_suggestions]
     omittable_nodes = []
@@ -787,9 +786,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 normal_count += 1
         #print(pet.graph.vp.id[v], "->", "bar:", barrier_count, "task: ", task_count, "omittable:", omittable_count)
         if task_count == 1 and barrier_count == 0:
-            if pet.graph.vp.viz_omittable[v] == 'False':
+            if pet.graph.vp.tp_omittable[v] == 'False':
                 # actual change
-                pet.graph.vp.viz_omittable[v] = 'True'
+                pet.graph.vp.tp_omittable[v] = 'True'
                 combine_with_node = [e.target() for e in out_dep_edges if
                                      e.target() in task_nodes]
                 if len(combine_with_node) < 1:
@@ -802,10 +801,10 @@ def __detect_barrier_suggestions(pet: PETGraph,
         elif barrier_count != 0 and task_count != 0:
             # check if child barrier(s) cover each child task
             child_barriers = [e.target() for e in out_dep_edges if
-                              pet.graph.vp.viz_contains_taskwait[e.target()] ==
+                              pet.graph.vp.tp_contains_taskwait[e.target()] ==
                               'True']
             child_tasks = [e.target() for e in out_dep_edges if
-                           pet.graph.vp.viz_contains_task[e.target()] ==
+                           pet.graph.vp.tp_contains_task[e.target()] ==
                            'True']
             uncovered_task_exists = False
             for ct in child_tasks:
@@ -824,9 +823,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
                         uncovered_task_exists = True
             if uncovered_task_exists:
                 # suggest barrier
-                if pet.graph.vp.viz_contains_taskwait[v] == 'False':
+                if pet.graph.vp.tp_contains_taskwait[v] == 'False':
                     # actual change
-                    pet.graph.vp.viz_contains_taskwait[v] = 'True'
+                    pet.graph.vp.tp_contains_taskwait[v] = 'True'
                     barrier_nodes.append(v)
                     transformation_happened = True
                     tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
@@ -837,9 +836,9 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 # no barrier needed
                 pass
         elif omittable_count == 0 and task_count > 1:  # connected to at least two distinct task nodes
-            if pet.graph.vp.viz_contains_taskwait[v] == 'False':
+            if pet.graph.vp.tp_contains_taskwait[v] == 'False':
                 # actual change
-                pet.graph.vp.viz_contains_taskwait[v] = 'True'
+                pet.graph.vp.tp_contains_taskwait[v] = 'True'
                 barrier_nodes.append(v)
                 transformation_happened = True
                 tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
@@ -847,14 +846,14 @@ def __detect_barrier_suggestions(pet: PETGraph,
                                                      [], [], [])
                 suggestions.append(tmp_suggestion)
         if omittable_count == 1 and \
-                pet.graph.vp.viz_contains_task[v] == 'False' and \
-                pet.graph.vp.viz_contains_taskwait[v] == 'False':
+                pet.graph.vp.tp_contains_task[v] == 'False' and \
+                pet.graph.vp.tp_contains_taskwait[v] == 'False':
             # omittable node appended to prior omittable node
             # get parent task
             parent_task = None
             for e in out_dep_edges:
-                if pet.graph.vp.viz_omittable[e.target()] == 'True':
-                    # if viz_omittable is set, a omittable_suggestion has to exists.
+                if pet.graph.vp.tp_omittable[e.target()] == 'True':
+                    # if tp_omittable is set, a omittable_suggestion has to exists.
                     # find this suggestion and extract combine_with_node
                     found_cwn = False
                     for (tmp_omit, tmp_cwn) in omittable_nodes:
@@ -868,7 +867,7 @@ def __detect_barrier_suggestions(pet: PETGraph,
             for e in out_dep_edges:
                 if e.target() == v:
                     continue
-                elif pet.graph.vp.viz_omittable[e.target()] == 'True':
+                elif pet.graph.vp.tp_omittable[e.target()] == 'True':
                     continue
                 elif __check_reachability(pet, parent_task, v, "dependence"):
                     continue
@@ -879,17 +878,17 @@ def __detect_barrier_suggestions(pet: PETGraph,
                              pet.graph.ep.type[e] == "successor"]
             is_successor = False
             for e in in_succ_edges:
-                if pet.graph.vp.viz_omittable[e.source()] == 'True':
+                if pet.graph.vp.tp_omittable[e.source()] == 'True':
                     is_successor = True
-                elif pet.graph.vp.viz_contains_task[e.source()] == 'True':
+                elif pet.graph.vp.tp_contains_task[e.source()] == 'True':
                     is_successor = True
             if not is_successor:
                 violation = True
             # suggest omittable cu if no violation occured
             if not violation:
-                if pet.graph.vp.viz_omittable[v] == 'False':
+                if pet.graph.vp.tp_omittable[v] == 'False':
                     # actual change
-                    pet.graph.vp.viz_omittable[v] = 'True'
+                    pet.graph.vp.tp_omittable[v] = 'True'
                     omittable_nodes.append((v, parent_task))
                     suggestions.append(OmittableCuInfo(pet, v,
                                                        parent_task))
