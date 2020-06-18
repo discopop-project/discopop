@@ -72,6 +72,9 @@ if __name__ == "__main__":
         exit(e)
 
     path = arguments['--path']
+    # path = './../../test_data/atax'
+    # path = './../../test_data/temp'
+    # path = './../../test_data/reduction'
 
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
@@ -92,9 +95,6 @@ if __name__ == "__main__":
     # graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
     # graph.interactive_visualize(path)
     graph = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-
-    for n in graph.graph.nodes:
-        print(str(n))
 
     graph.show()
     print("end of program")

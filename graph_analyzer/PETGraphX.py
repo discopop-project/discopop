@@ -41,10 +41,16 @@ def parse_id(node_id: str) -> (int, int):
     return int(split[0]), int(split[1])
 
 
-class DepType(Enum):
+class EdgeType(Enum):
     CHILD = 0
     SUCCESSOR = 1
     DATA = 2
+
+
+class DepType(Enum):
+    RAW = 0
+    WAR = 1
+    WAW = 2
 
 
 class CuType(IntEnum):
@@ -55,10 +61,14 @@ class CuType(IntEnum):
 
 
 class Dependency:
-    type: DepType
+    etype: EdgeType
+    dtype: DepType
+    var_name: str
 
-    def __init__(self, type: DepType):
-        self.type = type
+    def __init__(self, type: EdgeType):
+        self.etype = type
+        self.dtype = None
+        self.var_name = None
 
 
 class CuNode:
@@ -104,6 +114,16 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
     return n
 
 
+def parce_depencency(dep) -> Dependency:
+    d = Dependency(EdgeType.DATA)
+    # TODO needed?
+    # self.graph.ep.source[e] = dep.source
+    # self.graph.ep.sink[e] = dep.sink
+    d.dtype = DepType[dep.type]
+    d.var_name = dep.var_name
+    return d
+
+
 class PETGraphX(object):
     reduction_vars: List[Dict[str, str]]
     loop_data: Dict[str, int]
@@ -122,12 +142,12 @@ class PETGraphX(object):
                 for child in [n.text for n in node.childrenNodes]:
                     if child not in self.graph:
                         print(f"WARNING: no child node {child} found")
-                    self.graph.add_edge(source, child, data=Dependency(DepType.CHILD))
+                    self.graph.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if 'successors' in dir(node) and 'CU' in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in self.graph:
                         print(f"WARNING: no successor node {successor} found")
-                    self.graph.add_edge(source, successor, data=Dependency(DepType.SUCCESSOR))
+                    self.graph.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
         # calculate position before dependencies affect them
         # self.pos = nx.shell_layout(self.graph) # maybe
@@ -145,12 +165,7 @@ class PETGraphX(object):
                     if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                         continue
                     elif sink_cu_id and source_cu_id:
-                        self.graph.add_edge(sink_cu_id, source_cu_id, data=Dependency(DepType.DATA))
-                        # self.graph.ep.type[e] = 'dependence'
-                        # self.graph.ep.source[e] = dep.source
-                        # self.graph.ep.sink[e] = dep.sink
-                        # self.graph.ep.dtype[e] = dep.type
-                        # self.graph.ep.var[e] = dep.var_name
+                        self.graph.add_edge(sink_cu_id, source_cu_id, data=parce_depencency(dep))
 
         # TODO deps
 
@@ -177,11 +192,11 @@ class PETGraphX(object):
         nx.draw_networkx_labels(self.graph, pos, labels, font_size=10)
 
         nx.draw_networkx_edges(self.graph, pos,
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.CHILD])
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.CHILD])
         nx.draw_networkx_edges(self.graph, pos, edge_color='green',
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.SUCCESSOR])
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.SUCCESSOR])
         nx.draw_networkx_edges(self.graph, pos, edge_color='red',
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.DATA])
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.DATA])
         plt.show()
         # plt.savefig('graphX.svg')
 
@@ -197,5 +212,5 @@ class PETGraphX(object):
         return self.graph[edge[0]][edge[1]]['data']
 
     def is_child(self, edge: Tuple[str, str, Dependency]):
-        return edge[2].type == DepType.CHILD
+        return edge[2].etype == EdgeType.CHILD
 
