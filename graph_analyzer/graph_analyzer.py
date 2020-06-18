@@ -94,15 +94,15 @@ if __name__ == "__main__":
 
     # graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
     # graph.interactive_visualize(path)
-    graph = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+    petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
 
-    graph.show()
-    print("end of program")
+    petGraphX.show()
+
     exit(0)
     # visualize subgraphs
 
     if arguments['--interactive'] == 'True':
-        graph.interactive_visualize(file_mapping)
+        petGraphX.interactive_visualize(file_mapping)
 
     start = time.time()
 
@@ -114,9 +114,9 @@ if __name__ == "__main__":
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin before: " + plugin_name)
-        graph = p.run_before(graph)
+        petGraphX = p.run_before(petGraphX)
 
-    pattern_detector = PatternDetector(graph)
+    pattern_detector = PatternDetector(petGraphX)
     res: DetectionResult = pattern_detector.detect_patterns()
 
     if arguments['--json'] == 'None':
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin after: " + plugin_name)
-        graph = p.run_after(graph)
+        petGraphX = p.run_after(petGraphX)
 
     end = time.time()
 

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from lxml.objectify import ObjectifiedElement
 from enum import IntEnum, Enum
-from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
+from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap, DependenceItem
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -114,7 +114,7 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
     return n
 
 
-def parce_depencency(dep) -> Dependency:
+def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
     # TODO needed?
     # self.graph.ep.source[e] = dep.source
@@ -125,34 +125,36 @@ def parce_depencency(dep) -> Dependency:
 
 
 class PETGraphX(object):
+    g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     loop_data: Dict[str, int]
 
-    def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
-        self.graph = nx.MultiDiGraph()
+    def __init__(self, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
+                 loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
+        self.g = nx.MultiDiGraph()
         self.loop_data = loop_data
         self.reduction_vars = reduction_vars
 
         for id, node in cu_dict.items():
-            self.graph.add_node(id, data=parse_cu(node))
+            self.g.add_node(id, data=parse_cu(node))
 
         for node_id, node in cu_dict.items():
             source = node_id
             if 'childrenNodes' in dir(node):
                 for child in [n.text for n in node.childrenNodes]:
-                    if child not in self.graph:
+                    if child not in self.g:
                         print(f"WARNING: no child node {child} found")
-                    self.graph.add_edge(source, child, data=Dependency(EdgeType.CHILD))
+                    self.g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if 'successors' in dir(node) and 'CU' in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
-                    if successor not in self.graph:
+                    if successor not in self.g:
                         print(f"WARNING: no successor node {successor} found")
-                    self.graph.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+                    self.g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
         # calculate position before dependencies affect them
         # self.pos = nx.shell_layout(self.graph) # maybe
         # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
-        self.pos = nx.planar_layout(self.graph)  # good
+        self.pos = nx.planar_layout(self.g)  # good
 
         for dep in dependencies_list:
             if dep.type == 'INIT':
@@ -165,7 +167,7 @@ class PETGraphX(object):
                     if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                         continue
                     elif sink_cu_id and source_cu_id:
-                        self.graph.add_edge(sink_cu_id, source_cu_id, data=parce_depencency(dep))
+                        self.g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
 
         # TODO deps
 
@@ -175,41 +177,41 @@ class PETGraphX(object):
         pos = self.pos
 
         # draw nodes
-        nx.draw_networkx_nodes(self.graph, pos=pos, node_color='#2B85FD', node_shape='o',
-                               nodelist=[n for n in self.graph.nodes if self.node_at(n).type == CuType.CU])
-        nx.draw_networkx_nodes(self.graph, pos=pos, node_color='#ff5151', node_shape='d',
-                               nodelist=[n for n in self.graph.nodes if self.node_at(n).type == CuType.LOOP])
-        nx.draw_networkx_nodes(self.graph, pos=pos, node_color='grey', node_shape='s',
-                               nodelist=[n for n in self.graph.nodes if self.node_at(n).type == CuType.DUMMY])
-        nx.draw_networkx_nodes(self.graph, pos=pos, node_color='#cf65ff', node_shape='s',
-                               nodelist=[n for n in self.graph.nodes if self.node_at(n).type == CuType.FUNC])
-        nx.draw_networkx_nodes(self.graph, pos=pos, node_color='yellow', node_shape='h', node_size=750,
-                               nodelist=[n for n in self.graph.nodes if self.node_at(n).name == 'main'])
+        nx.draw_networkx_nodes(self.g, pos=pos, node_color='#2B85FD', node_shape='o',
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.CU])
+        nx.draw_networkx_nodes(self.g, pos=pos, node_color='#ff5151', node_shape='d',
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.LOOP])
+        nx.draw_networkx_nodes(self.g, pos=pos, node_color='grey', node_shape='s',
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.DUMMY])
+        nx.draw_networkx_nodes(self.g, pos=pos, node_color='#cf65ff', node_shape='s',
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.FUNC])
+        nx.draw_networkx_nodes(self.g, pos=pos, node_color='yellow', node_shape='h', node_size=750,
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).name == 'main'])
         # id as label
         labels = {}
-        for n in self.graph.nodes:
-            labels[n] = str(self.graph.nodes[n]['data'])
-        nx.draw_networkx_labels(self.graph, pos, labels, font_size=10)
+        for n in self.g.nodes:
+            labels[n] = str(self.g.nodes[n]['data'])
+        nx.draw_networkx_labels(self.g, pos, labels, font_size=10)
 
-        nx.draw_networkx_edges(self.graph, pos,
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.CHILD])
-        nx.draw_networkx_edges(self.graph, pos, edge_color='green',
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.SUCCESSOR])
-        nx.draw_networkx_edges(self.graph, pos, edge_color='red',
-                               edgelist=[e for e in self.graph.edges(data='data') if e[2].etype == EdgeType.DATA])
+        nx.draw_networkx_edges(self.g, pos,
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.CHILD])
+        nx.draw_networkx_edges(self.g, pos, edge_color='green',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.SUCCESSOR])
+        nx.draw_networkx_edges(self.g, pos, edge_color='red',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.DATA])
         plt.show()
         # plt.savefig('graphX.svg')
 
     def node_at(self, id: str) -> CuNode:
-        return self.graph.nodes[id]['data']
+        return self.g.nodes[id]['data']
 
     def edge_at(self, source: str, target: str) -> Dependency:
-        g = self.graph[source][target]
-        return self.graph[source][target]['data']
+        g = self.g[source][target]
+        return self.g[source][target]['data']
 
     def edge_data_at(self, edge: tuple) -> List[Dependency]:
-        g = self.graph[edge[0]][edge[1]]
-        return self.graph[edge[0]][edge[1]]['data']
+        g = self.g[edge[0]][edge[1]]
+        return self.g[edge[0]][edge[1]]['data']
 
     def is_child(self, edge: Tuple[str, str, Dependency]):
         return edge[2].etype == EdgeType.CHILD
