@@ -106,7 +106,9 @@ if __name__ == "__main__":
         graph = p.run(graph)
 
     pattern_detector = PatternDetector(graph)
-    res: DetectionResult = pattern_detector.detect_patterns()
+    res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file,
+                                                            loop_counter_file,
+                                                            reduction_file)
 
     if arguments['--json'] == 'None':
         print(str(res))

@@ -13,7 +13,7 @@ from pattern_detectors.do_all_detector import run_detection as detect_do_all, Do
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
 from pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
-from pattern_detectors.task_parallelism_detector import run_detection as detect_tp, TaskParallelismInfo
+from pattern_detectors.task_parallelism_detector import build_preprocessed_graph_and_run_detection as detect_tp, TaskParallelismInfo
 
 
 class DetectionResult(object):
@@ -65,7 +65,7 @@ class PatternDetector(object):
                         else:
                             sub_nodes.append(e.target())
 
-    def detect_patterns(self):
+    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
@@ -77,6 +77,9 @@ class PatternDetector(object):
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
-        res.task_parallelism = detect_tp(self.pet)
+
+        # task detector works on modified version of the cu xml file and thus
+        # requires building a separate cu graph
+        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
 
         return res

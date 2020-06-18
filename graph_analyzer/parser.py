@@ -129,9 +129,14 @@ def parse_inputs(xml_fd, dependences_fd, loop_counter, reduction_file):
             content = f.readlines()
 
         for line in content:
+            line = line.replace("\n", "")
             s = line.split(' ')
             # line = FileId + LineNr
-            var = {'loop_line': s[3] + ':' + s[8], 'name': s[17]}
+            var = {}
+            var['loop_line'] = s[3] + ':' + s[8]
+            var['name'] = s[17]
+            var['reduction_line'] = s[3] + ':' + s[13]
+            var['operation'] = s[21]
             reduction_vars.append(var)
     else:
         reduction_vars = None

@@ -519,6 +519,9 @@ def is_first_written_new(pet, var: Variable, raw_deps: Set[Edge], war_deps: Set[
     if var.name is None:
         return False
     is_read = is_read_in(pet, var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
+    if var.name is None:
+        print("Empty var.name found. Skipping.")
+        return False
     for dep in raw_deps:
         if var.name in pet.graph.ep.var[dep] and dep.target() in tree:
             result = True
@@ -672,6 +675,7 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
     reduction: List[str] = []
 
     left_sub_tree = __get_left_right_subtree(pet, task, False)
+    right_sub_tree = __get_left_right_subtree(pet, task, True)
     subtree = get_subtree_of_type(pet, task, "cu")
     t_loop = get_subtree_of_type(pet, task, "loop")
 
@@ -757,7 +761,10 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
         elif is_first_written_new(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on,
                                   subtree):
             if is_scalar_val(var):
-                private.append(var)
+                if is_read_in(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
+                    shared.append(var)
+                else:
+                    private.append(var)
             else:
                 shared.append(var)
 

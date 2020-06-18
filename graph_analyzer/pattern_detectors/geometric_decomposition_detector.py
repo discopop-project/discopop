@@ -162,7 +162,7 @@ def __get_parent_iterations(pet: PETGraph, node: Vertex) -> int:
         if pet.graph.vp.type[node] == 'loop':
             max_iter = max(1, get_loop_iterations(pet.graph.vp.startsAtLine[node]))
             break
-        parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child']
+        parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child' and node not in [tmp_e.target() for tmp_e in e.source().out_edges()]]
 
     return max_iter
 
