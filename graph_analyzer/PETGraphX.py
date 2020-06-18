@@ -97,6 +97,9 @@ class CuNode:
     def start_position(self) -> str:
         return f'{self.source_file}:{self.start_line}'
 
+    def end_position(self) -> str:
+        return f'{self.source_file}:{self.end_line}'
+
     def __str__(self):
         return self.id
 
@@ -143,12 +146,10 @@ def parse_dependency(dep) -> Dependency:
 class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
-    loop_data: Dict[str, int]
 
     def __init__(self, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                  loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
         self.g = nx.MultiDiGraph()
-        self.loop_data = loop_data
         self.reduction_vars = reduction_vars
 
         for id, node in cu_dict.items():
@@ -238,3 +239,14 @@ class PETGraphX(object):
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.subtree_of_type(self.node_at(t), type))
         return res
+
+    def is_reduction_var(self, line: str, name: str) -> bool:
+        """Determines, whether or not the given variable is reduction variable
+
+        :param line: loop line number
+        :param name: variable name
+        :param reduction_vars: List of reduction variables
+        :return: true if is reduction variable
+        """
+        return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
+

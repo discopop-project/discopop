@@ -76,4 +76,4 @@ def __detect_reduction(pet: PETGraphX, root: Vertex) -> bool:
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
-    return bool([v for v in all_vars if is_reduction_var(pet.graph.vp.startsAtLine[root], v.name, pet.reduction_vars)])
+    return bool([v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)])

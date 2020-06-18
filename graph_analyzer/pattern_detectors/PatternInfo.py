@@ -9,15 +9,14 @@ import json
 
 from graph_tool import Vertex
 
-import PETGraph
-from utils import get_loop_iterations, total_instructions_count, \
-    calculate_workload
+from PETGraphX import PETGraphX, CuNode
+from utils import get_loop_iterations, total_instructions_count, calculate_workload
 
 
 class PatternInfo(object):
     """Base class for pattern detection info
     """
-    _node: Vertex
+    _node: CuNode
     node_id: str
     start_line: str
     end_line: str
@@ -25,18 +24,18 @@ class PatternInfo(object):
     instructions_count: int
     workload: int
 
-    def __init__(self, pet: PETGraph, node: Vertex):
+    def __init__(self, pet: PETGraphX, node: CuNode):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
         """
         self._node = node
-        self.node_id = pet.graph.vp.id[node]
-        self.start_line = pet.graph.vp.startsAtLine[node]
-        self.end_line = pet.graph.vp.endsAtLine[node]
-        self.iterations_count = get_loop_iterations(self.start_line)
-        self.instruction_count = total_instructions_count(pet, node)
-        self.workload = calculate_workload(pet, node)
+        self.node_id = node.id
+        self.start_line = node.start_position()
+        self.end_line = node.end_position()
+        self.iterations_count = node.loop_iterations
+        # TODO self.instruction_count = total_instructions_count(pet, node)
+        # TODO self.workload = calculate_workload(pet, node)
 
     def to_json(self):
         dic = self.__dict__

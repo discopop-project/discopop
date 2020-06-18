@@ -260,6 +260,8 @@ def classify_loop_variables(pet: PETGraph, loop: Vertex) -> (List[Variable], Lis
     last_private = []
     shared = []
     reduction = []
+    return first_private, private, last_private, shared, reduction
+    # TODO
 
     lst = __get_left_right_subtree(pet, loop, False)
     rst = __get_left_right_subtree(pet, loop, True)

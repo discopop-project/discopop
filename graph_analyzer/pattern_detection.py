@@ -93,8 +93,6 @@ class PatternDetectorX(object):
         """
         self.pet = pet_graph
 
-        utils.loop_data = pet_graph.loop_data
-
     def __merge(self, loop_type: bool, remove_dummies: bool):
         """Removes dummy nodes
 
@@ -122,7 +120,7 @@ class PatternDetectorX(object):
 
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
-        return
+        return res
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
