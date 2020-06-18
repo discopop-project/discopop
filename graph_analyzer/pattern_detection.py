@@ -119,7 +119,7 @@ class PatternDetectorX(object):
         self.__merge(False, True)
 
         res = DetectionResult()
-        return
+
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
         return

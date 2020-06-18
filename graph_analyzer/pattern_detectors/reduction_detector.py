@@ -10,9 +10,8 @@
 from typing import List
 
 from graph_tool import Vertex
-from graph_tool.util import find_vertex
 
-import PETGraph
+from PETGraphX import PETGraphX, CuType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import get_subtree_of_type, is_reduction_var, classify_loop_variables, get_loop_iterations
 
@@ -21,7 +20,7 @@ class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex):
+    def __init__(self, pet: PETGraphX, node: Vertex):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -48,7 +47,7 @@ class ReductionInfo(PatternInfo):
                f'last private: {[v.name for v in self.last_private]}'
 
 
-def run_detection(pet: PETGraph) -> List[ReductionInfo]:
+def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param pet: PET graph
@@ -56,16 +55,16 @@ def run_detection(pet: PETGraph) -> List[ReductionInfo]:
     """
     result = []
 
-    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
+    for node in pet.all_nodes(CuType.LOOP):
         if __detect_reduction(pet, node):
-            pet.graph.vp.reduction[node] = True
-            if get_loop_iterations(pet.graph.vp.startsAtLine[node]) != 0:
+            node.reduction = True
+            if node.loop_iterations != 0:
                 result.append(ReductionInfo(pet, node))
 
     return result
 
 
-def __detect_reduction(pet: PETGraph, root: Vertex) -> bool:
+def __detect_reduction(pet: PETGraphX, root: Vertex) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph

@@ -81,18 +81,22 @@ class CuNode:
     type: CuType
     name: str
     instructions_count: int
+    loop_iterations: int
+    reduction: bool
 
     def __init__(self, id: str):
         self.id = id
         self.file_id, self.node_id = parse_id(id)
+        self.loop_iterations = 0
+
+    def start_position(self) -> str:
+        return f'{self.source_file}:{self.start_line}'
 
     def __str__(self):
         return self.id
 
     def __eq__(self, other):
-        if isinstance(other, str):
-            return other == self.id
-        elif isinstance(other, CuNode):
+        if isinstance(other, CuNode):
             return other.id == self.id
         else:
             return False
@@ -137,6 +141,9 @@ class PETGraphX(object):
 
         for id, node in cu_dict.items():
             self.g.add_node(id, data=parse_cu(node))
+
+        for node in self.all_nodes(CuType.LOOP):
+            node.loop_iterations = loop_data.get(node.start_position(), 0)
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -205,8 +212,8 @@ class PETGraphX(object):
     def node_at(self, node_id: str) -> CuNode:
         return self.g.nodes[node_id]['data']
 
-    def all_nodes(self) -> List[CuNode]:
-        return [n[1] for n in self.g.nodes(data='data')]
+    def all_nodes(self, type: CuType = None) -> List[CuNode]:
+        return [n[1] for n in self.g.nodes(data='data') if type is None or n[1].type == type]
 
     def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
         return [t for t in self.g.out_edges(node_id, data='data') if etype is None or t[2].etype == etype]
