@@ -89,8 +89,8 @@ if __name__ == "__main__":
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    #graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
-
+    # graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    # graph.interactive_visualize(path)
     graph = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
 
     for n in graph.graph.nodes:

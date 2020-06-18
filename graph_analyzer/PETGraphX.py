@@ -11,8 +11,8 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 from lxml.objectify import ObjectifiedElement
-from networkx import Graph
 from enum import IntEnum, Enum
+from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -109,7 +109,6 @@ class PETGraphX(object):
     loop_data: Dict[str, int]
 
     def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
-        # self.graph = Graph().to_directed()
         self.graph = nx.MultiDiGraph()
         self.loop_data = loop_data
         self.reduction_vars = reduction_vars
@@ -133,13 +132,31 @@ class PETGraphX(object):
         # calculate position before dependencies affect them
         # self.pos = nx.shell_layout(self.graph) # maybe
         # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
-        self.pos = nx.planar_layout(self.graph) # good
+        self.pos = nx.planar_layout(self.graph)  # good
+
+        for dep in dependencies_list:
+            if dep.type == 'INIT':
+                continue
+
+            sink_cu_ids = readlineToCUIdMap[dep.sink]
+            source_cu_ids = writelineToCUIdMap[dep.source]
+            for sink_cu_id in sink_cu_ids:
+                for source_cu_id in source_cu_ids:
+                    if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
+                        continue
+                    elif sink_cu_id and source_cu_id:
+                        self.graph.add_edge(sink_cu_id, source_cu_id, data=Dependency(DepType.DATA))
+                        # self.graph.ep.type[e] = 'dependence'
+                        # self.graph.ep.source[e] = dep.source
+                        # self.graph.ep.sink[e] = dep.sink
+                        # self.graph.ep.dtype[e] = dep.type
+                        # self.graph.ep.var[e] = dep.var_name
 
         # TODO deps
 
     def show(self):
         print("showing")
-        plt.subplot(111)
+        plt.plot()
         pos = self.pos
 
         # draw nodes
@@ -163,7 +180,10 @@ class PETGraphX(object):
                                edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.CHILD])
         nx.draw_networkx_edges(self.graph, pos, edge_color='green',
                                edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.SUCCESSOR])
+        nx.draw_networkx_edges(self.graph, pos, edge_color='red',
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.DATA])
         plt.show()
+        # plt.savefig('graphX.svg')
 
     def node_at(self, id: str) -> CuNode:
         return self.graph.nodes[id]['data']
