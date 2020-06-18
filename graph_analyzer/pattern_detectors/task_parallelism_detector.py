@@ -41,7 +41,7 @@ class Task(object):
         self.nodes = [node]
         self.start_line = pet.graph.vp.startsAtLine[node]
         if ":" in self.start_line:
-            self.region_start_line = self.start_line[self.start_line.index(":") + 1 :]
+            self.region_start_line = self.start_line[self.start_line.index(":") + 1:]
         else:
             self.region_start_line = self.start_line
         self.region_end_line = None
@@ -71,7 +71,7 @@ def __merge_tasks(pet: PETGraph, task: Task):
     """
     for i in range(len(task.child_tasks)):
         child_task: Task = task.child_tasks[i]
-        if child_task.workload < __workloadThreshold:  # todo child child_tasks?
+        if child_task.workload < __workloadThreshold:
             if i > 0:
                 pred: Task = task.child_tasks[i - 1]
                 if __neighbours(pred, child_task):
@@ -79,10 +79,10 @@ def __merge_tasks(pet: PETGraph, task: Task):
                     pred.child_tasks.remove(child_task)
                     __merge_tasks(pet, task)
                     return
-            if i + 1 < len(task.child_tasks) - 1:  # todo off by one?, elif?
+            if i + 1 < len(task.child_tasks) - 1:
                 succ: Task = task.child_tasks[i + 1]
                 if __neighbours(child_task, succ):
-                    child_task.aggregate(succ)  # todo odd aggregation in c++
+                    child_task.aggregate(succ)
                     task.child_tasks.remove(succ)
                     __merge_tasks(pet, task)
                     return
@@ -99,7 +99,7 @@ def __merge_tasks(pet: PETGraph, task: Task):
 
     for child in task.child_tasks:
         if pet.graph.vp.type[child.nodes[0]] == 'loop':
-            pass  # todo add loops?
+            pass
 
 
 def __neighbours(first: Task, second: Task):
@@ -227,7 +227,6 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
         c.) if a child has dependence to more than one parent node, it will be marked as barrier
     3.) if two barriers can run in parallel they are marked as barrierWorkers.
         Two barriers can run in parallel if there is not a directed path from one to the other
-
         :param pet: PET graph
         :return: List of detected pattern info
     """
@@ -250,7 +249,6 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     # ctt = [graph.vp.id[v] for v in forks]
     fs = [f for f in __forks if f.node_id == '130:0']
     for fork in fs:
-        # todo __merge_tasks(graph, fork)
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
 
@@ -270,9 +268,17 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
 
 
 def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
-    """TODO
-    check if >= 2 dependences exist from same successor path. Eliminate those
-    barrier suggestions that violate this requirement."""
+    """Checks if >= 2 dependences exist from same successor path. Eliminate those
+    barrier suggestions that violate this requirement.
+    A successor path is represented by a list of nodes reachable by traversing
+    the successor edges inside a single function in reverse direction.
+    Note, that nodes with multiple outgoing successor edges
+    (multiple control flow options) lead to a separation of the created
+    successor paths to support the desired behavior.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
+    """
     barrier_suggestions = []
     result = []
     for single_suggestion in suggestions:
@@ -344,15 +350,12 @@ def __get_predecessor_nodes(pet: PETGraph, root: Vertex, visited_nodes: [Vertex]
     return result, visited_nodes
 
 
-
-
 def __remove_duplicates(pet: PETGraph, suggestions: [PatternInfo]):
     """removes duplicates from the list of suggestions and return the modified
     list.
     CU-ID is not considered.
     Removes a suggestion, if one with identical region_start_line,
     region_end_line and pragma exists.
-
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
@@ -376,7 +379,6 @@ def __sort_output(pet: PETGraph, suggestions: [PatternInfo]):
     """orders the list of suggestions by the respective properties:
     order by: file-id, then line-number (descending).
     Returns the sorted list of suggestions
-
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
@@ -411,7 +413,6 @@ def __detect_task_suggestions(pet: PETGraph):
     TaskParallelismInfo objects.
     Currently relies on previous processing steps and suggests WORKER CUs
     as Tasks and BARRIER/BARRIER_WORKER as Taskwaits.
-
     :param pet: PET graph
     :return List[TaskParallelismInfo]
     """
@@ -744,7 +745,6 @@ def __detect_barrier_suggestions(pet: PETGraph,
             if len(targets_cyclic_dep_edges) != 0:
                 to_remove.append(dep_edge)
         for e in to_remove:
-            # print("ignoring cyclic dependence edge: ", (pet.graph.vp.id[e.source()], pet.graph.vp.id[e.target()], pet.graph.ep.var[e]))
             out_dep_edges.remove(e)
 
         v_first_line = pet.graph.vp.startsAtLine[v]
@@ -778,13 +778,10 @@ def __detect_barrier_suggestions(pet: PETGraph,
                 if pet.graph.vp.id[parent_task] not in omittable_parent_buffer:
                     omittable_parent_buffer.append(pet.graph.vp.id[parent_task])
                     omittable_count += 1
-    #                if pet.graph.vp.id[parent_task] not in task_buffer:
-    #                    task_count += 1     # TODO check if increasing both is a good idea
                 else:
                     pass
             else:
                 normal_count += 1
-        #print(pet.graph.vp.id[v], "->", "bar:", barrier_count, "task: ", task_count, "omittable:", omittable_count)
         if task_count == 1 and barrier_count == 0:
             if pet.graph.vp.tp_omittable[v] == 'False':
                 # actual change
@@ -1338,8 +1335,11 @@ def __create_task_tree_helper(pet: PETGraph, current: Vertex, root: Task, visite
 
 
 def cu_xml_preprocessing(cu_xml):
-    """executes CU XML Preprocessiong.
-    Returns file name of modified cu xml file."""
+    """Execute CU XML Preprocessiong.
+    Returns file name of modified cu xml file.
+    :param cu_xml: path to the xml file
+    :return file name of modified cu xml file.
+    """
     xml_fd = open(cu_xml)
     xml_content = ""
     for line in xml_fd.readlines():
@@ -1549,9 +1549,9 @@ def cu_xml_preprocessing(cu_xml):
                         except TypeError:
                             parent_copy.writePhaseLines._setText(parent_copy.get("endsAtLine"))
                             parent_copy.writePhaseLines.set("count", "1")
-                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,",","))
-                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,",","))
-                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,",","))
+                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,", ","))
+                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,", ","))
+                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,", ","))
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
                         cur_line = parent.get("startsAtLine")
@@ -1575,9 +1575,9 @@ def cu_xml_preprocessing(cu_xml):
                             cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(int(cur_line[cur_line.rfind(":") + 1:]) + 1)
                             continue
 
-                        parent.instructionLines._setText(parent.instructionLines.text.replace(",,",","))
-                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,",","))
-                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,",","))
+                        parent.instructionLines._setText(parent.instructionLines.text.replace(",,", ","))
+                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,", ","))
+                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
 
                         # add parent.id to parent_function.childrenNodes
                         parent_function = None
@@ -1639,8 +1639,13 @@ def cu_xml_preprocessing(cu_xml):
 
 
 def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
-    """check if line is contained in [startLine, endLine].
-    Return True if so. False else."""
+    """check if test_line is contained in [startLine, endLine].
+    Return True if so. False else.
+    :param test_line: <fileID>:<line>
+    :param start_line: <fileID>:<line>
+    :param end_line: <fileID>:<line>
+    :return True/False
+    """
     test_line_file_id = int(test_line.split(":")[0])
     test_line_line = int(test_line.split(":")[1])
     start_line_file_id = int(start_line.split(":")[0])
@@ -1654,10 +1659,14 @@ def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
         return True
     return False
 
+
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
     """Check if >= 2 recursive funciton calls are contained in a cu's code region.
     Returns True, if so.
-    Returns False, else."""
+    Returns False, else.
+    :param node: Vertex
+    :return True/False
+    """
     starts_at_line = node.get("startsAtLine").split(":")
     ends_at_line = node.get("endsAtLine").split(":")
     file_id = starts_at_line[0]
