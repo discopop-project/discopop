@@ -207,3 +207,10 @@ class PETGraphX(object):
 
     def all_nodes(self) -> List[CuNode]:
         return [n[1] for n in self.g.nodes(data='data')]
+
+    def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+        return [t for t in self.g.out_edges(node_id, data='data') if etype is None or t[2].etype == etype]
+
+    def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+        return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
+

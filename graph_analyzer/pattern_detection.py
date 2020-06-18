@@ -101,19 +101,17 @@ class PatternDetectorX(object):
         :param loop_type: loops only
         :param remove_dummies: remove dummy nodes
         """
+        dummies_to_remove = set()
         for node in self.pet.all_nodes():
             if not loop_type or node.type == CuType.LOOP:
                 if remove_dummies and node.type == CuType.DUMMY:
                     continue
+                for s, t, e in self.pet.out_edges(node.id, EdgeType.CHILD):
+                    if remove_dummies and self.pet.node_at(t).type == CuType.DUMMY:
+                        dummies_to_remove.add(t)
 
-                dummies_to_remove = set()
-                for s, t, e in self.pet.g.out_edges(node.id, data='data'):
-                    if e.etype == EdgeType.CHILD:
-                        if remove_dummies and self.pet.node_at(t).type == CuType.DUMMY:
-                            dummies_to_remove.add(t)
-
-                for n in dummies_to_remove:
-                    self.pet.g.remove_node(n)
+        for n in dummies_to_remove:
+            self.pet.g.remove_node(n)
 
     def detect_patterns(self):
         """Runs pattern discovery on the CU graph
@@ -121,9 +119,10 @@ class PatternDetectorX(object):
         self.__merge(False, True)
 
         res = DetectionResult()
-
+        return
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
+        return
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
