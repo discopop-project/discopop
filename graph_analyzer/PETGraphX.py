@@ -202,17 +202,8 @@ class PETGraphX(object):
         plt.show()
         # plt.savefig('graphX.svg')
 
-    def node_at(self, id: str) -> CuNode:
-        return self.g.nodes[id]['data']
+    def node_at(self, node_id: str) -> CuNode:
+        return self.g.nodes[node_id]['data']
 
-    def edge_at(self, source: str, target: str) -> Dependency:
-        g = self.g[source][target]
-        return self.g[source][target]['data']
-
-    def edge_data_at(self, edge: tuple) -> List[Dependency]:
-        g = self.g[edge[0]][edge[1]]
-        return self.g[edge[0]][edge[1]]['data']
-
-    def is_child(self, edge: Tuple[str, str, Dependency]):
-        return edge[2].etype == EdgeType.CHILD
-
+    def all_nodes(self) -> List[CuNode]:
+        return [n[1] for n in self.g.nodes(data='data')]

@@ -37,7 +37,7 @@ from PETGraph import PETGraph
 from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
-from pattern_detection import PatternDetector, DetectionResult
+from pattern_detection import PatternDetector, DetectionResult, PatternDetectorX
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -70,9 +70,9 @@ if __name__ == "__main__":
         exit(e)
 
     path = arguments['--path']
-    # path = './../../test_data/atax'
+    path = './../../test_data/atax'
     # path = './../../test_data/temp'
-    # path = './../../test_data/reduction'
+    path = './../../test_data/reduction'
 
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
@@ -90,10 +90,9 @@ if __name__ == "__main__":
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    # graph = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
-    # graph.interactive_visualize(path)
+    # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    # petGraphX.interactive_visualize(path)
     petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-
     petGraphX.show()
 
     start = time.time()
@@ -108,9 +107,11 @@ if __name__ == "__main__":
         print("executing plugin before: " + plugin_name)
         petGraphX = p.run_before(petGraphX)
 
-    pattern_detector = PatternDetector(petGraphX)
-    res: DetectionResult = pattern_detector.detect_patterns()
+    # pattern_detector = PatternDetector(petGraphX)
+    pattern_detector = PatternDetectorX(petGraphX)
 
+    res: DetectionResult = pattern_detector.detect_patterns()
+    petGraphX.show()
     if arguments['--json'] == 'None':
         print(str(res))
     else:
