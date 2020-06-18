@@ -10,7 +10,7 @@
 
 Usage:
     graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>]  [--interactive] [--fmap <fmap>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -21,9 +21,8 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
-    -i --interactive               Show interactive graph window
     -h --help                   Show this screen
-    -v --version                   Show version
+    -v --version                Show version
 """
 import json
 import os
@@ -49,7 +48,6 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
-    '--interactive': Use(str)
 })
 
 
@@ -97,12 +95,6 @@ if __name__ == "__main__":
     petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
 
     petGraphX.show()
-
-    exit(0)
-    # visualize subgraphs
-
-    if arguments['--interactive'] == 'True':
-        petGraphX.interactive_visualize(file_mapping)
 
     start = time.time()
 
