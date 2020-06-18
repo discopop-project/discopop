@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -109,7 +109,8 @@ class PETGraphX(object):
     loop_data: Dict[str, int]
 
     def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
-        self.graph = Graph().to_directed()
+        # self.graph = Graph().to_directed()
+        self.graph = nx.MultiDiGraph()
         self.loop_data = loop_data
         self.reduction_vars = reduction_vars
 
@@ -120,12 +121,12 @@ class PETGraphX(object):
             source = node_id
             if 'childrenNodes' in dir(node):
                 for child in [n.text for n in node.childrenNodes]:
-                    if not self.graph.has_node(child):
+                    if child not in self.graph:
                         print(f"WARNING: no child node {child} found")
                     self.graph.add_edge(source, child, data=Dependency(DepType.CHILD))
             if 'successors' in dir(node) and 'CU' in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
-                    if not self.graph.has_node(successor):
+                    if successor not in self.graph:
                         print(f"WARNING: no successor node {successor} found")
                     self.graph.add_edge(source, successor, data=Dependency(DepType.SUCCESSOR))
 
@@ -159,17 +160,22 @@ class PETGraphX(object):
         nx.draw_networkx_labels(self.graph, pos, labels, font_size=10)
 
         nx.draw_networkx_edges(self.graph, pos,
-                               edgelist=[e for e in self.graph.edges() if self.edge_at(e).type == DepType.CHILD])
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.CHILD])
         nx.draw_networkx_edges(self.graph, pos, edge_color='green',
-                               edgelist=[e for e in self.graph.edges() if self.edge_at(e).type == DepType.SUCCESSOR])
+                               edgelist=[e for e in self.graph.edges(data='data') if e[2].type == DepType.SUCCESSOR])
         plt.show()
 
     def node_at(self, id: str) -> CuNode:
         return self.graph.nodes[id]['data']
 
     def edge_at(self, source: str, target: str) -> Dependency:
+        g = self.graph[source][target]
         return self.graph[source][target]['data']
 
-    def edge_at(self, source: tuple) -> Dependency:
-        return self.graph[source[0]][source[1]]['data']
+    def edge_data_at(self, edge: tuple) -> List[Dependency]:
+        g = self.graph[edge[0]][edge[1]]
+        return self.graph[edge[0]][edge[1]]['data']
+
+    def is_child(self, edge: Tuple[str, str, Dependency]):
+        return edge[2].type == DepType.CHILD
 
