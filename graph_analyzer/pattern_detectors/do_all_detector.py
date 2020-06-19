@@ -7,28 +7,25 @@
 # directory for details.
 from typing import List
 
-import numpy as np
 from graph_tool import Vertex
-from graph_tool.util import find_vertex
 
-import PETGraph
+from PETGraphX import PETGraphX, CuNode, CuType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, \
-    correlation_coefficient, get_loop_iterations, classify_loop_variables
+from utils import depends_ignore_readonly,  classify_loop_variables
+
 
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result
     """
-    coefficient: float
 
-    def __init__(self, pet: PETGraph, node: Vertex, coefficient: float):
+    def __init__(self, pet: PETGraphX, node: CuNode):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
         :param coefficient: correlation coefficient
         """
         PatternInfo.__init__(self, pet, node)
-        self.coefficient = round(coefficient, 3)
+        # self.coefficient = round(coefficient, 3)
         fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.first_private = fp
         self.private = p
@@ -37,12 +34,12 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
 
     def __str__(self):
+        # f'Coefficient: {round(self.coefficient, 3)}\n'
         return f'Do-all at: {self.node_id}\n' \
-               f'Coefficient: {round(self.coefficient, 3)}\n' \
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
                f'iterations: {self.iterations_count}\n' \
-               f'instructions: {self.instruction_count}\n' \
+               f'instructions: {self.instructions_count}\n' \
                f'workload: {self.workload}\n' \
                f'pragma: "#pragma omp parallel for"\n' \
                f'private: {[v.name for v in self.private]}\n' \
@@ -52,34 +49,34 @@ class DoAllInfo(PatternInfo):
                f'last private: {[v.name for v in self.last_private]}'
 
 
-def run_detection(pet: PETGraph) -> List[DoAllInfo]:
+def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
-    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
+    for node in pet.all_nodes(CuType.LOOP):
         if __detect_do_all(pet, node):
-            pet.graph.vp.doAll[node] = True
-            if not pet.graph.vp.reduction[node] and get_loop_iterations(pet.graph.vp.startsAtLine[node]) > 0:
-                result.append(DoAllInfo(pet, node, pet.graph.vp.doAll[node]))
+            node.do_all = True
+            if not node.reduction and node.loop_iterations > 0:
+                result.append(DoAllInfo(pet, node))
 
     return result
 
 
-def __detect_do_all(pet: PETGraph, root: Vertex):
+def __detect_do_all(pet: PETGraphX, root: Vertex) -> bool:
     """Calculate do-all value for node
 
     :param pet: PET graph
     :param root: root node
-    :return: do-all scalar value
+    :return: true if do-all
     """
-    subnodes = find_subnodes(pet, root, 'child')
+    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
 
     for i in range(0, len(subnodes)):
         for j in range(i, len(subnodes)):
-            if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root):
+            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root):
                 return False
 
     return True

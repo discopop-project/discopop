@@ -72,7 +72,7 @@ if __name__ == "__main__":
     path = arguments['--path']
     path = './../../test_data/atax'
     # path = './../../test_data/temp'
-    path = './../../test_data/reduction'
+    # path = './../../test_data/reduction'
 
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
     # petGraphX.interactive_visualize(path)
     petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-    petGraphX.show()
+    # petGraphX.show()
 
     start = time.time()
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     pattern_detector = PatternDetectorX(petGraphX)
 
     res: DetectionResult = pattern_detector.detect_patterns()
-    petGraphX.show()
+
     if arguments['--json'] == 'None':
         print(str(res))
     else:

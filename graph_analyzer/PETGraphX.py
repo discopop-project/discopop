@@ -6,13 +6,14 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Tuple
+from enum import IntEnum, Enum
+from typing import Dict, List, Tuple, Set
 
 import matplotlib.pyplot as plt
 import networkx as nx
 from lxml.objectify import ObjectifiedElement
-from enum import IntEnum, Enum
-from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap, DependenceItem
+
+from parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from variable import Variable
 
 node_props = [
@@ -65,11 +66,15 @@ class Dependency:
     etype: EdgeType
     dtype: DepType
     var_name: str
+    source: str
+    sink: str
 
     def __init__(self, type: EdgeType):
         self.etype = type
         self.dtype = None
         self.var_name = None
+        self.source = None
+        self.sink = None
 
 
 class CuNode:
@@ -81,18 +86,16 @@ class CuNode:
     end_line: int
     type: CuType
     name: str
-    instructions_count: int
-    loop_iterations: int
-    reduction: bool
-    local_vars: List[Variable]
-    global_vars: List[Variable]
+    instructions_count: int = -1
+    loop_iterations: int = -1
+    reduction: bool = False
+    do_all: bool = False
+    local_vars: List[Variable] = []
+    global_vars: List[Variable] = []
 
     def __init__(self, id: str):
         self.id = id
         self.file_id, self.node_id = parse_id(id)
-        self.loop_iterations = 0
-        self.local_vars = []
-        self.global_vars = []
 
     def start_position(self) -> str:
         return f'{self.source_file}:{self.start_line}'
@@ -135,9 +138,8 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
 
 def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
-    # TODO needed?
-    # self.graph.ep.source[e] = dep.source
-    # self.graph.ep.sink[e] = dep.sink
+    d.source = dep.source
+    d.sink = dep.sink
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     return d
@@ -245,8 +247,96 @@ class PETGraphX(object):
 
         :param line: loop line number
         :param name: variable name
-        :param reduction_vars: List of reduction variables
         :return: true if is reduction variable
         """
         return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
+
+    def depends_ignore_readonly(self, source: CuNode, target: CuNode, root_loop: CuNode) -> bool:
+        """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+        The loop index and readonly variables are ignored
+
+        :param source: source node for dependency detection
+        :param target: target of dependency
+        :param root_loop: root loop
+        :return: true, if there is RAW dependency
+        """
+        children = self.subtree_of_type(target, CuType.CU)
+        # TODO children.append(target)
+
+        for dep in self.get_all_dependencies(source, root_loop):
+            if dep in children:
+                return True
+        return False
+
+    def get_all_dependencies(self, node: CuNode, root_loop: CuNode) -> Set[str]:
+        """Returns all data dependencies of the node and it's children
+        This method ignores loop index and read only variables
+
+        :param node: node
+        :param root_loop: root loop
+        :return: list of all RAW dependencies of the node
+        """
+        dep_set = set()
+        children = self.subtree_of_type(node, CuType.CU)
+
+        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, CuType.LOOP)]
+
+        for v in children:
+            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
+                if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, CuType.CU))
+                        or self.is_readonly_inside_loop_body(d, root_loop)):
+                    continue
+                dep_set.add(t)
+
+        return dep_set
+
+    def is_loop_index(self, var_name: str, loops_start_lines: List[str], children: List[CuNode]) -> bool:
+        """Checks, whether the variable is a loop index.
+
+        :param var_name: name of the variable
+        :param loops_start_lines: start lines of the loops
+        :param children: children nodes of the loops
+        :return: true if edge represents loop index
+        """
+
+        # If there is a raw dependency for var, the source cu is part of the loop
+        # and the dependency occurs in loop header, then var is loop index+
+
+        for c in children:
+            for t, d in [(t, d) for s, t, d in self.out_edges(c.id, EdgeType.DATA)
+                         if d.dtype == DepType.RAW and d.var_name == var_name]:
+                if (d.sink == d.source
+                        and d.source in loops_start_lines
+                        and self.node_at(t) in children):
+                    return True
+
+        return False
+
+    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CuNode) -> bool:
+        """Checks, whether a variable is read-only in loop body
+
+        :param dep: dependency variable
+        :param root_loop: root loop
+        :return: true if variable is read-only in loop body
+        """
+        # TODO pass as param?
+        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, CuType.LOOP)]
+        children = self.subtree_of_type(root_loop, CuType.CU)
+
+        for v in children:
+            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
+                         if d.dtype == DepType.WAR or d.dtype == DepType.WAW]:
+                # If there is a waw dependency for var, then var is written in loop
+                # (sink is always inside loop for waw/war)
+                if (dep.var_name == d.var_name
+                        and not (d.sink in loops_start_lines)):
+                    return False
+            for t, d in [(t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA)
+                         if d.dtype == DepType.RAW]:
+                # If there is a reverse raw dependency for var, then var is written in loop
+                # (source is always inside loop for reverse raw)
+                if (dep.var_name == d.var_name
+                        and not (d.source in loops_start_lines)):
+                    return False
+        return True
 

@@ -34,7 +34,9 @@ class PatternInfo(object):
         self.start_line = node.start_position()
         self.end_line = node.end_position()
         self.iterations_count = node.loop_iterations
-        # TODO self.instruction_count = total_instructions_count(pet, node)
+        # TODO self.instructions_count = total_instructions_count(pet, node)
+        self.instructions_count = 0
+        self.workload = 0
         # TODO self.workload = calculate_workload(pet, node)
 
     def to_json(self):

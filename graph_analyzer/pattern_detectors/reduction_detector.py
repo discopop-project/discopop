@@ -58,7 +58,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     for node in pet.all_nodes(CuType.LOOP):
         if __detect_reduction(pet, node):
             node.reduction = True
-            if node.loop_iterations != 0:
+            if node.loop_iterations > 0:
                 result.append(ReductionInfo(pet, node))
 
     return result
