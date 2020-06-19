@@ -90,6 +90,7 @@ class CuNode:
     loop_iterations: int = -1
     reduction: bool = False
     do_all: bool = False
+    pipeline: float = -1
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
 
@@ -268,7 +269,7 @@ class PETGraphX(object):
                 return True
         return False
 
-    def get_all_dependencies(self, node: CuNode, root_loop: CuNode) -> Set[str]:
+    def get_all_dependencies(self, node: CuNode, root_loop: CuNode) -> Set[CuNode]:
         """Returns all data dependencies of the node and it's children
         This method ignores loop index and read only variables
 
@@ -286,7 +287,7 @@ class PETGraphX(object):
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, CuType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
-                dep_set.add(t)
+                dep_set.add(self.node_at(t))
 
         return dep_set
 

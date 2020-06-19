@@ -12,7 +12,7 @@ from typing import List
 from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
-import PETGraph
+from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
     classify_task_vars
@@ -55,7 +55,7 @@ class PipelineInfo(PatternInfo):
     """
     coefficient: float
 
-    def __init__(self, pet: PETGraph, node: Vertex, coefficient: float):
+    def __init__(self, pet: PETGraphX, node: CuNode):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
@@ -63,7 +63,7 @@ class PipelineInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
         self._pet = pet
-        self.coefficient = round(coefficient, 3)
+        self.coefficient = round(node.pipeline, 3)
 
         children_start_lines = [pet.graph.vp.startsAtLine[v]
                                 for v in find_subnodes(pet, node, 'child')
@@ -112,7 +112,7 @@ class PipelineInfo(PatternInfo):
                f'Stages:\n{s}'
 
 
-def is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(root: CuNode, current: CuNode, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param pet: PET graph
@@ -121,31 +121,31 @@ def is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_s
     :param children_start_lines: start lines of children loops
     :return: true if valid
     """
-    r_start = pet.graph.vp.startsAtLine[root]
-    r_end = pet.graph.vp.endsAtLine[root]
-    c_start = pet.graph.vp.startsAtLine[current]
-    c_end = pet.graph.vp.endsAtLine[current]
+    r_start = root.start_position()
+    r_end = root.end_position()
+    c_start = current.start_position()
+    c_end = current.end_position()
     return not (c_start == r_start and c_end == r_start
                 or c_start == r_end and c_end == r_end
                 or c_start == c_end and c_start in children_start_lines)
 
 
-def run_detection(pet: PETGraph) -> List[PipelineInfo]:
+def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
-    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
-        pet.graph.vp.pipeline[node] = __detect_pipeline(pet, node)
-        if pet.graph.vp.pipeline[node] > __pipeline_threshold:
-            result.append(PipelineInfo(pet, node, pet.graph.vp.pipeline[node]))
+    for node in pet.all_nodes(CuType.LOOP):
+        node.pipeline = __detect_pipeline(pet, node)
+        if node.pipeline > __pipeline_threshold:
+            result.append(PipelineInfo(pet, node))
 
     return result
 
 
-def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
+def __detect_pipeline(pet: PETGraphX, root: CuNode) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph
@@ -153,21 +153,18 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
     :return: Pipeline scalar value
     """
 
-    children_start_lines = [pet.graph.vp.startsAtLine[v]
-                            for v in find_subnodes(pet, root, 'child')
-                            if pet.graph.vp.type[v] == 'loop']
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, CuType.LOOP)]
 
-    loop_subnodes = [v for v in find_subnodes(pet, root, 'child')
-                     if is_pipeline_subnode(pet, root, v, children_start_lines)]
+    loop_subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+                     if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)]
 
     # No chain of stages found
     if len(loop_subnodes) < 2:
-        pet.graph.vp.pipeline[root] = -1
         return 0
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1 if depends_ignore_readonly(pet, loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
+        graph_vector.append(1 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):
@@ -176,7 +173,7 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
     min_weight = 1
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if depends_ignore_readonly(pet, loop_subnodes[i], loop_subnodes[j], root):
+            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:
@@ -188,6 +185,5 @@ def __detect_pipeline(pet: PETGraph, root: Vertex) -> float:
     else:
         graph_vector.append(1)
         pipeline_vector.append(min_weight)
-    #print(pet.graph.vp.id[root] + " " + str(graph_vector) + " : " + str(pipeline_vector))
-    #print( correlation_coefficient(graph_vector, pipeline_vector))
+
     return correlation_coefficient(graph_vector, pipeline_vector)
