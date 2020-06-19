@@ -76,6 +76,8 @@ class Dependency:
         self.source = None
         self.sink = None
 
+    def __str__(self):
+        return self.var_name if self.var_name is not None else str(self.etype)
 
 class CuNode:
     id: str

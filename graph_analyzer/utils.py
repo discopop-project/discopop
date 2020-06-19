@@ -673,6 +673,9 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
     depend_in_out: List[Variable] = []
     reduction: List[str] = []
 
+    #TODO
+    return first_private, private, shared, depend_in, depend_out, depend_in_out, reduction
+
     left_sub_tree = __get_left_right_subtree(pet, task, False)
     subtree = get_subtree_of_type(pet, task, "cu")
     t_loop = get_subtree_of_type(pet, task, "loop")
@@ -742,7 +745,7 @@ def classify_task_vars(pet: PETGraph, task: Vertex, type: str, in_deps: List[Edg
                 break
         if var_is_loop_index:
             private.append(var)
-        elif ("GeometricDecomposition" in type or "PipeLine" in type) \
+        elif ("GeometricDecomposition" in type or "Pipeline" in type) \
                 and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars):
             reduction.append(var.name)
         elif is_depend_in_out(pet, var, in_deps, out_deps):

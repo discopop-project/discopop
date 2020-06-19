@@ -12,7 +12,7 @@ from typing import List
 from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
-from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
+from PETGraphX import PETGraphX, CuType, CuNode, EdgeType, DepType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
     classify_task_vars
@@ -21,12 +21,12 @@ __pipeline_threshold = 0.9
 
 
 class PipelineStage(object):
-    def __init__(self, pet, node, in_dep, out_dep):
-        self.node = pet.graph.vp.id[node]
-        self.startsAtLine = pet.graph.vp.startsAtLine[node]
-        self.endsAtLine = pet.graph.vp.endsAtLine[node]
+    def __init__(self, pet: PETGraphX, node: CuNode, in_dep, out_dep):
+        self.node = node.id
+        self.startsAtLine = node.start_position()
+        self.endsAtLine = node.end_position()
 
-        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(pet, node, "PipeLine", in_dep, out_dep)
+        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(pet, node, "Pipeline", in_dep, out_dep)
 
         self.first_private = fp
         self.private = p
@@ -59,45 +59,43 @@ class PipelineInfo(PatternInfo):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
-        :param coefficient: correlation coefficient
         """
         PatternInfo.__init__(self, pet, node)
         self._pet = pet
         self.coefficient = round(node.pipeline, 3)
 
-        children_start_lines = [pet.graph.vp.startsAtLine[v]
-                                for v in find_subnodes(pet, node, 'child')
-                                if pet.graph.vp.type[v] == 'loop']
+        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, CuType.LOOP)]
 
-        self._stages = [v for v in find_subnodes(pet, node, 'child')
-                        if is_pipeline_subnode(pet, node, v, children_start_lines)]
+        self._stages = [pet.node_at(t) for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
+                         if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)]
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 
-    def __in_dep(self, node: Vertex):
+    def __in_dep(self, node: CuNode):
         raw = []
-        for n in get_subtree_of_type(self._pet, node, 'cu'):
-            raw.extend(e for e in n.out_edges() if self._pet.graph.ep.dtype[e] == 'RAW')
+        for n in self._pet.subtree_of_type(node, CuType.CU):
+            raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = []
         for i in range(self._stages.index(node)):
-            nodes_before.extend(get_subtree_of_type(self._pet, self._stages[i], 'cu'))
+            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], CuType.CU))
+        nodes_before = [n.id for n in nodes_before]
 
-        return [dep for dep in raw if dep.target() in nodes_before]
+        return [dep for dep in raw if dep[1] in nodes_before]
 
-    def __out_dep(self, node: Vertex):
+    def __out_dep(self, node: CuNode):
         raw = []
-        for n in get_subtree_of_type(self._pet, node, 'cu'):
-            raw.extend(e for e in n.in_edges() if self._pet.graph.ep.dtype[e] == 'RAW')
+        for n in self._pet.subtree_of_type(node, CuType.CU):
+            raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = []
         for i in range(self._stages.index(node) + 1, len(self._stages)):
-            nodes_after.extend(get_subtree_of_type(self._pet, self._stages[i], 'cu'))
+            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], CuType.CU))
+        nodes_after = [n.id for n in nodes_after]
 
-        return [dep for dep in raw if dep.source() in nodes_after]
+        return [dep for dep in raw if dep[0] in nodes_after]
 
     def __output_stage(self, node: Vertex) -> PipelineStage:
-
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
 
