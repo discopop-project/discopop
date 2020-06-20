@@ -13,7 +13,7 @@ from typing import Dict, List
 from graph_tool import Vertex
 from graph_tool.util import find_vertex
 
-from PETGraphX import PETGraphX, CuType, CuNode, DepType
+from PETGraphX import PETGraphX, CuType, CuNode, DepType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_task_vars, get_child_loops
 # cache
@@ -92,7 +92,8 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test:
-                result.append(GDInfo(pet, node, min_iter))
+                #result.append(GDInfo(pet, node, min_iter))
+                result.append(node.id)
 
     return result
 
@@ -107,18 +108,13 @@ def __test_chunk_limit(pet: PETGraphX, node: CuNode) -> (bool, int):
     min_iterations_count = math.inf
     inner_loop_iter = {}
 
-    children = [e.target() for e in node.out_edges() if pet.graph.ep.type[e] == 'child'
-                and pet.graph.vp.type[e.target()] == 'loop']
+    children = pet.direct_children_of_type(node, CuType.LOOP)
 
-    for func_child in [e.target()
-                       for e in node.out_edges()
-                       if pet.graph.ep.type[e] == 'child' and pet.graph.vp.type[e.target()] == 'func']:
-        children.extend([e.target()
-                         for e in func_child.out_edges()
-                         if pet.graph.ep.type[e] == 'child' and pet.graph.vp.type[e.target()] == 'loop'])
+    for func_child in pet.direct_children_of_type(node, CuType.FUNC):
+        children.extend(pet.direct_children_of_type(func_child, CuType.LOOP))
 
     for child in children:
-        inner_loop_iter[pet.graph.vp.startsAtLine[child]] = __iterations_count(pet, child)
+        inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
         min_iterations_count = min(min_iterations_count, v)
@@ -133,17 +129,17 @@ def __iterations_count(pet: PETGraphX, node: CuNode) -> int:
     :return: number of iterations
     """
     if not (node in __loop_iterations):
-        loop_iter = get_loop_iterations(pet.graph.vp.startsAtLine[node])
+        loop_iter = node.loop_iterations
         parent_iter = __get_parent_iterations(pet, node)
 
         if loop_iter < parent_iter:
-            __loop_iterations[node] = loop_iter
-        elif loop_iter == 0 or parent_iter == 0:
-            __loop_iterations[node] = 0
+            __loop_iterations[node.id] = loop_iter
+        elif loop_iter <= 0 or parent_iter <= 0:
+            __loop_iterations[node.id] = 0
         else:
-            __loop_iterations[node] = loop_iter // parent_iter
+            __loop_iterations[node.id] = loop_iter // parent_iter
 
-    return __loop_iterations[node]
+    return __loop_iterations[node.id]
 
 
 def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
@@ -153,15 +149,15 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
     :param node: current node
     :return: number of iterations
     """
-    parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child']
+    parent = pet.in_edges(node.id, EdgeType.CHILD)
 
     max_iter = 1
     while parent:
-        node = parent[0]
-        if pet.graph.vp.type[node] == 'loop':
-            max_iter = max(1, get_loop_iterations(pet.graph.vp.startsAtLine[node]))
+        node = pet.node_at(parent[0][0])
+        if node.type == CuType.LOOP:
+            max_iter = max(1, node.loop_iterations)
             break
-        parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child']
+        parent = pet.in_edges(node.id, EdgeType.CHILD)
 
     return max_iter
 
