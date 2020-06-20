@@ -92,6 +92,7 @@ class CuNode:
     loop_iterations: int = -1
     reduction: bool = False
     do_all: bool = False
+    geometric_decomposition: bool = False
     pipeline: float = -1
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
@@ -244,6 +245,10 @@ class PETGraphX(object):
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.subtree_of_type(self.node_at(t), type))
         return res
+
+    def direct_children_of_type(self, root: CuNode, type: CuType) -> List[CuNode]:
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
+                if self.node_at(t).type == type]
 
     def is_reduction_var(self, line: str, name: str) -> bool:
         """Determines, whether or not the given variable is reduction variable
