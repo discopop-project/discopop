@@ -87,7 +87,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :return: List of detected pattern info
     """
     result = []
-    for node in pet.all_nodes(CuType.LOOP):
+    for node in pet.all_nodes(CuType.FUNC):
         if __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
