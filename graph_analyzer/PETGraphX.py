@@ -96,10 +96,11 @@ class CuNode:
     pipeline: float = -1
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
+    args: List[Variable] = []
 
-    def __init__(self, id: str):
-        self.id = id
-        self.file_id, self.node_id = parse_id(id)
+    def __init__(self, node_id: str):
+        self.id = node_id
+        self.file_id, self.node_id = parse_id(node_id)
 
     def start_position(self) -> str:
         return f'{self.source_file}:{self.start_line}'
@@ -127,7 +128,9 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
     _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
     n.instructions_count = node.get("instructionsCount", 0)
-    # TODO func args
+
+    if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
+        n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
     # TODO recursive calls
     if n.type == CuType.CU:
         if hasattr(node.localVariables, 'local'):
@@ -152,6 +155,7 @@ def parse_dependency(dep) -> Dependency:
 class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
+    main: CuNode
 
     def __init__(self, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                  loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
@@ -159,7 +163,10 @@ class PETGraphX(object):
         self.reduction_vars = reduction_vars
 
         for id, node in cu_dict.items():
-            self.g.add_node(id, data=parse_cu(node))
+            n = parse_cu(node)
+            if n.name == "main":
+                self.main = n
+            self.g.add_node(id, data=n)
 
         for node in self.all_nodes(CuType.LOOP):
             node.loop_iterations = loop_data.get(node.start_position(), 0)
@@ -245,6 +252,9 @@ class PETGraphX(object):
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.subtree_of_type(self.node_at(t), type))
         return res
+
+    def direct_children(self, root: CuNode) -> List[CuNode]:
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
     def direct_children_of_type(self, root: CuNode, type: CuType) -> List[CuNode]:
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
@@ -347,4 +357,45 @@ class PETGraphX(object):
                         and not (d.source in loops_start_lines)):
                     return False
         return True
+
+    def get_left_right_subtree(self, target: CuNode, right_subtree: bool) -> List[CuNode]:
+        """Searches for all subnodes of main which are to the left or to the right of the specified node
+
+        :param pet: CU graph
+        :param target: node that divides the tree
+        :param right_subtree: true - right subtree, false - left subtree
+        :return: list of nodes in the subtree
+        """
+        stack: List[CuNode] = [self.main]
+        res = []
+        visited = []
+
+        while stack:
+            current = stack.pop()
+
+            if current == target:
+                return res
+            if current.type == CuType.CU:
+                res.append(current)
+
+            if current in visited:  # suppress looping
+                continue
+            else:
+                visited.append(current)
+
+            stack.extend(self.direct_children(current) if right_subtree
+                         else reversed(self.direct_children(current)))
+
+        return res
+
+    def path(self, source: CuNode, target: CuNode) -> List[CuNode]:
+        if source == target:
+            return [source]
+
+        for child in self.direct_children(source):
+            path = self.path(child, target)
+            if path:
+                path.insert(0, source)
+                return path
+        return []
 
