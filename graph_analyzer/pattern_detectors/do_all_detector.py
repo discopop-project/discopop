@@ -9,7 +9,7 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, CuNode, NodeType, EdgeType
+from PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_loop_variables
 
@@ -18,7 +18,7 @@ class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result
     """
 
-    def __init__(self, pet: PETGraphX, node: CuNode):
+    def __init__(self, pet: PETGraphX, node: CUNode):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected

@@ -10,7 +10,7 @@
 import math
 from typing import Dict, List
 
-from PETGraphX import PETGraphX, NodeType, CuNode, EdgeType
+from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_task_vars, get_child_loops
 from variable import Variable
@@ -22,7 +22,7 @@ class GDInfo(PatternInfo):
     """Class, that contains geometric decomposition detection result
     """
 
-    def __init__(self, pet: PETGraphX, node: CuNode, min_iter: int):
+    def __init__(self, pet: PETGraphX, node: CUNode, min_iter: int):
         """
         :param pet: PET graph
         :param node: node, where geometric decomposition was detected
@@ -91,7 +91,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     return result
 
 
-def __test_chunk_limit(pet: PETGraphX, node: CuNode) -> (bool, int):
+def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> (bool, int):
     """Tests, whether or not the node has inner loops with and none of them have 0 iterations
 
     :param pet: PET graph
@@ -114,7 +114,7 @@ def __test_chunk_limit(pet: PETGraphX, node: CuNode) -> (bool, int):
     return inner_loop_iter and min_iterations_count > 0, min_iterations_count
 
 
-def __iterations_count(pet: PETGraphX, node: CuNode) -> int:
+def __iterations_count(pet: PETGraphX, node: CUNode) -> int:
     """Counts the iterations in the specified node
 
     :param pet: PET graph
@@ -135,7 +135,7 @@ def __iterations_count(pet: PETGraphX, node: CuNode) -> int:
     return __loop_iterations[node.id]
 
 
-def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
+def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
     """Calculates the number of iterations in parent of loop
 
     :param pet: PET graph
@@ -156,7 +156,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
     return max_iter
 
 
-def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
+def __detect_geometric_decomposition(pet: PETGraphX, root: CUNode) -> bool:
     """Detects geometric decomposition pattern
 
     :param pet: PET graph

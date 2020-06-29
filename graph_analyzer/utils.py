@@ -15,7 +15,7 @@ from graph_tool.all import Vertex, Edge
 from graph_tool.search import dfs_iterator
 
 import PETGraph
-from PETGraphX import PETGraphX, NodeType, CuNode, DepType, EdgeType, Dependency
+from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from variable import Variable
 
 loop_data = {}
@@ -105,7 +105,7 @@ def is_loop_index(pet: PETGraph, var_name: str, loops_start_lines: List[str], ch
     return False
 
 
-def is_loop_index2(pet: PETGraphX, root_loop: CuNode, var_name: str) -> bool:
+def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     """Checks, whether the variable is a loop index.
 
     :param pet: CU graph
@@ -245,7 +245,7 @@ def get_loop_iterations(line: str) -> int:
     return loop_data.get(line, 0)
 
 
-def __get_dep_of_type(pet: PETGraphX, node: CuNode, dep_type: DepType,
+def __get_dep_of_type(pet: PETGraphX, node: CUNode, dep_type: DepType,
                       reversed: bool) -> List[Tuple[str, str, Dependency]]:
     """Searches all dependencies of specified type
 
@@ -290,7 +290,7 @@ def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool)
     return res
 
 
-def __get_variables(nodes: List[CuNode]) -> Set[Variable]:
+def __get_variables(nodes: List[CUNode]) -> Set[Variable]:
     """Gets all variables in nodes
 
     :param nodes: nodes
@@ -332,7 +332,7 @@ def is_reduction_any(possible_lines: List[str], name: str, reduction_vars: List[
 
 
 def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
-                          waw: Set[Tuple[str, str, Dependency]], tree: List[CuNode]) -> bool:
+                          waw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
     """ Checks if variable is written in subtree
 
     :param var_name: variable name
@@ -347,7 +347,7 @@ def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
     return False
 
 
-def is_func_arg(pet: PETGraphX, var: str, node: CuNode) -> bool:
+def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
     """Checks if variable is a function argument
 
     :param pet: CU graph
@@ -361,7 +361,7 @@ def is_func_arg(pet: PETGraphX, var: str, node: CuNode) -> bool:
     if '.' not in var:
         return False
 
-    path: List[CuNode] = pet.path(pet.main, node)
+    path: List[CUNode] = pet.path(pet.main, node)
 
     for node in reversed(path):
         if node.type == NodeType.FUNC:
@@ -397,7 +397,7 @@ def is_readonly(var: str, war: Set[Tuple[str, str, Dependency]],
     return True
 
 
-def is_global(var: str, tree: List[CuNode]) -> bool:
+def is_global(var: str, tree: List[CUNode]) -> bool:
     """Checks if variable is global
 
     :param var: variable name
@@ -415,7 +415,7 @@ def is_global(var: str, tree: List[CuNode]) -> bool:
 
 
 def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
-                     war: Set[Tuple[str, str, Dependency]], sub: List[CuNode]) -> bool:
+                     war: Set[Tuple[str, str, Dependency]], sub: List[CUNode]) -> bool:
     """Checks whether a variable is first written inside the current node
 
     :param var: variable name
@@ -440,7 +440,7 @@ def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
 
 def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency]],
                          war_deps: Set[Tuple[str, str, Dependency]], reverse_raw_deps: Set[Tuple[str, str, Dependency]],
-                         reverse_war_deps: Set[Tuple[str, str, Dependency]], tree: List[CuNode]):
+                         reverse_war_deps: Set[Tuple[str, str, Dependency]], tree: List[CUNode]):
     """Checks whether a variable is first written inside the current node
 
     :param var:
@@ -471,7 +471,7 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
     return result or not is_read
 
 
-def is_read_in_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CuNode]) -> bool:
+def is_read_in_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
     """Checks if variable is read in subtree
 
     :param var: variable name
@@ -533,7 +533,7 @@ def is_depend_out_var(var: Variable, reverse_raw_deps_on: Set[Tuple[str, str, De
 
 def is_read_in(var: Variable, raw_deps_on: Set[Tuple[str, str, Dependency]],
                war_deps_on: Set[Tuple[str, str, Dependency]], reverse_raw_deps_on: Set[Tuple[str, str, Dependency]],
-               reverse_war_deps_on: Set[Tuple[str, str, Dependency]], tree: List[CuNode]) -> bool:
+               reverse_war_deps_on: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
     """Check all reverse RAW dependencies (since we know that var is written in loop, because
     is_first_written returned true)
 
@@ -564,7 +564,7 @@ def is_read_in(var: Variable, raw_deps_on: Set[Tuple[str, str, Dependency]],
     return False
 
 
-def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]):
+def get_child_loops(pet: PETGraphX, node: CUNode) -> (List[CUNode], List[CUNode]):
     """Gets all do-all and reduction subloops
 
     :param pet: CU graph
@@ -590,7 +590,7 @@ def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]
     return do_all, reduction
 
 
-def classify_loop_variables(pet: PETGraphX, loop: CuNode) -> (List[Variable], List[Variable], List[Variable],
+def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], List[Variable], List[Variable],
                                                               List[Variable], List[Variable]):
     """Classifies variables inside the loop
 
@@ -649,7 +649,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CuNode) -> (List[Variable], Li
     return first_private, private, last_private, shared, reduction
 
 
-def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Edge], out_deps: List[Edge]):
+def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Edge], out_deps: List[Edge]):
     """Classify task variables
 
     :param pet: CU graph

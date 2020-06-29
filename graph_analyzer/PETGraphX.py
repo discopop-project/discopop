@@ -76,7 +76,7 @@ class Dependency:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
-class CuNode:
+class CUNode:
     id: str
     file_id: int
     node_id: int
@@ -122,7 +122,7 @@ class CuNode:
         return self.id
 
     def __eq__(self, other):
-        if isinstance(other, CuNode):
+        if isinstance(other, CUNode):
             return other.id == self.id
         else:
             return False
@@ -131,8 +131,8 @@ class CuNode:
         return hash(id)
 
 
-def parse_cu(node: ObjectifiedElement) -> CuNode:
-    n = CuNode(node.get("id"))
+def parse_cu(node: ObjectifiedElement) -> CUNode:
+    n = CUNode(node.get("id"))
     n.type = NodeType(int(node.get("type")))
     n.source_file, n.start_line = parse_id(node.get("startsAtLine"))
     _, n.end_line = parse_id(node.get("endsAtLine"))
@@ -165,7 +165,7 @@ def parse_dependency(dep) -> Dependency:
 class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
-    main: CuNode
+    main: CUNode
 
     def __init__(self, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                  loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
@@ -247,7 +247,7 @@ class PETGraphX(object):
         plt.show()
         # plt.savefig('graphX.svg')
 
-    def node_at(self, node_id: str) -> CuNode:
+    def node_at(self, node_id: str) -> CUNode:
         """Gets node data by node id
 
         :param node_id: id of the node
@@ -255,7 +255,7 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]['data']
 
-    def all_nodes(self, type: NodeType = None) -> List[CuNode]:
+    def all_nodes(self, type: NodeType = None) -> List[CUNode]:
         """List of all nodes of specified type
 
         :param type: type of node
@@ -281,7 +281,7 @@ class PETGraphX(object):
         """
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
-    def subtree_of_type(self, root: CuNode, type: NodeType) -> List[CuNode]:
+    def subtree_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -295,7 +295,7 @@ class PETGraphX(object):
             res.extend(self.subtree_of_type(self.node_at(t), type))
         return res
 
-    def direct_children(self, root: CuNode) -> List[CuNode]:
+    def direct_children(self, root: CUNode) -> List[CUNode]:
         """Gets only direct children of any type
 
         :param root: root node
@@ -303,7 +303,7 @@ class PETGraphX(object):
         """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
-    def direct_children_of_type(self, root: CuNode, type: NodeType) -> List[CuNode]:
+    def direct_children_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
         """Gets only direct children of specified type
 
         :param root: root node
@@ -322,7 +322,7 @@ class PETGraphX(object):
         """
         return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
-    def depends_ignore_readonly(self, source: CuNode, target: CuNode, root_loop: CuNode) -> bool:
+    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored
 
@@ -339,7 +339,7 @@ class PETGraphX(object):
                 return True
         return False
 
-    def get_all_dependencies(self, node: CuNode, root_loop: CuNode) -> Set[CuNode]:
+    def get_all_dependencies(self, node: CUNode, root_loop: CUNode) -> Set[CUNode]:
         """Returns all data dependencies of the node and it's children
         This method ignores loop index and read only variables
 
@@ -361,7 +361,7 @@ class PETGraphX(object):
 
         return dep_set
 
-    def is_loop_index(self, var_name: str, loops_start_lines: List[str], children: List[CuNode]) -> bool:
+    def is_loop_index(self, var_name: str, loops_start_lines: List[str], children: List[CUNode]) -> bool:
         """Checks, whether the variable is a loop index.
 
         :param var_name: name of the variable
@@ -383,7 +383,7 @@ class PETGraphX(object):
 
         return False
 
-    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CuNode) -> bool:
+    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode) -> bool:
         """Checks, whether a variable is read-only in loop body
 
         :param dep: dependency variable
@@ -411,14 +411,14 @@ class PETGraphX(object):
                     return False
         return True
 
-    def get_left_right_subtree(self, target: CuNode, right_subtree: bool) -> List[CuNode]:
+    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
         :param right_subtree: true - right subtree, false - left subtree
         :return: list of nodes in the subtree
         """
-        stack: List[CuNode] = [self.main]
+        stack: List[CUNode] = [self.main]
         res = []
         visited = []
 
@@ -440,7 +440,7 @@ class PETGraphX(object):
 
         return res
 
-    def path(self, source: CuNode, target: CuNode) -> List[CuNode]:
+    def path(self, source: CUNode, target: CUNode) -> List[CUNode]:
         """DFS from source to target over edges of child type
 
         :param source: source node

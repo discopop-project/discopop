@@ -7,13 +7,13 @@
 # directory for details.
 import json
 
-from PETGraphX import CuNode
+from PETGraphX import CUNode
 
 
 class PatternInfo(object):
     """Base class for pattern detection info
     """
-    _node: CuNode
+    _node: CUNode
     node_id: str
     start_line: str
     end_line: str
@@ -21,7 +21,7 @@ class PatternInfo(object):
     instructions_count: int
     workload: int
 
-    def __init__(self, node: CuNode):
+    def __init__(self, node: CUNode):
         """
         :param node: node, where pipeline was detected
         """

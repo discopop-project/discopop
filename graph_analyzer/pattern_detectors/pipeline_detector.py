@@ -11,7 +11,7 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, NodeType, CuNode, EdgeType, DepType
+from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import correlation_coefficient, classify_task_vars
 
@@ -19,7 +19,7 @@ __pipeline_threshold = 0.9
 
 
 class PipelineStage(object):
-    def __init__(self, pet: PETGraphX, node: CuNode, in_dep, out_dep):
+    def __init__(self, pet: PETGraphX, node: CUNode, in_dep, out_dep):
         self.node = node.id
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
@@ -53,7 +53,7 @@ class PipelineInfo(PatternInfo):
     """
     coefficient: float
 
-    def __init__(self, pet: PETGraphX, node: CuNode):
+    def __init__(self, pet: PETGraphX, node: CUNode):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
@@ -69,7 +69,7 @@ class PipelineInfo(PatternInfo):
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 
-    def __in_dep(self, node: CuNode):
+    def __in_dep(self, node: CUNode):
         raw = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
@@ -81,7 +81,7 @@ class PipelineInfo(PatternInfo):
 
         return [dep for dep in raw if dep[1] in nodes_before]
 
-    def __out_dep(self, node: CuNode):
+    def __out_dep(self, node: CUNode):
         raw = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
@@ -108,7 +108,7 @@ class PipelineInfo(PatternInfo):
                f'Stages:\n{s}'
 
 
-def is_pipeline_subnode(root: CuNode, current: CuNode, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param root: root node
@@ -140,7 +140,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     return result
 
 
-def __detect_pipeline(pet: PETGraphX, root: CuNode) -> float:
+def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph
