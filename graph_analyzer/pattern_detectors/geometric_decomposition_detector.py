@@ -151,6 +151,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
             max_iter = max(1, node.loop_iterations)
             break
         parent = pet.in_edges(node.id, EdgeType.CHILD)
+        # TODO parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child' and node not in [tmp_e.target() for tmp_e in e.source().out_edges()]]
 
     return max_iter
 

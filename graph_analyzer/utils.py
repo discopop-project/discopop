@@ -456,6 +456,9 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
     if var.name is None:
         return False
     is_read = is_read_in(var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
+    if var.name is None:
+        print("Empty var.name found. Skipping.")
+        return False
     for dep in raw_deps:
         if var.name in dep[2].var_name and any([n.id == dep[1] for n in tree]):
             result = True
@@ -664,6 +667,7 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
     reduction: List[str] = []
 
     left_sub_tree = pet.get_left_right_subtree(task, False)
+    right_sub_tree = pet.get_left_right_subtree(task, True)
     subtree = pet.subtree_of_type(task, NodeType.CU)
     t_loop = pet.subtree_of_type(task, NodeType.LOOP)
 
@@ -751,7 +755,10 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
                 first_private.append(var)
         elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
             if is_scalar_val(var):
-                private.append(var)
+                if is_read_in(pet, var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
+                    shared.append(var)
+                else:
+                    private.append(var)
             else:
                 shared.append(var)
 

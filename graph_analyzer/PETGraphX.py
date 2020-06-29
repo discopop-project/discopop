@@ -94,6 +94,9 @@ class CuNode:
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
     args: List[Variable] = []
+    tp_contains_task: bool = False
+    tp_contains_taskwait: bool = False
+    tp_omittable: bool = False
 
     def __init__(self, node_id: str):
         self.id = node_id

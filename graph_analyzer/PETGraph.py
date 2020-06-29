@@ -72,7 +72,11 @@ node_props = [
     ('recursiveFunctionCalls', 'object', '[]'),
 
     ('viz_color', 'string', 'node_type_info[node.get("type")]["color"]'),
-    ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]')
+    ('viz_shape', 'string', 'node_type_info[node.get("type")]["shape"]'),
+
+    ('tp_contains_task', 'string', 'False'),
+    ('tp_contains_taskwait', 'string', 'False'),
+    ('tp_omittable', 'string', 'False')
 ]
 
 edge_props = [
@@ -121,7 +125,7 @@ class PETGraph(object):
                 self.graph.vp.args[v] = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
 
             if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
-                self.graph.vp.recursiveFunctionCalls[v] = [v.text for v in node.callsNode.recursiveFunctionCall]
+                self.graph.vp.recursiveFunctionCalls[v] = [n.text for n in node.callsNode.recursiveFunctionCall]
 
             if node.get("type") == '0':
                 if hasattr(node.localVariables, 'local'):
@@ -187,7 +191,7 @@ class PETGraph(object):
 
     def filter_view(self, nodes_id='*', edges_type='*'):
         vfilter = None if nodes_id == '*' else lambda v: self.graph.vertex_index[v] in nodes_id
-        efilter = None if edges_type == '*' else lambda e: self.graph.ep.type[e] == edges_type
+        efilter = None if edges_type == '*' else lambda e: self.graph.ep.type[e] in edges_type
 
         return GraphView(self.graph, vfilt=vfilter, efilt=efilter)
 

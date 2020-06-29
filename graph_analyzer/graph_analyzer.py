@@ -109,7 +109,7 @@ if __name__ == "__main__":
     # pattern_detector = PatternDetector(petGraphX)
     pattern_detector = PatternDetectorX(petGraphX)
 
-    res: DetectionResult = pattern_detector.detect_patterns()
+    res: DetectionResult = pattern_detector.detect_patterns(cu_dict, dependencies, loop_data, reduction_vars)
 
     if arguments['--json'] == 'None':
         print(str(res))
