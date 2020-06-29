@@ -170,13 +170,13 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
     :return: true if GD pattern was discovered
     """
     for child in pet.subtree_of_type(root, CuType.LOOP):
-        if child.reduction or child.do_all:
+        if not(child.reduction or child.do_all):
             return False
 
     for child in pet.direct_children_of_type(root, CuType.FUNC):
         for child2 in pet.direct_children_of_type(child, CuType.LOOP):
-            if child2.reduction or child2.do_all:
+            if not(child2.reduction or child2.do_all):
                 return False
-
+            
     return True
 
