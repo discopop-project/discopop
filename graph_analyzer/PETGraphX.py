@@ -55,7 +55,7 @@ class DepType(Enum):
     WAW = 2
 
 
-class CuType(IntEnum):
+class NodeType(IntEnum):
     CU = 0
     FUNC = 1
     LOOP = 2
@@ -64,17 +64,13 @@ class CuType(IntEnum):
 
 class Dependency:
     etype: EdgeType
-    dtype: DepType
-    var_name: str
-    source: str
-    sink: str
+    dtype: DepType = None
+    var_name: str = None
+    source: str = None
+    sink: str = None
 
     def __init__(self, type: EdgeType):
         self.etype = type
-        self.dtype = None
-        self.var_name = None
-        self.source = None
-        self.sink = None
 
     def __str__(self):
         return self.var_name if self.var_name is not None else str(self.etype)
@@ -87,7 +83,7 @@ class CuNode:
     source_file: int
     start_line: int
     end_line: int
-    type: CuType
+    type: NodeType
     name: str
     instructions_count: int = -1
     loop_iterations: int = -1
@@ -104,9 +100,19 @@ class CuNode:
         self.file_id, self.node_id = parse_id(node_id)
 
     def start_position(self) -> str:
+        """Start position file_id:line
+        e.g. 23:45
+
+        :return:
+        """
         return f'{self.source_file}:{self.start_line}'
 
     def end_position(self) -> str:
+        """End position file_id:line
+        e.g. 23:45
+
+        :return:
+        """
         return f'{self.source_file}:{self.end_line}'
 
     def __str__(self):
@@ -124,7 +130,7 @@ class CuNode:
 
 def parse_cu(node: ObjectifiedElement) -> CuNode:
     n = CuNode(node.get("id"))
-    n.type = CuType(int(node.get("type")))
+    n.type = NodeType(int(node.get("type")))
     n.source_file, n.start_line = parse_id(node.get("startsAtLine"))
     _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
@@ -133,7 +139,7 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
     # TODO recursive calls unused
-    if n.type == CuType.CU:
+    if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
         if hasattr(node.globalVariables, 'global'):
@@ -169,7 +175,7 @@ class PETGraphX(object):
                 self.main = n
             self.g.add_node(id, data=n)
 
-        for node in self.all_nodes(CuType.LOOP):
+        for node in self.all_nodes(NodeType.LOOP):
             node.loop_iterations = loop_data.get(node.start_position(), 0)
 
         for node_id, node in cu_dict.items():
@@ -204,19 +210,23 @@ class PETGraphX(object):
                         self.g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
 
     def show(self):
+        """Plots the graph
+
+        :return:
+        """
         print("showing")
         plt.plot()
         pos = self.pos
 
         # draw nodes
         nx.draw_networkx_nodes(self.g, pos=pos, node_color='#2B85FD', node_shape='o',
-                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.CU])
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.CU])
         nx.draw_networkx_nodes(self.g, pos=pos, node_color='#ff5151', node_shape='d',
-                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.LOOP])
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.LOOP])
         nx.draw_networkx_nodes(self.g, pos=pos, node_color='grey', node_shape='s',
-                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.DUMMY])
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.DUMMY])
         nx.draw_networkx_nodes(self.g, pos=pos, node_color='#cf65ff', node_shape='s',
-                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == CuType.FUNC])
+                               nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.FUNC])
         nx.draw_networkx_nodes(self.g, pos=pos, node_color='yellow', node_shape='h', node_size=750,
                                nodelist=[n for n in self.g.nodes if self.node_at(n).name == 'main'])
         # id as label
@@ -235,18 +245,46 @@ class PETGraphX(object):
         # plt.savefig('graphX.svg')
 
     def node_at(self, node_id: str) -> CuNode:
+        """Gets node data by node id
+
+        :param node_id: id of the node
+        :return: Node
+        """
         return self.g.nodes[node_id]['data']
 
-    def all_nodes(self, type: CuType = None) -> List[CuNode]:
+    def all_nodes(self, type: NodeType = None) -> List[CuNode]:
+        """List of all nodes of specified type
+
+        :param type: type of node
+        :return: List of all nodes
+        """
         return [n[1] for n in self.g.nodes(data='data') if type is None or n[1].type == type]
 
     def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+        """Get outgoing edges of node of specified type
+
+        :param node_id: id of the source node
+        :param etype: type of edges
+        :return: list of outgoing edges
+        """
         return [t for t in self.g.out_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
     def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+        """Get incoming edges of node of specified type
+
+        :param node_id: id of the target node
+        :param etype: type of edges
+        :return: list of incoming edges
+        """
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
-    def subtree_of_type(self, root: CuNode, type: CuType) -> List[CuNode]:
+    def subtree_of_type(self, root: CuNode, type: NodeType) -> List[CuNode]:
+        """Gets all nodes in subtree of specified type including root
+
+        :param root: root node
+        :param type: type of children
+        :return: list of nodes in subtree
+        """
         res = []
         if root.type == type:
             res.append(root)
@@ -255,9 +293,20 @@ class PETGraphX(object):
         return res
 
     def direct_children(self, root: CuNode) -> List[CuNode]:
+        """Gets only direct children of any type
+
+        :param root: root node
+        :return: list of direct children
+        """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
-    def direct_children_of_type(self, root: CuNode, type: CuType) -> List[CuNode]:
+    def direct_children_of_type(self, root: CuNode, type: NodeType) -> List[CuNode]:
+        """Gets only direct children of specified type
+
+        :param root: root node
+        :param type: type of children
+        :return: list of direct children
+        """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
                 if self.node_at(t).type == type]
 
@@ -279,7 +328,7 @@ class PETGraphX(object):
         :param root_loop: root loop
         :return: true, if there is RAW dependency
         """
-        children = self.subtree_of_type(target, CuType.CU)
+        children = self.subtree_of_type(target, NodeType.CU)
         # TODO children.append(target)
 
         for dep in self.get_all_dependencies(source, root_loop):
@@ -296,13 +345,13 @@ class PETGraphX(object):
         :return: list of all RAW dependencies of the node
         """
         dep_set = set()
-        children = self.subtree_of_type(node, CuType.CU)
+        children = self.subtree_of_type(node, NodeType.CU)
 
-        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, CuType.LOOP)]
+        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
 
         for v in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
-                if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, CuType.CU))
+                if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
                 dep_set.add(self.node_at(t))
@@ -339,8 +388,8 @@ class PETGraphX(object):
         :return: true if variable is read-only in loop body
         """
         # TODO pass as param?
-        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, CuType.LOOP)]
-        children = self.subtree_of_type(root_loop, CuType.CU)
+        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
+        children = self.subtree_of_type(root_loop, NodeType.CU)
 
         for v in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
@@ -362,7 +411,6 @@ class PETGraphX(object):
     def get_left_right_subtree(self, target: CuNode, right_subtree: bool) -> List[CuNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
-        :param pet: CU graph
         :param target: node that divides the tree
         :param right_subtree: true - right subtree, false - left subtree
         :return: list of nodes in the subtree
@@ -376,7 +424,7 @@ class PETGraphX(object):
 
             if current == target:
                 return res
-            if current.type == CuType.CU:
+            if current.type == NodeType.CU:
                 res.append(current)
 
             if current in visited:  # suppress looping
@@ -390,6 +438,12 @@ class PETGraphX(object):
         return res
 
     def path(self, source: CuNode, target: CuNode) -> List[CuNode]:
+        """DFS from source to target over edges of child type
+
+        :param source: source node
+        :param target: target node
+        :return: list of nodes from source to target
+        """
         if source == target:
             return [source]
 

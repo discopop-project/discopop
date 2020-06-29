@@ -10,7 +10,7 @@
 import math
 from typing import Dict, List
 
-from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
+from PETGraphX import PETGraphX, NodeType, CuNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_task_vars, get_child_loops
 from variable import Variable
@@ -27,7 +27,7 @@ class GDInfo(PatternInfo):
         :param pet: PET graph
         :param node: node, where geometric decomposition was detected
         """
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
 
         self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
@@ -80,7 +80,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :return: List of detected pattern info
     """
     result = []
-    for node in pet.all_nodes(CuType.FUNC):
+    for node in pet.all_nodes(NodeType.FUNC):
         if __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
@@ -101,10 +101,10 @@ def __test_chunk_limit(pet: PETGraphX, node: CuNode) -> (bool, int):
     min_iterations_count = math.inf
     inner_loop_iter = {}
 
-    children = pet.direct_children_of_type(node, CuType.LOOP)
+    children = pet.direct_children_of_type(node, NodeType.LOOP)
 
-    for func_child in pet.direct_children_of_type(node, CuType.FUNC):
-        children.extend(pet.direct_children_of_type(func_child, CuType.LOOP))
+    for func_child in pet.direct_children_of_type(node, NodeType.FUNC):
+        children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
 
     for child in children:
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
@@ -147,7 +147,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
     max_iter = 1
     while parent:
         node = pet.node_at(parent[0][0])
-        if node.type == CuType.LOOP:
+        if node.type == NodeType.LOOP:
             max_iter = max(1, node.loop_iterations)
             break
         parent = pet.in_edges(node.id, EdgeType.CHILD)
@@ -162,12 +162,12 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for child in pet.subtree_of_type(root, CuType.LOOP):
+    for child in pet.subtree_of_type(root, NodeType.LOOP):
         if not (child.reduction or child.do_all):
             return False
 
-    for child in pet.direct_children_of_type(root, CuType.FUNC):
-        for child2 in pet.direct_children_of_type(child, CuType.LOOP):
+    for child in pet.direct_children_of_type(root, NodeType.FUNC):
+        for child2 in pet.direct_children_of_type(child, NodeType.LOOP):
             if not (child2.reduction or child2.do_all):
                 return False
 

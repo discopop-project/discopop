@@ -15,7 +15,7 @@ from graph_tool.all import Vertex, Edge
 from graph_tool.search import dfs_iterator
 
 import PETGraph
-from PETGraphX import PETGraphX, CuType, CuNode, DepType, EdgeType, Dependency
+from PETGraphX import PETGraphX, NodeType, CuNode, DepType, EdgeType, Dependency
 from variable import Variable
 
 loop_data = {}
@@ -113,8 +113,8 @@ def is_loop_index2(pet: PETGraphX, root_loop: CuNode, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, CuType.LOOP)]
-    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, CuType.CU))
+    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
+    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
 
 
 def is_readonly_inside_loop_body(pet: PETGraph, dep: Edge, root_loop: Vertex) -> bool:
@@ -245,8 +245,8 @@ def get_loop_iterations(line: str) -> int:
     return loop_data.get(line, 0)
 
 
-def __get_dep_of_type(pet: PETGraphX, node: CuNode, dep_type: DepType, reversed: bool) -> List[
-    Tuple[str, str, Dependency]]:
+def __get_dep_of_type(pet: PETGraphX, node: CuNode, dep_type: DepType,
+                      reversed: bool) -> List[Tuple[str, str, Dependency]]:
     """Searches all dependencies of specified type
 
     :param pet: CU graph
@@ -364,7 +364,7 @@ def is_func_arg(pet: PETGraphX, var: str, node: CuNode) -> bool:
     path: List[CuNode] = pet.path(pet.main, node)
 
     for node in reversed(path):
-        if node.type == CuType.FUNC:
+        if node.type == NodeType.FUNC:
             for arg in node.args:
                 if var.startswith(arg.name):
                     return True
@@ -397,20 +397,20 @@ def is_readonly(var: str, war: Set[Tuple[str, str, Dependency]],
     return True
 
 
-def is_global(var: str, tree: List[Vertex]) -> bool:
+def is_global(var: str, tree: List[CuNode]) -> bool:
     """Checks if variable is global
 
     :param var: variable name
     :param tree: nodes to search
     :return: true if global
     """
-    return False
-    # TODO from tmp global vars
+
     for node in tree:
-        if pet.graph.vp.type[node] == 'cu':
-            for gv in pet.graph.vp.globalVars[node]:
+        if node.type == NodeType.CU:
+            for gv in node.global_vars:
                 if gv.name == var:
-                    return True
+                    # TODO from tmp global vars
+                    return False
     return False
 
 
@@ -502,7 +502,6 @@ def is_depend_in_var(var: Variable, in_deps: List[Tuple[str, str, Dependency]],
                      raw_deps_on: Set[Tuple[str, str, Dependency]]) -> bool:
     """Checks if variable is written inside a dependent task and read in current task
 
-    :param pet: CU graph
     :param var: Variable
     :param in_deps: in dependencies
     :param raw_deps_on: raw dependencies
@@ -572,14 +571,14 @@ def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]
     do_all = []
     reduction = []
 
-    for child in pet.subtree_of_type(node, CuType.LOOP):
+    for child in pet.subtree_of_type(node, NodeType.LOOP):
         if child.do_all:
             do_all.append(child)
         elif child.reduction:
             reduction.append(child)
 
-    for fchild in pet.direct_children_of_type(node, CuType.FUNC):
-        for child in pet.direct_children_of_type(fchild, CuType.LOOP):
+    for func_child in pet.direct_children_of_type(node, NodeType.FUNC):
+        for child in pet.direct_children_of_type(func_child, NodeType.LOOP):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -604,7 +603,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CuNode) -> (List[Variable], Li
 
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
-    sub = pet.subtree_of_type(loop, CuType.CU)
+    sub = pet.subtree_of_type(loop, NodeType.CU)
 
     vars = __get_variables(sub)
 
@@ -665,11 +664,11 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
     reduction: List[str] = []
 
     left_sub_tree = pet.get_left_right_subtree(task, False)
-    subtree = pet.subtree_of_type(task, CuType.CU)
-    t_loop = pet.subtree_of_type(task, CuType.LOOP)
+    subtree = pet.subtree_of_type(task, NodeType.CU)
+    t_loop = pet.subtree_of_type(task, NodeType.LOOP)
 
     vars: Set[Variable] = set()
-    if task.type == CuType.FUNC:
+    if task.type == NodeType.FUNC:
         tmp = __get_variables(subtree)
         vars_strings = []
         for v in task.args:
@@ -687,7 +686,7 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
             if name in vars_strings:
                 vars.add(v)
     else:
-        vars = __get_variables(pet.subtree_of_type(task, CuType.CU))
+        vars = __get_variables(pet.subtree_of_type(task, NodeType.CU))
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()
@@ -711,7 +710,7 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
     do_all_loops, reduction_loops = get_child_loops(pet, task)
     # reduction_result = ""
 
-    if task.type == CuType.LOOP:
+    if task.type == NodeType.LOOP:
         if task.reduction:
             reduction_loops.append(task)
         else:

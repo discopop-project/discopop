@@ -11,7 +11,7 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, CuType
+from PETGraphX import PETGraphX, NodeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import is_reduction_var, classify_loop_variables
 
@@ -25,7 +25,7 @@ class ReductionInfo(PatternInfo):
         :param pet: PET graph
         :param node: node, where reduction was detected
         """
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
         self.pragma = "#pragma omp parallel for"
 
         fp, p, lp, s, r = classify_loop_variables(pet, node)
@@ -55,7 +55,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     """
     result = []
 
-    for node in pet.all_nodes(CuType.LOOP):
+    for node in pet.all_nodes(NodeType.LOOP):
         if __detect_reduction(pet, node):
             node.reduction = True
             if node.loop_iterations > 0:
@@ -72,7 +72,7 @@ def __detect_reduction(pet: PETGraphX, root: Vertex) -> bool:
     :return: true if is reduction loop
     """
     all_vars = []
-    for node in pet.subtree_of_type(root, CuType.CU):
+    for node in pet.subtree_of_type(root, NodeType.CU):
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 

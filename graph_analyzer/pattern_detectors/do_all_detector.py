@@ -9,7 +9,7 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, CuNode, CuType, EdgeType
+from PETGraphX import PETGraphX, CuNode, NodeType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_loop_variables
 
@@ -22,10 +22,8 @@ class DoAllInfo(PatternInfo):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
-        :param coefficient: correlation coefficient
         """
-        PatternInfo.__init__(self, pet, node)
-        # self.coefficient = round(coefficient, 3)
+        PatternInfo.__init__(self, node)
         fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.first_private = fp
         self.private = p
@@ -34,7 +32,6 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
 
     def __str__(self):
-        # f'Coefficient: {round(self.coefficient, 3)}\n'
         return f'Do-all at: {self.node_id}\n' \
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
@@ -56,7 +53,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :return: List of detected pattern info
     """
     result = []
-    for node in pet.all_nodes(CuType.LOOP):
+    for node in pet.all_nodes(NodeType.LOOP):
         if __detect_do_all(pet, node):
             node.do_all = True
             if not node.reduction and node.loop_iterations > 0:

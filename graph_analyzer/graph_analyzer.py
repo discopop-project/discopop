@@ -50,14 +50,14 @@ docopt_schema = Schema({
 })
 
 
-def get_path(base_path: str, file: str) -> str:
+def get_path(base_path: str, file_name: str) -> str:
     """Combines path and filename if it is not absolute
 
     :param base_path: path
-    :param file: file name
+    :param file_name: file name
     :return: path to file
     """
-    return file if os.path.isabs(file) else os.path.join(base_path, file)
+    return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
 if __name__ == "__main__":
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         exit(e)
 
     path = arguments['--path']
-    path = './../../test_data/atax'
+    # path = './../../test_data/atax'
     # path = './../../test_data/temp'
     # path = './../../test_data/reduction'
 

@@ -7,7 +7,7 @@
 # directory for details.
 import json
 
-from PETGraphX import PETGraphX, CuNode
+from PETGraphX import CuNode
 
 
 class PatternInfo(object):
@@ -21,9 +21,8 @@ class PatternInfo(object):
     instructions_count: int
     workload: int
 
-    def __init__(self, pet: PETGraphX, node: CuNode):
+    def __init__(self, node: CuNode):
         """
-        :param pet: PET graph
         :param node: node, where pipeline was detected
         """
         self._node = node

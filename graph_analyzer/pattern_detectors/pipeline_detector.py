@@ -11,7 +11,7 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, CuType, CuNode, EdgeType, DepType
+from PETGraphX import PETGraphX, NodeType, CuNode, EdgeType, DepType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import correlation_coefficient, classify_task_vars
 
@@ -58,11 +58,11 @@ class PipelineInfo(PatternInfo):
         :param pet: PET graph
         :param node: node, where pipeline was detected
         """
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
         self._pet = pet
         self.coefficient = round(node.pipeline, 3)
 
-        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, CuType.LOOP)]
+        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, NodeType.LOOP)]
 
         self._stages = [pet.node_at(t) for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
                         if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)]
@@ -71,24 +71,24 @@ class PipelineInfo(PatternInfo):
 
     def __in_dep(self, node: CuNode):
         raw = []
-        for n in self._pet.subtree_of_type(node, CuType.CU):
+        for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = []
         for i in range(self._stages.index(node)):
-            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], CuType.CU))
+            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
         nodes_before = [n.id for n in nodes_before]
 
         return [dep for dep in raw if dep[1] in nodes_before]
 
     def __out_dep(self, node: CuNode):
         raw = []
-        for n in self._pet.subtree_of_type(node, CuType.CU):
+        for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = []
         for i in range(self._stages.index(node) + 1, len(self._stages)):
-            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], CuType.CU))
+            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
         nodes_after = [n.id for n in nodes_after]
 
         return [dep for dep in raw if dep[0] in nodes_after]
@@ -111,7 +111,6 @@ class PipelineInfo(PatternInfo):
 def is_pipeline_subnode(root: CuNode, current: CuNode, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
-    :param pet: PET graph
     :param root: root node
     :param current: current node
     :param children_start_lines: start lines of children loops
@@ -133,7 +132,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :return: List of detected pattern info
     """
     result = []
-    for node in pet.all_nodes(CuType.LOOP):
+    for node in pet.all_nodes(NodeType.LOOP):
         node.pipeline = __detect_pipeline(pet, node)
         if node.pipeline > __pipeline_threshold:
             result.append(PipelineInfo(pet, node))
@@ -149,7 +148,7 @@ def __detect_pipeline(pet: PETGraphX, root: CuNode) -> float:
     :return: Pipeline scalar value
     """
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, CuType.LOOP)]
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
 
     loop_subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
                      if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)]
