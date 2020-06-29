@@ -10,13 +10,10 @@
 import math
 from typing import Dict, List
 
-from graph_tool import Vertex
-from graph_tool.util import find_vertex
-
-from PETGraphX import PETGraphX, CuType, CuNode, DepType, EdgeType
+from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_task_vars, get_child_loops
-# cache
+from utils import classify_task_vars
+
 from variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
@@ -33,9 +30,7 @@ class GDInfo(PatternInfo):
         """
         PatternInfo.__init__(self, pet, node)
 
-        do_all, reduction = get_child_loops(pet, node)
-        self.do_all_children = [pet.graph.vp.id[v] for v in do_all]
-        self.reduction_children = [pet.graph.vp.id[v] for v in reduction]
+        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
@@ -53,8 +48,7 @@ class GDInfo(PatternInfo):
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp = []
-        fp, p, s, in_dep, out_dep, in_out_dep, r = \
-            classify_task_vars(pet, node, "GeometricDecomposition", [], [])
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
         fp.append(Variable('int', 'i'))
 
         self.first_private = fp
@@ -68,8 +62,8 @@ class GDInfo(PatternInfo):
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
                f'Type: Geometric Decomposition Pattern\n' \
-               f'Do-All loops: {[n for n in self.do_all_children]}\n' \
-               f'Reduction loops: {[n for n in self.reduction_children]}\n' \
+               f'Do-All loops: {[n.id for n in self.do_all_children]}\n' \
+               f'Reduction loops: {[n.id for n in self.reduction_children]}\n' \
                f'\tNumber of tasks: {self.num_tasks}\n' \
                f'\tChunk limits: {self.min_iter_number}\n' \
                f'\tpragma: {self.pragma}]\n' \
@@ -92,8 +86,8 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test:
-                #result.append(GDInfo(pet, node, min_iter))
-                result.append(node.id)
+                result.append(GDInfo(pet, node, min_iter))
+                # result.append(node.id)
 
     return result
 
@@ -162,6 +156,32 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
     return max_iter
 
 
+def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]):
+    """Gets all do-all and reduction subloops
+
+    :param pet: CU graph
+    :param node: root node
+    :return: list of do-all and list of reduction loop nodes
+    """
+    do_all = []
+    reduction = []
+
+    for child in pet.subtree_of_type(node, CuType.LOOP):
+        if child.do_all:
+            do_all.append(child)
+        elif child.reduction:
+            reduction.append(child)
+
+    for fchild in pet.direct_children_of_type(node, CuType.FUNC):
+        for child in pet.direct_children_of_type(fchild, CuType.LOOP):
+            if child.do_all:
+                do_all.append(child)
+            elif child.reduction:
+                reduction.append(child)
+
+    return do_all, reduction
+
+
 def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
     """Detects geometric decomposition pattern
 
@@ -177,6 +197,6 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
         for child2 in pet.direct_children_of_type(child, CuType.LOOP):
             if not(child2.reduction or child2.do_all):
                 return False
-            
+
     return True
 

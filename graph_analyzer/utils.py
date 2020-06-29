@@ -548,31 +548,6 @@ def is_read_in_subtree(pet: PETGraph, var: str, rev_raw: Set[Edge], tree: List[V
     return False
 
 
-def get_child_loops(pet: PETGraph, node: Vertex) -> (List[Vertex], List[Vertex]):
-    """Gets all do-all and reduction subloops
-
-    :param pet: CU graph
-    :param node: root node
-    :return: list of do-all and list of reduction loop nodes
-    """
-    do_all = []
-    reduction = []
-    children_nodes = [e.target() for e in node.out_edges()]
-    for child in children_nodes:
-        if pet.graph.vp.type[child] == 'loop':
-            if pet.graph.vp.doAll[child]:
-                do_all.append(child)
-            elif pet.graph.vp.reduction[child]:
-                reduction.append(child)
-        elif pet.graph.vp.type[child] == 'func':
-            child_children = [e.target() for e in child.out_edges()]
-            for func_child in child_children:
-                if pet.graph.vp.type[func_child] == 'loop':
-                    if pet.graph.vp.doAll[func_child]:
-                        do_all.append(func_child)
-                    elif pet.graph.vp.reduction[func_child]:
-                        reduction.append(func_child)
-    return do_all, reduction
 
 
 def is_depend_in_out(pet: PETGraph, var: Variable, in_deps: List[Edge], out_deps: List[Edge]) -> bool:
