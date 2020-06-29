@@ -13,7 +13,6 @@ from typing import Dict, List
 from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_task_vars, get_child_loops
-
 from variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
@@ -164,13 +163,12 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:
     :return: true if GD pattern was discovered
     """
     for child in pet.subtree_of_type(root, CuType.LOOP):
-        if not(child.reduction or child.do_all):
+        if not (child.reduction or child.do_all):
             return False
 
     for child in pet.direct_children_of_type(root, CuType.FUNC):
         for child2 in pet.direct_children_of_type(child, CuType.LOOP):
-            if not(child2.reduction or child2.do_all):
+            if not (child2.reduction or child2.do_all):
                 return False
 
     return True
-

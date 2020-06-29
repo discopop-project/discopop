@@ -13,7 +13,7 @@ from graph_tool import Vertex
 
 from PETGraphX import PETGraphX, CuType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import get_subtree_of_type, is_reduction_var, classify_loop_variables, get_loop_iterations
+from utils import is_reduction_var, classify_loop_variables
 
 
 class ReductionInfo(PatternInfo):

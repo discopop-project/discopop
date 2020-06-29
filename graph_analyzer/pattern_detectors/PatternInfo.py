@@ -7,10 +7,7 @@
 # directory for details.
 import json
 
-from graph_tool import Vertex
-
 from PETGraphX import PETGraphX, CuNode
-from utils import get_loop_iterations, total_instructions_count, calculate_workload
 
 
 class PatternInfo(object):

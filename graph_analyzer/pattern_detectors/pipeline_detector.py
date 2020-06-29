@@ -65,7 +65,7 @@ class PipelineInfo(PatternInfo):
         children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, CuType.LOOP)]
 
         self._stages = [pet.node_at(t) for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
-                         if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)]
+                        if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)]
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 

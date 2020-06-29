@@ -33,11 +33,10 @@ from docopt import docopt
 from pluginbase import PluginBase
 from schema import Schema, Use, SchemaError
 
-from PETGraph import PETGraph
 from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
-from pattern_detection import PatternDetector, DetectionResult, PatternDetectorX
+from pattern_detection import DetectionResult, PatternDetectorX
 
 docopt_schema = Schema({
     '--path': Use(str),

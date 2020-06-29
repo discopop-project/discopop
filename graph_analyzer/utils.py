@@ -20,6 +20,7 @@ from variable import Variable
 
 loop_data = {}
 
+
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     """Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
 
@@ -244,7 +245,8 @@ def get_loop_iterations(line: str) -> int:
     return loop_data.get(line, 0)
 
 
-def __get_dep_of_type(pet: PETGraphX, node: CuNode, dep_type: DepType, reversed: bool) -> List[Tuple[str, str, Dependency]]:
+def __get_dep_of_type(pet: PETGraphX, node: CuNode, dep_type: DepType, reversed: bool) -> List[
+    Tuple[str, str, Dependency]]:
     """Searches all dependencies of specified type
 
     :param pet: CU graph
@@ -426,7 +428,7 @@ def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
         if e[2].var_name == var and any([n.id == e[1] for n in sub]):
             res = False
             for eraw in raw:
-                #TODO check
+                # TODO check
                 if (eraw[2].var_name == var and any([n.id == e[1] for n in sub])
                         and e[0] == eraw[2].sink):
                     res = True
@@ -587,7 +589,7 @@ def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]
 
 
 def classify_loop_variables(pet: PETGraphX, loop: CuNode) -> (List[Variable], List[Variable], List[Variable],
-                                                             List[Variable], List[Variable]):
+                                                              List[Variable], List[Variable]):
     """Classifies variables inside the loop
 
     :param pet: CU graph
@@ -613,9 +615,9 @@ def classify_loop_variables(pet: PETGraphX, loop: CuNode) -> (List[Variable], Li
 
     for sub_node in sub:
         raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, False))
-        war.update(__get_dep_of_type(pet, sub_node,  DepType.WAR, False))
-        waw.update(__get_dep_of_type(pet, sub_node,  DepType.WAW, False))
-        rev_raw.update(__get_dep_of_type(pet, sub_node,  DepType.RAW, True))
+        war.update(__get_dep_of_type(pet, sub_node, DepType.WAR, False))
+        waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
+        rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
@@ -733,7 +735,7 @@ def classify_task_vars(pet: PETGraphX, task: CuNode, type: str, in_deps: List[Ed
         if var_is_loop_index:
             private.append(var)
         elif (("GeometricDecomposition" in type or "Pipeline" in type)
-                and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars)):
+              and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars)):
             reduction.append(var.name)
         elif is_depend_in_out(var, in_deps, out_deps):
             depend_in_out.append(var)

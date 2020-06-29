@@ -399,4 +399,3 @@ class PETGraphX(object):
                 path.insert(0, source)
                 return path
         return []
-

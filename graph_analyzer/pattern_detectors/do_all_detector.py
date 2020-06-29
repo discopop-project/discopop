@@ -11,7 +11,7 @@ from graph_tool import Vertex
 
 from PETGraphX import PETGraphX, CuNode, CuType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import depends_ignore_readonly,  classify_loop_variables
+from utils import classify_loop_variables
 
 
 class DoAllInfo(PatternInfo):
