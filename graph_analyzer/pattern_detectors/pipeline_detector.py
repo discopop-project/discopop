@@ -10,12 +10,10 @@
 from typing import List
 
 from graph_tool import Vertex
-from graph_tool.util import find_vertex
 
 from PETGraphX import PETGraphX, CuType, CuNode, EdgeType, DepType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends_ignore_readonly, correlation_coefficient, get_subtree_of_type, \
-    classify_task_vars
+from utils import correlation_coefficient, classify_task_vars
 
 __pipeline_threshold = 0.9
 

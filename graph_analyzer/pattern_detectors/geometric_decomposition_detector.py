@@ -12,7 +12,7 @@ from typing import Dict, List
 
 from PETGraphX import PETGraphX, CuType, CuNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import classify_task_vars
+from utils import classify_task_vars, get_child_loops
 
 from variable import Variable
 
@@ -154,32 +154,6 @@ def __get_parent_iterations(pet: PETGraphX, node: CuNode) -> int:
         parent = pet.in_edges(node.id, EdgeType.CHILD)
 
     return max_iter
-
-
-def get_child_loops(pet: PETGraphX, node: CuNode) -> (List[CuNode], List[CuNode]):
-    """Gets all do-all and reduction subloops
-
-    :param pet: CU graph
-    :param node: root node
-    :return: list of do-all and list of reduction loop nodes
-    """
-    do_all = []
-    reduction = []
-
-    for child in pet.subtree_of_type(node, CuType.LOOP):
-        if child.do_all:
-            do_all.append(child)
-        elif child.reduction:
-            reduction.append(child)
-
-    for fchild in pet.direct_children_of_type(node, CuType.FUNC):
-        for child in pet.direct_children_of_type(fchild, CuType.LOOP):
-            if child.do_all:
-                do_all.append(child)
-            elif child.reduction:
-                reduction.append(child)
-
-    return do_all, reduction
 
 
 def __detect_geometric_decomposition(pet: PETGraphX, root: CuNode) -> bool:

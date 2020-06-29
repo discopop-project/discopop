@@ -79,6 +79,7 @@ class Dependency:
     def __str__(self):
         return self.var_name if self.var_name is not None else str(self.etype)
 
+
 class CuNode:
     id: str
     file_id: int
@@ -131,7 +132,7 @@ def parse_cu(node: ObjectifiedElement) -> CuNode:
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
-    # TODO recursive calls
+    # TODO recursive calls unused
     if n.type == CuType.CU:
         if hasattr(node.localVariables, 'local'):
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
