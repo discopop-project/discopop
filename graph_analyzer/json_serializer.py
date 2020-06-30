@@ -8,6 +8,7 @@
 
 from json import JSONEncoder
 
+from PETGraphX import CUNode
 from pattern_detection import DetectionResult
 from pattern_detectors.PatternInfo import PatternInfo
 from pattern_detectors.pipeline_detector import PipelineStage
@@ -47,6 +48,9 @@ class PatternInfoSerializer(JSONEncoder):
             return filter_members(o.__dict__)
         if isinstance(o, PipelineStage):
             return filter_members(o.__dict__)
+        if isinstance(o, CUNode):
+            return o.id
+
 
         # Let the base class default method raise the TypeError
         return JSONEncoder.default(self, o)

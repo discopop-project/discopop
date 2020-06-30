@@ -6,13 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-
+import os
 from typing import Dict, List
+
+import gi
+
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 
 from graph_tool import Vertex
 from graph_tool.all import Graph
-from graph_tool.all import graph_draw, GraphView, interactive_window
-from graph_tool.draw import arf_layout
+from graph_tool.all import graph_draw, GraphView, GraphWindow
+from graph_tool.draw import arf_layout, radial_tree_layout
 from graph_tool.search import bfs_iterator
 
 from parser import readlineToCUIdMap, writelineToCUIdMap, lineToCUIdMap
@@ -97,6 +102,7 @@ class PETGraph(object):
     main: Vertex
 
     def __init__(self, cu_dict, dependencies_list, loop_data, reduction_vars):
+        self.file_mapping = {}
         self.graph = Graph()
         self.loop_data = loop_data
         self.reduction_vars = reduction_vars
@@ -199,13 +205,68 @@ class PETGraph(object):
             print(self.graph.vp.id[level.source()], self.graph.vp.id[level.target()])
             # for depth in dfs_iterator()
 
-    def interactive_visualize(self, view=None):
-        view = view if view else self.graph
-        interactive_window(view,
-                           vprops={'text': self.graph.vp.id,
-                                   'fill_color': self.graph.vp.viz_color,
-                                   'shape': self.graph.vp.viz_shape},
-                           eprops={'color': self.graph.ep.viz_color})
+    def key_pressed_callback(self, widget, graph: Graph, picked, pos: Vertex, vprops, vpropsdic, eprops):
+        file_id = self.graph.vp.startsAtLine[pos].split(':')[0]
+        graph.set_edge_filter(None)
+        self.visible.a = False
+        if file_id in self.file_mapping:
+            with open(self.file_mapping[file_id]) as f:
+                lines = f.readlines()
+            print(f'Node: {self.graph.vp.id[pos]}')
+            print(f'Name: {self.graph.vp.name[pos]}')
+            print(f'Type: {self.graph.vp.type[pos]}')
+            start = int(self.graph.vp.startsAtLine[pos].split(':')[1]) - 1
+            # TODO inclusive or exclusive
+            end = int(self.graph.vp.endsAtLine[pos].split(':')[1])
+            for i in range(start, end):
+                print(lines[i].replace('\n', ''))
+            print()
+        else:
+            print(f'Unknown file id: {file_id}')
+
+        for e in graph.edges():
+            self.visible[e] = graph.ep.type[e] != 'dependence'
+        for e in pos.out_edges():
+            self.visible[e] = True
+        for e in pos.in_edges():
+            self.visible[e] = True
+
+        graph.set_edge_filter(self.visible, inverted=False)
+
+        self.win.graph.regenerate_surface()
+        self.win.graph.queue_draw()
+
+    def interactive_visualize(self, file_mapping=None):
+        self.parse_mapping(file_mapping)
+        layout = radial_tree_layout(self.graph, self.main)
+
+        self.visible = self.graph.new_edge_property("bool")
+        self.visible.a = False
+        for e in self.graph.edges():
+            self.visible[e] = self.graph.ep.type[e] != 'dependence'
+        self.graph.set_edge_filter(self.visible, inverted=False)
+        print('Hover over the node and press any key to display source lines and dependencies')
+        self.win = GraphWindow(self.graph, layout, geometry=(1000, 1000),
+                               vprops={'text': self.graph.vp.id,
+                                       'fill_color': self.graph.vp.viz_color,
+                                       'shape': self.graph.vp.viz_shape},
+                               eprops={'color': self.graph.ep.viz_color,
+                                       'text': self.graph.ep.var},
+                               key_press_callback=self.key_pressed_callback)
+
+        self.win.connect("delete_event", Gtk.main_quit)
+        self.win.show_all()
+        Gtk.main()
+
+    def parse_mapping(self, path):
+        self.file_mapping.clear()
+        if os.path.isfile(path):
+            with open(path) as f:
+                for line in f.readlines():
+                    split = line.split('\t')
+                    self.file_mapping[split[0]] = split[1].strip()
+        else:
+            print(f'File mapping not found at {path}')
 
     def visualize(self, view=None, filename='output.svg'):
         view = view if view else self.graph

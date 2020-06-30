@@ -9,6 +9,7 @@ from typing import List
 
 import utils
 from PETGraph import PETGraph
+from PETGraphX import PETGraphX, NodeType, EdgeType
 from pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
@@ -80,6 +81,52 @@ class PatternDetector(object):
 
         # task detector works on modified version of the cu xml file and thus
         # requires building a separate cu graph
+        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
+
+        return res
+
+
+class PatternDetectorX(object):
+    pet: PETGraphX
+
+    def __init__(self, pet_graph: PETGraphX):
+        """This class runs detection algorithms on CU graph
+
+        :param pet_graph: CU graph
+        """
+        self.pet = pet_graph
+
+    def __merge(self, loop_type: bool, remove_dummies: bool):
+        """Removes dummy nodes
+
+        :param loop_type: loops only
+        :param remove_dummies: remove dummy nodes
+        """
+        dummies_to_remove = set()
+        for node in self.pet.all_nodes():
+            if not loop_type or node.type == NodeType.LOOP:
+                if remove_dummies and node.type == NodeType.DUMMY:
+                    continue
+                for s, t, e in self.pet.out_edges(node.id, EdgeType.CHILD):
+                    if remove_dummies and self.pet.node_at(t).type == NodeType.DUMMY:
+                        dummies_to_remove.add(t)
+
+        for n in dummies_to_remove:
+            self.pet.g.remove_node(n)
+
+    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars):
+        """Runs pattern discovery on the CU graph
+        """
+        self.__merge(False, True)
+
+        res = DetectionResult()
+
+        # reduction before doall!
+        res.reduction = detect_reduction(self.pet)
+        res.do_all = detect_do_all(self.pet)
+        res.pipeline = detect_pipeline(self.pet)
+        res.geometric_decomposition = detect_gd(self.pet)
+        return res
         res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
 
         return res
