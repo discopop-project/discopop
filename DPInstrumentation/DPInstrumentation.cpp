@@ -822,7 +822,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
         }
         // // store instruction
         else if (isa<StoreInst>(BI))
-        {
+        {   
             instrumentStore(cast<StoreInst>(BI));
         }
         // call and invoke
