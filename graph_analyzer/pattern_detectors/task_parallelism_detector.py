@@ -479,6 +479,7 @@ def __detect_task_suggestions(pet: PETGraph):
                 # only include cu and func nodes
                 if not ('func' in pet.graph.vp.type[contained_in] or
                         "cu" in pet.graph.vp.type[contained_in]):
+                    print("contained in ", contained_in, "  type: ", pet.graph.vp.type[contained_in])
                     continue
 
                 if pet.graph.vp.mwType[contained_in] == "WORKER" or \
@@ -1190,6 +1191,7 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
             Ex.: fib 7:35,  (might contain ,)
     :param worker_cus: List of vertices
     """
+
     # remove , and whitespaces at start / end
     function_call_string = function_call_string.replace(",", "")
     while function_call_string.startswith(" "):
@@ -1219,7 +1221,10 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
                                  cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
-                return cur_w
+                # check if node type is cu or func
+                if ('func' in pet.graph.vp.type[cur_w] or
+                        "cu" in pet.graph.vp.type[cur_w]):
+                    return cur_w
     return None
 
 
