@@ -298,12 +298,7 @@ class PETGraphX(object):
         :param type: type of children
         :return: list of nodes in subtree
         """
-        res = []
-        if root.type == type:
-            res.append(root)
-        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.__subtree_of_type_rec(self.node_at(t), type, {root}))
-        return res
+        return self.__subtree_of_type_rec(root, type, set())
 
     def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
@@ -316,8 +311,8 @@ class PETGraphX(object):
         res = []
         if root in visited:
             return res
+        visited.add(root)
         if root.type == type:
-            visited.add(root)
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
