@@ -18,12 +18,15 @@ class GraphAnalyzerTest(unittest.TestCase):
                 res = run(cu_xml, dep_file, loop_counter_file, reduction_file, [])
 
                 with open(os.path.join(path, file)) as f:
-                    expected = json.load(f)
-                actual = json.loads(json.dumps(res, cls=PatternInfoSerializer))
-                equal = ordered(expected) == ordered(actual)
+                    expected = ordered(json.load(f))
+                actual = ordered(json.loads(json.dumps(res, cls=PatternInfoSerializer)))
+                equal = expected == actual
                 if not equal:
-                    print(expected)
-                    print(actual)
+                    print('##expected##')
+                    print(json.dumps(expected, indent=2))
+                    print('##actual##')
+                    print(json.dumps(actual, indent=2))
+                    print('##end##')
                 self.assertTrue(equal)
 
 
