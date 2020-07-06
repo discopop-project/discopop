@@ -37,6 +37,7 @@ from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
 from pattern_detection import DetectionResult, PatternDetectorX
+from typing import List
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -58,6 +59,39 @@ def get_path(base_path: str, file_name: str) -> str:
     :return: path to file
     """
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
+
+
+def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str])\
+        -> DetectionResult:
+    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file),
+                                                                    loop_counter_file, reduction_file)
+
+    # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
+    # petGraphX.interactive_visualize(path)
+    petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+    # petGraphX.show()
+
+    plugin_base = PluginBase(package='plugins')
+
+    plugin_source = plugin_base.make_plugin_source(
+        searchpath=['./plugins'])
+
+    for plugin_name in plugins:
+        p = plugin_source.load_plugin(plugin_name)
+        print("executing plugin before: " + plugin_name)
+        petGraphX = p.run_before(petGraphX)
+
+    # pattern_detector = PatternDetector(petGraphX)
+    pattern_detector = PatternDetectorX(petGraphX)
+
+    res: DetectionResult = pattern_detector.detect_patterns(cu_dict, dependencies, loop_data, reduction_vars)
+
+    for plugin_name in plugins:
+        p = plugin_source.load_plugin(plugin_name)
+        print("executing plugin after: " + plugin_name)
+        petGraphX = p.run_after(petGraphX)
+
+    return res
 
 
 if __name__ == "__main__":
@@ -85,32 +119,13 @@ if __name__ == "__main__":
             print(f"File not found: \"{file}\"")
             sys.exit()
 
-    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file),
-                                                                    loop_counter_file, reduction_file)
-
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
-
-    # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.interactive_visualize(path)
-    petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.show()
 
     start = time.time()
 
-    plugin_base = PluginBase(package='plugins')
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins)
 
-    plugin_source = plugin_base.make_plugin_source(
-        searchpath=['./plugins'])
-
-    for plugin_name in plugins:
-        p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin before: " + plugin_name)
-        petGraphX = p.run_before(petGraphX)
-
-    # pattern_detector = PatternDetector(petGraphX)
-    pattern_detector = PatternDetectorX(petGraphX)
-
-    res: DetectionResult = pattern_detector.detect_patterns(cu_dict, dependencies, loop_data, reduction_vars)
+    end = time.time()
 
     if arguments['--json'] == 'None':
         print(str(res))
@@ -118,11 +133,5 @@ if __name__ == "__main__":
         with open(arguments['--json'], 'w') as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
-    for plugin_name in plugins:
-        p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin after: " + plugin_name)
-        petGraphX = p.run_after(petGraphX)
-
-    end = time.time()
-
     print("Time taken for pattern detection: {0}".format(end - start))
+
