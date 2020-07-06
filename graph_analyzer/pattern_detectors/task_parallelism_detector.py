@@ -1501,7 +1501,19 @@ def cu_xml_preprocessing(cu_xml):
                             parent.writePhaseLines.set("count", "1")
 
                         separator_line = parent.get("startsAtLine")
-                        parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
+                        # select smallest instruction line >= separator_line + 1
+                        parent_new_startLine = None
+                        for tmp in parent.instructionLines.text.split(","):
+                            if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
+                                if parent_new_startLine is None:
+                                    parent_new_startLine = tmp
+                                    continue
+                                # select smallest instruction line
+                                if int(tmp[tmp.find(":") + 1:]) < int(parent_new_startLine[parent_new_startLine.find(":") + 1:]):
+                                    print("updated parent_new_startLine")
+                                    parent_new_startLine = tmp
+
+                        parent.set("startsAtLine", parent_new_startLine)
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
