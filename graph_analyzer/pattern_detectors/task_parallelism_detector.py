@@ -1207,6 +1207,8 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
               function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1:]
 
+    # get tightest surrounding cu
+    tightest_worker_cu = None
     # iterate over worker_cus
     for cur_w in worker_cus:
         cur_w_starts_at_line = pet.graph.vp.startsAtLine[cur_w]
@@ -1221,11 +1223,20 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
                                  cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
-                # check if node type is cu or func
-                if ('func' in pet.graph.vp.type[cur_w] or
-                        "cu" in pet.graph.vp.type[cur_w]):
-                    return cur_w
-    return None
+                # check if cur_w is tighter than last result
+                if tightest_worker_cu is None:
+                    tightest_worker_cu = cur_w
+                    continue
+                if __line_contained_in_region(pet.graph.vp.startsAtLine[cur_w],
+                                              pet.graph.vp.startsAtLine[tightest_worker_cu],
+                                              pet.graph.vp.endsAtLine[tightest_worker_cu]) \
+                    and \
+                    __line_contained_in_region(pet.graph.vp.endsAtLine[cur_w],
+                                               pet.graph.vp.startsAtLine[tightest_worker_cu],
+                                               pet.graph.vp.endsAtLine[tightest_worker_cu]):
+                    tightest_worker_cu = cur_w
+
+    return tightest_worker_cu
 
 
 def __detect_mw_types(pet: PETGraph, main_node: Vertex):
@@ -1488,7 +1499,7 @@ def cu_xml_preprocessing(cu_xml):
                         # update instruction/readPhase/writePhase lines
                         try:
                             for tmp_line in parent_copy.instructionLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1501,7 +1512,7 @@ def cu_xml_preprocessing(cu_xml):
                             pass
                         try:
                             for tmp_line in parent_copy.readPhaseLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1514,7 +1525,7 @@ def cu_xml_preprocessing(cu_xml):
                             pass
                         try:
                             for tmp_line in parent_copy.writePhaseLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1560,7 +1571,7 @@ def cu_xml_preprocessing(cu_xml):
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
                         cur_line = parent.get("startsAtLine")
-                        while __preprocessor_line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
+                        while __line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
                             if not cur_line in parent.instructionLines.text:
                                 parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
                                 if parent.instructionLines.text.endswith(","):
@@ -1588,8 +1599,8 @@ def cu_xml_preprocessing(cu_xml):
                         parent_function = None
                         for tmp_node in parsed_cu.Node:
                             if tmp_node.get('type') == '1':
-                                if __preprocessor_line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
-                                    if __preprocessor_line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                if __line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                    if __line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
                                         parent_function = tmp_node
                                         break
                         if parent_function is None:
@@ -1643,7 +1654,7 @@ def cu_xml_preprocessing(cu_xml):
     return modified_cu_xml
 
 
-def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
+def __line_contained_in_region(test_line, start_line, end_line):
     """check if test_line is contained in [startLine, endLine].
     Return True if so. False else.
     :param test_line: <fileID>:<line>
