@@ -195,9 +195,19 @@ class PETGraphX(object):
                     self.g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
         # calculate position before dependencies affect them
-        # self.pos = nx.shell_layout(self.graph) # maybe
-        # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
-        self.pos = nx.planar_layout(self.g)  # good
+        try:
+            self.pos = nx.planar_layout(self.g)  # good
+        except nx.exception.NetworkXException:
+            try:
+                # fallback layouts
+                self.pos = nx.shell_layout(self.g)  # maybe
+                # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
+            except nx.exception.NetworkXException:
+                try:
+                    self.pos = nx.planar_layout(self.g)  # good
+                except nx.exception.NetworkXException:
+                    # last resort
+                    self.pos = nx.random_layout(self.g)
 
         for dep in dependencies_list:
             if dep.type == 'INIT':
