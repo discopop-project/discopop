@@ -470,11 +470,21 @@ class PETGraphX(object):
         :param target: target node
         :return: list of nodes from source to target
         """
+        return self.__path_rec(source, target, set())
+
+    def __path_rec(self, source: CUNode, target: CUNode, visited: Set[CUNode]) -> List[CUNode]:
+        """DFS from source to target over edges of child type
+
+        :param source: source node
+        :param target: target node
+        :return: list of nodes from source to target
+        """
+        visited.add(source)
         if source == target:
             return [source]
 
-        for child in self.direct_children(source):
-            path = self.path(child, target)
+        for child in [c for c in self.direct_children(source) if c not in visited]:
+            path = self.__path_rec(child, target, visited)
             if path:
                 path.insert(0, source)
                 return path
