@@ -213,6 +213,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     suggestions = run_detection(preprocessed_graph)
+    preprocessed_graph.interactive_visualize(preprocessed_graph.graph)
     return suggestions
 
 
@@ -268,8 +269,9 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
 
 
 def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
-    """Checks if >= 2 dependences exist from same successor path. Eliminate those
-    barrier suggestions that violate this requirement.
+    """Checks if >= 2 dependences exist from same successor path or
+    node that contains the barrier is of type loop.
+    Eliminate those barrier suggestions that violate this requirement.
     A successor path is represented by a list of nodes reachable by traversing
     the successor edges inside a single function in reverse direction.
     Note, that nodes with multiple outgoing successor edges
@@ -291,6 +293,12 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
             result.append(single_suggestion)
 
     for bs in barrier_suggestions:
+        # check if type of bs node is loop and accept the suggestion if so
+        # reason: if task is spawned inside a loop, paths are irrelevant
+        if pet.graph.vp.type[bs._node] == "loop":
+            result.append(bs)
+            continue
+
         # create "path lists" for each incoming successor edge
         in_succ_edges = [e for e in bs._node.in_edges() if
                          pet.graph.ep.type[e] == "successor" and
