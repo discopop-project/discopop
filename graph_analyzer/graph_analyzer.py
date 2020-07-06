@@ -63,7 +63,8 @@ def get_path(base_path: str, file_name: str) -> str:
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str])\
         -> DetectionResult:
-    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(cu_xml), open(dep_file),
+
+    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
 
     # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)

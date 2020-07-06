@@ -104,11 +104,13 @@ def __parse_dep_file(dep_fd):
     return dependencies_list
 
 
-def parse_inputs(xml_fd, dependences_fd, loop_counter, reduction_file):
-    cu_dict = __parse_xml_input(xml_fd)
+def parse_inputs(cu_file, dependences, loop_counter, reduction_file):
+    with open(cu_file) as f:
+        cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
 
-    dependencies = __parse_dep_file(dependences_fd)
+    with open(dependences) as f:
+        dependencies = __parse_dep_file(f)
 
     if os.path.exists(loop_counter):
         loop_data = {}
