@@ -52,6 +52,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/DebugInfoMetadata.h>
+#include "llvm/Analysis/TargetLibraryInfo.h"
 
 #include "DPUtils.h"
 
@@ -247,6 +248,7 @@ namespace
 /*****************************   DiscoPoP Functions  ***********************************/
 string CUGeneration::determineVariableDefLine(Instruction *I){
     string varName = determineVariableName(&*I);
+    varName = refineVarName(varName);
 
     Function *F = I->getFunction();
 
@@ -259,7 +261,7 @@ string CUGeneration::determineVariableDefLine(Instruction *I){
                 if(auto *N = dyn_cast<MDNode>(DI->getVariable())){
                     if(auto *DV = dyn_cast<DILocalVariable>(N)){
                         if(DV->getName() == varName)
-                            return to_string(DV->getLine());
+                            return to_string(fileID) + ":" + to_string(DV->getLine());
                     }
                 }
             }
@@ -575,11 +577,12 @@ void CUGeneration::printNode(Node *root, bool isRoot)
         *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << endl;
         if (root->type == nodeTypes::func || root->type == nodeTypes::dummy)
         {
-
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai : root->argumentsList)
             {
-                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\">" << xmlEscape(ai.name) << "</arg>" << endl;
+                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\"" 
+                << " defLine=\"" << xmlEscape(ai.defLine)  << "\">"
+                << xmlEscape(ai.name)  << "</arg>" << endl;
             }
             *outCUs << "\t\t</funcArguments>" << endl;
         }
@@ -779,7 +782,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
         cu = new CU;
 
-        //errs() << "cu->ID: " << cu->ID << " , " << "node->ID: " << currentNode->ID << " , " << "tmpNode->ID: " << tmpNode->ID << " , " << "bb->Name: " << bb->getName() << "\n";
+        // errs() << "==== " << bb->getName() << "\n"; //"cu->ID: " << cu->ID << " , " << "node->ID: " << currentNode->ID << " , " << "tmpNode->ID: " << tmpNode->ID << " , " << "bb->Name: " << bb->getName() << "\n";
 
         if(bb->getName().size() == 0)
             bb->setName(cu->ID);
@@ -799,7 +802,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             {
                 cu-> instructionsLineNumbers.insert(lid);
                 cu-> instructionsCount++;
-            }
+            //}
             if(isa < StoreInst >(instruction))
             {
 
@@ -877,6 +880,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 }
             }
         }
+        }
         if (cu->instructionsLineNumbers.empty())
         {
             cu->removeCU();
@@ -893,23 +897,38 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         CUVector.push_back(cu);
         suspiciousVariables.clear();
 
-        //errs() << "cu->basicBlockName: "  << cu->basicBlockName << "\n";
-
         //check for call instructions in current basic block
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
-            if(dyn_cast<DbgDeclareInst>(instruction) || dyn_cast<DbgValueInst>(instruction))
-                continue;
+            //Mohammad 6.7.2020: Don't create nodes for library functions (c++/llvm).
+            int32_t lid = getLID(&*instruction, fileID);
+            if(lid > 0){
+
             if (isa < CallInst >(instruction))
             {
-                Node *n = new Node;
-                n->type = nodeTypes::dummy;
-
+                
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                 //TODO: DO the same for Invoke inst
 
-                //get function name and parameters
-                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                //Mohammad 6.7.2020
+                Function::iterator FI = f->begin();
+                bool externalFunction = true;
+                string lid;
+                    
+                for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI){
+                    externalFunction = false;
+                    auto tempBI = FI->begin();
+                    if(DebugLoc dl = tempBI->getDebugLoc()){
+                        lid = to_string(dl->getLine());
+                    }else{
+                        lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
+                    }
+                    break;
+                }
+                if(externalFunction) continue;
 
+                Node *n = new Node;
+                n->type = nodeTypes::dummy;
                 // For ordinary function calls, F has a name.
                 // However, sometimes the function being called
                 // in IR is encapsulated by "bitcast()" due to
@@ -919,6 +938,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 if(f)
                 {
                     n->name = f->getName();
+
+
                     // @Zia: This for loop appeared after the else part. For some function calls, the value of f is null.
                     // I guess that is why you have checked if f is not null here. Anyway, I (Mohammad) had to bring the
                     // for loop inside to avoid the segmentation fault. If you think it is not appropriate, find a solution for it.
@@ -928,8 +949,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         string type_str;
                         raw_string_ostream rso(type_str);
                         (it->getType())->print(rso);
-                        Variable v(string(it->getName()), rso.str(), to_string(f->getSubprogram()->getLine()));
-
+                        Variable v(string(it->getName()), rso.str(), lid);
                         n->argumentsList.push_back(v);
                     }
                 }
@@ -964,6 +984,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 }
             }
         }
+        }
     }
 }
 
@@ -991,7 +1012,6 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
         auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
-            // errs() << varDefLine << "\n";
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction))
             {
                 // NOTE: changed 'instruction' to '&*instruction'
@@ -1150,8 +1170,8 @@ void CUGeneration::getAnalysisUsage(AnalysisUsage &AU) const
 bool CUGeneration::runOnFunction(Function &F)
 {
     StringRef funcName = F.getName();
-    // Avoid functions we don't want to instrument
-    if (funcName.find("llvm.dbg") != string::npos)    // llvm debug calls
+    // Avoid functions we don't want to analyze
+    if (funcName.find("llvm.") != string::npos)    // llvm debug calls
     {
         return false;
     }
@@ -1167,9 +1187,9 @@ bool CUGeneration::runOnFunction(Function &F)
     {
         return false;
     }
-    //    if (funcName.find("_GLOBAL_") != string::npos) {  // global init calls (c++)
-    //        return false;
-    //    }
+    if (funcName.find("_GLOBAL_") != string::npos) {  // global init calls (c++)
+        return false;
+    }
     if (funcName.find("pthread_") != string::npos)
     {
         return false;
@@ -1189,13 +1209,23 @@ bool CUGeneration::runOnFunction(Function &F)
     //Get list of arguments for this function and store them in root.
     // NOTE: changed the way we get the arguments
     // for (Function::ArgumentListType::iterator it = F.getArgumentList().begin(); it != F.getArgumentList().end(); it++) {
+    
+    BasicBlock *BB = &F.getEntryBlock();
+    auto BI = BB->begin();
+    string lid;
+    if(DebugLoc dl = BI->getDebugLoc()){
+        lid = to_string(dl->getLine());
+    }else{
+        lid = to_string(BI->getFunction()->getSubprogram()->getLine());
+    }
+
     for ( Function::arg_iterator it = F.arg_begin(); it != F.arg_end(); it++)
     {
 
         string type_str;
         raw_string_ostream rso(type_str);
         (it->getType())->print(rso);
-        Variable v(it->getName(), rso.str(), to_string(F.getSubprogram()->getLine()));
+        Variable v(it->getName(), rso.str(), to_string(fileID) + ":" + lid);
 
         root->argumentsList.push_back(v);
     }
