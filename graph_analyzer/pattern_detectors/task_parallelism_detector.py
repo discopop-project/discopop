@@ -213,7 +213,6 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     suggestions = run_detection(preprocessed_graph)
-    preprocessed_graph.interactive_visualize(preprocessed_graph.graph)
     return suggestions
 
 
@@ -259,13 +258,89 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __set_task_contained_lines(pet, result)
     result = __detect_taskloop_reduction(pet, result)
     result = __detect_barrier_suggestions(pet, result)
+    result = __validate_barriers(pet, result)
+    result = __testwise_missing_barrier_suggestion(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __remove_duplicates(pet, result)
-    result = __validate_barriers(pet, result)
     result = __sort_output(pet, result)
 
+    # pet.interactive_visualize(pet.graph)
+    pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "dependence"))
+
     return result
+
+
+def __testwise_missing_barrier_suggestion(pet: PETGraph, suggestions: [PatternInfo]):
+    """Suggests a barrier if a node is a successor of a task CU
+    which is not covered by an existing barrier and the set of global variables
+    of the CU and the task are overlapping
+    (i.e. both CUsaccess common global variables).
+    If the cu which would be suggested as a barrier contains a Task suggestion
+    already, ignore the barrier suggestion
+    (reason: false positives due to copying of global / local variables in preprocessor).
+    TODO: maybe include a more intelligent way to deal with variables in preprocessor.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
+    """
+    # split suggestions into task and taskwait suggestions
+    taskwait_suggestions = []
+    task_suggestions = []
+    for single_suggestion in suggestions:
+        if type(single_suggestion) == ParallelRegionInfo or \
+                type(single_suggestion) == OmittableCuInfo:
+            continue
+        elif single_suggestion.pragma[0] == "taskwait":
+            taskwait_suggestions.append(single_suggestion)
+        else:
+            task_suggestions.append(single_suggestion)
+
+    # iterate over task suggestions
+    for task_sug in task_suggestions:
+        print(pet.graph.vp.id[task_sug._node])
+        visited_nodes = [task_sug._node]
+        out_succ_edges = [e for e in task_sug._node.out_edges() if
+                          pet.graph.ep.type[e] == "successor" and
+                          e.target() != task_sug._node]
+        queue = out_succ_edges
+        # iterate over queued successor-edges
+        while len(queue) > 0:
+            succ_edge = queue.pop()
+            if not succ_edge.target() in visited_nodes:
+                visited_nodes.append(succ_edge.target())
+            else:
+                continue
+            # if barrier is encountered, stop
+            if pet.graph.vp.tp_contains_taskwait[succ_edge.target()] == "True":
+                continue
+            # if edge.target has common global variable with task
+            common_vars = [var for
+                           var in pet.graph.vp.globalVars[succ_edge.target()]
+                           if var in pet.graph.vp.globalVars[task_sug._node]]
+            if len(common_vars) > 0:
+                # if cu is a task suggestion, continue
+                if pet.graph.vp.tp_contains_task[succ_edge.target()] == "True":
+                    continue
+                # suggest taskwait
+                if pet.graph.vp.tp_contains_taskwait[succ_edge.target()] == 'False':
+                    # actual change
+                    pet.graph.vp.tp_contains_taskwait[succ_edge.target()] = 'True'
+                    first_line = pet.graph.vp.startsAtLine[succ_edge.target()]
+                    first_line = first_line[first_line.index(":") + 1:]
+                    tmp_suggestion = TaskParallelismInfo(pet,
+                                                         succ_edge.target(),
+                                                         ["taskwait"],
+                                                         first_line,
+                                                         [], [], [])
+                    suggestions.append(tmp_suggestion)
+                continue
+            # append current nodes outgoing successor edges to queue
+            target_out_succ_edges = [e for e in succ_edge.target().out_edges() if
+                                     pet.graph.ep.type[e] == "successor" and
+                                     e.target() != succ_edge.target()]
+            queue = list(set(queue + target_out_succ_edges))
+    return suggestions
 
 
 def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
