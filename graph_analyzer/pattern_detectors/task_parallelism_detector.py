@@ -213,6 +213,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     suggestions = run_detection(preprocessed_graph)
+    preprocessed_graph.interactive_visualize(preprocessed_graph.graph)
     return suggestions
 
 
@@ -268,8 +269,9 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
 
 
 def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
-    """Checks if >= 2 dependences exist from same successor path. Eliminate those
-    barrier suggestions that violate this requirement.
+    """Checks if >= 2 dependences exist from same successor path or
+    node that contains the barrier is of type loop.
+    Eliminate those barrier suggestions that violate this requirement.
     A successor path is represented by a list of nodes reachable by traversing
     the successor edges inside a single function in reverse direction.
     Note, that nodes with multiple outgoing successor edges
@@ -291,6 +293,12 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
             result.append(single_suggestion)
 
     for bs in barrier_suggestions:
+        # check if type of bs node is loop and accept the suggestion if so
+        # reason: if task is spawned inside a loop, paths are irrelevant
+        if pet.graph.vp.type[bs._node] == "loop":
+            result.append(bs)
+            continue
+
         # create "path lists" for each incoming successor edge
         in_succ_edges = [e for e in bs._node.in_edges() if
                          pet.graph.ep.type[e] == "successor" and
@@ -479,6 +487,7 @@ def __detect_task_suggestions(pet: PETGraph):
                 # only include cu and func nodes
                 if not ('func' in pet.graph.vp.type[contained_in] or
                         "cu" in pet.graph.vp.type[contained_in]):
+                    print("contained in ", contained_in, "  type: ", pet.graph.vp.type[contained_in])
                     continue
 
                 if pet.graph.vp.mwType[contained_in] == "WORKER" or \
@@ -1190,6 +1199,7 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
             Ex.: fib 7:35,  (might contain ,)
     :param worker_cus: List of vertices
     """
+
     # remove , and whitespaces at start / end
     function_call_string = function_call_string.replace(",", "")
     while function_call_string.startswith(" "):
@@ -1205,6 +1215,8 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
               function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1:]
 
+    # get tightest surrounding cu
+    tightest_worker_cu = None
     # iterate over worker_cus
     for cur_w in worker_cus:
         cur_w_starts_at_line = pet.graph.vp.startsAtLine[cur_w]
@@ -1219,8 +1231,20 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
                                  cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
-                return cur_w
-    return None
+                # check if cur_w is tighter than last result
+                if tightest_worker_cu is None:
+                    tightest_worker_cu = cur_w
+                    continue
+                if __line_contained_in_region(pet.graph.vp.startsAtLine[cur_w],
+                                              pet.graph.vp.startsAtLine[tightest_worker_cu],
+                                              pet.graph.vp.endsAtLine[tightest_worker_cu]) \
+                    and \
+                    __line_contained_in_region(pet.graph.vp.endsAtLine[cur_w],
+                                               pet.graph.vp.startsAtLine[tightest_worker_cu],
+                                               pet.graph.vp.endsAtLine[tightest_worker_cu]):
+                    tightest_worker_cu = cur_w
+
+    return tightest_worker_cu
 
 
 def __detect_mw_types(pet: PETGraph, main_node: Vertex):
@@ -1477,13 +1501,25 @@ def cu_xml_preprocessing(cu_xml):
                             parent.writePhaseLines.set("count", "1")
 
                         separator_line = parent.get("startsAtLine")
-                        parent.set("startsAtLine", separator_line[0:separator_line.find(":") + 1] + str(int(separator_line[separator_line.find(":") + 1:]) + 1))
+                        # select smallest instruction line >= separator_line + 1
+                        parent_new_startLine = None
+                        for tmp in parent.instructionLines.text.split(","):
+                            if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
+                                if parent_new_startLine is None:
+                                    parent_new_startLine = tmp
+                                    continue
+                                # select smallest instruction line
+                                if int(tmp[tmp.find(":") + 1:]) < int(parent_new_startLine[parent_new_startLine.find(":") + 1:]):
+                                    print("updated parent_new_startLine")
+                                    parent_new_startLine = tmp
+
+                        parent.set("startsAtLine", parent_new_startLine)
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
                         try:
                             for tmp_line in parent_copy.instructionLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1496,7 +1532,7 @@ def cu_xml_preprocessing(cu_xml):
                             pass
                         try:
                             for tmp_line in parent_copy.readPhaseLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1509,7 +1545,7 @@ def cu_xml_preprocessing(cu_xml):
                             pass
                         try:
                             for tmp_line in parent_copy.writePhaseLines.text.split(","):
-                                if not __preprocessor_line_contained_in_region(
+                                if not __line_contained_in_region(
                                         tmp_line,
                                         parent_copy.get("startsAtLine"),
                                         parent_copy.get("endsAtLine")):
@@ -1555,7 +1591,7 @@ def cu_xml_preprocessing(cu_xml):
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
                         cur_line = parent.get("startsAtLine")
-                        while __preprocessor_line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
+                        while __line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
                             if not cur_line in parent.instructionLines.text:
                                 parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
                                 if parent.instructionLines.text.endswith(","):
@@ -1583,8 +1619,8 @@ def cu_xml_preprocessing(cu_xml):
                         parent_function = None
                         for tmp_node in parsed_cu.Node:
                             if tmp_node.get('type') == '1':
-                                if __preprocessor_line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
-                                    if __preprocessor_line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                if __line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
+                                    if __line_contained_in_region(parent.get("endsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")):
                                         parent_function = tmp_node
                                         break
                         if parent_function is None:
@@ -1638,7 +1674,7 @@ def cu_xml_preprocessing(cu_xml):
     return modified_cu_xml
 
 
-def __preprocessor_line_contained_in_region(test_line, start_line, end_line):
+def __line_contained_in_region(test_line, start_line, end_line):
     """check if test_line is contained in [startLine, endLine].
     Return True if so. False else.
     :param test_line: <fileID>:<line>
