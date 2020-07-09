@@ -323,36 +323,70 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
     """
     for suggestion in suggestions:
         # only consider task suggestions
-        print(suggestion.start_line)
         if suggestion.pragma[0] != "task":
             continue
         # get function containing the task cu
         parent_function, last_node = __get_parent_of_type(pet, suggestion._node, "func", "child", True)[0]
-        for arr in [suggestion.first_private, suggestion.private, suggestion.shared]:
-            # filter firstprivate
-            to_be_removed = []
-            for var in arr:
-                var = var.replace(".addr", "")
-                is_valid = False
-                try:
-                    for defLine in var_def_line_dict[var]:
-                        if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
-                            is_valid = True
-                        else:
-                            pass
-                except:
-                    pass
-                if not is_valid:
-                    to_be_removed.append(var)
-            to_be_removed = list(set(to_be_removed))
-            print("arr: ", arr)
-            print("t.b.r: ", to_be_removed)
-
-
+        # filter firstprivate
+        to_be_removed = []
+        print("FP pre: ", suggestion.first_private)
+        for var in suggestion.first_private:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
+                        is_valid = True
+                    else:
+                        pass
+            except Exception:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        print("\t", to_be_removed)
+        suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
+        print("FP post: ", suggestion.first_private)
         # filter private
-        #print("private: ",suggestion.private)
+        to_be_removed = []
+        print("P pre: ", suggestion.private)
+        for var in suggestion.private:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
+                        is_valid = True
+                    else:
+                        pass
+            except Exception:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        print("\t", to_be_removed)
+        suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
+        print("P post: ", suggestion.private)
         # filter shared
-        #print("shared: ", suggestion.shared)
+        to_be_removed = []
+        print("S pre: ", suggestion.shared)
+        for var in suggestion.shared:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
+                        is_valid = True
+                    else:
+                        pass
+            except Exception as ex:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        print("\t", to_be_removed)
+        suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
+        print("S post: ", suggestion.shared)
     return suggestions
 
 
