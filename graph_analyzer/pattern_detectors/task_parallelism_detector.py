@@ -212,11 +212,10 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
-    suggestions = run_detection(preprocessed_graph)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml)
     return suggestions
 
-
-def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraph, cu_xml) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -263,12 +262,98 @@ def run_detection(pet: PETGraph) -> List[TaskParallelismInfo]:
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __remove_duplicates(pet, result)
+    result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __sort_output(pet, result)
 
     # pet.interactive_visualize(pet.graph)
-    pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "dependence"))
+    pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "successor"))
 
     return result
+
+def __get_var_definition_line_dict(cu_xml):
+    """creates a dictionary {varname: [definitionLines]} based on cu_xml
+    and return the dictionary.
+    Removes .addr suffix if present.
+    """
+    xml_fd = open(cu_xml)
+    xml_content = ""
+    for line in xml_fd.readlines():
+        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+            xml_content = xml_content + line
+    xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
+    parsed_cu = objectify.fromstring(xml_content)
+
+    var_def_line_dict = dict()
+    for node in parsed_cu.Node:
+        # only consider cu nodes
+        # TODO rename
+        if node.get("type") == "0":
+            # add global variables
+            for idx, global_variables_entry in enumerate(node.globalVariables):
+                try:
+                    for i in global_variables_entry["global"]:
+                        # insert mapping into var_def_line_dict
+                        if not i.text.replace(".addr", "") in var_def_line_dict:
+                            var_def_line_dict[i.text.replace(".addr", "")] = [i.get("defLine")]
+                        else:
+                            var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
+                            var_def_line_dict[i.text.replace(".addr", "")] = list(set(var_def_line_dict[i.text.replace(".addr", "")]))
+                except Exception as ex:
+                    pass
+            # add local variables
+            for idx, global_variables_entry in enumerate(node.localVariables):
+                try:
+                    for i in global_variables_entry["local"]:
+                        # insert mapping into var_def_line_dict
+                        if not i.text.replace(".addr", "") in var_def_line_dict:
+                            var_def_line_dict[i.text.replace(".addr", "")] = [i.get("defLine")]
+                        else:
+                            var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
+                            var_def_line_dict[i.text.replace(".addr", "")] = list(set(var_def_line_dict[i.text.replace(".addr", "")]))
+                except Exception as ex:
+                    pass
+    return var_def_line_dict
+
+def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var_def_line_dict: dict):
+    """Removes superflous variables from the data sharing clauses
+    of task suggestions.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
+    """
+    for suggestion in suggestions:
+        # only consider task suggestions
+        print(suggestion.start_line)
+        if suggestion.pragma[0] != "task":
+            continue
+        # get function containing the task cu
+        parent_function, last_node = __get_parent_of_type(pet, suggestion._node, "func", "child", True)[0]
+        for arr in [suggestion.first_private, suggestion.private, suggestion.shared]:
+            # filter firstprivate
+            to_be_removed = []
+            for var in arr:
+                var = var.replace(".addr", "")
+                is_valid = False
+                try:
+                    for defLine in var_def_line_dict[var]:
+                        if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
+                            is_valid = True
+                        else:
+                            pass
+                except:
+                    pass
+                if not is_valid:
+                    to_be_removed.append(var)
+            to_be_removed = list(set(to_be_removed))
+            print("arr: ", arr)
+            print("t.b.r: ", to_be_removed)
+
+
+        # filter private
+        #print("private: ",suggestion.private)
+        # filter shared
+        #print("shared: ", suggestion.shared)
+    return suggestions
 
 
 def __testwise_missing_barrier_suggestion(pet: PETGraph, suggestions: [PatternInfo]):
@@ -298,7 +383,6 @@ def __testwise_missing_barrier_suggestion(pet: PETGraph, suggestions: [PatternIn
 
     # iterate over task suggestions
     for task_sug in task_suggestions:
-        print(pet.graph.vp.id[task_sug._node])
         visited_nodes = [task_sug._node]
         out_succ_edges = [e for e in task_sug._node.out_edges() if
                           pet.graph.ep.type[e] == "successor" and
@@ -508,6 +592,8 @@ def __detect_task_suggestions(pet: PETGraph):
     barrier_cus = []
     barrier_worker_cus = []
 
+    func_cus = []
+
     for v in pet.graph.vertices():
         if pet.graph.vp.mwType[v] == "WORKER":
             worker_cus.append(v)
@@ -515,7 +601,11 @@ def __detect_task_suggestions(pet: PETGraph):
             barrier_cus.append(v)
         if pet.graph.vp.mwType[v] == "BARRIER_WORKER":
             barrier_worker_cus.append(v)
-    worker_cus = worker_cus + barrier_worker_cus
+        # test TODO
+        if pet.graph.vp.type[v] == "func":
+            func_cus.append(v)
+
+    worker_cus = worker_cus + barrier_worker_cus + func_cus
 
     # SUGGEST TASKWAIT
     for v in barrier_cus:
@@ -564,9 +654,9 @@ def __detect_task_suggestions(pet: PETGraph):
                         "cu" in pet.graph.vp.type[contained_in]):
                     print("contained in ", contained_in, "  type: ", pet.graph.vp.type[contained_in])
                     continue
-
                 if pet.graph.vp.mwType[contained_in] == "WORKER" or \
-                        pet.graph.vp.mwType[contained_in] == "BARRIER_WORKER":
+                        pet.graph.vp.mwType[contained_in] == "BARRIER_WORKER" or \
+                        pet.graph.vp.type[contained_in] == "func":
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [])
@@ -1274,7 +1364,6 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
             Ex.: fib 7:35,  (might contain ,)
     :param worker_cus: List of vertices
     """
-
     # remove , and whitespaces at start / end
     function_call_string = function_call_string.replace(",", "")
     while function_call_string.startswith(" "):
@@ -1319,6 +1408,10 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
                                                pet.graph.vp.endsAtLine[tightest_worker_cu]):
                     tightest_worker_cu = cur_w
 
+    if tightest_worker_cu is not None:
+        print("\t", pet.graph.vp.id[tightest_worker_cu])
+    else:
+        print("\tNone")
     return tightest_worker_cu
 
 
@@ -1448,15 +1541,6 @@ def cu_xml_preprocessing(cu_xml):
     xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
 
     parsed_cu = objectify.fromstring(xml_content)
-
-    # DEBUG write parsed cu to file to compare modifications against
-    debug_cu_xml = cu_xml.replace(".xml", "-debug-formatted.xml")
-    if os.path.exists(debug_cu_xml):
-        os.remove(debug_cu_xml)
-    f = open(debug_cu_xml, "w+")
-    f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
-    f.close()
-    # DEBUG
 
     iterate_over_cus = True  # used to enable re-starting
     while iterate_over_cus:
