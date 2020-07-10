@@ -212,6 +212,9 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraph(cu_dict, dependencies,
                                   loop_data, reduction_vars)
+    # execute reduction detector to enable taskloop-reduction-detection
+    from pattern_detectors.reduction_detector import run_detection as detect_reduction
+    detect_reduction(preprocessed_graph)
     suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml)
     return suggestions
 
@@ -266,7 +269,7 @@ def run_detection(pet: PETGraph, cu_xml) -> List[TaskParallelismInfo]:
     result = __sort_output(pet, result)
 
     # pet.interactive_visualize(pet.graph)
-    pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "successor"))
+    pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "child"))
 
     return result
 
@@ -323,7 +326,7 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
     """
     for suggestion in suggestions:
         # only consider task suggestions
-        if suggestion.pragma[0] != "task":
+        if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
             continue
         # get function containing the task cu
         parent_function, last_node = __get_parent_of_type(pet, suggestion._node, "func", "child", True)[0]
