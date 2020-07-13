@@ -108,6 +108,7 @@ if __name__ == "__main__":
     # path = './../../test_data/temp'
     # path = './../../test_data/reduction'
     # path = './../../test_data/nqueens'
+    # path = './../../dp_script/data'
 
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
