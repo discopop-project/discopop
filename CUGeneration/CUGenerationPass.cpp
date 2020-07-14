@@ -81,7 +81,6 @@ namespace
         string type;
         string defLine;
         string isArray;
-        string scope;
 
         Variable_struct(const Variable_struct &other) : name(other.name), type(other.type), defLine(other.defLine)
         {
@@ -247,29 +246,30 @@ namespace
 
 /*****************************   DiscoPoP Functions  ***********************************/
 string CUGeneration::determineVariableDefLine(Instruction *I){
-    errs()<< "determineVariableDefLine 1\n";
+    string varDefLine = "LineNotFound";
+
     string varName = determineVariableName(&*I);
-    errs()<< "determineVariableDefLine 2\n";
     varName = refineVarName(varName);
-    errs()<< "determineVariableDefLine 3\n";
+
     Function *F = I->getFunction();
-    errs()<< "determineVariableDefLine 4\n";
     for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
     {
         BasicBlock &BB = *FI;
-        errs()<< "determineVariableDefLine 5\n";
         for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI)
         {
             if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)){
                 if(auto *N = dyn_cast<MDNode>(DI->getVariable())){
                     if(auto *DV = dyn_cast<DILocalVariable>(N)){
-                        if(DV->getName() == varName)
-                            return to_string(fileID) + ":" + to_string(DV->getLine());
+                        if(DV->getName() == varName){
+                            varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                            break;
+                        }
                     }
                 }
             }
         }
     }
+    return varDefLine;
 }
 
 string CUGeneration::determineVariableType(Instruction *I)
@@ -293,13 +293,11 @@ string CUGeneration::determineVariableType(Instruction *I)
             Type *structType = pointsToStruct(PTy);
             if (structType && gep->getNumOperands() > 2)
             {
-                //errs() << "STRUCT DETECTED!\n";
                 s = "STRUCT,";
             }
             // we've found an array
             if (PTy->getElementType()->getTypeID() == Type::ArrayTyID )
             {
-                //errs() << "ARRAY DETECTED!\n";
                 s = "ARRAY,";
             }
         }
@@ -994,7 +992,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap)
 {
     int lid;
-    string varName, varType, varDefLine = "----";
+    string varName, varType, varDefLine;
     // Changed TerminatorInst to Instuction
     const Instruction *TInst;
     string successorBB;
@@ -1025,7 +1023,7 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
                 varName = determineVariableName(&*instruction);
                 varType = determineVariableType(&*instruction);
-                // varDefLine = determineVariableDefLine(&*instruction);
+                varDefLine = determineVariableDefLine(&*instruction);
 
                 Variable v(varName, varType, varDefLine);
 
@@ -1173,7 +1171,6 @@ void CUGeneration::getAnalysisUsage(AnalysisUsage &AU) const
 bool CUGeneration::runOnFunction(Function &F)
 {
     StringRef funcName = F.getName();
-    errs() << funcName << "\n";
     // Avoid functions we don't want to analyze
     if (funcName.find("llvm.") != string::npos)    // llvm debug calls
     {
@@ -1244,24 +1241,24 @@ bool CUGeneration::runOnFunction(Function &F)
     Region *TopRegion = RI->getTopLevelRegion();
 
     populateGlobalVariablesSet(TopRegion, globalVariablesSet);
-    errs() << "1\n";
+
     createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
-    errs() << "2\n";
+
     fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
-    errs() << "3\n";
+
     fillStartEndLineNumbers(root);
-    errs() << "4\n";
+
     secureStream();
-    errs() << "5\n";
+
     printOriginalVariables(originalVariablesSet);
-    errs() << "6\n";
+
     printData(root);
-    errs() << "7\n";
+
     for(auto i : CUVector)
     {
         delete(i);
     }
-    errs() << "8\n";
+
     return false;
 }
 
