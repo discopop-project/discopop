@@ -251,6 +251,11 @@ string CUGeneration::determineVariableDefLine(Instruction *I){
     string varName = determineVariableName(&*I);
     varName = refineVarName(varName);
 
+    if(programGlobalVariablesSet.count(varName)){
+        varDefLine = "GlobalVar";
+        //TODO: Find definition line of global variables
+    }
+
     Function *F = I->getFunction();
     for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
     {
