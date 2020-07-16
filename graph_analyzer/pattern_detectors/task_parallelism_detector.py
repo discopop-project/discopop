@@ -358,6 +358,13 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
             is_valid = False
             try:
                 for defLine in var_def_line_dict[var]:
+                    # catch GlobalVar and LineNotFound
+                    if defLine == "GlobalVar":
+                        is_valid = True
+                        continue
+                    if defLine == "LineNotFound":
+                        continue
+                    # check if var is defined in parent function
                     if __line_contained_in_region(defLine, pet.graph.vp.startsAtLine[parent_function], pet.graph.vp.endsAtLine[parent_function]):
                         is_valid = True
                     else:
@@ -789,36 +796,39 @@ def __combine_omittable_cus(pet: PETGraph,
 
         # find target task_suggestion for omit_s, based on in / out dep matches
         omit_target_task_indices = []
-        if len(task_suggestions_dict[omit_s.combine_with_node]) != 1:
-            # search for matching in/out dependency pair
-            for idx, ts in enumerate(task_suggestions_dict[omit_s.combine_with_node]):
-                intersect = [v for v in omit_s.in_dep if v in ts.out_dep]
-                if len(intersect) == len(omit_s.in_dep):
-                    # all in_deps covered
-                    omit_target_task_indices.append(idx)
-        else:
-            omit_target_task_indices = [0]
+        if omit_s.combine_with_node in task_suggestions_dict:
+            if len(task_suggestions_dict[omit_s.combine_with_node]) != 1:
+                # search for matching in/out dependency pair
+                for idx, ts in enumerate(task_suggestions_dict[omit_s.combine_with_node]):
+                    intersect = [v for v in omit_s.in_dep if v in ts.out_dep]
+                    if len(intersect) == len(omit_s.in_dep):
+                        # all in_deps covered
+                        omit_target_task_indices.append(idx)
+            else:
+                omit_target_task_indices = [0]
 
-        for omit_target_task_idx in omit_target_task_indices:
-            # note: dependencies of task nodes can contain multiples
-            # process out dependencies of omit_s
-            for omit_out_var in omit_s.out_dep:
-                task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].out_dep.append(omit_out_var)
-                # omit_s.combine_with_node.out_dep.append(omit_out_var)
-            # process in dependencies of omit_s
-            for omit_in_var in omit_s.in_dep:
-                # note: only dependencies to target node allowed
-                task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].out_dep.remove(omit_in_var)
-                # omit_s.combine_with_node.out_dep.remove(omit_in_var)
+            for omit_target_task_idx in omit_target_task_indices:
+                # note: dependencies of task nodes can contain multiples
+                # process out dependencies of omit_s
+                for omit_out_var in omit_s.out_dep:
+                    task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].out_dep.append(omit_out_var)
+                    # omit_s.combine_with_node.out_dep.append(omit_out_var)
+                # process in dependencies of omit_s
+                for omit_in_var in omit_s.in_dep:
+                    # note: only dependencies to target node allowed
+                    task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].out_dep.remove(omit_in_var)
+                    # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
-            # increase size of pragma region if needed
-            if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
-                    int(task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].region_end_line):
-                task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].region_end_line = omit_s.end_line
+                # increase size of pragma region if needed
+                if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
+                        int(task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].region_end_line):
+                    task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].region_end_line = omit_s.end_line
+
+
 
     # remove duplicates from dependency lists and append to result
     for key in task_suggestions_dict:
@@ -1700,6 +1710,8 @@ def cu_xml_preprocessing(cu_xml):
                         # select smallest instruction line >= separator_line + 1
                         parent_new_startLine = None
                         for tmp in parent.instructionLines.text.split(","):
+                            if tmp == "":
+                                continue
                             if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
                                 if parent_new_startLine is None:
                                     parent_new_startLine = tmp
@@ -1708,6 +1720,11 @@ def cu_xml_preprocessing(cu_xml):
                                 if int(tmp[tmp.find(":") + 1:]) < int(parent_new_startLine[parent_new_startLine.find(":") + 1:]):
                                     print("updated parent_new_startLine")
                                     parent_new_startLine = tmp
+                        # if no instructionLines contained
+                        if parent.instructionLines.text == "":
+                            parent_new_startLine = str(separator_line[:separator_line.index(":")])
+                            parent_new_startLine += ":"
+                            parent_new_startLine += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
 
                         parent.set("startsAtLine", parent_new_startLine)
                         parent_copy.set("endsAtLine", separator_line)
