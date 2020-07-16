@@ -332,7 +332,6 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
         parent_function, last_node = __get_parent_of_type(pet, suggestion._node, "func", "child", True)[0]
         # filter firstprivate
         to_be_removed = []
-        print("FP pre: ", suggestion.first_private)
         for var in suggestion.first_private:
             var = var.replace(".addr", "")
             is_valid = False
@@ -347,12 +346,9 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
             if not is_valid:
                 to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
-        print("\t", to_be_removed)
         suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
-        print("FP post: ", suggestion.first_private)
         # filter private
         to_be_removed = []
-        print("P pre: ", suggestion.private)
         for var in suggestion.private:
             var = var.replace(".addr", "")
             is_valid = False
@@ -374,12 +370,9 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
             if not is_valid:
                 to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
-        print("\t", to_be_removed)
         suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
-        print("P post: ", suggestion.private)
         # filter shared
         to_be_removed = []
-        print("S pre: ", suggestion.shared)
         for var in suggestion.shared:
             var = var.replace(".addr", "")
             is_valid = False
@@ -394,9 +387,7 @@ def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var
             if not is_valid:
                 to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
-        print("\t", to_be_removed)
         suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
-        print("S post: ", suggestion.shared)
     return suggestions
 
 
