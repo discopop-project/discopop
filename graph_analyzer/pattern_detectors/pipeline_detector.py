@@ -74,7 +74,7 @@ class PipelineInfo(PatternInfo):
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
-        nodes_before = []
+        nodes_before = [node]
         for i in range(self._stages.index(node)):
             nodes_before.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
         nodes_before = [n.id for n in nodes_before]
@@ -86,7 +86,7 @@ class PipelineInfo(PatternInfo):
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
-        nodes_after = []
+        nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
             nodes_after.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
         nodes_after = [n.id for n in nodes_after]
