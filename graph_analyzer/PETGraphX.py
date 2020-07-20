@@ -195,9 +195,15 @@ class PETGraphX(object):
                     self.g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
         # calculate position before dependencies affect them
-        # self.pos = nx.shell_layout(self.graph) # maybe
-        # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
-        self.pos = nx.planar_layout(self.g)  # good
+        try:
+            self.pos = nx.planar_layout(self.g)  # good
+        except nx.exception.NetworkXException:
+            try:
+                # fallback layouts
+                self.pos = nx.shell_layout(self.g)  # maybe
+                # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
+            except nx.exception.NetworkXException:
+                self.pos = nx.random_layout(self.g)
 
         for dep in dependencies_list:
             if dep.type == 'INIT':
@@ -288,11 +294,24 @@ class PETGraphX(object):
         :param type: type of children
         :return: list of nodes in subtree
         """
+        return self.__subtree_of_type_rec(root, type, set())
+
+    def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
+        """Gets all nodes in subtree of specified type including root
+
+        :param root: root node
+        :param type: type of children
+        :param visited: set of visited nodes
+        :return: list of nodes in subtree
+        """
         res = []
+        if root in visited:
+            return res
+        visited.add(root)
         if root.type == type:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.subtree_of_type(self.node_at(t), type))
+            res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
         return res
 
     def direct_children(self, root: CUNode) -> List[CUNode]:
@@ -447,11 +466,21 @@ class PETGraphX(object):
         :param target: target node
         :return: list of nodes from source to target
         """
+        return self.__path_rec(source, target, set())
+
+    def __path_rec(self, source: CUNode, target: CUNode, visited: Set[CUNode]) -> List[CUNode]:
+        """DFS from source to target over edges of child type
+
+        :param source: source node
+        :param target: target node
+        :return: list of nodes from source to target
+        """
+        visited.add(source)
         if source == target:
             return [source]
 
-        for child in self.direct_children(source):
-            path = self.path(child, target)
+        for child in [c for c in self.direct_children(source) if c not in visited]:
+            path = self.__path_rec(child, target, visited)
             if path:
                 path.insert(0, source)
                 return path
