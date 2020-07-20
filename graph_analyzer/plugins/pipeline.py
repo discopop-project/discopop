@@ -1,11 +1,9 @@
 from copy import deepcopy
 from typing import List, Any
 
-from graph_tool import Vertex
-from graph_tool.util import find_vertex
+from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
 
-import PETGraph
-from utils import find_subnodes, correlation_coefficient, depends_ignore_readonly
+from utils import correlation_coefficient
 
 
 total = 0
@@ -13,12 +11,12 @@ before = []
 after = []
 
 
-def run_before(pet):
+def run_before(pet: PETGraphX):
     return pet
 
 
-def run_after(pet):
-    for node in find_vertex(pet.graph, pet.graph.vp.type, 'loop'):
+def run_after(pet: PETGraphX):
+    for node in pet.all_nodes(NodeType.LOOP):
         check_pipeline(pet, node)
 
     print(f'Total: {total}')
@@ -27,7 +25,7 @@ def run_after(pet):
     return pet
 
 
-def check_pipeline(pet: PETGraph, root: Vertex):
+def check_pipeline(pet: PETGraphX, root: CUNode):
     """Tries to optimize dependencies for pipeline detection
     1. Deletes independent lines, that do not contribute to the pipeline
     2. Deletes similar CU (that have same dependencies), as those can be one step in the pipeline
@@ -39,11 +37,12 @@ def check_pipeline(pet: PETGraph, root: Vertex):
     global total
     global before
     global after
-    children_start_lines = [pet.graph.vp.startsAtLine[v]
-                            for v in find_subnodes(pet, root, 'child')
-                            if pet.graph.vp.type[v] == 'loop']
-    loop_subnodes = [v for v in find_subnodes(pet, root, 'child')
-                     if is_pipeline_subnode(pet, root, v, children_start_lines)]
+
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
+
+    loop_subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+                     if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)]
+
     if len(loop_subnodes) < 3:
         return
 
@@ -66,8 +65,8 @@ def check_pipeline(pet: PETGraph, root: Vertex):
         before.append(initial_coef)
         after.append(new_coef)
         print("Pipeline improvement opportunity:")
-        print("Node: " + pet.graph.vp.id[root])
-        print("Lines: " + pet.graph.vp.startsAtLine[root] + "-" + pet.graph.vp.endsAtLine[root])
+        print("Node: " + root.id)
+        print("Lines: " + root.start_position() + "-" + root.end_position())
         print("Independent lines:")
         independent_cus.sort()
         print(" ".join([str(x) for x in independent_cus]))
@@ -93,7 +92,6 @@ def delete_lines(matrix, loop_nodes, lines):
             del matrix[lines[i]]
             for j in range(0, len(matrix)):
                 del matrix[j][lines[i]]
-
 
 
 def get_independent_lines(matrix):
@@ -126,7 +124,7 @@ def get_matrix(pet, root, loop_subnodes):
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
-            res[i].append(int(depends_ignore_readonly(pet, loop_subnodes[i], loop_subnodes[j], root)))
+            res[i].append(int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root)))
     return res
 
 
@@ -156,19 +154,18 @@ def get_correlation_coefficient(matrix):
     return round(correlation_coefficient(graph_vector, pipeline_vector), 2)
 
 
-def is_pipeline_subnode(pet: PETGraph, root: Vertex, current: Vertex, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[str]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
-    :param pet: PET graph
     :param root: root node
     :param current: current node
     :param children_start_lines: start lines of children loops
     :return: true if valid
     """
-    r_start = pet.graph.vp.startsAtLine[root]
-    r_end = pet.graph.vp.endsAtLine[root]
-    c_start = pet.graph.vp.startsAtLine[current]
-    c_end = pet.graph.vp.endsAtLine[current]
+    r_start = root.start_position()
+    r_end = root.end_position()
+    c_start = current.start_position()
+    c_end = current.end_position()
     return not (c_start == r_start and c_end == r_start
                 or c_start == r_end and c_end == r_end
                 or c_start == c_end and c_start in children_start_lines)
