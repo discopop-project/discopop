@@ -203,11 +203,7 @@ class PETGraphX(object):
                 self.pos = nx.shell_layout(self.g)  # maybe
                 # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
             except nx.exception.NetworkXException:
-                try:
-                    self.pos = nx.planar_layout(self.g)  # good
-                except nx.exception.NetworkXException:
-                    # last resort
-                    self.pos = nx.random_layout(self.g)
+                self.pos = nx.random_layout(self.g)
 
         for dep in dependencies_list:
             if dep.type == 'INIT':
