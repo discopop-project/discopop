@@ -80,6 +80,8 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :return: List of detected pattern info
     """
     result = []
+    global __loop_iterations
+    __loop_iterations = {}
     for node in pet.all_nodes(NodeType.FUNC):
         if __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
