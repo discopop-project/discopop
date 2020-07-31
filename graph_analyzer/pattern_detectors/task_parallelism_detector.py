@@ -15,8 +15,9 @@ from parser import parse_inputs
 import copy
 import PETGraph
 from PETGraph import PETGraph
+from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, depends, calculate_workload, \
+from utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars
 
 from lxml import objectify
@@ -205,12 +206,14 @@ class OmittableCuInfo(PatternInfo):
 
 def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_file, reduction_file):
     """execute preprocessing of given cu xml file and construct a new cu graph.
-    execute run_detection on newly constructed graph afterwards
-    TODO proper description"""
-    preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
-    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(open(preprocessed_cu_xml), open(dep_file),
+    execute run_detection on newly constructed graph afterwards.
+    """
+    # preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
+    # TODO re-enable preprocessing
+    preprocessed_cu_xml = cu_xml
+    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
-    preprocessed_graph = PETGraph(cu_dict, dependencies,
+    preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                   loop_data, reduction_vars)
     # execute reduction detector to enable taskloop-reduction-detection
     from pattern_detectors.reduction_detector import run_detection as detect_reduction
@@ -218,7 +221,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml)
     return suggestions
 
-def run_detection(pet: PETGraph, cu_xml) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -234,10 +237,11 @@ def run_detection(pet: PETGraph, cu_xml) -> List[TaskParallelismInfo]:
     """
     result = []
 
-    for node in pet.graph.vertices():
-        if pet.graph.vp.type[node] == 'dummy':
+    for node in pet.all_nodes():
+
+        if node.type == NodeType.DUMMY:
             continue
-        if find_subnodes(pet, node, 'child'):
+        if pet.direct_children(node):
             # print(graph.vp.id[node])
             __detect_mw_types(pet, node)
 
@@ -1453,7 +1457,7 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
     return tightest_worker_cu
 
 
-def __detect_mw_types(pet: PETGraph, main_node: Vertex):
+def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before
@@ -1464,10 +1468,10 @@ def __detect_mw_types(pet: PETGraph, main_node: Vertex):
     """
 
     # first insert all the direct children of main node in a queue to use it for the BFS
-    for node in find_subnodes(pet, main_node, 'child'):
+    for node in pet.direct_children(main_node):
         # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
-        if pet.graph.vp.mwType[node] == 'NONE' or pet.graph.vp.mwType[node] == 'ROOT':
-            pet.graph.vp.mwType[node] = 'FORK'
+        if node.mwType == 'NONE' or node.mwType == 'ROOT':
+            node.mwType = 'FORK'
 
         # while using the node as the base child, we copy all the other children in a copy vector.
         # we do that because it could be possible that two children of the current node (two dependency)
@@ -1479,48 +1483,48 @@ def __detect_mw_types(pet: PETGraph, main_node: Vertex):
         # the other node
 
         # create the copy vector so that it only contains the other nodes
-        other_nodes = find_subnodes(pet, main_node, 'child')
+        other_nodes = pet.direct_children(main_node)
         other_nodes.remove(node)
 
         for other_node in other_nodes:
             if depends(pet, other_node, node):
                 # print("\t" + pet.graph.vp.id[node] + "<--" + pet.graph.vp.id[other_node])
-                if pet.graph.vp.mwType[other_node] == 'WORKER':
-                    pet.graph.vp.mwType[other_node] = 'BARRIER'
+                if other_node.mwType == 'WORKER':
+                    other_node.mwType = 'BARRIER'
                 else:
-                    pet.graph.vp.mwType[other_node] = 'WORKER'
+                    other_node.mwType = 'WORKER'
 
                     # check if other_node has > 1 RAW dependencies to node
                     # -> not detected in previous step, since other_node is only
                     #    dependent of a single CU
                     raw_targets = []
-                    for e in other_node.out_edges():
-                        if e.target() == node:
-                            if pet.graph.ep.dtype[e] == 'RAW':
-                                raw_targets.append(pet.graph.vp.id[e.target()])
+                    for s, t, d in pet.out_edges(other_node.id):
+                        if pet.node_at(t) == node:
+                            if d.dtype == DepType.RAW:
+                                raw_targets.append(t)
                     # remove entries which occur less than two times
                     raw_targets = [t for t in raw_targets if raw_targets.count(t) > 1]
                     # remove duplicates from list
                     raw_targets = list(set(raw_targets))
                     # if elements remaining, mark other_node as BARRIER
                     if len(raw_targets) > 0:
-                        pet.graph.vp.mwType[other_node] = 'BARRIER'
+                        other_node.mwType = 'BARRIER'
 
     pairs = []
     # check for Barrier Worker pairs
     # if two barriers don't have any dependency to each other then they create a barrierWorker pair
     # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-    direct_subnodes = find_subnodes(pet, main_node, 'child')
+    direct_subnodes = pet.direct_children(main_node)
     for n1 in direct_subnodes:
-        if pet.graph.vp.mwType[n1] == 'BARRIER':
+        if n1.mwType == 'BARRIER':
             for n2 in direct_subnodes:
-                if pet.graph.vp.mwType[n2] == 'BARRIER' and n1 != n2:
-                    if n2 in [e.target() for e in n1.out_edges()] or n2 in [e.source() for e in n1.in_edges()]:
+                if n2.mwType == 'BARRIER' and n1 != n2:
+                    if n2 in [pet.node_at(t) for s,t,d in pet.out_edges(n1.id)] or n2 in [pet.node_at(s) for s,t,d in pet.in_edges(n1.id)]:
                         break
                     # so these two nodes are BarrierWorker, because there is no dependency between them
                     pairs.append((n1, n2))
-                    pet.graph.vp.mwType[n1] = 'BARRIER_WORKER'
-                    pet.graph.vp.mwType[n2] = 'BARRIER_WORKER'
+                    n1.mwType = 'BARRIER_WORKER'
+                    n2.mwType = 'BARRIER_WORKER'
     # return pairs
 
 
@@ -1549,7 +1553,7 @@ def __create_task_tree_helper(pet: PETGraph, current: Vertex, root: Task, visite
         else:
             visited_func.append(current)
 
-    for child in find_subnodes(pet, current, 'child'):
+    for child in pet.direct_children(current):
         mw_type = pet.graph.vp.mwType[child]
 
         if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER']:

@@ -87,6 +87,7 @@ class CUNode:
     name: str
     instructions_count: int = -1
     loop_iterations: int = -1
+    mwType = 'FORK'
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
@@ -288,7 +289,8 @@ class PETGraphX(object):
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
     def subtree_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root
+        """Gets all nodes in subtree of specified type including root.
+        If type is set to None, all types are accepted.
 
         :param root: root node
         :param type: type of children
@@ -297,7 +299,7 @@ class PETGraphX(object):
         return self.__subtree_of_type_rec(root, type, set())
 
     def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root
+        """Gets all nodes in subtree of specified type including root.
 
         :param root: root node
         :param type: type of children
@@ -308,7 +310,7 @@ class PETGraphX(object):
         if root in visited:
             return res
         visited.add(root)
-        if root.type == type:
+        if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
