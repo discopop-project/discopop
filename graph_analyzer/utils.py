@@ -32,7 +32,7 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
-def find_subnodes(pet: PETGraph, node: Vertex, criteria: str) -> List[Vertex]:
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: str) -> List[Vertex]:
     """Returns direct children of a given node
 
     :param pet: PET graph
@@ -43,7 +43,7 @@ def find_subnodes(pet: PETGraph, node: Vertex, criteria: str) -> List[Vertex]:
     return [e.target() for e in node.out_edges() if pet.graph.ep.type[e] == criteria]
 
 
-def depends(pet: PETGraph, source: Vertex, target: Vertex) -> bool:
+def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
 
     :param pet: PET graph
@@ -53,11 +53,12 @@ def depends(pet: PETGraph, source: Vertex, target: Vertex) -> bool:
     """
     if source == target:
         return False
-    target_nodes = get_subtree_of_type(pet, target, '*')
+    target_nodes = pet.subtree_of_type(target, None)
 
-    for node in get_subtree_of_type(pet, source, '*'):
-        for dep in [e.target() for e in node.out_edges() if pet.graph.ep.dtype[e] == 'RAW']:
-            if dep in target_nodes:
+    for node in pet.subtree_of_type(source, None):
+        #for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
+        for target in [pet.node_at(target_id) for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+            if target in target_nodes:
                 return True
     return False
 
