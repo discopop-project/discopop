@@ -466,7 +466,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
     return suggestions
 
 
-def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
+def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
     """Checks if >= 2 dependences exist from same successor path or
     node that contains the barrier is of type loop.
     Eliminate those barrier suggestions that violate this requirement.
@@ -493,24 +493,24 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
     for bs in barrier_suggestions:
         # check if type of bs node is loop and accept the suggestion if so
         # reason: if task is spawned inside a loop, paths are irrelevant
-        if pet.graph.vp.type[bs._node] == "loop":
+        if bs._node.type == NodeType.LOOP:
             result.append(bs)
             continue
 
         # create "path lists" for each incoming successor edge
-        in_succ_edges = [e for e in bs._node.in_edges() if
-                         pet.graph.ep.type[e] == "successor" and
-                         e.source() != bs._node]
+        in_succ_edges = [(s,t,e) for s,t,e in pet.in_edges(bs._node.id) if
+                         e.etype == EdgeType.SUCCESSOR and
+                         pet.node_at(s) != bs._node]
         predecessors_dict = dict()
         for e in in_succ_edges:
             visited_nodes = []
-            tmp, visited_nodes = __get_predecessor_nodes(pet, e.source(), visited_nodes)
+            tmp, visited_nodes = __get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
             predecessors_dict[e] = tmp
         # iterate over outgoing dependence edges and increase dependence counts
         # for those paths that contain the dependence target CU
-        out_dep_edges = [e for e in bs._node.out_edges() if
-                         pet.graph.ep.type[e] == "dependence" and
-                         e.target() != bs._node]
+        out_dep_edges = [(s,t,e) for s,t,e in pet.out_edges(bs._node.id) if
+                         e.etype == EdgeType.DATA and
+                         pet.node_at(t) != bs._node]
         dependence_count_dict = dict()
 
         for key in predecessors_dict:
@@ -518,7 +518,7 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
 
         for key in predecessors_dict:
             for e in out_dep_edges:
-                if e.target() in predecessors_dict[key]:
+                if pet.node_at(e[1]) in predecessors_dict[key]:
                     dependence_count_dict[key] += 1
 
         # if validated, append bs to result
@@ -530,12 +530,12 @@ def __validate_barriers(pet: PETGraph, suggestions: [PatternInfo]):
                 break
         # if not validated, unmark node as containing a taskwait in the graph
         if not validation_successful:
-            pet.graph.vp.tp_contains_taskwait[bs._node] = "False"
+            bs._node.tp_contains_taskwait = False
 
     return result
 
 
-def __get_predecessor_nodes(pet: PETGraph, root: Vertex, visited_nodes: [Vertex]):
+def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode]):
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -543,14 +543,14 @@ def __get_predecessor_nodes(pet: PETGraph, root: Vertex, visited_nodes: [Vertex]
     already covered by this barrier and thus can be ignored)."""
     result = [root]
     visited_nodes.append(root)
-    if pet.graph.vp.type[root] == "1" or pet.graph.vp.tp_contains_taskwait[root] == "True":
+    if root.type == NodeType.FUNC or root.tp_contains_taskwait is True:
         # root of type "function" or root is a barrier
         return result, visited_nodes
-    in_succ_edges = [e for e in root.in_edges() if
-                     pet.graph.ep.type[e] == "successor" and
-                     e.source() != root and e.source() not in visited_nodes]
+    in_succ_edges = [(s,t,e) for s,t,e in pet.in_edges(root) if
+                     e.etype == EdgeType.SUCCESSOR and
+                     pet.node_at(s) != root and pet.node_at(s) not in visited_nodes]
     for e in in_succ_edges:
-        tmp, visited_nodes = __get_predecessor_nodes(pet, e.source(), visited_nodes)
+        tmp, visited_nodes = __get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
         result += tmp
 
     return result, visited_nodes
