@@ -32,15 +32,15 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
-def find_subnodes(pet: PETGraphX, node: CUNode, criteria: str) -> List[Vertex]:
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[Vertex]:
     """Returns direct children of a given node
 
     :param pet: PET graph
     :param node: node
-    :param criteria: type of dependency
+    :param criteria: type of edges to traverse
     :return: list of children nodes
     """
-    return [e.target() for e in node.out_edges() if pet.graph.ep.type[e] == criteria]
+    return [pet.node_at(t) for s,t,d in pet.out_edges(node.id) if d.etype == criteria]
 
 
 def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
@@ -194,7 +194,7 @@ def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Ver
     return res
 
 
-def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
+def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
     """Calculates total number of the instructions in the subtree of a given node
 
     :param pet: PET graph
@@ -202,12 +202,12 @@ def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
     :return: number of instructions
     """
     res = 0
-    for node in get_subtree_of_type(pet, root, 'cu'):
-        res += pet.graph.vp.instructionsCount[node]
+    for node in pet.subtree_of_type(root, NodeType.CU):
+        res += node.instructions_count
     return res
 
 
-def calculate_workload(pet: PETGraph, node: Vertex) -> int:
+def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
     """Calculates workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
 
@@ -216,25 +216,25 @@ def calculate_workload(pet: PETGraph, node: Vertex) -> int:
     :return: workload
     """
     res = 0
-    if pet.graph.vp.type[node] == 'dummy':
+    if node.type == NodeType.DUMMY:
         return 0
-    elif pet.graph.vp.type[node] == 'cu':
-        res += pet.graph.vp.instructionsCount[node]
-    elif pet.graph.vp.type[node] == 'func':
+    elif node.type == NodeType.CU:
+        res += node.instructions_count
+    elif node.type == NodeType.FUNC:
         for child in find_subnodes(pet, node, 'child'):
             res += calculate_workload(pet, child)
-    elif pet.graph.vp.type[node] == 'loop':
+    elif node.type == NodeType.LOOP:
         for child in find_subnodes(pet, node, 'child'):
-            if pet.graph.vp.type[child] == 'cu':
-                if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
-                    res += pet.graph.vp.instructionsCount[child]
-                elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
-                    res += pet.graph.vp.instructionsCount[child] * (
-                            get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+            if child.type == NodeType.CU:
+                if 'for.inc' in child.BasicBlockID:
+                    res += child.instructions_count
+                elif 'for.cond' in child.BasicBlockID:
+                    res += child.instructions_count * (
+                            get_loop_iterations(node.start_position) + 1)
                 else:
-                    res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                    res += child.instructions_count * get_loop_iterations(node.start_position)
             else:
-                res += calculate_workload(pet, child) * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                res += calculate_workload(pet, child) * get_loop_iterations(node.start_position)
     return res
 
 

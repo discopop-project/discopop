@@ -88,6 +88,8 @@ class CUNode:
     instructions_count: int = -1
     loop_iterations: int = -1
     mwType = 'FORK'
+    BasicBlockID = ""
+    recursive_function_calls = []
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
