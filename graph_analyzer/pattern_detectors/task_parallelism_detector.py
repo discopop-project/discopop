@@ -556,7 +556,7 @@ def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode
     return result, visited_nodes
 
 
-def __remove_duplicates(pet: PETGraph, suggestions: [PatternInfo]):
+def __remove_duplicates(pet: PETGraphX, suggestions: [PatternInfo]):
     """removes duplicates from the list of suggestions and return the modified
     list.
     CU-ID is not considered.
@@ -581,7 +581,7 @@ def __remove_duplicates(pet: PETGraph, suggestions: [PatternInfo]):
     return result
 
 
-def __sort_output(pet: PETGraph, suggestions: [PatternInfo]):
+def __sort_output(pet: PETGraphX, suggestions: [PatternInfo]):
     """orders the list of suggestions by the respective properties:
     order by: file-id, then line-number (descending).
     Returns the sorted list of suggestions
@@ -727,7 +727,7 @@ def __detect_task_suggestions(pet: PETGraphX):
     return result
 
 
-def __combine_omittable_cus(pet: PETGraph,
+def __combine_omittable_cus(pet: PETGraphX,
                             suggestions: [PatternInfo]):
     """execute combination of tasks suggestions with omittable cus.
     Adds modified version of the respective Parent suggestions to the list.
@@ -757,15 +757,15 @@ def __combine_omittable_cus(pet: PETGraph,
     # successor graph of a node containing a task suggestion
     useful_omittable_suggestions = []
     for os in omittable_suggestions:
-        in_succ_edges = [e for e in os._node.in_edges() if
-                         pet.graph.ep.type[e] == "successor"]
-        parent_task_nodes = [e.source() for e in in_succ_edges if
-                             pet.graph.vp.tp_contains_task[e.source()] == 'True']
+        in_succ_edges = [(s,t,e) for s,t,e in pet.in_edges(os._node.id) if
+                         e.etype == EdgeType.SUCCESSOR]
+        parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if
+                             pet.node_at(e[0]).tp_contains_task is True]
         if len(parent_task_nodes) != 0:
             useful_omittable_suggestions.append(os)
         else:
             # un-mark node as omittable
-            pet.graph.vp.tp_omittable[os._node] = 'False'
+            os._node.tp_omittable = False
     omittable_suggestions = useful_omittable_suggestions
 
     # create copies of original Task suggestion versions
