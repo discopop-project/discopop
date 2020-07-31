@@ -13,8 +13,8 @@ from graph_tool import Vertex
 from parser import parse_inputs
 
 import copy
-import PETGraph
-from PETGraph import PETGraph
+# import PETGraph
+# from PETGraph import PETGraph
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import depends, calculate_workload, \
@@ -274,6 +274,7 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
 
     # pet.interactive_visualize(pet.graph)
     # pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "child"))
+    pet.show()
     return result
 
 def __get_var_definition_line_dict(cu_xml):
@@ -320,7 +321,7 @@ def __get_var_definition_line_dict(cu_xml):
                     pass
     return var_def_line_dict
 
-def __filter_data_sharing_clauses(pet: PETGraph, suggestions: [PatternInfo], var_def_line_dict: dict):
+def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
     """Removes superflous variables from the data sharing clauses
     of task suggestions.
     :param pet: PET graph
