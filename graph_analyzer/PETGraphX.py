@@ -434,11 +434,13 @@ class PETGraphX(object):
                     return False
         return True
 
-    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
+
+    def get_left_right_subtree(self, target: CUNode, right_subtree: bool, node_type: NodeType) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
         :param right_subtree: true - right subtree, false - left subtree
+        :param node_type: specific type of nodes or None for wildcard
         :return: list of nodes in the subtree
         """
         stack: List[CUNode] = [self.main]
@@ -450,7 +452,7 @@ class PETGraphX(object):
 
             if current == target:
                 return res
-            if current.type == NodeType.CU:
+            if current.type == node_type or node_type is None:
                 res.append(current)
 
             if current in visited:  # suppress looping
@@ -462,6 +464,7 @@ class PETGraphX(object):
                          else reversed(self.direct_children(current)))
 
         return res
+
 
     def path(self, source: CUNode, target: CUNode) -> List[CUNode]:
         """DFS from source to target over edges of child type
