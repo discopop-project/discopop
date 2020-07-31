@@ -274,7 +274,6 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
 
     # pet.interactive_visualize(pet.graph)
     # pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "child"))
-
     return result
 
 def __get_var_definition_line_dict(cu_xml):
@@ -842,7 +841,7 @@ def __combine_omittable_cus(pet: PETGraphX,
     return result
 
 
-def __detect_dependency_clauses(pet: PETGraph,
+def __detect_dependency_clauses(pet: PETGraphX,
                                 suggestions: [PatternInfo]):
     """detect in, out and inout dependencies for tasks and omittable CUs and
     add this information to the respective suggestions.
@@ -872,24 +871,24 @@ def __detect_dependency_clauses(pet: PETGraph,
         # out/in_dep_edges are based on the dependency graph and thus inverse
         # to the omp dependency clauses
         # only consider those dependencies to/from Task/Omittable CUs
-        out_dep_edges = [e for e in s._node.out_edges() if
-                         pet.graph.ep.type[e] == "dependence" and
-                         (pet.graph.vp.tp_contains_task[e.target()] == 'True' or
-                         pet.graph.vp.tp_omittable[e.target()] == 'True') and
-                         e.target() != s._node]  # exclude self-dependencies
-        in_dep_edges = [e for e in s._node.in_edges() if
-                        pet.graph.ep.type[e] == "dependence" and
-                        (pet.graph.vp.tp_contains_task[e.source()] == 'True' or
-                        pet.graph.vp.tp_omittable[e.source()] == 'True') and
-                        e.source() != s._node]  # exclude self-dependencies
+        out_dep_edges = [(s,t,e) for s,t,e in pet.out_edges(s._node.id) if
+                         e.etype == EdgeType.DATA and
+                         (pet.node_at(e[1]).tp_contains_task is True or
+                         pet.node_at(e[1]).tp_omittable is True) and
+                         pet.node_at(e[1]) != s._node]  # exclude self-dependencies
+        in_dep_edges = [(s,t,e) for s,t,e in s._node.in_edges() if
+                        e.etype == "dependence" and
+                        (pet.node_at(e[1]).tp_contains_task is True or
+                        pet.node_at(e[1]).tp_omittable is True) and
+                        pet.node_at(e[1]) != s._node]  # exclude self-dependencies
         # set iversed dependencies
         length_in = 0
         length_out = 0
         for ode in out_dep_edges:
-            var = pet.graph.ep.var[ode]
+            var = ode.var_name
             s.in_dep.append(var)
         for ide in in_dep_edges:
-            var = pet.graph.ep.var[ide]
+            var = ide.var_name
             s.out_dep.append(var)
         # find and set in_out_dependencies
         if length_in < length_out:  # just for performance
@@ -1119,7 +1118,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
     return suggestions
 
 
-def __detect_taskloop_reduction(pet: PETGraph,
+def __detect_taskloop_reduction(pet: PETGraphX,
                                 suggestions: [TaskParallelismInfo]):
     """detect suggested tasks which can and should be replaced by
     taskloop reduction.
@@ -1156,7 +1155,7 @@ def __detect_taskloop_reduction(pet: PETGraph,
     return output
 
 
-def __task_contained_in_reduction_loop(pet: PETGraph,
+def __task_contained_in_reduction_loop(pet: PETGraphX,
                                        task: TaskParallelismInfo):
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
@@ -1173,9 +1172,9 @@ def __task_contained_in_reduction_loop(pet: PETGraph,
     else:
         # check if task is actually contained in one of the parents
         for parent_loop, last_node in parents:
-            p_start_line = pet.graph.vp.startsAtLine[parent_loop]
+            p_start_line = parent_loop.start_position()
             p_start_line = p_start_line[p_start_line.index(":") + 1:]
-            p_end_line = pet.graph.vp.endsAtLine[parent_loop]
+            p_end_line = parent_loop.end_position()
             p_end_line = p_end_line[p_end_line.index(":") + 1:]
             t_start_line = task.start_line
             t_start_line = t_start_line[t_start_line.index(":") + 1:]
@@ -1185,15 +1184,15 @@ def __task_contained_in_reduction_loop(pet: PETGraph,
                 contained_in.append(parent_loop)
     # check if task is contained in a reduction loop
     for parent in contained_in:
-        if pet.graph.vp.reduction[parent]:
+        if parent.reduction:
             # get correct entry for loop from pet.reduction_vars
             for rv in pet.reduction_vars:
-                if rv["loop_line"] == pet.graph.vp.startsAtLine[parent]:
+                if rv["loop_line"] == parent.start_position():
                     return rv
     return None
 
 
-def __set_task_contained_lines(pet: PETGraph,
+def __set_task_contained_lines(pet: PETGraphX,
                                suggestions: [TaskParallelismInfo]):
     """set region_end_line property of TaskParallelismInfo objects
     in suggestions and return the modified list.
@@ -1242,7 +1241,7 @@ def __set_task_contained_lines(pet: PETGraph,
     return output
 
 
-def __remove_useless_barrier_suggestions(pet: PETGraph,
+def __remove_useless_barrier_suggestions(pet: PETGraphX,
                                          suggestions: [TaskParallelismInfo]):
     """remove suggested barriers which are not contained in the same
     function body with at least one suggested task.
@@ -1286,7 +1285,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraph,
     return suggestions
 
 
-def __suggest_parallel_regions(pet: PETGraph,
+def __suggest_parallel_regions(pet: PETGraphX,
                                suggestions: [TaskParallelismInfo]):
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
@@ -1324,8 +1323,8 @@ def __suggest_parallel_regions(pet: PETGraph,
     region_suggestions = []
     for parent, last_node in outer_parents:
         region_suggestions.append(ParallelRegionInfo(pet, parent,
-                                  pet.graph.vp.startsAtLine[last_node],
-                                  pet.graph.vp.endsAtLine[last_node]))
+                                  last_node.start_position(),
+                                  last_node.end_position()))
     return region_suggestions
 
 
@@ -1354,8 +1353,8 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
     return False
 
 
-def __get_parent_of_type(pet: PETGraph, node: Vertex,
-                         parent_type: str, edge_type: str, only_first: bool):
+def __get_parent_of_type(pet: PETGraphX, node: CUNode,
+                         parent_type: NodeType, edge_type: EdgeType, only_first: bool):
     """return parent cu nodes and the last node of the path to them as a tuple
     for the given node with type parent_type
     accessible via edges of type edge_type.
@@ -1374,25 +1373,25 @@ def __get_parent_of_type(pet: PETGraph, node: Vertex,
         (cur_node, last_node) = tmp
         last_node = cur_node
         visited.append(cur_node)
-        tmpList = [e for e in cur_node.in_edges()
-                   if e.source() not in visited and
-                   pet.graph.ep.type[e] == edge_type]
+        tmpList = [(s,t,e) for s,t,e in pet.in_edges(cur_node)
+                   if pet.node_at(e[0]) not in visited and
+                   e.etype == edge_type]
         for e in tmpList:
-            if pet.graph.vp.type[e.source()] == parent_type:
+            if pet.node_at(e[0]).type == parent_type:
                 if only_first is True:
-                    return [(e.source(), last_node)]
+                    return [(pet.node_at(e[0]), last_node)]
                 else:
-                    res.append((e.source(), last_node))
-                    visited.append(e.source())
+                    res.append((pet.node_at(e[0]), last_node))
+                    visited.append(pet.node_at(e[0]))
             else:
-                if e.source() not in visited:
-                    queue.append((e.source(), last_node))
+                if pet.node_at(e[0]) not in visited:
+                    queue.append((pet.node_at(e[0]), last_node))
     return res
 
 
-def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
+def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
                                                      function_call_string: str,
-                                                     worker_cus: [Vertex]):
+                                                     worker_cus: [CUNode]):
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -1423,8 +1422,8 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
     tightest_worker_cu = None
     # iterate over worker_cus
     for cur_w in worker_cus:
-        cur_w_starts_at_line = pet.graph.vp.startsAtLine[cur_w]
-        cur_w_ends_at_line = pet.graph.vp.endsAtLine[cur_w]
+        cur_w_starts_at_line = cur_w.start_position()
+        cur_w_ends_at_line = cur_w.end_position()
         cur_w_file_id = cur_w_starts_at_line[:cur_w_starts_at_line.index(":")]
         # check if file_id is equal
         if file_id == cur_w_file_id:
@@ -1439,17 +1438,17 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraph,
                 if tightest_worker_cu is None:
                     tightest_worker_cu = cur_w
                     continue
-                if __line_contained_in_region(pet.graph.vp.startsAtLine[cur_w],
-                                              pet.graph.vp.startsAtLine[tightest_worker_cu],
-                                              pet.graph.vp.endsAtLine[tightest_worker_cu]) \
+                if __line_contained_in_region(cur_w.start_position(),
+                                              tightest_worker_cu.start_position(),
+                                              tightest_worker_cu.end_position()) \
                     and \
-                    __line_contained_in_region(pet.graph.vp.endsAtLine[cur_w],
-                                               pet.graph.vp.startsAtLine[tightest_worker_cu],
-                                               pet.graph.vp.endsAtLine[tightest_worker_cu]):
+                    __line_contained_in_region(cur_w.end_position(),
+                                               tightest_worker_cu.start_position(),
+                                               tightest_worker_cu.end_position()):
                     tightest_worker_cu = cur_w
 
     if tightest_worker_cu is not None:
-        print("\t", pet.graph.vp.id[tightest_worker_cu])
+        print("\t", tightest_worker_cu.id)
     else:
         print("\tNone")
     return tightest_worker_cu
@@ -1526,7 +1525,7 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
     # return pairs
 
 
-def __create_task_tree(pet: PETGraph, root: Vertex):
+def __create_task_tree(pet: PETGraphX, root: CUNode):
     """generates task tree data from root node
 
     :param pet: PET graph
@@ -1537,7 +1536,7 @@ def __create_task_tree(pet: PETGraph, root: Vertex):
     __create_task_tree_helper(pet, root, root_task, [])
 
 
-def __create_task_tree_helper(pet: PETGraph, current: Vertex, root: Task, visited_func: List[Vertex]):
+def __create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visited_func: List[CUNode]):
     """generates task tree data recursively
 
     :param pet: PET graph
