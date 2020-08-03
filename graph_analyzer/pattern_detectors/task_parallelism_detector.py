@@ -673,7 +673,6 @@ def __detect_task_suggestions(pet: PETGraphX):
         # iterate over all entries in recursiveFunctionCalls
         # in order to find task suggestions
         for i in range(0, len(vx.recursive_function_calls)):
-            print(i)
             function_call_string = vx.recursive_function_calls[i]
             if not type(function_call_string) == str:
                 continue
