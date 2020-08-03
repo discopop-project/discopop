@@ -165,7 +165,7 @@ class ParallelRegionInfo(PatternInfo):
     """
     def __init__(self, pet: PETGraphX, node: CUNode,
                  region_start_line, region_end_line):
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
         self.pragma = "#pragma omp parallel\n\t#pragma omp single"
@@ -186,7 +186,7 @@ class OmittableCuInfo(PatternInfo):
     final suggestions.
     """
     def __init__(self, pet: PETGraphX, node: CUNode, combine_with_node: CUNode):
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
         self.combine_with_node = combine_with_node
         # only for printing
         self.cwn_id = combine_with_node.id
@@ -259,8 +259,6 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
     result += __detect_task_suggestions(pet)
-    [print(r) for r in result]
-    print("####")
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(pet, result)
@@ -425,7 +423,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
         visited_nodes = [task_sug._node]
         out_succ_edges = [(s,t,e) for s,t,e in pet.out_edges(task_sug._node.id) if
                           e.etype == EdgeType.SUCCESSOR and
-                          pet.node_at(e[1]) != task_sug._node]
+                          pet.node_at(t) != task_sug._node]
         queue = out_succ_edges
         # iterate over queued successor-edges
         while len(queue) > 0:
@@ -440,7 +438,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
             # if edge.target has common global variable with task
             common_vars = [var for
                            var in pet.node_at(succ_edge[1]).global_vars
-                           if var in task_sug._node.globalVars]
+                           if var in task_sug._node.global_vars]
             if len(common_vars) > 0:
                 # if cu is a task suggestion, continue
                 if pet.node_at(succ_edge[1]).tp_contains_task is True:
@@ -449,7 +447,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
                 if pet.node_at(succ_edge[1]).tp_contains_taskwait is False:
                     # actual change
                     pet.node_at(succ_edge[1]).tp_contains_taskwait = True
-                    first_line = pet.node_at(succ_edge[1]).startsAtLine
+                    first_line = pet.node_at(succ_edge[1]).start_position()
                     first_line = first_line[first_line.index(":") + 1:]
                     tmp_suggestion = TaskParallelismInfo(pet,
                                                          pet.node_at(succ_edge[1]),
@@ -459,7 +457,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
                     suggestions.append(tmp_suggestion)
                 continue
             # append current nodes outgoing successor edges to queue
-            target_out_succ_edges = [(s,t,e) for s,t,e in pet.out_edges(pet.node_at(succ_edge[1])) if
+            target_out_succ_edges = [(s,t,e) for s,t,e in pet.out_edges(pet.node_at(succ_edge[1]).id) if
                                      e.etype == EdgeType.SUCCESSOR and
                                      pet.node_at(t) != pet.node_at(succ_edge[1])]
             queue = list(set(queue + target_out_succ_edges))
@@ -674,7 +672,6 @@ def __detect_task_suggestions(pet: PETGraphX):
     for vx in pet.all_nodes():
         # iterate over all entries in recursiveFunctionCalls
         # in order to find task suggestions
-        print("recursive_function_calls: ", vx.recursive_function_calls)
         for i in range(0, len(vx.recursive_function_calls)):
             print(i)
             function_call_string = vx.recursive_function_calls[i]
@@ -874,24 +871,24 @@ def __detect_dependency_clauses(pet: PETGraphX,
         # out/in_dep_edges are based on the dependency graph and thus inverse
         # to the omp dependency clauses
         # only consider those dependencies to/from Task/Omittable CUs
-        out_dep_edges = [(s,t,e) for s,t,e in pet.out_edges(s._node.id) if
+        out_dep_edges = [(src,t,e) for src,t,e in pet.out_edges(s._node.id) if
                          e.etype == EdgeType.DATA and
-                         (pet.node_at(e[1]).tp_contains_task is True or
-                         pet.node_at(e[1]).tp_omittable is True) and
-                         pet.node_at(e[1]) != s._node]  # exclude self-dependencies
-        in_dep_edges = [(s,t,e) for s,t,e in s._node.in_edges() if
+                         (pet.node_at(t).tp_contains_task is True or
+                         pet.node_at(t).tp_omittable is True) and
+                         pet.node_at(t) != s._node]  # exclude self-dependencies
+        in_dep_edges = [(src,t,e) for src,t,e in pet.in_edges(s._node.id) if
                         e.etype == "dependence" and
-                        (pet.node_at(e[1]).tp_contains_task is True or
-                        pet.node_at(e[1]).tp_omittable is True) and
-                        pet.node_at(e[1]) != s._node]  # exclude self-dependencies
+                        (pet.node_at(t).tp_contains_task is True or
+                        pet.node_at(t).tp_omittable is True) and
+                        pet.node_at(t) != s._node]  # exclude self-dependencies
         # set iversed dependencies
         length_in = 0
         length_out = 0
         for ode in out_dep_edges:
-            var = ode.var_name
+            var = ode[2].var_name
             s.in_dep.append(var)
         for ide in in_dep_edges:
-            var = ide.var_name
+            var = ide[2].var_name
             s.out_dep.append(var)
         # find and set in_out_dependencies
         if length_in < length_out:  # just for performance
@@ -1109,7 +1106,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
 
         # append neighbors of modified node to queue
         if transformation_happened:
-            in_dep_edges = [(s,t,e) for s,t,e in pet.in_edges(v) if
+            in_dep_edges = [(s,t,e) for s,t,e in pet.in_edges(v.id) if
                             e.etype == EdgeType.DATA and
                             pet.node_at(s) != v]
             for e in out_dep_edges:
@@ -1303,7 +1300,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # start search for each suggested task
     parents = []
     for ts in task_suggestions:
-        parents += __get_parent_of_type(pet, ts._node, NodeType.FUNC, NodeType.CHILD, False)
+        parents += __get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, False)
     # remove duplicates
     parents = list(set(parents))
     # get outer-most parents of suggested tasks
@@ -1311,7 +1308,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # iterate over entries in parents.
     while len(parents) > 0:
         (p, last_node) = parents.pop(0)
-        p_parents = __get_parent_of_type(pet, p, NodeType.FUNC, NodeType.CHILD, False)
+        p_parents = __get_parent_of_type(pet, p, NodeType.FUNC, EdgeType.CHILD, False)
         if p_parents == []:
             # p is outer
             # get last cu before p
@@ -1344,7 +1341,7 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
     while len(queue) > 0:
         cur_node = queue.pop(0)
         visited.append(cur_node)
-        tmpList = [(s,t,e) for s,t,e in pet.in_edges(cur_node)
+        tmpList = [(s,t,e) for s,t,e in pet.in_edges(cur_node.id)
                    if s not in visited and
                    e.etype == edge_type]
         for e in tmpList:
@@ -1352,7 +1349,7 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
                 return True
             else:
                 if pet.node_at(e[0]) not in visited:
-                    queue.append(pet.node_at[e[0]])
+                    queue.append(pet.node_at(e[0]))
     return False
 
 
