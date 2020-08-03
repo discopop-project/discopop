@@ -254,11 +254,13 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
     # ct = [graph.vp.id[v] for v in pet.graph.vp.childrenTasks[main_node]]
     # ctt = [graph.vp.id[v] for v in forks]
     fs = [f for f in __forks if f.node_id == '130:0']
+
     for fork in fs:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
-
     result += __detect_task_suggestions(pet)
+    [print(r) for r in result]
+    print("####")
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(pet, result)
@@ -272,9 +274,7 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __sort_output(pet, result)
 
-    # pet.interactive_visualize(pet.graph)
-    # pet.interactive_visualize(pet.filter_view(pet.graph.vertices(), "child"))
-    pet.show()
+    # pet.show()
     return result
 
 def __get_var_definition_line_dict(cu_xml):
@@ -333,7 +333,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
         if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
             continue
         # get function containing the task cu
-        parent_function, last_node = __get_parent_of_type(pet, suggestion._node, "func", "child", True)[0]
+        parent_function, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
         # filter firstprivate
         to_be_removed = []
         for var in suggestion.first_private:
@@ -674,7 +674,9 @@ def __detect_task_suggestions(pet: PETGraphX):
     for vx in pet.all_nodes():
         # iterate over all entries in recursiveFunctionCalls
         # in order to find task suggestions
+        print("recursive_function_calls: ", vx.recursive_function_calls)
         for i in range(0, len(vx.recursive_function_calls)):
+            print(i)
             function_call_string = vx.recursive_function_calls[i]
             if not type(function_call_string) == str:
                 continue
@@ -1166,7 +1168,7 @@ def __task_contained_in_reduction_loop(pet: PETGraphX,
     :return None / {loop_line, name, reduction_line, operation}
     """
     # check if task contained in loop body
-    parents = __get_parent_of_type(pet, task._node, "loop", "child", False)
+    parents = __get_parent_of_type(pet, task._node, NodeType.LOOP, EdgeType.CHILD, False)
     contained_in = []
     if len(parents) == 0:
         return None
@@ -1264,7 +1266,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
     relevant_function_bodies = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent = __get_parent_of_type(pet, ts._node, "func", "child", True)
+        parent = __get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)
         parent = parent[0][0]  # parent like [(parent, last_node)]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
@@ -1301,7 +1303,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # start search for each suggested task
     parents = []
     for ts in task_suggestions:
-        parents += __get_parent_of_type(pet, ts._node, "func", "child", False)
+        parents += __get_parent_of_type(pet, ts._node, NodeType.FUNC, NodeType.CHILD, False)
     # remove duplicates
     parents = list(set(parents))
     # get outer-most parents of suggested tasks
@@ -1309,7 +1311,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # iterate over entries in parents.
     while len(parents) > 0:
         (p, last_node) = parents.pop(0)
-        p_parents = __get_parent_of_type(pet, p, "func", "child", False)
+        p_parents = __get_parent_of_type(pet, p, NodeType.FUNC, NodeType.CHILD, False)
         if p_parents == []:
             # p is outer
             # get last cu before p
@@ -1374,8 +1376,8 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
         (cur_node, last_node) = tmp
         last_node = cur_node
         visited.append(cur_node)
-        tmpList = [(s,t,e) for s,t,e in pet.in_edges(cur_node)
-                   if pet.node_at(e[0]) not in visited and
+        tmpList = [(s,t,e) for s,t,e in pet.in_edges(cur_node.id)
+                   if pet.node_at(s) not in visited and
                    e.etype == edge_type]
         for e in tmpList:
             if pet.node_at(e[0]).type == parent_type:
