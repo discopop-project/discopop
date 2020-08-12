@@ -207,8 +207,6 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     execute run_detection on newly constructed graph afterwards.
     """
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
-    # TODO re-enable preprocessing
-    # preprocessed_cu_xml = cu_xml
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
@@ -240,7 +238,6 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
         if node.type == NodeType.DUMMY:
             continue
         if pet.direct_children(node):
-            # print(graph.vp.id[node])
             __detect_mw_types(pet, node)
 
         if node.mwType == 'NONE':
@@ -289,7 +286,6 @@ def __get_var_definition_line_dict(cu_xml):
     var_def_line_dict = dict()
     for node in parsed_cu.Node:
         # only consider cu nodes
-        # TODO rename
         if node.get("type") == "0":
             # add global variables
             for idx, global_variables_entry in enumerate(node.globalVariables):
@@ -316,6 +312,7 @@ def __get_var_definition_line_dict(cu_xml):
                 except Exception as ex:
                     pass
     return var_def_line_dict
+
 
 def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
     """Removes superflous variables from the data sharing clauses
@@ -399,7 +396,6 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
     If the cu which would be suggested as a barrier contains a Task suggestion
     already, ignore the barrier suggestion
     (reason: false positives due to copying of global / local variables in preprocessor).
-    TODO: maybe include a more intelligent way to deal with variables in preprocessor.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
@@ -636,7 +632,6 @@ def __detect_task_suggestions(pet: PETGraphX):
             barrier_cus.append(v)
         if v.mwType == "BARRIER_WORKER":
             barrier_worker_cus.append(v)
-        # test TODO
         if v.type == NodeType.FUNC:
             func_cus.append(v)
 
@@ -1443,11 +1438,6 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
                                                tightest_worker_cu.start_position(),
                                                tightest_worker_cu.end_position()):
                     tightest_worker_cu = cur_w
-
-    if tightest_worker_cu is not None:
-        print("\t", tightest_worker_cu.id)
-    else:
-        print("\tNone")
     return tightest_worker_cu
 
 
@@ -1482,7 +1472,6 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
 
         for other_node in other_nodes:
             if depends(pet, other_node, node):
-                # print("\t" + pet.graph.vp.id[node] + "<--" + pet.graph.vp.id[other_node])
                 if other_node.mwType == 'WORKER':
                     other_node.mwType = 'BARRIER'
                 else:
@@ -1704,7 +1693,6 @@ def cu_xml_preprocessing(cu_xml):
                                     continue
                                 # select smallest instruction line
                                 if int(tmp[tmp.find(":") + 1:]) < int(parent_new_startLine[parent_new_startLine.find(":") + 1:]):
-                                    print("updated parent_new_startLine")
                                     parent_new_startLine = tmp
                         # if no instructionLines contained
                         if parent.instructionLines.text == "":
