@@ -13,8 +13,6 @@ from graph_tool import Vertex
 from parser import parse_inputs
 
 import copy
-# import PETGraph
-# from PETGraph import PETGraph
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import depends, calculate_workload, \
@@ -208,9 +206,9 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     """
-    # preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
+    preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     # TODO re-enable preprocessing
-    preprocessed_cu_xml = cu_xml
+    # preprocessed_cu_xml = cu_xml
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
@@ -1616,19 +1614,16 @@ def cu_xml_preprocessing(cu_xml):
                         parent_copy = copy.copy(parent)
                         parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
-                        # Preprocessor Step 2
+                        # Preprocessor Step 2 - generate cu id for new element
                         incremented_id = None
-                        if "-" in parent_copy.get("id"):
-                            tmp_id = parent_copy.get("id")
-                            incremented_id = tmp_id[0:tmp_id.rfind("-") + 1]
-                            incremented_id += str(int(
-                                tmp_id[tmp_id.rfind("-") + 1:]) + 1)
-                            if incremented_id in used_node_ids:
-                                incremented_id = parent_copy.get("id")+"-1"
-                            else:
-                                pass
-                        else:
-                            incremented_id = parent_copy.get("id")+"-1"
+                        # get next free id for specific tmp_file_id
+                        parent_copy_id = parent_copy.get("id")
+                        tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
+                        tmp_used_ids = [int(s[s.index(":")+1:]) for s in
+                                        used_node_ids if
+                                        s.startswith(tmp_file_id + ":")]
+                        next_free_id = max(tmp_used_ids) + 1
+                        incremented_id = tmp_file_id + ":" + str(next_free_id)
                         parent.set("id", incremented_id)
 
                         # Preprocessor Step 3
@@ -1866,6 +1861,7 @@ def cu_xml_preprocessing(cu_xml):
                     # node not of type CU, go to next node
                     inner_iteration = False
                     continue
+
         iterate_over_cus = False  # disable restarting, preprocessing finished
 
     # print modified Data.xml to file
