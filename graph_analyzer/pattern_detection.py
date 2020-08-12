@@ -81,7 +81,6 @@ class PatternDetector(object):
 
         # task detector works on modified version of the cu xml file and thus
         # requires building a separate cu graph
-        # res.task_parallelism = tp_run_detection(self.pet)
         res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
 
         return res
