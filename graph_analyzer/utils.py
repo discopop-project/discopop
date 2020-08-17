@@ -32,18 +32,18 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
-def find_subnodes(pet: PETGraph, node: Vertex, criteria: str) -> List[Vertex]:
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[Vertex]:
     """Returns direct children of a given node
 
     :param pet: PET graph
     :param node: node
-    :param criteria: type of dependency
+    :param criteria: type of edges to traverse
     :return: list of children nodes
     """
-    return [e.target() for e in node.out_edges() if pet.graph.ep.type[e] == criteria]
+    return [pet.node_at(t) for s,t,d in pet.out_edges(node.id) if d.etype == criteria]
 
 
-def depends(pet: PETGraph, source: Vertex, target: Vertex) -> bool:
+def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
 
     :param pet: PET graph
@@ -53,55 +53,13 @@ def depends(pet: PETGraph, source: Vertex, target: Vertex) -> bool:
     """
     if source == target:
         return False
-    target_nodes = get_subtree_of_type(pet, target, '*')
+    target_nodes = pet.subtree_of_type(target, None)
 
-    for node in get_subtree_of_type(pet, source, '*'):
-        for dep in [e.target() for e in node.out_edges() if pet.graph.ep.dtype[e] == 'RAW']:
-            if dep in target_nodes:
+    for node in pet.subtree_of_type(source, None):
+        #for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
+        for target in [pet.node_at(target_id) for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+            if target in target_nodes:
                 return True
-    return False
-
-
-def depends_ignore_readonly(pet: PETGraph, source: Vertex, target: Vertex, root_loop: Vertex) -> bool:
-    """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
-    The loop index and readonly variables are ignored
-
-    :param pet: PET graph
-    :param source: source node for dependency detection
-    :param target: target of dependency
-    :param root_loop: root loop
-    :return: true, if there is RAW dependency
-    """
-    children = get_subtree_of_type(pet, target, 'cu')
-    # children.append(target)
-
-    for dep in get_all_dependencies(pet, source, root_loop):
-        if dep in children:
-            return True
-    return False
-
-
-def is_loop_index(pet: PETGraph, var_name: str, loops_start_lines: List[str], children: List[Vertex]) -> bool:
-    """Checks, whether the variable is a loop index.
-
-    :param pet: PET graph
-    :param var_name: name of the variable
-    :param loops_start_lines: start lines of the loops
-    :param children: children nodes of the loops
-    :return: true if edge represents loop index
-    """
-
-    # If there is a raw dependency for var, the source cu is part of the loop
-    # and the dependency occurs in loop header, then var is loop index+
-
-    for c in children:
-        for dep in c.out_edges():
-            if pet.graph.ep.dtype[dep] == 'RAW' and pet.graph.ep.var[dep] == var_name:
-                if (pet.graph.ep.source[dep] == pet.graph.ep.sink[dep]
-                        and pet.graph.ep.source[dep] in loops_start_lines
-                        and dep.target() in children):
-                    return True
-
     return False
 
 
@@ -117,7 +75,7 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
 
 
-def is_readonly_inside_loop_body(pet: PETGraph, dep: Edge, root_loop: Vertex) -> bool:
+def is_readonly_inside_loop_body(pet: PETGraphX, dep: Dependency, root_loop: CUNode) -> bool:
     """Checks, whether a variable is read-only in loop body
 
     :param pet: PET graph
@@ -125,30 +83,30 @@ def is_readonly_inside_loop_body(pet: PETGraph, dep: Edge, root_loop: Vertex) ->
     :param root_loop: root loop
     :return: true if variable is read-only in loop body
     """
-    loops_start_lines = [pet.graph.vp.startsAtLine[v]
-                         for v in get_subtree_of_type(pet, root_loop, 'loop')]
+    loops_start_lines = [v.start_position()
+                         for v in get_subtree_of_type(pet, root_loop, NodeType.LOOP)]
 
-    children = get_subtree_of_type(pet, root_loop, 'cu')
+    children = get_subtree_of_type(pet, root_loop, NodeType.CU)
 
     for v in children:
-        for e in v.out_edges():
+        for s,t,e in pet.out_edges(v):
             # If there is a waw dependency for var, then var is written in loop
             # (sink is always inside loop for waw/war)
-            if pet.graph.ep.dtype[e] == 'WAR' or pet.graph.ep.dtype[e] == 'WAW':
-                if (pet.graph.ep.var[dep] == pet.graph.ep.var[e]
-                        and not (pet.graph.ep.sink[e] in loops_start_lines)):
+            if e.dtype == DepType.WAR or e.dtype == DepType.WAW:
+                if (dep.var_name == e.var_name
+                        and not (pet.node_at(e.sink) in loops_start_lines)):
                     return False
-        for e in v.in_edges():
+        for s,t,e in pet.in_edges(v):
             # If there is a reverse raw dependency for var, then var is written in loop
             # (source is always inside loop for reverse raw)
-            if pet.graph.ep.dtype[e] == 'RAW':
-                if (pet.graph.ep.var[dep] == pet.graph.ep.var[e]
-                        and not (pet.graph.ep.source[e] in loops_start_lines)):
+            if e.dtype == DepType.RAW:
+                if (dep.var_name == e.var_name
+                        and not (pet.node_at(e.source) in loops_start_lines)):
                     return False
     return True
 
 
-def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[Vertex]:
+def get_all_dependencies(pet: PETGraphX, node: CUNode, root_loop: CUNode) -> Set[CUNode]:
     """Returns all data dependencies of the node and it's children
     This method ignores loop index and read only variables
 
@@ -158,42 +116,33 @@ def get_all_dependencies(pet: PETGraph, node: Vertex, root_loop: Vertex) -> Set[
     :return: list of all RAW dependencies of the node
     """
     dep_set = set()
-    children = get_subtree_of_type(pet, node, 'cu')
+    children = get_subtree_of_type(pet, node, NodeType.CU)
 
-    loops_start_lines = [pet.graph.vp.startsAtLine[v]
-                         for v in get_subtree_of_type(pet, root_loop, 'loop')]
+    loops_start_lines = [v.start_position()
+                         for v in get_subtree_of_type(pet, root_loop, NodeType.LOOP)]
     for v in children:
-        for e in v.out_edges():
-            if pet.graph.ep.type[e] == 'dependence' and pet.graph.ep.dtype[e] == 'RAW':
-                if not (is_loop_index(pet, pet.graph.ep.var[e], loops_start_lines,
-                                      get_subtree_of_type(pet, root_loop, 'cu'))
-                        and is_readonly_inside_loop_body(pet, e, root_loop)):
-                    dep_set.add(e.target())
+        for (s,t,e) in pet.out_edges(v.id):
+            if e.etype == EdgeType.DATA and e.dtype == DepType.RAW:
+                if not (is_loop_index(pet, e.var_name, loops_start_lines,
+                                      get_subtree_of_type(pet, root_loop, NodeType.CU)
+                        and is_readonly_inside_loop_body(pet, e, root_loop))):
+                    dep_set.add(node_at(t))
     return dep_set
 
 
-def get_subtree_of_type(pet: PETGraph, root: Vertex, node_type: str) -> List[Vertex]:
-    """Returns all nodes of a given type from a subtree
+def get_subtree_of_type(pet: PETGraphX, root: CUNode, node_type: NodeType) -> List[Vertex]:
+    """Returns all nodes of a given type from a subtree.
+    node_type None acts as wildcard.
 
     :param pet: PET graph
     :param root: root node
     :param node_type: specific type of nodes or '*' for wildcard
     :return: list of nodes of specified type from subtree
     """
-    res = []
-    if pet.graph.vp.type[root] == node_type or node_type == '*':
-        res.append(root)
-
-    for e in dfs_iterator(pet.children_graph, root):
-        t = e.target()
-        if pet.graph.vp.type[t] == node_type or node_type == '*':
-            # use original vertex without filter
-            res.append(pet.graph.vertex(t))
-
-    return res
+    return pet.get_left_right_subtree(root, True, node_type)
 
 
-def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
+def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
     """Calculates total number of the instructions in the subtree of a given node
 
     :param pet: PET graph
@@ -201,12 +150,12 @@ def total_instructions_count(pet: PETGraph, root: Vertex) -> int:
     :return: number of instructions
     """
     res = 0
-    for node in get_subtree_of_type(pet, root, 'cu'):
-        res += pet.graph.vp.instructionsCount[node]
+    for node in pet.subtree_of_type(root, NodeType.CU):
+        res += node.instructions_count
     return res
 
 
-def calculate_workload(pet: PETGraph, node: Vertex) -> int:
+def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
     """Calculates workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
 
@@ -215,25 +164,25 @@ def calculate_workload(pet: PETGraph, node: Vertex) -> int:
     :return: workload
     """
     res = 0
-    if pet.graph.vp.type[node] == 'dummy':
+    if node.type == NodeType.DUMMY:
         return 0
-    elif pet.graph.vp.type[node] == 'cu':
-        res += pet.graph.vp.instructionsCount[node]
-    elif pet.graph.vp.type[node] == 'func':
+    elif node.type == NodeType.CU:
+        res += node.instructions_count
+    elif node.type == NodeType.FUNC:
         for child in find_subnodes(pet, node, 'child'):
             res += calculate_workload(pet, child)
-    elif pet.graph.vp.type[node] == 'loop':
+    elif node.type == NodeType.LOOP:
         for child in find_subnodes(pet, node, 'child'):
-            if pet.graph.vp.type[child] == 'cu':
-                if 'for.inc' in pet.graph.vp.BasicBlockID[child]:
-                    res += pet.graph.vp.instructionsCount[child]
-                elif 'for.cond' in pet.graph.vp.BasicBlockID[child]:
-                    res += pet.graph.vp.instructionsCount[child] * (
-                            get_loop_iterations(pet.graph.vp.startsAtLine[node]) + 1)
+            if child.type == NodeType.CU:
+                if 'for.inc' in child.BasicBlockID:
+                    res += child.instructions_count
+                elif 'for.cond' in child.BasicBlockID:
+                    res += child.instructions_count * (
+                            get_loop_iterations(node.start_position) + 1)
                 else:
-                    res += pet.graph.vp.instructionsCount[child] * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                    res += child.instructions_count * get_loop_iterations(node.start_position)
             else:
-                res += calculate_workload(pet, child) * get_loop_iterations(pet.graph.vp.startsAtLine[node])
+                res += calculate_workload(pet, child) * get_loop_iterations(node.start_position)
     return res
 
 
@@ -257,37 +206,6 @@ def __get_dep_of_type(pet: PETGraphX, node: CUNode, dep_type: DepType,
     """
     return [e for e in (pet.in_edges(node.id, EdgeType.DATA) if reversed else pet.out_edges(node.id, EdgeType.DATA))
             if e[2].dtype == dep_type]
-
-
-def __get_left_right_subtree(pet: PETGraph, target: Vertex, right_subtree: bool) -> List[Vertex]:
-    """Searches for all subnodes of main which are to the left or to the right of the specified node
-
-    :param pet: CU graph
-    :param target: node that divides the tree
-    :param right_subtree: true - right subtree, false - left subtree
-    :return: list of nodes in the subtree
-    """
-    stack = [pet.main]
-    res = []
-    visited = []
-
-    while stack:
-        current = stack.pop()
-
-        if current == target:
-            return res
-        if pet.graph.vp.type[current] == 'cu':
-            res.append(current)
-
-        if current in visited:  # suppress looping
-            continue
-        else:
-            visited.append(current)
-
-        stack.extend(
-            find_subnodes(pet, current, 'child') if right_subtree else reversed(find_subnodes(pet, current, 'child')))
-
-    return res
 
 
 def __get_variables(nodes: List[CUNode]) -> Set[Variable]:
@@ -604,8 +522,8 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], Li
     shared = []
     reduction = []
 
-    lst = pet.get_left_right_subtree(loop, False)
-    rst = pet.get_left_right_subtree(loop, True)
+    lst = pet.get_left_right_subtree(loop, False, NodeType.CU)
+    rst = pet.get_left_right_subtree(loop, True, NodeType.CU)
     sub = pet.subtree_of_type(loop, NodeType.CU)
 
     vars = __get_variables(sub)
@@ -666,8 +584,8 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Ed
     depend_in_out: List[Variable] = []
     reduction: List[str] = []
 
-    left_sub_tree = pet.get_left_right_subtree(task, False)
-    right_sub_tree = pet.get_left_right_subtree(task, True)
+    left_sub_tree = pet.get_left_right_subtree(task, False, NodeType.CU)
+    right_sub_tree = pet.get_left_right_subtree(task, True, NodeType.CU)
     subtree = pet.subtree_of_type(task, NodeType.CU)
     t_loop = pet.subtree_of_type(task, NodeType.LOOP)
 
