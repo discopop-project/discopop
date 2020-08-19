@@ -85,7 +85,7 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     # pattern_detector = PatternDetector(petGraphX)
     pattern_detector = PatternDetectorX(petGraphX)
 
-    res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file, loop_counter_file, reduction_file)
+    res: DetectionResult = pattern_detector.detect_patterns(cu_dict, dependencies, loop_data, reduction_vars)
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
@@ -136,3 +136,4 @@ if __name__ == "__main__":
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     print("Time taken for pattern detection: {0}".format(end - start))
+
