@@ -202,9 +202,14 @@ class OmittableCuInfo(PatternInfo):
                f'in_out_dep: {" ".join(self.in_out_dep)}\n'
 
 
-def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_file, reduction_file):
+def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str):
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
+    :param cu_xml: Path (string) to the CU xml file to be used
+    :param dep_file: Path (string) to the dependence file to be used
+    :param loop_counter_file: Path (string) to the loop counter file file to be used
+    :param reduction_file: Path (string) to the reduction file to be used
+    :return: List of detected pattern info
     """
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
@@ -218,7 +223,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml, dep_file, loop_counter_fi
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -230,6 +235,7 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
     3.) if two barriers can run in parallel they are marked as barrierWorkers.
         Two barriers can run in parallel if there is not a directed path from one to the other
         :param pet: PET graph
+        :param cu_xml: Path (string) to the CU xml file to be used
         :return: List of detected pattern info
     """
     result = []
@@ -272,10 +278,12 @@ def run_detection(pet: PETGraphX, cu_xml) -> List[TaskParallelismInfo]:
     return result
 
 
-def __get_var_definition_line_dict(cu_xml):
+def __get_var_definition_line_dict(cu_xml: str):
     """creates a dictionary {varname: [definitionLines]} based on cu_xml
     and return the dictionary.
     Removes .addr suffix if present.
+    :param xu_xml: Path (string) to the CU xml file to be used
+    :return: dictionary, containing information on variable definition lines
     """
     xml_fd = open(cu_xml)
     xml_content = ""
