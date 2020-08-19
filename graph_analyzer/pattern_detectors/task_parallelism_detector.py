@@ -986,7 +986,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
             elif pet.node_at(e[1]) in barrier_nodes:
                 # only count distinct barriers
                 if pet.node_at(e[1]) not in barrier_buffer:
-                    barrier_buffer.append(pet.node_at(e.target()))
+                    barrier_buffer.append(pet.node_at(e[1]))
                     barrier_count += 1
                 else:
                     pass
@@ -1017,7 +1017,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 transformation_happened = True
         elif barrier_count != 0 and task_count != 0:
             # check if child barrier(s) cover each child task
-            child_barriers = [e.target() for e in out_dep_edges if
+            child_barriers = [e[1] for e in out_dep_edges if
                               pet.node_at(e[1]).tp_contains_taskwait is True]
             child_tasks = [pet.node_at(e[1]) for e in out_dep_edges if
                            pet.node_at(e[1]).tp_contains_task is True]

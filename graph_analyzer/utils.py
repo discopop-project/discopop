@@ -11,7 +11,7 @@ import itertools
 from typing import List, Set, Dict, Tuple
 
 import numpy as np
-from graph_tool.all import Vertex, Edge
+from graph_tool.all import Edge
 
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from variable import Variable
@@ -88,14 +88,14 @@ def is_readonly_inside_loop_body(pet: PETGraphX, dep: Dependency, root_loop: CUN
     children = get_subtree_of_type(pet, root_loop, NodeType.CU)
 
     for v in children:
-        for s, t, e in pet.out_edges(v):
+        for s, t, e in pet.out_edges(v.id):
             # If there is a waw dependency for var, then var is written in loop
             # (sink is always inside loop for waw/war)
             if e.dtype == DepType.WAR or e.dtype == DepType.WAW:
                 if (dep.var_name == e.var_name
                         and not (pet.node_at(e.sink) in loops_start_lines)):
                     return False
-        for s, t, e in pet.in_edges(v):
+        for s, t, e in pet.in_edges(v.id):
             # If there is a reverse raw dependency for var, then var is written in loop
             # (source is always inside loop for reverse raw)
             if e.dtype == DepType.RAW:
@@ -129,7 +129,7 @@ def get_all_dependencies(pet: PETGraphX, node: CUNode, root_loop: CUNode) -> Set
     return dep_set
 
 
-def get_subtree_of_type(pet: PETGraphX, root: CUNode, node_type: NodeType) -> List[Vertex]:
+def get_subtree_of_type(pet: PETGraphX, root: CUNode, node_type: NodeType) -> List[CUNode]:
     """Returns all nodes of a given type from a subtree.
     node_type None acts as wildcard.
 
@@ -177,11 +177,11 @@ def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
                     res += child.instructions_count
                 elif 'for.cond' in child.BasicBlockID:
                     res += child.instructions_count * (
-                            get_loop_iterations(node.start_position) + 1)
+                            get_loop_iterations(node.start_position()) + 1)
                 else:
-                    res += child.instructions_count * get_loop_iterations(node.start_position)
+                    res += child.instructions_count * get_loop_iterations(node.start_position())
             else:
-                res += calculate_workload(pet, child) * get_loop_iterations(node.start_position)
+                res += calculate_workload(pet, child) * get_loop_iterations(node.start_position())
     return res
 
 
@@ -525,7 +525,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], Li
     rst = pet.get_left_right_subtree(loop, True, NodeType.CU)
     sub = pet.subtree_of_type(loop, NodeType.CU)
 
-    vars = __get_variables(sub)
+    variables = __get_variables(sub)
 
     raw = set()
     war = set()
@@ -538,7 +538,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], Li
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    for var in vars:
+    for var in variables:
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
