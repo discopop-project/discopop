@@ -12,9 +12,7 @@ from typing import List, Set, Dict, Tuple
 
 import numpy as np
 from graph_tool.all import Vertex, Edge
-from graph_tool.search import dfs_iterator
 
-import PETGraph
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from variable import Variable
 
@@ -32,15 +30,15 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
-def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[Vertex]:
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[CUNode]:
     """Returns direct children of a given node
 
     :param pet: PET graph
-    :param node: node
-    :param criteria: type of edges to traverse
+    :param node: CUNode
+    :param criteria: EdgeType, type of edges to traverse
     :return: list of children nodes
     """
-    return [pet.node_at(t) for s,t,d in pet.out_edges(node.id) if d.etype == criteria]
+    return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
 
 
 def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
@@ -56,8 +54,9 @@ def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     target_nodes = pet.subtree_of_type(target, None)
 
     for node in pet.subtree_of_type(source, None):
-        #for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
-        for target in [pet.node_at(target_id) for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+        # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
+        for target in [pet.node_at(target_id) for source_id, target_id, dependence in
+                       pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
             if target in target_nodes:
                 return True
     return False
@@ -89,14 +88,14 @@ def is_readonly_inside_loop_body(pet: PETGraphX, dep: Dependency, root_loop: CUN
     children = get_subtree_of_type(pet, root_loop, NodeType.CU)
 
     for v in children:
-        for s,t,e in pet.out_edges(v):
+        for s, t, e in pet.out_edges(v):
             # If there is a waw dependency for var, then var is written in loop
             # (sink is always inside loop for waw/war)
             if e.dtype == DepType.WAR or e.dtype == DepType.WAW:
                 if (dep.var_name == e.var_name
                         and not (pet.node_at(e.sink) in loops_start_lines)):
                     return False
-        for s,t,e in pet.in_edges(v):
+        for s, t, e in pet.in_edges(v):
             # If there is a reverse raw dependency for var, then var is written in loop
             # (source is always inside loop for reverse raw)
             if e.dtype == DepType.RAW:
@@ -121,12 +120,12 @@ def get_all_dependencies(pet: PETGraphX, node: CUNode, root_loop: CUNode) -> Set
     loops_start_lines = [v.start_position()
                          for v in get_subtree_of_type(pet, root_loop, NodeType.LOOP)]
     for v in children:
-        for (s,t,e) in pet.out_edges(v.id):
+        for (s, t, e) in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA and e.dtype == DepType.RAW:
-                if not (is_loop_index(pet, e.var_name, loops_start_lines,
-                                      get_subtree_of_type(pet, root_loop, NodeType.CU)
-                        and is_readonly_inside_loop_body(pet, e, root_loop))):
-                    dep_set.add(node_at(t))
+                if not (pet.is_loop_index(e.var_name, loops_start_lines,
+                                          get_subtree_of_type(pet, root_loop, NodeType.CU)
+                                          and is_readonly_inside_loop_body(pet, e, root_loop))):
+                    dep_set.add(pet.node_at(t))
     return dep_set
 
 
@@ -169,10 +168,10 @@ def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
     elif node.type == NodeType.CU:
         res += node.instructions_count
     elif node.type == NodeType.FUNC:
-        for child in find_subnodes(pet, node, 'child'):
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
             res += calculate_workload(pet, child)
     elif node.type == NodeType.LOOP:
-        for child in find_subnodes(pet, node, 'child'):
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
             if child.type == NodeType.CU:
                 if 'for.inc' in child.BasicBlockID:
                     res += child.instructions_count
