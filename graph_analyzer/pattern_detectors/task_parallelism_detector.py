@@ -553,7 +553,7 @@ def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode
     if root.type == NodeType.FUNC or root.tp_contains_taskwait is True:
         # root of type "function" or root is a barrier
         return result, visited_nodes
-    in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(root) if
+    in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(root.id) if
                      e.etype == EdgeType.SUCCESSOR and
                      pet.node_at(s) != root and pet.node_at(s) not in visited_nodes]
     for e in in_succ_edges:
@@ -1084,7 +1084,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     continue
                 elif pet.node_at(e[1]).tp_omittable is True:
                     continue
-                elif __check_reachability(pet, parent_task, v, "dependence"):
+                elif __check_reachability(pet, parent_task, v, EdgeType.DATA):
                     continue
                 else:
                     violation = True
@@ -1280,7 +1280,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
         tws_line_number = tws.pragma_line
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
         for rel_func_body in relevant_function_bodies.keys():
-            if __check_reachability(pet, tws._node, rel_func_body, "child"):
+            if __check_reachability(pet, tws._node, rel_func_body, EdgeType.CHILD):
                 # remove suggested barriers where line number smaller than
                 # pragma line number of task
                 for line_number in relevant_function_bodies[rel_func_body]:
@@ -1337,9 +1337,9 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
                          source: CUNode, edge_type: EdgeType):
     """check if target is reachable from source via edges of type edge_type.
     :param pet: PET graph
-    :param source: Vertex
-    :param target: Vertex
-    :param edge_type: str
+    :param source: CUNode
+    :param target: CUNode
+    :param edge_type: EdgeType
     :return Boolean"""
     visited = []
     queue = [target]
@@ -1364,12 +1364,12 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
     for the given node with type parent_type
     accessible via edges of type edge_type.
     :param pet: PET graph
-    :param node: Vertex, root for the search
-    :param parent_type: String, type of target node
-    :param edge_type: String, type of usable edges
+    :param node: CUNode, root for the search
+    :param parent_type: NodeType, type of target node
+    :param edge_type: EdgeType, type of usable edges
     :param only_first: Bool, if true, return only first parent.
         Else, return first parent for each incoming edge of node.
-    :return [(Vertex, Vertex)]"""
+    :return [(CUNode, CUNode)]"""
     visited = []
     queue = [(node, None)]
     res = []
@@ -1935,7 +1935,7 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
     """Check if >= 2 recursive funciton calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
-    :param node: Vertex
+    :param node: CUNode
     :return True/False
     """
     starts_at_line = node.get("startsAtLine").split(":")
