@@ -7,20 +7,18 @@
 # directory for details.
 
 
+import copy
+import os
 from typing import List
 
-from graph_tool import Vertex
-from parser import parse_inputs
+from lxml import etree
+from lxml import objectify
 
-import copy
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
+from parser import parse_inputs
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars
-
-from lxml import objectify
-from lxml import etree
-import os
 
 __forks = set()
 __workloadThreshold = 10000
