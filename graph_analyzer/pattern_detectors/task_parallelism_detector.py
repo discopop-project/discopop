@@ -818,8 +818,10 @@ def __combine_omittable_cus(pet: PETGraphX,
                 # process in dependencies of omit_s
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
-                    task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep.remove(omit_in_var)
+                    if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].out_dep:
+                        task_suggestions_dict[omit_s.combine_with_node][
+                            omit_target_task_idx].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
@@ -1582,6 +1584,7 @@ def cu_xml_preprocessing(cu_xml):
     parsed_cu = objectify.fromstring(xml_content)
 
     iterate_over_cus = True  # used to enable re-starting
+    self_added_node_ids = []
     while iterate_over_cus:
         used_node_ids = []
         for node in parsed_cu.Node:
@@ -1591,6 +1594,8 @@ def cu_xml_preprocessing(cu_xml):
             inner_iteration = True
             remaining_recursive_call_in_parent = False
             while inner_iteration:
+                used_node_ids = list(set(used_node_ids + self_added_node_ids))
+
                 if node.get('type') == '0':  # iterate over CU nodes
                     # find CU nodes with > 1 recursiveFunctionCalls in own code region
                     if __preprocessor_cu_contains_at_least_two_recursive_calls(
@@ -1629,6 +1634,7 @@ def cu_xml_preprocessing(cu_xml):
                         next_free_id = max(tmp_used_ids) + 1
                         incremented_id = tmp_file_id + ":" + str(next_free_id)
                         parent.set("id", incremented_id)
+                        self_added_node_ids.append(incremented_id)
 
                         # Preprocessor Step 3
                         parent_copy.callsNode.clear()
