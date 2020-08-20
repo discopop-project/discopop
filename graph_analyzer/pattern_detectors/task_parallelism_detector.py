@@ -1031,6 +1031,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
                 # check if ct covered by a barrier
                 for cb in child_barriers:
+                    cb = pet.node_at(cb)
                     cb_start_line = cb.start_position()
                     cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
                     cb_end_line = cb.end_position()
