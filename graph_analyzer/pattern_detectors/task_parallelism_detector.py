@@ -259,7 +259,7 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0], [], [], [], [], []))
+            result.append(TaskParallelismInfo(pet, fork.nodes[0], ["dummy_fork"], [], [], [], []))
     result += __detect_task_suggestions(pet)
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
@@ -1009,7 +1009,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 combine_with_node = [pet.node_at(e[1]) for e in out_dep_edges if
                                      pet.node_at(e[1]) in task_nodes]
                 if len(combine_with_node) < 1:
-                    raise ValueException("length combine_with_node < 1!")
+                    raise ValueError("length combine_with_node < 1!")
                 combine_with_node = combine_with_node[0]
                 omittable_nodes.append((v, combine_with_node))
                 suggestions.append(OmittableCuInfo(pet, v,
