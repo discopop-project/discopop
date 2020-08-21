@@ -173,9 +173,9 @@ def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
     elif node.type == NodeType.LOOP:
         for child in find_subnodes(pet, node, EdgeType.CHILD):
             if child.type == NodeType.CU:
-                if 'for.inc' in child.BasicBlockID:
+                if 'for.inc' in child.basic_block_id:
                     res += child.instructions_count
-                elif 'for.cond' in child.BasicBlockID:
+                elif 'for.cond' in child.basic_block_id:
                     res += child.instructions_count * (
                             get_loop_iterations(node.start_position()) + 1)
                 else:

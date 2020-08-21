@@ -88,7 +88,7 @@ class CUNode:
     instructions_count: int = -1
     loop_iterations: int = -1
     mwType = 'FORK'
-    BasicBlockID = ""
+    basic_block_id = ""
     recursive_function_calls = []
     reduction: bool = False
     do_all: bool = False
@@ -153,9 +153,8 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
         if hasattr(node.globalVariables, 'global'):
             n.global_vars = [Variable(v.get('type'), v.text) for v in getattr(node.globalVariables, 'global')]
-
-        # TODO self.graph.vp.instructionsCount[v] = node.instructionsCount
-        # TODO self.graph.vp.BasicBlockID[v] = node.BasicBlockID
+        if hasattr(node, 'BasicBlockID'):
+            n.basic_block_id = getattr(node, 'BasicBlockID')
     return n
 
 
