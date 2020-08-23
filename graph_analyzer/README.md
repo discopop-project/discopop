@@ -18,8 +18,6 @@ In case any of the files mentioned above are missing, please follow the [DiscoPo
 To use the graph analyzer tool, you need to have Python 3.6+ installed on your system. Further python dependencies can be installed using the following command:
 `pip install -r requirements.txt`
 
-For graph manipulation, we use [graph-tool](https://graph-tool.skewed.de) package. You can compile it from source or install the binary version. We recommend installing the binary release, as it is far easier than installing from source.
-
 ### Usage
 To run the graph analyzer, you can use the following command:
 
