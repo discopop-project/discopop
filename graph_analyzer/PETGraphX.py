@@ -302,7 +302,7 @@ class PETGraphX(object):
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
-        :param type: type of children
+        :param type: type of children, None is equal to a wildcard
         :return: list of nodes in subtree
         """
         return self.__subtree_of_type_rec(root, type, set())
@@ -311,7 +311,7 @@ class PETGraphX(object):
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
-        :param type: type of children
+        :param type: type of children, None is equal to a wildcard
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
@@ -319,7 +319,7 @@ class PETGraphX(object):
         if root in visited:
             return res
         visited.add(root)
-        if root.type == type:
+        if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
