@@ -14,7 +14,6 @@ import numpy as np
 from graph_tool.all import Vertex, Edge
 from graph_tool.search import dfs_iterator
 
-import PETGraph
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from variable import Variable
 
