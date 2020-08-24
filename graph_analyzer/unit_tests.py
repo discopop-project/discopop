@@ -27,7 +27,7 @@ class GraphAnalyzerTest(unittest.TestCase):
                     print('##actual##')
                     print(json.dumps(actual, indent=2))
                     print('##end##')
-                self.assertTrue(equal)
+                self.assertTrue(equal, 'Expected and actual detection result are not equal')
 
 
 def ordered(obj):

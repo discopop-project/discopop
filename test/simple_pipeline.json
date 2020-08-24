@@ -12,10 +12,10 @@
         "d"
       ],
       "private": [
-        "i",
         "c",
-        "d.addr",
-        "in.addr"
+        "i",
+        "in.addr",
+        "d.addr"
       ],
       "last_private": [],
       "shared": [],
@@ -41,8 +41,8 @@
             "d"
           ],
           "private": [
-            "d.addr",
-            "in.addr"
+            "in.addr",
+            "d.addr"
           ],
           "shared": [],
           "reduction": [],
@@ -60,8 +60,8 @@
             "d"
           ],
           "private": [
-            "d.addr",
-            "in.addr"
+            "in.addr",
+            "d.addr"
           ],
           "shared": [],
           "reduction": [],
@@ -82,8 +82,8 @@
           ],
           "private": [
             "c",
-            "d.addr",
-            "in.addr"
+            "in.addr",
+            "d.addr"
           ],
           "shared": [],
           "reduction": [],
