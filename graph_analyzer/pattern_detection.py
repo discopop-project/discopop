@@ -55,7 +55,7 @@ class PatternDetectorX(object):
         for n in dummies_to_remove:
             self.pet.g.remove_node(n)
 
-    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars):
+    def detect_patterns(self):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)

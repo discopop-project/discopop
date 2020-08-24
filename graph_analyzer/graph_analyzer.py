@@ -66,10 +66,9 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
 
-    # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.interactive_visualize(path)
-    petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.show()
+    pet = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+    # TODO add visualization
+    # pet.show()
 
     plugin_base = PluginBase(package='plugins')
 
@@ -79,17 +78,16 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin before: " + plugin_name)
-        petGraphX = p.run_before(petGraphX)
+        pet = p.run_before(pet)
 
-    # pattern_detector = PatternDetector(petGraphX)
-    pattern_detector = PatternDetectorX(petGraphX)
+    pattern_detector = PatternDetectorX(pet)
 
-    res: DetectionResult = pattern_detector.detect_patterns(cu_dict, dependencies, loop_data, reduction_vars)
+    res: DetectionResult = pattern_detector.detect_patterns()
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin after: " + plugin_name)
-        petGraphX = p.run_after(petGraphX)
+        pet = p.run_after(pet)
 
     return res
 
