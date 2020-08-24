@@ -21,7 +21,6 @@ class DetectionResult(object):
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
-    task_parallelism: List[TaskParallelismInfo]
 
     def __init__(self):
         pass
