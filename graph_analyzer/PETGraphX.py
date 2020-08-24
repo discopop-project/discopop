@@ -22,7 +22,7 @@ node_props = [
     ('doAll', 'bool', 'False'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
-    ('mwType', 'string', '\'FORK\''),
+    ('mwType', 'int', '2'),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
     ('args', 'object', '[]'),
@@ -62,6 +62,15 @@ class NodeType(IntEnum):
     DUMMY = 3
 
 
+class MWType(Enum):
+    NONE = 0
+    ROOT = 1
+    FORK = 2
+    WORKER = 3
+    BARRIER = 4
+    BARRIER_WORKER = 5
+
+
 class Dependency:
     etype: EdgeType
     dtype: DepType = None
@@ -87,7 +96,7 @@ class CUNode:
     name: str
     instructions_count: int = -1
     loop_iterations: int = -1
-    mwType = 'FORK'
+    mw_type = MWType.FORK
     basic_block_id = ""
     recursive_function_calls = []
     reduction: bool = False

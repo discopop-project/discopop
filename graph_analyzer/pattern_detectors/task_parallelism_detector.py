@@ -14,7 +14,7 @@ from typing import List
 from lxml import etree
 from lxml import objectify
 
-from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
+from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
 from parser import parse_inputs
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import depends, calculate_workload, \
@@ -43,7 +43,7 @@ class Task(object):
             self.region_start_line = self.start_line
         self.region_end_line = None
         self.end_line = node.end_position()
-        self.mw_type = node.mwType
+        self.mw_type = node.mw_type
         self.instruction_count = total_instructions_count(pet, node)
         self.workload = calculate_workload(pet, node)
         self.child_tasks = []
@@ -57,7 +57,7 @@ class Task(object):
         self.end_line = other.end_line
         self.workload += other.workload
         self.instruction_count += other.instruction_count
-        self.mw_type = 'BARRIER_WORKER' if other.mw_type == 'BARRIER_WORKER' else 'WORKER'
+        self.mw_type = MWType.BARRIER_WORKER if other.mw_type == MWType.BARRIER_WORKER else MWType.WORKER
 
 
 def __merge_tasks(pet: PETGraphX, task: Task):
@@ -247,8 +247,8 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
         if pet.direct_children(node):
             __detect_mw_types(pet, node)
 
-        if node.mwType == 'NONE':
-            node.mwType = 'ROOT'
+        if node.mw_type == MWType.NONE:
+            node.mw_type = MWType.ROOT
 
     __forks.clear()
     __create_task_tree(pet, pet.main)
@@ -641,11 +641,11 @@ def __detect_task_suggestions(pet: PETGraphX):
     func_cus = []
 
     for v in pet.all_nodes():
-        if v.mwType == "WORKER":
+        if v.mw_type == MWType.WORKER:
             worker_cus.append(v)
-        if v.mwType == "BARRIER":
+        if v.mw_type == MWType.BARRIER:
             barrier_cus.append(v)
-        if v.mwType == "BARRIER_WORKER":
+        if v.mw_type == MWType.BARRIER_WORKER:
             barrier_worker_cus.append(v)
         if v.type == NodeType.FUNC:
             func_cus.append(v)
@@ -699,8 +699,8 @@ def __detect_task_suggestions(pet: PETGraphX):
                         contained_in.type == NodeType.CU):
                     print("contained in ", contained_in, "  type: ", contained_in.type)
                     continue
-                if contained_in.mwType == "WORKER" or \
-                        contained_in.mwType == "BARRIER_WORKER" or \
+                if contained_in.mw_type == MWType.WORKER or \
+                        contained_in.mw_type == MWType.BARRIER_WORKER or \
                         contained_in.type == NodeType.FUNC:
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
@@ -1470,15 +1470,15 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
     # first insert all the direct children of main node in a queue to use it for the BFS
     for node in pet.direct_children(main_node):
         # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
-        if node.mwType == 'NONE' or node.mwType == 'ROOT':
-            node.mwType = 'FORK'
+        if node.mw_type == MWType.NONE or node.mw_type == MWType.ROOT:
+            node.mw_type = MWType.FORK
 
         # while using the node as the base child, we copy all the other children in a copy vector.
         # we do that because it could be possible that two children of the current node (two dependency)
         # point to two different children of another child node which results that the child node becomes BARRIER
         # instead of WORKER
         # so we copy the whole other children in another vector and when one of the children of the current node
-        # does point to the other child node, we just adjust mwType and then we remove the node from the vector
+        # does point to the other child node, we just adjust mw_type and then we remove the node from the vector
         # Thus we prevent changing to BARRIER due of two dependencies pointing to two different children of
         # the other node
 
@@ -1488,10 +1488,10 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
 
         for other_node in other_nodes:
             if depends(pet, other_node, node):
-                if other_node.mwType == 'WORKER':
-                    other_node.mwType = 'BARRIER'
+                if other_node.mw_type == MWType.WORKER:
+                    other_node.mw_type = MWType.BARRIER
                 else:
-                    other_node.mwType = 'WORKER'
+                    other_node.mw_type = MWType.WORKER
 
                     # check if other_node has > 1 RAW dependencies to node
                     # -> not detected in previous step, since other_node is only
@@ -1507,7 +1507,7 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
                     raw_targets = list(set(raw_targets))
                     # if elements remaining, mark other_node as BARRIER
                     if len(raw_targets) > 0:
-                        other_node.mwType = 'BARRIER'
+                        other_node.mw_type = MWType.BARRIER
 
     pairs = []
     # check for Barrier Worker pairs
@@ -1515,16 +1515,16 @@ def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
     # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
     direct_subnodes = pet.direct_children(main_node)
     for n1 in direct_subnodes:
-        if n1.mwType == 'BARRIER':
+        if n1.mw_type == MWType.BARRIER:
             for n2 in direct_subnodes:
-                if n2.mwType == 'BARRIER' and n1 != n2:
+                if n2.mw_type == MWType.BARRIER and n1 != n2:
                     if n2 in [pet.node_at(t) for s, t, d in pet.out_edges(n1.id)] or n2 in [pet.node_at(s) for s, t, d
                                                                                             in pet.in_edges(n1.id)]:
                         break
                     # so these two nodes are BarrierWorker, because there is no dependency between them
                     pairs.append((n1, n2))
-                    n1.mwType = 'BARRIER_WORKER'
-                    n2.mwType = 'BARRIER_WORKER'
+                    n1.mw_type = MWType.BARRIER_WORKER
+                    n2.mw_type = MWType.BARRIER_WORKER
     # return pairs
 
 
@@ -1554,13 +1554,13 @@ def __create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visit
             visited_func.append(current)
 
     for child in pet.direct_children(current):
-        mw_type = child.mwType
+        mw_type = child.mw_type
 
-        if mw_type in ['BARRIER', 'BARRIER_WORKER', 'WORKER']:
+        if mw_type in [MWType.BARRIER, MWType.BARRIER_WORKER, MWType.WORKER]:
             task = Task(pet, child)
             root.child_tasks.append(task)
             __create_task_tree_helper(pet, child, task, visited_func)
-        elif mw_type == 'FORK' and not child.start_position().endswith('16383'):
+        elif mw_type == MWType.FORK and not child.start_position().endswith('16383'):
             task = Task(pet, child)
             __forks.add(task)
             __create_task_tree_helper(pet, child, task, visited_func)
