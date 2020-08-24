@@ -1,6 +1,7 @@
-import unittest
-import os
 import json
+import os
+import unittest
+
 from graph_analyzer import run
 from json_serializer import PatternInfoSerializer
 

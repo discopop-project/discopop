@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import time
+from typing import List
 
 from docopt import docopt
 from pluginbase import PluginBase
@@ -37,7 +38,6 @@ from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
 from pattern_detection import DetectionResult, PatternDetectorX
-from typing import List
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -61,9 +61,8 @@ def get_path(base_path: str, file_name: str) -> str:
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
-def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str])\
+def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str]) \
         -> DetectionResult:
-
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
 
@@ -131,6 +130,3 @@ if __name__ == "__main__":
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     print("Time taken for pattern detection: {0}".format(end - start))
-
-
-
