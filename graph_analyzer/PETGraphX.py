@@ -153,7 +153,10 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
-    # TODO recursive calls unused
+
+    if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
+        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
+
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
