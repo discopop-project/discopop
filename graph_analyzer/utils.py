@@ -51,10 +51,10 @@ def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     """
     if source == target:
         return False
-    #target_nodes = pet.get_left_right_subtree(target, True)
+    # target_nodes = pet.get_left_right_subtree(target, True)
     target_nodes = pet.subtree_of_type(target, None)
 
-    #for node in pet.get_left_right_subtree(source, True):
+    # for node in pet.get_left_right_subtree(source, True):
     for node in pet.subtree_of_type(source, NodeType.CU):
         # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
         for target in [pet.node_at(target_id) for source_id, target_id, dependence in
