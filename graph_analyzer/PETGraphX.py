@@ -153,10 +153,7 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
-
-    if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
-        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
-
+    # TODO recursive calls unused
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
@@ -302,8 +299,7 @@ class PETGraphX(object):
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
     def subtree_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root.
-        If type is set to None, all types are accepted.
+        """Gets all nodes in subtree of specified type including root
 
         :param root: root node
         :param type: type of children
@@ -312,7 +308,7 @@ class PETGraphX(object):
         return self.__subtree_of_type_rec(root, type, set())
 
     def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root.
+        """Gets all nodes in subtree of specified type including root
 
         :param root: root node
         :param type: type of children
@@ -323,7 +319,7 @@ class PETGraphX(object):
         if root in visited:
             return res
         visited.add(root)
-        if root.type == type or type is None:
+        if root.type == type:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
@@ -445,13 +441,11 @@ class PETGraphX(object):
                     return False
         return True
 
-
-    def get_left_right_subtree(self, target: CUNode, right_subtree: bool, node_type: NodeType) -> List[CUNode]:
+    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
         :param right_subtree: true - right subtree, false - left subtree
-        :param node_type: specific type of nodes or None for wildcard
         :return: list of nodes in the subtree
         """
         stack: List[CUNode] = [self.main]
@@ -463,7 +457,7 @@ class PETGraphX(object):
 
             if current == target:
                 return res
-            if current.type == node_type or node_type is None:
+            if current.type == NodeType.CU:
                 res.append(current)
 
             if current in visited:  # suppress looping
@@ -475,7 +469,6 @@ class PETGraphX(object):
                          else reversed(self.direct_children(current)))
 
         return res
-
 
     def path(self, source: CUNode, target: CUNode) -> List[CUNode]:
         """DFS from source to target over edges of child type

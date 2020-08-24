@@ -15,7 +15,7 @@ from pattern_detectors.geometric_decomposition_detector import run_detection as 
 from pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
 from pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
 from pattern_detectors.task_parallelism_detector import build_preprocessed_graph_and_run_detection as detect_tp, TaskParallelismInfo
-from pattern_detectors.task_parallelism_detector import run_detection as tp_run_detection
+
 
 class DetectionResult(object):
     reduction: List[ReductionInfo]

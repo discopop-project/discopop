@@ -136,3 +136,4 @@ if __name__ == "__main__":
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     print("Time taken for pattern detection: {0}".format(end - start))
+
