@@ -115,9 +115,8 @@ class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
 
-    def __init__(self, pet: PETGraphX, node: CUNode, pragma, pragma_line, first_private, private, shared):
+    def __init__(self, node: CUNode, pragma, pragma_line, first_private, private, shared):
         """
-        :param pet: PET graph
         :param node: node, where task parallelism was detected
         :param pragma: pragma to be used (task / taskwait)
         :param pragma_line: line prior to which the pragma shall be inserted
@@ -160,7 +159,7 @@ class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info.
     """
 
-    def __init__(self, pet: PETGraphX, node: CUNode,
+    def __init__(self, node: CUNode,
                  region_start_line, region_end_line):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
@@ -183,7 +182,7 @@ class OmittableCuInfo(PatternInfo):
     final suggestions.
     """
 
-    def __init__(self, pet: PETGraphX, node: CUNode, combine_with_node: CUNode):
+    def __init__(self, node: CUNode, combine_with_node: CUNode):
         PatternInfo.__init__(self, node)
         self.combine_with_node = combine_with_node
         # only for printing
@@ -259,22 +258,21 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(pet, fork.nodes[0], ["dummy_fork"], [], [], [], []))
+            result.append(TaskParallelismInfo(fork.nodes[0], ["dummy_fork"], [], [], [], []))
     result += __detect_task_suggestions(pet)
     result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
-    result = __set_task_contained_lines(pet, result)
+    result = __set_task_contained_lines(result)
     result = __detect_taskloop_reduction(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     result = __testwise_missing_barrier_suggestion(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
-    result = __remove_duplicates(pet, result)
+    result = __remove_duplicates(result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
-    result = __sort_output(pet, result)
+    result = __sort_output(result)
 
-    # pet.show()
     return result
 
 
@@ -282,7 +280,7 @@ def __get_var_definition_line_dict(cu_xml: str):
     """creates a dictionary {varname: [definitionLines]} based on cu_xml
     and return the dictionary.
     Removes .addr suffix if present.
-    :param xu_xml: Path (string) to the CU xml file to be used
+    :param cu_xml: Path (string) to the CU xml file to be used
     :return: dictionary, containing information on variable definition lines
     """
     xml_fd = open(cu_xml)
@@ -308,7 +306,7 @@ def __get_var_definition_line_dict(cu_xml: str):
                             var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
                             var_def_line_dict[i.text.replace(".addr", "")] = list(
                                 set(var_def_line_dict[i.text.replace(".addr", "")]))
-                except Exception as ex:
+                except AttributeError:
                     pass
             # add local variables
             for idx, global_variables_entry in enumerate(node.localVariables):
@@ -321,13 +319,13 @@ def __get_var_definition_line_dict(cu_xml: str):
                             var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
                             var_def_line_dict[i.text.replace(".addr", "")] = list(
                                 set(var_def_line_dict[i.text.replace(".addr", "")]))
-                except Exception as ex:
+                except AttributeError:
                     pass
     return var_def_line_dict
 
 
 def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
-    """Removes superflous variables from the data sharing clauses
+    """Removes superfluous variables from the data sharing clauses
     of task suggestions.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -351,7 +349,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                         is_valid = True
                     else:
                         pass
-            except Exception:
+            except ValueError:
                 pass
             if not is_valid:
                 to_be_removed.append(var)
@@ -376,7 +374,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                         is_valid = True
                     else:
                         pass
-            except Exception:
+            except ValueError:
                 pass
             if not is_valid:
                 to_be_removed.append(var)
@@ -394,7 +392,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                         is_valid = True
                     else:
                         pass
-            except Exception as ex:
+            except ValueError:
                 pass
             if not is_valid:
                 to_be_removed.append(var)
@@ -407,7 +405,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
     """Suggests a barrier if a node is a successor of a task CU
     which is not covered by an existing barrier and the set of global variables
     of the CU and the task are overlapping
-    (i.e. both CUsaccess common global variables).
+    (i.e. both CUs access common global variables).
     If the cu which would be suggested as a barrier contains a Task suggestion
     already, ignore the barrier suggestion
     (reason: false positives due to copying of global / local variables in preprocessor).
@@ -458,8 +456,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
                     pet.node_at(succ_edge[1]).tp_contains_taskwait = True
                     first_line = pet.node_at(succ_edge[1]).start_position()
                     first_line = first_line[first_line.index(":") + 1:]
-                    tmp_suggestion = TaskParallelismInfo(pet,
-                                                         pet.node_at(succ_edge[1]),
+                    tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
                                                          ["taskwait"],
                                                          first_line,
                                                          [], [], [])
@@ -474,7 +471,7 @@ def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternI
 
 
 def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
-    """Checks if >= 2 dependences exist from same successor path or
+    """Checks if >= 2 dependencies exist from same successor path or
     node that contains the barrier is of type loop.
     Eliminate those barrier suggestions that violate this requirement.
     A successor path is represented by a list of nodes reachable by traversing
@@ -494,7 +491,7 @@ def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
                 barrier_suggestions.append(single_suggestion)
             else:
                 result.append(single_suggestion)
-        except Exception:
+        except AttributeError:
             result.append(single_suggestion)
 
     for bs in barrier_suggestions:
@@ -563,13 +560,12 @@ def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode
     return result, visited_nodes
 
 
-def __remove_duplicates(pet: PETGraphX, suggestions: [PatternInfo]):
+def __remove_duplicates(suggestions: [PatternInfo]):
     """removes duplicates from the list of suggestions and return the modified
     list.
     CU-ID is not considered.
     Removes a suggestion, if one with identical region_start_line,
     region_end_line and pragma exists.
-    :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
     """
@@ -588,11 +584,10 @@ def __remove_duplicates(pet: PETGraphX, suggestions: [PatternInfo]):
     return result
 
 
-def __sort_output(pet: PETGraphX, suggestions: [PatternInfo]):
+def __sort_output(suggestions: [PatternInfo]):
     """orders the list of suggestions by the respective properties:
     order by: file-id, then line-number (descending).
     Returns the sorted list of suggestions
-    :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
     """
@@ -600,8 +595,6 @@ def __sort_output(pet: PETGraphX, suggestions: [PatternInfo]):
     tmp_dict = dict()
     for sug in suggestions:
         # get start_line and file_id for sug
-        start_line = ""
-        file_id = ""
         if ":" not in sug.region_start_line:
             start_line = sug.region_start_line
             file_id = sug.start_line[0:sug.start_line.index(":")]
@@ -657,14 +650,14 @@ def __detect_task_suggestions(pet: PETGraphX):
         # get line number of first dependency. suggest taskwait prior to that
         first_dependency_line = v.end_position()
         first_dependency_line_number = first_dependency_line[
-                                       first_dependency_line.index(":") + 1:]
+            first_dependency_line.index(":") + 1:]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
                 dep_line = e.sink
                 dep_line_number = dep_line[dep_line.index(":") + 1:]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
-        tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+        tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
                                              first_dependency_line,
                                              [], [], [])
         if v.start_position() not in suggestions:
@@ -684,14 +677,13 @@ def __detect_task_suggestions(pet: PETGraphX):
             function_call_string = vx.recursive_function_calls[i]
             if not type(function_call_string) == str:
                 continue
-            contained_in = __recursive_function_call_contained_in_worker_cu(
-                pet, function_call_string, worker_cus)
+            contained_in = __recursive_function_call_contained_in_worker_cu(function_call_string, worker_cus)
             if contained_in is not None:
                 current_suggestions = None
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
                 pragma_line = function_call_string[
-                              function_call_string.index(":") + 1:]
+                    function_call_string.index(":") + 1:]
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
 
                 # only include cu and func nodes
@@ -705,7 +697,7 @@ def __detect_task_suggestions(pet: PETGraphX):
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [])
-                    current_suggestions = TaskParallelismInfo(pet, vx, ["task"],
+                    current_suggestions = TaskParallelismInfo(vx, ["task"],
                                                               pragma_line,
                                                               [v.name for v in fpriv],
                                                               [v.name for v in priv],
@@ -756,14 +748,14 @@ def __combine_omittable_cus(pet: PETGraphX,
                     task_suggestions.append(single_suggestion)
                 else:
                     result.append(single_suggestion)
-            except Exception:
+            except AttributeError:
                 result.append(single_suggestion)
 
     # remove omittable suggestion if cu is no direct child in the
     # successor graph of a node containing a task suggestion
     useful_omittable_suggestions = []
-    for os in omittable_suggestions:
-        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(os._node.id) if
+    for oms in omittable_suggestions:
+        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(oms._node.id) if
                          e.etype == EdgeType.SUCCESSOR]
         parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if
                              pet.node_at(e[0]).tp_contains_task is True]
@@ -771,7 +763,7 @@ def __combine_omittable_cus(pet: PETGraphX,
             useful_omittable_suggestions.append(os)
         else:
             # un-mark node as omittable
-            os._node.tp_omittable = False
+            oms._node.tp_omittable = False
     omittable_suggestions = useful_omittable_suggestions
 
     # create copies of original Task suggestion versions
@@ -819,7 +811,7 @@ def __combine_omittable_cus(pet: PETGraphX,
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
                     if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep:
+                            omit_target_task_idx].out_dep:
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
@@ -827,7 +819,7 @@ def __combine_omittable_cus(pet: PETGraphX,
                 # increase size of pragma region if needed
                 if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                         int(task_suggestions_dict[omit_s.combine_with_node][
-                                omit_target_task_idx].region_end_line):
+                            omit_target_task_idx].region_end_line):
                     task_suggestions_dict[omit_s.combine_with_node][
                         omit_target_task_idx].region_end_line = omit_s.end_line
 
@@ -871,7 +863,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
                     task_suggestions.append(single_suggestion)
                 else:
                     result.append(single_suggestion)
-            except Exception:
+            except AttributeError:
                 result.append(single_suggestion)
 
     for s in omittable_suggestions + task_suggestions:
@@ -888,7 +880,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
                         (pet.node_at(t).tp_contains_task is True or
                          pet.node_at(t).tp_omittable is True) and
                         pet.node_at(t) != s._node]  # exclude self-dependencies
-        # set iversed dependencies
+        # set inverted dependencies
         length_in = 0
         length_out = 0
         for ode in out_dep_edges:
@@ -956,7 +948,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
         out_dep_edges = [(s, t, e) for s, t, e in pet.out_edges(v.id) if
                          e.etype == EdgeType.DATA and
                          pet.node_at(t) != v]
-        # ignore cyclic dependences on the same variable
+        # ignore cyclic dependencies on the same variable
         to_remove = []
         for dep_edge in out_dep_edges:
             targets_cyclic_dep_edges = [(s, t, e) for s, t, e in pet.out_edges(dep_edge[1]) if
@@ -1005,7 +997,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
             else:
                 normal_count += 1
         if task_count == 1 and barrier_count == 0:
-            if v.tp_omittable == False:
+            if not v.tp_omittable:
                 # actual change
                 v.tp_omittable = True
                 combine_with_node = [pet.node_at(e[1]) for e in out_dep_edges if
@@ -1014,7 +1006,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     raise ValueError("length combine_with_node < 1!")
                 combine_with_node = combine_with_node[0]
                 omittable_nodes.append((v, combine_with_node))
-                suggestions.append(OmittableCuInfo(pet, v,
+                suggestions.append(OmittableCuInfo(v,
                                                    combine_with_node))
                 transformation_happened = True
         elif barrier_count != 0 and task_count != 0:
@@ -1046,7 +1038,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     v.tp_contains_taskwait = True
                     barrier_nodes.append(v)
                     transformation_happened = True
-                    tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+                    tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
                                                          v_first_line,
                                                          [], [], [])
                     suggestions.append(tmp_suggestion)
@@ -1059,7 +1051,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 v.tp_contains_taskwait = True
                 barrier_nodes.append(v)
                 transformation_happened = True
-                tmp_suggestion = TaskParallelismInfo(pet, v, ["taskwait"],
+                tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
                                                      v_first_line,
                                                      [], [], [])
                 suggestions.append(tmp_suggestion)
@@ -1108,7 +1100,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     # actual change
                     v.tp_omittable = True
                     omittable_nodes.append((v, parent_task))
-                    suggestions.append(OmittableCuInfo(pet, v,
+                    suggestions.append(OmittableCuInfo(v,
                                                        parent_task))
                     transformation_happened = True
 
@@ -1200,13 +1192,11 @@ def __task_contained_in_reduction_loop(pet: PETGraphX,
     return None
 
 
-def __set_task_contained_lines(pet: PETGraphX,
-                               suggestions: [TaskParallelismInfo]):
+def __set_task_contained_lines(suggestions: [TaskParallelismInfo]):
     """set region_end_line property of TaskParallelismInfo objects
     in suggestions and return the modified list.
     Regions are determined by checking if a CU contains multiple Tasks or
     Barriers and splitting up the contained source code lines accordingly.
-    :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
     :return List[TaskParallelismInfo]"""
     # group suggestions by parent CU
@@ -1277,7 +1267,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
             relevant_function_bodies[parent].append(ts.pragma_line)
-    # remove suggested barriers which are no descedants of relevant functions
+    # remove suggested barriers which are no descendants of relevant functions
     suggestions = task_suggestions
     for tws in taskwait_suggestions:
         tws_line_number = tws.pragma_line
@@ -1317,7 +1307,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     while len(parents) > 0:
         (p, last_node) = parents.pop(0)
         p_parents = __get_parent_of_type(pet, p, NodeType.FUNC, EdgeType.CHILD, False)
-        if p_parents == []:
+        if not p_parents:  # p_parents is empty
             # p is outer
             # get last cu before p
             outer_parents.append((p, last_node))
@@ -1330,7 +1320,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # create region suggestions based on detected outer parents
     region_suggestions = []
     for parent, last_node in outer_parents:
-        region_suggestions.append(ParallelRegionInfo(pet, parent,
+        region_suggestions.append(ParallelRegionInfo(parent,
                                                      last_node.start_position(),
                                                      last_node.end_position()))
     return region_suggestions
@@ -1349,10 +1339,10 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
     while len(queue) > 0:
         cur_node = queue.pop(0)
         visited.append(cur_node)
-        tmpList = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
-                   if s not in visited and
-                   e.etype == edge_type]
-        for e in tmpList:
+        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
+                    if s not in visited and
+                    e.etype == edge_type]
+        for e in tmp_list:
             if pet.node_at(e[0]) == source:
                 return True
             else:
@@ -1381,10 +1371,10 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
         (cur_node, last_node) = tmp
         last_node = cur_node
         visited.append(cur_node)
-        tmpList = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
-                   if pet.node_at(s) not in visited and
-                   e.etype == edge_type]
-        for e in tmpList:
+        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
+                    if pet.node_at(s) not in visited and
+                    e.etype == edge_type]
+        for e in tmp_list:
             if pet.node_at(e[0]).type == parent_type:
                 if only_first is True:
                     return [(pet.node_at(e[0]), last_node)]
@@ -1397,8 +1387,7 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
     return res
 
 
-def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
-                                                     function_call_string: str,
+def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
                                                      worker_cus: [CUNode]):
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
@@ -1406,7 +1395,6 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
     Note: The Strings stored in recursiveFunctionCalls might contain multiple function calls at once.
           in order to apply this function correctly, make sure to split Strings in advance and supply
           one call at a time.
-    :param pet: PET graph
     :param function_call_string: String representation of the recursive function call to be checked
             Ex.: fib 7:35,  (might contain ,)
     :param worker_cus: List of vertices
@@ -1420,10 +1408,9 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
     # function_call_string looks now like like: 'fib 7:52'
 
     # split String into function_name. file_id and line_number
-    function_name = function_call_string[0:function_call_string.index(" ")]
     file_id = function_call_string[
-              function_call_string.index(" ") + 1:
-              function_call_string.index(":")]
+        function_call_string.index(" ") + 1:
+        function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1:]
 
     # get tightest surrounding cu
@@ -1437,9 +1424,9 @@ def __recursive_function_call_contained_in_worker_cu(pet: PETGraphX,
         if file_id == cur_w_file_id:
             # trim to line numbers only
             cur_w_starts_at_line = cur_w_starts_at_line[
-                                   cur_w_starts_at_line.index(":") + 1:]
+                cur_w_starts_at_line.index(":") + 1:]
             cur_w_ends_at_line = cur_w_ends_at_line[
-                                 cur_w_ends_at_line.index(":") + 1:]
+                cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 # check if cur_w is tighter than last result
@@ -1569,7 +1556,7 @@ def __create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visit
 
 
 def cu_xml_preprocessing(cu_xml):
-    """Execute CU XML Preprocessiong.
+    """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
     :param cu_xml: path to the xml file
     :return file name of modified cu xml file.
@@ -1603,29 +1590,27 @@ def cu_xml_preprocessing(cu_xml):
                             node) or remaining_recursive_call_in_parent:
                         remaining_recursive_call_in_parent = False
                         # Preprocessor Step 1
-                        tmp_CN_entry = None  # (recursiveFunctionCall, nodeCalled)
+                        tmp_cn_entry = None  # (recursiveFunctionCall, nodeCalled)
                         for cne_idx, calls_node_entry in enumerate(node.callsNode):
                             # get first matching entry of node.callsNode
                             try:
                                 for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
                                     rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
-                                    rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
                                     if str(rec_call_line) in str(rec_call):
-                                        tmp_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        tmp_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
                                         break
-                            except:
+                            except AttributeError:
                                 continue
-                        if tmp_CN_entry is None:
+                        if tmp_cn_entry is None:
                             raise Exception("no matching entries for callsNode found!")
 
                         parent = node
-                        tmp_CN_entry[0].getparent().remove(tmp_CN_entry[0])
-                        tmp_CN_entry[1].getparent().remove(tmp_CN_entry[1])
+                        tmp_cn_entry[0].getparent().remove(tmp_cn_entry[0])
+                        tmp_cn_entry[1].getparent().remove(tmp_cn_entry[1])
                         parent_copy = copy.copy(parent)
                         parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
                         # Preprocessor Step 2 - generate cu id for new element
-                        incremented_id = None
                         # get next free id for specific tmp_file_id
                         parent_copy_id = parent_copy.get("id")
                         tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
@@ -1639,15 +1624,15 @@ def cu_xml_preprocessing(cu_xml):
 
                         # Preprocessor Step 3
                         parent_copy.callsNode.clear()
-                        parent_copy.callsNode.append(tmp_CN_entry[1])
-                        parent_copy.callsNode.append(tmp_CN_entry[0])
+                        parent_copy.callsNode.append(tmp_cn_entry[1])
+                        parent_copy.callsNode.append(tmp_cn_entry[0])
 
                         parent_copy.successors.clear()
                         etree.SubElement(parent_copy.successors, "CU")
                         parent_copy.successors.CU._setText(parent.get("id"))
 
                         # delete childrenNodes-entry from parent
-                        tmp_cu_id = tmp_CN_entry[1].text
+                        tmp_cu_id = tmp_cn_entry[1].text
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id + ",", ""))
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
 
@@ -1657,7 +1642,7 @@ def cu_xml_preprocessing(cu_xml):
                             try:
                                 for node_call in calls_node_entry.nodeCalled:
                                     try:
-                                        if not node_call.text in parent_copy.childrenNodes.text:
+                                        if node_call.text not in parent_copy.childrenNodes.text:
                                             parent_copy.childrenNodes._setText(
                                                 parent_copy.childrenNodes.text + "," + node_call.text)
                                             if parent_copy.childrenNodes.text.startswith(","):
@@ -1665,10 +1650,10 @@ def cu_xml_preprocessing(cu_xml):
                                             if parent_copy.childrenNodes.text.endswith(","):
                                                 parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
                                             continue
-                                    except Exception as e1:
+                                    except AttributeError as e1:
                                         print(e1)
                                         continue
-                            except Exception as e2:
+                            except AttributeError as e2:
                                 print(e2)
                                 continue
 
@@ -1683,7 +1668,7 @@ def cu_xml_preprocessing(cu_xml):
                                     parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
                                                                          ""))
                                 parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
-                        except TypeError as te:
+                        except TypeError:
                             parent.instructionLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
                             parent.instructionLines.set("count", "1")
 
@@ -1696,7 +1681,7 @@ def cu_xml_preprocessing(cu_xml):
                                     parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
                                                                        ""))
                                 parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
-                        except TypeError as te:
+                        except TypeError:
                             parent.readPhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
                             parent.readPhaseLines.set("count", "1")
 
@@ -1709,31 +1694,31 @@ def cu_xml_preprocessing(cu_xml):
                                     parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
                                                                         ""))
                                 parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
-                        except TypeError as te:
+                        except TypeError:
                             parent.writePhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
                             parent.writePhaseLines.set("count", "1")
 
                         separator_line = parent.get("startsAtLine")
                         # select smallest instruction line >= separator_line + 1
-                        parent_new_startLine = None
+                        parent_new_start_line = None
                         for tmp in parent.instructionLines.text.split(","):
                             if tmp == "":
                                 continue
                             if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
-                                if parent_new_startLine is None:
-                                    parent_new_startLine = tmp
+                                if parent_new_start_line is None:
+                                    parent_new_start_line = tmp
                                     continue
                                 # select smallest instruction line
                                 if int(tmp[tmp.find(":") + 1:]) < int(
-                                        parent_new_startLine[parent_new_startLine.find(":") + 1:]):
-                                    parent_new_startLine = tmp
+                                        parent_new_start_line[parent_new_start_line.find(":") + 1:]):
+                                    parent_new_start_line = tmp
                         # if no instructionLines contained
                         if parent.instructionLines.text == "":
-                            parent_new_startLine = str(separator_line[:separator_line.index(":")])
-                            parent_new_startLine += ":"
-                            parent_new_startLine += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
+                            parent_new_start_line = str(separator_line[:separator_line.index(":")])
+                            parent_new_start_line += ":"
+                            parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
 
-                        parent.set("startsAtLine", parent_new_startLine)
+                        parent.set("startsAtLine", parent_new_start_line)
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
@@ -1786,7 +1771,8 @@ def cu_xml_preprocessing(cu_xml):
                         except AttributeError:
                             pass
 
-                        # insert separator line to parent_copys instruction, read and writePhaseLines if not already present
+                        # insert separator line to parent_copys instruction,
+                        # read and writePhaseLines if not already present
                         try:
                             if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
                                 parent_copy.instructionLines._setText(
@@ -1828,17 +1814,17 @@ def cu_xml_preprocessing(cu_xml):
                         cur_line = parent.get("startsAtLine")
                         while __line_contained_in_region(cur_line, parent.get("startsAtLine"),
                                                          parent.get("endsAtLine")):
-                            if not cur_line in parent.instructionLines.text:
+                            if cur_line not in parent.instructionLines.text:
                                 parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
                                 if parent.instructionLines.text.endswith(","):
                                     parent.instructionLines._setText(parent.instructionLines.text[:-1])
                                 parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
-                            if not cur_line in parent.readPhaseLines.text:
+                            if cur_line not in parent.readPhaseLines.text:
                                 parent.readPhaseLines._setText(cur_line + "," + parent.readPhaseLines.text)
                                 if parent.readPhaseLines.text.endswith(","):
                                     parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
                                 parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
-                            if not cur_line in parent.writePhaseLines.text:
+                            if cur_line not in parent.writePhaseLines.text:
                                 parent.writePhaseLines._setText(cur_line + "," + parent.writePhaseLines.text)
                                 if parent.writePhaseLines.text.endswith(","):
                                     parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
@@ -1872,22 +1858,20 @@ def cu_xml_preprocessing(cu_xml):
                                 parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
                         # Preprocessor Step 5 (looping)
-                        parent_further_CN_entry = None
+                        parent_further_cn_entry = None
                         for cne_idx, calls_node_entry in enumerate(parent.callsNode):
                             # get first matching entry of node.callsNode
                             try:
                                 for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
                                     rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
-                                    rec_call_cu = calls_node_entry.nodeCalled[rc_idx]
                                     if str(rec_call_line) in str(rec_call):
-                                        parent_further_CN_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        parent_further_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
                                         break
-                            except:
+                            except AttributeError:
                                 continue
-                        if parent_further_CN_entry is None:
+                        if parent_further_cn_entry is None:
                             # parent has no further recursive call, restart outer loop
                             inner_iteration = False
-                            iterate_over_cus = True
                             continue
                         else:
                             # parent still has recursive calls
@@ -1895,7 +1879,6 @@ def cu_xml_preprocessing(cu_xml):
                             node = parent
                             remaining_recursive_call_in_parent = True
                             continue
-
                     else:
                         inner_iteration = False
                         continue
@@ -1930,16 +1913,14 @@ def __line_contained_in_region(test_line, start_line, end_line):
     start_line_line = int(start_line.split(":")[1])
     end_line_file_id = int(end_line.split(":")[0])
     end_line_line = int(end_line.split(":")[1])
-    if test_line_file_id == start_line_file_id and \
-            start_line_file_id == end_line_file_id and \
-            test_line_line >= start_line_line and \
-            test_line_line <= end_line_line:
+    if test_line_file_id == start_line_file_id == end_line_file_id and \
+            start_line_line <= test_line_line <= end_line_line:
         return True
     return False
 
 
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
-    """Check if >= 2 recursive funciton calls are contained in a cu's code region.
+    """Check if >= 2 recursive function calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
     :param node: CUNode
@@ -1966,10 +1947,9 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
                         rfc_line = rec_func_call.split(":")[1]
                         # test if recursiveFunctionCall is inside CU region
                         if rfc_file_id == file_id and \
-                                rfc_line >= starts_at_line and \
-                                rfc_line <= ends_at_line:
+                                starts_at_line <= rfc_line <= ends_at_line:
                             contained_recursive_calls += 1
-        except Exception as ex:
+        except AttributeError:
             pass
     if contained_recursive_calls >= 2:
         return True
