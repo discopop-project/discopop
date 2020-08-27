@@ -586,7 +586,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai : root->argumentsList)
             {
-                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\"" 
+                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                 << " defLine=\"" << xmlEscape(ai.defLine)  << "\">"
                 << xmlEscape(ai.name)  << "</arg>" << endl;
             }
@@ -624,7 +624,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<globalVariables>" << endl;
             for (auto gvi : cu->globalVariableNames)
             {
-                *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\"" 
+                *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                 << " defLine=\"" << xmlEscape(gvi.defLine) << "\">"
                 << xmlEscape(gvi.name) << "</global>" << endl;
             }
@@ -820,7 +820,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 //varName = refineVarName(determineVariableName(instruction));
                 varName = determineVariableName(&*instruction);
                 varType = determineVariableType(&*instruction);
-    
+
                 // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                 {
                     suspiciousVariables.insert(varName);
@@ -912,15 +912,29 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
             if (isa < CallInst >(instruction))
             {
-                
+
                 Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                 //TODO: DO the same for Invoke inst
+
+                //Lukas 27.8.20 - fixes occuring segfaults for calls to free()
+                if(! f){
+                  errs() << "getCalledFunction() not possible\n";
+                  Value* v=cast<CallInst>(instruction)->getCalledValue();
+                  Value* sv = v->stripPointerCasts();
+                  StringRef fname = sv->getName();
+                  errs()<<"\tfunction name: " << fname << "\n";
+                  if(fname.compare("free") == 0){
+                    errs() << "\tskipping call to free.\n";
+                    //TODO more sophisticated treatment of such CUs
+                    continue;
+                  }
+                }
 
                 //Mohammad 6.7.2020
                 Function::iterator FI = f->begin();
                 bool externalFunction = true;
                 string lid;
-                    
+
                 for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI){
                     externalFunction = false;
                     auto tempBI = FI->begin();
@@ -1215,7 +1229,7 @@ bool CUGeneration::runOnFunction(Function &F)
     //Get list of arguments for this function and store them in root.
     // NOTE: changed the way we get the arguments
     // for (Function::ArgumentListType::iterator it = F.getArgumentList().begin(); it != F.getArgumentList().end(); it++) {
-    
+
     BasicBlock *BB = &F.getEntryBlock();
     auto BI = BB->begin();
     string lid;
