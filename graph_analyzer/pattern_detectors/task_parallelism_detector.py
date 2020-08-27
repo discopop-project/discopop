@@ -760,7 +760,7 @@ def __combine_omittable_cus(pet: PETGraphX,
         parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if
                              pet.node_at(e[0]).tp_contains_task is True]
         if len(parent_task_nodes) != 0:
-            useful_omittable_suggestions.append(os)
+            useful_omittable_suggestions.append(oms)
         else:
             # un-mark node as omittable
             oms._node.tp_omittable = False
