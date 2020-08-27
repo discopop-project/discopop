@@ -1,0 +1,123 @@
+{
+  "reduction": [],
+  "do_all": [
+    {
+      "node_id": "8:8",
+      "start_line": "8:30",
+      "end_line": "8:34",
+      "iterations_count": 100,
+      "instructions_count": 0,
+      "workload": 0,
+      "first_private": [
+        "d"
+      ],
+      "private": [
+        "c",
+        "i",
+        "in.addr",
+        "d.addr"
+      ],
+      "last_private": [],
+      "shared": [],
+      "reduction": []
+    }
+  ],
+  "pipeline": [
+    {
+      "node_id": "8:8",
+      "start_line": "8:30",
+      "end_line": "8:34",
+      "iterations_count": 100,
+      "instructions_count": 0,
+      "workload": 0,
+      "coefficient": 1.0,
+      "stages": [
+        {
+          "node": "8:10",
+          "startsAtLine": "8:31",
+          "endsAtLine": "8:31",
+          "first_private": [
+            "i",
+            "d"
+          ],
+          "private": [
+            "in.addr",
+            "d.addr"
+          ],
+          "shared": [],
+          "reduction": [],
+          "in_deps": [],
+          "out_deps": [
+            "a"
+          ],
+          "in_out_deps": []
+        },
+        {
+          "node": "8:11",
+          "startsAtLine": "8:32",
+          "endsAtLine": "8:32",
+          "first_private": [
+            "d"
+          ],
+          "private": [
+            "in.addr",
+            "d.addr"
+          ],
+          "shared": [],
+          "reduction": [],
+          "in_deps": [
+            "a"
+          ],
+          "out_deps": [
+            "b"
+          ],
+          "in_out_deps": []
+        },
+        {
+          "node": "8:12",
+          "startsAtLine": "8:33",
+          "endsAtLine": "8:34",
+          "first_private": [
+            "d"
+          ],
+          "private": [
+            "c",
+            "in.addr",
+            "d.addr"
+          ],
+          "shared": [],
+          "reduction": [],
+          "in_deps": [
+            "b"
+          ],
+          "out_deps": [],
+          "in_out_deps": []
+        }
+      ]
+    }
+  ],
+  "geometric_decomposition": [
+    {
+      "node_id": "8:6",
+      "start_line": "8:28",
+      "end_line": "8:36",
+      "iterations_count": -1,
+      "instructions_count": 0,
+      "workload": 0,
+      "do_all_children": [
+        "8:8"
+      ],
+      "reduction_children": [],
+      "min_iter_number": 100,
+      "num_tasks": 1,
+      "pragma": "for (i = 0; i < num-tasks; i++) #pragma omp task",
+      "first_private": [
+        "i"
+      ],
+      "private": [],
+      "last_private": [],
+      "shared": [],
+      "reduction": []
+    }
+  ]
+}
