@@ -344,6 +344,10 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
             is_valid = False
             try:
                 for defLine in var_def_line_dict[var]:
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
+                    # check if var is defined in parent function
                     if __line_contained_in_region(defLine, parent_function.start_position(),
                                                   parent_function.end_position()):
                         is_valid = True
@@ -368,9 +372,12 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                         continue
                     if defLine == "LineNotFound":
                         continue
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
                     # check if var is defined in parent function
-                    if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                  parent_function.end_position()):
+                    elif __line_contained_in_region(defLine, parent_function.start_position(),
+                                                    parent_function.end_position()):
                         is_valid = True
                     else:
                         pass
@@ -387,6 +394,10 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
             is_valid = False
             try:
                 for defLine in var_def_line_dict[var]:
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
+                    # check if var is defined in parent function
                     if __line_contained_in_region(defLine, parent_function.start_position(),
                                                   parent_function.end_position()):
                         is_valid = True
@@ -1408,9 +1419,7 @@ def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
     # function_call_string looks now like like: 'fib 7:52'
 
     # split String into function_name. file_id and line_number
-    file_id = function_call_string[
-        function_call_string.index(" ") + 1:
-        function_call_string.index(":")]
+    file_id = function_call_string[function_call_string.index(" ") + 1:function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1:]
 
     # get tightest surrounding cu
@@ -1423,10 +1432,8 @@ def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
         # check if file_id is equal
         if file_id == cur_w_file_id:
             # trim to line numbers only
-            cur_w_starts_at_line = cur_w_starts_at_line[
-                cur_w_starts_at_line.index(":") + 1:]
-            cur_w_ends_at_line = cur_w_ends_at_line[
-                cur_w_ends_at_line.index(":") + 1:]
+            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1:]
+            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1:]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 # check if cur_w is tighter than last result
