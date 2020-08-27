@@ -72,7 +72,7 @@ def __map_dummy_nodes(cu_dict):
                 dummy_to_func_ids_map[dummyID] = func_node_args_to_id_map[func]
                 cu_dict.pop(dummyID)
 
-    # now go through all the nodes and update the mapped dummys to real funcs
+    # now go through all the nodes and update the mapped dummies to real funcs
     for node_id, node in cu_dict.items():
         # check dummy in all the children nodes
         if 'childrenNodes' in dir(node):
@@ -95,7 +95,7 @@ def __parse_dep_file(dep_fd):
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
         sink = dep_fields[0]
-        for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:  # pairwise iteration over dependences source
+        for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:  # pairwise iteration over dependencies source
             type = dep_pair[0]
             source_fields = dep_pair[1].split('|')
             var_str = "" if len(source_fields) == 1 else source_fields[1]
@@ -104,12 +104,12 @@ def __parse_dep_file(dep_fd):
     return dependencies_list
 
 
-def parse_inputs(cu_file, dependences, loop_counter, reduction_file):
+def parse_inputs(cu_file, dependencies, loop_counter, reduction_file):
     with open(cu_file) as f:
         cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
 
-    with open(dependences) as f:
+    with open(dependencies) as f:
         dependencies = __parse_dep_file(f)
 
     if os.path.exists(loop_counter):
@@ -134,11 +134,12 @@ def parse_inputs(cu_file, dependences, loop_counter, reduction_file):
             line = line.replace("\n", "")
             s = line.split(' ')
             # line = FileId + LineNr
-            var = {}
-            var['loop_line'] = f'{s[3]}:{s[8]}'
-            var['name'] = s[17]
-            var['reduction_line'] = f'{s[3]}:{s[13]}'
-            var['operation'] = s[21]
+            var = {
+                'loop_line': f'{s[3]}:{s[8]}',
+                'name': s[17],
+                'reduction_line': f'{s[3]}:{s[13]}',
+                'operation': s[21]
+            }
             reduction_vars.append(var)
     else:
         reduction_vars = None

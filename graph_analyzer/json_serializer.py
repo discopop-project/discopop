@@ -51,6 +51,5 @@ class PatternInfoSerializer(JSONEncoder):
         if isinstance(o, CUNode):
             return o.id
 
-
         # Let the base class default method raise the TypeError
         return JSONEncoder.default(self, o)

@@ -370,8 +370,8 @@
         "global_array"
       ],
       "private": [
-        "i162",
-        "j169"
+        "j169",
+        "i162"
       ],
       "last_private": [],
       "shared": [],
@@ -454,8 +454,8 @@
       "pragma": "#pragma omp parallel for",
       "first_private": [],
       "private": [
-        "i204",
-        "j208"
+        "j208",
+        "i204"
       ],
       "last_private": [],
       "shared": [
@@ -514,8 +514,8 @@
       "pragma": "#pragma omp parallel for",
       "first_private": [],
       "private": [
-        "i232",
-        "tmp_var236"
+        "tmp_var236",
+        "i232"
       ],
       "last_private": [],
       "shared": [],
@@ -664,9 +664,9 @@
       "workload": 0,
       "first_private": [],
       "private": [
+        "tmp_var37",
         "local_var",
-        "i33",
-        "tmp_var37"
+        "i33"
       ],
       "last_private": [],
       "shared": [],
@@ -873,15 +873,15 @@
           "endsAtLine": "7:121",
           "first_private": [],
           "private": [],
-          "shared": [
-            "local_array"
-          ],
+          "shared": [],
           "reduction": [],
           "in_deps": [
             "tmp_var236"
           ],
           "out_deps": [],
-          "in_out_deps": []
+          "in_out_deps": [
+            "local_array"
+          ]
         }
       ]
     },
@@ -944,10 +944,10 @@
           "shared": [],
           "reduction": [],
           "in_deps": [],
-          "out_deps": [
+          "out_deps": [],
+          "in_out_deps": [
             "local_var"
-          ],
-          "in_out_deps": []
+          ]
         },
         {
           "node": "7:172",

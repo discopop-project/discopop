@@ -1,6 +1,7 @@
-import unittest
-import os
 import json
+import os
+import unittest
+
 from graph_analyzer import run
 from json_serializer import PatternInfoSerializer
 
@@ -27,7 +28,7 @@ class GraphAnalyzerTest(unittest.TestCase):
                     print('##actual##')
                     print(json.dumps(actual, indent=2))
                     print('##end##')
-                self.assertTrue(equal)
+                self.assertTrue(equal, 'Expected and actual detection result are not equal')
 
 
 def ordered(obj):
