@@ -1,10 +1,8 @@
 from copy import deepcopy
-from typing import List, Any
+from typing import List
 
 from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-
 from utils import correlation_coefficient
-
 
 total = 0
 before = []

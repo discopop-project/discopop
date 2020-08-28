@@ -1,0 +1,38 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+name: "DiscoPoP CI"
+on: [push, pull_request]
+
+jobs:
+
+  graph_analyzer:
+    name: "Graph Analyzer"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "Build Image with Dependencies"
+        run: docker build -f .github/workflows/graph_analyzer/Dockerfile . --tag graph_analyzer
+      - name: "Run unit_tests.py"
+        run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop/graph_analyzer graph_analyzer python unit_tests.py
+
+  discopop_profiler:
+    name: "Profiler"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "Build DiscoPoP Profiler"
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          make -j3
+      - name: "Run DiscoPoP Profiler on test/ Targets"
+        run: .github/workflows/discopop_profiler/test.sh

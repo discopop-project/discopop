@@ -28,6 +28,7 @@ import json
 import os
 import sys
 import time
+from typing import List
 
 from docopt import docopt
 from pluginbase import PluginBase
@@ -37,7 +38,6 @@ from PETGraphX import PETGraphX
 from json_serializer import PatternInfoSerializer
 from parser import parse_inputs
 from pattern_detection import DetectionResult, PatternDetectorX
-from typing import List
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -61,16 +61,14 @@ def get_path(base_path: str, file_name: str) -> str:
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
-def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str])\
+def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str]) \
         -> DetectionResult:
-
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
 
-    # petGraphX = PETGraph(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.interactive_visualize(path)
-    petGraphX = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
-    # petGraphX.show()
+    pet = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+    # TODO add visualization
+    # pet.show()
 
     plugin_base = PluginBase(package='plugins')
 
@@ -80,17 +78,16 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin before: " + plugin_name)
-        petGraphX = p.run_before(petGraphX)
+        pet = p.run_before(pet)
 
-    # pattern_detector = PatternDetector(petGraphX)
-    pattern_detector = PatternDetectorX(petGraphX)
+    pattern_detector = PatternDetectorX(pet)
 
     res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file, loop_counter_file, reduction_file)
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
         print("executing plugin after: " + plugin_name)
-        petGraphX = p.run_after(petGraphX)
+        pet = p.run_after(pet)
 
     return res
 
@@ -104,11 +101,6 @@ if __name__ == "__main__":
         exit(e)
 
     path = arguments['--path']
-    # path = './../../test_data/atax'
-    # path = './../../test_data/temp'
-    # path = './../../test_data/reduction'
-    # path = './../../test_data/nqueens'
-    # path = './../../dp_script/data'
 
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
