@@ -69,6 +69,6 @@ class PatternDetectorX(object):
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
-        # res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
+        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
 
         return res
