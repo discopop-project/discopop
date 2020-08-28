@@ -1,0 +1,66 @@
+{
+  "reduction": [],
+  "do_all": [
+    {
+      "node_id": "2:3",
+      "start_line": "2:23",
+      "end_line": "2:25",
+      "iterations_count": 19,
+      "instructions_count": 0,
+      "workload": 0,
+      "first_private": [
+        "n1",
+        "p.addr"
+      ],
+      "private": [
+        "i",
+        "vla"
+      ],
+      "last_private": [],
+      "shared": [
+        "A.addr"
+      ],
+      "reduction": []
+    },
+    {
+      "node_id": "2:8",
+      "start_line": "2:26",
+      "end_line": "2:28",
+      "iterations_count": 15,
+      "instructions_count": 0,
+      "workload": 0,
+      "first_private": [
+        "q.addr",
+        "n2"
+      ],
+      "private": [
+        "vla4",
+        "j"
+      ],
+      "last_private": [],
+      "shared": [
+        "A.addr"
+      ],
+      "reduction": []
+    },
+    {
+      "node_id": "2:32",
+      "start_line": "2:55",
+      "end_line": "2:57",
+      "iterations_count": 10,
+      "instructions_count": 0,
+      "workload": 0,
+      "first_private": [
+        "array"
+      ],
+      "private": [
+        "i"
+      ],
+      "last_private": [],
+      "shared": [],
+      "reduction": []
+    }
+  ],
+  "pipeline": [],
+  "geometric_decomposition": []
+}

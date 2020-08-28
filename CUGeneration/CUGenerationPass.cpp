@@ -50,6 +50,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include <llvm/IR/DebugLoc.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 
 #include "DPUtils.h"
 
@@ -76,12 +78,15 @@ namespace
 
         string name;
         string type;
+        string defLine;
+        string isArray;
+        string scope;
 
-        Variable_struct(const Variable_struct &other) : name(other.name), type(other.type)
+        Variable_struct(const Variable_struct &other) : name(other.name), type(other.type), defLine(other.defLine)
         {
         }
 
-        Variable_struct(string n, string t) : name(n), type(t)
+        Variable_struct(string n, string t, string d) : name(n), type(t), defLine(d)
         {
         }
 
@@ -201,6 +206,9 @@ namespace
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         //DIGlobalVariable* findDbgGlobalDeclare(GlobalVariable *v);
 
+        //29.6.2020 Mohammad
+        string determineVariableDefLine(Instruction *I);
+
         //functions to get list of global variables
         bool doInitialization(Module &ThisModule);
         bool doFinalization(Module &M);
@@ -240,6 +248,28 @@ namespace
 } // end of anonymous namespace
 
 /*****************************   DiscoPoP Functions  ***********************************/
+string CUGeneration::determineVariableDefLine(Instruction *I){
+    string varName = determineVariableName(&*I);
+
+    Function *F = I->getFunction();
+
+    for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+        for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI)
+        {
+            if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)){
+                if(auto *N = dyn_cast<MDNode>(DI->getVariable())){
+                    if(auto *DV = dyn_cast<DILocalVariable>(N)){
+                        if(DV->getName() == varName)
+                            return to_string(DV->getLine());
+                    }
+                }
+            }
+        }
+    }
+}
+
 string CUGeneration::determineVariableType(Instruction *I)
 {
     string s = "";
@@ -575,14 +605,18 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<localVariables>" << endl;
             for (auto lvi : cu->localVariableNames)
             {
-                *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\">" << xmlEscape(lvi.name) << "</local>" << endl;
+                *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
+                << " defLine=\"" << xmlEscape(lvi.defLine) << "\">"
+                << xmlEscape(lvi.name) << "</local>" << endl;
             }
             *outCUs << "\t\t</localVariables>" << endl;
 
             *outCUs << "\t\t<globalVariables>" << endl;
             for (auto gvi : cu->globalVariableNames)
             {
-                *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\">" << xmlEscape(gvi.name) << "</global>" << endl;
+                *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\"" 
+                << " defLine=\"" << xmlEscape(gvi.defLine) << "\">"
+                << xmlEscape(gvi.name) << "</global>" << endl;
             }
             *outCUs << "\t\t</globalVariables>" << endl;
 
@@ -753,7 +787,6 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
-
             //NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName();
@@ -773,6 +806,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 //varName = refineVarName(determineVariableName(instruction));
                 varName = determineVariableName(&*instruction);
                 varType = determineVariableType(&*instruction);
+    
                 // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                 {
                     suspiciousVariables.insert(varName);
@@ -889,7 +923,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         string type_str;
                         raw_string_ostream rso(type_str);
                         (it->getType())->print(rso);
-                        Variable v(string(it->getName()), rso.str());
+                        Variable v(string(it->getName()), rso.str(), to_string(f->getSubprogram()->getLine()));
 
                         n->argumentsList.push_back(v);
                     }
@@ -932,7 +966,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap)
 {
     int lid;
-    string varName, varType;
+    string varName, varType, varDefLine;
     // Changed TerminatorInst to Instuction
     const Instruction *TInst;
     string successorBB;
@@ -953,7 +987,7 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
         auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
-
+            // errs() << varDefLine << "\n";
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction))
             {
                 // NOTE: changed 'instruction' to '&*instruction'
@@ -964,7 +998,9 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
                 varName = determineVariableName(&*instruction);
                 varType = determineVariableType(&*instruction);
-                Variable v(varName, varType);
+                varDefLine = determineVariableDefLine(&*instruction);
+
+                Variable v(varName, varType, varDefLine);
 
                 std::string prefix("ARRAY");
                 if (!varType.compare(0, prefix.size(), prefix))
@@ -1151,7 +1187,7 @@ bool CUGeneration::runOnFunction(Function &F)
         string type_str;
         raw_string_ostream rso(type_str);
         (it->getType())->print(rso);
-        Variable v(it->getName(), rso.str());
+        Variable v(it->getName(), rso.str(), to_string(F.getSubprogram()->getLine()));
 
         root->argumentsList.push_back(v);
     }

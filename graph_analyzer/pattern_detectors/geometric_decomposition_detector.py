@@ -10,13 +10,9 @@
 import math
 from typing import Dict, List
 
-from graph_tool import Vertex
-from graph_tool.util import find_vertex
-
-import PETGraph
+from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
-from utils import find_subnodes, get_subtree_of_type, get_loop_iterations, classify_task_vars, get_child_loops
-# cache
+from utils import classify_task_vars, get_child_loops
 from variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
@@ -26,16 +22,14 @@ class GDInfo(PatternInfo):
     """Class, that contains geometric decomposition detection result
     """
 
-    def __init__(self, pet: PETGraph, node: Vertex, min_iter: int):
+    def __init__(self, pet: PETGraphX, node: CUNode, min_iter: int):
         """
         :param pet: PET graph
         :param node: node, where geometric decomposition was detected
         """
-        PatternInfo.__init__(self, pet, node)
+        PatternInfo.__init__(self, node)
 
-        do_all, reduction = get_child_loops(pet, node)
-        self.do_all_children = [pet.graph.vp.id[v] for v in do_all]
-        self.reduction_children = [pet.graph.vp.id[v] for v in reduction]
+        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
@@ -53,8 +47,7 @@ class GDInfo(PatternInfo):
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp = []
-        fp, p, s, in_dep, out_dep, in_out_dep, r = \
-            classify_task_vars(pet, node, "GeometricDecomposition", [], [])
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
         fp.append(Variable('int', 'i'))
 
         self.first_private = fp
@@ -68,8 +61,8 @@ class GDInfo(PatternInfo):
                f'Start line: {self.start_line}\n' \
                f'End line: {self.end_line}\n' \
                f'Type: Geometric Decomposition Pattern\n' \
-               f'Do-All loops: {[n for n in self.do_all_children]}\n' \
-               f'Reduction loops: {[n for n in self.reduction_children]}\n' \
+               f'Do-All loops: {[n.id for n in self.do_all_children]}\n' \
+               f'Reduction loops: {[n.id for n in self.reduction_children]}\n' \
                f'\tNumber of tasks: {self.num_tasks}\n' \
                f'\tChunk limits: {self.min_iter_number}\n' \
                f'\tpragma: {self.pragma}]\n' \
@@ -80,25 +73,27 @@ class GDInfo(PatternInfo):
                f'\tlast private: {[v.name for v in self.last_private]}'
 
 
-def run_detection(pet: PETGraph) -> List[GDInfo]:
+def run_detection(pet: PETGraphX) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
-    for node in find_vertex(pet.graph, pet.graph.vp.type, 'func'):
-        val = __detect_geometric_decomposition(pet, node)
-        if val:
-            pet.graph.vp.geomDecomp[node] = val
+    global __loop_iterations
+    __loop_iterations = {}
+    for node in pet.all_nodes(NodeType.FUNC):
+        if __detect_geometric_decomposition(pet, node):
+            node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test:
                 result.append(GDInfo(pet, node, min_iter))
+                # result.append(node.id)
 
     return result
 
 
-def __test_chunk_limit(pet: PETGraph, node: Vertex) -> (bool, int):
+def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> (bool, int):
     """Tests, whether or not the node has inner loops with and none of them have 0 iterations
 
     :param pet: PET graph
@@ -108,25 +103,20 @@ def __test_chunk_limit(pet: PETGraph, node: Vertex) -> (bool, int):
     min_iterations_count = math.inf
     inner_loop_iter = {}
 
-    children = [e.target() for e in node.out_edges() if pet.graph.ep.type[e] == 'child'
-                and pet.graph.vp.type[e.target()] == 'loop']
+    children = pet.direct_children_of_type(node, NodeType.LOOP)
 
-    for func_child in [e.target()
-                       for e in node.out_edges()
-                       if pet.graph.ep.type[e] == 'child' and pet.graph.vp.type[e.target()] == 'func']:
-        children.extend([e.target()
-                         for e in func_child.out_edges()
-                         if pet.graph.ep.type[e] == 'child' and pet.graph.vp.type[e.target()] == 'loop'])
+    for func_child in pet.direct_children_of_type(node, NodeType.FUNC):
+        children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
 
     for child in children:
-        inner_loop_iter[pet.graph.vp.startsAtLine[child]] = __iterations_count(pet, child)
+        inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
         min_iterations_count = min(min_iterations_count, v)
     return inner_loop_iter and min_iterations_count > 0, min_iterations_count
 
 
-def __iterations_count(pet: PETGraph, node: Vertex) -> int:
+def __iterations_count(pet: PETGraphX, node: CUNode) -> int:
     """Counts the iterations in the specified node
 
     :param pet: PET graph
@@ -134,53 +124,53 @@ def __iterations_count(pet: PETGraph, node: Vertex) -> int:
     :return: number of iterations
     """
     if not (node in __loop_iterations):
-        loop_iter = get_loop_iterations(pet.graph.vp.startsAtLine[node])
+        loop_iter = node.loop_iterations
         parent_iter = __get_parent_iterations(pet, node)
 
         if loop_iter < parent_iter:
-            __loop_iterations[node] = loop_iter
-        elif loop_iter == 0 or parent_iter == 0:
-            __loop_iterations[node] = 0
+            __loop_iterations[node.id] = loop_iter
+        elif loop_iter <= 0 or parent_iter <= 0:
+            __loop_iterations[node.id] = 0
         else:
-            __loop_iterations[node] = loop_iter // parent_iter
+            __loop_iterations[node.id] = loop_iter // parent_iter
 
-    return __loop_iterations[node]
+    return __loop_iterations[node.id]
 
 
-def __get_parent_iterations(pet: PETGraph, node: Vertex) -> int:
+def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
     """Calculates the number of iterations in parent of loop
 
     :param pet: PET graph
     :param node: current node
     :return: number of iterations
     """
-    parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child']
+    parent = pet.in_edges(node.id, EdgeType.CHILD)
 
     max_iter = 1
     while parent:
-        node = parent[0]
-        if pet.graph.vp.type[node] == 'loop':
-            max_iter = max(1, get_loop_iterations(pet.graph.vp.startsAtLine[node]))
+        node = pet.node_at(parent[0][0])
+        if node.type == NodeType.LOOP:
+            max_iter = max(1, node.loop_iterations)
             break
-        parent = [e.source() for e in node.in_edges() if pet.graph.ep.type[e] == 'child']
+        parent = pet.in_edges(node.id, EdgeType.CHILD)
 
     return max_iter
 
 
-def __detect_geometric_decomposition(pet: PETGraph, root: Vertex) -> bool:
+def __detect_geometric_decomposition(pet: PETGraphX, root: CUNode) -> bool:
     """Detects geometric decomposition pattern
 
     :param pet: PET graph
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for child in get_subtree_of_type(pet, root, 'loop'):
-        if not pet.graph.vp.doAll[child] and not pet.graph.vp.reduction[child]:
+    for child in pet.subtree_of_type(root, NodeType.LOOP):
+        if not (child.reduction or child.do_all):
             return False
 
-    for child in find_subnodes(pet, root, 'func'):
-        for child2 in find_subnodes(pet, child, 'loop'):
-            if not pet.graph.vp.doAll[child2] and not pet.graph.vp.reduction[child2]:
+    for child in pet.direct_children_of_type(root, NodeType.FUNC):
+        for child2 in pet.direct_children_of_type(child, NodeType.LOOP):
+            if not (child2.reduction or child2.do_all):
                 return False
 
     return True

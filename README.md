@@ -7,7 +7,7 @@ In a nutshell, DiscoPoP performs the following steps:
 * identifies parallel patterns which can be used to parallelize a code region,
 * and finally suggests corresponding OpenMP parallelization constructs and clauses to programmers.
 
-A more comprehensive overview of DiscoPop can be found on our [project website](https://www.discopop.tu-darmstadt.de).
+A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
 
 DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code which can be transferred into the LLVM IR.
 
@@ -17,7 +17,7 @@ Before doing anything, you need a basic development setup. We have tested DiscoP
 
 	sudo apt-get install git build-essential cmake
 
-Additionally, you need LLVM installed on your system. Currently, DiscoPoP supports LLVM 8.0 or higher. Lower versions are not supported, due to API changes which lead to compilation failure. Please follow the installation tutorial [here](https://llvm.org/docs/GettingStarted.html), if you have not installed LLVM before.
+Additionally, you need LLVM installed on your system. Currently, DiscoPoP supports LLVM 8.0. Lower and higher versions are not supported, due to API changes which lead to compilation failures. Please follow the installation tutorial [here](https://llvm.org/docs/GettingStarted.html), if you have not installed LLVM before.
 
 ### DiscoPoP profiler installation
 First, clone the source code into the designated folder. Then, create a build directory:
