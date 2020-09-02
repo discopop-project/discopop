@@ -260,10 +260,10 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(fork.nodes[0], ["dummy_fork"], [], [], [], []))
     result += __detect_task_suggestions(pet)
-    result = __remove_useless_barrier_suggestions(pet, result)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(result)
     result = __detect_taskloop_reduction(pet, result)
+    result = __remove_useless_barrier_suggestions(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     result = __testwise_missing_barrier_suggestion(pet, result)
@@ -1148,6 +1148,8 @@ def __detect_taskloop_reduction(pet: PETGraphX,
         if not (type(s) == Task or type(s) == TaskParallelismInfo):
             output.append(s)
             continue
+        if not s.pragma[0] == "task":
+            continue
         # check if s contained in reduction loop body
         red_vars_entry = __task_contained_in_reduction_loop(pet, s)
         if red_vars_entry is None:
@@ -1262,11 +1264,14 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
     task_suggestions = []
+    result_suggestions = []
     for single_suggestion in suggestions:
         if single_suggestion.pragma[0] == "taskwait":
             taskwait_suggestions.append(single_suggestion)
-        else:
+        elif single_suggestion.pragma[0] == "task":
             task_suggestions.append(single_suggestion)
+        else:
+            result_suggestions.append(single_suggestion)
     # get map of function body cus containing task suggestions to line number
     # of task pragmas
     relevant_function_bodies = {}
@@ -1279,7 +1284,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
         else:
             relevant_function_bodies[parent].append(ts.pragma_line)
     # remove suggested barriers which are no descendants of relevant functions
-    suggestions = task_suggestions
+    result_suggestions += task_suggestions
     for tws in taskwait_suggestions:
         tws_line_number = tws.pragma_line
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
@@ -1289,9 +1294,9 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
                 # pragma line number of task
                 for line_number in relevant_function_bodies[rel_func_body]:
                     if line_number <= tws_line_number:
-                        suggestions.append(tws)
+                        result_suggestions.append(tws)
                         break
-    return suggestions
+    return result_suggestions
 
 
 def __suggest_parallel_regions(pet: PETGraphX,
