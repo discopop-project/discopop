@@ -271,9 +271,27 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __combine_omittable_cus(pet, result)
     result = __remove_duplicates(result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
+    result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
     return result
+
+
+def __remove_duplicate_data_sharing_clauses(suggestions: [PatternInfo]):
+    """removes duplicates from in, out and in-out dependency lists.
+    Mainly needed for printing purposes.
+    :param suggestions: List[PatternInfo]
+    :return: Modified List of PatternInfos
+    """
+    result = []
+    for s in suggestions:
+        if not type(s) == TaskParallelismInfo:
+            result.append(s)
+        else:
+            s.in_dep = list(set(s.in_dep))
+            s.out_dep = list(set(s.out_dep))
+            s.in_out_dep = list(set(s.in_out_dep))
+    return suggestions
 
 
 def __get_var_definition_line_dict(cu_xml: str):
