@@ -1151,7 +1151,7 @@ def __detect_taskloop_reduction(pet: PETGraphX,
         if not s.pragma[0] == "task":
             continue
         # check if s contained in reduction loop body
-        red_vars_entry = __task_contained_in_reduction_loop(pet, s)
+        red_vars_entry, red_loop = __task_contained_in_reduction_loop(pet, s)
         if red_vars_entry is None:
             # s not contained in reduction loop body
             output.append(s)
@@ -1163,6 +1163,11 @@ def __detect_taskloop_reduction(pet: PETGraphX,
             reduction_clause += red_vars_entry["name"].replace(".addr", "")
             reduction_clause += ")"
             s.pragma = ["taskloop", reduction_clause]
+            # update pragma line to parent reduction loop
+            s.pragma_line = red_loop.start_position()
+            # update pragma region
+            s.region_start_line = red_loop.start_position()
+            s.region_end_line = red_loop.end_position()
             # append modified task to output
             output.append(s)
     return output
@@ -1172,16 +1177,16 @@ def __task_contained_in_reduction_loop(pet: PETGraphX,
                                        task: TaskParallelismInfo):
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
-    else, return reduction_vars entry of parent reduction loop.
+    else, return reduction_vars entry of parent reduction loop and loop CU Node.
     :param pet: PET graph
     :param task: TaskParallelismInfo
-    :return None / {loop_line, name, reduction_line, operation}
+    :return None / ({loop_line, name, reduction_line, operation}, CUNode)
     """
     # check if task contained in loop body
     parents = __get_parent_of_type(pet, task._node, NodeType.LOOP, EdgeType.CHILD, False)
     contained_in = []
     if len(parents) == 0:
-        return None
+        return None, None
     else:
         # check if task is actually contained in one of the parents
         for parent_loop, last_node in parents:
@@ -1201,8 +1206,8 @@ def __task_contained_in_reduction_loop(pet: PETGraphX,
             # get correct entry for loop from pet.reduction_vars
             for rv in pet.reduction_vars:
                 if rv["loop_line"] == parent.start_position():
-                    return rv
-    return None
+                    return rv, parent
+    return None, None
 
 
 def __set_task_contained_lines(suggestions: [TaskParallelismInfo]):
