@@ -9,11 +9,11 @@ First, switch to the `/test/simple_pipeline` folder which contains the program `
 
     `<DISCOPOP_PATH>/scripts/dp-fmap`
 
-2) To obtain the computational unit (CU) graph, please run the following command.
+2) To obtain the computational units (CU), please run the following command.
 
     `clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c SimplePipeline.c`
 
-The output is an XML file, which contains all the CU nodes. You should be able to obtain an XML file as in [`Data.xml`](/test/simple_pipeline/data/Data.xml). Using the information in this file, we can generate a CU Graph.
+The output is an XML file, which contains all the CU nodes and their connections. You should be able to obtain an XML file as in [`Data.xml`](/test/simple_pipeline/data/Data.xml). Using the information in this file, we can generate a CU graph.
 
 3) To obtain data dependences, we need to instrument the application and run it. 
 ```
