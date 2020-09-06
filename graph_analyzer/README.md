@@ -42,7 +42,7 @@ Options:
 
 By default, running the graph analyzer will print out the list of patterns along with OpenMP parallelization suggestions to the standard output. You can also obtain the results in JSON format by passing `--json` argument to the Python script.
 
-### Walkthrough Example
+### Walkthrough example
 The **test/** folder contains a number of precomputed inputs for testing the tool, e.g., *atax* from Polybench benchmark suite.
 Here is an example workflow that you can try it out by yourself.
 
