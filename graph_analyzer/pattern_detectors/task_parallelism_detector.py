@@ -451,7 +451,7 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: [Pat
             continue
         elif single_suggestion.pragma[0] == "taskwait":
             taskwait_suggestions.append(single_suggestion)
-        else:
+        elif single_suggestion.pragma[0] == "task":
             task_suggestions.append(single_suggestion)
 
     # iterate over task suggestions
@@ -957,7 +957,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
             omittable_suggestions.append(single_suggestion)
         elif single_suggestion.pragma[0] == "taskwait":
             taskwait_suggestions.append(single_suggestion)
-        else:
+        elif single_suggestion.pragma[0] == "task":
             task_suggestions.append(single_suggestion)
     for s in task_suggestions:
         s._node.tp_contains_task = True
@@ -1743,7 +1743,7 @@ def cu_xml_preprocessing(cu_xml):
                                     try:
                                         potential_lines.append(tmp2.get("atLine"))
                                         pass
-                                    except tmpAttributeError:
+                                    except AttributeError:
                                         pass
                             except AttributeError:
                                 pass
