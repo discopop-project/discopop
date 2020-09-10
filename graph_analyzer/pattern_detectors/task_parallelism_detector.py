@@ -1734,9 +1734,21 @@ def cu_xml_preprocessing(cu_xml):
                             parent.writePhaseLines.set("count", "1")
 
                         separator_line = parent.get("startsAtLine")
-                        # select smallest instruction line >= separator_line + 1
+                        # select smallest recursive function call line >= separator_line + 1
                         parent_new_start_line = None
-                        for tmp in parent.instructionLines.text.split(","):
+                        potential_lines = []
+                        for tmp1 in parent.callsNode:
+                            try:
+                                for tmp2 in tmp1.nodeCalled:
+                                    try:
+                                        potential_lines.append(tmp2.get("atLine"))
+                                        pass
+                                    except tmpAttributeError:
+                                        pass
+                            except AttributeError:
+                                pass
+
+                        for tmp in potential_lines:
                             if tmp == "":
                                 continue
                             if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
@@ -1747,8 +1759,7 @@ def cu_xml_preprocessing(cu_xml):
                                 if int(tmp[tmp.find(":") + 1:]) < int(
                                         parent_new_start_line[parent_new_start_line.find(":") + 1:]):
                                     parent_new_start_line = tmp
-                        # if no instructionLines contained
-                        if parent.instructionLines.text == "":
+                        if potential_lines == []:
                             parent_new_start_line = str(separator_line[:separator_line.index(":")])
                             parent_new_start_line += ":"
                             parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
