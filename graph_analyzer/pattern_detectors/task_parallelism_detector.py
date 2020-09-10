@@ -266,7 +266,7 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __remove_useless_barrier_suggestions(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
-    result = __testwise_missing_barrier_suggestion(pet, result)
+    result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __remove_duplicates(result)
@@ -430,7 +430,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
     return suggestions
 
 
-def __testwise_missing_barrier_suggestion(pet: PETGraphX, suggestions: [PatternInfo]):
+def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: [PatternInfo]):
     """Suggests a barrier if a node is a successor of a task CU
     which is not covered by an existing barrier and the set of global variables
     of the CU and the task are overlapping
