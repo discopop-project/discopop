@@ -115,6 +115,7 @@ namespace
         //Only for func type
         string name;
         vector<Variable> argumentsList;
+        set<int> returnLines;
 
         vector<Node_struct *> childrenNodes;
         Node_struct *parentNode;
@@ -204,6 +205,7 @@ namespace
 
         //29.6.2020 Mohammad
         string determineVariableDefLine(Instruction *I);
+        void getFunctionReturnLines(Region *TopRegion, Node *root);
 
         //functions to get list of global variables
         bool doInitialization(Module &ThisModule);
@@ -246,6 +248,26 @@ namespace
 
 
 /*****************************   DiscoPoP Functions  ***********************************/
+
+void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root){
+    int lid = 0;
+    for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb)
+    {
+        for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
+        {
+            if(isa<StoreInst>(instruction)){
+                string varName = determineVariableName(&*instruction);
+                size_t pos = varName.find("retval");
+                if (pos != varName.npos){
+                    lid = getLID(&*instruction, fileID);
+                    // errs() << "varName: " << varName << " " << dputil::decodeLID(lid) << "\n";
+                    if(lid > 0)
+                        root->returnLines.insert(lid);
+                }
+            }      
+        }
+    }
+}
 
 string CUGeneration::determineVariableDefLine(Instruction *I){
     string varDefLine = "LineNotFound";
@@ -594,6 +616,13 @@ void CUGeneration::printNode(Node *root, bool isRoot)
                 << xmlEscape(ai.name)  << "</arg>" << endl;
             }
             *outCUs << "\t\t</funcArguments>" << endl;
+
+            string rlVals = "";
+            for (auto rl : root->returnLines)
+            {
+                rlVals += dputil::decodeLID(rl)  + ", ";
+            }
+            *outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>" << endl;
         }
 
         if (root->type == nodeTypes::cu)
@@ -1249,6 +1278,8 @@ bool CUGeneration::runOnFunction(Function &F)
     RIpass = &getAnalysis<RegionInfoPass>();
     RI = &(RIpass->getRegionInfo());
     Region *TopRegion = RI->getTopLevelRegion();
+
+    getFunctionReturnLines(TopRegion, root);
 
     populateGlobalVariablesSet(TopRegion, globalVariablesSet);
 
