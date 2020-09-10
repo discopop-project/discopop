@@ -145,6 +145,7 @@ namespace
         set<int> instructionsLineNumbers;
         set<int> readPhaseLineNumbers;
         set<int> writePhaseLineNumbers;
+        set<int> returnInstructions;
 
         set<Variable> localVariableNames;
         set<Variable> globalVariableNames;
@@ -588,7 +589,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai : root->argumentsList)
             {
-                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\"" 
+                *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                 << " defLine=\"" << xmlEscape(ai.defLine)  << "\">"
                 << xmlEscape(ai.name)  << "</arg>" << endl;
             }
@@ -606,7 +607,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
             *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
             *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
-
+            *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\"" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
             {
@@ -810,6 +811,9 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             {
                 cu-> instructionsLineNumbers.insert(lid);
                 cu-> instructionsCount++;
+                if(isa<ReturnInst>(instruction)){
+                  cu->returnInstructions.insert(lid);
+                }
             //}
             if(isa < StoreInst >(instruction))
             {
@@ -913,7 +917,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
             if (isa < CallInst >(instruction))
             {
-                
+
                 Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                 //TODO: DO the same for Invoke inst
 
@@ -921,7 +925,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 Function::iterator FI = f->begin();
                 bool externalFunction = true;
                 string lid;
-                    
+
                 for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI){
                     externalFunction = false;
                     auto tempBI = FI->begin();
@@ -1216,7 +1220,7 @@ bool CUGeneration::runOnFunction(Function &F)
     //Get list of arguments for this function and store them in root.
     // NOTE: changed the way we get the arguments
     // for (Function::ArgumentListType::iterator it = F.getArgumentList().begin(); it != F.getArgumentList().end(); it++) {
-    
+
     BasicBlock *BB = &F.getEntryBlock();
     auto BI = BB->begin();
     string lid;
