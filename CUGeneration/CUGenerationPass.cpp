@@ -1237,7 +1237,7 @@ bool CUGeneration::runOnFunction(Function &F)
         root->argumentsList.push_back(v);
     }
     /********************* End of initialize root values ***************************/
-
+// errs()<< "000---\n";
     // NOTE: changed the pass name for loopinfo -- LoopInfo &LI = getAnalysis<LoopInfo>();
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
