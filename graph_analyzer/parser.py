@@ -10,7 +10,7 @@
 import os
 from collections import defaultdict
 
-from lxml import objectify
+from lxml import objectify  # type:ignore
 
 readlineToCUIdMap = defaultdict(set)  # Map to record which line belongs to read set of nodes. LID -> NodeIds
 writelineToCUIdMap = defaultdict(set)  # Map to record which line belongs to write set of nodes. LID -> NodeIds

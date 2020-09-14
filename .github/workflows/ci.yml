@@ -21,6 +21,8 @@ jobs:
         run: docker build -f .github/workflows/graph_analyzer/Dockerfile . --tag graph_analyzer
       - name: "Run unit_tests.py"
         run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop graph_analyzer python -m graph_analyzer.unit_tests
+      - name: "Run MyPy Type Checker"
+        run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop graph_analyzer python -m mypy --warn-unused-ignores -p graph_analyzer
 
   discopop_profiler:
     name: "Profiler"
