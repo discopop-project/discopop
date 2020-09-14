@@ -10,10 +10,10 @@
 import math
 from typing import Dict, List
 
-from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import classify_task_vars, get_child_loops
-from variable import Variable
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..utils import classify_task_vars, get_child_loops
+from ..variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
 

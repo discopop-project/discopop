@@ -1,15 +1,16 @@
 import json
 import os
 import unittest
+from pathlib import Path
 
-from graph_analyzer import run
-from json_serializer import PatternInfoSerializer
+from . import run
+from .json_serializer import PatternInfoSerializer
 
 
 class GraphAnalyzerTest(unittest.TestCase):
     def test_analyzer_end_to_end(self):
         # TODO upload test data?
-        path = './../test'
+        path = Path(__file__).parent.parent / 'test'
         for file in [f.name for f in os.scandir(path) if f.name.endswith('.json')]:
             with self.subTest(file=file):
                 cu_xml = os.path.join(path, file[:-5], 'data', 'Data.xml')

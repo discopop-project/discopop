@@ -11,9 +11,9 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import correlation_coefficient, classify_task_vars
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
+from ..utils import correlation_coefficient, classify_task_vars
 
 __pipeline_threshold = 0.9
 

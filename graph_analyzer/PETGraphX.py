@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from lxml.objectify import ObjectifiedElement
 
-from parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
-from variable import Variable
+from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
+from .variable import Variable
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),

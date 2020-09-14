@@ -9,9 +9,9 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import classify_loop_variables
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
+from ..utils import classify_loop_variables
 
 
 class DoAllInfo(PatternInfo):

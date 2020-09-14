@@ -11,9 +11,9 @@ from typing import List
 
 from graph_tool import Vertex
 
-from PETGraphX import PETGraphX, NodeType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import is_reduction_var, classify_loop_variables
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType
+from ..utils import is_reduction_var, classify_loop_variables
 
 
 class ReductionInfo(PatternInfo):

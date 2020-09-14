@@ -7,7 +7,7 @@
 # directory for details.
 import json
 
-from PETGraphX import CUNode
+from ..PETGraphX import CUNode
 
 
 class PatternInfo(object):
