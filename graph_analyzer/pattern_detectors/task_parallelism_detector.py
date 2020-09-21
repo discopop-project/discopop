@@ -373,7 +373,7 @@ def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggest
                 # stop search on this path
                 continue
             # check if returnInstructionCount > 0
-            if intcurrent_node.return_instructions_count > 0:
+            if current_node.return_instructions_count > 0:
                 # taskwait missing -> add current node to targets
                 targets.append(current_node)
                 continue
@@ -1814,7 +1814,7 @@ def cu_xml_preprocessing(cu_xml):
                                 if int(tmp[tmp.find(":") + 1:]) < int(
                                         parent_new_start_line[parent_new_start_line.find(":") + 1:]):
                                     parent_new_start_line = tmp
-                        if potential_lines == []:
+                        if not potential_lines:
                             parent_new_start_line = str(separator_line[:separator_line.index(":")])
                             parent_new_start_line += ":"
                             parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
@@ -1944,7 +1944,8 @@ def cu_xml_preprocessing(cu_xml):
                             entries = parent_copy.returnInstructions.text.split(",")
                             new_entries = []
                             for entry in entries:
-                                if __line_contained_in_region(entry, parent_copy.get("startsAtLine"), parent_copy.get("endsAtLine")):
+                                if __line_contained_in_region(entry, parent_copy.get("startsAtLine"),
+                                                              parent_copy.get("endsAtLine")):
                                     new_entries.append(entry)
                             parent_copy.returnInstructions._setText(",".join(new_entries))
                             parent_copy.returnInstructions.set("count", str(len(new_entries)))
@@ -1952,7 +1953,8 @@ def cu_xml_preprocessing(cu_xml):
                             entries = parent.returnInstructions.text.split(",")
                             new_entries = []
                             for entry in entries:
-                                if __line_contained_in_region(entry, parent.get("startsAtLine"), parent.get("endsAtLine")):
+                                if __line_contained_in_region(entry, parent.get("startsAtLine"),
+                                                              parent.get("endsAtLine")):
                                     new_entries.append(entry)
                             parent.returnInstructions._setText(",".join(new_entries))
                             parent.returnInstructions.set("count", str(len(new_entries)))
