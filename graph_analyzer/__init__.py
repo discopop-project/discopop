@@ -7,5 +7,3 @@
 # directory for details.
 
 from .graph_analyzer import run
-
-__version__ = "0.1"

@@ -22,7 +22,6 @@ Options:
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
     -h --help                   Show this screen
-    -v --version                Show version
 """
 
 import json
@@ -33,7 +32,7 @@ import time
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 
-from . import run, __version__
+from . import run
 from .json_serializer import PatternInfoSerializer
 
 docopt_schema = Schema({
@@ -59,7 +58,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
-    arguments = docopt(__doc__, version=f'DiscoPoP analyzer {__version__}')
+    arguments = docopt(__doc__)
 
     try:
         arguments = docopt_schema.validate(arguments)

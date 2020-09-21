@@ -18,12 +18,8 @@ SRC = Path("graph_analyzer")
 
 
 def get_version():
-    with open(SRC / "__init__.py") as f:
-        for line in f:
-            m = re.match(r'__version__ = "(.*)"', line)
-            if m:
-                return m.group(1)
-    raise SystemExit("Could not find version string.")
+    with open("version.txt") as f:
+        return f.read().rstrip()
 
 
 def get_requirements():
