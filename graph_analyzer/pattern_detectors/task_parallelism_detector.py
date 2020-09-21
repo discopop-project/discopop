@@ -269,6 +269,7 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __detect_dependency_clauses(pet, result)
     result = __combine_omittable_cus(pet, result)
+    result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __remove_duplicates(result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
@@ -340,6 +341,60 @@ def __get_var_definition_line_dict(cu_xml: str):
                 except AttributeError:
                     pass
     return var_def_line_dict
+
+
+def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestions: [PatternInfo]):
+    """enforces taskwait or similar pragmas before return statements to ensure, that no unfinished tasks exist
+    when the parent function returns.
+    :param pet: PET graph
+    :param suggestions; List[PatternInfo]
+    :return List[PatternInfo]"""
+    # iterate over task suggestions
+    for suggestion in suggestions:
+        if suggestion.pragma[0] != "task":
+            continue
+        # if task is covered by a parallel region, ignore it due to the present, implicit barrier
+        covered_by_parallel_region = False
+        for tmp in suggestions:
+            if type(tmp) == ParallelRegionInfo:
+                if __line_contained_in_region(suggestion.start_line, tmp.region_start_line, tmp.region_end_line):
+                    covered_by_parallel_region = True
+                    break
+        if covered_by_parallel_region:
+            continue
+        # check, if barrier in successor - path between task and return (same cu -> no barrier contained)
+        queue = [suggestion._node]
+        visited = []
+        targets = []
+        while len(queue) != 0:
+            current_node = queue.pop()
+            visited.append(current_node)
+            if current_node.tp_contains_taskwait:
+                # stop search on this path
+                continue
+            # check if returnInstructionCount > 0
+            if intcurrent_node.return_instructions_count > 0:
+                # taskwait missing -> add current node to targets
+                targets.append(current_node)
+                continue
+            # append direct successors to targets, if not in visited
+            successors = pet.direct_successors(current_node)
+            successors = [ds for ds in successors if ds not in visited]
+            queue = queue + successors
+        # suggest taskwait prior to return if needed
+        for cu in targets:
+            # actual change
+            cu.tp_contains_taskwait = True
+            pragma_line = cu.end_position()  # since return has to be the last statement in a CU
+            pragma_line = pragma_line[pragma_line.index(":") + 1:]
+            tmp_suggestion = TaskParallelismInfo(cu,
+                                                 ["taskwait"],
+                                                 pragma_line,
+                                                 [], [], [])
+            print("TPDet:suggest_barriers_for_uncovered_tasks_before_return: added taskwait suggestion at line: ",
+                  cu.end_position())
+            suggestions.append(tmp_suggestion)
+    return suggestions
 
 
 def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
@@ -1883,6 +1938,24 @@ def cu_xml_preprocessing(cu_xml):
                         parent.instructionLines._setText(parent.instructionLines.text.replace(",,", ","))
                         parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,", ","))
                         parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
+
+                        # remove returnInstructions if they are not part of the cus anymore
+                        if int(parent_copy.returnInstructions.get("count")) != 0:
+                            entries = parent_copy.returnInstructions.text.split(",")
+                            new_entries = []
+                            for entry in entries:
+                                if __line_contained_in_region(entry, parent_copy.get("startsAtLine"), parent_copy.get("endsAtLine")):
+                                    new_entries.append(entry)
+                            parent_copy.returnInstructions._setText(",".join(new_entries))
+                            parent_copy.returnInstructions.set("count", str(len(new_entries)))
+                        if int(parent.returnInstructions.get("count")) != 0:
+                            entries = parent.returnInstructions.text.split(",")
+                            new_entries = []
+                            for entry in entries:
+                                if __line_contained_in_region(entry, parent.get("startsAtLine"), parent.get("endsAtLine")):
+                                    new_entries.append(entry)
+                            parent.returnInstructions._setText(",".join(new_entries))
+                            parent.returnInstructions.set("count", str(len(new_entries)))
 
                         # add parent.id to parent_function.childrenNodes
                         parent_function = None

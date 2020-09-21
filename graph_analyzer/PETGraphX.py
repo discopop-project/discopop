@@ -95,6 +95,7 @@ class CUNode:
     type: NodeType
     name: str
     instructions_count: int = -1
+    return_instructions_count: int = -1
     loop_iterations: int = -1
     mw_type = MWType.FORK
     basic_block_id = ""
@@ -164,6 +165,8 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
             n.global_vars = [Variable(v.get('type'), v.text) for v in getattr(node.globalVariables, 'global')]
         if hasattr(node, 'BasicBlockID'):
             n.basic_block_id = getattr(node, 'BasicBlockID')
+        if hasattr(node, 'returnInstructions'):
+            n.return_instructions_count = int(getattr(node, 'returnInstructions').get('count'))
     return n
 
 
@@ -327,6 +330,14 @@ class PETGraphX(object):
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
         return res
+
+    def direct_successors(self, root: CUNode) -> List[CUNode]:
+        """Gets only direct successors of any type
+
+        :param root: root node
+        :return: list of direct successors
+        """
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.SUCCESSOR)]
 
     def direct_children(self, root: CUNode) -> List[CUNode]:
         """Gets only direct children of any type
