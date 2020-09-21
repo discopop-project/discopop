@@ -2,10 +2,10 @@
 DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University. 
 
 In a nutshell, DiscoPoP performs the following steps:
-* detects parts of the code (computational units or CUs) with little to no internal parallelization potential,
-* finds data dependences among them,
-* identifies parallel patterns which can be used to parallelize a code region,
-* and finally suggests corresponding OpenMP parallelization constructs and clauses to programmers.
+* detect parts of the code (computational units or CUs) with little to no internal parallelization potential,
+* find data dependences among them,
+* identifie parallel patterns that can be used to parallelize a code region,
+* and finally suggest corresponding OpenMP parallelization constructs and clauses to programmers.
 
 A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
 
@@ -17,7 +17,7 @@ Before doing anything, you need a basic development setup. We have tested DiscoP
 
 	sudo apt-get install git build-essential cmake
 
-Additionally, you need LLVM installed on your system. Currently, DiscoPoP supports LLVM 8.0. Lower and higher versions are not supported, due to API changes which lead to compilation failures. Please follow the installation tutorial [here](https://llvm.org/docs/GettingStarted.html), if you have not installed LLVM before.
+Additionally, you need to install LLVM on your system. Currently, DiscoPoP only supports LLVM 8.0. Due to API changes, which lead to compilation failures, it does not support lower and higher versions. Please follow the [installation tutorial](https://llvm.org/docs/GettingStarted.html), if you have not installed LLVM yet.
 
 ### DiscoPoP profiler installation
 First, clone the source code into the designated folder. Then, create a build directory:
@@ -42,14 +42,14 @@ To obtain the computational unit (CU) graph of the target application, please ru
 	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File>
 
 #### Dependence profiling
-To obtain data dependences, we need to instrument the target application. Running the instrumented application will result in a text file containing all the dependences located in the present working directory.
+To obtain data dependences, we need to instrument the target application. Running the instrumented application will result in a text file containing all the dependences that are located in the present working directory.
 
 	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
 	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
 	./<APP_NAME>
 
 #### Identifying reduction operations
-To obtain the list of reduction operations in the target application, we need to instrument the target application. Running the instrumented application will result in a text file containing all the reductions located in the present working directory.
+To obtain the list of reduction operations in the target application, we need to instrument the target application. Running the instrumented application will result in a text file containing all the reductions that are located in the present working directory.
 
 	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPReduction.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
 	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
