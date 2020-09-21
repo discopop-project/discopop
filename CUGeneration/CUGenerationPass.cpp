@@ -840,8 +840,24 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             {
                 cu-> instructionsLineNumbers.insert(lid);
                 cu-> instructionsCount++;
+                // find return instructions
                 if(isa<ReturnInst>(instruction)){
                   cu->returnInstructions.insert(lid);
+                }
+                // find branches to return instructions, i.e. return statements
+                // Lukas 21.09.20
+                else if(isa<BranchInst>(instruction)){
+                  if((cast<BranchInst>(instruction))->isUnconditional()){
+                    if((cast<BranchInst>(instruction))->getNumSuccessors() == 1){
+                      BasicBlock* successorBB = (cast<BranchInst>(instruction))->getSuccessor(0);
+                      for (BasicBlock::iterator innerInstruction = successorBB->begin(); innerInstruction != successorBB->end(); ++innerInstruction){
+                        if(isa<ReturnInst>(innerInstruction)){
+                          cu->returnInstructions.insert(lid);
+                          break;
+                        }
+                      }
+                    }
+                  }
                 }
             //}
             if(isa < StoreInst >(instruction))
