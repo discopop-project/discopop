@@ -264,7 +264,7 @@ void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root){
                     if(lid > 0)
                         root->returnLines.insert(lid);
                 }
-            }      
+            }
         }
     }
 }
@@ -636,7 +636,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
             *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
             *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
-            *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\"" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
+            *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
             {
