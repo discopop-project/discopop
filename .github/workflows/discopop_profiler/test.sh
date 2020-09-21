@@ -14,7 +14,7 @@ DISCOPOP_SRC=$(pwd)
 DISCOPOP_INSTALL="$(pwd)/build"
 CXX=clang++-8
 
-tests="dependence reduction"  # TODO: "cu" yet missing because it fails
+tests="cu dependence reduction"
 
 function test_cu {
   # CU Generation
