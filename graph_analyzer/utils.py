@@ -212,15 +212,12 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
         return False
     if '.' not in var:
         return False
-
-    path: List[CUNode] = pet.path(pet.main, node)
-
-    for node in reversed(path):
-        if node.type == NodeType.FUNC:
-            for arg in node.args:
-                if var.startswith(arg.name):
-                    return True
-
+    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    parent_functions = [cu for cu in parents if cu.type == NodeType.FUNC]
+    for pf in parent_functions:
+        for arg in pf.args:
+            if var.startswith(arg.name):
+                return True
     return False
 
 
