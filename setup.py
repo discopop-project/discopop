@@ -17,7 +17,7 @@ SRC = Path("graph_analyzer")
 
 
 def get_version():
-    with open("version.txt") as f:
+    with open("VERSION") as f:
         return f.read().rstrip()
 
 
@@ -54,4 +54,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Software Development",
     ],
+    license_files=["LICENSE"],
 )
