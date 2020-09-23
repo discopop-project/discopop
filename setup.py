@@ -46,7 +46,7 @@ setup(
     entry_points={"console_scripts": ["graph_analyzer=graph_analyzer.__main__:main"]},
     zip_safe=True,
     classifiers=[
-        "Development Status :: 4 - Beta"
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
