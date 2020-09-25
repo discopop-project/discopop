@@ -17,5 +17,6 @@ set(CMAKE_CXX_FLAGS
 
 add_library(DiscoPoP_RT STATIC
     ${DiscoPoP_SOURCES})
+install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
 
