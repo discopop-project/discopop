@@ -268,6 +268,7 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __validate_barriers(pet, result)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __detect_dependency_clauses(pet, result)
+    result = __detect_dependency_clauses_alias_based(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
@@ -277,6 +278,172 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __sort_output(result)
 
     return result
+
+
+def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo]):
+    """TODO"""
+    # TODO Read source file to read from FileMapping
+    source_code_files = {"15": "/home/lukas/git/result_store/sort-build/sort.c"}
+    # iterate over task suggestions
+    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
+    aliases = []
+    for ts in task_suggestions:
+        print("###")
+        # get parent function
+        for parent_function in [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
+                                if pet.node_at(e[0]).type == NodeType.FUNC]:
+            # get recursive function call from original source code
+            function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line), ts.node_id.split(":")[0])
+            # get function parameter names from recursive function call
+            parameter_names = __get_parameter_names_from_function_call(function_call_string, ts._node.recursive_function_calls[0], ts._node)
+            # print("function_call_string: ", function_call_string)
+            # print("parameter_names: ", parameter_names)
+            # print("rec: ", ts._node.recursive_function_calls)
+            # get CU Node object of called function
+            called_function_cu_id = None
+            for recursive_function_call_entry in ts._node.recursive_function_calls:
+                if "," in recursive_function_call_entry:
+                    recursive_function_call_entry = recursive_function_call_entry.split(",")[0]
+                recursive_function_call_entry = recursive_function_call_entry.split(" ")
+                recursive_function_call_line = recursive_function_call_entry[1]
+                if int(recursive_function_call_line.split(":")[1]) == int(ts.pragma_line):
+                    # correct function call found
+                    # find corresponding function CU
+                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                        if tmp_func_cu.name == recursive_function_call_entry[0]:
+                            called_function_cu_id = tmp_func_cu.id
+            print("called function cu: ", called_function_cu_id)
+            print("--> args: ", [v.name for v in pet.node_at(called_function_cu_id).args])
+            # get aliases for parameters
+            for idx, param in enumerate(parameter_names):
+                if param is None:
+                    continue
+                current_alias = []
+                current_alias.append((param, parent_function.name, parent_function.start_position(), parent_function.end_position()))
+                current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx, source_code_files, [])
+                aliases.append(current_alias)
+
+    # join aliases on first element (original identifier)
+    joined_aliases = []
+    while aliases:
+        join_on = aliases.pop()
+        join_indices = []
+        for idx, alias_entry in enumerate(aliases):
+            if alias_entry[0] == join_on[0]:
+                join_indices.append(idx)
+        # sort reversed to prevent errors due to popping elements
+        join_indices.sort(reverse=True)
+        for idx in join_indices:
+            to_be_joined = aliases.pop(idx)
+            to_be_joined.pop(0)
+            join_on += to_be_joined
+        joined_aliases.append(join_on)
+    aliases = joined_aliases
+    print("Found aliases:")
+    [print(e) for e in aliases]
+
+                # read _dep.txt to find dependencies
+    return suggestions
+
+
+def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int, source_code_files, visited):
+    """TODO"""
+    visited.append((function, parameter_position))
+    parameter_name = function.args[parameter_position].name
+    print("parameter_name: ", parameter_name)
+    # append Alias information for parameter to result
+    result = [(parameter_name, function.name, function.start_position(), function.end_position())]
+
+    # find function calls which use the parameter
+        # iterate over CUs
+    for cu in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(function.id)]]:
+        # iterate over children of CU and retrieve called functions
+        called_functions = []
+        for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(cu.id)]]:
+            # check if type is Func or Dummy
+            if child.type == NodeType.FUNC or child.type == NodeType.DUMMY:
+                # CU contains a function call
+                # if Dummy, map to Func
+                if child.type == NodeType.DUMMY:
+                    for function_cu in pet.all_nodes(NodeType.FUNC):
+                        if child.name == function_cu.name:
+                            child = function_cu
+                called_functions.append(child)
+        # iterate over called functions
+        for called_function in called_functions:
+            # read line from source code (iterate over lines of CU to search for function call)
+            for line in range(cu.start_line, cu.end_line+1):
+                source_code_line = __get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
+                # get parameter names from call
+                call_parameters = __get_parameter_names_from_function_call(source_code_line, called_function.name, cu)
+                # check if parameter_name is contained
+                for idx, pn in enumerate(call_parameters):
+                    if pn == parameter_name:
+                        # check if same configuration for alias detection has been used:
+                        if (called_function, idx) not in visited:
+                            # if not, start recursion
+                            result += __get_alias_for_parameter_at_position(pet, called_function, idx, source_code_files, visited)
+    return result
+
+
+def __get_function_call_from_source_code(source_code_files, line_number, file_id):
+    """TODO"""
+    source_code = open(source_code_files[file_id])
+    source_code_lines = source_code.readlines()
+    offset = -1
+    function_call_string = source_code_lines[line_number + offset]
+    while function_call_string.count("(") > function_call_string.count(")") or function_call_string.count("(") < 1:
+        offset += 1
+        function_call_string += source_code_lines[line_number + offset]
+    function_call_string = function_call_string.replace("\n", "")
+    return function_call_string
+
+
+def __get_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str, node: CUNode):
+    """TODO
+    If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position."""
+    # find function name by finding biggest match between function call line and recursive call
+    function_name = ""
+    function_position = 0
+    mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
+    for rotation in range (0, len(mangled_function_name)):
+        rotated_call = mangled_function_name[rotation:] + mangled_function_name[:rotation]
+        for start_idx in range (0, len(source_code_line)):
+            current_intersection = ""
+            for char_index in range(0, len(rotated_call)):
+                if start_idx + char_index >= len(source_code_line):
+                    break
+                if source_code_line[start_idx + char_index] == rotated_call[char_index]:
+                    current_intersection += rotated_call[char_index]
+                else:
+                    break
+            if len(current_intersection) > len(function_name):
+                function_position = start_idx
+                function_name = current_intersection
+    # get parameters in brackets
+    parameter_string = source_code_line[function_position:]
+        # prune left
+    while not parameter_string.startswith(("(")):
+        parameter_string = parameter_string[parameter_string.find("("):]
+        # prune right
+    while not parameter_string.endswith((")")):
+        parameter_string = parameter_string[:parameter_string.rfind(")")+1]
+        # prune to correct amount of closing brackets
+    while not parameter_string.count("(") == parameter_string.count(")"):
+        parameter_string = parameter_string[:-1]
+        parameter_string = parameter_string[:parameter_string.rfind(")")+1]
+    parameter_string = parameter_string[1:-1]
+    # intersect parameters with set of known variables to prevent errors
+    parameters = parameter_string.split(",")
+    result_parameters = []
+    for param in parameters:
+        if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
+            result_parameters.append(None)
+        else:
+            # check if param in known variables:
+            if param.replace(" ", "") in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]:
+                result_parameters.append(param.replace(" ", ""))
+    return result_parameters
 
 
 def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: [PatternInfo]):
