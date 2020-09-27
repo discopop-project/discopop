@@ -326,9 +326,8 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
             function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
                                                                           ts_1.node_id.split(":")[0])
             # get function parameter names from recursive function call
-            parameter_names_1 = __get_parameter_names_from_function_call(function_call_string_1,
-                                                                         ts_1._node.recursive_function_calls[0],
-                                                                         ts_1._node)
+            function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
+                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
             for ts_2 in [s for s in task_suggestions if not s == ts_1 and int(ts_1.pragma_line) <= int(s.pragma_line)]:
                 # get parent function
                 for parent_function_2 in [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
@@ -338,15 +337,12 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                                                                                   int(ts_2.pragma_line),
                                                                                   ts_2.node_id.split(":")[0])
                     # get function parameter names from recursive function call
-                    parameter_names_2 = __get_parameter_names_from_function_call(function_call_string_2,
-                                                                                 ts_2._node.recursive_function_calls[0],
-                                                                                 ts_2._node)
-                    # check dependence of ts_1 and ts_2
-                    # TODO return value etc
-                    dependences = __check_dependence_of_task_pair(aliases, raw_dependency_information,
+                    function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
+                        function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
+                    dependencies = __check_dependence_of_task_pair(aliases, raw_dependency_information,
                                                                   ts_1, function_call_string_1, parameter_names_1,
                                                                   ts_2, function_call_string_2, parameter_names_2)
-                    for dependence_var in dependences:
+                    for dependence_var in dependencies:
                         # Mark the variable as depend out for the first function and depend in for the second function.
                         if not ts_1 in out_dep_updates:
                             out_dep_updates[ts_1] = []
@@ -383,11 +379,23 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
             # skip wrong alias entries
             if not alias_entry[0][0] == parameter:
                 continue
+            print()
+            print("alias entry 1")
+            print("\t", alias_entry)
             # intersect alias_entry of task_suggestion_1 with entries of task_suggestion_2
             alias_entries_2 = []
             for alias_entry_2 in aliases[task_suggestion_2]:
+            #    print("alias entry 2")
+            #    print("\t", alias_entry_2)
+              #  # ignore calls to same function
+              #  if alias_entry_2[0][1] == alias_entry[0][1]:
+              #      print("CALL TO SAME FUNCTION DETECTED!")
+              #      continue
                 alias_entries_2 += alias_entry_2
             intersection = list(set([ae for ae in alias_entry if ae in alias_entries_2]))
+
+            print("intersection: ")
+            print(intersection)
             # get sink lines
             # (start and end line of task_sug_1's parent func)
             sink_lines_start = alias_entry[0][2].split(":")
@@ -413,8 +421,9 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
                     for raw_dep_entry in raw_dependency_information[source_line]:
                         if raw_dep_entry[1] == intersecting_variable:
                             if raw_dep_entry[0] in sink_lines:
-                     #            print("DEPENDENCE: ", raw_dep_entry[0], " -- ", source_line)
+                                print("DEPENDENCE: ", parameter)
                                 dependences.append(parameter)
+
     dependences = list(set(dependences))
     return dependences
 
@@ -476,8 +485,8 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
             function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
                                                                         ts.node_id.split(":")[0])
             # get function parameter names from recursive function call
-            parameter_names = __get_parameter_names_from_function_call(function_call_string,
-                                                                       ts._node.recursive_function_calls[0], ts._node)
+            function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(function_call_string,
+                ts._node.recursive_function_calls[0], ts._node)
             # get CU Node object of called function
             called_function_cu_id = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
@@ -549,7 +558,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
             for line in range(cu.start_line, cu.end_line+1):
                 source_code_line = __get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
                 # get parameter names from call
-                call_parameters = __get_parameter_names_from_function_call(source_code_line, called_function.name, cu)
+                function_name, call_parameters = __get_called_function_and_parameter_names_from_function_call(source_code_line, called_function.name, cu)
                 # check if parameter_name is contained
                 for idx, pn in enumerate(call_parameters):
                     if pn == parameter_name:
@@ -573,7 +582,8 @@ def __get_function_call_from_source_code(source_code_files, line_number, file_id
     return function_call_string
 
 
-def __get_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str, node: CUNode):
+def __get_called_function_and_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str,
+                                                                 node: CUNode):
     """TODO
     If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position."""
     # find function name by finding biggest match between function call line and recursive call
@@ -617,7 +627,7 @@ def __get_parameter_names_from_function_call(source_code_line: str, mangled_func
             # check if param in known variables:
             if param.replace(" ", "") in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]:
                 result_parameters.append(param.replace(" ", ""))
-    return result_parameters
+    return function_name, result_parameters
 
 
 def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: [PatternInfo]):
@@ -925,17 +935,21 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
             var = var.replace(".addr", "")
             is_valid = False
             try:
-                for defLine in var_def_line_dict[var]:
+                for def_line in var_def_line_dict[var]:
                     # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
+                    if def_line == "GlobalVar" or def_line == "LineNotFound":  # TODO: not sure if break is suitable
+                        is_valid = False
+                        break
+                    if def_line is None:
                         is_valid = True
                     # check if var is defined in parent function
-                    if __line_contained_in_region(defLine, parent_function.start_position(),
+                    if __line_contained_in_region(def_line, parent_function.start_position(),
                                                   parent_function.end_position()):
                         is_valid = True
                     else:
                         pass
-            except ValueError:
+            except ValueError as ve:
+                raise ve
                 pass
             if not is_valid:
                 to_be_removed.append(var)
