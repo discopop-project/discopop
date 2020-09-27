@@ -201,7 +201,8 @@ class OmittableCuInfo(PatternInfo):
                f'in_out_dep: {" ".join(self.in_out_dep)}\n'
 
 
-def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str):
+def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
+                                               file_mapping: str):
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -218,11 +219,11 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     # execute reduction detector to enable taskloop-reduction-detection
     from pattern_detectors.reduction_detector import run_detection as detect_reduction
     detect_reduction(preprocessed_graph)
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping)
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -268,7 +269,7 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     result = __validate_barriers(pet, result)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __detect_dependency_clauses(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
@@ -280,15 +281,19 @@ def run_detection(pet: PETGraphX, cu_xml: str) -> List[TaskParallelismInfo]:
     return result
 
 
-def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo]):
+def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str):
     """TODO"""
-    # TODO Read source file to read from FileMapping
-    source_code_files = {"15": "/home/lukas/git/result_store/sort-build/sort.c"}
+    # Read contents of file_mapping
+    source_code_files = dict()
+    with open(file_mapping_path) as f:
+        for line in f.readlines():
+            line = line.replace("\n","")
+            line = line.split("\t")
+            source_code_files[line[0]] = line[1]
     # iterate over task suggestions
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
     aliases = []
     for ts in task_suggestions:
-        print("###")
         # get parent function
         for parent_function in [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                                 if pet.node_at(e[0]).type == NodeType.FUNC]:
@@ -312,8 +317,6 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [Patter
                     for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
                         if tmp_func_cu.name == recursive_function_call_entry[0]:
                             called_function_cu_id = tmp_func_cu.id
-            print("called function cu: ", called_function_cu_id)
-            print("--> args: ", [v.name for v in pet.node_at(called_function_cu_id).args])
             # get aliases for parameters
             for idx, param in enumerate(parameter_names):
                 if param is None:
@@ -323,24 +326,24 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [Patter
                 current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx, source_code_files, [])
                 aliases.append(current_alias)
 
-    # join aliases on first element (original identifier)
-    joined_aliases = []
-    while aliases:
-        join_on = aliases.pop()
-        join_indices = []
-        for idx, alias_entry in enumerate(aliases):
-            if alias_entry[0] == join_on[0]:
-                join_indices.append(idx)
-        # sort reversed to prevent errors due to popping elements
-        join_indices.sort(reverse=True)
-        for idx in join_indices:
-            to_be_joined = aliases.pop(idx)
-            to_be_joined.pop(0)
-            join_on += to_be_joined
-        joined_aliases.append(join_on)
-    aliases = joined_aliases
+#    # join aliases on first element (original identifier)
+#    joined_aliases = []
+#    while aliases:
+#        join_on = aliases.pop()
+#        join_indices = []
+#        for idx, alias_entry in enumerate(aliases):
+#            if alias_entry[0] == join_on[0]:
+#                join_indices.append(idx)
+#        # sort reversed to prevent errors due to popping elements
+#        join_indices.sort(reverse=True)
+#        for idx in join_indices:
+#            to_be_joined = aliases.pop(idx)
+#            to_be_joined.pop(0)
+#            join_on += to_be_joined
+#        joined_aliases.append(join_on)
+#    aliases = joined_aliases
     print("Found aliases:")
-    [print(e) for e in aliases]
+    [print(e,"\n") for e in aliases]
 
                 # read _dep.txt to find dependencies
     return suggestions
@@ -350,7 +353,6 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
     """TODO"""
     visited.append((function, parameter_position))
     parameter_name = function.args[parameter_position].name
-    print("parameter_name: ", parameter_name)
     # append Alias information for parameter to result
     result = [(parameter_name, function.name, function.start_position(), function.end_position())]
 
