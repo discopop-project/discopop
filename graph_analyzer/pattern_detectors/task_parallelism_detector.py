@@ -219,11 +219,11 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     # execute reduction detector to enable taskloop-reduction-detection
     from pattern_detectors.reduction_detector import run_detection as detect_reduction
     detect_reduction(preprocessed_graph)
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file)
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str) -> List[TaskParallelismInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -268,42 +268,216 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str) -> List[TaskPa
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
-    result = __detect_dependency_clauses(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping)
+    # result = __detect_dependency_clauses(pet, result)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
     result = __remove_duplicates(result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
+    result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
     return result
 
 
-def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str):
+def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str,
+                                            dep_file: str):
     """TODO"""
     # Read contents of file_mapping
     source_code_files = dict()
     with open(file_mapping_path) as f:
         for line in f.readlines():
-            line = line.replace("\n","")
+            line = line.replace("\n", "")
             line = line.split("\t")
             source_code_files[line[0]] = line[1]
+    # get RAW depencency information as a dict
+    raw_dependency_information = __get_RAW_dependency_information_from_dep_file(dep_file)
+    aliases = __get_alias_information(pet, suggestions, source_code_files)
+    suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
+                                                                  raw_dependency_information)
+    return suggestions
+
+
+def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: [PatternInfo], aliases,
+                                                    source_code_files, raw_dependency_information: dict):
+    """TODO, adds dependency clauses to task suggestions"""
+    # wrapper to start __check_dependence_of_task_pair for all viable combinations of suggested tasks
+    result_suggestions = []
+    task_suggestions = []
+    for s in suggestions:
+        if type(s) == TaskParallelismInfo:
+            if s.pragma[0] == "task":
+                task_suggestions.append(s)
+            else:
+                result_suggestions.append(s)
+        else:
+            result_suggestions.append(s)
+    # iterate over all combinations of tasks, ts_1 has to come before ts_2  # TODO: possible / required to filter for tasks inside same function?
+    # get in and out dependences to insert
+    out_dep_updates = dict()
+    in_dep_updates = dict()
+    for ts_1 in task_suggestions:
+        # get parent function
+        for parent_function_1 in [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
+                                  if pet.node_at(e[0]).type == NodeType.FUNC]:
+            # get recursive function call from original source code
+            function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
+                                                                          ts_1.node_id.split(":")[0])
+            # get function parameter names from recursive function call
+            parameter_names_1 = __get_parameter_names_from_function_call(function_call_string_1,
+                                                                         ts_1._node.recursive_function_calls[0],
+                                                                         ts_1._node)
+            for ts_2 in [s for s in task_suggestions if not s == ts_1 and int(ts_1.pragma_line) <= int(s.pragma_line)]:
+                # get parent function
+                for parent_function_2 in [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
+                                          if pet.node_at(e[0]).type == NodeType.FUNC]:
+                    # get recursive function call from original source code
+                    function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                  int(ts_2.pragma_line),
+                                                                                  ts_2.node_id.split(":")[0])
+                    # get function parameter names from recursive function call
+                    parameter_names_2 = __get_parameter_names_from_function_call(function_call_string_2,
+                                                                                 ts_2._node.recursive_function_calls[0],
+                                                                                 ts_2._node)
+                    # check dependence of ts_1 and ts_2
+                    # TODO return value etc
+                    dependences = __check_dependence_of_task_pair(aliases, raw_dependency_information,
+                                                                  ts_1, function_call_string_1, parameter_names_1,
+                                                                  ts_2, function_call_string_2, parameter_names_2)
+                    for dependence_var in dependences:
+                        # Mark the variable as depend out for the first function and depend in for the second function.
+                        if not ts_1 in out_dep_updates:
+                            out_dep_updates[ts_1] = []
+                        out_dep_updates[ts_1].append(dependence_var)
+                        if not ts_2 in in_dep_updates:
+                            in_dep_updates[ts_2] = []
+                        in_dep_updates[ts_2].append(dependence_var)
+    # perform updates of in and out dependencies
+    for ts in task_suggestions:
+        if ts in out_dep_updates:
+            for out_dep_var in out_dep_updates[ts]:
+                ts.out_dep.append(out_dep_var)
+            ts.out_dep = list(set(ts.out_dep))
+        if ts in in_dep_updates:
+            for in_dep_var in in_dep_updates[ts]:
+                ts.in_dep.append(in_dep_var)
+            ts.in_dep = list(set(ts.in_dep))
+        result_suggestions.append(ts)
+
+    return result_suggestions
+
+
+def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
+                                    task_suggestion_1: TaskParallelismInfo, call_string_1: str, param_names_1: [str],
+                                    task_suggestion_2: TaskParallelismInfo, call_string_2: str, param_names_2: [str]):
+    """TODO"""
+    dependences = []
+    # iterate over parameters of task_1
+    for parameter in param_names_1:
+        if parameter is None:
+            continue
+        # get aliases for parameter
+        for alias_entry in aliases[task_suggestion_1]:
+            # skip wrong alias entries
+            if not alias_entry[0][0] == parameter:
+                continue
+            # intersect alias_entry of task_suggestion_1 with entries of task_suggestion_2
+            alias_entries_2 = []
+            for alias_entry_2 in aliases[task_suggestion_2]:
+                alias_entries_2 += alias_entry_2
+            intersection = list(set([ae for ae in alias_entry if ae in alias_entries_2]))
+            # get sink lines
+            # (start and end line of task_sug_1's parent func)
+            sink_lines_start = alias_entry[0][2].split(":")
+            sink_lines_end = alias_entry[0][3].split(":")
+            sink_lines = []
+            for ln in range(int(sink_lines_start[1]), int(sink_lines_end[1]) + 1):
+                sink_lines.append("" + sink_lines_start[0] + ":" + str(ln))
+            # check if there is a RAW on the variable within sink lines and source lines.
+            for intersection_entry in intersection:
+                # get intersection variable and source lines
+                intersecting_variable = intersection_entry[0]
+                source_lines_start = intersection_entry[2].split(":")
+                source_lines_end = intersection_entry[3].split(":")
+                source_lines = []
+                for ln in range(int(source_lines_start[1]), int(source_lines_end[1])+1):
+                    source_lines.append(""+source_lines_start[0]+":"+str(ln))
+                # check if there is a RAW on the variable within sink lines and source lines.
+                if source_lines == sink_lines:
+                    continue
+                for source_line in source_lines:
+                    if not source_line in raw_dependency_information:
+                        continue
+                    for raw_dep_entry in raw_dependency_information[source_line]:
+                        if raw_dep_entry[1] == intersecting_variable:
+                            if raw_dep_entry[0] in sink_lines:
+                     #            print("DEPENDENCE: ", raw_dep_entry[0], " -- ", source_line)
+                                dependences.append(parameter)
+    dependences = list(set(dependences))
+    return dependences
+
+
+def __get_RAW_dependency_information_from_dep_file(dep_file) -> dict:
+    """TODO
+    Format: {source_line: [(sink_line, var_name)]"""
+    raw_dependencies = dict()
+    with open(dep_file) as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            # format of dependency entries in _dep.txt-file:
+            #   sourceLine NOM RAW sinkLine|variable
+            if not " NOM " in line:
+                continue
+            split_line = line.split(" NOM ")
+            source_line = split_line[0]
+            # split entries
+            entries = []
+            current_entry = ""
+            for word in split_line[1].split(" "):
+                word = word.replace(" ", "")
+                if word == "RAW" or word == "WAR" or word == "WAW" or word == "INIT":
+                    if len(current_entry) > 0:
+                        entries.append(current_entry)
+                    current_entry = ""
+                if len(current_entry) > 0:
+                    current_entry += " "+word
+                else:
+                    current_entry += word
+            if len(current_entry) > 0:
+                entries.append(current_entry)
+            if source_line not in raw_dependencies:
+                raw_dependencies[source_line] = []
+            for entry in entries:
+                # filter for RAW dependencies
+                split_entry = entry.split(" ")
+                if split_entry[0] != "RAW":
+                    continue
+                split_sink_line_var = split_entry[1].split("|")
+                sink_line = split_sink_line_var[0]
+                var_name = split_sink_line_var[1].replace(".addr", "")
+                raw_dependencies[source_line].append((sink_line, var_name))
+    return raw_dependencies
+
+
+def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_code_files: dict):
+    """TODO"""
     # iterate over task suggestions
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
-    aliases = []
+    # collect alias information
+    aliases = dict()
     for ts in task_suggestions:
+        current_alias_entry = []
         # get parent function
         for parent_function in [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                                 if pet.node_at(e[0]).type == NodeType.FUNC]:
             # get recursive function call from original source code
-            function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line), ts.node_id.split(":")[0])
+            function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
+                                                                        ts.node_id.split(":")[0])
             # get function parameter names from recursive function call
-            parameter_names = __get_parameter_names_from_function_call(function_call_string, ts._node.recursive_function_calls[0], ts._node)
-            # print("function_call_string: ", function_call_string)
-            # print("parameter_names: ", parameter_names)
-            # print("rec: ", ts._node.recursive_function_calls)
+            parameter_names = __get_parameter_names_from_function_call(function_call_string,
+                                                                       ts._node.recursive_function_calls[0], ts._node)
             # get CU Node object of called function
             called_function_cu_id = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
@@ -321,32 +495,30 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [Patter
             for idx, param in enumerate(parameter_names):
                 if param is None:
                     continue
-                current_alias = []
-                current_alias.append((param, parent_function.name, parent_function.start_position(), parent_function.end_position()))
-                current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx, source_code_files, [])
-                aliases.append(current_alias)
-
-#    # join aliases on first element (original identifier)
-#    joined_aliases = []
-#    while aliases:
-#        join_on = aliases.pop()
-#        join_indices = []
-#        for idx, alias_entry in enumerate(aliases):
-#            if alias_entry[0] == join_on[0]:
-#                join_indices.append(idx)
-#        # sort reversed to prevent errors due to popping elements
-#        join_indices.sort(reverse=True)
-#        for idx in join_indices:
-#            to_be_joined = aliases.pop(idx)
-#            to_be_joined.pop(0)
-#            join_on += to_be_joined
-#        joined_aliases.append(join_on)
-#    aliases = joined_aliases
-    print("Found aliases:")
-    [print(e,"\n") for e in aliases]
-
-                # read _dep.txt to find dependencies
-    return suggestions
+                current_alias = [(param, parent_function.name, parent_function.start_position(),
+                                  parent_function.end_position())]
+                current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx,
+                                                                       source_code_files, [])
+                current_alias_entry.append(current_alias)
+        aliases[ts] = current_alias_entry
+    # join aliases on first element (original identifier)
+    for key in aliases:
+        joined_aliases = []
+        while aliases[key]:
+            join_on = aliases[key].pop()
+            join_indices = []
+            for idx, alias_entry in enumerate(aliases[key]):
+                if alias_entry[0] == join_on[0]:
+                    join_indices.append(idx)
+            # sort reversed to prevent errors due to popping elements
+            join_indices.sort(reverse=True)
+            for idx in join_indices:
+                to_be_joined = aliases[key].pop(idx)
+                to_be_joined.pop(0)
+                join_on += to_be_joined
+            joined_aliases.append(join_on)
+        aliases[key] = joined_aliases
+    return aliases
 
 
 def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int, source_code_files, visited):
@@ -599,6 +771,88 @@ def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggest
             print("TPDet:suggest_barriers_for_uncovered_tasks_before_return: added taskwait suggestion at line: ",
                   cu.end_position())
             suggestions.append(tmp_suggestion)
+    return suggestions
+
+
+def __filter_data_depend_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
+    """Removes superfluous variables from the data depend clauses
+    of task suggestions.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return List[PatternInfo]
+    """
+    for suggestion in suggestions:
+        # only consider task suggestions
+        if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+            continue
+        # get function containing the task cu
+        parent_function, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+        # filter in_dep
+        to_be_removed = []
+        for var in suggestion.in_dep:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
+                    # check if var is defined in parent function
+                    if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                  parent_function.end_position()):
+                        is_valid = True
+                    else:
+                        pass
+            except ValueError:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
+        # filter out_dep
+        to_be_removed = []
+        for var in suggestion.out_dep:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
+                    # check if var is defined in parent function
+                    if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                  parent_function.end_position()):
+                        is_valid = True
+                    else:
+                        pass
+            except ValueError:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
+        # filter in_out_dep
+        to_be_removed = []
+        for var in suggestion.in_out_dep:
+            var = var.replace(".addr", "")
+            is_valid = False
+            try:
+                for defLine in var_def_line_dict[var]:
+                    # ensure backwards compatibility (no definition line present in cu_xml
+                    if defLine is None:
+                        is_valid = True
+                    # check if var is defined in parent function
+                    if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                  parent_function.end_position()):
+                        is_valid = True
+                    else:
+                        pass
+            except ValueError:
+                pass
+            if not is_valid:
+                to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
     return suggestions
 
 
