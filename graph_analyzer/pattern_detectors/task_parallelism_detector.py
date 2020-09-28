@@ -323,8 +323,12 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
         for parent_function_1 in [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
                                   if pet.node_at(e[0]).type == NodeType.FUNC]:
             # get recursive function call from original source code
-            function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
-                                                                          ts_1.node_id.split(":")[0])
+            function_call_string_1 = ""
+            try:
+                function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
+                                                                              ts_1.node_id.split(":")[0])
+            except IndexError:
+                continue
             # get function parameter names from recursive function call
             function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
@@ -333,9 +337,13 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                 for parent_function_2 in [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
                                           if pet.node_at(e[0]).type == NodeType.FUNC]:
                     # get recursive function call from original source code
-                    function_call_string_2 = __get_function_call_from_source_code(source_code_files,
-                                                                                  int(ts_2.pragma_line),
-                                                                                  ts_2.node_id.split(":")[0])
+                    function_call_string_2 = ""
+                    try:
+                        function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                      int(ts_2.pragma_line),
+                                                                                      ts_2.node_id.split(":")[0])
+                    except IndexError:
+                        continue
                     # get function parameter names from recursive function call
                     function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
                         function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
@@ -379,23 +387,11 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
             # skip wrong alias entries
             if not alias_entry[0][0] == parameter:
                 continue
-            print()
-            print("alias entry 1")
-            print("\t", alias_entry)
             # intersect alias_entry of task_suggestion_1 with entries of task_suggestion_2
             alias_entries_2 = []
             for alias_entry_2 in aliases[task_suggestion_2]:
-            #    print("alias entry 2")
-            #    print("\t", alias_entry_2)
-              #  # ignore calls to same function
-              #  if alias_entry_2[0][1] == alias_entry[0][1]:
-              #      print("CALL TO SAME FUNCTION DETECTED!")
-              #      continue
                 alias_entries_2 += alias_entry_2
             intersection = list(set([ae for ae in alias_entry if ae in alias_entries_2]))
-
-            print("intersection: ")
-            print(intersection)
             # get sink lines
             # (start and end line of task_sug_1's parent func)
             sink_lines_start = alias_entry[0][2].split(":")
@@ -482,8 +478,12 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
         for parent_function in [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                                 if pet.node_at(e[0]).type == NodeType.FUNC]:
             # get recursive function call from original source code
-            function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
-                                                                        ts.node_id.split(":")[0])
+            function_call_string = ""
+            try:
+                function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
+                                                                            ts.node_id.split(":")[0])
+            except IndexError:
+                continue
             # get function parameter names from recursive function call
             function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(function_call_string,
                 ts._node.recursive_function_calls[0], ts._node)
@@ -556,7 +556,11 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
         for called_function in called_functions:
             # read line from source code (iterate over lines of CU to search for function call)
             for line in range(cu.start_line, cu.end_line+1):
-                source_code_line = __get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
+                source_code_line = ""
+                try:
+                    source_code_line = __get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
+                except IndexError:
+                    continue
                 # get parameter names from call
                 function_name, call_parameters = __get_called_function_and_parameter_names_from_function_call(source_code_line, called_function.name, cu)
                 # check if parameter_name is contained
