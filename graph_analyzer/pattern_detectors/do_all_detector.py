@@ -7,8 +7,6 @@
 # directory for details.
 from typing import List
 
-from graph_tool import Vertex
-
 from PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import classify_loop_variables
@@ -62,7 +60,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     return result
 
 
-def __detect_do_all(pet: PETGraphX, root: Vertex) -> bool:
+def __detect_do_all(pet: PETGraphX, root: CUNode) -> bool:
     """Calculate do-all value for node
 
     :param pet: PET graph
