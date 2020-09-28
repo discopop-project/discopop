@@ -9,8 +9,6 @@
 
 from typing import List
 
-from graph_tool import Vertex
-
 from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
 from pattern_detectors.PatternInfo import PatternInfo
 from utils import correlation_coefficient, classify_task_vars
@@ -93,7 +91,7 @@ class PipelineInfo(PatternInfo):
 
         return [dep for dep in raw if dep[0] in nodes_after]
 
-    def __output_stage(self, node: Vertex) -> PipelineStage:
+    def __output_stage(self, node: CUNode) -> PipelineStage:
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
 
