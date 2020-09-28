@@ -875,6 +875,9 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: [PatternInfo], var
 def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
     """Removes superfluous variables from the data sharing clauses
     of task suggestions.
+    Removes .addr suffix from variable names
+    Removes entries if Variable occurs in different classes. Removes in following order:
+    firstprivate, private, shared
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
     :return List[PatternInfo]
@@ -961,6 +964,28 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                 to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
         suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
+
+        # remove duplicates and .addr suffix from variable names
+        suggestion.shared = list(set([v.replace(".addr", "") for v in suggestion.shared]))
+        suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
+        suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
+
+        # remove duplicates (variable occuring in different classes)
+        remove_from_first_private = []
+        remove_from_private = []
+        for var in suggestion.shared:
+            if var in suggestion.private:
+                remove_from_private.append(var)
+            if var in suggestion.first_private:
+                remove_from_first_private.append(var)
+        for var in suggestion.private:
+            if var in suggestion.first_private:
+                remove_from_first_private.append(var)
+        remove_from_first_private = list(set(remove_from_first_private))
+        remove_from_private = list(set(remove_from_private))
+        remove_from_private = [var for var in remove_from_private if not var in remove_from_first_private]
+        suggestion.private = [var for var in suggestion.private if not var in remove_from_private]
+        suggestion.first_private = [var for var in suggestion.first_private if not var in remove_from_first_private]
     return suggestions
 
 
