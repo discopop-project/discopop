@@ -11,6 +11,8 @@ import copy
 import os
 from typing import List
 
+from cpp_demangle import demangle
+
 from lxml import etree
 from lxml import objectify
 
@@ -280,6 +282,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __sort_output(result)
 
     return result
+
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str,
@@ -562,6 +565,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
                 except IndexError:
                     continue
                 # get parameter names from call
+
                 function_name, call_parameters = __get_called_function_and_parameter_names_from_function_call(source_code_line, called_function.name, cu)
                 # check if parameter_name is contained
                 for idx, pn in enumerate(call_parameters):
@@ -589,27 +593,17 @@ def __get_function_call_from_source_code(source_code_files, line_number, file_id
 def __get_called_function_and_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str,
                                                                  node: CUNode):
     """TODO
-    If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position."""
+    If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position.
+    Returns None if function name not in source_code_line"""
     # find function name by finding biggest match between function call line and recursive call
-    function_name = ""
-    function_position = 0
     mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
-    for rotation in range (0, len(mangled_function_name)):
-        rotated_call = mangled_function_name[rotation:] + mangled_function_name[:rotation]
-        for start_idx in range (0, len(source_code_line)):
-            current_intersection = ""
-            for char_index in range(0, len(rotated_call)):
-                if start_idx + char_index >= len(source_code_line):
-                    break
-                if source_code_line[start_idx + char_index] == rotated_call[char_index]:
-                    current_intersection += rotated_call[char_index]
-                else:
-                    break
-            if len(current_intersection) > len(function_name):
-                function_position = start_idx
-                function_name = current_intersection
+    function_name = demangle(mangled_function_name).split("(")[0]
+    if not function_name in source_code_line:
+        return (None, [])
+
     # get parameters in brackets
-    parameter_string = source_code_line[function_position:]
+    # parameter_string = source_code_line[function_position:]
+    parameter_string = source_code_line[source_code_line.find(function_name) + len(function_name):]
         # prune left
     while not parameter_string.startswith(("(")):
         parameter_string = parameter_string[parameter_string.find("("):]
@@ -2279,7 +2273,6 @@ def cu_xml_preprocessing(cu_xml):
                                         pass
                             except AttributeError:
                                 pass
-
                         for tmp in potential_lines:
                             if tmp == "":
                                 continue
@@ -2291,7 +2284,7 @@ def cu_xml_preprocessing(cu_xml):
                                 if int(tmp[tmp.find(":") + 1:]) < int(
                                         parent_new_start_line[parent_new_start_line.find(":") + 1:]):
                                     parent_new_start_line = tmp
-                        if not potential_lines:
+                        if not potential_lines or (potential_lines and not parent_new_start_line):
                             parent_new_start_line = str(separator_line[:separator_line.index(":")])
                             parent_new_start_line += ":"
                             parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)

@@ -204,11 +204,13 @@ class PETGraphX(object):
                 for child in [n.text for n in node.childrenNodes]:
                     if child not in self.g:
                         print(f"WARNING: no child node {child} found")
+                        continue
                     self.g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if 'successors' in dir(node) and 'CU' in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in self.g:
                         print(f"WARNING: no successor node {successor} found")
+                        continue
                     self.g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
         # calculate position before dependencies affect them
