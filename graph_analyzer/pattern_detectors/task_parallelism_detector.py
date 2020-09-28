@@ -420,7 +420,6 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
                     for raw_dep_entry in raw_dependency_information[source_line]:
                         if raw_dep_entry[1] == intersecting_variable:
                             if raw_dep_entry[0] in sink_lines:
-                                print("DEPENDENCE: ", parameter)
                                 dependences.append(parameter)
 
     dependences = list(set(dependences))
@@ -583,7 +582,16 @@ def __get_function_call_from_source_code(source_code_files, line_number, file_id
     source_code_lines = source_code.readlines()
     offset = -1
     function_call_string = source_code_lines[line_number + offset]
-    while function_call_string.count("(") > function_call_string.count(")") or function_call_string.count("(") < 1:
+    if ")" in function_call_string and "(" in function_call_string:
+        if function_call_string.index(")") < function_call_string.index("("):
+            function_call_string = function_call_string[function_call_string.index(")") + 1:]
+    if ")" in function_call_string and "(" not in function_call_string:
+        function_call_string = function_call_string[function_call_string.index(")") + 1:]
+    while function_call_string.count("(") > function_call_string.count(")") or function_call_string.count("(") < 1 or function_call_string.count(")") < 1:
+        # if ) prior to (, cut first part away
+        if ")" in function_call_string and "(" in function_call_string:
+            if function_call_string.index(")") < function_call_string.index("("):
+                function_call_string = function_call_string[function_call_string.index(")") + 1:]
         offset += 1
         function_call_string += source_code_lines[line_number + offset]
     function_call_string = function_call_string.replace("\n", "")
