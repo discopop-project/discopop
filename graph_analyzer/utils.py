@@ -11,7 +11,6 @@ import itertools
 from typing import List, Set, Dict, Tuple
 
 import numpy as np
-from graph_tool.all import Edge
 
 from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from .variable import Variable
@@ -423,7 +422,8 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], Li
     return first_private, private, last_private, shared, reduction
 
 
-def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Edge], out_deps: List[Edge]):
+def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
+                       out_deps: List[Tuple[str, str, Dependency]]):
     """Classify task variables
 
     :param pet: CU graph
