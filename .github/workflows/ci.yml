@@ -20,7 +20,7 @@ jobs:
       - name: "Build Image with Dependencies"
         run: docker build -f .github/workflows/graph_analyzer/Dockerfile . --tag graph_analyzer
       - name: "Run unit_tests.py"
-        run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop/graph_analyzer graph_analyzer python unit_tests.py
+        run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop graph_analyzer python -m graph_analyzer.unit_tests
 
   discopop_profiler:
     name: "Profiler"

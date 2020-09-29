@@ -9,9 +9,9 @@
 
 from typing import List
 
-from PETGraphX import PETGraphX, NodeType, CUNode
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import is_reduction_var, classify_loop_variables
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType, CUNode
+from ..utils import is_reduction_var, classify_loop_variables
 
 
 class ReductionInfo(PatternInfo):
