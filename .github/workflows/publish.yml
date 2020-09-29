@@ -1,0 +1,41 @@
+name: "Publish Package"
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    name: "Publish Package"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "Setup Python"
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: "Get Version String"
+        id: get_version
+        env:
+          GITHUB_REF: ${{ github.ref }}
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+        shell: bash
+      - name: "Generate Python Package"
+        run: python setup.py sdist
+      - name: "Create Draft Release on GitHub"
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          release_name: Version ${{ steps.get_version.outputs.VERSION }}
+          draft: true
+      - name: "Publish Distribution to PyPI"
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.pypi_password }}
