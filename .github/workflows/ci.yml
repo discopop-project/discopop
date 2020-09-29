@@ -14,13 +14,24 @@ jobs:
   graph_analyzer:
     name: "Graph Analyzer"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.6 ]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
-      - name: "Build Image with Dependencies"
-        run: docker build -f .github/workflows/graph_analyzer/Dockerfile . --tag graph_analyzer
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install -r graph_analyzer/requirements.txt
+          python -m pip install mypy data-science-types
       - name: "Run unit_tests.py"
-        run: docker run --mount type=bind,src=`pwd`,dst=/discopop --workdir=/discopop graph_analyzer python -m graph_analyzer.unit_tests
+        run: python -m graph_analyzer.unit_tests
+      - name: "Run MyPy Type Checker"
+        run: python -m mypy --warn-unused-ignores -p graph_analyzer
 
   discopop_profiler:
     name: "Profiler"
