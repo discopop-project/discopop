@@ -32,8 +32,8 @@ A data dependence is represented as a triple `<sink, type, source>`. `type` is t
 ```
 Besides the list of reduction loops, this step generates two important files named `loop_counter_output.txt` and `loop_meta.txt`. These files along with CU graph and dependences are required for the pattern analysis in the next step.
 
-5) To obtain the list of patterns and OpenMP parallelization suggestions, run the Python script in the `/graph_analyzer` directory:
+5) To obtain the list of patterns and OpenMP parallelization suggestions, run the Python application `discopop_explorer`:
 
-    `python3 graph_analyzer.py --cu-xml=Data.xml --dep-file=dp_run_dep.txt`
+    `python3 -m discopop_explorer --cu-xml=Data.xml --dep-file=dp_run_dep.txt`
 
 You should now be able to see the pipeline pattern found in the target application along with its stages plus suitable OpenMP constructs for parallelization. You can access a sample output in [simple_pipeline.json](/test/simple_pipeline.json). Using these hints you can start parallelizing the target application.

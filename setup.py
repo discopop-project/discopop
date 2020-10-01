@@ -13,7 +13,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 os.chdir(Path(__file__).parent)
-SRC = Path("graph_analyzer")
+SRC = Path("discopop_explorer")
 
 
 def get_version():
@@ -27,7 +27,7 @@ def get_requirements():
 
 
 if sys.version_info < (3, 6):
-    raise SystemExit("Discopop analyzer requires Python >= 3.6.")
+    raise SystemExit("Discopop explorer requires Python >= 3.6.")
 
 setup(
     name="discopop",
@@ -43,7 +43,7 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=get_requirements(),
     python_requires=">=3.6",
-    entry_points={"console_scripts": ["graph_analyzer=graph_analyzer.__main__:main"]},
+    entry_points={"console_scripts": ["discopop_explorer=discopop_explorer.__main__:main"]},
     zip_safe=True,
     classifiers=[
         "Development Status :: 4 - Beta",
