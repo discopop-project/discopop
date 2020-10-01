@@ -21,11 +21,11 @@ To use the graph analyzer tool, you need to have Python 3.6+ installed on your s
 ### Usage
 To run the graph analyzer, you can use the following command:
 
-`python3 graph_analyzer.py --path <path-to-your-output>`
+`python3 -m discopop_explorer --path <path-to-your-output>`
 
 You can specify the path to DiscoPoP output files. Then, the Python script searches within this path to find the required files. Nevertheless, if you are interested in passing a specific location to each file, here is the detailed usage:
 
-    `graph_analyzer.py [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>]`
+    `discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>]`
 
 Options:
 ```
@@ -51,7 +51,7 @@ The loop itself sums up all numbers from 1 to n.
 
 You can run DiscoPoP on **main.c** or just use included output.
 
-After that, you can run **graph_analyzer.py** from **graph_analyzer**. The **--path** argument should point to the output of the DiscoPoP.
+After that, you can run **discopop_explorer**. The **--path** argument should point to the output of the DiscoPoP.
 
 In this example, the output for reduction will point to the lines 6-9. And it will suggest **pragma omp parallel for** OpenMP directive for parallizing the loop.
 You will also find **i** classified as a private variable and **sum** as a reduction variable. Thus, the parallelization directive would be suggested as following:
