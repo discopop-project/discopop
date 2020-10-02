@@ -4,15 +4,8 @@ DiscoPoP is an open-source tool that helps software developers parallelize their
 In a nutshell, DiscoPoP performs the following steps:
 * detect parts of the code (computational units or CUs) with little to no internal parallelization potential,
 * find data dependences among them,
-<<<<<<< HEAD
-* identifie parallel patterns that can be used to parallelize a code region,
-* and finally suggest corresponding OpenMP parallelization constructs and clauses to programmers.
-
-A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
-=======
 * identify parallel patterns that can be used to parallelize a code region,
 * and finally suggest corresponding OpenMP parallelization constructs and clauses to programmers.
->>>>>>> develop
 
 DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code which can be transferred into the LLVM IR.
 
