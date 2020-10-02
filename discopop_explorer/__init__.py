@@ -12,6 +12,7 @@ from typing import List
 from pluginbase import PluginBase  # type:ignore
 
 from .PETGraphX import PETGraphX
+from ._version import __version__
 from .parser import parse_inputs
 from .pattern_detection import DetectionResult, PatternDetectorX
 

@@ -32,7 +32,7 @@ import time
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 
-from . import run
+from . import run, __version__
 from .json_serializer import PatternInfoSerializer
 
 docopt_schema = Schema({
@@ -58,7 +58,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
-    arguments = docopt(__doc__)
+    arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:
         arguments = docopt_schema.validate(arguments)
