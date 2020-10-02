@@ -1,0 +1,49 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+name: "DiscoPoP CI"
+on: [push, pull_request]
+
+jobs:
+
+  discopop_explorer:
+    name: "Explorer"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ 3.6 ]
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install -r discopop_explorer/requirements.txt
+          python -m pip install mypy data-science-types
+      - name: "Run unit_tests.py"
+        run: python -m discopop_explorer.unit_tests
+      - name: "Run MyPy Type Checker"
+        run: python -m mypy --warn-unused-ignores -p discopop_explorer
+
+  discopop_profiler:
+    name: "Profiler"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "Build DiscoPoP Profiler"
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          make -j3
+      - name: "Run DiscoPoP Profiler on test/ Targets"
+        run: .github/workflows/discopop_profiler/test.sh

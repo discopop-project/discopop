@@ -7,13 +7,11 @@
 # directory for details.
 
 
-from typing import List
+from typing import List, Tuple
 
-from graph_tool import Vertex
-
-from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import correlation_coefficient, classify_task_vars
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
+from ..utils import correlation_coefficient, classify_task_vars
 
 __pipeline_threshold = 0.9
 
@@ -70,30 +68,28 @@ class PipelineInfo(PatternInfo):
         self.stages = [self.__output_stage(s) for s in self._stages]
 
     def __in_dep(self, node: CUNode):
-        raw = []
+        raw: List[Tuple[str, str, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = [node]
         for i in range(self._stages.index(node)):
             nodes_before.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
-        nodes_before = [n.id for n in nodes_before]
 
-        return [dep for dep in raw if dep[1] in nodes_before]
+        return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
     def __out_dep(self, node: CUNode):
-        raw = []
+        raw: List[Tuple[str, str, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
             nodes_after.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
-        nodes_after = [n.id for n in nodes_after]
 
-        return [dep for dep in raw if dep[0] in nodes_after]
+        return [dep for dep in raw if dep[0] in [n.id for n in nodes_after]]
 
-    def __output_stage(self, node: Vertex) -> PipelineStage:
+    def __output_stage(self, node: CUNode) -> PipelineStage:
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
 
@@ -159,13 +155,13 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0)
+        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        pipeline_vector.append(1)
+        pipeline_vector.append(1.0)
 
-    min_weight = 1
+    min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
             if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
@@ -174,11 +170,11 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
                 if min_weight > node_weight > 0:
                     min_weight = node_weight
 
-    if min_weight == 1:
-        graph_vector.append(0)
+    if min_weight == 1.0:
+        graph_vector.append(0.0)
         pipeline_vector.append(0)
     else:
-        graph_vector.append(1)
+        graph_vector.append(1.0)
         pipeline_vector.append(min_weight)
 
     return correlation_coefficient(graph_vector, pipeline_vector)

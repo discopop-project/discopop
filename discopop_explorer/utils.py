@@ -11,12 +11,11 @@ import itertools
 from typing import List, Set, Dict, Tuple
 
 import numpy as np
-from graph_tool.all import Edge
 
-from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
-from variable import Variable
+from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
+from .variable import Variable
 
-loop_data = {}
+loop_data: Dict[str, int] = {}
 
 
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
@@ -26,8 +25,8 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     :param v2: second vector
     :return: correlation coefficient, 0 if one of the norms is 0
     """
-    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
-    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
+    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)  # type:ignore
+    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
 
 
 def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
@@ -234,9 +233,11 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
         print("Empty var.name found. Skipping.")
         return False
     for dep in raw_deps:
+        assert dep[2].var_name is not None
         if var.name in dep[2].var_name and any([n.id == dep[1] for n in tree]):
             result = True
             for warDep in war_deps:
+                assert warDep[2].var_name is not None
                 if (var.name in warDep[2].var_name
                         and any([n.id == dep[1] for n in tree])
                         and dep[2].source == warDep[2].sink):
@@ -338,7 +339,7 @@ def is_read_in(var: Variable, raw_deps_on: Set[Tuple[str, str, Dependency]],
     return False
 
 
-def get_child_loops(pet: PETGraphX, node: CUNode) -> (List[CUNode], List[CUNode]):
+def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CUNode]]:
     """Gets all do-all and reduction subloops
 
     :param pet: CU graph
@@ -364,8 +365,8 @@ def get_child_loops(pet: PETGraphX, node: CUNode) -> (List[CUNode], List[CUNode]
     return do_all, reduction
 
 
-def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], List[Variable], List[Variable],
-                                                              List[Variable], List[Variable]):
+def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable], List[Variable], List[Variable],
+                                                                   List[Variable], List[Variable]]:
     """Classifies variables inside the loop
 
     :param pet: CU graph
@@ -423,7 +424,8 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> (List[Variable], Li
     return first_private, private, last_private, shared, reduction
 
 
-def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Edge], out_deps: List[Edge]):
+def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
+                       out_deps: List[Tuple[str, str, Dependency]]):
     """Classify task variables
 
     :param pet: CU graph

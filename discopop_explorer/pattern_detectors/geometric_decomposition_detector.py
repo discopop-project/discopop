@@ -8,12 +8,12 @@
 
 
 import math
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 
-from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-from pattern_detectors.PatternInfo import PatternInfo
-from utils import classify_task_vars, get_child_loops
-from variable import Variable
+from .PatternInfo import PatternInfo
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..utils import classify_task_vars, get_child_loops
+from ..variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
 
@@ -46,7 +46,7 @@ class GDInfo(PatternInfo):
             self.num_tasks = math.floor(nt)
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
-        lp = []
+        lp: List = []
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
         fp.append(Variable('int', 'i'))
 
@@ -86,21 +86,21 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
         if __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
-            if test:
+            if test and min_iter is not None:
                 result.append(GDInfo(pet, node, min_iter))
                 # result.append(node.id)
 
     return result
 
 
-def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> (bool, int):
+def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> Tuple[bool, Optional[int]]:
     """Tests, whether or not the node has inner loops with and none of them have 0 iterations
 
     :param pet: PET graph
     :param node: the node
     :return: true if node satisfies condition, min iteration number
     """
-    min_iterations_count = math.inf
+    min_iterations_count = None
     inner_loop_iter = {}
 
     children = pet.direct_children_of_type(node, NodeType.LOOP)
@@ -112,8 +112,9 @@ def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> (bool, int):
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
-        min_iterations_count = min(min_iterations_count, v)
-    return inner_loop_iter and min_iterations_count > 0, min_iterations_count
+        if min_iterations_count is None or v < min_iterations_count:
+            min_iterations_count = v
+    return bool(inner_loop_iter) and (min_iterations_count is None or min_iterations_count > 0), min_iterations_count
 
 
 def __iterations_count(pet: PETGraphX, node: CUNode) -> int:
