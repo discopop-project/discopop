@@ -7,9 +7,9 @@ In a nutshell, DiscoPoP performs the following steps:
 * identifies parallel patterns which can be used to parallelize a code region,
 * and finally suggests corresponding OpenMP parallelization constructs and clauses to programmers.
 
-A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
-
 DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code which can be transferred into the LLVM IR.
+
+A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
 
 ## Getting started
 ### Pre-requisites
@@ -75,6 +75,8 @@ cmake -DCMAKE_CXX_COMPILER=<PATH_TO_CLANG> -DCMAKE_CXX_FLAGS="-c -g -O0 -fno-dis
 cmake -DCMAKE_CXX_COMPILER=<PATH_TO_CLANG> -DCMAKE_CXX_FLAGS="-g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_FOLDER>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm <PATH_TO_FILE_MAPPING>" -DCMAKE_CXX_STANDARD_LIBRARIES="-L<PATH_TO_DISCOPOP_BUILD_FOLDER>/rtlib -lDiscoPoP_RT -lpthread" .
 ```
 3. Running `make` will build the project with DiscoPoP instrumentation applied on the code.
+
+You may use Github issues to report potential bugs or ask your questions. In case you need individual support, please contact us using discopop[at]lists.parallel.informatik.tu-darmstadt.de.
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
