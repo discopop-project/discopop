@@ -231,7 +231,10 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     # preprocessed_graph.show()
     # execute reduction detector to enable taskloop-reduction-detection
     from pattern_detectors.reduction_detector import run_detection as detect_reduction
+    from pattern_detectors.do_all_detector import run_detection as detect_do_all
     detect_reduction(preprocessed_graph)
+    detect_do_all(preprocessed_graph)
+
     suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file)
     return suggestions
 
@@ -287,12 +290,58 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
     result = __remove_duplicates(result)
+    result = __correct_taskwait_suggestions_in_loop_body(pet, result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
     return result
+
+
+def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [PatternInfo]):
+    """TODO
+    distinguish between taskwaits in loop body and taskwait in do-all loop body.
+    If regular loop: move taskwait suggested at loop increment line to end of loop body.
+    If do-all loop: move taskwait outside of loop body."""
+    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
+    for ts in task_suggestions:
+        for loop_cu in pet.all_nodes(NodeType.LOOP):
+            # check if task suggestion inside do-all loop exists
+            if __line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
+                def find_taskwaits(cu_node: CUNode):
+                    if cu_node.tp_contains_taskwait:
+                        return [cu_node]
+                    result = []
+                    for succ_cu_node in [pet.node_at(t) for s, t, e in pet.out_edges(cu_node.id) if
+                                         e.etype == EdgeType.SUCCESSOR and
+                                         pet.node_at(t) != cu_node]:
+                        result += find_taskwaits(succ_cu_node)
+                    return result
+                # find successive taskwaits
+                successive_taskwait_cus = find_taskwaits(ts._node)
+
+                for stws in successive_taskwait_cus:
+                    # check if stws is suggested at loop increment
+                    if stws.basic_block_id != "for.inc":
+                        continue
+                    if loop_cu.do_all:
+                        # Do-all loop, move taskwait to the outside
+                        print("TPDet: correct_taskwait_suggestions_in_loop_body: Task in do-all loop ", ts.pragma_line,
+                              ". Moving Taskwait ", stws.start_line, " to: ",
+                              int(loop_cu.end_position().split(":")[1])+1)
+                        for s in suggestions:
+                            if s.pragma[0] == "taskwait" and s._node == stws:
+                                s.pragma_line = int(loop_cu.end_position().split(":")[1])+1
+                    else:
+                        # Regular loop, move taskwait to the end of the loop body
+                        print("TPDet: correct_taskwait_suggestions_in_loop_body: Task in regular loop ", ts.pragma_line,
+                              ". Moving Taskwait ", stws.start_line, " to: ",
+                              int(loop_cu.end_position().split(":")[1]))
+                        for s in suggestions:
+                            if s.pragma[0] == "taskwait" and s._node == stws:
+                                s.pragma_line = int(loop_cu.end_position().split(":")[1])
+    return suggestions
 
 
 
