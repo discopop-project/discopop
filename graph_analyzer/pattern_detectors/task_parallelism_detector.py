@@ -218,6 +218,17 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
+    # print dependences for debugging
+#    for cu in preprocessed_graph.all_nodes(NodeType.CU):
+#        if len(preprocessed_graph.out_edges(cu.id, EdgeType.DATA)) > 0:
+#            print(cu.id)
+#        for dep_edge in preprocessed_graph.out_edges(cu.id, EdgeType.DATA):
+#            print("\tout:", dep_edge[1], " : ", dep_edge[2])
+#        for dep_edge in preprocessed_graph.in_edges(cu.id, EdgeType.DATA):
+#            print("\tin :", dep_edge[0], " : ", dep_edge[2])
+#    import sys
+#    sys.exit()
+    # preprocessed_graph.show()
     # execute reduction detector to enable taskloop-reduction-detection
     from pattern_detectors.reduction_detector import run_detection as detect_reduction
     detect_reduction(preprocessed_graph)
@@ -323,8 +334,22 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
     in_dep_updates = dict()
     for ts_1 in task_suggestions:
         # get parent function
-        for parent_function_1 in [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
-                                  if pet.node_at(e[0]).type == NodeType.FUNC]:
+        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
+                                      if pet.node_at(e[0]).type == NodeType.FUNC]
+        # TODO traverse upwards if []
+        if not potential_parent_functions_1:
+            # perform BFS search on incoming CHILD edges to find closest parent function,
+            # i.e. function which contains the CU.
+            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
+            found_parent = None
+            while len(queue) > 0 or not found_parent:
+                current = queue.pop(0)
+                if current.type == NodeType.FUNC:
+                    found_parent = current
+                    break
+                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+            potential_parent_functions_1 = [found_parent]
+        for parent_function_1 in potential_parent_functions_1:
             # get recursive function call from original source code
             function_call_string_1 = ""
             try:
@@ -335,10 +360,24 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
             # get function parameter names from recursive function call
             function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
-            for ts_2 in [s for s in task_suggestions if not s == ts_1 and int(ts_1.pragma_line) <= int(s.pragma_line)]:
+            for ts_2 in [s for s in task_suggestions if not s == ts_1]:  # and int(ts_1.pragma_line) <= int(s.pragma_line)]: # TODO marker
                 # get parent function
-                for parent_function_2 in [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
-                                          if pet.node_at(e[0]).type == NodeType.FUNC]:
+                potential_parent_functions_2 = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
+                                                if pet.node_at(e[0]).type == NodeType.FUNC]
+                # TODO traverse upwards if []
+                if not potential_parent_functions_2:
+                    # perform BFS search on incoming CHILD edges to find closest parent function,
+                    # i.e. function which contains the CU.
+                    queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)]
+                    found_parent = None
+                    while len(queue) > 0 or not found_parent:
+                        current = queue.pop(0)
+                        if current.type == NodeType.FUNC:
+                            found_parent = current
+                            break
+                        queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+                    potential_parent_functions_2 = [found_parent]
+                for parent_function_2 in potential_parent_functions_2:
                     # get recursive function call from original source code
                     function_call_string_2 = ""
                     try:
@@ -476,9 +515,23 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
     aliases = dict()
     for ts in task_suggestions:
         current_alias_entry = []
+        potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
+                                      if pet.node_at(e[0]).type == NodeType.FUNC]
+        # TODO traverse upwards if []
+        if not potential_parent_functions:
+            # perform BFS search on incoming CHILD edges to find closest parent function,
+            # i.e. function which contains the CU.
+            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]
+            found_parent = None
+            while len(queue) > 0 or not found_parent:
+                current = queue.pop(0)
+                if current.type == NodeType.FUNC:
+                    found_parent = current
+                    break
+                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+            potential_parent_functions = [found_parent]
         # get parent function
-        for parent_function in [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
-                                if pet.node_at(e[0]).type == NodeType.FUNC]:
+        for parent_function in potential_parent_functions:
             # get recursive function call from original source code
             function_call_string = ""
             try:
@@ -492,6 +545,8 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
             # get CU Node object of called function
             called_function_cu_id = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
+                if recursive_function_call_entry is None:
+                    continue
                 if "," in recursive_function_call_entry:
                     recursive_function_call_entry = recursive_function_call_entry.split(",")[0]
                 recursive_function_call_entry = recursive_function_call_entry.split(" ")
@@ -604,21 +659,26 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position.
     Returns None if function name not in source_code_line"""
     # find function name by finding biggest match between function call line and recursive call
-    mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
-    function_name = demangle(mangled_function_name).split("(")[0]
-    if not function_name in source_code_line:
-        return (None, [])
+    try:
+        mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
+        function_name = demangle(mangled_function_name).split("(")[0]
+    except ValueError:
+        return None, []
+    except AttributeError:
+        return None, []
+    if function_name not in source_code_line:
+        return None, []
 
     # get parameters in brackets
     # parameter_string = source_code_line[function_position:]
     parameter_string = source_code_line[source_code_line.find(function_name) + len(function_name):]
-        # prune left
-    while not parameter_string.startswith(("(")):
+    # prune left
+    while not parameter_string.startswith("("):
         parameter_string = parameter_string[parameter_string.find("("):]
-        # prune right
-    while not parameter_string.endswith((")")):
+    # prune right
+    while not parameter_string.endswith(")"):
         parameter_string = parameter_string[:parameter_string.rfind(")")+1]
-        # prune to correct amount of closing brackets
+    # prune to correct amount of closing brackets
     while not parameter_string.count("(") == parameter_string.count(")"):
         parameter_string = parameter_string[:-1]
         parameter_string = parameter_string[:parameter_string.rfind(")")+1]
@@ -628,11 +688,30 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     result_parameters = []
     for param in parameters:
         if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
-            result_parameters.append(None)
+            import re
+            split_param_expression = re.split("\+|\-|\*|/|\(|\)", param)
+            split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
+            # check if any of the parameters is in list of known variables
+            split_param_expression = [ex for ex in split_param_expression if ex in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]]
+            # check if type of any of them contains * (i.e. is a pointer)
+            found_entry = False
+            for var_name_to_check in split_param_expression:
+                if found_entry:
+                    break
+                for known_var in node.local_vars+node.global_vars:
+                    if found_entry:
+                        break
+                    if known_var.name.replace(".addr", "") == var_name_to_check:
+                        if "*" in known_var.type:
+                            result_parameters.append(var_name_to_check)
+                            found_entry = True
+            if not found_entry:
+                result_parameters.append(None)
         else:
             # check if param in known variables:
-            if param.replace(" ", "") in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]:
-                result_parameters.append(param.replace(" ", ""))
+            # if param.replace(" ", "") in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]:
+            result_parameters.append(param.replace(" ", ""))
+
     return function_name, result_parameters
 
 
