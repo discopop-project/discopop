@@ -346,7 +346,13 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: Lis
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
                                             dep_file: str) -> List[PatternInfo]:
-    """TODO"""
+    """Wrapper for alias based dependency detection.
+    :param pet: PET Graph
+    :param suggestions: List[PatternInfo]
+    :param file_mapping_path: path to FileMapping file
+    :param dep_file: path to dependency file
+    :return: List[PatternInfo]
+    """
     # Read contents of file_mapping
     source_code_files = dict()
     with open(file_mapping_path) as f:
@@ -365,7 +371,14 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
 def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
                                                     source_code_files: Dict,
                                                     raw_dependency_information: Dict) -> List[PatternInfo]:
-    """TODO, adds dependency clauses to task suggestions"""
+    """Identify dependency clauses for all combinations of suggested tasks and supplement the suggestions.
+    :param pet: PET Graph
+    :param suggestions: List[PatternInfo]
+    :param aliases: alias information dict
+    :param source_code_files: File-Mapping dictionary
+    :param raw_dependency_information: RAW information dict
+    :return: List[PatternInfo]
+    """
     # wrapper to start __check_dependence_of_task_pair for all viable combinations of suggested tasks
     result_suggestions = []
     task_suggestions = []
@@ -462,7 +475,15 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
 def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: Dict,
                                     task_suggestion_1: TaskParallelismInfo, param_names_1: [str],
                                     task_suggestion_2: TaskParallelismInfo) -> List[str]:
-    """TODO"""
+    """Check if function calls specified by task_suggestion_1 and _2 are dependent and
+    return a list of found dependencies.
+    :param aliases: alias information dict
+    :param raw_dependency_information: RAW information dict
+    :param task_suggestion_1: first suggestion for the check
+    :param param_names_1: List of parameter names used in the function call specified by task_suggestion_1
+    :param task_suggestion_2: second suggestion for the check
+    :return: List of found dependencies
+    """
     dependencies = []
     # iterate over parameters of task_1
     for parameter in param_names_1:
@@ -509,8 +530,11 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
 
 
 def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, List[Tuple[str, str]]]:
-    """TODO
-    Format: {source_line: [(sink_line, var_name)]"""
+    """return RAW dependency information contained in dep_file in the form of a dictionary.
+    Format: {source_line: [(sink_line, var_name)]
+    :param dep_file: path to dependency file
+    :return: RAW dictionary
+    """
     raw_dependencies = dict()
     with open(dep_file) as f:
         for line in f.readlines():
@@ -551,7 +575,12 @@ def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, L
 
 
 def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
-    """TODO"""
+    """Generate and return alias information dictionary.
+    :param pet: PET Graph
+    :param suggestions: List[PatternInfo]
+    :param source_code_files: File-Mapping dictionary
+    :return: alias information dictionary
+    """
     # iterate over task suggestions
     task_suggestions = [s for s in
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
@@ -633,7 +662,14 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
 def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int,
                                           source_code_files: Dict[str, str], visited: List[Tuple[CUNode, int]]) \
         -> List[Tuple[str, str, str, str]]:
-    """TODO"""
+    """Returns alias information for a parameter at a specific position.
+    :param pet: PET Graph
+    :param function: CUNode of called function
+    :param parameter_position: position of the parameter to be analyzed
+    :param source_code_files: File-Mapping dictionary
+    :param visited: List of already traversed function-index-combinations
+    :return: alias information for the specified parameter
+    """
     visited.append((function, parameter_position))
     parameter_name = function.args[parameter_position].name
     # append Alias information for parameter to result
@@ -679,7 +715,12 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
 
 
 def __get_function_call_from_source_code(source_code_files: Dict[str, str], line_number: int, file_id: str) -> str:
-    """TODO"""
+    """Extract code snippet from original source code which contains a function call.
+    :param source_code_files: File-Mapping dictionary
+    :param line_number: original source code line number to start searching at
+    :param file_id: file id of the original source code file
+    :return: source code snippet
+    """
     source_code = open(source_code_files[file_id])
     source_code_lines = source_code.readlines()
     offset = -1
@@ -705,9 +746,15 @@ def __get_function_call_from_source_code(source_code_files: Dict[str, str], line
 def __get_called_function_and_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str,
                                                                  node: CUNode) \
         -> Tuple[Optional[str], List[Optional[str]]]:
-    """TODO
+    """Returns the name of the called function and the names of the variables used as parameters in a list,
+    if any are used.
     If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position.
-    Returns None if function name not in source_code_line"""
+    Returns None if function name not in source_code_line
+    :param source_code_line: string, source code snippet which contains the function call
+    :param mangled_function_name: mangled name of the called function
+    :param node: CUNode
+    :return: function and parameter names. None instead of specific parameter, if no respective variable could be found.
+    """
     # find function name by finding biggest match between function call line and recursive call
     try:
         mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
@@ -1673,7 +1720,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
 
 
 def __detect_barrier_suggestions(pet: PETGraphX,
-                                 suggestions: List[TaskParallelismInfo]) -> List[PatternInfo]:
+                                 suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
@@ -1696,10 +1743,14 @@ def __detect_barrier_suggestions(pet: PETGraphX,
             continue
         elif type(single_suggestion) == OmittableCuInfo:
             omittable_suggestions.append(single_suggestion)
-        elif single_suggestion.pragma[0] == "taskwait":
-            taskwait_suggestions.append(single_suggestion)
-        elif single_suggestion.pragma[0] == "task":
-            task_suggestions.append(single_suggestion)
+        elif type(single_suggestion) == TaskParallelismInfo:
+            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
+            if single_suggestion.pragma[0] == "taskwait":
+                taskwait_suggestions.append(single_suggestion)
+            elif single_suggestion.pragma[0] == "task":
+                task_suggestions.append(single_suggestion)
+        else:
+            raise TypeError("Unknown Type: ", type(single_suggestion))
     for s in task_suggestions:
         s._node.tp_contains_task = True
     for s in taskwait_suggestions:
