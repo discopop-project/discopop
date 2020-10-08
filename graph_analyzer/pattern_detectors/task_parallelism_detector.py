@@ -9,6 +9,7 @@
 
 import copy
 import os
+import re
 from typing import List
 
 from cpp_demangle import demangle
@@ -19,6 +20,8 @@ from lxml import objectify
 from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
 from parser import parse_inputs
 from pattern_detectors.PatternInfo import PatternInfo
+from pattern_detectors.reduction_detector import run_detection as detect_reduction
+from pattern_detectors.do_all_detector import run_detection as detect_do_all
 from utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars
 
@@ -211,6 +214,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :param dep_file: Path (string) to the dependence file to be used
     :param loop_counter_file: Path (string) to the loop counter file file to be used
     :param reduction_file: Path (string) to the reduction file to be used
+    :param file_mapping: Path (string) to the FileMapping.txt to be used
     :return: List of detected pattern info
     """
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
@@ -218,20 +222,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
                                                                     loop_counter_file, reduction_file)
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
-    # print dependences for debugging
-#    for cu in preprocessed_graph.all_nodes(NodeType.CU):
-#        if len(preprocessed_graph.out_edges(cu.id, EdgeType.DATA)) > 0:
-#            print(cu.id)
-#        for dep_edge in preprocessed_graph.out_edges(cu.id, EdgeType.DATA):
-#            print("\tout:", dep_edge[1], " : ", dep_edge[2])
-#        for dep_edge in preprocessed_graph.in_edges(cu.id, EdgeType.DATA):
-#            print("\tin :", dep_edge[0], " : ", dep_edge[2])
-#    import sys
-#    sys.exit()
-    # preprocessed_graph.show()
     # execute reduction detector to enable taskloop-reduction-detection
-    from pattern_detectors.reduction_detector import run_detection as detect_reduction
-    from pattern_detectors.do_all_detector import run_detection as detect_do_all
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
@@ -252,6 +243,8 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
         Two barriers can run in parallel if there is not a directed path from one to the other
         :param pet: PET graph
         :param cu_xml: Path (string) to the CU xml file to be used
+        :param file_mapping: Path (string) to the FileMapping.txt to be used
+        :param dep_file: Path (string) to the dependencies-file to be used
         :return: List of detected pattern info
     """
     result = []
@@ -300,10 +293,9 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
 
 
 def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [PatternInfo]):
-    """TODO
-    distinguish between taskwaits in loop body and taskwait in do-all loop body.
+    """Separate treatment of taskwait suggestions at loop increment CUs.
     If regular loop: move taskwait suggested at loop increment line to end of loop body.
-    If do-all loop: move taskwait outside of loop body."""
+    If do-all loop: move taskwait suggested at loop increment line outside of loop body."""
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
     for ts in task_suggestions:
         for loop_cu in pet.all_nodes(NodeType.LOOP):
@@ -320,7 +312,6 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [Pa
                     return result
                 # find successive taskwaits
                 successive_taskwait_cus = find_taskwaits(ts._node)
-
                 for stws in successive_taskwait_cus:
                     # check if stws is suggested at loop increment
                     if stws.basic_block_id != "for.inc":
@@ -344,7 +335,6 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [Pa
     return suggestions
 
 
-
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str,
                                             dep_file: str):
     """TODO"""
@@ -356,7 +346,7 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [Patter
             line = line.split("\t")
             source_code_files[line[0]] = line[1]
     # get RAW depencency information as a dict
-    raw_dependency_information = __get_RAW_dependency_information_from_dep_file(dep_file)
+    raw_dependency_information = __get_raw_dependency_information_from_dep_file(dep_file)
     aliases = __get_alias_information(pet, suggestions, source_code_files)
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
@@ -377,15 +367,14 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                 result_suggestions.append(s)
         else:
             result_suggestions.append(s)
-    # iterate over all combinations of tasks, ts_1 has to come before ts_2  # TODO: possible / required to filter for tasks inside same function?
-    # get in and out dependences to insert
+    # iterate over all combinations of tasks, ts_1 has to come before ts_2
+    # get in and out dependencies to insert
     out_dep_updates = dict()
     in_dep_updates = dict()
     for ts_1 in task_suggestions:
         # get parent function
         potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
-                                      if pet.node_at(e[0]).type == NodeType.FUNC]
-        # TODO traverse upwards if []
+                                        if pet.node_at(e[0]).type == NodeType.FUNC]
         if not potential_parent_functions_1:
             # perform BFS search on incoming CHILD edges to find closest parent function,
             # i.e. function which contains the CU.
@@ -398,9 +387,9 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                     break
                 queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
             potential_parent_functions_1 = [found_parent]
-        for parent_function_1 in potential_parent_functions_1:
+        while potential_parent_functions_1:
+            potential_parent_functions_1.pop()
             # get recursive function call from original source code
-            function_call_string_1 = ""
             try:
                 function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
                                                                               ts_1.node_id.split(":")[0])
@@ -409,11 +398,10 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
             # get function parameter names from recursive function call
             function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
-            for ts_2 in [s for s in task_suggestions if not s == ts_1]:  # and int(ts_1.pragma_line) <= int(s.pragma_line)]: # TODO marker
+            for ts_2 in [s for s in task_suggestions if not s == ts_1]:
                 # get parent function
                 potential_parent_functions_2 = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
                                                 if pet.node_at(e[0]).type == NodeType.FUNC]
-                # TODO traverse upwards if []
                 if not potential_parent_functions_2:
                     # perform BFS search on incoming CHILD edges to find closest parent function,
                     # i.e. function which contains the CU.
@@ -426,27 +414,23 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                             break
                         queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
                     potential_parent_functions_2 = [found_parent]
-                for parent_function_2 in potential_parent_functions_2:
+                while potential_parent_functions_2:
+                    potential_parent_functions_2.pop()
                     # get recursive function call from original source code
-                    function_call_string_2 = ""
                     try:
-                        function_call_string_2 = __get_function_call_from_source_code(source_code_files,
-                                                                                      int(ts_2.pragma_line),
-                                                                                      ts_2.node_id.split(":")[0])
+                        __get_function_call_from_source_code(source_code_files, int(ts_2.pragma_line),
+                                                             ts_2.node_id.split(":")[0])
                     except IndexError:
                         continue
                     # get function parameter names from recursive function call
-                    function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
-                        function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
                     dependencies = __check_dependence_of_task_pair(aliases, raw_dependency_information,
-                                                                  ts_1, function_call_string_1, parameter_names_1,
-                                                                  ts_2, function_call_string_2, parameter_names_2)
+                                                                   ts_1, parameter_names_1, ts_2)
                     for dependence_var in dependencies:
                         # Mark the variable as depend out for the first function and depend in for the second function.
-                        if not ts_1 in out_dep_updates:
+                        if ts_1 not in out_dep_updates:
                             out_dep_updates[ts_1] = []
                         out_dep_updates[ts_1].append(dependence_var)
-                        if not ts_2 in in_dep_updates:
+                        if ts_2 not in in_dep_updates:
                             in_dep_updates[ts_2] = []
                         in_dep_updates[ts_2].append(dependence_var)
     # perform updates of in and out dependencies
@@ -465,10 +449,10 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
 
 
 def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
-                                    task_suggestion_1: TaskParallelismInfo, call_string_1: str, param_names_1: [str],
-                                    task_suggestion_2: TaskParallelismInfo, call_string_2: str, param_names_2: [str]):
+                                    task_suggestion_1: TaskParallelismInfo, param_names_1: [str],
+                                    task_suggestion_2: TaskParallelismInfo):
     """TODO"""
-    dependences = []
+    dependencies = []
     # iterate over parameters of task_1
     for parameter in param_names_1:
         if parameter is None:
@@ -503,18 +487,17 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
                 if source_lines == sink_lines:
                     continue
                 for source_line in source_lines:
-                    if not source_line in raw_dependency_information:
+                    if source_line not in raw_dependency_information:
                         continue
                     for raw_dep_entry in raw_dependency_information[source_line]:
                         if raw_dep_entry[1] == intersecting_variable:
                             if raw_dep_entry[0] in sink_lines:
-                                dependences.append(parameter)
+                                dependencies.append(parameter)
+    dependencies = list(set(dependencies))
+    return dependencies
 
-    dependences = list(set(dependences))
-    return dependences
 
-
-def __get_RAW_dependency_information_from_dep_file(dep_file) -> dict:
+def __get_raw_dependency_information_from_dep_file(dep_file) -> dict:
     """TODO
     Format: {source_line: [(sink_line, var_name)]"""
     raw_dependencies = dict()
@@ -523,7 +506,7 @@ def __get_RAW_dependency_information_from_dep_file(dep_file) -> dict:
             line = line.replace("\n", "")
             # format of dependency entries in _dep.txt-file:
             #   sourceLine NOM RAW sinkLine|variable
-            if not " NOM " in line:
+            if " NOM " not in line:
                 continue
             split_line = line.split(" NOM ")
             source_line = split_line[0]
@@ -566,7 +549,6 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
         current_alias_entry = []
         potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                                       if pet.node_at(e[0]).type == NodeType.FUNC]
-        # TODO traverse upwards if []
         if not potential_parent_functions:
             # perform BFS search on incoming CHILD edges to find closest parent function,
             # i.e. function which contains the CU.
@@ -582,15 +564,14 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
         # get parent function
         for parent_function in potential_parent_functions:
             # get recursive function call from original source code
-            function_call_string = ""
             try:
                 function_call_string = __get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
                                                                             ts.node_id.split(":")[0])
             except IndexError:
                 continue
             # get function parameter names from recursive function call
-            function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(function_call_string,
-                ts._node.recursive_function_calls[0], ts._node)
+            function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(
+                function_call_string, ts._node.recursive_function_calls[0], ts._node)
             # get CU Node object of called function
             called_function_cu_id = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
@@ -636,7 +617,8 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
     return aliases
 
 
-def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int, source_code_files, visited):
+def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int, source_code_files,
+                                          visited: [(CUNode, int)]):
     """TODO"""
     visited.append((function, parameter_position))
     parameter_name = function.args[parameter_position].name
@@ -644,7 +626,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
     result = [(parameter_name, function.name, function.start_position(), function.end_position())]
 
     # find function calls which use the parameter
-        # iterate over CUs
+    # iterate over CUs
     for cu in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(function.id)]]:
         # iterate over children of CU and retrieve called functions
         called_functions = []
@@ -662,21 +644,23 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
         for called_function in called_functions:
             # read line from source code (iterate over lines of CU to search for function call)
             for line in range(cu.start_line, cu.end_line+1):
-                source_code_line = ""
                 try:
-                    source_code_line = __get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
+                    source_code_line = __get_function_call_from_source_code(source_code_files, line,
+                                                                            cu.id.split(":")[0])
                 except IndexError:
                     continue
                 # get parameter names from call
 
-                function_name, call_parameters = __get_called_function_and_parameter_names_from_function_call(source_code_line, called_function.name, cu)
+                function_name, call_parameters = __get_called_function_and_parameter_names_from_function_call(
+                    source_code_line, called_function.name, cu)
                 # check if parameter_name is contained
                 for idx, pn in enumerate(call_parameters):
                     if pn == parameter_name:
                         # check if same configuration for alias detection has been used:
                         if (called_function, idx) not in visited:
                             # if not, start recursion
-                            result += __get_alias_for_parameter_at_position(pet, called_function, idx, source_code_files, visited)
+                            result += __get_alias_for_parameter_at_position(pet, called_function, idx,
+                                                                            source_code_files, visited)
     return result
 
 
@@ -691,7 +675,9 @@ def __get_function_call_from_source_code(source_code_files, line_number, file_id
             function_call_string = function_call_string[function_call_string.index(")") + 1:]
     if ")" in function_call_string and "(" not in function_call_string:
         function_call_string = function_call_string[function_call_string.index(")") + 1:]
-    while function_call_string.count("(") > function_call_string.count(")") or function_call_string.count("(") < 1 or function_call_string.count(")") < 1:
+    while function_call_string.count("(") > function_call_string.count(")") \
+            or function_call_string.count("(") < 1 \
+            or function_call_string.count(")") < 1:
         # if ) prior to (, cut first part away
         if ")" in function_call_string and "(" in function_call_string:
             if function_call_string.index(")") < function_call_string.index("("):
@@ -737,11 +723,12 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     result_parameters = []
     for param in parameters:
         if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
-            import re
-            split_param_expression = re.split("\+|\-|\*|/|\(|\)", param)
+            split_param_expression = re.split(r"\+-\*/\(\)", param)
             split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
             # check if any of the parameters is in list of known variables
-            split_param_expression = [ex for ex in split_param_expression if ex in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]]
+            split_param_expression = [ex for ex in split_param_expression
+                                      if ex in [var.replace(".addr", "")
+                                                for var in [v.name for v in node.local_vars+node.global_vars]]]
             # check if type of any of them contains * (i.e. is a pointer)
             found_entry = False
             for var_name_to_check in split_param_expression:
@@ -758,7 +745,6 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
                 result_parameters.append(None)
         else:
             # check if param in known variables:
-            # if param.replace(" ", "") in [var.replace(".addr", "") for var in [v.name for v in node.local_vars+node.global_vars]]:
             result_parameters.append(param.replace(" ", ""))
 
     return function_name, result_parameters
@@ -1111,9 +1097,9 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
                 remove_from_first_private.append(var)
         remove_from_first_private = list(set(remove_from_first_private))
         remove_from_private = list(set(remove_from_private))
-        remove_from_private = [var for var in remove_from_private if not var in remove_from_first_private]
-        suggestion.private = [var for var in suggestion.private if not var in remove_from_private]
-        suggestion.first_private = [var for var in suggestion.first_private if not var in remove_from_first_private]
+        remove_from_private = [var for var in remove_from_private if var not in remove_from_first_private]
+        suggestion.private = [var for var in suggestion.private if var not in remove_from_private]
+        suggestion.first_private = [var for var in suggestion.first_private if var not in remove_from_first_private]
     return suggestions
 
 
@@ -1947,9 +1933,9 @@ def __set_task_contained_lines(suggestions: [TaskParallelismInfo]):
             cu_to_suggestions_map[s.node_id] = [s]
     # order suggestions for each CU by first affected line
     for cu in cu_to_suggestions_map:
-        sorted = cu_to_suggestions_map[cu]
-        sorted.sort(key=lambda s: s.region_start_line)
-        cu_to_suggestions_map[cu] = sorted
+        sorted_suggestions = cu_to_suggestions_map[cu]
+        sorted_suggestions.sort(key=lambda x: x.region_start_line)
+        cu_to_suggestions_map[cu] = sorted_suggestions
     # iterate over suggestions. set region_end_line to end of cu or
     # beginning of next suggestion
     for cu in cu_to_suggestions_map:
