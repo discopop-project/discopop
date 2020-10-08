@@ -10,7 +10,7 @@
 import copy
 import os
 import re
-from typing import List
+from typing import List, Tuple, Dict, Optional
 
 from cpp_demangle import demangle
 
@@ -292,10 +292,13 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     return result
 
 
-def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [PatternInfo]):
+def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Separate treatment of taskwait suggestions at loop increment CUs.
     If regular loop: move taskwait suggested at loop increment line to end of loop body.
-    If do-all loop: move taskwait suggested at loop increment line outside of loop body."""
+    If do-all loop: move taskwait suggested at loop increment line outside of loop body.
+    :param pet: PET graph
+    :param suggestions: Found suggestions
+    :return: Updated suggestions"""
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
     for ts in task_suggestions:
         for loop_cu in pet.all_nodes(NodeType.LOOP):
@@ -335,8 +338,8 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: [Pa
     return suggestions
 
 
-def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [PatternInfo], file_mapping_path: str,
-                                            dep_file: str):
+def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
+                                            dep_file: str) -> List[PatternInfo]:
     """TODO"""
     # Read contents of file_mapping
     source_code_files = dict()
@@ -353,8 +356,9 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: [Patter
     return suggestions
 
 
-def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: [PatternInfo], aliases,
-                                                    source_code_files, raw_dependency_information: dict):
+def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
+                                                    source_code_files: Dict,
+                                                    raw_dependency_information: Dict) -> List[PatternInfo]:
     """TODO, adds dependency clauses to task suggestions"""
     # wrapper to start __check_dependence_of_task_pair for all viable combinations of suggested tasks
     result_suggestions = []
@@ -448,9 +452,9 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
     return result_suggestions
 
 
-def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
+def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: Dict,
                                     task_suggestion_1: TaskParallelismInfo, param_names_1: [str],
-                                    task_suggestion_2: TaskParallelismInfo):
+                                    task_suggestion_2: TaskParallelismInfo) -> List[str]:
     """TODO"""
     dependencies = []
     # iterate over parameters of task_1
@@ -497,7 +501,7 @@ def __check_dependence_of_task_pair(aliases, raw_dependency_information: dict,
     return dependencies
 
 
-def __get_raw_dependency_information_from_dep_file(dep_file) -> dict:
+def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, Tuple[str, str]]:
     """TODO
     Format: {source_line: [(sink_line, var_name)]"""
     raw_dependencies = dict()
@@ -539,7 +543,7 @@ def __get_raw_dependency_information_from_dep_file(dep_file) -> dict:
     return raw_dependencies
 
 
-def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_code_files: dict):
+def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
     """TODO"""
     # iterate over task suggestions
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
@@ -617,8 +621,9 @@ def __get_alias_information(pet: PETGraphX, suggestions: [PatternInfo], source_c
     return aliases
 
 
-def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int, source_code_files,
-                                          visited: [(CUNode, int)]):
+def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int,
+                                          source_code_files: Dict[str, str], visited: List[Tuple[CUNode, int]]) \
+        -> List[Tuple[str, str, str, str]]:
     """TODO"""
     visited.append((function, parameter_position))
     parameter_name = function.args[parameter_position].name
@@ -664,7 +669,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
     return result
 
 
-def __get_function_call_from_source_code(source_code_files, line_number, file_id):
+def __get_function_call_from_source_code(source_code_files: Dict[str, str], line_number: int, file_id: str) -> str:
     """TODO"""
     source_code = open(source_code_files[file_id])
     source_code_lines = source_code.readlines()
@@ -689,7 +694,8 @@ def __get_function_call_from_source_code(source_code_files, line_number, file_id
 
 
 def __get_called_function_and_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str,
-                                                                 node: CUNode):
+                                                                 node: CUNode) \
+        -> Tuple[Optional[str], List[Optional[str]]]:
     """TODO
     If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position.
     Returns None if function name not in source_code_line"""
@@ -750,7 +756,8 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     return function_name, result_parameters
 
 
-def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: [PatternInfo]):
+def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: List[PatternInfo]) \
+        -> List[PatternInfo]:
     """Marks unmentioned variables as shared, if they occur as shared in a different task suggestions
     inside the parent functions body.
     :param: pet: PET graph
@@ -785,7 +792,7 @@ def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, sugg
     return suggestions
 
 
-def __remove_duplicate_data_sharing_clauses(suggestions: [PatternInfo]):
+def __remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """removes duplicates from in, out and in-out dependency lists.
     Mainly needed for printing purposes.
     :param suggestions: List[PatternInfo]
@@ -802,7 +809,7 @@ def __remove_duplicate_data_sharing_clauses(suggestions: [PatternInfo]):
     return suggestions
 
 
-def __get_var_definition_line_dict(cu_xml: str):
+def __get_var_definition_line_dict(cu_xml: str) -> Dict[str, List[str]]:
     """creates a dictionary {varname: [definitionLines]} based on cu_xml
     and return the dictionary.
     Removes .addr suffix if present.
@@ -850,12 +857,13 @@ def __get_var_definition_line_dict(cu_xml: str):
     return var_def_line_dict
 
 
-def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestions: [PatternInfo]):
+def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestions: List[PatternInfo]) \
+        -> List[PatternInfo]:
     """enforces taskwait or similar pragmas before return statements to ensure, that no unfinished tasks exist
     when the parent function returns.
     :param pet: PET graph
     :param suggestions; List[PatternInfo]
-    :return List[PatternInfo]"""
+    :return: List[PatternInfo]"""
     # iterate over task suggestions
     for suggestion in suggestions:
         if suggestion.pragma[0] != "task":
@@ -904,12 +912,13 @@ def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggest
     return suggestions
 
 
-def __filter_data_depend_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
+def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
+                                 var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables from the data depend clauses
     of task suggestions.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     for suggestion in suggestions:
         # only consider task suggestions
@@ -986,7 +995,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: [PatternInfo], var
     return suggestions
 
 
-def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], var_def_line_dict: dict):
+def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
+                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
@@ -994,7 +1004,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
     firstprivate, private, shared
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     for suggestion in suggestions:
         # only consider task suggestions
@@ -1060,7 +1070,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
             try:
                 for def_line in var_def_line_dict[var]:
                     # ensure backwards compatibility (no definition line present in cu_xml
-                    if def_line == "GlobalVar" or def_line == "LineNotFound":  # TODO: not sure if break is suitable
+                    if def_line == "GlobalVar" or def_line == "LineNotFound":
                         is_valid = False
                         break
                     if def_line is None:
@@ -1103,7 +1113,7 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: [PatternInfo], va
     return suggestions
 
 
-def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: [PatternInfo]):
+def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Suggests a barrier if a node is a successor of a task CU
     which is not covered by an existing barrier and the set of global variables
     of the CU and the task are overlapping
@@ -1113,7 +1123,7 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: [Pat
     (reason: false positives due to copying of global / local variables in preprocessor).
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
@@ -1172,7 +1182,7 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: [Pat
     return suggestions
 
 
-def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
+def __validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Checks if >= 2 dependencies exist from same successor path or
     node that contains the barrier is of type loop.
     Eliminate those barrier suggestions that violate this requirement.
@@ -1183,7 +1193,7 @@ def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
     successor paths to support the desired behavior.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     barrier_suggestions = []
     result = []
@@ -1241,7 +1251,8 @@ def __validate_barriers(pet: PETGraphX, suggestions: [PatternInfo]):
     return result
 
 
-def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode]):
+def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode]) \
+        -> Tuple[List[CUNode], List[CUNode]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -1258,18 +1269,17 @@ def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: [CUNode
     for e in in_succ_edges:
         tmp, visited_nodes = __get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
         result += tmp
-
     return result, visited_nodes
 
 
-def __remove_duplicates(suggestions: [PatternInfo]):
+def __remove_duplicates(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """removes duplicates from the list of suggestions and return the modified
     list.
     CU-ID is not considered.
     Removes a suggestion, if one with identical region_start_line,
     region_end_line and pragma exists.
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     buffer = []  # list of tuples containing region_start_line,
     # region_end_line and pragma, representing suggestions
@@ -1286,12 +1296,12 @@ def __remove_duplicates(suggestions: [PatternInfo]):
     return result
 
 
-def __sort_output(suggestions: [PatternInfo]):
+def __sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """orders the list of suggestions by the respective properties:
     order by: file-id, then line-number (descending).
     Returns the sorted list of suggestions
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     sorted_suggestions = []
     tmp_dict = dict()
@@ -1316,13 +1326,13 @@ def __sort_output(suggestions: [PatternInfo]):
     return sorted_suggestions
 
 
-def __detect_task_suggestions(pet: PETGraphX):
+def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     """creates task parallelism suggestions and returns them as a list of
     TaskParallelismInfo objects.
     Currently relies on previous processing steps and suggests WORKER CUs
     as Tasks and BARRIER/BARRIER_WORKER as Taskwaits.
     :param pet: PET graph
-    :return List[TaskParallelismInfo]
+    :return: List[TaskParallelismInfo]
     """
     # suggestions contains a map from LID to a set of suggestions. This is required to
     # detect multiple suggestions for a single line of source code.
@@ -1428,7 +1438,7 @@ def __detect_task_suggestions(pet: PETGraphX):
 
 
 def __combine_omittable_cus(pet: PETGraphX,
-                            suggestions: [PatternInfo]):
+                            suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """execute combination of tasks suggestions with omittable cus.
     Adds modified version of the respective Parent suggestions to the list.
     Returns the modified list of suggestions.
@@ -1436,7 +1446,7 @@ def __combine_omittable_cus(pet: PETGraphX,
     Removes duplicates in in/out/in_out dependency lists.
     :param pet: PET graph
     :param suggestions: List [PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     omittable_suggestions = []
     task_suggestions = []
@@ -1553,7 +1563,7 @@ def __combine_omittable_cus(pet: PETGraphX,
 
 
 def __detect_dependency_clauses(pet: PETGraphX,
-                                suggestions: [PatternInfo]):
+                                suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """detect in, out and inout dependencies for tasks and omittable CUs and
     add this information to the respective suggestions.
     dependencies are written into a list, result in multiple entries for a
@@ -1561,7 +1571,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
     Return the modified list of suggestions.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
-    :return List[PatternInfo]
+    :return: List[PatternInfo]
     """
     omittable_suggestions = []
     task_suggestions = []
@@ -1615,7 +1625,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
 
 
 def __detect_barrier_suggestions(pet: PETGraphX,
-                                 suggestions: [TaskParallelismInfo]):
+                                 suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
@@ -1831,7 +1841,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
 
 
 def __detect_taskloop_reduction(pet: PETGraphX,
-                                suggestions: [TaskParallelismInfo]):
+                                suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """detect suggested tasks which can and should be replaced by
     taskloop reduction.
     return the modified list of suggestions.
@@ -1840,7 +1850,7 @@ def __detect_taskloop_reduction(pet: PETGraphX,
                 3. if so, build reduction clause and modify suggested task
     :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
-    :return List[TaskParallelismInfo]
+    :return: List[TaskParallelismInfo]
     """
     output = []
     # iterate over suggestions
@@ -1875,13 +1885,13 @@ def __detect_taskloop_reduction(pet: PETGraphX,
 
 
 def __task_contained_in_reduction_loop(pet: PETGraphX,
-                                       task: TaskParallelismInfo):
+                                       task: TaskParallelismInfo) -> Tuple[Optional[Dict[str, str]], Optional[CUNode]]:
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
     else, return reduction_vars entry of parent reduction loop and loop CU Node.
     :param pet: PET graph
     :param task: TaskParallelismInfo
-    :return None / ({loop_line, name, reduction_line, operation}, CUNode)
+    :return: None / ({loop_line, name, reduction_line, operation}, CUNode)
     """
     # check if task contained in loop body
     parents = __get_parent_of_type(pet, task._node, NodeType.LOOP, EdgeType.CHILD, False)
@@ -1911,13 +1921,13 @@ def __task_contained_in_reduction_loop(pet: PETGraphX,
     return None, None
 
 
-def __set_task_contained_lines(suggestions: [TaskParallelismInfo]):
+def __set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """set region_end_line property of TaskParallelismInfo objects
     in suggestions and return the modified list.
     Regions are determined by checking if a CU contains multiple Tasks or
     Barriers and splitting up the contained source code lines accordingly.
     :param suggestions: List[TaskParallelismInfo]
-    :return List[TaskParallelismInfo]"""
+    :return: List[TaskParallelismInfo]"""
     # group suggestions by parent CU
     output = []
     cu_to_suggestions_map = dict()
@@ -1959,13 +1969,13 @@ def __set_task_contained_lines(suggestions: [TaskParallelismInfo]):
 
 
 def __remove_useless_barrier_suggestions(pet: PETGraphX,
-                                         suggestions: [TaskParallelismInfo]):
+                                         suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """remove suggested barriers which are not contained in the same
     function body with at least one suggested task.
     Returns the filtered version of the list given as a parameter.
     :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
-    :return List[TaskParallelismInfo]
+    :return: List[TaskParallelismInfo]
     """
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
@@ -2006,7 +2016,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
 
 
 def __suggest_parallel_regions(pet: PETGraphX,
-                               suggestions: [TaskParallelismInfo]):
+                               suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
     possibly leading to the creation of tasks.
@@ -2014,7 +2024,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     starting from each suggested task.
     :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
-    :return List[TaskParallelismInfo]"""
+    :return: List[TaskParallelismInfo]"""
     # get task suggestions from suggestions
     task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
     # start search for each suggested task
@@ -2049,13 +2059,13 @@ def __suggest_parallel_regions(pet: PETGraphX,
 
 
 def __check_reachability(pet: PETGraphX, target: CUNode,
-                         source: CUNode, edge_type: EdgeType):
+                         source: CUNode, edge_type: EdgeType) -> bool:
     """check if target is reachable from source via edges of type edge_type.
     :param pet: PET graph
     :param source: CUNode
     :param target: CUNode
     :param edge_type: EdgeType
-    :return Boolean"""
+    :return: Boolean"""
     visited = []
     queue = [target]
     while len(queue) > 0:
@@ -2074,7 +2084,8 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
 
 
 def __get_parent_of_type(pet: PETGraphX, node: CUNode,
-                         parent_type: NodeType, edge_type: EdgeType, only_first: bool):
+                         parent_type: NodeType, edge_type: EdgeType, only_first: bool) \
+        -> List[Tuple[CUNode, Optional[CUNode]]]:
     """return parent cu nodes and the last node of the path to them as a tuple
     for the given node with type parent_type
     accessible via edges of type edge_type.
@@ -2084,7 +2095,7 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
     :param edge_type: EdgeType, type of usable edges
     :param only_first: Bool, if true, return only first parent.
         Else, return first parent for each incoming edge of node.
-    :return [(CUNode, CUNode)]"""
+    :return: [(CUNode, CUNode)]"""
     visited = []
     queue = [(node, None)]
     res = []
@@ -2110,7 +2121,7 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
 
 
 def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
-                                                     worker_cus: [CUNode]):
+                                                     worker_cus: List[CUNode]) -> CUNode:
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -2120,6 +2131,7 @@ def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
     :param function_call_string: String representation of the recursive function call to be checked
             Ex.: fib 7:35,  (might contain ,)
     :param worker_cus: List of vertices
+    :return: CUNode
     """
     # remove , and whitespaces at start / end
     function_call_string = function_call_string.replace(",", "")
@@ -2273,11 +2285,11 @@ def __create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visit
             __create_task_tree_helper(pet, child, root, visited_func)
 
 
-def cu_xml_preprocessing(cu_xml):
+def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
     :param cu_xml: path to the xml file
-    :return file name of modified cu xml file.
+    :return: file name of modified cu xml file.
     """
     xml_fd = open(cu_xml)
     xml_content = ""
@@ -2647,13 +2659,13 @@ def cu_xml_preprocessing(cu_xml):
     return modified_cu_xml
 
 
-def __line_contained_in_region(test_line, start_line, end_line):
+def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -> bool:
     """check if test_line is contained in [startLine, endLine].
     Return True if so. False else.
     :param test_line: <fileID>:<line>
     :param start_line: <fileID>:<line>
     :param end_line: <fileID>:<line>
-    :return True/False
+    :return: bool
     """
     test_line_file_id = int(test_line.split(":")[0])
     test_line_line = int(test_line.split(":")[1])
@@ -2667,12 +2679,12 @@ def __line_contained_in_region(test_line, start_line, end_line):
     return False
 
 
-def __preprocessor_cu_contains_at_least_two_recursive_calls(node):
+def __preprocessor_cu_contains_at_least_two_recursive_calls(node: CUNode) -> bool:
     """Check if >= 2 recursive function calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
     :param node: CUNode
-    :return True/False
+    :return: bool
     """
     starts_at_line = node.get("startsAtLine").split(":")
     ends_at_line = node.get("endsAtLine").split(":")
