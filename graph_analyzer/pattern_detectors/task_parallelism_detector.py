@@ -10,7 +10,7 @@
 import copy
 import os
 import re
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, cast
 
 from cpp_demangle import demangle
 
@@ -207,7 +207,7 @@ class OmittableCuInfo(PatternInfo):
 
 
 def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
-                                               file_mapping: str):
+                                               file_mapping: str) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -230,7 +230,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str) -> List[TaskParallelismInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str) -> List[PatternInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -299,7 +299,9 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: Lis
     :param pet: PET graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
-    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
+    task_suggestions = [s for s in
+                        [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
+                        if s.pragma[0] == "task"]
     for ts in task_suggestions:
         for loop_cu in pet.all_nodes(NodeType.LOOP):
             # check if task suggestion inside do-all loop exists
@@ -325,16 +327,20 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: Lis
                               ". Moving Taskwait ", stws.start_line, " to: ",
                               int(loop_cu.end_position().split(":")[1])+1)
                         for s in suggestions:
-                            if s.pragma[0] == "taskwait" and s._node == stws:
-                                s.pragma_line = int(loop_cu.end_position().split(":")[1])+1
+                            if type(s) == TaskParallelismInfo:
+                                s = cast(TaskParallelismInfo, s)
+                                if s.pragma[0] == "taskwait" and s._node == stws:
+                                    s.pragma_line = int(loop_cu.end_position().split(":")[1])+1
                     else:
                         # Regular loop, move taskwait to the end of the loop body
                         print("TPDet: correct_taskwait_suggestions_in_loop_body: Task in regular loop ", ts.pragma_line,
                               ". Moving Taskwait ", stws.start_line, " to: ",
                               int(loop_cu.end_position().split(":")[1]))
                         for s in suggestions:
-                            if s.pragma[0] == "taskwait" and s._node == stws:
-                                s.pragma_line = int(loop_cu.end_position().split(":")[1])
+                            if type(s) == TaskParallelismInfo:
+                                s = cast(TaskParallelismInfo, s)
+                                if s.pragma[0] == "taskwait" and s._node == stws:
+                                    s.pragma_line = int(loop_cu.end_position().split(":")[1])
     return suggestions
 
 
@@ -365,6 +371,7 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
     task_suggestions = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
+            s = cast(TaskParallelismInfo, s)
             if s.pragma[0] == "task":
                 task_suggestions.append(s)
             else:
@@ -501,7 +508,7 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
     return dependencies
 
 
-def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, Tuple[str, str]]:
+def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, List[Tuple[str, str]]]:
     """TODO
     Format: {source_line: [(sink_line, var_name)]"""
     raw_dependencies = dict()
@@ -546,7 +553,9 @@ def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, T
 def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
     """TODO"""
     # iterate over task suggestions
-    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.pragma[0] == "task"]
+    task_suggestions = [s for s in
+                        [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
+                        if s.pragma[0] == "task"]
     # collect alias information
     aliases = dict()
     for ts in task_suggestions:
@@ -764,7 +773,8 @@ def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, sugg
     :param: suggestions: List[PatternInfo]
     :return: List[PatternInfo]
     """
-    task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
+    task_suggestions = [s for s in [cast(TaskParallelismInfo, t) for t in suggestions
+                                    if type(t) == TaskParallelismInfo] if s.pragma[0] == "task"]
     for ts in task_suggestions:
         if ts.shared:
             # iterate over parent function(s)
@@ -866,12 +876,16 @@ def __suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggest
     :return: List[PatternInfo]"""
     # iterate over task suggestions
     for suggestion in suggestions:
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.pragma[0] != "task":
             continue
         # if task is covered by a parallel region, ignore it due to the present, implicit barrier
         covered_by_parallel_region = False
         for tmp in suggestions:
             if type(tmp) == ParallelRegionInfo:
+                tmp = cast(ParallelRegionInfo, tmp)
                 if __line_contained_in_region(suggestion.start_line, tmp.region_start_line, tmp.region_end_line):
                     covered_by_parallel_region = True
                     break
@@ -922,6 +936,9 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     """
     for suggestion in suggestions:
         # only consider task suggestions
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
             continue
         # get function containing the task cu
@@ -1008,6 +1025,9 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo]
     """
     for suggestion in suggestions:
         # only consider task suggestions
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
             continue
         # get function containing the task cu
@@ -1132,10 +1152,14 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List
         if type(single_suggestion) == ParallelRegionInfo or \
                 type(single_suggestion) == OmittableCuInfo:
             continue
-        elif single_suggestion.pragma[0] == "taskwait":
-            taskwait_suggestions.append(single_suggestion)
-        elif single_suggestion.pragma[0] == "task":
-            task_suggestions.append(single_suggestion)
+        if type(single_suggestion) == TaskParallelismInfo:
+            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
+            if single_suggestion.pragma[0] == "taskwait":
+                taskwait_suggestions.append(single_suggestion)
+            elif single_suggestion.pragma[0] == "task":
+                task_suggestions.append(single_suggestion)
+        else:
+            raise TypeError("Unsupported Type: ", type(single_suggestion))
 
     # iterate over task suggestions
     for task_sug in task_suggestions:
@@ -1198,12 +1222,16 @@ def __validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[
     barrier_suggestions = []
     result = []
     for single_suggestion in suggestions:
-        try:
-            if single_suggestion.pragma[0] == "taskwait":
-                barrier_suggestions.append(single_suggestion)
-            else:
+        if type(single_suggestion) == TaskParallelismInfo:
+            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
+            try:
+                if single_suggestion.pragma[0] == "taskwait":
+                    barrier_suggestions.append(single_suggestion)
+                else:
+                    result.append(single_suggestion)
+            except AttributeError:
                 result.append(single_suggestion)
-        except AttributeError:
+        else:
             result.append(single_suggestion)
 
     for bs in barrier_suggestions:
@@ -1285,6 +1313,12 @@ def __remove_duplicates(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     # region_end_line and pragma, representing suggestions
     result = []
     for sug in suggestions:
+        if type(sug) == ParallelRegionInfo:
+            sug = cast(ParallelRegionInfo, sug)
+        elif type(sug) == TaskParallelismInfo:
+            sug = cast(TaskParallelismInfo, sug)
+        else:
+            continue
         representing_tuple = (sug.region_start_line,
                               sug.region_end_line,
                               sug.pragma)
@@ -1306,6 +1340,12 @@ def __sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     sorted_suggestions = []
     tmp_dict = dict()
     for sug in suggestions:
+        if type(sug) == ParallelRegionInfo:
+            sug = cast(ParallelRegionInfo, sug)
+        elif type(sug) == TaskParallelismInfo:
+            sug = cast(TaskParallelismInfo, sug)
+        else:
+            continue
         # get start_line and file_id for sug
         if ":" not in sug.region_start_line:
             start_line = sug.region_start_line
@@ -1448,19 +1488,23 @@ def __combine_omittable_cus(pet: PETGraphX,
     :param suggestions: List [PatternInfo]
     :return: List[PatternInfo]
     """
-    omittable_suggestions = []
-    task_suggestions = []
-    result = []
+    omittable_suggestions: List[OmittableCuInfo] = []
+    task_suggestions: List[TaskParallelismInfo] = []
+    result: List[PatternInfo] = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == OmittableCuInfo:
-            omittable_suggestions.append(single_suggestion)
+            omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
         else:
-            try:
-                if single_suggestion.pragma[0] == "task":
-                    task_suggestions.append(single_suggestion)
-                else:
+            if type(single_suggestion) == TaskParallelismInfo:
+                single_suggestion: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
+                try:
+                    if single_suggestion.pragma[0] == "task":
+                        task_suggestions.append(single_suggestion)
+                    else:
+                        result.append(single_suggestion)
+                except AttributeError:
                     result.append(single_suggestion)
-            except AttributeError:
+            else:
                 result.append(single_suggestion)
 
     # remove omittable suggestion if cu is no direct child in the
@@ -1573,22 +1617,26 @@ def __detect_dependency_clauses(pet: PETGraphX,
     :param suggestions: List[PatternInfo]
     :return: List[PatternInfo]
     """
-    omittable_suggestions = []
-    task_suggestions = []
-    result = []
+    omittable_suggestions: List[OmittableCuInfo] = []
+    task_suggestions: List[TaskParallelismInfo] = []
+    result: List[PatternInfo] = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == OmittableCuInfo:
-            omittable_suggestions.append(single_suggestion)
+            omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
         else:
-            try:
-                if single_suggestion.pragma[0] == "task":
-                    task_suggestions.append(single_suggestion)
-                else:
+            if type(single_suggestion) == TaskParallelismInfo:
+                single_suggestion: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
+                try:
+                    if single_suggestion.pragma[0] == "task":
+                        task_suggestions.append(single_suggestion)
+                    else:
+                        result.append(single_suggestion)
+                except AttributeError:
                     result.append(single_suggestion)
-            except AttributeError:
+            else:
                 result.append(single_suggestion)
 
-    for s in omittable_suggestions + task_suggestions:
+    for s in cast(List[PatternInfo], omittable_suggestions) + cast(List[PatternInfo], task_suggestions):
         # out/in_dep_edges are based on the dependency graph and thus inverse
         # to the omp dependency clauses
         # only consider those dependencies to/from Task/Omittable CUs
@@ -1625,7 +1673,7 @@ def __detect_dependency_clauses(pet: PETGraphX,
 
 
 def __detect_barrier_suggestions(pet: PETGraphX,
-                                 suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
+                                 suggestions: List[TaskParallelismInfo]) -> List[PatternInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
@@ -1637,7 +1685,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
     1.) mark node as Barrier, if dependences only to task-containing-paths
     :param pet: PET Graph
     :param suggestions: List[TaskParallelismInfo]
-    :return List[TaskParallelismInfo]
+    :return List[PatternInfo]
     """
     # split suggestions into task and taskwait suggestions
     taskwait_suggestions = []
@@ -1708,7 +1756,9 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     pass
             elif pet.node_at(e[1]) in [tmp[0] for tmp in omittable_nodes]:
                 # treat omittable cus like their parent tasks
-                tmp_omit_suggestions = [s for s in suggestions if type(s) == OmittableCuInfo]
+                tmp_omit_suggestions: List[OmittableCuInfo] = cast(List[OmittableCuInfo],
+                                                                   [s for s in suggestions
+                                                                    if type(s) == OmittableCuInfo])
                 parent_task = [tos for tos in tmp_omit_suggestions if tos._node == pet.node_at(e[1])][
                     0].combine_with_node
                 if parent_task.id not in omittable_parent_buffer:
@@ -2016,7 +2066,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
 
 
 def __suggest_parallel_regions(pet: PETGraphX,
-                               suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
+                               suggestions: List[TaskParallelismInfo]) -> List[ParallelRegionInfo]:
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
     possibly leading to the creation of tasks.
@@ -2024,7 +2074,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     starting from each suggested task.
     :param pet: PET graph
     :param suggestions: List[TaskParallelismInfo]
-    :return: List[TaskParallelismInfo]"""
+    :return: List[ParallelRegionInfo]"""
     # get task suggestions from suggestions
     task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
     # start search for each suggested task
@@ -2679,7 +2729,7 @@ def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -
     return False
 
 
-def __preprocessor_cu_contains_at_least_two_recursive_calls(node: CUNode) -> bool:
+def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
     """Check if >= 2 recursive function calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
