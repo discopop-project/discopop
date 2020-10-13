@@ -6,29 +6,29 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import logging
 import os
 import re
 import subprocess
 from contextlib import suppress
 from typing import List
 
+from ._version import __version__
 from .utils import recursive_scandir, is_compile, is_link, get_library
 
 
-class DiscopopClang:
+class DiscopopCpp:
     def __init__(
         self,
         cugeneration: bool,
         dpinstrumentation: bool,
         dpreduction: bool,
         clang_path: str,
-        verbose: bool = False,
     ):
         self.cugeneration = cugeneration
         self.dpinstrumentation = dpinstrumentation
         self.dpreduction = dpreduction
         self.clang_path = clang_path
-        self.verbose = verbose
 
     def update_filemapping(self):
         cwd = os.getcwd()
@@ -42,8 +42,7 @@ class DiscopopClang:
                 ]
             ):
                 return
-        if self.verbose:
-            print("Generating FileMapping.txt.")
+        logging.info("Generating FileMapping.txt.")
         with open("FileMapping.txt", "w") as fd:
             i = 1
             for entry in sorted(recursive_scandir(cwd), key=lambda e: e.path):
@@ -59,24 +58,24 @@ class DiscopopClang:
                 args += ["-g", "-O0", "-fno-discard-value-names"]
                 if self.cugeneration:
                     # clang++ -g -O0 -fno-discard-value-names -Xclang -load \
-                    #   -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so \
+                    #   -Xclang ${DISCOPOP_INSTALL}/libi/LLVMCUGeneration.so \
                     #   -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File>
                     args += ["-Xclang", "-load", "-Xclang", get_library("LLVMCUGeneration.so")]
                 if self.dpinstrumentation:
                     # clang++ -g -O0 -fno-discard-value-names -Xclang -load \
-                    #   -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so \
+                    #   -Xclang ${DISCOPOP_INSTALL}/libi/LLVMDPInstrumentation.so \
                     #   -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
                     args += ["-Xclang", "-load", "-Xclang", get_library("LLVMDPInstrumentation.so")]
                 if self.dpreduction:
                     # clang++ -g -O0 -fno-discard-value-names -Xclang -load \
-                    #   -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPReduction.so \
+                    #   -Xclang ${DISCOPOP_INSTALL}/libi/LLVMDPReduction.so \
                     #   -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
                     args += ["-Xclang", "-load", "-Xclang", get_library("LLVMDPReduction.so")]
                 args += ["-mllvm", "-fm-path", "-mllvm", "./FileMapping.txt"]
         args += clang_args
         if is_link(clang_args):
             if self.dpinstrumentation or self.dpreduction:
-                # clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
+                # clang++ out.o -L${DISCOPOP_INSTALL}/rtlib -lDiscoPoP_RT -lpthread
                 args += [
                     f"-L{os.path.dirname(get_library('libDiscoPoP_RT.a'))}",
                     "-lDiscoPoP_RT",
@@ -86,6 +85,5 @@ class DiscopopClang:
 
     def invoke(self, clang_args: List[str]) -> subprocess.CompletedProcess:
         args = self.wrap_clang_args(clang_args)
-        if self.verbose:
-            print(" ".join(args))
+        logging.info(" ".join(args))
         return subprocess.run(args)

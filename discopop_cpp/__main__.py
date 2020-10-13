@@ -6,32 +6,53 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-"""Call Clang++ with DiscoPoP LLVM passes."""
+"""Call clang++ with DiscoPoP LLVM passes."""
 
 import argparse
+import logging
 import shutil
-import sys
 
-from . import DiscopopClang
+from . import DiscopopCpp, __version__
+
+PROG = "discopop_cpp"
+
+USAGE = f"""{PROG} [--verbose] [--clang CLANG]
+       {'':{len(PROG)}} (--CUGeneration | --DPInstrumentation | --DPReduction)
+       {'':{len(PROG)}} <clang++ arguments>
+"""
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output.")
-    parser.add_argument("--clang", help="Path to clang++ executable.")
+    parser = argparse.ArgumentParser(prog=PROG, description=__doc__, usage=USAGE, add_help=False)
+    parser.add_argument("-h", "--help", action="help", help="Show this help message and exit.")
     parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show version number and exit.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show additional information such as clang++ invocations.",
+    )
+    parser.add_argument("--clang", help="Path to clang++ executable.")
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument(
         "--CUGeneration",
         "--cugeneration",
         action="store_true",
         help="Obtain the computational unit (CU) graph of the target application.",
     )
-    parser.add_argument(
+    action.add_argument(
         "--DPInstrumentation",
         "--dpinstrumentation",
         action="store_true",
-        help="Instrument the target application to obtain data dependencies.",
+        help="Instrument the target application to obtain data dependences.",
     )
-    parser.add_argument(
+    action.add_argument(
         "--DPReduction",
         "--dpreduction",
         action="store_true",
@@ -39,24 +60,27 @@ def main(args=None):
     )
     parameters, clang_args = parser.parse_known_args(args)
 
+    logging.basicConfig(
+        format="%(message)s",
+        level=logging.INFO if parameters.verbose else logging.WARNING,
+    )
+
     if not any([parameters.CUGeneration, parameters.DPInstrumentation, parameters.DPReduction]):
-        print(
-            "Warning: Not using any DiscoPoP LLVM pass (specify --CUGeneration, "
+        logging.warning(
+            "Warning: Not using any DiscoPoP LLVM pass (specify either --CUGeneration, "
             "--DPInstrumentation or --DPReduction).",
-            file=sys.stderr,
         )
     clang_path = parameters.clang or shutil.which("clang++-8") or shutil.which("clang++")
     if not clang_path:
         raise SystemExit("clang++ executable not found in PATH. Specify --clang PATH/TO/CLANG++.")
     if not clang_args:
-        print("Warning: No arguments to clang++ were given.", file=sys.stderr)
+        logging.warning("Warning: No arguments to clang++ were given.")
 
-    clang_proc = DiscopopClang(
+    clang_proc = DiscopopCpp(
         cugeneration=parameters.CUGeneration,
         dpinstrumentation=parameters.DPInstrumentation,
         dpreduction=parameters.DPReduction,
         clang_path=clang_path,
-        verbose=parameters.verbose,
     ).invoke(clang_args)
     if clang_proc.returncode != 0:
         raise SystemExit(clang_proc.returncode)
