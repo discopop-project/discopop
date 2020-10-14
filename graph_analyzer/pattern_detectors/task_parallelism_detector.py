@@ -143,6 +143,7 @@ class TaskParallelismInfo(PatternInfo):
         self.in_dep = []
         self.out_dep = []
         self.in_out_dep = []
+        self.critical_sections: List[str] = []
 
     def __str__(self):
         return f'Task parallelism at CU: {self.node_id}\n' \
@@ -157,7 +158,8 @@ class TaskParallelismInfo(PatternInfo):
                f'shared: {" ".join(self.shared)}\n' \
                f'in_dep: {" ".join(self.in_dep)}\n' \
                f'out_dep: {" ".join(self.out_dep)}\n' \
-               f'in_out_dep: {" ".join(self.in_out_dep)}\n'
+               f'in_out_dep: {" ".join(self.in_out_dep)}\n' \
+               f'critical_sections: {" ".join(self.critical_sections)}\n'
 
 
 class ParallelRegionInfo(PatternInfo):
@@ -269,6 +271,9 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     for fork in fs:
         if fork.child_tasks:
             result.append(TaskParallelismInfo(fork.nodes[0], ["dummy_fork"], [], [], [], []))
+    # Preprocessing
+    __check_loop_scopes(pet)
+    # Suggestion generation
     result += __detect_task_suggestions(pet)
     result += __suggest_parallel_regions(pet, result)
     result = __set_task_contained_lines(result)
@@ -283,7 +288,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
     result = __remove_duplicates(result)
-    result = __correct_taskwait_suggestions_in_loop_body(pet, result)
+    result = __correct_task_suggestions_in_loop_body(pet, result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
@@ -292,10 +297,28 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     return result
 
 
-def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
-    """Separate treatment of taskwait suggestions at loop increment CUs.
+def __check_loop_scopes(pet: PETGraphX):
+    """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
+    (expand only) if necessary
+    :param pet: PET graph"""
+    for loop_cu in pet.all_nodes(NodeType.LOOP):
+        for child in pet.direct_children(loop_cu):
+            if not __line_contained_in_region(child.start_position(), loop_cu.start_position(), loop_cu.end_position()):
+                # expand loop_cu start_position upwards
+                if child.start_line < loop_cu.start_line and loop_cu.file_id == child.file_id:
+                    loop_cu.start_line = child.start_line
+            if not __line_contained_in_region(child.end_position(), loop_cu.start_position(), loop_cu.end_position()):
+                # expand loop_cu end_position downwards
+                if child.end_line > loop_cu.end_line and loop_cu.file_id == child.file_id:
+                    loop_cu.end_line = child.end_line
+
+
+def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+    """Separate treatment of task suggestions at loop increment CUs.
     If regular loop: move taskwait suggested at loop increment line to end of loop body.
     If do-all loop: move taskwait suggested at loop increment line outside of loop body.
+    If critical CUs are detected in the process, they will be appended to the critical_sections
+    of the respective task suggestion.
     :param pet: PET graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
@@ -303,6 +326,7 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: Lis
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
                         if s.pragma[0] == "task"]
     for ts in task_suggestions:
+        found_critical_cus: List[CUNode] = []
         for loop_cu in pet.all_nodes(NodeType.LOOP):
             # check if task suggestion inside do-all loop exists
             if __line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
@@ -317,30 +341,110 @@ def __correct_taskwait_suggestions_in_loop_body(pet: PETGraphX, suggestions: Lis
                     return result
                 # find successive taskwaits
                 successive_taskwait_cus = find_taskwaits(ts._node)
-                for stws in successive_taskwait_cus:
-                    # check if stws is suggested at loop increment
-                    if stws.basic_block_id != "for.inc":
-                        continue
+                for stws_cu in successive_taskwait_cus:
                     if loop_cu.do_all:
+                        # check if stws is suggested at loop increment
+                        if stws_cu.basic_block_id != "for.inc":
+                            continue
                         # Do-all loop, move taskwait to the outside
-                        print("TPDet: correct_taskwait_suggestions_in_loop_body: Task in do-all loop ", ts.pragma_line,
-                              ". Moving Taskwait ", stws.start_line, " to: ",
+                        print("TPDet: correct_task_suggestions_in_loop_body: Task in do-all loop ", ts.pragma_line,
+                              ". Moving Taskwait ", stws_cu.start_line, " to: ",
                               int(loop_cu.end_position().split(":")[1])+1)
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws:
+                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1])+1
                     else:
-                        # Regular loop, move taskwait to the end of the loop body
-                        print("TPDet: correct_taskwait_suggestions_in_loop_body: Task in regular loop ", ts.pragma_line,
-                              ". Moving Taskwait ", stws.start_line, " to: ",
-                              int(loop_cu.end_position().split(":")[1]))
+                        # Regular loop: task = loop body, move taskwait to the end of the loop body
+                        # protect RAW to shared with critical section around CU (general)  or atomic (reduction)
+                        print("TPDet: correct_task_suggestions_in_loop_body: Task in regular loop ", ts.pragma_line,
+                              ". Moving Taskwait ", stws_cu.start_line, " to: ",
+                              int(loop_cu.end_position().split(":")[1]), ".")
+                        # move pragma taskwait line
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws:
+                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1])
+                        # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
+                        # set task region lines accordingly
+                        # if ts._node is a direct child of loop_cu
+                        if loop_cu.id in [e[0] for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]:
+                            print("Moving Pragma from: ", ts.pragma_line,
+                                  " to: ", int(loop_cu.start_position().split(":")[1]) + 1)
+                            ts.pragma_line = int(loop_cu.start_position().split(":")[1])+1
+                            ts.region_start_line = str(ts.pragma_line)
+                            ts.region_end_line = loop_cu.end_position().split(":")[1]
+
+                            # protect RAW-Writes to shared variables with critical section
+                            # i.e. find in-deps to shared variables and suggest critical section around CUs
+                            # containing such cases
+                            # TODO: check if atomic is possible
+                            for loop_cu_child in pet.direct_children(loop_cu):
+                                for in_dep_var_name in list(set([e[2].var_name for e in
+                                                                 pet.in_edges(loop_cu_child.id, EdgeType.DATA)])):
+                                    if in_dep_var_name in ts.shared:
+                                        # check if the found dependency occurs in the scope of the suggested task
+                                        if loop_cu_child.file_id == ts._node.file_id and \
+                                            loop_cu_child.start_line >= int(ts.region_start_line) and \
+                                                loop_cu_child.end_line <= int(ts.region_end_line):
+                                            # append loop_cu_child to list of critical CUs
+                                            found_critical_cus.append(loop_cu_child)
+        # remove potential duplicates from critical cus
+        found_critical_cus = list(set(found_critical_cus))
+        # get lists of combinable cus by checking successor relation
+        combinations = []
+        for cu in found_critical_cus:
+            combinations.append([cu])
+        found_combination = True
+        while found_combination:
+            found_combination = False
+            for parent_idx in range(0, len(combinations)):
+                if found_combination:
+                    break
+                for child_idx in range(0, len(combinations)):
+                    if found_combination:
+                        break
+                    if parent_idx == child_idx:
+                        continue
+                    if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
+                        combinations[parent_idx] += combinations[child_idx]
+                        combinations.pop(child_idx)
+                        found_combination = True
+        # remove entries from combinations, if they are already covered by another combination
+        # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
+        removed_entry = True
+        while removed_entry:
+            removed_entry = False
+            for parent_idx in range(0, len(combinations)):
+                if removed_entry:
+                    break
+                # check that parent is a single-entry list
+                if len(combinations[parent_idx]) != 1:
+                    continue
+                for child_idx in range(0, len(combinations)):
+                    if removed_entry:
+                        break
+                    if parent_idx == child_idx:
+                        continue
+                    # check if parent is covered by child
+                    parent = combinations[parent_idx]
+                    child = combinations[child_idx]
+                    if __line_contained_in_region(parent[0].start_position(), child[0].start_position(),
+                                                  child[-1].end_position()) and \
+                        __line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
+                                                   child[-1].end_position()):
+                        combinations.pop(parent_idx)
+                        removed_entry = True
+        # create a string from the gathered information and append to ts.critical_sections
+        for combination_list in combinations:
+            print("\t", [e.id for e in combination_list])
+            critical_section_str = ""
+            critical_section_str += combination_list[0].start_position()
+            critical_section_str += "-"
+            critical_section_str += combination_list[-1].end_position()
+            ts.critical_sections.append(critical_section_str)
     return suggestions
 
 
