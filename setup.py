@@ -43,7 +43,12 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=get_requirements(),
     python_requires=">=3.6",
-    entry_points={"console_scripts": ["discopop_explorer=discopop_explorer.__main__:main"]},
+    entry_points={
+        "console_scripts": [
+            "discopop_explorer=discopop_explorer.__main__:main",
+            "discopop_profiler=discopop_profiler.__main__:main",
+        ]
+    },
     zip_safe=True,
     classifiers=[
         "Development Status :: 4 - Beta",
