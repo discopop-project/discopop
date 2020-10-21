@@ -31,9 +31,9 @@ jobs:
       - name: "Run unit_tests.py"
         run: python -m discopop_explorer.unit_tests
       - name: "Run MyPy Type Checker"
-        run: python -m mypy --warn-unused-ignores -p discopop_explorer -p discopop_cpp
-      - name: "Check formatting of discopop_cpp"
-        run: python -m black -l 100 --check discopop_cpp
+        run: python -m mypy --warn-unused-ignores -p discopop_explorer -p discopop_profiler
+      - name: "Check formatting of discopop_profiler"
+        run: python -m black -l 100 --check discopop_profiler
 
   discopop_profiler:
     name: "Profiler"

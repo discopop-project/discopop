@@ -37,8 +37,8 @@ jobs:
           git checkout $(git branch -a --format="%(refname:lstrip=3)" --contains ${GITHUB_REF} | tail -n1)
           echo "${VERSION}" > VERSION
           echo "__version__ = \"${VERSION}\"" > discopop_explorer/_version.py
-          echo "__version__ = \"${VERSION}\"" > discopop_cpp/_version.py
-          git add VERSION discopop_explorer/_version.py discopop_cpp/_version.py
+          echo "__version__ = \"${VERSION}\"" > discopop_profiler/_version.py
+          git add VERSION discopop_explorer/_version.py discopop_profiler/_version.py
           git commit -m "Release of Version ${VERSION}"
           git tag -a -f -m "Version ${VERSION}" v${VERSION}
           git push

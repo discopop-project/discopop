@@ -46,7 +46,7 @@ setup(
     entry_points={
         "console_scripts": [
             "discopop_explorer=discopop_explorer.__main__:main",
-            "discopop_cpp=discopop_cpp.__main__:main",
+            "discopop_profiler=discopop_profiler.__main__:main",
         ]
     },
     zip_safe=True,

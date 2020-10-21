@@ -14,7 +14,7 @@ import shutil
 
 from . import DiscopopCpp, __version__
 
-PROG = "discopop_cpp"
+PROG = "discopop_profiler"
 
 USAGE = f"""{PROG} [--verbose] [--clang CLANG]
        {'':{len(PROG)}} (--CUGeneration | --DPInstrumentation | --DPReduction)

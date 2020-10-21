@@ -57,7 +57,7 @@ To obtain the list of reduction operations in the target application, we need to
 	
 *NOTE:* Please use the exact compiler flags that we used. Otherwise, you might not get the correct results, or the analysis might fail.
 
-DiscoPoP also provides a wrapper [discopop_cpp](./discopop_cpp/README.md) to
+DiscoPoP also provides a wrapper [discopop_profiler](discopop_profiler/README.md) to
 easily invoke clang with the DiscoPoP LLVM passes.
 
 #### Pattern identfication
