@@ -284,9 +284,9 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __remove_useless_barrier_suggestions(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
-    result = __suggest_missing_barriers_for_global_vars(pet, result)
     # result = __detect_dependency_clauses(pet, result)
     result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file)
+    result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
@@ -1573,18 +1573,20 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List
                 # if cu is a task suggestion, continue
                 if pet.node_at(succ_edge[1]).tp_contains_task is True:
                     continue
-                # suggest taskwait
-                if pet.node_at(succ_edge[1]).tp_contains_taskwait is False:
-                    # actual change
-                    pet.node_at(succ_edge[1]).tp_contains_taskwait = True
-                    first_line = pet.node_at(succ_edge[1]).start_position()
-                    first_line = first_line[first_line.index(":") + 1:]
-                    tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
-                                                         ["taskwait"],
-                                                         first_line,
-                                                         [], [], [])
-                    suggestions.append(tmp_suggestion)
-                continue
+                # check if any element of common vars is not contained in task_sug.out_dep
+                if len([v for v in task_sug.out_dep if v not in [e.name for e in common_vars] ]) > 0:
+                    # suggest taskwait
+                    if pet.node_at(succ_edge[1]).tp_contains_taskwait is False:
+                        # actual change
+                        pet.node_at(succ_edge[1]).tp_contains_taskwait = True
+                        first_line = pet.node_at(succ_edge[1]).start_position()
+                        first_line = first_line[first_line.index(":") + 1:]
+                        tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
+                                                             ["taskwait"],
+                                                             first_line,
+                                                             [], [], [])
+                        suggestions.append(tmp_suggestion)
+                    continue
             # append current nodes outgoing successor edges to queue
             target_out_succ_edges = [(s, t, e) for s, t, e in pet.out_edges(pet.node_at(succ_edge[1]).id) if
                                      e.etype == EdgeType.SUCCESSOR and
