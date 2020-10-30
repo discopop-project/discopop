@@ -61,7 +61,7 @@ def get_path(base_path: str, file_name: str) -> str:
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
-def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str]) \
+def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, file_mapping:str, plugins: List[str]) \
         -> DetectionResult:
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
@@ -82,7 +82,8 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
 
     pattern_detector = PatternDetectorX(pet)
 
-    res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file, loop_counter_file, reduction_file)
+    res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file, loop_counter_file, reduction_file,
+                                                            file_mapping)
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
@@ -117,7 +118,7 @@ if __name__ == "__main__":
 
     start = time.time()
 
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins)
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping, plugins)
 
     end = time.time()
 

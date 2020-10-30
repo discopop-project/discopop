@@ -57,7 +57,7 @@ class PatternDetectorX(object):
         for n in dummies_to_remove:
             self.pet.g.remove_node(n)
 
-    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars):
+    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars, file_mapping):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
@@ -69,6 +69,6 @@ class PatternDetectorX(object):
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
-        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars)
+        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping)
 
         return res

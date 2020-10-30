@@ -264,7 +264,7 @@ void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root){
                     if(lid > 0)
                         root->returnLines.insert(lid);
                 }
-            }      
+            }
         }
     }
 }
@@ -636,7 +636,7 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
             *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
             *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
-            *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\"" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
+            *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
             {
@@ -840,8 +840,24 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             {
                 cu-> instructionsLineNumbers.insert(lid);
                 cu-> instructionsCount++;
+                // find return instructions
                 if(isa<ReturnInst>(instruction)){
                   cu->returnInstructions.insert(lid);
+                }
+                // find branches to return instructions, i.e. return statements
+                // Lukas 21.09.20
+                else if(isa<BranchInst>(instruction)){
+                  if((cast<BranchInst>(instruction))->isUnconditional()){
+                    if((cast<BranchInst>(instruction))->getNumSuccessors() == 1){
+                      BasicBlock* successorBB = (cast<BranchInst>(instruction))->getSuccessor(0);
+                      for (BasicBlock::iterator innerInstruction = successorBB->begin(); innerInstruction != successorBB->end(); ++innerInstruction){
+                        if(isa<ReturnInst>(innerInstruction)){
+                          cu->returnInstructions.insert(lid);
+                          break;
+                        }
+                      }
+                    }
+                  }
                 }
             //}
             if(isa < StoreInst >(instruction))
