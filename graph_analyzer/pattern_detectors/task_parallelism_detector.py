@@ -1221,81 +1221,181 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     :param suggestions: List[PatternInfo]
     :return: List[PatternInfo]
     """
-    for suggestion in suggestions:
-        # only consider task suggestions
-        if type(suggestion) != TaskParallelismInfo:
-            continue
-        suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
-            continue
-        # get function containing the task cu
-        parent_function, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
-        # filter in_dep
-        to_be_removed = []
-        for var in suggestion.in_dep:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for defLine in var_def_line_dict[var]:
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                  parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError:
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
-        # filter out_dep
-        to_be_removed = []
-        for var in suggestion.out_dep:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for defLine in var_def_line_dict[var]:
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                  parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError:
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
-        # filter in_out_dep
-        to_be_removed = []
-        for var in suggestion.in_out_dep:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for defLine in var_def_line_dict[var]:
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                  parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError:
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
+    modification_found = True
+    while modification_found:
+        # get list of used variabled by dependency type
+        in_dep_vars = dict()
+        out_dep_vars = dict()
+        for suggestion in suggestions:
+            # only consider task suggestions
+            if type(suggestion) != TaskParallelismInfo:
+                continue
+            suggestion = cast(TaskParallelismInfo, suggestion)
+            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+                continue
+            for var in suggestion.in_dep:
+                if var not in in_dep_vars:
+                    in_dep_vars[var] = []
+                in_dep_vars[var].append(suggestion.pragma_line)
+            for var in suggestion.out_dep:
+                if var not in out_dep_vars:
+                    out_dep_vars[var] = []
+                out_dep_vars[var].append(suggestion.pragma_line)
+            for var in suggestion.in_out_dep:
+                if var not in in_dep_vars:
+                    in_dep_vars[var] = []
+                in_dep_vars[var].append(suggestion.pragma_line)
+                if var not in out_dep_vars:
+                    out_dep_vars[var] = []
+                out_dep_vars[var].append(suggestion.pragma_line)
+
+        # filter dependency clauses
+        modification_found = False
+        for suggestion in suggestions:
+            # only consider task suggestions
+            if type(suggestion) != TaskParallelismInfo:
+                continue
+            suggestion = cast(TaskParallelismInfo, suggestion)
+            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+                continue
+            # get function containing the task cu
+            parent_function, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+            # filter in_dep
+            to_be_removed = []
+            for var in suggestion.in_dep:
+                var = var.replace(".addr", "")
+                is_valid = False
+                try:
+                    for defLine in var_def_line_dict[var]:
+                        # ensure backwards compatibility (no definition line present in cu_xml
+                        if defLine is None:
+                            is_valid = True
+                        # check if var is defined in parent function
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
+                            # check if var is contained in out_dep_vars and a previous out_dep exists
+                            if var in out_dep_vars:
+                                for line_num in out_dep_vars[var]:
+                                    tmp_pragma_line = suggestion.pragma_line
+                                    if ":" in line_num:
+                                        line_num = line_num.split(":")[1]
+                                    if ":" in tmp_pragma_line:
+                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
+                                    if int(line_num) < int(tmp_pragma_line):
+                                        is_valid = True
+                        else:
+                            pass
+                except ValueError:
+                    pass
+                if not is_valid:
+                    modification_found = True
+                    to_be_removed.append(var)
+            to_be_removed = list(set(to_be_removed))
+            suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
+            # filter out_dep
+            to_be_removed = []
+            for var in suggestion.out_dep:
+                var = var.replace(".addr", "")
+                is_valid = False
+                try:
+                    for defLine in var_def_line_dict[var]:
+                        # ensure backwards compatibility (no definition line present in cu_xml
+                        if defLine is None:
+                            is_valid = True
+                        # check if var is defined in parent function
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
+                            # check if var is contained in in_dep_vars and a successive in_dep exists
+                            if var in in_dep_vars:
+                                for line_num in in_dep_vars[var]:
+                                    tmp_pragma_line = suggestion.pragma_line
+                                    if ":" in line_num:
+                                        line_num = line_num.split(":")[1]
+                                    if ":" in tmp_pragma_line:
+                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
+                                    if int(line_num) > int(tmp_pragma_line):
+                                        is_valid = True
+                        else:
+                            pass
+                except ValueError:
+                    pass
+                if not is_valid:
+                    to_be_removed.append(var)
+                    modification_found = True
+            to_be_removed = list(set(to_be_removed))
+            suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
+            # filter in_out_dep
+            to_be_removed = []
+            for var in suggestion.in_out_dep:
+                var = var.replace(".addr", "")
+                is_valid = False
+                try:
+                    for defLine in var_def_line_dict[var]:
+                        # ensure backwards compatibility (no definition line present in cu_xml
+                        if defLine is None:
+                            is_valid = True
+                        # check if var is defined in parent function
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
+                            # check if var occurs more than once as in or out, i.e. at least an actual in or out
+                            # dependency exists
+                            if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
+                                # check if out dep prior an in dep afterwards exist
+                                prior_out_exists = False
+                                successive_in_exists = False
+                                tmp_pragma_line = suggestion.pragma_line
+                                if ":" in tmp_pragma_line:
+                                    tmp_pragma_line = tmp_pragma_line.split(":")[1]
+                                for line_num in out_dep_vars[var]:
+                                    if ":" in line_num:
+                                        line_num = line_num.split(":")[1]
+                                    if int(line_num) < int(tmp_pragma_line):
+                                        prior_out_exists = True
+                                for line_num in in_dep_vars[var]:
+                                    if ":" in line_num:
+                                        line_num = line_num.split(":")[1]
+                                    if int(line_num) > int(tmp_pragma_line):
+                                        successive_in_exists = True
+                                # check and treat conditions
+                                if prior_out_exists and successive_in_exists:
+                                    # proper in_out_dep
+                                    is_valid = True
+                                elif prior_out_exists and not successive_in_exists:
+                                    # depend in
+                                    suggestion.in_dep.append(var)
+                                    suggestion.in_dep = list(set(suggestion.in_dep))
+                                elif not prior_out_exists and successive_in_exists:
+                                    # depend out
+                                    suggestion.out_dep.append(var)
+                                    suggestion.out_dep = list(set(suggestion.out_dep))
+                        else:
+                            pass
+                except ValueError:
+                    pass
+                if not is_valid:
+                    to_be_removed.append(var)
+                    modification_found = True
+            to_be_removed = list(set(to_be_removed))
+            suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
+
+            # correct in_out_vars (find in_out vars if not already detected)
+            overlap = [v for v in suggestion.in_dep if v in suggestion.out_dep]
+            for v in overlap:
+                if v not in suggestion.in_out_dep:
+                    modification_found = True
+                suggestion.in_dep.remove(v)
+                suggestion.out_dep.remove(v)
+                suggestion.in_out_dep.append(v)
+            suggestion.in_out_dep = list(set(suggestion.in_out_dep))
+            # correct in_out vars (remove from in and out)
+            for v in suggestion.in_out_dep:
+                if v in suggestion.in_dep:
+                    suggestion.in_dep.remove(v)
+                    modification_found = True
+                if v in suggestion.out_dep:
+                    suggestion.out_dep.remove(v)
+                    modification_found = True
+
     return suggestions
 
 
