@@ -434,8 +434,8 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                     ts.atomic_sections.append(
                                                         ""+str(file_idx)+":"+str(e)+"-"+str(file_idx)+":"+str(e))
                                             else:
-                                                 # append loop_cu_child to list of critical CUs
-                                                 found_critical_cus.append(loop_cu_child)
+                                                # append loop_cu_child to list of critical CUs
+                                                found_critical_cus.append(loop_cu_child)
         ## CRITICAL SECTIONS
         # remove potential duplicates from critical cus
         found_critical_cus = list(set(found_critical_cus))
@@ -740,8 +740,8 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
                         continue
                     for raw_dep_entry in raw_dependency_information[source_line]:
                         if raw_dep_entry[1] == intersecting_variable:
-                                if raw_dep_entry[0] in sink_lines:
-                                    dependencies.append(parameter)
+                            if raw_dep_entry[0] in sink_lines:
+                                dependencies.append(parameter)
     dependencies = list(set(dependencies))
     return dependencies
 
