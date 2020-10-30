@@ -144,6 +144,7 @@ class TaskParallelismInfo(PatternInfo):
         self.out_dep = []
         self.in_out_dep = []
         self.critical_sections: List[str] = []
+        self.atomic_sections: List[str] = []
 
     def __str__(self):
         return f'Task parallelism at CU: {self.node_id}\n' \
@@ -159,7 +160,8 @@ class TaskParallelismInfo(PatternInfo):
                f'in_dep: {" ".join(self.in_dep)}\n' \
                f'out_dep: {" ".join(self.out_dep)}\n' \
                f'in_out_dep: {" ".join(self.in_out_dep)}\n' \
-               f'critical_sections: {" ".join(self.critical_sections)}\n'
+               f'critical_sections: {" ".join(self.critical_sections)}\n' \
+               f'atomic_sections: {" ".join(self.atomic_sections)}\n'
 
 
 class ParallelRegionInfo(PatternInfo):
@@ -222,6 +224,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
+
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
     # execute reduction detector to enable taskloop-reduction-detection
@@ -319,6 +322,8 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
     If do-all loop: move taskwait suggested at loop increment line outside of loop body.
     If critical CUs are detected in the process, they will be appended to the critical_sections
     of the respective task suggestion.
+    If atomic CUs are detected in the process, they will be appended to the atomic_sections
+    of the respective task suggestion.
     :param pet: PET graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
@@ -327,6 +332,7 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                         if s.pragma[0] == "task"]
     for ts in task_suggestions:
         found_critical_cus: List[CUNode] = []
+        found_atomic_cus: List[CUNode] = []
         for loop_cu in pet.all_nodes(NodeType.LOOP):
             # check if task suggestion inside do-all loop exists
             if __line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
@@ -380,7 +386,6 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                             # protect RAW-Writes to shared variables with critical section
                             # i.e. find in-deps to shared variables and suggest critical section around CUs
                             # containing such cases
-                            # TODO: check if atomic is possible
                             for loop_cu_child in pet.direct_children(loop_cu):
                                 for in_dep_var_name in list(set([e[2].var_name for e in
                                                                  pet.in_edges(loop_cu_child.id, EdgeType.DATA)])):
@@ -389,8 +394,49 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                         if loop_cu_child.file_id == ts._node.file_id and \
                                             loop_cu_child.start_line >= int(ts.region_start_line) and \
                                                 loop_cu_child.end_line <= int(ts.region_end_line):
-                                            # append loop_cu_child to list of critical CUs
-                                            found_critical_cus.append(loop_cu_child)
+                                            # seperate between critical and atomic CUs
+                                            if __contains_reduction(pet, loop_cu_child):
+                                                # split cu lines on reduction, mark surrounding lines as critical
+                                                file_idx = loop_cu_child.start_position().split(":")[0]
+                                                start_line = int(loop_cu_child.start_position().split(":")[1])
+                                                end_line = int(loop_cu_child.end_position().split(":")[1])
+                                                critical_lines = range(start_line, end_line + 1)
+                                                atomic_lines = []
+                                                # seperate between critical and atomic lines
+                                                for red_var in pet.reduction_vars:
+                                                    if __line_contained_in_region(red_var["reduction_line"],
+                                                                                  loop_cu_child.start_position(),
+                                                                                  loop_cu_child.end_position()):
+                                                        atomic_lines.append(int(red_var["reduction_line"].split(":")[1]))
+                                                critical_lines = [e for e in critical_lines if e not in atomic_lines]
+                                                # combine successive critical lines if possible
+                                                combined_critical_lines = [(e, e) for e in critical_lines]  # (start, end)
+                                                found_combination = True
+                                                while found_combination and len(combined_critical_lines) > 1:
+                                                    found_combination = False
+                                                    for outer_idx, outer in enumerate(combined_critical_lines):
+                                                        for inner_idx, inner in enumerate(combined_critical_lines):
+                                                            if inner_idx == outer_idx:
+                                                                continue
+                                                            if outer[1] + 1 == inner[0]:
+                                                                # inner is direct successor of outer
+                                                                combined_critical_lines[outer_idx] = (outer[0], inner[1])
+                                                                combined_critical_lines.pop(inner_idx)
+                                                                found_combination = True
+                                                                break
+                                                        if found_combination:
+                                                            break
+                                                # append critical and atomic to ts.atomic_sections/ts.critical_sections
+                                                for e in combined_critical_lines:
+                                                    ts.critical_sections.append(
+                                                        ""+str(file_idx)+":"+str(e[0])+"-"+str(file_idx)+":"+str(e[1]))
+                                                for e in atomic_lines:
+                                                    ts.atomic_sections.append(
+                                                        ""+str(file_idx)+":"+str(e)+"-"+str(file_idx)+":"+str(e))
+                                            else:
+                                                 # append loop_cu_child to list of critical CUs
+                                                 found_critical_cus.append(loop_cu_child)
+        ## CRITICAL SECTIONS
         # remove potential duplicates from critical cus
         found_critical_cus = list(set(found_critical_cus))
         # get lists of combinable cus by checking successor relation
@@ -439,13 +485,79 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                         removed_entry = True
         # create a string from the gathered information and append to ts.critical_sections
         for combination_list in combinations:
-            print("\t", [e.id for e in combination_list])
             critical_section_str = ""
             critical_section_str += combination_list[0].start_position()
             critical_section_str += "-"
             critical_section_str += combination_list[-1].end_position()
             ts.critical_sections.append(critical_section_str)
+
+        ## ATOMIC SECTIONS
+        # remove potential duplicates from atomic cus
+        found_atomic_cus = list(set(found_atomic_cus))
+        # get lists of combinable cus by checking successor relation
+        combinations = []
+        for cu in found_atomic_cus:
+            combinations.append([cu])
+        found_combination = True
+        while found_combination:
+            found_combination = False
+            for parent_idx in range(0, len(combinations)):
+                if found_combination:
+                    break
+                for child_idx in range(0, len(combinations)):
+                    if found_combination:
+                        break
+                    if parent_idx == child_idx:
+                        continue
+                    if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
+                        combinations[parent_idx] += combinations[child_idx]
+                        combinations.pop(child_idx)
+                        found_combination = True
+        # remove entries from combinations, if they are already covered by another combination
+        # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
+        removed_entry = True
+        while removed_entry:
+            removed_entry = False
+            for parent_idx in range(0, len(combinations)):
+                if removed_entry:
+                    break
+                # check that parent is a single-entry list
+                if len(combinations[parent_idx]) != 1:
+                    continue
+                for child_idx in range(0, len(combinations)):
+                    if removed_entry:
+                        break
+                    if parent_idx == child_idx:
+                        continue
+                    # check if parent is covered by child
+                    parent = combinations[parent_idx]
+                    child = combinations[child_idx]
+                    if __line_contained_in_region(parent[0].start_position(), child[0].start_position(),
+                                                  child[-1].end_position()) and \
+                            __line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
+                                                       child[-1].end_position()):
+                        combinations.pop(parent_idx)
+                        removed_entry = True
+        # create a string from the gathered information and append to ts.critical_sections
+        for combination_list in combinations:
+            atomic_section_str = ""
+            atomic_section_str += combination_list[0].start_position()
+            atomic_section_str += "-"
+            atomic_section_str += combination_list[-1].end_position()
+            ts.atomic_sections.append(atomic_section_str)
+
     return suggestions
+
+
+def __contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
+    """Checks if node contains a reduction operation.
+    :param pet: PET Graph
+    :param node: CUNode
+    :return: bool"""
+    for red_var in pet.reduction_vars:
+        if __line_contained_in_region(red_var["reduction_line"], node.start_position(), node.end_position()):
+            return True
+    return False
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
@@ -553,6 +665,7 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                     # get function parameter names from recursive function call
                     dependencies = __check_dependence_of_task_pair(aliases, raw_dependency_information,
                                                                    ts_1, parameter_names_1, ts_2)
+
                     for dependence_var in dependencies:
                         # Mark the variable as depend out for the first function and depend in for the second function.
                         if ts_1 not in out_dep_updates:
@@ -627,8 +740,8 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
                         continue
                     for raw_dep_entry in raw_dependency_information[source_line]:
                         if raw_dep_entry[1] == intersecting_variable:
-                            if raw_dep_entry[0] in sink_lines:
-                                dependencies.append(parameter)
+                                if raw_dep_entry[0] in sink_lines:
+                                    dependencies.append(parameter)
     dependencies = list(set(dependencies))
     return dependencies
 
@@ -691,6 +804,7 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
                         if s.pragma[0] == "task"]
     # collect alias information
     aliases = dict()
+    called_function_cache = dict()
     for ts in task_suggestions:
         current_alias_entry = []
         potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
@@ -740,7 +854,7 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
                 current_alias = [(param, parent_function.name, parent_function.start_position(),
                                   parent_function.end_position())]
                 current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx,
-                                                                       source_code_files, [])
+                                                                       source_code_files, [], called_function_cache)
                 current_alias_entry.append(current_alias)
         aliases[ts] = current_alias_entry
     # join aliases on first element (original identifier)
@@ -763,8 +877,37 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
     return aliases
 
 
+def __get_called_functions_recursively(pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict) -> List[CUNode]:
+    """returns a recursively generated list of called functions, started at root."""
+    visited.append(root)
+    called_functions = []
+    for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
+        # check if type is Func or Dummy
+        if child.type == NodeType.FUNC or child.type == NodeType.DUMMY:
+            # CU contains a function call
+            # if Dummy, map to Func
+            if child.type == NodeType.DUMMY:
+                for function_cu in pet.all_nodes(NodeType.FUNC):
+                    if child.name == function_cu.name:
+                        child = function_cu
+            called_functions.append(child)
+        elif child not in visited:
+            if child in cache:
+                called_functions += cache[child]
+            else:
+                # recursion step
+                called_functions += __get_called_functions_recursively(pet, child, visited, cache)
+        else:
+            # suppress endless recursion
+            continue
+    if root not in cache:
+        cache[root] = called_functions
+    return called_functions
+
+
 def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int,
-                                          source_code_files: Dict[str, str], visited: List[Tuple[CUNode, int]]) \
+                                          source_code_files: Dict[str, str], visited: List[Tuple[CUNode, int]],
+                                          called_function_cache: Dict) \
         -> List[Tuple[str, str, str, str]]:
     """Returns alias information for a parameter at a specific position.
     :param pet: PET Graph
@@ -783,17 +926,8 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
     # iterate over CUs
     for cu in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(function.id)]]:
         # iterate over children of CU and retrieve called functions
-        called_functions = []
-        for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(cu.id)]]:
-            # check if type is Func or Dummy
-            if child.type == NodeType.FUNC or child.type == NodeType.DUMMY:
-                # CU contains a function call
-                # if Dummy, map to Func
-                if child.type == NodeType.DUMMY:
-                    for function_cu in pet.all_nodes(NodeType.FUNC):
-                        if child.name == function_cu.name:
-                            child = function_cu
-                called_functions.append(child)
+        called_functions = __get_called_functions_recursively(pet, cu, [], called_function_cache)
+        called_functions = list(set(called_functions))
         # iterate over called functions
         for called_function in called_functions:
             # read line from source code (iterate over lines of CU to search for function call)
@@ -814,7 +948,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
                         if (called_function, idx) not in visited:
                             # if not, start recursion
                             result += __get_alias_for_parameter_at_position(pet, called_function, idx,
-                                                                            source_code_files, visited)
+                                                                            source_code_files, visited, called_function_cache)
     return result
 
 
@@ -874,10 +1008,10 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     # parameter_string = source_code_line[function_position:]
     parameter_string = source_code_line[source_code_line.find(function_name) + len(function_name):]
     # prune left
-    while not parameter_string.startswith("("):
+    while "(" in parameter_string and not parameter_string.startswith("("):
         parameter_string = parameter_string[parameter_string.find("("):]
     # prune right
-    while not parameter_string.endswith(")"):
+    while ")" in parameter_string and not parameter_string.endswith(")"):
         parameter_string = parameter_string[:parameter_string.rfind(")")+1]
     # prune to correct amount of closing brackets
     while not parameter_string.count("(") == parameter_string.count(")"):
@@ -888,8 +1022,11 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     parameters = parameter_string.split(",")
     result_parameters = []
     for param in parameters:
+        param = param.replace("\t", "")
         if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
-            split_param_expression = re.split(r"\+-\*/\(\)", param)
+            split_param_expression = param.replace("+", "$$").replace("-", "$$").replace("/", "$$")
+            split_param_expression = split_param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
+            split_param_expression = split_param_expression.split("$$")
             split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
             # check if any of the parameters is in list of known variables
             split_param_expression = [ex for ex in split_param_expression
@@ -912,7 +1049,6 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
         else:
             # check if param in known variables:
             result_parameters.append(param.replace(" ", ""))
-
     return function_name, result_parameters
 
 
