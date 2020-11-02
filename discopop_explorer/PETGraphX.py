@@ -7,14 +7,14 @@
 # directory for details.
 
 from enum import IntEnum, Enum
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Optional
 
 import matplotlib.pyplot as plt
-import networkx as nx
-from lxml.objectify import ObjectifiedElement
+import networkx as nx  # type:ignore
+from lxml.objectify import ObjectifiedElement  # type:ignore
 
-from parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
-from variable import Variable
+from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
+from .variable import Variable
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -38,7 +38,7 @@ edge_props = [
 ]
 
 
-def parse_id(node_id: str) -> (int, int):
+def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(':')
     return int(split[0]), int(split[1])
 
@@ -73,10 +73,10 @@ class MWType(Enum):
 
 class Dependency:
     etype: EdgeType
-    dtype: DepType = None
-    var_name: str = None
-    source: str = None
-    sink: str = None
+    dtype: Optional[DepType] = None
+    var_name: Optional[str] = None
+    source: Optional[str] = None
+    sink: Optional[str] = None
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -323,7 +323,7 @@ class PETGraphX(object):
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
-        res = []
+        res: List[CUNode] = []
         if root in visited:
             return res
         visited.add(root)
@@ -407,7 +407,7 @@ class PETGraphX(object):
 
         return dep_set
 
-    def is_loop_index(self, var_name: str, loops_start_lines: List[str], children: List[CUNode]) -> bool:
+    def is_loop_index(self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]) -> bool:
         """Checks, whether the variable is a loop index.
 
         :param var_name: name of the variable
@@ -465,7 +465,7 @@ class PETGraphX(object):
         :return: list of nodes in the subtree
         """
         stack: List[CUNode] = [self.main]
-        res = []
+        res: List[CUNode] = []
         visited = []
 
         while stack:

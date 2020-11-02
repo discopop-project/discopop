@@ -6,9 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-# Dockerfile for an image containing the dependencies of graph_analyzer
+# This file specifies which additional files to include in the Python package.
+# https://packaging.python.org/guides/using-manifest-in/
 
-FROM tiagopeixoto/graph-tool
-RUN pacman --noconfirm -S python-pip
-COPY graph_analyzer/requirements.txt /requirements.txt
-RUN pip install -r /requirements.txt
+include VERSION
+include discopop_explorer/README.md
+include discopop_explorer/requirements.txt

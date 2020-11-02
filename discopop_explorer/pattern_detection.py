@@ -7,13 +7,14 @@
 # directory for details.
 from typing import List
 
-from PETGraphX import PETGraphX, NodeType, EdgeType
-from pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
-from pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
-from pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
-from pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
-from pattern_detectors.task_parallelism_detector import build_preprocessed_graph_and_run_detection as detect_tp, \
-    TaskParallelismInfo
+from .PETGraphX import PETGraphX, NodeType, EdgeType
+from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
+from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
+from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
+from .pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
+from .pattern_detectors.task_parallelism_detector import build_preprocessed_graph_and_run_detection \
+    as detect_tp
+from .pattern_detectors.PatternInfo import PatternInfo
 
 
 class DetectionResult(object):
@@ -21,6 +22,7 @@ class DetectionResult(object):
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
+    task: List[PatternInfo]
 
     def __init__(self):
         pass
@@ -69,6 +71,6 @@ class PatternDetectorX(object):
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
-        res.task_parallelism = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping)
+        res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping)
 
         return res

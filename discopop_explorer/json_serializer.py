@@ -8,11 +8,11 @@
 
 from json import JSONEncoder
 
-from PETGraphX import CUNode
-from pattern_detection import DetectionResult
-from pattern_detectors.PatternInfo import PatternInfo
-from pattern_detectors.pipeline_detector import PipelineStage
-from variable import Variable
+from .PETGraphX import CUNode
+from .pattern_detection import DetectionResult
+from .pattern_detectors.PatternInfo import PatternInfo
+from .pattern_detectors.pipeline_detector import PipelineStage
+from .variable import Variable
 
 
 def filter_members(d: dict) -> dict:

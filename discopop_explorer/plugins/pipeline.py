@@ -1,12 +1,12 @@
 from copy import deepcopy
 from typing import List
 
-from PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-from utils import correlation_coefficient
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..utils import correlation_coefficient
 
 total = 0
-before = []
-after = []
+before: List[float] = []
+after: List[float] = []
 
 
 def run_before(pet: PETGraphX):

@@ -17,12 +17,12 @@ from cpp_demangle import demangle
 from lxml import etree
 from lxml import objectify
 
-from PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
-from parser import parse_inputs
-from pattern_detectors.PatternInfo import PatternInfo
-from pattern_detectors.reduction_detector import run_detection as detect_reduction
-from pattern_detectors.do_all_detector import run_detection as detect_do_all
-from utils import depends, calculate_workload, \
+from .PatternInfo import PatternInfo
+from .reduction_detector import run_detection as detect_reduction
+from .do_all_detector import run_detection as detect_do_all
+from ..PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
+from ..parser import parse_inputs
+from ..utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars
 
 __forks = set()

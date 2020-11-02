@@ -1,0 +1,69 @@
+name: "Publish Package"
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    name: "Publish Package"
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions'
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: "Setup Python"
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: "Get Version String"
+        id: get_version
+        env:
+          GITHUB_REF: ${{ github.ref }}
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+        shell: bash
+      - name: "Create Version Files and Move Annotated Tag"
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+        shell: bash
+        run: |
+          git fetch --tags --force origin ${GITHUB_REF}
+          git config user.name "$(git for-each-ref --format='%(taggername)' ${GITHUB_REF})"
+          git config user.email $(git for-each-ref --format='%(taggeremail)' ${GITHUB_REF})
+          git checkout -b release/v${VERSION} ${GITHUB_REF}
+          echo "${VERSION}" > VERSION
+          echo "__version__ = \"${VERSION}\"" > discopop_explorer/_version.py
+          echo "__version__ = \"${VERSION}\"" > discopop_profiler/_version.py
+          git add VERSION discopop_explorer/_version.py discopop_profiler/_version.py
+          git commit -m "Release of Version ${VERSION}"
+          git tag -a -f -m "Version ${VERSION}" v${VERSION}
+          git push --set-upstream origin release/v${VERSION}
+          git push --tags --force
+      - name: "Create pull request"
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: release/v${{ steps.get_version.outputs.VERSION }}
+          destination_branch: master
+          pr_title: "Release of version ${{ steps.get_version.outputs.VERSION }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Generate Python Package"
+        run: python setup.py sdist
+      - name: "Create Draft Release on GitHub"
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          release_name: Version ${{ steps.get_version.outputs.VERSION }}
+          draft: true
+      - name: "Publish Distribution to PyPI"
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.pypi_password }}
