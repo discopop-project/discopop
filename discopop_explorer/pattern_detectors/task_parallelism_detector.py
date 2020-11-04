@@ -211,7 +211,7 @@ class OmittableCuInfo(PatternInfo):
 
 
 def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
-                                               file_mapping: str) -> List[PatternInfo]:
+                                               file_mapping: str, cu_inst_result_file: str) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -219,6 +219,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :param loop_counter_file: Path (string) to the loop counter file file to be used
     :param reduction_file: Path (string) to the reduction file to be used
     :param file_mapping: Path (string) to the FileMapping.txt to be used
+    :param cu_inst_result_file: Path (string) to the _CUInstResult.txt to be used
     :return: List of detected pattern info
     """
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
