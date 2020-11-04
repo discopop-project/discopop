@@ -658,8 +658,14 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                     potential_parent_functions_2.pop()
                     # get recursive function call from original source code
                     try:
-                        __get_function_call_from_source_code(source_code_files, int(ts_2.pragma_line),
-                                                             ts_2.node_id.split(":")[0])
+                        function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                      int(ts_2.pragma_line),
+                                                                                      ts_2.node_id.split(":")[0])
+                        function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
+                            function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
+                        # exclude pairs of same function from dependency detection
+                        if function_name_1 == function_name_2:
+                            continue
                     except IndexError:
                         continue
                     # get function parameter names from recursive function call
