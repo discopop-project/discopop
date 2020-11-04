@@ -228,11 +228,18 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
 
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
+
+    # DEBUG parse cu_inst_result_file contents into dict
+    cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
+    print("task_parallelism_detector.py:build_preprocessed_graph_and_run_detection:  DEBUG PRESENT")
+    # END DEBUG
+
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
     suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file)
+
     return suggestions
 
 
@@ -315,6 +322,36 @@ def __check_loop_scopes(pet: PETGraphX):
                 # expand loop_cu end_position downwards
                 if child.end_line > loop_cu.end_line and loop_cu.file_id == child.file_id:
                     loop_cu.end_line = child.end_line
+
+
+def __get_dict_from_cu_inst_result_file(cu_inst_result_file:str) -> Dict[str, List[Dict[str, Optional[str]]]]:
+    """Parses the information contained in cu_inst_result_file into a dictionary of dictionaries,
+    ordered by dependency type and returns the dictionary.
+    :param cu_inst_result_file: Path (string) to cu_inst_result file
+    :return: parsed dictionary"""
+    res_dict: Dict[str, List[Dict[str, Optional[str]]]] = {'RAW': [], 'WAR': [], 'WAW': []}
+    try:
+        with open(cu_inst_result_file) as f:
+            for line in f:
+                line = line.replace("\n", "")
+                line = line.split(" ")
+                dep_type = line[0]
+                target_type = line[2]
+                if target_type == "line:":
+                    target_function = None
+                    target_line = line[3]
+                    target_var = line[5]
+                elif target_type == "function:":
+                    target_function = line[3]
+                    target_line = line[4]
+                    target_var = line[6]
+                else:
+                    raise ValueError("Unknown type: ", target_type)
+                cur_line_dict = {'function': target_function, 'line': target_line, 'var': target_var}
+                res_dict[dep_type].append(cur_line_dict)
+    except FileNotFoundError as ex:
+        raise ex
+    return res_dict
 
 
 def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
