@@ -229,21 +229,17 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
 
-    # DEBUG parse cu_inst_result_file contents into dict
-    cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
-    print("task_parallelism_detector.py:build_preprocessed_graph_and_run_detection:  DEBUG PRESENT")
-    # END DEBUG
-
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file, cu_inst_result_file)
 
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str) -> List[PatternInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str, cu_ist_result_file: str) \
+        -> List[PatternInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -292,8 +288,8 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __remove_useless_barrier_suggestions(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
-    # result = __detect_dependency_clauses(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file)
+    # result = __detect_dependency_clauses_old(pet, result)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file, cu_ist_result_file)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
@@ -599,7 +595,7 @@ def __contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
-                                            dep_file: str) -> List[PatternInfo]:
+                                            dep_file: str, cu_inst_result_file: str) -> List[PatternInfo]:
     """Wrapper for alias based dependency detection.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -616,16 +612,39 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
             source_code_files[line[0]] = line[1]
     # get RAW depencency information as a dict
     raw_dependency_information = __get_raw_dependency_information_from_dep_file(dep_file)
+    # parse cu_inst_result_file contents into dict
+    cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
     aliases = __get_alias_information(pet, suggestions, source_code_files)
+    # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
+    # find dependencies between calls of same function inside function scopes
+    suggestions = __identify_dependencies_for_same_functions(pet, suggestions, aliases, source_code_files,
+                                                             raw_dependency_information, cu_inst_result_dict)
+    return suggestions
+
+
+def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
+                                               source_code_files: Dict, raw_dependency_information: Dict,
+                                               cu_inst_result_dict: Dict) -> List[PatternInfo]:
+    """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
+    and supplement the suggestions.
+    :param pet: PET Graph
+    :param suggestions: List[PatternInfo]
+    :param aliases: alias information dict
+    :param source_code_files: File-Mapping dictionary
+    :param raw_dependency_information: RAW information dict
+    :param cu_inst_result_dict: CUInstResult.txt information dict
+    :return: List[PatternInfo]"""
+    # TODO implement
     return suggestions
 
 
 def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
                                                     source_code_files: Dict,
                                                     raw_dependency_information: Dict) -> List[PatternInfo]:
-    """Identify dependency clauses for all combinations of suggested tasks and supplement the suggestions.
+    """Identify dependency clauses for all combinations of suggested tasks concerning different called functions
+     and supplement the suggestions.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
     :param aliases: alias information dict
@@ -2039,9 +2058,10 @@ def __combine_omittable_cus(pet: PETGraphX,
     return result
 
 
-def __detect_dependency_clauses(pet: PETGraphX,
-                                suggestions: List[PatternInfo]) -> List[PatternInfo]:
-    """detect in, out and inout dependencies for tasks and omittable CUs and
+def __detect_dependency_clauses_old(pet: PETGraphX,
+                                    suggestions: List[PatternInfo]) -> List[PatternInfo]:
+    """CURRENTLY UNUSED, might be removed eventually
+    detect in, out and inout dependencies for tasks and omittable CUs and
     add this information to the respective suggestions.
     dependencies are written into a list, result in multiple entries for a
     value in case of multiple dependencies.
