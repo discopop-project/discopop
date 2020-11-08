@@ -10,7 +10,8 @@
 
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
+[--cu-inst-res <cuinstres>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -21,6 +22,7 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
+    --cu-inst-res=<cuinstres>   CU instantiation result file
     -h --help                   Show this screen
 """
 
@@ -44,6 +46,7 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
+    '--cu-inst-res': Use(str),
 })
 
 
@@ -72,6 +75,7 @@ def main():
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
     file_mapping = get_path(path, 'FileMapping.txt')
+    cu_inst_result_file = get_path(path, arguments['--cu-inst-res'])
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
         if not os.path.isfile(file):
@@ -82,7 +86,7 @@ def main():
 
     start = time.time()
 
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping)
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping, cu_inst_result_file)
 
     end = time.time()
 

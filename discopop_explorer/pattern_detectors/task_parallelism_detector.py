@@ -9,17 +9,15 @@
 
 import copy
 import os
-import re
 from typing import List, Tuple, Dict, Optional, cast
 
 from cpp_demangle import demangle
-
 from lxml import etree
 from lxml import objectify
 
 from .PatternInfo import PatternInfo
-from .reduction_detector import run_detection as detect_reduction
 from .do_all_detector import run_detection as detect_do_all
+from .reduction_detector import run_detection as detect_reduction
 from ..PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
 from ..parser import parse_inputs
 from ..utils import depends, calculate_workload, \
@@ -211,7 +209,7 @@ class OmittableCuInfo(PatternInfo):
 
 
 def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
-                                               file_mapping: str) -> List[PatternInfo]:
+                                               file_mapping: str, cu_inst_result_file: str) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -219,6 +217,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :param loop_counter_file: Path (string) to the loop counter file file to be used
     :param reduction_file: Path (string) to the reduction file to be used
     :param file_mapping: Path (string) to the FileMapping.txt to be used
+    :param cu_inst_result_file: Path (string) to the _CUInstResult.txt to be used
     :return: List of detected pattern info
     """
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
@@ -227,15 +226,18 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
 
     preprocessed_graph = PETGraphX(cu_dict, dependencies,
                                    loop_data, reduction_vars)
+
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file, cu_inst_result_file)
+
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str) -> List[PatternInfo]:
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str, cu_ist_result_file: str) \
+        -> List[PatternInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -250,6 +252,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
         :param cu_xml: Path (string) to the CU xml file to be used
         :param file_mapping: Path (string) to the FileMapping.txt to be used
         :param dep_file: Path (string) to the dependencies-file to be used
+        :param cu_ist_result_file: Path(string) to the CUInstResult.txt
         :return: List of detected pattern info
     """
     result = []
@@ -284,8 +287,8 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str)
     result = __remove_useless_barrier_suggestions(pet, result)
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
-    # result = __detect_dependency_clauses(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file)
+    # result = __detect_dependency_clauses_old(pet, result)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file, cu_ist_result_file)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
@@ -314,6 +317,36 @@ def __check_loop_scopes(pet: PETGraphX):
                 # expand loop_cu end_position downwards
                 if child.end_line > loop_cu.end_line and loop_cu.file_id == child.file_id:
                     loop_cu.end_line = child.end_line
+
+
+def __get_dict_from_cu_inst_result_file(cu_inst_result_file: str) -> Dict[str, List[Dict[str, Optional[str]]]]:
+    """Parses the information contained in cu_inst_result_file into a dictionary of dictionaries,
+    ordered by dependency type and returns the dictionary.
+    :param cu_inst_result_file: Path (string) to cu_inst_result file
+    :return: parsed dictionary"""
+    res_dict: Dict[str, List[Dict[str, Optional[str]]]] = {'RAW': [], 'WAR': [], 'WAW': []}
+    try:
+        with open(cu_inst_result_file) as f:
+            for line in f:
+                line = line.replace("\n", "")
+                line = line.split(" ")
+                dep_type = line[0]
+                target_type = line[2]
+                if target_type == "line:":
+                    target_function = None
+                    target_line = line[3]
+                    target_var = line[5]
+                elif target_type == "function:":
+                    target_function = line[3]
+                    target_line = line[4]
+                    target_var = line[6]
+                else:
+                    raise ValueError("Unknown type: ", target_type)
+                cur_line_dict = {'function': target_function, 'line': target_line.replace(",", ""), 'var': target_var}
+                res_dict[dep_type].append(cur_line_dict)
+    except FileNotFoundError as ex:
+        raise ex
+    return res_dict
 
 
 def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
@@ -345,6 +378,7 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                          pet.node_at(t) != cu_node]:
                         result += find_taskwaits(succ_cu_node)
                     return result
+
                 # find successive taskwaits
                 successive_taskwait_cus = find_taskwaits(ts._node)
                 for stws_cu in successive_taskwait_cus:
@@ -355,12 +389,12 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                         # Do-all loop, move taskwait to the outside
                         print("TPDet: correct_task_suggestions_in_loop_body: Task in do-all loop ", ts.pragma_line,
                               ". Moving Taskwait ", stws_cu.start_line, " to: ",
-                              int(loop_cu.end_position().split(":")[1])+1)
+                              int(loop_cu.end_position().split(":")[1]) + 1)
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
                                 if s.pragma[0] == "taskwait" and s._node == stws_cu:
-                                    s.pragma_line = int(loop_cu.end_position().split(":")[1])+1
+                                    s.pragma_line = int(loop_cu.end_position().split(":")[1]) + 1
                     else:
                         # Regular loop: task = loop body, move taskwait to the end of the loop body
                         # protect RAW to shared with critical section around CU (general)  or atomic (reduction)
@@ -379,7 +413,7 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                         if loop_cu.id in [e[0] for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]:
                             print("Moving Pragma from: ", ts.pragma_line,
                                   " to: ", int(loop_cu.start_position().split(":")[1]) + 1)
-                            ts.pragma_line = int(loop_cu.start_position().split(":")[1])+1
+                            ts.pragma_line = int(loop_cu.start_position().split(":")[1]) + 1
                             ts.region_start_line = str(ts.pragma_line)
                             ts.region_end_line = loop_cu.end_position().split(":")[1]
 
@@ -392,7 +426,7 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                     if in_dep_var_name in ts.shared:
                                         # check if the found dependency occurs in the scope of the suggested task
                                         if loop_cu_child.file_id == ts._node.file_id and \
-                                            loop_cu_child.start_line >= int(ts.region_start_line) and \
+                                                loop_cu_child.start_line >= int(ts.region_start_line) and \
                                                 loop_cu_child.end_line <= int(ts.region_end_line):
                                             # seperate between critical and atomic CUs
                                             if __contains_reduction(pet, loop_cu_child):
@@ -407,10 +441,12 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                     if __line_contained_in_region(red_var["reduction_line"],
                                                                                   loop_cu_child.start_position(),
                                                                                   loop_cu_child.end_position()):
-                                                        atomic_lines.append(int(red_var["reduction_line"].split(":")[1]))
+                                                        atomic_lines.append(
+                                                            int(red_var["reduction_line"].split(":")[1]))
                                                 critical_lines = [e for e in critical_lines if e not in atomic_lines]
                                                 # combine successive critical lines if possible
-                                                combined_critical_lines = [(e, e) for e in critical_lines]  # (start, end)
+                                                combined_critical_lines = [(e, e) for e in
+                                                                           critical_lines]  # (start, end)
                                                 found_combination = True
                                                 while found_combination and len(combined_critical_lines) > 1:
                                                     found_combination = False
@@ -420,7 +456,8 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                                 continue
                                                             if outer[1] + 1 == inner[0]:
                                                                 # inner is direct successor of outer
-                                                                combined_critical_lines[outer_idx] = (outer[0], inner[1])
+                                                                combined_critical_lines[outer_idx] = (outer[0],
+                                                                                                      inner[1])
                                                                 combined_critical_lines.pop(inner_idx)
                                                                 found_combination = True
                                                                 break
@@ -429,10 +466,12 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                 # append critical and atomic to ts.atomic_sections/ts.critical_sections
                                                 for e in combined_critical_lines:
                                                     ts.critical_sections.append(
-                                                        ""+str(file_idx)+":"+str(e[0])+"-"+str(file_idx)+":"+str(e[1]))
+                                                        "" + str(file_idx) + ":" + str(e[0]) + "-" + str(
+                                                            file_idx) + ":" + str(e[1]))
                                                 for e in atomic_lines:
                                                     ts.atomic_sections.append(
-                                                        ""+str(file_idx)+":"+str(e)+"-"+str(file_idx)+":"+str(e))
+                                                        "" + str(file_idx) + ":" + str(e) + "-" + str(
+                                                            file_idx) + ":" + str(e))
                                             else:
                                                 # append loop_cu_child to list of critical CUs
                                                 found_critical_cus.append(loop_cu_child)
@@ -479,8 +518,8 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                     child = combinations[child_idx]
                     if __line_contained_in_region(parent[0].start_position(), child[0].start_position(),
                                                   child[-1].end_position()) and \
-                        __line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
-                                                   child[-1].end_position()):
+                            __line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
+                                                       child[-1].end_position()):
                         combinations.pop(parent_idx)
                         removed_entry = True
         # create a string from the gathered information and append to ts.critical_sections
@@ -561,7 +600,7 @@ def __contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
-                                            dep_file: str) -> List[PatternInfo]:
+                                            dep_file: str, cu_inst_result_file: str) -> List[PatternInfo]:
     """Wrapper for alias based dependency detection.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -578,16 +617,245 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
             source_code_files[line[0]] = line[1]
     # get RAW depencency information as a dict
     raw_dependency_information = __get_raw_dependency_information_from_dep_file(dep_file)
+    # parse cu_inst_result_file contents into dict
+    cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
     aliases = __get_alias_information(pet, suggestions, source_code_files)
+    # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
+    # find dependencies between calls of same function inside function scopes
+    suggestions = __identify_dependencies_for_same_functions(pet, suggestions, source_code_files,
+                                                             cu_inst_result_dict)
+    return suggestions
+
+
+def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
+                                               source_code_files: Dict,
+                                               cu_inst_result_dict: Dict) -> List[PatternInfo]:
+    """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
+    and supplement the suggestions.
+    :param pet: PET Graph
+    :param suggestions: List[PatternInfo]
+    :param source_code_files: File-Mapping dictionary
+    :param cu_inst_result_dict: CUInstResult.txt information dict
+    :return: List[PatternInfo]"""
+
+    # Idea:
+    # 1. iterate over task suggestions
+    # 2. get parent function (pf) and called function (cf)
+    # 3. get R/W information for cf's parameters based on CUInstResult.txt
+    # 3.1.get CU object corresponding to cf
+    # 3.2. get R/W information for cf's parameters based on CUInstResult.txt
+    # 3.3 match variable names with gathered R/W information
+    # 4. iterate over successive calls to cf, named scf
+    # 5. get R/W information for scf's parameters based on CUInstResult.txt
+    # 5.1.get CU object corresponding to scf
+    # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+    # 5.3 get function call corresponding to scf from source code
+    # 5.4 match variable names with gathered R/W information
+    # 6. check cf's R/W information against scf's R/W information and identify dependencies
+    # 6.1 Intersect cf's parameters with scf's parameters
+    # 6.2 get task suggestion corresponding to scf
+    # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
+
+    result_suggestions = []
+    task_suggestions = []
+    for s in suggestions:
+        if type(s) == TaskParallelismInfo:
+            s = cast(TaskParallelismInfo, s)
+            if s.pragma[0] == "task":
+                task_suggestions.append(s)
+            else:
+                result_suggestions.append(s)
+        else:
+            result_suggestions.append(s)
+
+    out_dep_updates = dict()
+    in_dep_updates = dict()
+    # 1. iterate over task suggestions
+    for ts_1 in task_suggestions:
+        # 2. get parent function (pf) and called function (cf)
+        # get parent function
+        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
+                                        if pet.node_at(e[0]).type == NodeType.FUNC]
+        if not potential_parent_functions_1:
+            # perform BFS search on incoming CHILD edges to find closest parent function,
+            # i.e. function which contains the CU.
+            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
+            found_parent = None
+            while len(queue) > 0 or not found_parent:
+                current = queue.pop(0)
+                if current.type == NodeType.FUNC:
+                    found_parent = current
+                    break
+                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+            potential_parent_functions_1 = [found_parent]
+        while potential_parent_functions_1:
+            cur_potential_parent_function = potential_parent_functions_1.pop()
+            # get recursive function call from original source code
+            try:
+                function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
+                                                                              ts_1.node_id.split(":")[0])
+            except IndexError:
+                continue
+            # get function parameter names from recursive function call
+            function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
+                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
+            # get recursive function calls inside cur_potential_parent_function's scope
+            cppf_recursive_function_calls = []
+            for child in [c for c in pet.direct_children(cur_potential_parent_function) if
+                          __line_contained_in_region(c.start_position(), cur_potential_parent_function.start_position(),
+                                                     cur_potential_parent_function.end_position())
+                          and
+                          __line_contained_in_region(c.end_position(), cur_potential_parent_function.start_position(),
+                                                     cur_potential_parent_function.end_position())]:
+                for e in child.recursive_function_calls:
+                    if e is not None:
+                        cppf_recursive_function_calls.append(e)
+            cppf_recursive_function_calls = list(set(cppf_recursive_function_calls))
+            # 3. get R/W information for cf's parameters based on CUInstResult.txt
+            # 3.1. get CU object corresponding to cf
+            # get CU Node object of called function
+            called_function_cu_id_1 = None
+            rfce_idx_1 = None
+            for tmp_idx, recursive_function_call_entry_1 in enumerate(cppf_recursive_function_calls):
+                if recursive_function_call_entry_1 is None:
+                    continue
+                if "," in recursive_function_call_entry_1:
+                    recursive_function_call_entry_1 = recursive_function_call_entry_1.split(",")[0]
+                recursive_function_call_entry_1 = recursive_function_call_entry_1.split(" ")
+                recursive_function_call_line_1 = recursive_function_call_entry_1[1]
+                if int(recursive_function_call_line_1.split(":")[1]) == int(ts_1.pragma_line):
+                    # correct function call found
+                    # find corresponding function CU
+                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                        if tmp_func_cu.name == recursive_function_call_entry_1[0]:
+                            called_function_cu_id_1 = tmp_func_cu.id
+                            rfce_idx_1 = tmp_idx
+            if called_function_cu_id_1 is None:
+                continue
+            # 3.2. get R/W information for cf's parameters based on CUInstResult.txt
+            called_function_cu_1 = pet.node_at(called_function_cu_id_1)
+            # get raw info concerning the scope of called_function_cu_1
+            raw_info_1 = cu_inst_result_dict["RAW"]
+            filtered_raw_info_1 = [e for e in raw_info_1 if __line_contained_in_region(e["line"],
+                                                                                       called_function_cu_1.start_position(),
+                                                                                       called_function_cu_1.end_position())]
+            # iterate over args positions and check if RAW is reported
+            raw_reported_for_param_positions_1: List[bool] = []
+            for arg_var in called_function_cu_1.args:
+                raw_reported = False
+                for raw_entry in filtered_raw_info_1:
+                    if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+                        raw_reported = True
+                raw_reported_for_param_positions_1.append(raw_reported)
+
+            # 3.3 match parameter_names_1 with gathered R/W information of argument positions
+            if len(raw_reported_for_param_positions_1) != len(parameter_names_1):
+                continue
+            parameter_names_1_raw_information: List[Tuple[str, bool]] = []
+            for idx in range(0, len(parameter_names_1)):
+                tmp = (parameter_names_1[idx], raw_reported_for_param_positions_1[idx])
+                parameter_names_1_raw_information.append(tmp)
+
+            # 4. iterate over successive calls to cf, named scf
+            for rfce_idx_2, recursive_function_call_entry_2 in enumerate(cppf_recursive_function_calls):
+                if rfce_idx_2 == rfce_idx_1:
+                    continue
+                if recursive_function_call_entry_2 is None:
+                    continue
+                # 5. get R/W information for scf's parameters based on CUInstResult.txt
+                # 5.1. get CU object corresponding to scf
+                called_function_cu_id_2 = None
+                if "," in recursive_function_call_entry_2:
+                    recursive_function_call_entry_2 = recursive_function_call_entry_2.split(",")[0]
+                recursive_function_call_entry_2 = recursive_function_call_entry_2.split(" ")
+                recursive_function_call_line_2 = recursive_function_call_entry_2[1]
+                if int(recursive_function_call_line_2.split(":")[1]) > int(ts_1.pragma_line):
+                    # correct function call found
+                    # find corresponding function CU
+                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                        if tmp_func_cu.name == recursive_function_call_entry_2[0]:
+                            called_function_cu_id_2 = tmp_func_cu.id
+                if called_function_cu_id_2 is None:
+                    continue
+                # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+                called_function_cu_2 = pet.node_at(called_function_cu_id_2)
+                # get raw info concerning the scope of called_function_cu_2
+                raw_info_2 = cu_inst_result_dict["RAW"]
+                filtered_raw_info_2 = [e for e in raw_info_2 if __line_contained_in_region(e["line"],
+                                                                                           called_function_cu_2.start_position(),
+                                                                                           called_function_cu_2.end_position())]
+                # iterate over args positions and check if RAW is reported
+                raw_reported_for_param_positions_2: List[bool] = []
+                for arg_var in called_function_cu_2.args:
+                    raw_reported = False
+                    for raw_entry in filtered_raw_info_2:
+                        if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+                            raw_reported = True
+                    raw_reported_for_param_positions_2.append(raw_reported)
+                # 5.3 get function call corresponding to scf from source code
+                try:
+                    function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                  int(
+                                                                                      recursive_function_call_line_2.split(
+                                                                                          ":")[1]),
+                                                                                  recursive_function_call_line_2.split(
+                                                                                      ":")[0])
+                except IndexError:
+                    continue
+                # get function parameter names from recursive function call
+                function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
+                    function_call_string_2, recursive_function_call_entry_2[0], ts_1._node)
+                # 5.4 match parameter_names_2 with gathered R/W information of argument positions
+                if len(raw_reported_for_param_positions_2) != len(parameter_names_2):
+                    continue
+                parameter_names_2_raw_information: List[Tuple[str, bool]] = []
+                for idx in range(0, len(parameter_names_2)):
+                    tmp = (parameter_names_2[idx], raw_reported_for_param_positions_2[idx])
+                    parameter_names_2_raw_information.append(tmp)
+                # 6. check cf's R/W information against scf's R/W information and identify dependencies
+                # 6.1 Intersect cf's parameters with scf's parameters
+                intersection = []
+                for param_entry_1 in parameter_names_1_raw_information:
+                    for param_entry_2 in parameter_names_2_raw_information:
+                        if param_entry_1[0] == param_entry_2[0]:
+                            intersection.append(param_entry_1)
+                intersection = list(set(intersection))
+                # 6.2 get task suggestion corresponding to scf
+                for ts_2 in task_suggestions:
+                    if ts_2 == ts_1:
+                        continue
+                    if ts_2.pragma_line != recursive_function_call_line_2.split(":")[1]:
+                        continue
+                    # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
+                    for intersection_var in [e[0] for e in intersection if e[1]]:
+                        if ts_1 not in out_dep_updates:
+                            out_dep_updates[ts_1] = []
+                        out_dep_updates[ts_1].append(intersection_var)
+                        if ts_2 not in in_dep_updates:
+                            in_dep_updates[ts_2] = []
+                        in_dep_updates[ts_2].append(intersection_var)
+    # perform updates of in and out dependencies
+    for ts in task_suggestions:
+        if ts in out_dep_updates:
+            for out_dep_var in out_dep_updates[ts]:
+                ts.out_dep.append(out_dep_var)
+            ts.out_dep = list(set(ts.out_dep))
+        if ts in in_dep_updates:
+            for in_dep_var in in_dep_updates[ts]:
+                ts.in_dep.append(in_dep_var)
+            ts.in_dep = list(set(ts.in_dep))
+        result_suggestions.append(ts)
+
     return suggestions
 
 
 def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
                                                     source_code_files: Dict,
                                                     raw_dependency_information: Dict) -> List[PatternInfo]:
-    """Identify dependency clauses for all combinations of suggested tasks and supplement the suggestions.
+    """Identify dependency clauses for all combinations of suggested tasks concerning different called functions
+     and supplement the suggestions.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
     :param aliases: alias information dict
@@ -658,8 +926,14 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                     potential_parent_functions_2.pop()
                     # get recursive function call from original source code
                     try:
-                        __get_function_call_from_source_code(source_code_files, int(ts_2.pragma_line),
-                                                             ts_2.node_id.split(":")[0])
+                        function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                      int(ts_2.pragma_line),
+                                                                                      ts_2.node_id.split(":")[0])
+                        function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
+                            function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
+                        # exclude pairs of same function from dependency detection
+                        if function_name_1 == function_name_2:
+                            continue
                     except IndexError:
                         continue
                     # get function parameter names from recursive function call
@@ -730,8 +1004,8 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
                 source_lines_start = intersection_entry[2].split(":")
                 source_lines_end = intersection_entry[3].split(":")
                 source_lines = []
-                for ln in range(int(source_lines_start[1]), int(source_lines_end[1])+1):
-                    source_lines.append(""+source_lines_start[0]+":"+str(ln))
+                for ln in range(int(source_lines_start[1]), int(source_lines_end[1]) + 1):
+                    source_lines.append("" + source_lines_start[0] + ":" + str(ln))
                 # check if there is a RAW on the variable within sink lines and source lines.
                 if source_lines == sink_lines:
                     continue
@@ -772,7 +1046,7 @@ def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, L
                         entries.append(current_entry)
                     current_entry = ""
                 if len(current_entry) > 0:
-                    current_entry += " "+word
+                    current_entry += " " + word
                 else:
                     current_entry += word
             if len(current_entry) > 0:
@@ -877,7 +1151,8 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
     return aliases
 
 
-def __get_called_functions_recursively(pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict) -> List[CUNode]:
+def __get_called_functions_recursively(pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict) \
+        -> List[CUNode]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
     called_functions = []
@@ -931,7 +1206,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
         # iterate over called functions
         for called_function in called_functions:
             # read line from source code (iterate over lines of CU to search for function call)
-            for line in range(cu.start_line, cu.end_line+1):
+            for line in range(cu.start_line, cu.end_line + 1):
                 try:
                     source_code_line = __get_function_call_from_source_code(source_code_files, line,
                                                                             cu.id.split(":")[0])
@@ -948,7 +1223,8 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
                         if (called_function, idx) not in visited:
                             # if not, start recursion
                             result += __get_alias_for_parameter_at_position(pet, called_function, idx,
-                                                                            source_code_files, visited, called_function_cache)
+                                                                            source_code_files, visited,
+                                                                            called_function_cache)
     return result
 
 
@@ -1012,11 +1288,11 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
         parameter_string = parameter_string[parameter_string.find("("):]
     # prune right
     while ")" in parameter_string and not parameter_string.endswith(")"):
-        parameter_string = parameter_string[:parameter_string.rfind(")")+1]
+        parameter_string = parameter_string[:parameter_string.rfind(")") + 1]
     # prune to correct amount of closing brackets
     while not parameter_string.count("(") == parameter_string.count(")"):
         parameter_string = parameter_string[:-1]
-        parameter_string = parameter_string[:parameter_string.rfind(")")+1]
+        parameter_string = parameter_string[:parameter_string.rfind(")") + 1]
     parameter_string = parameter_string[1:-1]
     # intersect parameters with set of known variables to prevent errors
     parameters = parameter_string.split(",")
@@ -1031,13 +1307,13 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
             # check if any of the parameters is in list of known variables
             split_param_expression = [ex for ex in split_param_expression
                                       if ex in [var.replace(".addr", "")
-                                                for var in [v.name for v in node.local_vars+node.global_vars]]]
+                                                for var in [v.name for v in node.local_vars + node.global_vars]]]
             # check if type of any of them contains * (i.e. is a pointer)
             found_entry = False
             for var_name_to_check in split_param_expression:
                 if found_entry:
                     break
-                for known_var in node.local_vars+node.global_vars:
+                for known_var in node.local_vars + node.global_vars:
                     if found_entry:
                         break
                     if known_var.name.replace(".addr", "") == var_name_to_check:
@@ -1259,7 +1535,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
                 continue
             # get function containing the task cu
-            parent_function, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+            parent_function, last_node = \
+                __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
             # filter in_dep
             to_be_removed = []
             for var in suggestion.in_dep:
@@ -1574,7 +1851,7 @@ def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List
                 if pet.node_at(succ_edge[1]).tp_contains_task is True:
                     continue
                 # check if any element of common vars is not contained in task_sug.out_dep
-                if len([v for v in task_sug.out_dep if v not in [e.name for e in common_vars] ]) > 0:
+                if len([v for v in task_sug.out_dep if v not in [e.name for e in common_vars]]) > 0:
                     # suggest taskwait
                     if pet.node_at(succ_edge[1]).tp_contains_taskwait is False:
                         # actual change
@@ -1791,7 +2068,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
         # get line number of first dependency. suggest taskwait prior to that
         first_dependency_line = v.end_position()
         first_dependency_line_number = first_dependency_line[
-            first_dependency_line.index(":") + 1:]
+                                       first_dependency_line.index(":") + 1:]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
                 dep_line = e.sink
@@ -1824,7 +2101,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 # recursive Function call contained in worker cu
                 # -> issue task suggestion
                 pragma_line = function_call_string[
-                    function_call_string.index(":") + 1:]
+                              function_call_string.index(":") + 1:]
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
 
                 # only include cu and func nodes
@@ -1963,15 +2240,15 @@ def __combine_omittable_cus(pet: PETGraphX,
 
                 # increase size of pragma region if needed
                 if ":" not in task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].region_end_line:
+                        omit_target_task_idx].region_end_line:
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(task_suggestions_dict[omit_s.combine_with_node][
-                                omit_target_task_idx].region_end_line):
+                                    omit_target_task_idx].region_end_line):
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].region_end_line = omit_s.end_line
                 else:
                     cut_region_end_line = task_suggestions_dict[omit_s.combine_with_node][
-                                omit_target_task_idx].region_end_line
+                        omit_target_task_idx].region_end_line
                     cut_region_end_line = cut_region_end_line[cut_region_end_line.index(":") + 1:]
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(cut_region_end_line):
@@ -1995,9 +2272,10 @@ def __combine_omittable_cus(pet: PETGraphX,
     return result
 
 
-def __detect_dependency_clauses(pet: PETGraphX,
-                                suggestions: List[PatternInfo]) -> List[PatternInfo]:
-    """detect in, out and inout dependencies for tasks and omittable CUs and
+def __detect_dependency_clauses_old(pet: PETGraphX,
+                                    suggestions: List[PatternInfo]) -> List[PatternInfo]:
+    """CURRENTLY UNUSED, might be removed eventually
+    detect in, out and inout dependencies for tasks and omittable CUs and
     add this information to the respective suggestions.
     dependencies are written into a list, result in multiple entries for a
     value in case of multiple dependencies.
