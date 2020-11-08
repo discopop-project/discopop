@@ -343,7 +343,7 @@ def __get_dict_from_cu_inst_result_file(cu_inst_result_file:str) -> Dict[str, Li
                     target_var = line[6]
                 else:
                     raise ValueError("Unknown type: ", target_type)
-                cur_line_dict = {'function': target_function, 'line': target_line, 'var': target_var}
+                cur_line_dict = {'function': target_function, 'line': target_line.replace(",",""), 'var': target_var}
                 res_dict[dep_type].append(cur_line_dict)
     except FileNotFoundError as ex:
         raise ex
@@ -636,7 +636,210 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
     :param raw_dependency_information: RAW information dict
     :param cu_inst_result_dict: CUInstResult.txt information dict
     :return: List[PatternInfo]"""
-    # TODO implement
+
+    # Idea:
+    # 1. iterate over task suggestions
+        # 2. get parent function (pf) and called function (cf)
+        # 3. get R/W information for cf's parameters based on CUInstResult.txt
+            # 3.1.get CU object corresponding to cf
+            # 3.2. get R/W information for cf's parameters based on CUInstResult.txt
+            # 3.3 match variable names with gathered R/W information
+        # 4. iterate over successive calls to cf, named scf
+            # 5. get R/W information for scf's parameters based on CUInstResult.txt
+                # 5.1.get CU object corresponding to scf
+                # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+                # 5.3 get function call corresponding to scf from source code
+                # 5.4 match variable names with gathered R/W information
+            # 6. check cf's R/W information against scf's R/W information and identify dependencies
+                # 6.1 Intersect cf's parameters with scf's parameters
+                # 6.2 get task suggestion corresponding to scf
+                # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
+
+    result_suggestions = []
+    task_suggestions = []
+    for s in suggestions:
+        if type(s) == TaskParallelismInfo:
+            s = cast(TaskParallelismInfo, s)
+            if s.pragma[0] == "task":
+                task_suggestions.append(s)
+            else:
+                result_suggestions.append(s)
+        else:
+            result_suggestions.append(s)
+
+    out_dep_updates = dict()
+    in_dep_updates = dict()
+    # 1. iterate over task suggestions
+    for ts_1 in task_suggestions:
+        # 2. get parent function (pf) and called function (cf)
+        # get parent function
+        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
+                                        if pet.node_at(e[0]).type == NodeType.FUNC]
+        if not potential_parent_functions_1:
+            # perform BFS search on incoming CHILD edges to find closest parent function,
+            # i.e. function which contains the CU.
+            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
+            found_parent = None
+            while len(queue) > 0 or not found_parent:
+                current = queue.pop(0)
+                if current.type == NodeType.FUNC:
+                    found_parent = current
+                    break
+                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+            potential_parent_functions_1 = [found_parent]
+        while potential_parent_functions_1:
+            cur_potential_parent_function = potential_parent_functions_1.pop()
+            # get recursive function call from original source code
+            try:
+                function_call_string_1 = __get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
+                                                                              ts_1.node_id.split(":")[0])
+            except IndexError:
+                continue
+            # get function parameter names from recursive function call
+            function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
+                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
+            # get recursive function calls inside cur_potential_parent_function's scope
+            cppf_recursive_function_calls = []
+            for child in [c for c in pet.direct_children(cur_potential_parent_function) if
+                          __line_contained_in_region(c.start_position(), cur_potential_parent_function.start_position(), cur_potential_parent_function.end_position())
+                          and
+                          __line_contained_in_region(c.end_position(), cur_potential_parent_function.start_position(), cur_potential_parent_function.end_position())]:
+                for e in child.recursive_function_calls:
+                    if e is not None:
+                        cppf_recursive_function_calls.append(e)
+            cppf_recursive_function_calls = list(set(cppf_recursive_function_calls))
+            # 3. get R/W information for cf's parameters based on CUInstResult.txt
+            # 3.1. get CU object corresponding to cf
+            # get CU Node object of called function
+            called_function_cu_id_1 = None
+            rfce_idx_1 = None
+            for tmp_idx, recursive_function_call_entry_1 in enumerate(cppf_recursive_function_calls):
+                if recursive_function_call_entry_1 is None:
+                    continue
+                if "," in recursive_function_call_entry_1:
+                    recursive_function_call_entry_1 = recursive_function_call_entry_1.split(",")[0]
+                recursive_function_call_entry_1 = recursive_function_call_entry_1.split(" ")
+                recursive_function_call_line_1 = recursive_function_call_entry_1[1]
+                if int(recursive_function_call_line_1.split(":")[1]) == int(ts_1.pragma_line):
+                    # correct function call found
+                    # find corresponding function CU
+                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                        if tmp_func_cu.name == recursive_function_call_entry_1[0]:
+                            called_function_cu_id_1 = tmp_func_cu.id
+                            rfce_idx_1 = tmp_idx
+            if called_function_cu_id_1 is None:
+                continue
+            # 3.2. get R/W information for cf's parameters based on CUInstResult.txt
+            called_function_cu_1 = pet.node_at(called_function_cu_id_1)
+            # get raw info concerning the scope of called_function_cu_1
+            raw_info_1 = cu_inst_result_dict["RAW"]
+            filtered_raw_info_1 = [e for e in raw_info_1 if __line_contained_in_region(e["line"],
+                                                                                   called_function_cu_1.start_position(),
+                                                                                   called_function_cu_1.end_position())]
+            # iterate over args positions and check if RAW is reported
+            raw_reported_for_param_positions_1: List[bool] = []
+            for arg_var in called_function_cu_1.args:
+                raw_reported = False
+                for raw_entry in filtered_raw_info_1:
+                    if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+                        raw_reported = True
+                raw_reported_for_param_positions_1.append(raw_reported)
+
+            # 3.3 match parameter_names_1 with gathered R/W information of argument positions
+            if len(raw_reported_for_param_positions_1) != len(parameter_names_1):
+                continue
+            parameter_names_1_raw_information: List[Tuple[str, bool]] = []
+            for idx in range(0, len(parameter_names_1)):
+                tmp = (parameter_names_1[idx], raw_reported_for_param_positions_1[idx])
+                parameter_names_1_raw_information.append(tmp)
+
+            # 4. iterate over successive calls to cf, named scf
+            for rfce_idx_2, recursive_function_call_entry_2 in enumerate(cppf_recursive_function_calls):
+                if rfce_idx_2 == rfce_idx_1:
+                    continue
+                if recursive_function_call_entry_2 is None:
+                    continue
+                # 5. get R/W information for scf's parameters based on CUInstResult.txt
+                # 5.1. get CU object corresponding to scf
+                called_function_cu_id_2 = None
+                if "," in recursive_function_call_entry_2:
+                    recursive_function_call_entry_2 = recursive_function_call_entry_2.split(",")[0]
+                recursive_function_call_entry_2 = recursive_function_call_entry_2.split(" ")
+                recursive_function_call_line_2 = recursive_function_call_entry_2[1]
+                if int(recursive_function_call_line_2.split(":")[1]) > int(ts_1.pragma_line):
+                    # correct function call found
+                    # find corresponding function CU
+                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                        if tmp_func_cu.name == recursive_function_call_entry_2[0]:
+                            called_function_cu_id_2 = tmp_func_cu.id
+                if called_function_cu_id_2 is None:
+                    continue
+                # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+                called_function_cu_2 = pet.node_at(called_function_cu_id_2)
+                # get raw info concerning the scope of called_function_cu_2
+                raw_info_2 = cu_inst_result_dict["RAW"]
+                filtered_raw_info_2 = [e for e in raw_info_2 if __line_contained_in_region(e["line"],
+                                                                                           called_function_cu_2.start_position(),
+                                                                                           called_function_cu_2.end_position())]
+                # iterate over args positions and check if RAW is reported
+                raw_reported_for_param_positions_2: List[bool] = []
+                for arg_var in called_function_cu_2.args:
+                    raw_reported = False
+                    for raw_entry in filtered_raw_info_2:
+                        if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+                            raw_reported = True
+                    raw_reported_for_param_positions_2.append(raw_reported)
+                # 5.3 get function call corresponding to scf from source code
+                try:
+                    function_call_string_2 = __get_function_call_from_source_code(source_code_files,
+                                                                                  int(recursive_function_call_line_2.split(":")[1]),
+                                                                                  recursive_function_call_line_2.split(":")[0])
+                except IndexError:
+                    continue
+                # get function parameter names from recursive function call
+                function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
+                    function_call_string_2, recursive_function_call_entry_2[0], ts_1._node)
+                # 5.4 match parameter_names_2 with gathered R/W information of argument positions
+                if len(raw_reported_for_param_positions_2) != len(parameter_names_2):
+                    continue
+                parameter_names_2_raw_information: List[Tuple[str, bool]] = []
+                for idx in range(0, len(parameter_names_2)):
+                    tmp = (parameter_names_2[idx], raw_reported_for_param_positions_2[idx])
+                    parameter_names_2_raw_information.append(tmp)
+                # 6. check cf's R/W information against scf's R/W information and identify dependencies
+                # 6.1 Intersect cf's parameters with scf's parameters
+                intersection = []
+                for param_entry_1 in parameter_names_1_raw_information:
+                    for param_entry_2 in parameter_names_2_raw_information:
+                        if param_entry_1[0] == param_entry_2[0]:
+                            intersection.append(param_entry_1)
+                intersection = list(set(intersection))
+                # 6.2 get task suggestion corresponding to scf
+                for ts_2 in task_suggestions:
+                    if ts_2 == ts_1:
+                        continue
+                    if ts_2.pragma_line != recursive_function_call_line_2.split(":")[1]:
+                        continue
+                    # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
+                    for intersection_var in [e[0] for e in intersection if e[1]]:
+                        if ts_1 not in out_dep_updates:
+                            out_dep_updates[ts_1] = []
+                        out_dep_updates[ts_1].append(intersection_var)
+                        if ts_2 not in in_dep_updates:
+                            in_dep_updates[ts_2] = []
+                        in_dep_updates[ts_2].append(intersection_var)
+    # perform updates of in and out dependencies
+    for ts in task_suggestions:
+        if ts in out_dep_updates:
+            for out_dep_var in out_dep_updates[ts]:
+                ts.out_dep.append(out_dep_var)
+            ts.out_dep = list(set(ts.out_dep))
+        if ts in in_dep_updates:
+            for in_dep_var in in_dep_updates[ts]:
+                ts.in_dep.append(in_dep_var)
+            ts.in_dep = list(set(ts.in_dep))
+        result_suggestions.append(ts)
+
     return suggestions
 
 
@@ -696,6 +899,19 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
             function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
             for ts_2 in [s for s in task_suggestions if not s == ts_1]:
+#                # make sure ts_2 is a successor of ts_1
+#                if ":" in ts_1.pragma_line:
+##                    ts_1_line = int(ts_1.pragma_line.split(":")[1])
+#                else:
+#                    ts_1_line = int(ts_1.pragma_line)
+#                if ":" in ts_2.pragma_line:
+#                    ts_2_line = int(ts_2.pragma_line.split(":")[1])
+#                else:
+#                    ts_2_line = int(ts_2.pragma_line)
+#                if ts_1_line < ts_2_line:
+#                    continue
+
+
                 # get parent function
                 potential_parent_functions_2 = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
                                                 if pet.node_at(e[0]).type == NodeType.FUNC]
