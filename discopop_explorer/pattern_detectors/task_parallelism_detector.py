@@ -369,18 +369,20 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
         for loop_cu in pet.all_nodes(NodeType.LOOP):
             # check if task suggestion inside do-all loop exists
             if __line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
-                def find_taskwaits(cu_node: CUNode):
+                def find_taskwaits(cu_node: CUNode, visited: List[CUNode]):
                     if cu_node.tp_contains_taskwait:
                         return [cu_node]
                     result = []
+                    visited.append(cu_node)
                     for succ_cu_node in [pet.node_at(t) for s, t, e in pet.out_edges(cu_node.id) if
                                          e.etype == EdgeType.SUCCESSOR and
                                          pet.node_at(t) != cu_node]:
-                        result += find_taskwaits(succ_cu_node)
+                        if succ_cu_node not in visited:
+                            result += find_taskwaits(succ_cu_node, visited)
                     return result
 
                 # find successive taskwaits
-                successive_taskwait_cus = find_taskwaits(ts._node)
+                successive_taskwait_cus = find_taskwaits(ts._node, [])
                 for stws_cu in successive_taskwait_cus:
                     if loop_cu.do_all:
                         # check if stws is suggested at loop increment
