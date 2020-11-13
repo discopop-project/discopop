@@ -704,8 +704,32 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
             function_name_1, parameter_names_1 = __get_called_function_and_parameter_names_from_function_call(
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
             # get recursive function calls inside cur_potential_parent_function's scope
+
+            # TEST TODO possibly revert
+            #potential_children = pet.direct_children(cur_potential_parent_function)
+            # get potential children by dfs enumerating children nodes inside cure_potential_parent_functions scope
+            queue = pet.direct_children(cur_potential_parent_function)
+            potential_children = []
+            visited = []
+            while queue:
+                cur_potential_child = queue.pop()
+                visited.append(cur_potential_child)
+                # test if cur_potential_child is inside cur_potential_parent_functions scope
+                if __line_contained_in_region(cur_potential_child.start_position(),
+                                              cur_potential_parent_function.start_position(),
+                                              cur_potential_parent_function.end_position()) and \
+                    __line_contained_in_region(cur_potential_child.end_position(),
+                                               cur_potential_parent_function.start_position(),
+                                               cur_potential_parent_function.end_position()):
+                    potential_children.append(cur_potential_child)
+                for tmp_child in pet.direct_children(cur_potential_child):
+                    if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
+                        queue.append(tmp_child)
+            # END TEST
+
+
             cppf_recursive_function_calls = []
-            for child in [c for c in pet.direct_children(cur_potential_parent_function) if
+            for child in [c for c in potential_children if
                           __line_contained_in_region(c.start_position(), cur_potential_parent_function.start_position(),
                                                      cur_potential_parent_function.end_position())
                           and
