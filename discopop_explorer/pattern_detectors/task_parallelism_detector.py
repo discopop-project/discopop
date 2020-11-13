@@ -631,6 +631,65 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
+def __get_function_call_parameter_rw_information(pet, recursive_function_call_entry, parent_task_suggestion, cu_inst_result_dict, source_code_files) -> Optional[any]:
+    """TODO used to get RW information for function's parameters based on CUInstResult.txt
+    None is returned if anything unpredicted happens."""
+    # 5. get R/W information for scf's parameters based on CUInstResult.txt
+    # 5.1.get CU object corresponding to scf
+    # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+    # 5.3 get function call corresponding to scf from source code
+    # 5.4 match variable names with gathered R/W information
+    ################
+
+    # 5. get R/W information for scf's parameters based on CUInstResult.txt
+    # 5.1. get CU object corresponding to called function
+    called_function_cu_id = None
+    if "," in recursive_function_call_entry:
+        recursive_function_call_entry = recursive_function_call_entry.split(",")[0]
+    recursive_function_call_entry = recursive_function_call_entry.split(" ")
+    recursive_function_call_line = recursive_function_call_entry[1]
+    if int(recursive_function_call_line.split(":")[1]) > int(parent_task_suggestion.pragma_line):
+        # correct function call found
+        # find corresponding function CU
+        for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+            if tmp_func_cu.name == recursive_function_call_entry[0]:
+                called_function_cu_id = tmp_func_cu.id
+    if called_function_cu_id is None:
+        return None
+    # 5.2. get R/W information for successive called function's parameters based on CUInstResult.txt
+    called_function_cu = pet.node_at(called_function_cu_id)
+    # get raw info concerning the scope of called_function_cu
+    raw_info = cu_inst_result_dict["RAW"]
+    filtered_raw_info = [e for e in raw_info if __line_contained_in_region(e["line"],
+                                                                               called_function_cu.start_position(),
+                                                                               called_function_cu.end_position())]
+    # iterate over args positions and check if RAW is reported
+    raw_reported_for_param_positions: List[bool] = []
+    for arg_var in called_function_cu.args:
+        raw_reported = False
+        for raw_entry in filtered_raw_info:
+            if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+                raw_reported = True
+        raw_reported_for_param_positions.append(raw_reported)
+    # 5.3 get function call corresponding to scf from source code
+    try:
+        function_call_string = __get_function_call_from_source_code(source_code_files, int(recursive_function_call_line.split(":")[1]),
+                                                                      recursive_function_call_line.split(":")[0])
+    except IndexError:
+        return None
+    # get function parameter names from recursive function call
+    function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(
+        function_call_string, recursive_function_call_entry[0], parent_task_suggestion._node)
+    # 5.4 match parameter_names with gathered R/W information of argument positions
+    if len(raw_reported_for_param_positions) != len(parameter_names):
+        return None
+    parameter_names_raw_information: List[Tuple[str, bool]] = []
+    for idx in range(0, len(parameter_names)):
+        tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
+        parameter_names_raw_information.append(tmp)
+    return recursive_function_call_line, parameter_names_raw_information
+
+
 def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
                                                source_code_files: Dict,
                                                cu_inst_result_dict: Dict) -> List[PatternInfo]:
@@ -790,56 +849,11 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                     continue
                 if recursive_function_call_entry_2 is None:
                     continue
-                # 5. get R/W information for scf's parameters based on CUInstResult.txt
-                # 5.1. get CU object corresponding to scf
-                called_function_cu_id_2 = None
-                if "," in recursive_function_call_entry_2:
-                    recursive_function_call_entry_2 = recursive_function_call_entry_2.split(",")[0]
-                recursive_function_call_entry_2 = recursive_function_call_entry_2.split(" ")
-                recursive_function_call_line_2 = recursive_function_call_entry_2[1]
-                if int(recursive_function_call_line_2.split(":")[1]) > int(ts_1.pragma_line):
-                    # correct function call found
-                    # find corresponding function CU
-                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
-                        if tmp_func_cu.name == recursive_function_call_entry_2[0]:
-                            called_function_cu_id_2 = tmp_func_cu.id
-                if called_function_cu_id_2 is None:
+                # 5. get R/W Information for scf
+                ret_val = __get_function_call_parameter_rw_information(pet, recursive_function_call_entry_2, ts_1, cu_inst_result_dict, source_code_files)
+                if ret_val is None:
                     continue
-                # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
-                called_function_cu_2 = pet.node_at(called_function_cu_id_2)
-                # get raw info concerning the scope of called_function_cu_2
-                raw_info_2 = cu_inst_result_dict["RAW"]
-                filtered_raw_info_2 = [e for e in raw_info_2 if __line_contained_in_region(e["line"],
-                                                                                           called_function_cu_2.start_position(),
-                                                                                           called_function_cu_2.end_position())]
-                # iterate over args positions and check if RAW is reported
-                raw_reported_for_param_positions_2: List[bool] = []
-                for arg_var in called_function_cu_2.args:
-                    raw_reported = False
-                    for raw_entry in filtered_raw_info_2:
-                        if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
-                            raw_reported = True
-                    raw_reported_for_param_positions_2.append(raw_reported)
-                # 5.3 get function call corresponding to scf from source code
-                try:
-                    function_call_string_2 = __get_function_call_from_source_code(source_code_files,
-                                                                                  int(
-                                                                                      recursive_function_call_line_2.split(
-                                                                                          ":")[1]),
-                                                                                  recursive_function_call_line_2.split(
-                                                                                      ":")[0])
-                except IndexError:
-                    continue
-                # get function parameter names from recursive function call
-                function_name_2, parameter_names_2 = __get_called_function_and_parameter_names_from_function_call(
-                    function_call_string_2, recursive_function_call_entry_2[0], ts_1._node)
-                # 5.4 match parameter_names_2 with gathered R/W information of argument positions
-                if len(raw_reported_for_param_positions_2) != len(parameter_names_2):
-                    continue
-                parameter_names_2_raw_information: List[Tuple[str, bool]] = []
-                for idx in range(0, len(parameter_names_2)):
-                    tmp = (parameter_names_2[idx], raw_reported_for_param_positions_2[idx])
-                    parameter_names_2_raw_information.append(tmp)
+                recursive_function_call_line_2, parameter_names_2_raw_information = ret_val
                 # 6. check cf's R/W information against scf's R/W information and identify dependencies
                 # 6.1 Intersect cf's parameters with scf's parameters
                 intersection = []
