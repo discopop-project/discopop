@@ -100,6 +100,7 @@ class CUNode:
     mw_type = MWType.FORK
     basic_block_id = ""
     recursive_function_calls = []
+    node_calls: List[Dict[str, str]] = []
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
@@ -157,6 +158,9 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
 
     if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
         n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
+
+    if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'nodeCalled'):
+        n.node_calls = [{'cuid': n.text, 'atLine': n.get('atLine')} for n in node.callsNode.nodeCalled if n.get('atLine') is not None]
 
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
