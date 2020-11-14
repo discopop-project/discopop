@@ -631,8 +631,15 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def __get_function_call_parameter_rw_information(pet, recursive_function_call_entry, parent_task_suggestion, cu_inst_result_dict, source_code_files) -> Optional[any]:
+def __get_function_call_parameter_rw_information(pet, call_position, parent_cu_node, lower_line_num: int, cu_inst_result_dict,
+                                                 source_code_files, called_cu_id=None, called_function_name=None) -> Optional[any]:
     """TODO used to get RW information for function's parameters based on CUInstResult.txt
+    TODO documentation
+    TODO Typing
+    Either called_cu_id, called_function_name or both need to be set.
+    call_position: position of function call in source code (e.g. 14:275)
+    lower_line_num: called_function_cu_id detections is restricted to source code lines > lower_line_num to
+    ignore prior function calls
     None is returned if anything unpredicted happens."""
     # 5. get R/W information for scf's parameters based on CUInstResult.txt
     # 5.1.get CU object corresponding to scf
@@ -640,22 +647,26 @@ def __get_function_call_parameter_rw_information(pet, recursive_function_call_en
     # 5.3 get function call corresponding to scf from source code
     # 5.4 match variable names with gathered R/W information
     ################
-
+    if called_cu_id is None and called_function_name is None:
+        raise ValueError("Unsufficient information!")
+    # TODO replace <recursiveFunctionCall> with mode general <nodeCalled> support
     # 5. get R/W information for scf's parameters based on CUInstResult.txt
     # 5.1. get CU object corresponding to called function
     called_function_cu_id = None
-    if "," in recursive_function_call_entry:
-        recursive_function_call_entry = recursive_function_call_entry.split(",")[0]
-    recursive_function_call_entry = recursive_function_call_entry.split(" ")
-    recursive_function_call_line = recursive_function_call_entry[1]
-    if int(recursive_function_call_line.split(":")[1]) > int(parent_task_suggestion.pragma_line):
-        # correct function call found
-        # find corresponding function CU
-        for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
-            if tmp_func_cu.name == recursive_function_call_entry[0]:
-                called_function_cu_id = tmp_func_cu.id
-    if called_function_cu_id is None:
-        return None
+    if called_cu_id is not None:
+        called_function_cu_id = called_cu_id
+        if called_function_name is None:
+            called_function_name = pet.node_at(called_function_cu_id).name
+    else:
+        # get cu id of called function
+        if int(call_position.split(":")[1]) > lower_line_num:
+            # correct function call found
+            # find corresponding function CU
+            for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                if tmp_func_cu.name == called_function_name:
+                    called_function_cu_id = tmp_func_cu.id
+        if called_function_cu_id is None:
+            return None
     # 5.2. get R/W information for successive called function's parameters based on CUInstResult.txt
     called_function_cu = pet.node_at(called_function_cu_id)
     # get raw info concerning the scope of called_function_cu
@@ -673,13 +684,13 @@ def __get_function_call_parameter_rw_information(pet, recursive_function_call_en
         raw_reported_for_param_positions.append(raw_reported)
     # 5.3 get function call corresponding to scf from source code
     try:
-        function_call_string = __get_function_call_from_source_code(source_code_files, int(recursive_function_call_line.split(":")[1]),
-                                                                      recursive_function_call_line.split(":")[0])
+        function_call_string = __get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
+                                                                      call_position.split(":")[0])
     except IndexError:
         return None
     # get function parameter names from recursive function call
     function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(
-        function_call_string, recursive_function_call_entry[0], parent_task_suggestion._node)
+        function_call_string, called_function_name, parent_cu_node)
     # 5.4 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
         return None
@@ -687,7 +698,7 @@ def __get_function_call_parameter_rw_information(pet, recursive_function_call_en
     for idx in range(0, len(parameter_names)):
         tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
         parameter_names_raw_information.append(tmp)
-    return recursive_function_call_line, parameter_names_raw_information
+    return call_position, parameter_names_raw_information
 
 
 def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
@@ -850,7 +861,15 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                 if recursive_function_call_entry_2 is None:
                     continue
                 # 5. get R/W Information for scf
-                ret_val = __get_function_call_parameter_rw_information(pet, recursive_function_call_entry_2, ts_1, cu_inst_result_dict, source_code_files)
+                # TODO map recursive_function_call_entry_2 to node_called information (line, name, cu_node_id)
+                called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(",")[0].split(" ")
+                lower_line_num_2 = ts_1.pragma_line
+                if ":" in lower_line_num_2:
+                    lower_line_num_2 = lower_line_num_2.split(":")[1]
+                lower_line_num_2 = int(lower_line_num_2)
+                ret_val = __get_function_call_parameter_rw_information(pet, call_line_2, ts_1._node, lower_line_num_2, cu_inst_result_dict,
+                                                                       source_code_files,
+                                                                       called_function_name=called_function_name_2)
                 if ret_val is None:
                     continue
                 recursive_function_call_line_2, parameter_names_2_raw_information = ret_val
