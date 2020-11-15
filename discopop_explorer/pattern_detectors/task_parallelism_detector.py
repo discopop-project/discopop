@@ -338,8 +338,8 @@ def __get_dict_from_cu_inst_result_file(cu_inst_result_file: str) -> Dict[str, L
                     target_var = line[5]
                 elif target_type == "function:":
                     target_function = line[3]
-                    target_line = line[4]
-                    target_var = line[6]
+                    target_line = line[5]
+                    target_var = line[7]
                 else:
                     raise ValueError("Unknown type: ", target_type)
                 cur_line_dict = {'function': target_function, 'line': target_line.replace(",", ""), 'var': target_var}
@@ -688,6 +688,8 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     called_function_cu = pet.node_at(called_function_cu_id)
     # get raw info concerning the scope of called_function_cu
     raw_info = cu_inst_result_dict["RAW"]
+    # TODO possibly exculde WAW
+    raw_info += cu_inst_result_dict["WAW"]
     filtered_raw_info = [e for e in raw_info if __line_contained_in_region(e["line"],
                                                                                called_function_cu.start_position(),
                                                                                called_function_cu.end_position())]
@@ -700,7 +702,16 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
                 raw_reported = True
         raw_reported_for_param_positions.append(raw_reported)
     # store results in cache
-    function_raw_information_cache[called_function_cu] = raw_reported_for_param_positions
+    if not called_function_cu.name in function_raw_information_cache:
+        function_raw_information_cache[called_function_cu.name] = raw_reported_for_param_positions
+    else:
+        # perform update
+        new_cache_line = []
+        for idx in range(0, len(function_raw_information_cache[called_function_cu.name])):
+            old_cache_line = function_raw_information_cache[called_function_cu.name]
+            new_cache_line.append(old_cache_line[idx] or raw_reported_for_param_positions[idx])
+        function_raw_information_cache[called_function_cu.name] = new_cache_line
+
     # 5.3 get function call corresponding to scf from source code
     try:
         function_call_string = __get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
@@ -717,11 +728,11 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
         print("CHECKING: ", called_function_cu.name, " id: ", called_function_cu.id)
         recursively_visited, res_called_function_name, res_called_function_raw_information, function_raw_information_cache = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, prefix+"\t", function_raw_information_cache, cu_inst_result_dict, source_code_files)
         # TODO cache res_called_function_raw_information
-        function_raw_information_cache[called_function_cu] = res_called_function_raw_information
+        function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
     else:
         # read cache
-        if called_function_cu in function_raw_information_cache:
-            res_called_function_raw_information = function_raw_information_cache[called_function_cu]
+        if called_function_cu.name in function_raw_information_cache:
+            res_called_function_raw_information = function_raw_information_cache[called_function_cu.name]
             print("READING CACHE: ", called_function_cu.name)
         else:
             print("SKIPPING CACHE:", called_function_cu.name)
@@ -737,6 +748,14 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
         for idx in range(0, len(parameter_names)):
             tmp = (parameter_names[idx], (raw_reported_for_param_positions[idx] or res_called_function_raw_information[idx]))
             parameter_names_raw_information.append(tmp)
+        # overwrite cache
+        new_cache_line = []
+        for idx in range(0, len(function_raw_information_cache[called_function_cu.name])):
+            old_cache_line = function_raw_information_cache[called_function_cu.name]
+            update = [elem[1] for elem in parameter_names_raw_information]
+            new_cache_line.append(old_cache_line[idx] or update[idx])
+        function_raw_information_cache[called_function_cu.name] = new_cache_line
+        print("OVERWRITE RES: ", function_raw_information_cache[called_function_cu.name])
     else:
         # ignore recursion results
     #    print("rrfpp: ", raw_reported_for_param_positions)
@@ -746,6 +765,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
             tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
             parameter_names_raw_information.append(tmp)
 
+    print(function_raw_information_cache)
 #    print()
 #    print(prefix + "called_function_cu: ", called_function_cu, "  -  ", called_function_cu.name, "  lower_line_num: ", lower_line_num)
 #    print(prefix + "out:", str(parameter_names_raw_information))
@@ -753,12 +773,9 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     # TODO document
 
 
-    # TODO
-    #
-    #
     #  combine recursion results with parameter_names_raw_information for final result
 
-    return call_position, parameter_names_raw_information, recursively_visited
+    return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
 
 
 def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu, recursively_visited, prefix, function_raw_information_cache, cu_inst_result_dict, source_code_files):
@@ -810,7 +827,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, c
                                                                        called_function_name=child_func.name)
                 if ret_val is None:
                     continue
-                recursive_function_call_line, parameter_names_raw_information, recursively_visited = ret_val
+                recursive_function_call_line, parameter_names_raw_information, recursively_visited, function_raw_information_cache = ret_val
   #              print(prefix + "child_func: ", child_func.id, " - ", child_func.name)
   #              print(prefix + "child_func_params: ", [v.name for v in child_func.args])
   #              print(prefix + "rec:", str(parameter_names_raw_information))
@@ -866,6 +883,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
 
     out_dep_updates = dict()
     in_dep_updates = dict()
+    function_raw_information_cache = dict()
     # 1. iterate over task suggestions
     for ts_1 in task_suggestions:
         # 2. get parent function (pf) and called function (cf)
@@ -938,11 +956,11 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                     lower_line_num_1 = lower_line_num_1.split(":")[1]
                 lower_line_num_1 = int(lower_line_num_1)
                 ret_val_1 = __get_function_call_parameter_rw_information(pet, call_line_1, ts_1._node, lower_line_num_1, True, False,
-                                                                         cu_inst_result_dict, source_code_files, [], "", dict(),
+                                                                         cu_inst_result_dict, source_code_files, [], "", function_raw_information_cache,
                                                                          called_function_name=called_function_name_1)
                 if ret_val_1 is None:
                     continue
-                recursive_function_call_line_1, parameter_names_1_raw_information, recursively_visited_1 = ret_val_1
+                recursive_function_call_line_1, parameter_names_1_raw_information, recursively_visited_1, function_raw_information_cache = ret_val_1
                 # 4. iterate over successive calls to cf, named scf
                 for rfce_idx_2, recursive_function_call_entry_2 in enumerate(cppf_recursive_function_calls):
                     if rfce_idx_2 == rfce_idx_1:
@@ -956,11 +974,15 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                         lower_line_num_2 = lower_line_num_2.split(":")[1]
                     lower_line_num_2 = int(lower_line_num_2)
                     ret_val_2 = __get_function_call_parameter_rw_information(pet, call_line_2, ts_1._node, lower_line_num_2, False, True,
-                                                                             cu_inst_result_dict, source_code_files, [], "", dict(),
+                                                                             cu_inst_result_dict, source_code_files, [], "", function_raw_information_cache,
                                                                              called_function_name=called_function_name_2)
                     if ret_val_2 is None:
                         continue
-                    recursive_function_call_line_2, parameter_names_2_raw_information, recursively_visited_2 = ret_val_2
+                    recursive_function_call_line_2, parameter_names_2_raw_information, recursively_visited_2, function_raw_information_cache = ret_val_2
+
+                    print("rec_call_1: ", recursive_function_call_line_1)
+                    print("rec_call_2: ", recursive_function_call_line_2)
+
                     # 6. check cf's R/W information against scf's R/W information and identify dependencies
                     # 6.1 Intersect cf's parameters with scf's parameters
                     intersection = []
@@ -971,20 +993,24 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             if param_entry_1[0] == param_entry_2[0]:
                                 intersection.append(param_entry_1)
                     intersection = list(set(intersection))
+                    print("intersection: ", intersection)
                     # 6.2 get task suggestion corresponding to scf
                     for ts_2 in task_suggestions:
                         if ts_2 == ts_1:
                             continue
                         if ts_2.pragma_line != recursive_function_call_line_2.split(":")[1]:
                             continue
+                        print("HERE: PRAGMA 2 LINE: ", ts_2.pragma_line)
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
                         for intersection_var in [e[0] for e in intersection if e[1]]:
+                            print("\t->", intersection_var)
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append(intersection_var)
                             if ts_2 not in in_dep_updates:
                                 in_dep_updates[ts_2] = []
                             in_dep_updates[ts_2].append(intersection_var)
+                            print("in-update: ", intersection_var)
                     outer_breaker = True
     # perform updates of in and out dependencies
     for ts in task_suggestions:
@@ -1734,13 +1760,16 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                      parent_function.end_position()):
+                        # TODO possibly re-enable
+                        #if __line_contained_in_region(defLine, parent_function.start_position(),
+                        #                              parent_function.end_position()):
+                        if True:
                             # check if var is contained in out_dep_vars and a previous out_dep exists
                             if var in out_dep_vars:
                                 for line_num in out_dep_vars[var]:
                                     line_num = str(line_num)
                                     tmp_pragma_line = suggestion.pragma_line
+                                    tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
                                     if ":" in tmp_pragma_line:
@@ -1767,12 +1796,16 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                      parent_function.end_position()):
+                        # TODO possibly re-enable
+                        #if __line_contained_in_region(defLine, parent_function.start_position(),
+                        #                              parent_function.end_position()):
+                        if True:
                             # check if var is contained in in_dep_vars and a successive in_dep exists
                             if var in in_dep_vars:
                                 for line_num in in_dep_vars[var]:
+                                    line_num = str(line_num)
                                     tmp_pragma_line = suggestion.pragma_line
+                                    tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
                                     if ":" in tmp_pragma_line:
@@ -1799,8 +1832,10 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        if __line_contained_in_region(defLine, parent_function.start_position(),
-                                                      parent_function.end_position()):
+                        # TODO possibly re-enable
+                        #if __line_contained_in_region(defLine, parent_function.start_position(),
+                        #                              parent_function.end_position()):
+                        if True:
                             # check if var occurs more than once as in or out, i.e. at least an actual in or out
                             # dependency exists
                             if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
@@ -1808,14 +1843,17 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                 prior_out_exists = False
                                 successive_in_exists = False
                                 tmp_pragma_line = suggestion.pragma_line
+                                tmp_pragma_line = str(tmp_pragma_line)
                                 if ":" in tmp_pragma_line:
                                     tmp_pragma_line = tmp_pragma_line.split(":")[1]
                                 for line_num in out_dep_vars[var]:
+                                    line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
                                     if int(line_num) < int(tmp_pragma_line):
                                         prior_out_exists = True
                                 for line_num in in_dep_vars[var]:
+                                    line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
                                     if int(line_num) > int(tmp_pragma_line):
