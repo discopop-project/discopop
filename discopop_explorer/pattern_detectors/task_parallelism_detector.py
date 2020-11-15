@@ -632,7 +632,7 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
 
 
 def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, parent_cu_node, lower_line_num, equal_lower_line_num, greater_lower_line_num, cu_inst_result_dict,
-                                                 source_code_files, recursively_visited, prefix, called_cu_id=None, called_function_name=None) -> Optional[any]:
+                                                 source_code_files, recursively_visited, prefix, function_raw_information_cache, called_cu_id=None, called_function_name=None) -> Optional[any]:
     """TODO used to get RW information for function's parameters based on CUInstResult.txt
     TODO documentation, remove usage of scf etc.
     TODO Typing
@@ -699,6 +699,8 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
             if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
                 raw_reported = True
         raw_reported_for_param_positions.append(raw_reported)
+    # store results in cache
+    function_raw_information_cache[called_function_cu] = raw_reported_for_param_positions
     # 5.3 get function call corresponding to scf from source code
     try:
         function_call_string = __get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
@@ -712,10 +714,20 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     # 5.4. start recursion step
     res_called_function_raw_information = []
     if called_function_cu not in recursively_visited:
-        recursively_visited, res_called_function_name, res_called_function_raw_information  = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, prefix+"\t", cu_inst_result_dict, source_code_files)
+        print("CHECKING: ", called_function_cu.name, " id: ", called_function_cu.id)
+        recursively_visited, res_called_function_name, res_called_function_raw_information, function_raw_information_cache = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, prefix+"\t", function_raw_information_cache, cu_inst_result_dict, source_code_files)
+        # TODO cache res_called_function_raw_information
+        function_raw_information_cache[called_function_cu] = res_called_function_raw_information
+    else:
+        # read cache
+        if called_function_cu in function_raw_information_cache:
+            res_called_function_raw_information = function_raw_information_cache[called_function_cu]
+            print("READING CACHE: ", called_function_cu.name)
+        else:
+            print("SKIPPING CACHE:", called_function_cu.name)
 
 #        print(prefix + "res_cfname: ", res_called_function_name)
-#        print(prefix + "res_cfraw: ", res_called_function_raw_information)
+    print(prefix + "res_cfraw: ", res_called_function_raw_information)
 
     # 5.5 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
@@ -727,6 +739,9 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
             parameter_names_raw_information.append(tmp)
     else:
         # ignore recursion results
+    #    print("rrfpp: ", raw_reported_for_param_positions)
+    #    print("rcfri: ", res_called_function_raw_information)
+    #    print()
         for idx in range(0, len(parameter_names)):
             tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
             parameter_names_raw_information.append(tmp)
@@ -746,7 +761,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     return call_position, parameter_names_raw_information, recursively_visited
 
 
-def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu, recursively_visited, prefix, cu_inst_result_dict, source_code_files):
+def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu, recursively_visited, prefix, function_raw_information_cache, cu_inst_result_dict, source_code_files):
     # TODO make recursive
     # iterate over ALL function calls in called functions body
     # get RW information for used parameters
@@ -791,7 +806,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, c
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
                 ret_val = __get_function_call_parameter_rw_information(pet, child.start_position(), child, int(child.start_position().split(":")[1]), True, True,
-                                                                       cu_inst_result_dict, source_code_files, recursively_visited, prefix+"\t",
+                                                                       cu_inst_result_dict, source_code_files, recursively_visited, prefix+"\t", function_raw_information_cache,
                                                                        called_function_name=child_func.name)
                 if ret_val is None:
                     continue
@@ -814,7 +829,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, c
     # TODO FINISH PROPER
     # remove names from called_function_args_raw_information
     called_function_args_raw_information = [e[1] for e in called_function_args_raw_information]
-    return recursively_visited, called_function_cu.name, called_function_args_raw_information
+    return recursively_visited, called_function_cu.name, called_function_args_raw_information, function_raw_information_cache
 
 def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
                                                source_code_files: Dict,
@@ -923,7 +938,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                     lower_line_num_1 = lower_line_num_1.split(":")[1]
                 lower_line_num_1 = int(lower_line_num_1)
                 ret_val_1 = __get_function_call_parameter_rw_information(pet, call_line_1, ts_1._node, lower_line_num_1, True, False,
-                                                                         cu_inst_result_dict, source_code_files, [], "",
+                                                                         cu_inst_result_dict, source_code_files, [], "", dict(),
                                                                          called_function_name=called_function_name_1)
                 if ret_val_1 is None:
                     continue
@@ -941,7 +956,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                         lower_line_num_2 = lower_line_num_2.split(":")[1]
                     lower_line_num_2 = int(lower_line_num_2)
                     ret_val_2 = __get_function_call_parameter_rw_information(pet, call_line_2, ts_1._node, lower_line_num_2, False, True,
-                                                                             cu_inst_result_dict, source_code_files, [], "",
+                                                                             cu_inst_result_dict, source_code_files, [], "", dict(),
                                                                              called_function_name=called_function_name_2)
                     if ret_val_2 is None:
                         continue
@@ -1724,6 +1739,7 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                             # check if var is contained in out_dep_vars and a previous out_dep exists
                             if var in out_dep_vars:
                                 for line_num in out_dep_vars[var]:
+                                    line_num = str(line_num)
                                     tmp_pragma_line = suggestion.pragma_line
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
