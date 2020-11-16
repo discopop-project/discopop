@@ -503,3 +503,15 @@ class PETGraphX(object):
                 path.insert(0, source)
                 return path
         return []
+
+    def get_reduction_sign(self, line: str, name: str) -> str:
+        """Returns reduction operation for variable
+
+        :param line: loop line number
+        :param name: variable name
+        :return: reduction operation
+        """
+        for rv in self.reduction_vars:
+            if rv['loop_line'] == line and rv['name'] == name:
+                return rv['operation']
+        return ""
