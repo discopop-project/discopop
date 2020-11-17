@@ -1760,10 +1760,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        # TODO possibly re-enable
-                        #if __line_contained_in_region(defLine, parent_function.start_position(),
-                        #                              parent_function.end_position()):
-                        if True:
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
                             # check if var is contained in out_dep_vars and a previous out_dep exists
                             if var in out_dep_vars:
                                 for line_num in out_dep_vars[var]:
@@ -1796,10 +1794,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        # TODO possibly re-enable
-                        #if __line_contained_in_region(defLine, parent_function.start_position(),
-                        #                              parent_function.end_position()):
-                        if True:
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
                             # check if var is contained in in_dep_vars and a successive in_dep exists
                             if var in in_dep_vars:
                                 for line_num in in_dep_vars[var]:
@@ -1832,10 +1828,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                         if defLine is None:
                             is_valid = True
                         # check if var is defined in parent function
-                        # TODO possibly re-enable
-                        #if __line_contained_in_region(defLine, parent_function.start_position(),
-                        #                              parent_function.end_position()):
-                        if True:
+                        if __line_contained_in_region(defLine, parent_function.start_position(),
+                                                      parent_function.end_position()):
                             # check if var occurs more than once as in or out, i.e. at least an actual in or out
                             # dependency exists
                             if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
