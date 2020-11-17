@@ -725,20 +725,12 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     # 5.4. start recursion step
     res_called_function_raw_information = []
     if called_function_cu not in recursively_visited:
-        print("CHECKING: ", called_function_cu.name, " id: ", called_function_cu.id)
         recursively_visited, res_called_function_name, res_called_function_raw_information, function_raw_information_cache = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, prefix+"\t", function_raw_information_cache, cu_inst_result_dict, source_code_files)
-        # TODO cache res_called_function_raw_information
         function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
     else:
         # read cache
         if called_function_cu.name in function_raw_information_cache:
             res_called_function_raw_information = function_raw_information_cache[called_function_cu.name]
-            print("READING CACHE: ", called_function_cu.name)
-        else:
-            print("SKIPPING CACHE:", called_function_cu.name)
-
-#        print(prefix + "res_cfname: ", res_called_function_name)
-    print(prefix + "res_cfraw: ", res_called_function_raw_information)
 
     # 5.5 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
@@ -755,38 +747,21 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
             update = [elem[1] for elem in parameter_names_raw_information]
             new_cache_line.append(old_cache_line[idx] or update[idx])
         function_raw_information_cache[called_function_cu.name] = new_cache_line
-        print("OVERWRITE RES: ", function_raw_information_cache[called_function_cu.name])
     else:
         # ignore recursion results
-    #    print("rrfpp: ", raw_reported_for_param_positions)
-    #    print("rcfri: ", res_called_function_raw_information)
-    #    print()
         for idx in range(0, len(parameter_names)):
             tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
             parameter_names_raw_information.append(tmp)
-
-    print(function_raw_information_cache)
-#    print()
-#    print(prefix + "called_function_cu: ", called_function_cu, "  -  ", called_function_cu.name, "  lower_line_num: ", lower_line_num)
-#    print(prefix + "out:", str(parameter_names_raw_information))
-
-    # TODO document
-
-
-    #  combine recursion results with parameter_names_raw_information for final result
 
     return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
 
 
 def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu, recursively_visited, prefix, function_raw_information_cache, cu_inst_result_dict, source_code_files):
-    # TODO make recursive
     # iterate over ALL function calls in called functions body
     # get RW information for used parameters
     # OR-conjunction of recursively gathered information with information from step 5.4.
     #   -> should result in information of type: variable <var> is RAW somewhere (location not necessary)
-    # TODO cache results for functions parameters (raw_reported_for_param_positions)
 
-    # TEST START
     # get potential children of called function
     recursively_visited.append(called_function_cu)
     queue = pet.direct_children(called_function_cu)
@@ -828,25 +803,16 @@ def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, c
                 if ret_val is None:
                     continue
                 recursive_function_call_line, parameter_names_raw_information, recursively_visited, function_raw_information_cache = ret_val
-  #              print(prefix + "child_func: ", child_func.id, " - ", child_func.name)
-  #              print(prefix + "child_func_params: ", [v.name for v in child_func.args])
-  #              print(prefix + "rec:", str(parameter_names_raw_information))
-  #              print(prefix + "child_know_variables: ", [v.name for v in child.global_vars+child.local_vars])
-  #              print(prefix + "called_function_name: ", called_function_cu.name)
-  #              print(prefix + "called_function_parameters:", [v.name for v in called_function_cu.args])
-                # TODO map parameter_names_raw_information against called_function_cu.args to get positions of RAW parameters
                 # perform or-conjunction of RAW information
                 for child_var_name, child_raw_info in parameter_names_raw_information:
                     for idx, (var_name, raw_info) in enumerate(called_function_args_raw_information):
                         if var_name == child_var_name:
                             called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
 
-    # print(prefix + "RESULT: ", called_function_args_raw_information)
-    # TEST END
-    # TODO FINISH PROPER
     # remove names from called_function_args_raw_information
     called_function_args_raw_information = [e[1] for e in called_function_args_raw_information]
     return recursively_visited, called_function_cu.name, called_function_args_raw_information, function_raw_information_cache
+
 
 def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
                                                source_code_files: Dict,
@@ -980,9 +946,6 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                         continue
                     recursive_function_call_line_2, parameter_names_2_raw_information, recursively_visited_2, function_raw_information_cache = ret_val_2
 
-                    print("rec_call_1: ", recursive_function_call_line_1)
-                    print("rec_call_2: ", recursive_function_call_line_2)
-
                     # 6. check cf's R/W information against scf's R/W information and identify dependencies
                     # 6.1 Intersect cf's parameters with scf's parameters
                     intersection = []
@@ -993,24 +956,20 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             if param_entry_1[0] == param_entry_2[0]:
                                 intersection.append(param_entry_1)
                     intersection = list(set(intersection))
-                    print("intersection: ", intersection)
                     # 6.2 get task suggestion corresponding to scf
                     for ts_2 in task_suggestions:
                         if ts_2 == ts_1:
                             continue
                         if ts_2.pragma_line != recursive_function_call_line_2.split(":")[1]:
                             continue
-                        print("HERE: PRAGMA 2 LINE: ", ts_2.pragma_line)
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
                         for intersection_var in [e[0] for e in intersection if e[1]]:
-                            print("\t->", intersection_var)
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append(intersection_var)
                             if ts_2 not in in_dep_updates:
                                 in_dep_updates[ts_2] = []
                             in_dep_updates[ts_2].append(intersection_var)
-                            print("in-update: ", intersection_var)
                     outer_breaker = True
     # perform updates of in and out dependencies
     for ts in task_suggestions:
@@ -2326,7 +2285,6 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 # only include cu and func nodes
                 if not (contained_in.type == NodeType.FUNC or
                         contained_in.type == NodeType.CU):
-                    print("contained in ", contained_in, "  type: ", contained_in.type)
                     continue
                 if contained_in.mw_type == MWType.WORKER or \
                         contained_in.mw_type == MWType.BARRIER_WORKER or \
