@@ -631,20 +631,36 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, parent_cu_node, lower_line_num, equal_lower_line_num, greater_lower_line_num, cu_inst_result_dict,
-                                                 source_code_files, recursively_visited, prefix, function_raw_information_cache, called_cu_id=None, called_function_name=None) -> Optional[any]:
-    """TODO used to get RW information for function's parameters based on CUInstResult.txt
-    TODO documentation, remove usage of scf etc.
-    TODO Typing
+def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: str, parent_cu_node: CUNode, lower_line_num: int, equal_lower_line_num: bool, greater_lower_line_num: bool, cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
+                                                 source_code_files: Dict[str, str], recursively_visited: List[CUNode], function_raw_information_cache: Dict[str, List[bool]], called_cu_id: Optional[str] = None, called_function_name: Optional[str] = None)\
+        -> Optional[Tuple[str, List[Tuple[str, bool]], List[CUNode], Dict[str, List[bool]]]]:
+    """Retrieves the call_position and information whether the parameters of the target function are modified within the respective function, based on the contents of cu_inst_result_dict.
     Either called_cu_id, called_function_name or both need to be set.
-    call_position: position of function call in source code (e.g. 14:275)
-    lower_line_num: called_function_cu_id detections is restricted to source code lines >= lower_line_num to ignore prior function calls
-    eq_lower_line_num: bool.    If True, restrict called_function_cu_id detection to line equal to lower_line_num.
-                                If False, restrict called_function_cu_id detection to lines greater than lower_line_num.
-    None is returned if anything unpredicted happens."""
-    # 5. get R/W information for scf's parameters based on CUInstResult.txt
-    # 5.1.get CU object corresponding to scf
-    # 5.2. get R/W information for scf's parameters based on CUInstResult.txt
+    :param pet: PET Graph
+    :param call_position: position of function call in source code (e.g. 14:275)
+    :param parent_cu_node: CUNode corresponding to the CU Node containing the target function
+    :param lower_line_num: called_function_cu_id detections is restricted to
+        source code lines >= / > / == lower_line_num to ignore prior function calls.
+        Different behavior is achieved by combining equal_lower_line and greater_lower_line
+    :param equal_lower_line_num: allow called_function_cu_id detection for lines == lower_line_num
+    :param greater_lower_line_num: allow called_function_cu_id detection for lines >= lower_line_num
+    :param cu_inst_result_dict: Contents of the CUInst_Result.txt, converted into a dict.
+    :param source_code_files: File Mapping dictionary
+    :param recursively_visited: List of already visited CU Nodes to prevent endless recursions
+    :param function_raw_information_cache: Cache containing a mapping of function names to a list of booleans,
+        representing the parameters of a given function and the information
+        whether a specific parameter is modified by the respective function.
+    :param called_cu_id: ID of the called function´s CU node
+    :param called_function_name: Name of the called function
+    :return: None, if anything unpredicted happens.
+             Otherwise, (call_position, parameter_names_raw_information,
+             recursively_visited, function_raw_information_cache),
+             with parameter_names_raw_infotation being a list of Tuples containing the parameter names of the
+             called function and the information wheter the respective parameter is modified by the function."""
+    ###############
+    # 5. get R/W information for called function´s (cf) parameters based on CUInstResult.txt
+    # 5.1.get CU object corresponding to cf
+    # 5.2. get R/W information for cf's parameters based on CUInstResult.txt
     # 5.3 get function call corresponding to scf from source code
     # 5.4 start recursion step
     # 5.5 match variable names with gathered R/W information
@@ -688,8 +704,6 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     called_function_cu = pet.node_at(called_function_cu_id)
     # get raw info concerning the scope of called_function_cu
     raw_info = cu_inst_result_dict["RAW"]
-    # TODO possibly exculde WAW
-    raw_info += cu_inst_result_dict["WAW"]
     filtered_raw_info = [e for e in raw_info if __line_contained_in_region(e["line"],
                                                                                called_function_cu.start_position(),
                                                                                called_function_cu.end_position())]
@@ -725,7 +739,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     # 5.4. start recursion step
     res_called_function_raw_information = []
     if called_function_cu not in recursively_visited:
-        recursively_visited, res_called_function_name, res_called_function_raw_information, function_raw_information_cache = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, prefix+"\t", function_raw_information_cache, cu_inst_result_dict, source_code_files)
+        recursively_visited, res_called_function_name, res_called_function_raw_information, function_raw_information_cache = __get_function_call_parameter_rw_information_recursion_step(pet, called_function_cu, recursively_visited, function_raw_information_cache, cu_inst_result_dict, source_code_files)
         function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
     else:
         # read cache
@@ -756,11 +770,24 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position, 
     return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
 
 
-def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu, recursively_visited, prefix, function_raw_information_cache, cu_inst_result_dict, source_code_files):
-    # iterate over ALL function calls in called functions body
-    # get RW information for used parameters
-    # OR-conjunction of recursively gathered information with information from step 5.4.
-    #   -> should result in information of type: variable <var> is RAW somewhere (location not necessary)
+def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, called_function_cu: CUNode, recursively_visited: List[CUNode], function_raw_information_cache: Dict[str, List[bool]], cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]], source_code_files: Dict[str, str])\
+        -> Tuple[List[CUNode], str, List[Tuple[str, bool]], Dict[str, List[bool]]]:
+    """Wrapper to execute __get_function_call_parameter_rw_information recursively,
+    i.e. for every function call in called functions body.
+    The gathered information is aggregated via a logical disjunction on a per-variable level.
+    Results only contain the information whether a given variable is modified at some point,
+    the specific location is not included.
+    :param pet: PET Graph
+    :param called_function_cu: CU Node corresponding to the called function to be checked
+    :param recursively_visited: List of already visited CU Nodes to prevent endless recursions
+    :param function_raw_information_cache: Cache containing a mapping of function names to a list of booleans,
+        representing the parameters of a given function and the information
+        whether a specific parameter is modified by the respective function.
+    :param cu_inst_result_dict: Contents of the CUInst_Result.txt, converted into a dict.
+    :param source_code_files: File-Mapping dictionary
+    :return: (recursively_visited, called_function_name,
+              called_function_args_raw_information, function_raw_information_cache)
+    """
 
     # get potential children of called function
     recursively_visited.append(called_function_cu)
@@ -798,7 +825,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet:PETGraphX, c
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
                 ret_val = __get_function_call_parameter_rw_information(pet, child.start_position(), child, int(child.start_position().split(":")[1]), True, True,
-                                                                       cu_inst_result_dict, source_code_files, recursively_visited, prefix+"\t", function_raw_information_cache,
+                                                                       cu_inst_result_dict, source_code_files, recursively_visited, function_raw_information_cache,
                                                                        called_function_name=child_func.name)
                 if ret_val is None:
                     continue
@@ -922,7 +949,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                     lower_line_num_1 = lower_line_num_1.split(":")[1]
                 lower_line_num_1 = int(lower_line_num_1)
                 ret_val_1 = __get_function_call_parameter_rw_information(pet, call_line_1, ts_1._node, lower_line_num_1, True, False,
-                                                                         cu_inst_result_dict, source_code_files, [], "", function_raw_information_cache,
+                                                                         cu_inst_result_dict, source_code_files, [], function_raw_information_cache,
                                                                          called_function_name=called_function_name_1)
                 if ret_val_1 is None:
                     continue
@@ -940,7 +967,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                         lower_line_num_2 = lower_line_num_2.split(":")[1]
                     lower_line_num_2 = int(lower_line_num_2)
                     ret_val_2 = __get_function_call_parameter_rw_information(pet, call_line_2, ts_1._node, lower_line_num_2, False, True,
-                                                                             cu_inst_result_dict, source_code_files, [], "", function_raw_information_cache,
+                                                                             cu_inst_result_dict, source_code_files, [], function_raw_information_cache,
                                                                              called_function_name=called_function_name_2)
                     if ret_val_2 is None:
                         continue
