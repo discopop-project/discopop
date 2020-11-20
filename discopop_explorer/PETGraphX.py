@@ -102,6 +102,13 @@ class CUNode:
         self.id = node_id
         self.file_id, self.node_id = parse_id(node_id)
 
+    @classmethod
+    def from_kwargs(cls, node_id: str, **kwargs):
+        node = cls(node_id)
+        for key, value in kwargs.items():
+            setattr(node, key, value)
+        return node
+
     def start_position(self) -> str:
         """Start position file_id:line
         e.g. 23:45
@@ -166,44 +173,52 @@ class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: CUNode
+    pos: Dict
 
-    def __init__(self, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
-                 loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
-        self.g = nx.MultiDiGraph()
+    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
+        self.g = g
         self.reduction_vars = reduction_vars
+        for _, node in g.nodes(data='data'):
+            if node.name == "main":
+                self.main = node
+        self.pos = pos
+
+    @classmethod
+    def from_parsed_input(cls, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
+                          loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
+        g = nx.MultiDiGraph()
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
-            if n.name == "main":
-                self.main = n
-            self.g.add_node(id, data=n)
-
-        for node in self.all_nodes(NodeType.LOOP):
-            node.loop_iterations = loop_data.get(node.start_position(), 0)
+            g.add_node(id, data=n)
 
         for node_id, node in cu_dict.items():
             source = node_id
             if 'childrenNodes' in dir(node):
                 for child in [n.text for n in node.childrenNodes]:
-                    if child not in self.g:
+                    if child not in g:
                         print(f"WARNING: no child node {child} found")
-                    self.g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
+                    g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if 'successors' in dir(node) and 'CU' in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
-                    if successor not in self.g:
+                    if successor not in g:
                         print(f"WARNING: no successor node {successor} found")
-                    self.g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+                    g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+
+        for _, node in g.nodes(data='data'):
+            if node.type == NodeType.LOOP:
+                node.loop_iterations = loop_data.get(node.start_position(), 0)
 
         # calculate position before dependencies affect them
         try:
-            self.pos = nx.planar_layout(self.g)  # good
+            pos = nx.planar_layout(g)  # good
         except nx.exception.NetworkXException:
             try:
                 # fallback layouts
-                self.pos = nx.shell_layout(self.g)  # maybe
+                pos = nx.shell_layout(g)  # maybe
                 # self.pos = nx.kamada_kawai_layout(self.graph) # maybe
             except nx.exception.NetworkXException:
-                self.pos = nx.random_layout(self.g)
+                pos = nx.random_layout(g)
 
         for dep in dependencies_list:
             if dep.type == 'INIT':
@@ -216,7 +231,9 @@ class PETGraphX(object):
                     if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                         continue
                     elif sink_cu_id and source_cu_id:
-                        self.g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+                        g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+
+        return cls(g, reduction_vars, pos)
 
     def show(self):
         """Plots the graph
