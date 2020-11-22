@@ -1015,6 +1015,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             continue
                         if ts_2.pragma_line != recursive_function_call_line_2.split(":")[1]:
                             continue
+
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
                         for intersection_var in [e[0] for e in intersection if e[1]]:
                             if ts_1 not in out_dep_updates:
@@ -1129,6 +1130,20 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
                     dependencies = __check_dependence_of_task_pair(aliases, raw_dependency_information,
                                                                    ts_1, parameter_names_1, ts_2)
 
+                    # check if task suggestion_1 occurs prior to task_suggestion_2
+                    if ts_1._node.start_position().split(":")[0] == \
+                            ts_2._node.start_position().split(":")[0]:
+                        # same file id
+                        ts_1_pragma_line = int(
+                            ts_1.pragma_line) if ":" not in ts_1.pragma_line else int(
+                            ts_1.pragma_line.split(":")[1])
+                        ts_2_pragma_line = int(
+                            ts_2.pragma_line) if ":" not in ts_2.pragma_line else int(
+                            ts_2.pragma_line.split(":")[1])
+                        # check line numbers
+                        if ts_2_pragma_line < ts_1_pragma_line:
+                            continue
+
                     for dependence_var in dependencies:
                         # Mark the variable as depend out for the first function and depend in for the second function.
                         if ts_1 not in out_dep_updates:
@@ -1156,7 +1171,7 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
                                     task_suggestion_1: TaskParallelismInfo, param_names_1: [str],
                                     task_suggestion_2: TaskParallelismInfo) -> List[str]:
     """Check if function calls specified by task_suggestion_1 and _2 are dependent and
-    return a list of found dependencies.
+    return a list of found dependencies. An empty list is returned if task_suggestion_2 occurs before task_suggestion_1.
     :param aliases: alias information dict
     :param raw_dependency_information: RAW information dict
     :param task_suggestion_1: first suggestion for the check
@@ -1171,6 +1186,7 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
             continue
         # get aliases for parameter
         for alias_entry in aliases[task_suggestion_1]:
+
             # skip wrong alias entries
             if not alias_entry[0][0] == parameter:
                 continue
@@ -1206,6 +1222,16 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
                             if raw_dep_entry[0] in sink_lines:
                                 dependencies.append(parameter)
     dependencies = list(set(dependencies))
+    # check if task suggestion_1 occurs prior to task_suggestion_2
+    if task_suggestion_1._node.start_position().split(":")[0] == task_suggestion_2._node.start_position().split(":")[0]:
+        # same file id
+        ts_1_pragma_line = int(task_suggestion_1.pragma_line) if ":" not in task_suggestion_1.pragma_line else int(
+            task_suggestion_1.pragma_line.split(":")[1])
+        ts_2_pragma_line = int(task_suggestion_2.pragma_line) if ":" not in task_suggestion_2.pragma_line else int(
+            task_suggestion_2.pragma_line.split(":")[1])
+        # check line numbers
+        if ts_2_pragma_line < ts_1_pragma_line:
+            return []
     return dependencies
 
 
