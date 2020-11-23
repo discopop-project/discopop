@@ -3,14 +3,15 @@ import os
 import unittest
 from pathlib import Path
 
-from . import run
-from .json_serializer import PatternInfoSerializer
+from discopop_explorer import run
+from discopop_explorer.json_serializer import PatternInfoSerializer
 
 
 class GraphAnalyzerTest(unittest.TestCase):
     def test_analyzer_end_to_end(self):
+        """Analyzer end-to-end test"""
         # TODO upload test data?
-        path = Path(__file__).parent.parent / 'test'
+        path = Path(__file__).parent.parent.parent / 'test'
         for file in [f.name for f in os.scandir(path) if f.name.endswith('.json')]:
             with self.subTest(file=file):
                 cu_xml = os.path.join(path, file[:-5], 'data', 'Data.xml')
@@ -39,7 +40,3 @@ def ordered(obj):
         return sorted(ordered(x) for x in obj)
     else:
         return obj
-
-
-if __name__ == '__main__':
-    unittest.main()
