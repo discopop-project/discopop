@@ -9,6 +9,7 @@ from discopop_explorer.json_serializer import PatternInfoSerializer
 
 class GraphAnalyzerTest(unittest.TestCase):
     def test_analyzer_end_to_end(self):
+        """Analyzer end-to-end test"""
         # TODO upload test data?
         path = Path(__file__).parent.parent.parent / 'test'
         for file in [f.name for f in os.scandir(path) if f.name.endswith('.json')]:

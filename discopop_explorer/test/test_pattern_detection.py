@@ -55,15 +55,18 @@ class ReductionDetectorTest(unittest.TestCase):
         self.assertListEqual([pattern.node_id for pattern in patterns], expected_node_ids)
 
     def test_reduction_pattern(self):
+        """Reduction detection on loop with a reduction on a variable"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         self.run_detection(g, reduction_vars, [loop_node.id])
 
     def test_nonloop_reduction(self):
+        """Reduction detection on loop with zero iterations"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         loop_node.loop_iterations = 0
         self.run_detection(g, reduction_vars, [])
 
     def test_no_reduction_vars(self):
+        """Reduction detection on loop without reduction variables"""
         g, _, loop_node, *_ = loop_with_reduction()
         self.run_detection(g, [], [])
 
@@ -75,20 +78,24 @@ class DoAllDetectorTest(unittest.TestCase):
         self.assertListEqual([pattern.node_id for pattern in patterns], expected_node_ids)
 
     def test_reduction_pattern(self):
+        """Do All detection on a reduction pattern"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         reduction_vars[0]["name"] += "_"
         self.run_detection(g, reduction_vars, [loop_node.id])
 
     def test_omit_reduction_loop(self):
+        """Do All detection on loop with a reduction on a variable"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         self.run_detection(g, reduction_vars, [])
 
     def test_nonloop_reduction(self):
+        """Do All detection on loop with zero iterations"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         loop_node.loop_iterations = 0
         self.run_detection(g, reduction_vars, [])
 
     def test_loop_with_raw_dependency(self):
+        """Do All detection on reduction loop with additional RAW dependency"""
         g, reduction_vars, loop_node, var_node = loop_with_reduction()
         raw_node = CUNode.from_kwargs(node_id="0:2", type=NodeType.CU, name="raw")
         g.add_node(raw_node.id, data=raw_node)
@@ -105,11 +112,13 @@ class PipelineDetector(unittest.TestCase):
         self.assertListEqual([pattern.node_id for pattern in patterns], expected_node_ids)
 
     def test_reduction_pattern(self):
+        """Pipeline detection on loop with a reduction on a variable"""
         g, reduction_vars, loop_node, *_ = loop_with_reduction()
         self.run_detection(g, reduction_vars, [])
         self.assertEqual(loop_node.pipeline, 0.0)
 
     def test_raw_dependency_chain(self):
+        """Pipeline detection on loop with a RAW dependency chain"""
         g, reduction_vars, loop_node, var_node = loop_with_reduction()
         var_node2 = CUNode.from_kwargs(
             node_id="0:2",

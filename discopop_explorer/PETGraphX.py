@@ -186,6 +186,7 @@ class PETGraphX(object):
     @classmethod
     def from_parsed_input(cls, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                           loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
+        """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
 
         for id, node in cu_dict.items():
