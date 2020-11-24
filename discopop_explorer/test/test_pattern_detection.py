@@ -44,6 +44,7 @@ def loop_with_reduction():
         {
             "loop_line": f"{loop_node.source_file}:{loop_node.start_line}",
             "name": var_node.local_vars[0].name,
+            "operation": "+"
         }
     ]
     return g, reduction_vars, loop_node, var_node
