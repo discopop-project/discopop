@@ -11,7 +11,7 @@
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
-[--cu-inst-res <cuinstres>]
+[--cu-inst-res <cuinstres>] [--generate-data-cu-inst <outputdir>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -23,6 +23,9 @@ Options:
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
     --cu-inst-res=<cuinstres>   CU instantiation result file
+    --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
+                                            Stops the regular execution of the discopop_explorer.
+                                            Requires --cu-xml, --dep-file, --loop-counter, --reduction.
     -h --help                   Show this screen
 """
 
@@ -47,6 +50,7 @@ docopt_schema = Schema({
     '--plugins': Use(str),
     '--json': Use(str),
     '--cu-inst-res': Use(str),
+    '--generate-data-cu-inst': Use(str),
 })
 
 
@@ -83,6 +87,13 @@ def main():
             sys.exit()
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+
+    if arguments['--generate-data-cu-inst'] != 'None':
+        # start generation of Data_CUInst and stop execution afterwards
+        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+        generate_data_cuinst_wrapper(cu_xml, dep_file, loop_counter_file, reduction_file,
+                                     arguments['--generate-data-cu-inst'])
+        sys.exit(0)
 
     start = time.time()
 
