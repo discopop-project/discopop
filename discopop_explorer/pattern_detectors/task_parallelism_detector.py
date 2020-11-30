@@ -1806,14 +1806,20 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                             if var in out_dep_vars:
                                 for line_num in out_dep_vars[var]:
                                     line_num = str(line_num)
-                                    tmp_pragma_line = suggestion.pragma_line
-                                    tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if ":" in tmp_pragma_line:
-                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
-                                    if int(line_num) < int(tmp_pragma_line):
-                                        is_valid = True
+                                    # check validity of the dependence by reachability checking on successor graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, suggestion._node, cu_node, EdgeType.SUCCESSOR):
+                                            is_valid = True
                         else:
                             pass
                 except ValueError:
@@ -1840,14 +1846,21 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                             if var in in_dep_vars:
                                 for line_num in in_dep_vars[var]:
                                     line_num = str(line_num)
-                                    tmp_pragma_line = suggestion.pragma_line
-                                    tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if ":" in tmp_pragma_line:
-                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
-                                    if int(line_num) > int(tmp_pragma_line):
-                                        is_valid = True
+                                    # check validity of the dependence by reachability checking on successor graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, cu_node, suggestion._node, EdgeType.SUCCESSOR):
+                                            is_valid = True
+
                         else:
                             pass
                 except ValueError:
@@ -1876,22 +1889,38 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                 # check if out dep prior an in dep afterwards exist
                                 prior_out_exists = False
                                 successive_in_exists = False
-                                tmp_pragma_line = suggestion.pragma_line
-                                tmp_pragma_line = str(tmp_pragma_line)
-                                if ":" in tmp_pragma_line:
-                                    tmp_pragma_line = tmp_pragma_line.split(":")[1]
                                 for line_num in out_dep_vars[var]:
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if int(line_num) < int(tmp_pragma_line):
-                                        prior_out_exists = True
+                                    # check validity of the dependence by reachability checking on successor graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, suggestion._node, cu_node, EdgeType.SUCCESSOR):
+                                            prior_out_exists = True
                                 for line_num in in_dep_vars[var]:
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if int(line_num) > int(tmp_pragma_line):
-                                        successive_in_exists = True
+                                    # check validity of the dependence by reachability checking on successor graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet,  cu_node, suggestion._node, EdgeType.SUCCESSOR):
+                                            successive_in_exists = True
                                 # check and treat conditions
                                 if prior_out_exists and successive_in_exists:
                                     # proper in_out_dep
