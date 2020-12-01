@@ -22,7 +22,7 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
-    --cu-inst-res=<cuinstres>   CU instantiation result file
+    --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
