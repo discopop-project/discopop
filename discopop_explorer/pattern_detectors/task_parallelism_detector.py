@@ -1465,7 +1465,19 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
                             result += __get_alias_for_parameter_at_position(pet, called_function, idx,
                                                                             source_code_files, visited,
                                                                             called_function_cache)
+    # find aliases in source code of function-cu and append them to result
+    result += __get_aliases_from_source_code(function, parameter_position, source_code_files)
     return result
+
+
+def __get_aliases_from_source_code(function_cu: CUNode, parameter_position: int, source_code_files: Dict[str, str])\
+        -> List[Tuple[str, str, str, str]]:
+    """Wrapper to iterate over statements in function body to start __get_alias_from_statement
+    :param function_cu: CUNode of called function
+    :param parameter_position: position of the parameter to be analyzed
+    :param source_code_files: File-Mapping dictionary
+    :return alias information for the specified parameter"""
+
 
 
 def __get_function_call_from_source_code(source_code_files: Dict[str, str], line_number: int, file_id: str,
