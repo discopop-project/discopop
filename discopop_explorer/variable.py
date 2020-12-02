@@ -8,9 +8,12 @@
 
 
 class Variable(object):
+    operation: str
+
     def __init__(self, type, name):
         self.type = type
         self.name = name
+        self.operation = None
 
     def __hash__(self):
         return hash(self.name)  # hash(self.type + self.name)
