@@ -97,7 +97,8 @@ def main():
 
     start = time.time()
 
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping, cu_inst_result_file)
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
+              cu_inst_result_file=cu_inst_result_file)
 
     end = time.time()
 

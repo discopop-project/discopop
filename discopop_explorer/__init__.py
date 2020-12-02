@@ -7,7 +7,7 @@
 # directory for details.
 
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pluginbase import PluginBase  # type:ignore
 
@@ -18,7 +18,7 @@ from .pattern_detection import DetectionResult, PatternDetectorX
 
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str],
-        file_mapping: str, cu_inst_result_file: str) -> DetectionResult:
+        file_mapping: Optional[str] = None, cu_inst_result_file: Optional[str] = None) -> DetectionResult:
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file,
                                                     loop_counter_file, reduction_file))
     # TODO add visualization

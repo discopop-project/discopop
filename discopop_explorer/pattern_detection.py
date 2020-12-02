@@ -71,8 +71,9 @@ class PatternDetectorX(object):
         res.do_all = detect_do_all(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
-        # check if cu_inst_result_file option is set
-        if not cu_inst_result_file.endswith("/None"):
-            res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file)
 
+        # check if task pattern should be enabled
+        if cu_inst_result_file.endswith("/None") or file_mapping is None or cu_inst_result_file is None:
+            return res
+        res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file)
         return res
