@@ -224,8 +224,8 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(preprocessed_cu_xml, dep_file,
                                                                     loop_counter_file, reduction_file)
 
-    preprocessed_graph = PETGraphX(cu_dict, dependencies,
-                                   loop_data, reduction_vars)
+    preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
+                                                                   loop_counter_file, reduction_file))
 
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)
@@ -2491,14 +2491,14 @@ def __combine_omittable_cus(pet: PETGraphX,
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
                     if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].out_dep:
+                        omit_target_task_idx].out_dep:
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
                 if ":" not in task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].region_end_line:
+                    omit_target_task_idx].region_end_line:
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(task_suggestions_dict[omit_s.combine_with_node][
                                     omit_target_task_idx].region_end_line):

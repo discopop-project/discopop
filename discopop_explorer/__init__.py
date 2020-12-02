@@ -19,10 +19,8 @@ from .pattern_detection import DetectionResult, PatternDetectorX
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str],
         file_mapping: str, cu_inst_result_file: str) -> DetectionResult:
-    cu_dict, dependencies, loop_data, reduction_vars = parse_inputs(cu_xml, dep_file,
-                                                                    loop_counter_file, reduction_file)
-
-    pet = PETGraphX(cu_dict, dependencies, loop_data, reduction_vars)
+    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file,
+                                                    loop_counter_file, reduction_file))
     # TODO add visualization
     # pet.show()
 

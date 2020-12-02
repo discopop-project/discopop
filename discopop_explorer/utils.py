@@ -478,6 +478,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
+            var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
             # TODO grouping
         elif (is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)

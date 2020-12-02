@@ -48,7 +48,7 @@ Options:
     --dep-file=<depfile>        Dependencies text file [default: dep.txt].
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt].
     --reduction=<reduction>     Reduction variables file [default: reduction.txt].
-    --cu-inst-res=<cuinstres>   CU instantiation result file
+    --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
     --plugins=<plugs>           Plugins to execute
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json                      Output result as a json file to specified path
