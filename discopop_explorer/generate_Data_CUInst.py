@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, cast
 
 from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
 from .parser import parse_inputs
@@ -26,7 +26,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
             continue
         output_file.write(recursive_function_call + " ")
 
-        children_ids = []
+        children_ids: List[str] = []
         # Output RAW deps. First collect all children IDs of currently called
         # function. Then go through the CU type nodes in them and record all deps
         # that are on the cus in this list.
@@ -40,26 +40,36 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
             for dep in pet.in_edges(child_id, EdgeType.DATA):
                 if dep[2].dtype is not DepType.RAW:
                     continue
+                if dep[2].source is None or dep[2].var_name is None or dep[2].sink is None:
+                    continue
                 # check if the CUid of the dep exists in children_ids
                 if dep[0] in children_ids:
                     # CUid found in children_ids. So print the line numbers of this dependence
-                    output_file.write(dep[2].sink + "|RAW|" + dep[2].source + "|" + dep[2].var_name + ",")
+                    output_file.write(cast(str, dep[2].sink) + "|RAW|" + cast(str, dep[2].source) + "|" + cast(str, dep[
+                        2].var_name) + ",")
 
             for dep in pet.in_edges(child_id, EdgeType.DATA):
                 if dep[2].dtype is not DepType.WAR:
                     continue
-                # check if the CUid of the dep exists in children_ids
-                if dep[0] in children_ids:
-                    # CUid found in children_ids. So print the line numbers of this dependence
-                    output_file.write(dep[2].sink + "|WAR|" + dep[2].source + "|" + dep[2].var_name + ",")
-
-            for dep in pet.in_edges(child_id, EdgeType.DATA):
-                if dep[2].dtype is not DepType.WAW:
+                if dep[2].source is None or dep[2].var_name is None or dep[2].sink is None:
                     continue
                 # check if the CUid of the dep exists in children_ids
                 if dep[0] in children_ids:
                     # CUid found in children_ids. So print the line numbers of this dependence
-                    output_file.write(dep[2].sink + "|WAW|" + dep[2].source + "|" + dep[2].var_name + ",")
+                    output_file.write(cast(str, dep[2].sink) + "|WAR|" + cast(str, dep[2].source) + "|" + cast(str, dep[
+                        2].var_name) + ",")
+
+            for dep in pet.in_edges(child_id, EdgeType.DATA):
+                if dep[2].dtype is not DepType.WAW:
+                    continue
+                if dep[2].source is None or dep[2].var_name is None or dep[2].sink is None:
+                    continue
+
+                # check if the CUid of the dep exists in children_ids
+                if dep[0] in children_ids:
+                    # CUid found in children_ids. So print the line numbers of this dependence
+                    output_file.write(cast(str, dep[2].sink) + "|WAW|" + cast(str, dep[2].source) + "|" + cast(str, dep[
+                        2].var_name) + ",")
 
         output_file.write("\n")
 

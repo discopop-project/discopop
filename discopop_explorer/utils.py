@@ -10,7 +10,7 @@
 import itertools
 from typing import List, Set, Dict, Tuple
 
-import numpy as np
+import numpy as np  # type: ignore
 
 from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
 from .variable import Variable

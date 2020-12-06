@@ -9,11 +9,11 @@
 
 import copy
 import os
-from typing import List, Tuple, Dict, Optional, cast
+from typing import List, Tuple, Dict, Optional, cast, Union
 
-from cpp_demangle import demangle
-from lxml import etree
-from lxml import objectify
+from cpp_demangle import demangle  # type: ignore
+from lxml import etree  # type: ignore
+from lxml import objectify  # type: ignore
 
 from .PatternInfo import PatternInfo
 from .do_all_detector import run_detection as detect_do_all
@@ -23,7 +23,7 @@ from ..parser import parse_inputs
 from ..utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars
 
-__forks = set()
+__forks = set()  # type: ignore
 __workloadThreshold = 10000
 __minParallelism = 3
 
@@ -134,13 +134,13 @@ class TaskParallelismInfo(PatternInfo):
             self.region_start_line = self.pragma_line[self.pragma_line.index(":") + 1:]
         else:
             self.region_start_line = self.pragma_line
-        self.region_end_line = None
+        self.region_end_line: Optional[str] = None
         self.first_private = first_private
         self.private = private
         self.shared = shared
-        self.in_dep = []
-        self.out_dep = []
-        self.in_out_dep = []
+        self.in_dep: List[str] = []
+        self.out_dep: List[str] = []
+        self.in_out_dep: List[str] = []
         self.critical_sections: List[str] = []
         self.atomic_sections: List[str] = []
 
@@ -194,9 +194,9 @@ class OmittableCuInfo(PatternInfo):
         self.combine_with_node = combine_with_node
         # only for printing
         self.cwn_id = combine_with_node.id
-        self.in_dep = []
-        self.out_dep = []
-        self.in_out_dep = []
+        self.in_dep: List[Optional[str]] = []
+        self.out_dep: List[Optional[str]] = []
+        self.in_out_dep: List[Optional[str]] = []
 
     def __str__(self):
         return f'Omittable CU: {self.node_id}\n' \
@@ -252,7 +252,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
         :param cu_ist_result_file: Path(string) to the CUInstResult.txt
         :return: List of detected pattern info
     """
-    result = []
+    result: List[PatternInfo] = []
 
     for node in pet.all_nodes():
 
@@ -278,10 +278,10 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     __check_loop_scopes(pet)
     # Suggestion generation
     result += __detect_task_suggestions(pet)
-    result += __suggest_parallel_regions(pet, result)
-    result = __set_task_contained_lines(result)
-    result = __detect_taskloop_reduction(pet, result)
-    result = __remove_useless_barrier_suggestions(pet, result)
+    result += __suggest_parallel_regions(pet, cast(List[TaskParallelismInfo], result))
+    result = cast(List[PatternInfo], __set_task_contained_lines(cast(List[TaskParallelismInfo], result)))
+    result = cast(List[PatternInfo], __detect_taskloop_reduction(pet, cast(List[TaskParallelismInfo], result)))
+    result = cast(List[PatternInfo], __remove_useless_barrier_suggestions(pet, cast(List[TaskParallelismInfo], result)))
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     # result = __detect_dependency_clauses_old(pet, result)
@@ -326,17 +326,17 @@ def __get_dict_from_cu_inst_result_file(cu_inst_result_file: str) -> Dict[str, L
         with open(cu_inst_result_file) as f:
             for line in f:
                 line = line.replace("\n", "")
-                line = line.split(" ")
-                dep_type = line[0]
-                target_type = line[2]
+                line_split = line.split(" ")
+                dep_type = line_split[0]
+                target_type = line_split[2]
                 if target_type == "line:":
                     target_function = None
-                    target_line = line[3]
-                    target_var = line[5]
+                    target_line = line_split[3]
+                    target_var = line_split[5]
                 elif target_type == "function:":
-                    target_function = line[3]
-                    target_line = line[5]
-                    target_var = line[7]
+                    target_function = line_split[3]
+                    target_line = line_split[5]
+                    target_var = line_split[7]
                 else:
                     raise ValueError("Unknown type: ", target_type)
                 cur_line_dict = {'function': target_function, 'line': target_line.replace(",", ""), 'var': target_var}
@@ -433,7 +433,7 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                 file_idx = loop_cu_child.start_position().split(":")[0]
                                                 start_line = int(loop_cu_child.start_position().split(":")[1])
                                                 end_line = int(loop_cu_child.end_position().split(":")[1])
-                                                critical_lines = range(start_line, end_line + 1)
+                                                critical_lines_range = range(start_line, end_line + 1)
                                                 atomic_lines = []
                                                 # seperate between critical and atomic lines
                                                 for red_var in pet.reduction_vars:
@@ -442,7 +442,8 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                                                   loop_cu_child.end_position()):
                                                         atomic_lines.append(
                                                             int(red_var["reduction_line"].split(":")[1]))
-                                                critical_lines = [e for e in critical_lines if e not in atomic_lines]
+                                                critical_lines = [e for e in critical_lines_range if
+                                                                  e not in atomic_lines]
                                                 # combine successive critical lines if possible
                                                 combined_critical_lines = [(e, e) for e in
                                                                            critical_lines]  # (start, end)
@@ -467,10 +468,10 @@ def __correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Pa
                                                     ts.critical_sections.append(
                                                         "" + str(file_idx) + ":" + str(e[0]) + "-" + str(
                                                             file_idx) + ":" + str(e[1]))
-                                                for e in atomic_lines:
+                                                for a in atomic_lines:
                                                     ts.atomic_sections.append(
-                                                        "" + str(file_idx) + ":" + str(e) + "-" + str(
-                                                            file_idx) + ":" + str(e))
+                                                        "" + str(file_idx) + ":" + str(a) + "-" + str(
+                                                            file_idx) + ":" + str(a))
                                             else:
                                                 # append loop_cu_child to list of critical CUs
                                                 found_critical_cus.append(loop_cu_child)
@@ -612,8 +613,8 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     with open(file_mapping_path) as f:
         for line in f.readlines():
             line = line.replace("\n", "")
-            line = line.split("\t")
-            source_code_files[line[0]] = line[1]
+            line_split = line.split("\t")
+            source_code_files[line_split[0]] = line_split[1]
     # get RAW depencency information as a dict
     raw_dependency_information = __get_raw_dependency_information_from_dep_file(dep_file)
     # parse cu_inst_result_file contents into dict
@@ -704,11 +705,14 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
                         called_function_cu_id = tmp_func_cu.id
         if called_function_cu_id is None:
             return None
+    if called_function_name is None:
+        raise ValueError("No valid called function could be found!")
+    called_function_name_not_none = cast(str, called_function_name)
     # 5.2. get R/W information for successive called function's parameters based on CUInstResult.txt
     called_function_cu = pet.node_at(called_function_cu_id)
     # get raw info concerning the scope of called_function_cu
     raw_info = cu_inst_result_dict["RAW"]
-    filtered_raw_info = [e for e in raw_info if __line_contained_in_region(e["line"],
+    filtered_raw_info = [e for e in raw_info if __line_contained_in_region(cast(str, e["line"]),
                                                                            called_function_cu.start_position(),
                                                                            called_function_cu.end_position())]
     # iterate over args positions and check if RAW is reported
@@ -716,7 +720,10 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     for arg_var in called_function_cu.args:
         raw_reported = False
         for raw_entry in filtered_raw_info:
-            if raw_entry["var"].replace(".addr", "") == arg_var.name.replace(".addr", ""):
+            if raw_entry["var"] is None:
+                continue
+            raw_entry_var = cast(str, raw_entry["var"])
+            if raw_entry_var.replace(".addr", "") == arg_var.name.replace(".addr", ""):
                 raw_reported = True
         raw_reported_for_param_positions.append(raw_reported)
     # store results in cache
@@ -734,15 +741,16 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     try:
         function_call_string = __get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
                                                                     call_position.split(":")[0], called_function_name=
-                                                                    demangle(called_function_name).split("(")[0])
+                                                                    demangle(called_function_name_not_none).split("(")[
+                                                                        0])
     except IndexError:
         return None
     # get function parameter names from recursive function call
     function_name, parameter_names = __get_called_function_and_parameter_names_from_function_call(
-        function_call_string, called_function_name, parent_cu_node)
+        function_call_string, called_function_name_not_none, parent_cu_node)
 
     # 5.4. start recursion step
-    res_called_function_raw_information = []
+    res_called_function_raw_information: List[bool] = []
     if called_function_cu not in recursively_visited:
         (recursively_visited, res_called_function_name, res_called_function_raw_information,
          function_raw_information_cache) = __get_function_call_parameter_rw_information_recursion_step(
@@ -763,7 +771,10 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
             tmp = (
                 parameter_names[idx],
                 (raw_reported_for_param_positions[idx] or res_called_function_raw_information[idx]))
-            parameter_names_raw_information.append(tmp)
+            if tmp[0] is None:
+                continue
+            tmp_not_none = cast(Tuple[str, bool], tmp)
+            parameter_names_raw_information.append(tmp_not_none)
         # overwrite cache
         new_cache_line = []
         for idx in range(0, len(function_raw_information_cache[called_function_cu.name])):
@@ -775,7 +786,10 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
         # ignore recursion results
         for idx in range(0, len(parameter_names)):
             tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
-            parameter_names_raw_information.append(tmp)
+            if tmp[0] is None:
+                continue
+            tmp_not_none = cast(Tuple[str, bool], tmp)
+            parameter_names_raw_information.append(tmp_not_none)
 
     return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
 
@@ -857,9 +871,9 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                             called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
 
     # remove names from called_function_args_raw_information
-    called_function_args_raw_information = [e[1] for e in called_function_args_raw_information]
+    called_function_args_raw_information_bools = [e[1] for e in called_function_args_raw_information]
     return (
-        recursively_visited, called_function_cu.name, called_function_args_raw_information,
+        recursively_visited, called_function_cu.name, called_function_args_raw_information_bools,
         function_raw_information_cache)
 
 
@@ -884,21 +898,21 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
     # 6.2 get task suggestion corresponding to scf
     # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
 
-    result_suggestions = []
-    task_suggestions = []
+    result_suggestions: List[PatternInfo] = []
+    task_suggestions: List[TaskParallelismInfo] = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
-            s = cast(TaskParallelismInfo, s)
-            if s.pragma[0] == "task":
-                task_suggestions.append(s)
+            s_tpi = cast(TaskParallelismInfo, s)
+            if s_tpi.pragma[0] == "task":
+                task_suggestions.append(s_tpi)
             else:
                 result_suggestions.append(s)
         else:
             result_suggestions.append(s)
 
-    out_dep_updates = dict()
-    in_dep_updates = dict()
-    function_raw_information_cache = dict()
+    out_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
+    in_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
+    function_raw_information_cache: Dict[str, List[bool]] = dict()
     # 1. iterate over task suggestions
     for ts_1 in task_suggestions:
         # 2. get parent function (pf) and called function (cf)
@@ -1050,7 +1064,7 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
     :return: List[PatternInfo]
     """
     # wrapper to start __check_dependence_of_task_pair for all viable combinations of suggested tasks
-    result_suggestions = []
+    result_suggestions: List[PatternInfo] = []
     task_suggestions = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
@@ -1063,8 +1077,8 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
             result_suggestions.append(s)
     # iterate over all combinations of tasks, ts_1 has to come before ts_2
     # get in and out dependencies to insert
-    out_dep_updates = dict()
-    in_dep_updates = dict()
+    out_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
+    in_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
     for ts_1 in task_suggestions:
         # get parent function
         potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
@@ -1165,7 +1179,7 @@ def __identify_dependencies_for_different_functions(pet: PETGraphX, suggestions:
 
 
 def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: Dict,
-                                    task_suggestion_1: TaskParallelismInfo, param_names_1: [str],
+                                    task_suggestion_1: TaskParallelismInfo, param_names_1: List[Optional[str]],
                                     task_suggestion_2: TaskParallelismInfo) -> List[str]:
     """Check if function calls specified by task_suggestion_1 and _2 are dependent and
     return a list of found dependencies. An empty list is returned if task_suggestion_2 occurs before task_suggestion_1.
@@ -1178,9 +1192,10 @@ def __check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: D
     """
     dependencies = []
     # iterate over parameters of task_1
-    for parameter in param_names_1:
-        if parameter is None:
+    for parameter_potential_none in param_names_1:
+        if parameter_potential_none is None:
             continue
+        parameter = cast(str, parameter_potential_none)
         # get aliases for parameter
         for alias_entry in aliases[task_suggestion_1]:
 
@@ -1238,7 +1253,7 @@ def __get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, L
     :param dep_file: path to dependency file
     :return: RAW dictionary
     """
-    raw_dependencies = dict()
+    raw_dependencies: Dict[str, List[Tuple[str, str]]] = dict()
     with open(dep_file) as f:
         for line in f.readlines():
             line = line.replace("\n", "")
@@ -1289,8 +1304,8 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
                         if s.pragma[0] == "task"]
     # collect alias information
-    aliases = dict()
-    called_function_cache = dict()
+    aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, str, str]]]] = dict()
+    called_function_cache: Dict = dict()
     for ts in task_suggestions:
         current_alias_entry = []
         potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
@@ -1325,21 +1340,25 @@ def __get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], sour
                     continue
                 if "," in recursive_function_call_entry:
                     recursive_function_call_entry = recursive_function_call_entry.split(",")[0]
-                recursive_function_call_entry = recursive_function_call_entry.split(" ")
-                recursive_function_call_line = recursive_function_call_entry[1]
+                recursive_function_call_entry_split = recursive_function_call_entry.split(" ")
+                recursive_function_call_line = recursive_function_call_entry_split[1]
                 if int(recursive_function_call_line.split(":")[1]) == int(ts.pragma_line):
                     # correct function call found
                     # find corresponding function CU
                     for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
-                        if tmp_func_cu.name == recursive_function_call_entry[0]:
+                        if tmp_func_cu.name == recursive_function_call_entry_split[0]:
                             called_function_cu_id = tmp_func_cu.id
             # get aliases for parameters
             for idx, param in enumerate(parameter_names):
                 if param is None:
                     continue
+                if called_function_cu_id is None:
+                    continue
+                called_function_cu_id_not_none = cast(str, called_function_cu_id)
                 current_alias = [(param, parent_function.name, parent_function.start_position(),
                                   parent_function.end_position())]
-                current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id), idx,
+                current_alias += __get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id_not_none),
+                                                                       idx,
                                                                        source_code_files, [], called_function_cache)
                 current_alias_entry.append(current_alias)
         aliases[ts] = current_alias_entry
@@ -1490,15 +1509,17 @@ def __get_function_call_from_source_code(source_code_files: Dict[str, str], line
                 function_call_string = function_call_string[function_call_string.index("(") + 1:]
         # check if called_function_name is contained in function_call_string
         if not called_function_name_contained:
-            if called_function_name in function_call_string:
+            called_function_name_str = cast(str, called_function_name)
+            if called_function_name_str in function_call_string:
                 called_function_name_contained = True
         offset += 1
         function_call_string += source_code_lines[line_number + offset]
     function_call_string = function_call_string.replace("\n", "")
     # if called_function_name is set and contained more than once in function_call_string, split function_call_string
     if called_function_name is not None:
-        while function_call_string.count(called_function_name) > 1:
-            function_call_string = function_call_string[:function_call_string.rfind(called_function_name)]
+        called_function_name_str = cast(str, called_function_name)
+        while function_call_string.count(called_function_name_str) > 1:
+            function_call_string = function_call_string[:function_call_string.rfind(called_function_name_str)]
 
     return function_call_string
 
@@ -1545,13 +1566,13 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     parameter_string = parameter_string[1:-1]
     # intersect parameters with set of known variables to prevent errors
     parameters = parameter_string.split(",")
-    result_parameters = []
+    result_parameters: List[Optional[str]] = []
     for param in parameters:
         param = param.replace("\t", "")
         if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
-            split_param_expression = param.replace("+", "$$").replace("-", "$$").replace("/", "$$")
-            split_param_expression = split_param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
-            split_param_expression = split_param_expression.split("$$")
+            param_expression = param.replace("+", "$$").replace("-", "$$").replace("/", "$$")
+            param_expression = param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
+            split_param_expression = param_expression.split("$$")
             split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
             # check if any of the parameters is in list of known variables
             split_param_expression = [ex for ex in split_param_expression
@@ -1574,7 +1595,7 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
         else:
             # check if param in known variables:
             result_parameters.append(param.replace(" ", ""))
-    return function_name, result_parameters
+    return cast(Optional[str], function_name), cast(List[Optional[str]], result_parameters)
 
 
 def __suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: List[PatternInfo]) \
@@ -1625,10 +1646,13 @@ def __remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> L
         if not type(s) == TaskParallelismInfo:
             result.append(s)
         else:
-            s.in_dep = list(set(s.in_dep))
-            s.out_dep = list(set(s.out_dep))
-            s.in_out_dep = list(set(s.in_out_dep))
-    return suggestions
+            s_tpi = cast(TaskParallelismInfo, s)
+            s_tpi.in_dep = list(set(s_tpi.in_dep))
+            s_tpi.out_dep = list(set(s_tpi.out_dep))
+            s_tpi.in_out_dep = list(set(s_tpi.in_out_dep))
+            s = cast(PatternInfo, s_tpi)
+            result.append(s)
+    return result
 
 
 def __get_var_definition_line_dict(cu_xml: str) -> Dict[str, List[str]]:
@@ -1749,8 +1773,8 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     modification_found = True
     while modification_found:
         # get list of used variabled by dependency type
-        in_dep_vars = dict()
-        out_dep_vars = dict()
+        in_dep_vars: Dict[str, List[str]] = dict()
+        out_dep_vars: Dict[str, List[str]] = dict()
         for suggestion in suggestions:
             # only consider task suggestions
             if type(suggestion) != TaskParallelismInfo:
@@ -2142,7 +2166,7 @@ def __validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[
     :return: List[PatternInfo]
     """
     barrier_suggestions = []
-    result = []
+    result: List[PatternInfo] = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
@@ -2169,7 +2193,7 @@ def __validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[
                          pet.node_at(s) != bs._node]
         predecessors_dict = dict()
         for e in in_succ_edges:
-            visited_nodes = []
+            visited_nodes: List[CUNode] = []
             tmp, visited_nodes = __get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
             predecessors_dict[e] = tmp
         # iterate over outgoing dependence edges and increase dependence counts
@@ -2236,14 +2260,14 @@ def __remove_duplicates(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     result = []
     for sug in suggestions:
         if type(sug) == ParallelRegionInfo:
-            sug = cast(ParallelRegionInfo, sug)
+            sug_tmp = cast(Union[TaskParallelismInfo, ParallelRegionInfo], sug)
         elif type(sug) == TaskParallelismInfo:
-            sug = cast(TaskParallelismInfo, sug)
+            sug_tmp = cast(Union[TaskParallelismInfo, ParallelRegionInfo], sug)
         else:
             continue
-        representing_tuple = (sug.region_start_line,
-                              sug.region_end_line,
-                              sug.pragma)
+        representing_tuple = (sug_tmp.region_start_line,
+                              sug_tmp.region_end_line,
+                              sug_tmp.pragma)
         if representing_tuple in buffer:
             continue
         else:
@@ -2260,31 +2284,45 @@ def __sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     :return: List[PatternInfo]
     """
     sorted_suggestions = []
-    tmp_dict = dict()
+    tmp_dict: Dict[str, List[Tuple[str, PatternInfo]]] = dict()
     for sug in suggestions:
         if type(sug) == ParallelRegionInfo:
-            sug = cast(ParallelRegionInfo, sug)
+            sug_par = cast(ParallelRegionInfo, sug)
+            # Note: Code duplicated for type correctness
+            # get start_line and file_id for sug
+            if ":" not in sug_par.region_start_line:
+                start_line = sug_par.region_start_line
+                file_id = sug_par.start_line[0:sug_par.start_line.index(":")]
+            else:
+                start_line = sug_par.region_start_line
+                file_id = start_line[0:start_line.index(":")]
+                start_line = start_line[start_line.index(":") + 1:]
+            # split suggestions by file-id
+            if file_id not in tmp_dict:
+                tmp_dict[file_id] = []
+            tmp_dict[file_id].append((start_line, sug))
         elif type(sug) == TaskParallelismInfo:
-            sug = cast(TaskParallelismInfo, sug)
+            sug_task = cast(TaskParallelismInfo, sug)
+            # Note: Code duplicated for type correctness
+            # get start_line and file_id for sug
+            if ":" not in sug_task.region_start_line:
+                start_line = sug_task.region_start_line
+                file_id = sug_task.start_line[0:sug_task.start_line.index(":")]
+            else:
+                start_line = sug_task.region_start_line
+                file_id = start_line[0:start_line.index(":")]
+                start_line = start_line[start_line.index(":") + 1:]
+            # split suggestions by file-id
+            if file_id not in tmp_dict:
+                tmp_dict[file_id] = []
+            tmp_dict[file_id].append((start_line, sug))
         else:
             continue
-        # get start_line and file_id for sug
-        if ":" not in sug.region_start_line:
-            start_line = sug.region_start_line
-            file_id = sug.start_line[0:sug.start_line.index(":")]
-        else:
-            start_line = sug.region_start_line
-            file_id = start_line[0:start_line.index(":")]
-            start_line = start_line[start_line.index(":") + 1:]
-        # split suggestions by file-id
-        if file_id not in tmp_dict:
-            tmp_dict[file_id] = []
-        tmp_dict[file_id].append((start_line, sug))
     # sort suggestions by line-number (descending)
     for key in tmp_dict:
-        sorted_list = sorted(tmp_dict[key], key=lambda x: x[0], reverse=True)
-        sorted_list = [elem[1] for elem in sorted_list]
-        sorted_suggestions += sorted_list
+        sorted_list = cast(List[Tuple[str, PatternInfo]], sorted(tmp_dict[key], key=lambda x: int(x[0]), reverse=True))
+        sorted_list_pruned = cast(List[PatternInfo], [elem[1] for elem in sorted_list])
+        sorted_suggestions += sorted_list_pruned
     return sorted_suggestions
 
 
@@ -2298,7 +2336,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     """
     # suggestions contains a map from LID to a set of suggestions. This is required to
     # detect multiple suggestions for a single line of source code.
-    suggestions = dict()  # LID -> List[TaskParallelismInfo]
+    suggestions: Dict[str, List[TaskParallelismInfo]] = dict()  # LID -> List[TaskParallelismInfo]
 
     # get a list of cus classified as WORKER
     worker_cus = []
@@ -2327,7 +2365,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                                        first_dependency_line.index(":") + 1:]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
-                dep_line = e.sink
+                dep_line = cast(str, e.sink)
                 dep_line_number = dep_line[dep_line.index(":") + 1:]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
@@ -2336,8 +2374,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                                              [], [], [])
         if v.start_position() not in suggestions:
             # no entry for source code line contained in suggestions
-            tmp_set = []
-            suggestions[v.start_position()] = tmp_set
+            suggestions[v.start_position()] = []
             suggestions[v.start_position()].append(tmp_suggestion)
         else:
             # entry for source code line already contained in suggestions
@@ -2382,8 +2419,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                     # current_suggestions contains something
                     if pragma_line not in suggestions:
                         # LID not contained in suggestions
-                        tmp_set = []
-                        suggestions[pragma_line] = tmp_set
+                        suggestions[pragma_line] = []
                         suggestions[pragma_line].append(current_suggestions)
                     else:
                         # LID already contained in suggestions
@@ -2391,7 +2427,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     # end of for loop
 
     # construct return value (list of TaskParallelismInfo)
-    result = []
+    result: List[PatternInfo] = []
     for key in suggestions:
         for single_suggestion in suggestions[key]:
             result.append(single_suggestion)
@@ -2417,12 +2453,12 @@ def __combine_omittable_cus(pet: PETGraphX,
             omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
         else:
             if type(single_suggestion) == TaskParallelismInfo:
-                single_suggestion: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
+                single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
                 try:
-                    if single_suggestion.pragma[0] == "task":
-                        task_suggestions.append(single_suggestion)
+                    if single_suggestion_tpi.pragma[0] == "task":
+                        task_suggestions.append(single_suggestion_tpi)
                     else:
-                        result.append(single_suggestion)
+                        result.append(single_suggestion_tpi)
                 except AttributeError:
                     result.append(single_suggestion)
             else:
@@ -2450,7 +2486,7 @@ def __combine_omittable_cus(pet: PETGraphX,
                 result.append(copy.copy(ts))
 
     # prepare dict to find target suggestions for combination
-    task_suggestions_dict = dict()
+    task_suggestions_dict: Dict[CUNode, List[TaskParallelismInfo]] = dict()
     for ts in task_suggestions:
         if ts._node in task_suggestions_dict:
             task_suggestions_dict[ts._node].append(ts)
@@ -2481,8 +2517,10 @@ def __combine_omittable_cus(pet: PETGraphX,
                 # note: dependencies of task nodes can contain multiples
                 # process out dependencies of omit_s
                 for omit_out_var in omit_s.out_dep:
+                    if omit_out_var is None:
+                        continue
                     task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep.append(omit_out_var)
+                        omit_target_task_idx].out_dep.append(cast(str, omit_out_var))
                     # omit_s.combine_with_node.out_dep.append(omit_out_var)
                 # process in dependencies of omit_s
                 for omit_in_var in omit_s.in_dep:
@@ -2494,16 +2532,16 @@ def __combine_omittable_cus(pet: PETGraphX,
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
-                if ":" not in task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].region_end_line:
+                if ":" not in cast(str, task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].region_end_line):
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
-                            int(task_suggestions_dict[omit_s.combine_with_node][
-                                    omit_target_task_idx].region_end_line):
+                            int(cast(str, task_suggestions_dict[omit_s.combine_with_node][
+                                omit_target_task_idx].region_end_line)):
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].region_end_line = omit_s.end_line
                 else:
-                    cut_region_end_line = task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].region_end_line
+                    cut_region_end_line = cast(str, task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx].region_end_line)
                     cut_region_end_line = cut_region_end_line[cut_region_end_line.index(":") + 1:]
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(cut_region_end_line):
@@ -2547,50 +2585,87 @@ def __detect_dependency_clauses_old(pet: PETGraphX,
             omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
         else:
             if type(single_suggestion) == TaskParallelismInfo:
-                single_suggestion: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
+                single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
                 try:
-                    if single_suggestion.pragma[0] == "task":
-                        task_suggestions.append(single_suggestion)
+                    if single_suggestion_tpi.pragma[0] == "task":
+                        task_suggestions.append(single_suggestion_tpi)
                     else:
-                        result.append(single_suggestion)
+                        result.append(single_suggestion_tpi)
                 except AttributeError:
                     result.append(single_suggestion)
             else:
                 result.append(single_suggestion)
 
-    for s in cast(List[PatternInfo], omittable_suggestions) + cast(List[PatternInfo], task_suggestions):
-        # out/in_dep_edges are based on the dependency graph and thus inverse
-        # to the omp dependency clauses
-        # only consider those dependencies to/from Task/Omittable CUs
-        out_dep_edges = [(src, t, e) for src, t, e in pet.out_edges(s._node.id) if
-                         e.etype == EdgeType.DATA and
-                         (pet.node_at(t).tp_contains_task is True or
-                          pet.node_at(t).tp_omittable is True) and
-                         pet.node_at(t) != s._node]  # exclude self-dependencies
-        in_dep_edges = [(src, t, e) for src, t, e in pet.in_edges(s._node.id) if
-                        e.etype == "dependence" and
-                        (pet.node_at(t).tp_contains_task is True or
-                         pet.node_at(t).tp_omittable is True) and
-                        pet.node_at(t) != s._node]  # exclude self-dependencies
-        # set inverted dependencies
-        length_in = 0
-        length_out = 0
-        for ode in out_dep_edges:
-            var = ode[2].var_name
-            s.in_dep.append(var)
-        for ide in in_dep_edges:
-            var = ide[2].var_name
-            s.out_dep.append(var)
-        # find and set in_out_dependencies
-        if length_in < length_out:  # just for performance
-            s.in_out_dep = [var for var in s.in_dep if var in s.out_dep]
-        else:
-            s.in_out_dep = [var for var in s.out_dep if var in s.in_dep]
-        # remove in_out_deps from in_dep and out_dep
-        for in_out_var in s.in_out_dep:
-            s.in_dep = [var for var in s.in_dep if not var == in_out_var]
-            s.out_dep = [var for var in s.out_dep if not var == in_out_var]
-        result.append(s)
+    for s_any in cast(List, omittable_suggestions) + cast(List, task_suggestions):
+        if type(s_any) == OmittableCuInfo:
+            s_omit = cast(OmittableCuInfo, s_any)
+            # Note: Duplicated code to allow correct typing
+            # out/in_dep_edges are based on the dependency graph and thus inverse
+            # to the omp dependency clauses
+            # only consider those dependencies to/from Task/Omittable CUs
+            out_dep_edges = [(src, t, e) for src, t, e in pet.out_edges(s_omit._node.id) if
+                             e.etype == EdgeType.DATA and
+                             (pet.node_at(t).tp_contains_task is True or
+                              pet.node_at(t).tp_omittable is True) and
+                             pet.node_at(t) != s_omit._node]  # exclude self-dependencies
+            in_dep_edges = [(src, t, e) for src, t, e in pet.in_edges(s_omit._node.id) if
+                            e.etype == "dependence" and
+                            (pet.node_at(t).tp_contains_task is True or
+                             pet.node_at(t).tp_omittable is True) and
+                            pet.node_at(t) != s_omit._node]  # exclude self-dependencies
+            # set inverted dependencies
+            length_in = 0
+            length_out = 0
+            for ode in out_dep_edges:
+                var = ode[2].var_name
+                s_omit.in_dep.append(var)
+            for ide in in_dep_edges:
+                var = ide[2].var_name
+                s_omit.out_dep.append(var)
+            # find and set in_out_dependencies
+            if length_in < length_out:  # just for performance
+                s_omit.in_out_dep = [var for var in s_omit.in_dep if var in s_omit.out_dep]
+            else:
+                s_omit.in_out_dep = [var for var in s_omit.out_dep if var in s_omit.in_dep]
+            # remove in_out_deps from in_dep and out_dep
+            for in_out_var in s_omit.in_out_dep:
+                s_omit.in_dep = [var for var in s_omit.in_dep if not var == in_out_var]
+                s_omit.out_dep = [var for var in s_omit.out_dep if not var == in_out_var]
+        if type(s_any) == TaskParallelismInfo:
+            s_task = cast(TaskParallelismInfo, s_any)
+            # Note: Duplicated code to allow correct typing
+            # out/in_dep_edges are based on the dependency graph and thus inverse
+            # to the omp dependency clauses
+            # only consider those dependencies to/from Task/Omittable CUs
+            out_dep_edges = [(src, t, e) for src, t, e in pet.out_edges(s_task._node.id) if
+                             e.etype == EdgeType.DATA and
+                             (pet.node_at(t).tp_contains_task is True or
+                              pet.node_at(t).tp_omittable is True) and
+                             pet.node_at(t) != s_task._node]  # exclude self-dependencies
+            in_dep_edges = [(src, t, e) for src, t, e in pet.in_edges(s_task._node.id) if
+                            e.etype == "dependence" and
+                            (pet.node_at(t).tp_contains_task is True or
+                             pet.node_at(t).tp_omittable is True) and
+                            pet.node_at(t) != s_task._node]  # exclude self-dependencies
+            # set inverted dependencies
+            length_in = 0
+            length_out = 0
+            for ode in out_dep_edges:
+                var = cast(str, ode[2].var_name)
+                s_task.in_dep.append(var)
+            for ide in in_dep_edges:
+                var = cast(str, ide[2].var_name)
+                s_task.out_dep.append(var)
+            # find and set in_out_dependencies
+            if length_in < length_out:  # just for performance
+                s_task.in_out_dep = [var for var in s_task.in_dep if var in s_task.out_dep]
+            else:
+                s_task.in_out_dep = [var for var in s_task.out_dep if var in s_task.in_dep]
+            # remove in_out_deps from in_dep and out_dep
+            for in_out_var in s_task.in_out_dep:
+                s_task.in_dep = [var for var in s_task.in_dep if not var == in_out_var]
+                s_task.out_dep = [var for var in s_task.out_dep if not var == in_out_var]
+            result.append(s_task)
     return result
 
 
@@ -2632,7 +2707,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
         s._node.tp_contains_taskwait = True
     task_nodes = [t._node for t in task_suggestions]
     barrier_nodes = [t._node for t in taskwait_suggestions]
-    omittable_nodes = []
+    omittable_nodes: List[Tuple[CUNode, List[CUNode]]] = []
 
     transformation_happened = True
     # let run until convergence
@@ -2698,12 +2773,12 @@ def __detect_barrier_suggestions(pet: PETGraphX,
             if not v.tp_omittable:
                 # actual change
                 v.tp_omittable = True
-                combine_with_node = [pet.node_at(e[1]) for e in out_dep_edges if
-                                     pet.node_at(e[1]) in task_nodes]
-                if len(combine_with_node) < 1:
+                combine_with_node_list = [pet.node_at(e[1]) for e in out_dep_edges if
+                                          pet.node_at(e[1]) in task_nodes]
+                if len(combine_with_node_list) < 1:
                     raise ValueError("length combine_with_node < 1!")
-                combine_with_node = combine_with_node[0]
-                omittable_nodes.append((v, combine_with_node))
+                combine_with_node = combine_with_node_list[0]
+                omittable_nodes.append((v, [combine_with_node]))
                 suggestions.append(OmittableCuInfo(v,
                                                    combine_with_node))
                 transformation_happened = True
@@ -2720,8 +2795,8 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 ct_end_line = ct.end_position()
                 ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
                 # check if ct covered by a barrier
-                for cb in child_barriers:
-                    cb = pet.node_at(cb)
+                for cb_id in child_barriers:
+                    cb = pet.node_at(cb_id)
                     cb_start_line = cb.start_position()
                     cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
                     cb_end_line = cb.end_position()
@@ -2758,16 +2833,18 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 v.tp_contains_taskwait is False:
             # omittable node appended to prior omittable node
             # get parent task
-            parent_task = None
+            #            parent_task: Optional[CUNode] = None
             for e in out_dep_edges:
                 if pet.node_at(e[1]).tp_omittable is True:
                     # if tp_omittable is set, a omittable_suggestion has to exists.
                     # find this suggestion and extract combine_with_node
                     found_cwn = False
                     for (tmp_omit, tmp_cwn) in omittable_nodes:
+                        tmp_cwn = cast(List[CUNode], tmp_cwn)
                         if pet.node_at(e[1]) == tmp_omit:
-                            parent_task = tmp_cwn
+                            parent_task = cast(CUNode, tmp_cwn)
                             found_cwn = True
+
                     if not found_cwn:
                         raise Exception("No parent task for omittable node found!")
             violation = False
@@ -2797,7 +2874,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                 if v.tp_omittable is False:
                     # actual change
                     v.tp_omittable = True
-                    omittable_nodes.append((v, parent_task))
+                    omittable_nodes.append((v, [parent_task]))
                     suggestions.append(OmittableCuInfo(v,
                                                        parent_task))
                     transformation_happened = True
@@ -2839,10 +2916,12 @@ def __detect_taskloop_reduction(pet: PETGraphX,
             continue
         # check if s contained in reduction loop body
         red_vars_entry, red_loop = __task_contained_in_reduction_loop(pet, s)
-        if red_vars_entry is None:
+        if red_vars_entry is None or red_loop is None:
             # s not contained in reduction loop body
             output.append(s)
         else:
+            red_vars_entry = cast(Dict[str, str], red_vars_entry)
+            red_loop = cast(CUNode, red_loop)
             # s contained in reduction loop body
             # modify task s
             reduction_clause = "reduction("
@@ -2906,7 +2985,7 @@ def __set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[T
     :return: List[TaskParallelismInfo]"""
     # group suggestions by parent CU
     output = []
-    cu_to_suggestions_map = dict()
+    cu_to_suggestions_map: Dict[str, List[TaskParallelismInfo]] = dict()
     for s in suggestions:
         # filter out non task / taskwait suggestions and append to output
         if not (type(s) == Task or type(s) == TaskParallelismInfo):
@@ -2931,7 +3010,7 @@ def __set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[T
                 # if so, set end to line prior to start of next suggestion
                 end = int(cu_to_suggestions_map[cu][idx + 1].region_start_line)
                 end = end - 1
-                s.region_end_line = end
+                s.region_end_line = str(end)
             else:
                 # if not, set end to end of cu
                 s.region_end_line = s.end_line[s.end_line.index(":") + 1:]
@@ -2939,7 +3018,8 @@ def __set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[T
             cu_to_suggestions_map[cu][idx] = s
     # append suggestions to output
     for cu in cu_to_suggestions_map:
-        for s in cu_to_suggestions_map[cu]:
+        tmp: List[TaskParallelismInfo] = cast(List[TaskParallelismInfo], cu_to_suggestions_map[cu])
+        for s in tmp:
             output.append(s)
     return output
 
@@ -2966,11 +3046,10 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
             result_suggestions.append(single_suggestion)
     # get map of function body cus containing task suggestions to line number
     # of task pragmas
-    relevant_function_bodies = {}
+    relevant_function_bodies: Dict[CUNode, List[str]] = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent = __get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)
-        parent = parent[0][0]  # parent like [(parent, last_node)]
+        parent: CUNode = __get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][0]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
@@ -3004,7 +3083,7 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # get task suggestions from suggestions
     task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
     # start search for each suggested task
-    parents = []
+    parents: List[Tuple[CUNode, Optional[CUNode]]] = []
     for ts in task_suggestions:
         parents += __get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, False)
     # remove duplicates
@@ -3028,6 +3107,9 @@ def __suggest_parallel_regions(pet: PETGraphX,
     # create region suggestions based on detected outer parents
     region_suggestions = []
     for parent, last_node in outer_parents:
+        if last_node is None:
+            continue
+        last_node = cast(CUNode, last_node)
         region_suggestions.append(ParallelRegionInfo(parent,
                                                      last_node.start_position(),
                                                      last_node.end_position()))
@@ -3046,6 +3128,9 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
     queue = [target]
     while len(queue) > 0:
         cur_node = queue.pop(0)
+        if type(cur_node) == list:
+            cur_node_list = cast(List[CUNode], cur_node)
+            cur_node = cur_node_list[0]
         visited.append(cur_node)
         tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
                     if s not in visited and
@@ -3073,8 +3158,8 @@ def __get_parent_of_type(pet: PETGraphX, node: CUNode,
         Else, return first parent for each incoming edge of node.
     :return: [(CUNode, CUNode)]"""
     visited = []
-    queue = [(node, None)]
-    res = []
+    queue: List[Tuple[CUNode, Optional[CUNode]]] = [(node, None)]
+    res: List[Tuple[CUNode, Optional[CUNode]]] = []
     while len(queue) > 0:
         tmp = queue.pop(0)
         (cur_node, last_node) = tmp
@@ -3147,7 +3232,9 @@ def __recursive_function_call_contained_in_worker_cu(function_call_string: str,
                                                    tightest_worker_cu.start_position(),
                                                    tightest_worker_cu.end_position()):
                     tightest_worker_cu = cur_w
-    return tightest_worker_cu
+    if tightest_worker_cu is None:
+        raise ValueError("No surrounding worker CU could be found.")
+    return cast(CUNode, tightest_worker_cu)
 
 
 def __detect_mw_types(pet: PETGraphX, main_node: CUNode):
@@ -3278,7 +3365,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
     parsed_cu = objectify.fromstring(xml_content)
 
     iterate_over_cus = True  # used to enable re-starting
-    self_added_node_ids = []
+    self_added_node_ids: List[str] = []
     while iterate_over_cus:
         used_node_ids = []
         for node in parsed_cu.Node:

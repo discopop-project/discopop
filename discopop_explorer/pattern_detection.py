@@ -34,7 +34,7 @@ class DetectionResult(object):
 class PatternDetectorX(object):
     pet: PETGraphX
 
-    def __init__(self, pet_graph: PETGraphX):
+    def __init__(self, pet_graph: PETGraphX) -> None:
         """This class runs detection algorithms on CU graph
 
         :param pet_graph: CU graph

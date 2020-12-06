@@ -9,7 +9,7 @@
 from enum import IntEnum, Enum
 from typing import Dict, List, Tuple, Set, Optional
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 
@@ -99,7 +99,7 @@ class CUNode:
     loop_iterations: int = -1
     mw_type = MWType.FORK
     basic_block_id = ""
-    recursive_function_calls = []
+    recursive_function_calls: List[str] = []
     node_calls: List[Dict[str, str]] = []
     reduction: bool = False
     do_all: bool = False
@@ -325,7 +325,7 @@ class PETGraphX(object):
         """
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
-    def subtree_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
+    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -334,7 +334,7 @@ class PETGraphX(object):
         """
         return self.__subtree_of_type_rec(root, type, set())
 
-    def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
+    def __subtree_of_type_rec(self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
