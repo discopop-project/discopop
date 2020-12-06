@@ -9,7 +9,7 @@
 from enum import IntEnum, Enum
 from typing import Dict, List, Tuple, Set, Optional
 
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 

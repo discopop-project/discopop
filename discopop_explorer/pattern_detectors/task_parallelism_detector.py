@@ -13,7 +13,7 @@ from typing import List, Tuple, Dict, Optional, cast, Union
 
 from cpp_demangle import demangle  # type: ignore
 from lxml import etree  # type: ignore
-from lxml import objectify  # type: ignore
+from lxml import objectify
 
 from .PatternInfo import PatternInfo
 from .do_all_detector import run_detection as detect_do_all
