@@ -302,7 +302,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __remove_duplicates(result)
     result = __correct_task_suggestions_in_loop_body(pet, result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
-    # result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
+    result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
@@ -631,7 +631,6 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     aliases = __get_alias_information(pet, suggestions, source_code_files)
     # get function-internal parameter aliases
     function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml)
-    print(function_parameter_alias_dict)
     # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
@@ -641,7 +640,8 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[str, List[Tuple[str, str]]]:
+def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[
+    str, List[Tuple[str, str]]]:
     """Wrapper to execute simple alias analysis and parse results into dict (function name to list of alias-tuples).
     :result function-internal alias detection results in dict form"""
     # execute simple alias detection
@@ -854,7 +854,8 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                                                                 function_raw_information_cache: Dict[str, List[bool]],
                                                                 cu_inst_result_dict: Dict[
                                                                     str, List[Dict[str, Optional[str]]]],
-                                                                function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
+                                                                function_parameter_alias_dict: Dict[
+                                                                    str, List[Tuple[str, str]]],
                                                                 source_code_files: Dict[str, str]) \
         -> Tuple[List[CUNode], str, List[bool], Dict[str, List[bool]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
@@ -929,13 +930,10 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                             called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
 
     # if parameter alias entry for parent function exists:
-    # TODO
     if called_function_cu.name in function_parameter_alias_dict:
-        print("IN: FUNCTION: ", called_function_cu.name)
         alias_entries = function_parameter_alias_dict[called_function_cu.name]
         for (var_name, alias_name) in alias_entries:
             var_name_is_modified = False
-            print("Var_name: ", var_name)
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
             function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
@@ -956,25 +954,18 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
             for child_cu in function_internal_cu_nodes:
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
-                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
+                dep_var_names = [x[2].var_name for x in
+                                 child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
                 dep_var_names = [x.replace(".addr", "") for x in dep_var_names]
                 if alias_name in dep_var_names:
-                    print("\talias modified: ", alias_name)
                     var_name_is_modified = True
                     break
             if var_name_is_modified:
                 # update RAW information
                 for idx, (old_var_name, raw_info) in enumerate(called_function_args_raw_information):
-                    print("\tcheck: ", old_var_name, " -> ", var_name)
                     if old_var_name == var_name:
-                        print("\t\tOLD_VAR_NAME == VAR_NAME")
-                        print("\t\traw_info: ", raw_info)
-                        # TODO HERE
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True)
-                            print("ALIAS MODIFICATION FOUND FOR: ", old_var_name, "  alias: ", alias_name)
-    else:
-        print("OUT: FUNCTION: ", called_function_cu.name)
     # remove names from called_function_args_raw_information
     called_function_args_raw_information_bools = [e[1] for e in called_function_args_raw_information]
     return (
@@ -1941,10 +1932,19 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if ":" in tmp_pragma_line:
-                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
-                                    if int(line_num) < int(tmp_pragma_line):
-                                        is_valid = True
+                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, suggestion._node, cu_node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                            is_valid = True
                         else:
                             pass
                 except ValueError:
@@ -1975,10 +1975,20 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if ":" in tmp_pragma_line:
-                                        tmp_pragma_line = tmp_pragma_line.split(":")[1]
-                                    if int(line_num) > int(tmp_pragma_line):
-                                        is_valid = True
+                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, cu_node, suggestion._node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                            is_valid = True
+
                         else:
                             pass
                 except ValueError:
@@ -2015,14 +2025,36 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if int(line_num) < int(tmp_pragma_line):
-                                        prior_out_exists = True
+                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, suggestion._node, cu_node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                            prior_out_exists = True
                                 for line_num in in_dep_vars[var]:
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    if int(line_num) > int(tmp_pragma_line):
-                                        successive_in_exists = True
+                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # get CU containing line_num
+                                    for cu_node in pet.all_nodes(NodeType.CU):
+                                        file_id = suggestion._node.start_position().split(":")[0]
+                                        test_line = file_id + ":" + line_num
+                                        # check if line_num is contained in cu_node
+                                        if not __line_contained_in_region(test_line, cu_node.start_position(),
+                                                                          cu_node.end_position()):
+                                            continue
+                                        # check if path from suggestion._node to cu_node exists
+                                        if __check_reachability(pet, cu_node, suggestion._node,
+                                                                [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                            successive_in_exists = True
                                 # check and treat conditions
                                 if prior_out_exists and successive_in_exists:
                                     # proper in_out_dep
@@ -2965,7 +2997,7 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     continue
                 elif pet.node_at(e[1]).tp_omittable is True:
                     continue
-                elif __check_reachability(pet, parent_task, v, EdgeType.DATA):
+                elif __check_reachability(pet, parent_task, v, [EdgeType.DATA]):
                     continue
                 else:
                     violation = True
@@ -3171,7 +3203,7 @@ def __remove_useless_barrier_suggestions(pet: PETGraphX,
         tws_line_number = tws.pragma_line
         tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
         for rel_func_body in relevant_function_bodies.keys():
-            if __check_reachability(pet, tws._node, rel_func_body, EdgeType.CHILD):
+            if __check_reachability(pet, tws._node, rel_func_body, [EdgeType.CHILD]):
                 # remove suggested barriers where line number smaller than
                 # pragma line number of task
                 for line_number in relevant_function_bodies[rel_func_body]:
@@ -3228,13 +3260,15 @@ def __suggest_parallel_regions(pet: PETGraphX,
 
 
 def __check_reachability(pet: PETGraphX, target: CUNode,
-                         source: CUNode, edge_type: EdgeType) -> bool:
-    """check if target is reachable from source via edges of type edge_type.
+                         source: CUNode, edge_types: List[EdgeType]) -> bool:
+    """check if target is reachable from source via edges of types edge_type.
     :param pet: PET graph
     :param source: CUNode
     :param target: CUNode
-    :param edge_type: EdgeType
+    :param edge_types: List[EdgeType]
     :return: Boolean"""
+    if source == target:
+        return True
     visited = []
     queue = [target]
     while len(queue) > 0:
@@ -3245,7 +3279,7 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
         visited.append(cur_node)
         tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
                     if s not in visited and
-                    e.etype == edge_type]
+                    e.etype in edge_types]
         for e in tmp_list:
             if pet.node_at(e[0]) == source:
                 return True
