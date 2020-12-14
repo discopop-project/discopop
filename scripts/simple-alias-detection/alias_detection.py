@@ -29,6 +29,9 @@ docopt_schema = Schema({
 
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
     """TODO"""
+    # prune var_name
+    if ".addr" in var_name:
+        var_name = var_name.replace(".addr", "")
     # prune statement
     if ":" in statement:
         statement = statement[statement.rindex(":") + 1:]

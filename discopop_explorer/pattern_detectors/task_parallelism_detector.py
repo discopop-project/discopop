@@ -9,6 +9,7 @@
 
 import copy
 import os
+import pathlib
 import subprocess
 from typing import List, Tuple, Dict, Optional, cast, Union, IO
 
@@ -293,7 +294,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     # result = __detect_dependency_clauses_old(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, dep_file, cu_ist_result_file)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, cu_xml, dep_file, cu_ist_result_file)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
@@ -301,7 +302,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __remove_duplicates(result)
     result = __correct_task_suggestions_in_loop_body(pet, result)
     result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
-    result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
+    # result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
 
@@ -608,7 +609,7 @@ def __contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
-                                            dep_file: str, cu_inst_result_file: str) -> List[PatternInfo]:
+                                            cu_xml: str, dep_file: str, cu_inst_result_file: str) -> List[PatternInfo]:
     """Wrapper for alias based dependency detection.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -628,13 +629,56 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     # parse cu_inst_result_file contents into dict
     cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
     aliases = __get_alias_information(pet, suggestions, source_code_files)
+    # get function-internal parameter aliases
+    function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml)
+    print(function_parameter_alias_dict)
     # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
     # find dependencies between calls of same function inside function scopes
     suggestions = __identify_dependencies_for_same_functions(pet, suggestions, source_code_files,
-                                                             cu_inst_result_dict)
+                                                             cu_inst_result_dict, function_parameter_alias_dict)
     return suggestions
+
+
+def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[str, List[Tuple[str, str]]]:
+    """Wrapper to execute simple alias analysis and parse results into dict (function name to list of alias-tuples).
+    :result function-internal alias detection results in dict form"""
+    # execute simple alias detection
+    pattern_detector_dir = str(pathlib.Path(__file__).parent.absolute())
+    s_a_d_dir = pattern_detector_dir + "/../../scripts/simple-alias-detection"
+    application_path = s_a_d_dir + "/alias_detection.py"
+    alias_detection_result_file = s_a_d_dir + "/alias_detection_result.txt"
+    # get absolute file paths
+    file_mapping_path = os.path.abspath(file_mapping_path)
+    cu_xml_path = os.path.abspath(cu_xml_path)
+    # remove old results if any exist
+    if os.path.exists(alias_detection_result_file):
+        os.remove(alias_detection_result_file)
+    call_string = "python3 " + application_path + "  --fmap " + file_mapping_path + " --cu-xml " + cu_xml_path + " --output " + alias_detection_result_file
+    process = subprocess.Popen(call_string, shell=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.wait()
+    # check if alias_detection_result_file exists
+    if not os.path.exists(alias_detection_result_file):
+        return dict()
+    # create dict:
+    alias_dict = dict()
+    with open(alias_detection_result_file) as alias_file:
+        for line in alias_file.readlines():
+            line = line.replace("\n", "")
+            line = line.split(";")
+            fname = line[1]
+            var_name = line[2]
+            alias_name = line[3]
+            if var_name == alias_name:
+                continue
+            if fname not in alias_dict:
+                alias_dict[fname] = []
+            alias_dict[fname].append((var_name, alias_name))
+    # remove alias_detection_result_file
+    os.remove(alias_detection_result_file)
+    return alias_dict
 
 
 def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: str, parent_cu_node: CUNode,
@@ -643,6 +687,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
                                                  cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
                                                  source_code_files: Dict[str, str], recursively_visited: List[CUNode],
                                                  function_raw_information_cache: Dict[str, List[bool]],
+                                                 function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
                                                  called_cu_id: Optional[str] = None,
                                                  called_function_name: Optional[str] = None) \
         -> Optional[Tuple[str, List[Tuple[str, bool]], List[CUNode], Dict[str, List[bool]]]]:
@@ -663,6 +708,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     :param function_raw_information_cache: Cache containing a mapping of function names to a list of booleans,
         representing the parameters of a given function and the information
         whether a specific parameter is modified by the respective function.
+    :param function_parameter_alias_dict: results of function-internal alias detection in dict form
     :param called_cu_id: ID of the called function´s CU node
     :param called_function_name: Name of the called function
     :return: None, if anything unpredicted happens.
@@ -764,7 +810,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
         (recursively_visited, res_called_function_name, res_called_function_raw_information,
          function_raw_information_cache) = __get_function_call_parameter_rw_information_recursion_step(
             pet, called_function_cu, recursively_visited, function_raw_information_cache, cu_inst_result_dict,
-            source_code_files)
+            function_parameter_alias_dict, source_code_files)
         function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
     else:
         # read cache
@@ -808,6 +854,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                                                                 function_raw_information_cache: Dict[str, List[bool]],
                                                                 cu_inst_result_dict: Dict[
                                                                     str, List[Dict[str, Optional[str]]]],
+                                                                function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
                                                                 source_code_files: Dict[str, str]) \
         -> Tuple[List[CUNode], str, List[bool], Dict[str, List[bool]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
@@ -822,6 +869,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
         representing the parameters of a given function and the information
         whether a specific parameter is modified by the respective function.
     :param cu_inst_result_dict: Contents of the CUInst_Result.txt, converted into a dict.
+    :param function_parameter_alias_dict: results of function-internal alias detection in dict form
     :param source_code_files: File-Mapping dictionary
     :return: (recursively_visited, called_function_name,
               called_function_args_raw_information, function_raw_information_cache)
@@ -868,17 +916,65 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                                                                        cu_inst_result_dict, source_code_files,
                                                                        recursively_visited,
                                                                        function_raw_information_cache,
+                                                                       function_parameter_alias_dict,
                                                                        called_function_name=child_func.name)
                 if ret_val is None:
                     continue
                 (recursive_function_call_line, parameter_names_raw_information, recursively_visited,
                  function_raw_information_cache) = ret_val
-                # perform or-conjunction of RAW information
+                # perform or-conjunction of RAW information parent <> child
                 for child_var_name, child_raw_info in parameter_names_raw_information:
                     for idx, (var_name, raw_info) in enumerate(called_function_args_raw_information):
                         if var_name == child_var_name:
                             called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
 
+    # if parameter alias entry for parent function exists:
+    # TODO
+    if called_function_cu.name in function_parameter_alias_dict:
+        print("IN: FUNCTION: ", called_function_cu.name)
+        alias_entries = function_parameter_alias_dict[called_function_cu.name]
+        for (var_name, alias_name) in alias_entries:
+            var_name_is_modified = False
+            print("Var_name: ", var_name)
+            # check if alias_name occurs in any depencendy in any of called_function_cu's children,
+            # recursively visits all children cu nodes in function body.
+            function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
+            queue: List[CUNode] = [called_function_cu]
+            while len(queue) > 0:
+                cur: CUNode = queue.pop(0)
+                # check if cur inside function body, append to function_internal_cu_nodes if so
+                if __line_contained_in_region(cur.start_position(), called_function_cu.start_position(),
+                                              called_function_cu.end_position()) and \
+                        __line_contained_in_region(cur.end_position(), called_function_cu.start_position(),
+                                                   called_function_cu.end_position()):
+                    function_internal_cu_nodes.append(cur)
+                # add children to queue
+                for cur_child in pet.direct_children(cur):
+                    if cur_child not in function_internal_cu_nodes and \
+                            cur_child not in queue:
+                        queue.append(cur_child)
+            for child_cu in function_internal_cu_nodes:
+                child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
+                child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
+                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
+                dep_var_names = [x.replace(".addr", "") for x in dep_var_names]
+                if alias_name in dep_var_names:
+                    print("\talias modified: ", alias_name)
+                    var_name_is_modified = True
+                    break
+            if var_name_is_modified:
+                # update RAW information
+                for idx, (old_var_name, raw_info) in enumerate(called_function_args_raw_information):
+                    print("\tcheck: ", old_var_name, " -> ", var_name)
+                    if old_var_name == var_name:
+                        print("\t\tOLD_VAR_NAME == VAR_NAME")
+                        print("\t\traw_info: ", raw_info)
+                        # TODO HERE
+                        if not raw_info:
+                            called_function_args_raw_information[idx] = (old_var_name, True)
+                            print("ALIAS MODIFICATION FOUND FOR: ", old_var_name, "  alias: ", alias_name)
+    else:
+        print("OUT: FUNCTION: ", called_function_cu.name)
     # remove names from called_function_args_raw_information
     called_function_args_raw_information_bools = [e[1] for e in called_function_args_raw_information]
     return (
@@ -888,13 +984,16 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
 
 def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
                                                source_code_files: Dict,
-                                               cu_inst_result_dict: Dict) -> List[PatternInfo]:
+                                               cu_inst_result_dict: Dict,
+                                               function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]]) \
+        -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
     and supplement the suggestions.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
     :param source_code_files: File-Mapping dictionary
     :param cu_inst_result_dict: CUInstResult.txt information dict
+    :param function_parameter_alias_dict: results of function-internal alias detection in dict form
     :return: List[PatternInfo]"""
     # Idea:
     # 1. iterate over task suggestions
@@ -992,6 +1091,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                                                                          True, False,
                                                                          cu_inst_result_dict, source_code_files, [],
                                                                          function_raw_information_cache,
+                                                                         function_parameter_alias_dict,
                                                                          called_function_name=called_function_name_1)
                 if ret_val_1 is None:
                     continue
@@ -1013,6 +1113,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                                                                              lower_line_num_2, False, True,
                                                                              cu_inst_result_dict, source_code_files, [],
                                                                              function_raw_information_cache,
+                                                                             function_parameter_alias_dict,
                                                                              called_function_name=called_function_name_2)
                     if ret_val_2 is None:
                         continue
@@ -1465,19 +1566,7 @@ def __get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, para
                             result += __get_alias_for_parameter_at_position(pet, called_function, idx,
                                                                             source_code_files, visited,
                                                                             called_function_cache)
-    # find aliases in source code of function-cu and append them to result
-    result += __get_aliases_from_source_code(function, parameter_position, source_code_files)
     return result
-
-
-def __get_aliases_from_source_code(function_cu: CUNode, parameter_position: int, source_code_files: Dict[str, str])\
-        -> List[Tuple[str, str, str, str]]:
-    """Wrapper to iterate over statements in function body to start __get_alias_from_statement
-    :param function_cu: CUNode of called function
-    :param parameter_position: position of the parameter to be analyzed
-    :param source_code_files: File-Mapping dictionary
-    :return alias information for the specified parameter"""
-
 
 
 def __get_function_call_from_source_code(source_code_files: Dict[str, str], line_number: int, file_id: str,
