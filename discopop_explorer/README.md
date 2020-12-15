@@ -39,7 +39,7 @@ To run the graph analyzer, you can use the following command:
 
 You can specify the path to DiscoPoP output files. Then, the Python script searches within this path to find the required files. Nevertheless, if you are interested in passing a specific location to each file, here is the detailed usage:
 
-    `discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>] [--fmap <fmap>] [--cu-inst-res <cuinstres>] [--generate-data-cu-inst <outputdir>]`
+    `discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json>] [--fmap <fmap>] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] [--generate-data-cu-inst <outputdir>]`
 
 Options:
 ```
@@ -49,6 +49,8 @@ Options:
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt].
     --reduction=<reduction>     Reduction variables file [default: reduction.txt].
     --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
+    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
+                                if non-standard path should be used.
     --plugins=<plugs>           Plugins to execute
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json                      Output result as a json file to specified path

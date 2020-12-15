@@ -6,4 +6,3 @@ docopt>=0.6.2
 lxml>=4.3.3
 numpy>=1.16.3
 schema>=0.7.0
-cpp-demangle

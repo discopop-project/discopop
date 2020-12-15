@@ -9,9 +9,9 @@
 
 import copy
 import os
-from typing import List, Tuple, Dict, Optional, cast, Union
+import subprocess
+from typing import List, Tuple, Dict, Optional, cast, Union, IO
 
-from cpp_demangle import demangle  # type: ignore
 from lxml import etree  # type: ignore
 from lxml import objectify
 
@@ -26,6 +26,7 @@ from ..utils import depends, calculate_workload, \
 __forks = set()  # type: ignore
 __workloadThreshold = 10000
 __minParallelism = 3
+__global_llvm_cxxfilt_path: Optional[str] = None
 
 
 class Task(object):
@@ -209,7 +210,8 @@ class OmittableCuInfo(PatternInfo):
 
 
 def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
-                                               file_mapping: str, cu_inst_result_file: str) -> List[PatternInfo]:
+                                               file_mapping: str, cu_inst_result_file: str,
+                                               llvm_cxxfilt_path: Optional[str]) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -218,8 +220,11 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :param reduction_file: Path (string) to the reduction file to be used
     :param file_mapping: Path (string) to the FileMapping.txt to be used
     :param cu_inst_result_file: Path (string) to the _CUInstResult.txt to be used
+    :param llvm_cxxfilt_path: Path (string) to the llvm-cxxfilt executable to be used or None.
     :return: List of detected pattern info
     """
+    global __global_llvm_cxxfilt_path
+    __global_llvm_cxxfilt_path = llvm_cxxfilt_path
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
                                                                    loop_counter_file, reduction_file))
@@ -741,7 +746,8 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     try:
         function_call_string = __get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
                                                                     call_position.split(":")[0], called_function_name=
-                                                                    demangle(called_function_name_not_none).split("(")[
+                                                                    __demangle(called_function_name_not_none).split(
+                                                                        "(")[
                                                                         0])
     except IndexError:
         return None
@@ -1539,7 +1545,7 @@ def __get_called_function_and_parameter_names_from_function_call(source_code_lin
     # find function name by finding biggest match between function call line and recursive call
     try:
         mangled_function_name = mangled_function_name.split(" ")[0]  # ignore line if present
-        function_name = demangle(mangled_function_name).split("(")[0]
+        function_name = __demangle(mangled_function_name).split("(")[0]
     except ValueError:
         return None, []
     except AttributeError:
@@ -3777,3 +3783,30 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
     if contained_recursive_calls >= 2:
         return True
     return False
+
+
+demangling_cache: Dict[str, str] = dict()
+
+
+def __demangle(mangled_name: str) -> str:
+    """Demangles the given mangled function name and returns the resulting string after demangling.
+    :param mangled_name: mangled function name
+    :return: demangled function name and type information"""
+    global demangling_cache
+    if mangled_name in demangling_cache:
+        return demangling_cache[mangled_name]
+    global __global_llvm_cxxfilt_path
+    if __global_llvm_cxxfilt_path is None:
+        # set default llvm-cxxfilt executable
+        llvm_cxxfilt_path = "llvm-cxxfilt"
+    else:
+        llvm_cxxfilt_path = cast(str, __global_llvm_cxxfilt_path)
+    process = subprocess.Popen([llvm_cxxfilt_path, mangled_name], stdout=subprocess.PIPE)
+    process.wait()
+    if process.stdout is not None:
+        out_bytes = cast(IO[bytes], process.stdout).readline()
+        out = out_bytes.decode("UTF-8")
+        out = out.replace("\n", "")
+        demangling_cache[mangled_name] = out
+        return out
+    raise ValueError("Demangling of " + mangled_name + " not possible!")

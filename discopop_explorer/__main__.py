@@ -11,7 +11,7 @@
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
-[--cu-inst-res <cuinstres>] [--generate-data-cu-inst <outputdir>]
+[--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] [--generate-data-cu-inst <outputdir>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -23,6 +23,8 @@ Options:
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
     --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
+    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
+                                if non-standard path should be used.
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
@@ -50,6 +52,7 @@ docopt_schema = Schema({
     '--plugins': Use(str),
     '--json': Use(str),
     '--cu-inst-res': Use(str),
+    '--llvm-cxxfilt-path': Use(str),
     '--generate-data-cu-inst': Use(str),
 })
 
@@ -98,7 +101,7 @@ def main():
     start = time.time()
 
     res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
-              cu_inst_result_file=cu_inst_result_file)
+              cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'])
 
     end = time.time()
 
