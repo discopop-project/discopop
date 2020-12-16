@@ -2846,10 +2846,11 @@ def __detect_barrier_suggestions(pet: PETGraphX,
                     # find this suggestion and extract combine_with_node
                     found_cwn = False
                     for (tmp_omit, tmp_cwn) in omittable_nodes:
-                        tmp_cwn = cast(List[CUNode], tmp_cwn)
+                        tmp_cwn_list = cast(List[CUNode], tmp_cwn)
                         if pet.node_at(e[1]) == tmp_omit:
-                            parent_task = cast(CUNode, tmp_cwn)
-                            found_cwn = True
+                            if len(tmp_cwn_list) == 1:
+                                parent_task = tmp_cwn_list[0]
+                                found_cwn = True
 
                     if not found_cwn:
                         raise Exception("No parent task for omittable node found!")
