@@ -8,15 +8,17 @@
 
 
 class Variable(object):
-    def __init__(self, type, name):
+    def __init__(self, type, name, defLine):
         self.type = type
         self.name = name
+        self.defLine = defLine
 
     def __hash__(self):
         return hash(self.name)  # hash(self.type + self.name)
 
     def __eq__(self, other):
-        return isinstance(other, Variable) and self.name == other.name  # and self.type == other.type
+        # and self.type == other.type
+        return isinstance(other, Variable) and self.name == other.name
 
     def __str__(self):
         return self.name

@@ -22,7 +22,8 @@ class PipelineStage(object):
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
 
-        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(pet, node, "Pipeline", in_dep, out_dep)
+        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(
+            pet, node, "Pipeline", in_dep, out_dep)
 
         self.first_private = fp
         self.private = p
@@ -60,7 +61,8 @@ class PipelineInfo(PatternInfo):
         self._pet = pet
         self.coefficient = round(node.pipeline, 3)
 
-        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, NodeType.LOOP)]
+        children_start_lines = [v.start_position()
+                                for v in pet.subtree_of_type(node, NodeType.LOOP)]
 
         self._stages = [pet.node_at(t) for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
                         if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)]
@@ -70,22 +72,26 @@ class PipelineInfo(PatternInfo):
     def __in_dep(self, node: CUNode):
         raw: List[Tuple[str, str, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
-            raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
+            raw.extend((s, t, d) for s, t, d in self._pet.out_edges(
+                n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = [node]
         for i in range(self._stages.index(node)):
-            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
+            nodes_before.extend(self._pet.subtree_of_type(
+                self._stages[i], NodeType.CU))
 
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
     def __out_dep(self, node: CUNode):
         raw: List[Tuple[str, str, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
-            raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
+            raw.extend((s, t, d) for s, t, d in self._pet.in_edges(
+                n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
-            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
+            nodes_after.extend(self._pet.subtree_of_type(
+                self._stages[i], NodeType.CU))
 
         return [dep for dep in raw if dep[0] in [n.id for n in nodes_after]]
 
@@ -123,15 +129,17 @@ def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: Lis
 
 def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
+    except for doall loops
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
     result = []
     for node in pet.all_nodes(NodeType.LOOP):
-        node.pipeline = __detect_pipeline(pet, node)
-        if node.pipeline > __pipeline_threshold:
-            result.append(PipelineInfo(pet, node))
+        if node.do_all == False:
+            node.pipeline = __detect_pipeline(pet, node)
+            if node.pipeline > __pipeline_threshold:
+                result.append(PipelineInfo(pet, node))
 
     return result
 
@@ -144,7 +152,8 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
     :return: Pipeline scalar value
     """
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
+    children_start_lines = [v.start_position()
+                            for v in pet.subtree_of_type(root, NodeType.LOOP)]
 
     loop_subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
                      if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)]
@@ -155,7 +164,8 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
+        graph_vector.append(1.0 if pet.depends_ignore_readonly(
+            loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):

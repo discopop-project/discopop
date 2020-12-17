@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-
+import time
 import itertools
 from typing import List, Set, Dict, Tuple
 
@@ -26,7 +26,8 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     :return: correlation coefficient, 0 if one of the norms is 0
     """
     norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)  # type:ignore
-    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
+    # type:ignore
+    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
 
 
 def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
@@ -37,7 +38,8 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
+    loops_start_lines = [v.start_position()
+                         for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
     return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
 
 
@@ -114,6 +116,9 @@ def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
     :param tree: subtree
     :return: true if is written
     """
+    # for i in tree:
+    #     if i.start_line >= 900 and i.start_line <= 1000:
+    #         print(f"----------{i.start_line} {i.end_line}")
     for e in itertools.chain(raw, waw):
         if e[2].var_name == var_name and any([n.id == e[1] for n in tree]):
             return True
@@ -228,7 +233,8 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
     # None may occur because __get_variables doesn't check for actual elements
     if var.name is None:
         return False
-    is_read = is_read_in(var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
+    is_read = is_read_in(var, raw_deps, war_deps,
+                         reverse_raw_deps, reverse_war_deps, tree)
     if var.name is None:
         print("Empty var.name found. Skipping.")
         return False
@@ -255,7 +261,7 @@ def is_read_in_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree
     :return: true if read in right subtree
     """
     for e in rev_raw:
-        if e[2].var_name == var and any([n.id == e[1] for n in tree]):
+        if e[2].var_name == var and any([n.id == e[0] for n in tree]):
             return True
     return False
 
@@ -378,12 +384,11 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
     last_private = []
     shared = []
     reduction = []
-
+    start1 = time.time()
+    print(f"{loop.start_line}")
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
     sub = pet.subtree_of_type(loop, NodeType.CU)
-
-    vars = __get_variables(sub)
 
     raw = set()
     war = set()
@@ -396,18 +401,47 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
+    vars = pet.get_undefined_variables_inside_loop(loop)
+    # vars = __get_variables(sub)
+    # if loop.start_line == 1010:
+    # print(f"{loop.start_line}")
+    # for i in sub:
+    #     print(f"SUB: {i.start_line} {i.end_line}")
+    # for i in lst:
+    #     print(f"LST: {i.start_line} {i.end_line}")
+    # for i in rst:
+    #     print(f"RST: {i.start_line} {i.end_line}")
+    start = time.time()
+    print(f"-- {loop.start_line} {start - start1}")
     for var in vars:
+        print(f"Variable: {var.name}")
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
+            # print(f"++++++++++++++++ {loop.start_line} {var.name}")
             reduction.append(var)
             # TODO grouping
         elif (is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
-              and is_scalar_val(var)) and is_readonly(var.name, war, waw, rev_raw):
-            if is_global(var.name, sub):
-                private.append(var)
-            else:
-                first_private.append(var)
+              and is_scalar_val(var)):
+            # if loop.start_line == 1010:
+            # print(f"++++++++++++++++ {loop.start_line} {var.name}")
+            if is_readonly(var.name, war, waw, rev_raw):
+                if is_global(var.name, sub):
+                    shared.append(var)
+                else:
+                    first_private.append(var)
+            elif is_read_in_subtree(var.name, rev_raw, rst):
+                if is_scalar_val(var):
+                    last_private.append(var)
+                else:
+                    shared.append(var)
+            # else:
+            #     if is_scalar_val(var):
+            #         # if loop.start_line == 1010:
+            #         #     print(f"////////// {var.name}")
+            #         private.append(var)
+            #     else:
+            #         shared.append(var)
         elif is_first_written(var.name, raw, war, sub):
             # TODO simplify
             if is_read_in_subtree(var.name, rev_raw, rst):
@@ -417,10 +451,13 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     shared.append(var)
             else:
                 if is_scalar_val(var):
+                    # if loop.start_line == 1010:
+                    #     print(f"////////// {var.name}")
                     private.append(var)
                 else:
                     shared.append(var)
-
+    end = time.time()
+    print(f"end {loop.start_line}: {end - start}")
     return first_private, private, last_private, shared, reduction
 
 
@@ -479,13 +516,19 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
 
     for sub_node in subtree:
         # insert all entries from child_cu.RAW_deps_on into RAW_deps_on etc.
-        raw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.RAW, False))
-        war_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAR, False))
-        waw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
+        raw_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.RAW, False))
+        war_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.WAR, False))
+        waw_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.WAW, False))
 
-        reverse_raw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
-        reverse_war_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAR, True))
-        reverse_waw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAW, True))
+        reverse_raw_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.RAW, True))
+        reverse_war_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.WAR, True))
+        reverse_waw_deps_on.update(__get_dep_of_type(
+            pet, sub_node, DepType.WAW, True))
 
     do_all_loops, reduction_loops = get_child_loops(pet, task)
     # reduction_result = ""

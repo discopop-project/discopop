@@ -58,6 +58,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
+    t1 = time.time()
     arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:
@@ -78,10 +79,11 @@ def main():
             print(f"File not found: \"{file}\"")
             sys.exit()
 
-    plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+    plugins = [
+    ] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
     start = time.time()
-
+    print(f"init time: {start-t1}")
     res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins)
 
     end = time.time()

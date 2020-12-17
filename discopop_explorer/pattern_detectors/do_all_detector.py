@@ -10,6 +10,7 @@ from typing import List
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
 from ..utils import classify_loop_variables
+import time
 
 
 class DoAllInfo(PatternInfo):
@@ -52,10 +53,14 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     """
     result = []
     for node in pet.all_nodes(NodeType.LOOP):
+        print(f"{node.start_line}")
+        t1 = time.time()
         if __detect_do_all(pet, node):
             node.do_all = True
-            if not node.reduction and node.loop_iterations > 0:
+            if not node.reduction and node.loop_iterations >= 0:
                 result.append(DoAllInfo(pet, node))
+        t2 = time.time()
+        print(f"ended Loop {node.start_line}: {t2 - t1} ")
 
     return result
 
@@ -67,7 +72,8 @@ def __detect_do_all(pet: PETGraphX, root: CUNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
+    subnodes = [pet.node_at(t)
+                for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
 
     for i in range(0, len(subnodes)):
         for j in range(i, len(subnodes)):
