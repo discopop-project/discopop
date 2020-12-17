@@ -22,7 +22,7 @@ node_props = [
     ('doAll', 'bool', 'False'),
     ('geomDecomp', 'bool', 'False'),
     ('reduction', 'bool', 'False'),
-    ('mwType', 'string', '\'FORK\''),
+    ('mwType', 'int', '2'),
     ('localVars', 'object', '[]'),
     ('globalVars', 'object', '[]'),
     ('args', 'object', '[]'),
@@ -62,6 +62,15 @@ class NodeType(IntEnum):
     DUMMY = 3
 
 
+class MWType(Enum):
+    NONE = 0
+    ROOT = 1
+    FORK = 2
+    WORKER = 3
+    BARRIER = 4
+    BARRIER_WORKER = 5
+
+
 class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
@@ -86,7 +95,12 @@ class CUNode:
     type: NodeType
     name: str
     instructions_count: int = -1
+    return_instructions_count: int = -1
     loop_iterations: int = -1
+    mw_type = MWType.FORK
+    basic_block_id = ""
+    recursive_function_calls: List[str] = []
+    node_calls: List[Dict[str, str]] = []
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
@@ -148,15 +162,21 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
-    # TODO recursive calls unused
+
+    if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
+        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
+
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
             n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
         if hasattr(node.globalVariables, 'global'):
             n.global_vars = [Variable(v.get('type'), v.text) for v in getattr(node.globalVariables, 'global')]
-
-        # TODO self.graph.vp.instructionsCount[v] = node.instructionsCount
-        # TODO self.graph.vp.BasicBlockID[v] = node.BasicBlockID
+        if hasattr(node, 'BasicBlockID'):
+            n.basic_block_id = getattr(node, 'BasicBlockID')
+        if hasattr(node, 'returnInstructions'):
+            n.return_instructions_count = int(getattr(node, 'returnInstructions').get('count'))
+        if hasattr(node.callsNode, 'nodeCalled'):
+            n.node_calls = [{"cuid": v.text,  "atLine": v.get('atLine')} for v in getattr(node.callsNode, 'nodeCalled') if v.get('atLine') is not None]
     return n
 
 
@@ -305,20 +325,20 @@ class PETGraphX(object):
         """
         return [t for t in self.g.in_edges(node_id, data='data') if etype is None or t[2].etype == etype]
 
-    def subtree_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
+    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
-        :param type: type of children
+        :param type: type of children, None is equal to a wildcard
         :return: list of nodes in subtree
         """
         return self.__subtree_of_type_rec(root, type, set())
 
-    def __subtree_of_type_rec(self, root: CUNode, type: NodeType, visited: Set[CUNode]) -> List[CUNode]:
+    def __subtree_of_type_rec(self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
-        :param type: type of children
+        :param type: type of children, None is equal to a wildcard
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
@@ -326,11 +346,19 @@ class PETGraphX(object):
         if root in visited:
             return res
         visited.add(root)
-        if root.type == type:
+        if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
         return res
+
+    def direct_successors(self, root: CUNode) -> List[CUNode]:
+        """Gets only direct successors of any type
+
+        :param root: root node
+        :return: list of direct successors
+        """
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.SUCCESSOR)]
 
     def direct_children(self, root: CUNode) -> List[CUNode]:
         """Gets only direct children of any type

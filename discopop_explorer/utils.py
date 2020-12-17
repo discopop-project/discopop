@@ -29,6 +29,40 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
 
 
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[CUNode]:
+    """Returns direct children of a given node
+
+    :param pet: PET graph
+    :param node: CUNode
+    :param criteria: EdgeType, type of edges to traverse
+    :return: list of children nodes
+    """
+    return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
+
+
+def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
+    """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+
+    :param pet: PET graph
+    :param source: source node for dependency detection
+    :param target: target of dependency
+    :return: true, if there is RAW dependency
+    """
+    if source == target:
+        return False
+    # target_nodes = pet.get_left_right_subtree(target, True)
+    target_nodes = pet.subtree_of_type(target, None)
+
+    # for node in pet.get_left_right_subtree(source, True):
+    for node in pet.subtree_of_type(source, NodeType.CU):
+        # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
+        for target in [pet.node_at(target_id) for source_id, target_id, dependence in
+                       pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+            if target in target_nodes:
+                return True
+    return False
+
+
 def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     """Checks, whether the variable is a loop index.
 
@@ -39,6 +73,50 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     """
     loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
     return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
+
+
+def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
+    """Calculates total number of the instructions in the subtree of a given node
+
+    :param pet: PET graph
+    :param root: root node
+    :return: number of instructions
+    """
+    res = 0
+    for node in pet.get_left_right_subtree(root, True):
+        res += node.instructions_count
+    return res
+
+
+def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
+    """Calculates workload for a given node
+    The workload is the number of instructions multiplied by respective number of iterations
+
+    :param pet: PET graph
+    :param node: root node
+    :return: workload
+    """
+    res = 0
+    if node.type == NodeType.DUMMY:
+        return 0
+    elif node.type == NodeType.CU:
+        res += node.instructions_count
+    elif node.type == NodeType.FUNC:
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
+            res += calculate_workload(pet, child)
+    elif node.type == NodeType.LOOP:
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
+            if child.type == NodeType.CU:
+                if 'for.inc' in child.basic_block_id:
+                    res += child.instructions_count
+                elif 'for.cond' in child.basic_block_id:
+                    res += child.instructions_count * (
+                            get_loop_iterations(node.start_position()) + 1)
+                else:
+                    res += child.instructions_count * get_loop_iterations(node.start_position())
+            else:
+                res += calculate_workload(pet, child) * get_loop_iterations(node.start_position())
+    return res
 
 
 def get_loop_iterations(line: str) -> int:
@@ -133,15 +211,15 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
         return False
     if '.' not in var:
         return False
-
-    path: List[CUNode] = pet.path(pet.main, node)
-
-    for node in reversed(path):
-        if node.type == NodeType.FUNC:
-            for arg in node.args:
-                if var.startswith(arg.name):
-                    return True
-
+    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    # add current node to parents, if it is of type FUNC
+    if node.type == NodeType.FUNC:
+        parents.append(node)
+    parent_functions = [cu for cu in parents if cu.type == NodeType.FUNC]
+    for pf in parent_functions:
+        for arg in pf.args:
+            if var.startswith(arg.name):
+                return True
     return False
 
 
@@ -383,7 +461,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
     rst = pet.get_left_right_subtree(loop, True)
     sub = pet.subtree_of_type(loop, NodeType.CU)
 
-    vars = __get_variables(sub)
+    variables = __get_variables(sub)
 
     raw = set()
     war = set()
@@ -396,7 +474,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    for var in vars:
+    for var in variables:
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
