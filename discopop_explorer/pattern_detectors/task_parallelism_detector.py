@@ -26,7 +26,7 @@ from ..utils import depends, calculate_workload, \
 __forks = set()  # type: ignore
 __workloadThreshold = 10000
 __minParallelism = 3
-__global_llvm_cxxfilt_path: Optional[str] = None
+__global_llvm_cxxfilt_path: str = ""
 
 
 class Task(object):
@@ -3797,17 +3797,21 @@ def __demangle(mangled_name: str) -> str:
     if mangled_name in demangling_cache:
         return demangling_cache[mangled_name]
     global __global_llvm_cxxfilt_path
-    if __global_llvm_cxxfilt_path is None:
+    if __global_llvm_cxxfilt_path == "None":
         # set default llvm-cxxfilt executable
         llvm_cxxfilt_path = "llvm-cxxfilt"
     else:
         llvm_cxxfilt_path = cast(str, __global_llvm_cxxfilt_path)
-    process = subprocess.Popen([llvm_cxxfilt_path, mangled_name], stdout=subprocess.PIPE)
-    process.wait()
-    if process.stdout is not None:
-        out_bytes = cast(IO[bytes], process.stdout).readline()
-        out = out_bytes.decode("UTF-8")
-        out = out.replace("\n", "")
-        demangling_cache[mangled_name] = out
-        return out
+    try:
+        process = subprocess.Popen([llvm_cxxfilt_path, mangled_name], stdout=subprocess.PIPE)
+        process.wait()
+        if process.stdout is not None:
+            out_bytes = cast(IO[bytes], process.stdout).readline()
+            out = out_bytes.decode("UTF-8")
+            out = out.replace("\n", "")
+            demangling_cache[mangled_name] = out
+            return out
+    except FileNotFoundError:
+        raise ValueError("Executable '" + llvm_cxxfilt_path + "' not found." +
+                         " Check or supply --llvm-cxxfilt-path parameter.")
     raise ValueError("Demangling of " + mangled_name + " not possible!")
