@@ -224,7 +224,10 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :return: List of detected pattern info
     """
     global __global_llvm_cxxfilt_path
-    __global_llvm_cxxfilt_path = llvm_cxxfilt_path
+    if llvm_cxxfilt_path is None:
+        __global_llvm_cxxfilt_path = "None"
+    else:
+        __global_llvm_cxxfilt_path = cast(str, llvm_cxxfilt_path)
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
                                                                    loop_counter_file, reduction_file))
