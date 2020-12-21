@@ -663,14 +663,14 @@ def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_pat
     if not os.path.exists(alias_detection_result_file):
         return dict()
     # create dict:
-    alias_dict = dict()
+    alias_dict: Dict[str, List[Tuple[str, str]]] = dict()
     with open(alias_detection_result_file) as alias_file:
         for line in alias_file.readlines():
             line = line.replace("\n", "")
-            line = line.split(";")
-            fname = line[1]
-            var_name = line[2]
-            alias_name = line[3]
+            line_split = line.split(";")
+            fname = line_split[1]
+            var_name = line_split[2]
+            alias_name = line_split[3]
             if var_name == alias_name:
                 continue
             if fname not in alias_dict:
@@ -879,11 +879,11 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
 
     # get potential children of called function
     recursively_visited.append(called_function_cu)
-    queue = pet.direct_children(called_function_cu)
+    queue_1 = pet.direct_children(called_function_cu)
     potential_children = []
     visited = []
-    while queue:
-        cur_potential_child = queue.pop()
+    while queue_1:
+        cur_potential_child = queue_1.pop()
         visited.append(cur_potential_child)
         # test if cur_potential_child is inside cur_potential_parent_functions scope
         if __line_contained_in_region(cur_potential_child.start_position(),
@@ -895,8 +895,8 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
             if cur_potential_child not in potential_children:
                 potential_children.append(cur_potential_child)
         for tmp_child in pet.direct_children(cur_potential_child):
-            if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
-                queue.append(tmp_child)
+            if tmp_child not in queue_1 and tmp_child not in potential_children and tmp_child not in visited:
+                queue_1.append(tmp_child)
 
     called_function_args_raw_information = []
     for var in called_function_cu.args:
@@ -958,8 +958,9 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
                 dep_var_names = [x[2].var_name for x in
                                  child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
-                dep_var_names = [x.replace(".addr", "") for x in dep_var_names]
-                if alias_name in dep_var_names:
+                dep_var_names_not_none = [x for x in dep_var_names if x is not None]
+                dep_var_names_not_none = [x.replace(".addr", "") for x in dep_var_names_not_none]
+                if alias_name in dep_var_names_not_none:
                     var_name_is_modified = True
                     break
             if var_name_is_modified:
