@@ -686,11 +686,11 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
                                                  greater_lower_line_num: bool,
                                                  cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
                                                  source_code_files: Dict[str, str], recursively_visited: List[CUNode],
-                                                 function_raw_information_cache: Dict[str, List[bool]],
+                                                 function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
                                                  function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
                                                  called_cu_id: Optional[str] = None,
                                                  called_function_name: Optional[str] = None) \
-        -> Optional[Tuple[str, List[Tuple[str, bool]], List[CUNode], Dict[str, List[bool]]]]:
+        -> Optional[Tuple[str, List[Tuple[str, bool, bool]], List[CUNode], Dict[str, List[Tuple[bool, bool]]]]]:
     """Retrieves the call_position and information whether the parameters of the target function are modified
     within the respective function, based on the contents of cu_inst_result_dict.
     Either called_cu_id, called_function_name or both need to be set.
@@ -770,7 +770,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
                                                                            called_function_cu.start_position(),
                                                                            called_function_cu.end_position())]
     # iterate over args positions and check if RAW is reported
-    raw_reported_for_param_positions: List[bool] = []
+    raw_reported_for_param_positions: List[Tuple[bool, bool]] = []
     for arg_var in called_function_cu.args:
         raw_reported = False
         for raw_entry in filtered_raw_info:
@@ -779,7 +779,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
             raw_entry_var = cast(str, raw_entry["var"])
             if raw_entry_var.replace(".addr", "") == arg_var.name.replace(".addr", ""):
                 raw_reported = True
-        raw_reported_for_param_positions.append(raw_reported)
+        raw_reported_for_param_positions.append((raw_reported, False))
     # store results in cache
     if called_function_cu.name not in function_raw_information_cache:
         function_raw_information_cache[called_function_cu.name] = raw_reported_for_param_positions
@@ -805,7 +805,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
         function_call_string, called_function_name_not_none, parent_cu_node)
 
     # 5.4. start recursion step
-    res_called_function_raw_information: List[bool] = []
+    res_called_function_raw_information: List[Tuple[bool, bool]] = []
     if called_function_cu not in recursively_visited:
         (recursively_visited, res_called_function_name, res_called_function_raw_information,
          function_raw_information_cache) = __get_function_call_parameter_rw_information_recursion_step(
@@ -820,15 +820,16 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     # 5.5 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
         return None
-    parameter_names_raw_information: List[Tuple[str, bool]] = []
+    parameter_names_raw_information: List[Tuple[str, bool, bool]] = []
     if len(raw_reported_for_param_positions) == len(res_called_function_raw_information):
         for idx in range(0, len(parameter_names)):
             tmp = (
                 parameter_names[idx],
-                (raw_reported_for_param_positions[idx] or res_called_function_raw_information[idx]))
+                (raw_reported_for_param_positions[idx] or res_called_function_raw_information[idx][0]),
+                res_called_function_raw_information[idx][1])
             if tmp[0] is None:
                 continue
-            tmp_not_none = cast(Tuple[str, bool], tmp)
+            tmp_not_none = cast(Tuple[str, bool, bool], tmp)
             parameter_names_raw_information.append(tmp_not_none)
         # overwrite cache
         new_cache_line = []
@@ -840,10 +841,10 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     else:
         # ignore recursion results
         for idx in range(0, len(parameter_names)):
-            tmp = (parameter_names[idx], raw_reported_for_param_positions[idx])
+            tmp = (parameter_names[idx], raw_reported_for_param_positions[idx], False)
             if tmp[0] is None:
                 continue
-            tmp_not_none = cast(Tuple[str, bool], tmp)
+            tmp_not_none = cast(Tuple[str, bool, bool], tmp)
             parameter_names_raw_information.append(tmp_not_none)
 
     return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
@@ -851,13 +852,13 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
 
 def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, called_function_cu: CUNode,
                                                                 recursively_visited: List[CUNode],
-                                                                function_raw_information_cache: Dict[str, List[bool]],
+                                                                function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
                                                                 cu_inst_result_dict: Dict[
                                                                     str, List[Dict[str, Optional[str]]]],
                                                                 function_parameter_alias_dict: Dict[
                                                                     str, List[Tuple[str, str]]],
                                                                 source_code_files: Dict[str, str]) \
-        -> Tuple[List[CUNode], str, List[bool], Dict[str, List[bool]]]:
+        -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
     i.e. for every function call in called functions body.
     The gathered information is aggregated via a logical disjunction on a per-variable level.
@@ -899,7 +900,7 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
 
     called_function_args_raw_information = []
     for var in called_function_cu.args:
-        called_function_args_raw_information.append((var.name, False))
+        called_function_args_raw_information.append((var.name, False, False))
 
     for child in [c for c in potential_children if
                   __line_contained_in_region(c.start_position(), called_function_cu.start_position(),
@@ -924,10 +925,11 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                 (recursive_function_call_line, parameter_names_raw_information, recursively_visited,
                  function_raw_information_cache) = ret_val
                 # perform or-conjunction of RAW information parent <> child
-                for child_var_name, child_raw_info in parameter_names_raw_information:
-                    for idx, (var_name, raw_info) in enumerate(called_function_args_raw_information):
+                for child_var_name, child_raw_info, child_is_pessimistic in parameter_names_raw_information:
+                    for idx, (var_name, raw_info, is_pessimistic) in enumerate(called_function_args_raw_information):
                         if var_name == child_var_name:
-                            called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info)
+                            called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info,
+                                                                         child_is_pessimistic or is_pessimistic)
 
     # if parameter alias entry for parent function exists:
     if called_function_cu.name in function_parameter_alias_dict:
@@ -962,12 +964,13 @@ def __get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, 
                     break
             if var_name_is_modified:
                 # update RAW information
-                for idx, (old_var_name, raw_info) in enumerate(called_function_args_raw_information):
+                for idx, (old_var_name, raw_info, _) in enumerate(called_function_args_raw_information):
                     if old_var_name == var_name:
                         if not raw_info:
-                            called_function_args_raw_information[idx] = (old_var_name, True)
+                            called_function_args_raw_information[idx] = (old_var_name, True, True)
+                            # second True denotes the pessimistic nature of a potential created dependency
     # remove names from called_function_args_raw_information
-    called_function_args_raw_information_bools = [e[1] for e in called_function_args_raw_information]
+    called_function_args_raw_information_bools = [(e[1], e[2]) for e in called_function_args_raw_information]
     return (
         recursively_visited, called_function_cu.name, called_function_args_raw_information_bools,
         function_raw_information_cache)
@@ -1009,9 +1012,9 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
         else:
             result_suggestions.append(s)
 
-    out_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
-    in_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
-    function_raw_information_cache: Dict[str, List[bool]] = dict()
+    out_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]] = dict()
+    in_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]] = dict()
+    function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]] = dict()
     # 1. iterate over task suggestions
     for ts_1 in task_suggestions:
         # 2. get parent function (pf) and called function (cf)
@@ -1119,7 +1122,11 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             continue
                         for param_entry_2 in parameter_names_2_raw_information:
                             if param_entry_1[0] == param_entry_2[0]:
-                                intersection.append(param_entry_1)
+                                # filter out potential numbers as variable names
+                                try:
+                                    int(param_entry_1[0])
+                                except ValueError:
+                                    intersection.append(param_entry_1)
                     intersection = list(set(intersection))
                     # 6.2 get task suggestion corresponding to scf
                     for ts_2 in task_suggestions:
@@ -1129,22 +1136,28 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for intersection_var in [e[0] for e in intersection if e[1]]:
+                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1]]:
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
-                            out_dep_updates[ts_1].append(intersection_var)
+                            out_dep_updates[ts_1].append((intersection_var, is_pessimistic))
                             if ts_2 not in in_dep_updates:
                                 in_dep_updates[ts_2] = []
-                            in_dep_updates[ts_2].append(intersection_var)
+                            in_dep_updates[ts_2].append((intersection_var, is_pessimistic))
                     outer_breaker = True
     # perform updates of in and out dependencies
     for ts in task_suggestions:
         if ts in out_dep_updates:
-            for out_dep_var in out_dep_updates[ts]:
+            for (out_dep_var, is_pessimistic) in out_dep_updates[ts]:
+                # TODO issue warning to user: Pessimistic Dependence reported, if not already contained out_dep
+                if out_dep_var not in ts.out_dep and is_pessimistic:
+                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: OUT  VarName:", out_dep_var)
                 ts.out_dep.append(out_dep_var)
             ts.out_dep = list(set(ts.out_dep))
         if ts in in_dep_updates:
-            for in_dep_var in in_dep_updates[ts]:
+            for (in_dep_var, is_pessimistic) in in_dep_updates[ts]:
+                # TODO issue warning to user: Pessimistic Dependence reported, if not already contained in_dep
+                if in_dep_var not in ts.in_dep and is_pessimistic:
+                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: IN  VarName:", out_dep_var)
                 ts.in_dep.append(in_dep_var)
             ts.in_dep = list(set(ts.in_dep))
         result_suggestions.append(ts)
