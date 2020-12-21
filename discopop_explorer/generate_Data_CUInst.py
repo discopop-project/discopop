@@ -24,6 +24,52 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
     for recursive_function_call in node.recursive_function_calls:
         if recursive_function_call is None:
             continue
+        # TODO check if recursive function call occurs twice inside loop?
+        # check if recursive function call occurs inside loop (check if line contained in lines of any loop cu)
+        contained_in_loop: bool = False
+        for tmp_cu in pet.all_nodes(NodeType.LOOP):
+            if __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""), tmp_cu.start_position(), tmp_cu.end_position()):
+                contained_in_loop = True
+        # check if recursive function call is called multiple times
+        called_multiple_times = False
+        for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+            # 1. get parent function of recursive function call
+            if not __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",",""), tmp_func_cu.start_position(), tmp_func_cu.end_position()):
+                continue
+            # recursive function call contained in tmp_func_cu
+            # 2. check if multiple calls to recursive function exist in tmp_func_cus body by listing cu nodes in function body.
+            # get cu's inside function by traversing child edges
+            queue: List[CUNode] = [tmp_func_cu]
+            contained_cus: List[CUNode] = []
+            while len(queue) > 0:
+                cur_cu = queue.pop(0)
+                if __line_contained_in_region(cur_cu.start_position(), tmp_func_cu.start_position(), tmp_func_cu.end_position()) and \
+                        __line_contained_in_region(cur_cu.end_position(), tmp_func_cu.start_position(),
+                                                   tmp_func_cu.end_position()):
+                    # cur_cu contained in tmp_func_cu's scope
+                    if cur_cu not in contained_cus:
+                        contained_cus.append(cur_cu)
+                    # append cur_cu children to queue
+                    for child_edge in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+                        child_cu = pet.node_at(child_edge[1])
+                        if child_cu not in queue:
+                            if child_cu not in contained_cus:
+                                queue.append(child_cu)
+            # get recursive function calls from contained_cus
+            rec_calls: List[str] = []
+            for tmp_cu in contained_cus:
+                rec_calls += tmp_cu.recursive_function_calls
+            # remove None and prune rec_calls to called function names only
+            rec_calls = [e for e in rec_calls if e is not None]
+            rec_calls = [e.split(" ")[0] for e in rec_calls]
+            # check if recursive_function_call occurs at least twice
+            if rec_calls.count(recursive_function_call.split(" ")[0]) > 1:
+                called_multiple_times = True
+
+        # check if recursive function is called inside loop or multiple times
+        if not (contained_in_loop or called_multiple_times):
+            continue
+
         output_file.write(recursive_function_call + " ")
 
         children_ids: List[str] = []
@@ -102,3 +148,23 @@ def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_dir)
+
+
+def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -> bool:
+    """check if test_line is contained in [startLine, endLine].
+    Return True if so. False else.
+    :param test_line: <fileID>:<line>
+    :param start_line: <fileID>:<line>
+    :param end_line: <fileID>:<line>
+    :return: bool
+    """
+    test_line_file_id = int(test_line.split(":")[0])
+    test_line_line = int(test_line.split(":")[1])
+    start_line_file_id = int(start_line.split(":")[0])
+    start_line_line = int(start_line.split(":")[1])
+    end_line_file_id = int(end_line.split(":")[0])
+    end_line_line = int(end_line.split(":")[1])
+    if test_line_file_id == start_line_file_id == end_line_file_id and \
+            start_line_line <= test_line_line <= end_line_line:
+        return True
+    return False
