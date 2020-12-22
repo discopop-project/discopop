@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import os
 from typing import List, cast
 
@@ -24,26 +32,29 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
     for recursive_function_call in node.recursive_function_calls:
         if recursive_function_call is None:
             continue
-        # TODO check if recursive function call occurs twice inside loop?
         # check if recursive function call occurs inside loop (check if line contained in lines of any loop cu)
         contained_in_loop: bool = False
         for tmp_cu in pet.all_nodes(NodeType.LOOP):
-            if __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""), tmp_cu.start_position(), tmp_cu.end_position()):
+            if __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""),
+                                          tmp_cu.start_position(), tmp_cu.end_position()):
                 contained_in_loop = True
         # check if recursive function call is called multiple times
         called_multiple_times = False
         for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
             # 1. get parent function of recursive function call
-            if not __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",",""), tmp_func_cu.start_position(), tmp_func_cu.end_position()):
+            if not __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""),
+                                              tmp_func_cu.start_position(), tmp_func_cu.end_position()):
                 continue
             # recursive function call contained in tmp_func_cu
-            # 2. check if multiple calls to recursive function exist in tmp_func_cus body by listing cu nodes in function body.
+            # 2. check if multiple calls to recursive function exist in tmp_func_cus body
+            # by listing cu nodes in function body.
             # get cu's inside function by traversing child edges
             queue: List[CUNode] = [tmp_func_cu]
             contained_cus: List[CUNode] = []
             while len(queue) > 0:
                 cur_cu = queue.pop(0)
-                if __line_contained_in_region(cur_cu.start_position(), tmp_func_cu.start_position(), tmp_func_cu.end_position()) and \
+                if __line_contained_in_region(cur_cu.start_position(), tmp_func_cu.start_position(),
+                                              tmp_func_cu.end_position()) and \
                         __line_contained_in_region(cur_cu.end_position(), tmp_func_cu.start_position(),
                                                    tmp_func_cu.end_position()):
                     # cur_cu contained in tmp_func_cu's scope
@@ -122,7 +133,9 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
 
 def cu_instantiation_input_cpp(pet: PETGraphX, output_dir: str):
     """translation of CUInstantiationInput.cpp, previously contained in discopop-analyzer/analyzer/src.
-    TODO documentation"""
+    Wrapper to gather information on recursive function calls for CU Instantiation.
+    :param pet: PET Graph
+    :param output_dir: Path to storage location of generated Data_CUInst.txt"""
     output_dir = output_dir if output_dir.endswith("/") else output_dir + "/"
     data_cu_inst_file = open(output_dir + "Data_CUInst.txt", "w+") if output_dir is not None else open(
         "Data_CUInst.txt", "w+")
