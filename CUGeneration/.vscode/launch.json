@@ -8,12 +8,12 @@
                "name": "(gdb) Launch",
                "type": "cppdbg",
                "request": "launch",
-               "program": "enter program name, for example ${workspaceFolder}/a.out",
-               "args": [],
+               "program": "/media/backuphd/norouzi/discopop/discopop-profiler/llvm-project/build/bin/opt",
                "stopAtEntry": false,
                "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
                "environment": [],
                "externalConsole": false,
+               // "console": "integratedTerminal",
                "MIMode": "gdb",
                "setupCommands": [
                     {
@@ -23,7 +23,9 @@
                     }
                ],
                "args": [
-                    "--path=/media/backuphd/norouzi/benchmarks/lulesh/LULESH_dp/build1/"
+                    "-load=/media/backuphd/norouzi/discopop/discopop-profiler/discopop/build/libi/LLVMCUGeneration.so",
+                    "-CUGeneration",
+                    "< /media/backuphd/norouzi/benchmarks/lulesh/LULESH_dp/lulesh.bc"
                ]
           }
      ]

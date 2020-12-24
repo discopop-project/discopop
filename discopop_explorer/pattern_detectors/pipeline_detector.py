@@ -136,7 +136,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     """
     result = []
     for node in pet.all_nodes(NodeType.LOOP):
-        if node.do_all == False:
+        if node.do_all == False and node.reduction == False:
             node.pipeline = __detect_pipeline(pet, node)
             if node.pipeline > __pipeline_threshold:
                 result.append(PipelineInfo(pet, node))
