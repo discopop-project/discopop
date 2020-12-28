@@ -10,7 +10,8 @@
 
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
+[--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] [--generate-data-cu-inst <outputdir>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -21,6 +22,12 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
+    --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
+    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
+                                if non-standard path should be used.
+    --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
+                                            Stops the regular execution of the discopop_explorer.
+                                            Requires --cu-xml, --dep-file, --loop-counter, --reduction.
     -h --help                   Show this screen
 """
 
@@ -44,6 +51,9 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
+    '--cu-inst-res': Use(str),
+    '--llvm-cxxfilt-path': Use(str),
+    '--generate-data-cu-inst': Use(str),
 })
 
 
@@ -72,6 +82,7 @@ def main():
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
     file_mapping = get_path(path, 'FileMapping.txt')
+    cu_inst_result_file = get_path(path, arguments['--cu-inst-res'])
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
         if not os.path.isfile(file):
@@ -80,9 +91,17 @@ def main():
 
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
+    if arguments['--generate-data-cu-inst'] != 'None':
+        # start generation of Data_CUInst and stop execution afterwards
+        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+        generate_data_cuinst_wrapper(cu_xml, dep_file, loop_counter_file, reduction_file,
+                                     arguments['--generate-data-cu-inst'])
+        sys.exit(0)
+
     start = time.time()
 
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins)
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
+              cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'])
 
     end = time.time()
 
