@@ -41,7 +41,7 @@ class ReductionInfo(PatternInfo):
                f'private: {[v.name for v in self.private]}\n' \
                f'shared: {[v.name for v in self.shared]}\n' \
                f'first private: {[v.name for v in self.first_private]}\n' \
-               f'reduction: {[v.name for v in self.reduction]}\n' \
+               f'reduction: {[v.operation + ":" + v.name for v in self.reduction]}\n' \
                f'last private: {[v.name for v in self.last_private]}'
 
 

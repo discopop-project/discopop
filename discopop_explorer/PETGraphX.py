@@ -79,63 +79,6 @@ class Dependency:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
-# class LOOPNode:
-#     id: str
-#     file_id: int
-#     node_id: int
-#     source_file: int
-#     start_line: int
-#     end_line: int
-#     type: NodeType
-#     name: str
-#     instructions_count: int = -1
-#     loop_iterations: int = -1
-#     reduction: bool = False
-#     do_all: bool = False
-#     defined_vars: List[Variable] = []
-#     undefined_vars: List[Variable] = []
-#     calls_functions: List[node_id] = []
-
-#     def __init__(self, node_id: str):
-#         self.id = node_id
-#         self.file_id, self.node_id = parse_id(node_id)
-
-#     @classmethod
-#     def from_kwargs(cls, node_id: str, **kwargs):
-#         node = cls(node_id)
-#         for key, value in kwargs.items():
-#             setattr(node, key, value)
-#         return node
-
-#     def start_position(self) -> str:
-#         """Start position file_id:line
-#         e.g. 23:45
-
-#         :return:
-#         """
-#         return f'{self.source_file}:{self.start_line}'
-
-#     def end_position(self) -> str:
-#         """End position file_id:line
-#         e.g. 23:45
-
-#         :return:
-#         """
-#         return f'{self.source_file}:{self.end_line}'
-
-#     def __str__(self):
-#         return self.id
-
-#     def __eq__(self, other):
-#         if isinstance(other, CUNode):
-#             return other.id == self.id
-#         else:
-#             return False
-
-#     def __hash__(self):
-#         return hash(id)
-
-
 class CUNode:
     id: str
     file_id: int
@@ -250,16 +193,16 @@ class PETGraphX(object):
     def from_parsed_input(cls, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                           loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
-        t1 = time.time()
+        # t1 = time.time()
         g = nx.MultiDiGraph()
-        t2 = time.time()
-        print(f"MultiDiGraph: {t2-t1}")
+        # t2 = time.time()
+        # print(f"MultiDiGraph: {t2-t1}")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
-        t3 = time.time()
-        print(f"for id, node in cu_dict.items(): {t3-t2}")
+        # t3 = time.time()
+        # print(f"for id, node in cu_dict.items(): {t3-t2}")
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -281,14 +224,14 @@ class PETGraphX(object):
                     g.add_edge(source, nodeCalled,
                                data=Dependency(EdgeType.CALLSNODE))
 
-        t4 = time.time()
-        print(f"for node_id, node in cu_dict.items(): {t4-t3}")
+        # t4 = time.time()
+        # print(f"for node_id, node in cu_dict.items(): {t4-t3}")
 
         for _, node in g.nodes(data='data'):
             if node.type == NodeType.LOOP:
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
-        t5 = time.time()
-        print(f"for _, node in g.nodes(data='data'): {t5-t4}")
+        # t5 = time.time()
+        # print(f"for _, node in g.nodes(data='data'): {t5-t4}")
 
         # calculate position before dependencies affect them
         try:
@@ -300,8 +243,8 @@ class PETGraphX(object):
                 # pos = nx.kamada_kawai_layout(g)  # maybe tooo slow
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        t6 = time.time()
-        print(f"try: {t6-t5}")
+        # t6 = time.time()
+        # print(f"try: {t6-t5}")
         for dep in dependencies_list:
             if dep.type == 'INIT':
                 continue
@@ -315,8 +258,8 @@ class PETGraphX(object):
                     elif sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id,
                                    data=parse_dependency(dep))
-        t7 = time.time()
-        print(f"for dep in dependencies_list: {t7-t6}")
+        # t7 = time.time()
+        # print(f"for dep in dependencies_list: {t7-t6}")
         return cls(g, reduction_vars, pos)
 
     def show(self):
@@ -480,7 +423,6 @@ class PETGraphX(object):
 
         loop_node_ids = [n.node_id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
-        # loop_nodes = self.subtree_of_type(root_loop, NodeType.CU)
         children = self.subtree_of_type(node, NodeType.CU)
 
         for v in self.subtree_of_type(root_loop, NodeType.LOOP):
@@ -488,41 +430,14 @@ class PETGraphX(object):
 
         undefinedVarsInLoop = [var.name for var in self.get_undefined_variables_inside_loop(
             root_loop)]
-        # undefinedVarsInLoop = self.get_undefined_variables_inside_loop(
-        #     root_loop)
-        # t = self.__get_called_functions(root_loop, set())
-        # t = self.direct_children_of_type(root_loop, NodeType.FUNC)
-        # for i in definedVarsInLoop:
-        #     print(f"+++{i.name}")
-
-        # for i in range(len(loops_start_lines)):
-        #     print(
-        #         f"{root_loop.start_line} {loops_start_lines[i]} {loops_end_lines[i]}")
-
-        # for v in children:
-        #     t = self.out_edges(v.id, EdgeType.DATA)
-        #     print(f"{t}")
-        # for s, t, d in [(s, t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
 
         for v in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
-                # print(f"**{root_loop.start_line} {d.var_name}")
-
-                # if(d.var_name in (var.name for var in undefinedVarsInLoop)):
-                # print(f"++{root_loop.start_line} {d.var_name}")
-
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
                 # TODO:
-                # if(d.dtype == DepType.INIT):
-                # if root_loop.start_line == 1010:
-                # print(f"****{root_loop.start_line} {d.var_name}")
                 if(self.is_first_written_in_loop(d, root_loop)):
-                    # if root_loop.start_line == 1010:
-                    # print(f"--{root_loop.start_line} {d.var_name}")
-                    # if root_loop.start_line == 1010:
-                    #     print(f"++{root_loop.start_line} {d.var_name}")
                     continue
                 if t not in loop_node_ids:
                     continue
@@ -588,30 +503,21 @@ class PETGraphX(object):
         :return: true if first written
         """
         result = False
-        # loops_start_lines = [v.start_position()
-        #  for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
         children = self.subtree_of_type(root_loop, NodeType.CU)
 
         for v in children:
-            # print(f"------- {v.start_line}")
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
                          if d.dtype == DepType.WAR or d.dtype == DepType.WAW]:
-                # print(f"**{root_loop.start_line} {d.var_name}")
                 if d.var_name is None:
                     return False
                 assert d.var_name is not None
                 if dep.var_name == d.var_name:
-                    # print(f"=={root_loop.start_line} {d.var_name}")
                     if dep.source == d.sink:
-                        # if root_loop.start_line == 1010:
-                        #     print(f"{dep.source} {dep.sink} {d.source} {d.sink}")
-                        #     print(f"++{root_loop.start_line} {d.var_name}")
                         result = True
                         break
 
                 # None may occur because __get_variables doesn't check for actual elements
         return result
-        # is_read_only = is_readonly_inside_loop_body(dep, root_loop)
 
     def is_loop_index(self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]) -> bool:
         """Checks, whether the variable is a loop index.
@@ -737,3 +643,15 @@ class PETGraphX(object):
                 path.insert(0, source)
                 return path
         return []
+
+    def get_reduction_sign(self, line: str, name: str) -> str:
+        """Returns reduction operation for variable
+
+        :param line: loop line number
+        :param name: variable name
+        :return: reduction operation
+        """
+        for rv in self.reduction_vars:
+            if rv['loop_line'] == line and rv['name'] == name:
+                return rv['operation']
+        return ""

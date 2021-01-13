@@ -384,8 +384,8 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
     last_private = []
     shared = []
     reduction = []
-    start1 = time.time()
-    print(f"{loop.start_line}")
+    # start1 = time.time()
+    # print(f"{loop.start_line}")
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
     sub = pet.subtree_of_type(loop, NodeType.CU)
@@ -402,29 +402,19 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     vars = pet.get_undefined_variables_inside_loop(loop)
-    # vars = __get_variables(sub)
-    # if loop.start_line == 1010:
-    # print(f"{loop.start_line}")
-    # for i in sub:
-    #     print(f"SUB: {i.start_line} {i.end_line}")
-    # for i in lst:
-    #     print(f"LST: {i.start_line} {i.end_line}")
-    # for i in rst:
-    #     print(f"RST: {i.start_line} {i.end_line}")
-    start = time.time()
-    print(f"-- {loop.start_line} {start - start1}")
+    # start = time.time()
+    # print(f"-- {loop.start_line} {start - start1}")
     for var in vars:
-        print(f"Variable: {var.name}")
+        # print(f"Variable: {var.name}")
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-            # print(f"++++++++++++++++ {loop.start_line} {var.name}")
+            var.operation = pet.get_reduction_sign(
+                loop.start_position(), var.name)
             reduction.append(var)
             # TODO grouping
         elif (is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
               and is_scalar_val(var)):
-            # if loop.start_line == 1010:
-            # print(f"++++++++++++++++ {loop.start_line} {var.name}")
             if is_readonly(var.name, war, waw, rev_raw):
                 if is_global(var.name, sub):
                     shared.append(var)
@@ -435,13 +425,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     last_private.append(var)
                 else:
                     shared.append(var)
-            # else:
-            #     if is_scalar_val(var):
-            #         # if loop.start_line == 1010:
-            #         #     print(f"////////// {var.name}")
-            #         private.append(var)
-            #     else:
-            #         shared.append(var)
+
         elif is_first_written(var.name, raw, war, sub):
             # TODO simplify
             if is_read_in_subtree(var.name, rev_raw, rst):
@@ -451,13 +435,11 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     shared.append(var)
             else:
                 if is_scalar_val(var):
-                    # if loop.start_line == 1010:
-                    #     print(f"////////// {var.name}")
                     private.append(var)
                 else:
                     shared.append(var)
-    end = time.time()
-    print(f"end {loop.start_line}: {end - start}")
+    # end = time.time()
+    # print(f"end {loop.start_line}: {end - start}")
     return first_private, private, last_private, shared, reduction
 
 

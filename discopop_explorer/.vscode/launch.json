@@ -13,7 +13,7 @@
                "console": "integratedTerminal",
                "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
                "args": [
-                    "--path=/media/backuphd/norouzi/benchmarks/test6/data/input/test/MINI_DATASET/"
+                    "--path=/media/backuphd/norouzi/benchmarks/test27/discopop/"
                ]
           }
      ]

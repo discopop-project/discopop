@@ -41,6 +41,8 @@ class PatternInfoSerializer(JSONEncoder):
             return list(iterable)
 
         if isinstance(o, Variable):
+            if o.operation is not None and o.operation != '':
+                return f'{o.operation}:{o.name}'
             return o.name
         if isinstance(o, PatternInfo):
             return filter_members(o.__dict__)

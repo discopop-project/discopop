@@ -58,7 +58,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
-    t1 = time.time()
+    # t1 = time.time()
     arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:
@@ -74,7 +74,7 @@ def main():
     reduction_file = get_path(path, arguments['--reduction'])
     file_mapping = get_path(path, 'FileMapping.txt')
 
-    for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
+    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
             sys.exit()
@@ -83,8 +83,8 @@ def main():
     ] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
     start = time.time()
-    print(f"init time: {start-t1}")
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins)
+    # print(f"init time: {start-t1}")
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping, plugins)
 
     end = time.time()
 
