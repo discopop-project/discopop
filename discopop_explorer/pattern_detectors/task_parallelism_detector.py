@@ -1137,7 +1137,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1]]:
+                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1][0]]:
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append((intersection_var, is_pessimistic))
