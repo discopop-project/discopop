@@ -825,7 +825,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
         for idx in range(0, len(parameter_names)):
             tmp = (
                 parameter_names[idx],
-                (raw_reported_for_param_positions[idx] or res_called_function_raw_information[idx][0]),
+                (raw_reported_for_param_positions[idx][0] or res_called_function_raw_information[idx][0]),
                 res_called_function_raw_information[idx][1])
             if tmp[0] is None:
                 continue
@@ -841,7 +841,7 @@ def __get_function_call_parameter_rw_information(pet: PETGraphX, call_position: 
     else:
         # ignore recursion results
         for idx in range(0, len(parameter_names)):
-            tmp = (parameter_names[idx], raw_reported_for_param_positions[idx], False)
+            tmp = (parameter_names[idx], raw_reported_for_param_positions[idx][0], False)
             if tmp[0] is None:
                 continue
             tmp_not_none = cast(Tuple[str, bool, bool], tmp)
@@ -1137,7 +1137,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1][0]]:
+                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1]]:
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append((intersection_var, is_pessimistic))
@@ -1158,7 +1158,7 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
             for (in_dep_var, is_pessimistic) in in_dep_updates[ts]:
                 # TODO issue warning to user: Pessimistic Dependence reported, if not already contained in_dep
                 if in_dep_var not in ts.in_dep and is_pessimistic:
-                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: IN  VarName:", out_dep_var)
+                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: IN  VarName:", in_dep_var)
                 ts.in_dep.append(in_dep_var)
             ts.in_dep = list(set(ts.in_dep))
         result_suggestions.append(ts)
