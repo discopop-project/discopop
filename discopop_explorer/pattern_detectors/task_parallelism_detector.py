@@ -2262,6 +2262,23 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         # get function containing the task cu
         parent_function_cu, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
 
+        # define helper function
+        def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
+            if root in visited:
+                return False
+            visited.append(root)
+            if root == target:
+                return True
+            if root == breaker_cu:
+                return False
+            recursion_result = False
+            # start recursion for each incoming edge
+            for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
+                recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
+                    pet.node_at(tmp_e[0]),
+                    target, breaker_cu, visited)
+            return recursion_result
+
         # filter firstprivate
         to_be_removed = []
         for var in suggestion.first_private:
@@ -2278,23 +2295,6 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                     continue  # Todo var Remove instead?
                 var_def_cu = cast(CUNode, optional_var_def_cu)
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode,
-                                                    visited: List[CUNode]):
-                    if root in visited:
-                        return False
-                    visited.append(root)
-                    if root == target:
-                        return True
-                    if root == breaker_cu:
-                        return False
-                    recursion_result = False
-                    # start recursion for each incoming edge
-                    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
-                        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
-                            pet.node_at(tmp_e[0]),
-                            target, breaker_cu, visited)
-                    return recursion_result
-
                 if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     # remove var as it may not be known
                     to_be_removed.append(var)
@@ -2327,23 +2327,6 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                 var_def_cu = cast(CUNode, p_optional_var_def_cu)
 
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode,
-                                                    visited: List[CUNode]):
-                    if root in visited:
-                        return False
-                    visited.append(root)
-                    if root == target:
-                        return True
-                    if root == breaker_cu:
-                        return False
-                    recursion_result = False
-                    # start recursion for each incoming edge
-                    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
-                        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
-                            pet.node_at(tmp_e[0]),
-                            target, breaker_cu, visited)
-                    return recursion_result
-
                 if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     # remove var as it may not be known
                     to_be_removed.append(var)
@@ -2376,22 +2359,6 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                 var_def_cu = cast(CUNode, s_optional_var_def_cu)
 
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
-                    if root in visited:
-                        return False
-                    visited.append(root)
-                    if root == target:
-                        return True
-                    if root == breaker_cu:
-                        return False
-                    recursion_result = False
-                    # start recursion for each incoming edge
-                    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
-                        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
-                            pet.node_at(tmp_e[0]),
-                            target, breaker_cu, visited)
-                    return recursion_result
-
                 if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     # remove var as it may not be known
                     to_be_removed.append(var)
