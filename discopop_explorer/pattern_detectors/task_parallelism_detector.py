@@ -2270,18 +2270,27 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         print("### FIRSTPRIVATE ###")
         for var in suggestion.first_private:
             for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    print("\tGlobal: ", var)
+                    # accept global vars
+                    continue
                 # get CU which contains var_def_line
                 optional_var_def_cu: Optional[CUNode] = None
-                for e in pet.out_edges(parent_function_cu.id, EdgeType.CHILD):
-                    child_cu = pet.node_at(e[1])
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
                     if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
                         optional_var_def_cu = child_cu
                 if optional_var_def_cu is None:
+                    print("\tovdc None: ", var)
+                    print("\tvar_def_line: ", var_def_line)
                     continue  # Todo var Remove instead?
                 var_def_cu = cast(CUNode, optional_var_def_cu)
                 print("\tVar def cu: ", var_def_cu.id)
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode):
+                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode,
+                                                    visited: List[CUNode]):
+                    if root in visited:
+                        return False
+                    visited.append(root)
                     if root == target:
                         return True
                     if root == breaker_cu:
@@ -2289,11 +2298,12 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                     recursion_result = False
                     # start recursion for each incoming edge
                     for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
-                        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(pet.node_at(tmp_e[0]),
-                                                                                               target, breaker_cu)
+                        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
+                            pet.node_at(tmp_e[0]),
+                            target, breaker_cu, visited)
                     return recursion_result
 
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu):
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     print("\tCHECK 1 FAILED FOR: ", var)
                     # remove var as it may not be known
                     to_be_removed.append(var)
@@ -2316,19 +2326,28 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         print("### PRIVATE ###")
         for var in suggestion.private:
             for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    print("\tGlobal: ", var)
+                    # accept global vars
+                    continue
                 # get CU which contains var_def_line
                 p_optional_var_def_cu: Optional[CUNode] = None
-                for e in pet.out_edges(parent_function_cu.id, EdgeType.CHILD):
-                    child_cu = pet.node_at(e[1])
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
                     if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
                         p_optional_var_def_cu = child_cu
                 if p_optional_var_def_cu is None:
+                    print("\tovdc None: ", var)
+                    print("\tvar_def_line: ", var_def_line)
                     continue  # Todo var Remove instead?
                 var_def_cu = cast(CUNode, p_optional_var_def_cu)
                 print("\tVar def cu: ", var_def_cu.id)
 
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode):
+                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode,
+                                                    visited: List[CUNode]):
+                    if root in visited:
+                        return False
+                    visited.append(root)
                     if root == target:
                         return True
                     if root == breaker_cu:
@@ -2338,10 +2357,10 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                     for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
                         recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
                             pet.node_at(tmp_e[0]),
-                            target, breaker_cu)
+                            target, breaker_cu, visited)
                     return recursion_result
 
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu):
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     print("\tCHECK 1 FAILED FOR: ", var)
                     # remove var as it may not be known
                     to_be_removed.append(var)
@@ -2364,19 +2383,27 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         print("### SHARED ###")
         for var in suggestion.shared:
             for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    # accept global vars
+                    print("\tGlobal: ", var)
+                    continue
                 # get CU which contains var_def_line
                 s_optional_var_def_cu: Optional[CUNode] = None
-                for e in pet.out_edges(parent_function_cu.id, EdgeType.CHILD):
-                    child_cu = pet.node_at(e[1])
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
                     if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
                         s_optional_var_def_cu = child_cu
                 if s_optional_var_def_cu is None:
+                    print("\tovdc None: ", var)
+                    print("\tvar_def_line: ", var_def_line)
                     continue  # Todo var Remove instead?
                 var_def_cu = cast(CUNode, s_optional_var_def_cu)
                 print("\tVar def cu: ", var_def_cu.id)
 
                 # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode):
+                def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
+                    if root in visited:
+                        return False
+                    visited.append(root)
                     if root == target:
                         return True
                     if root == breaker_cu:
@@ -2386,10 +2413,10 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                     for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
                         recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
                             pet.node_at(tmp_e[0]),
-                            target, breaker_cu)
+                            target, breaker_cu, visited)
                     return recursion_result
 
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu):
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
                     print("\tCHECK 1 FAILED FOR: ", var)
                     # remove var as it may not be known
                     to_be_removed.append(var)
@@ -2409,6 +2436,37 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
 
     return suggestions
 
+
+def __get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]:
+    """Returns cus contained in function-body as a list.
+    :param pet: PET Graph
+    :param function_cu: target function node
+    :return: List[CUNode]"""
+    queue: List[CUNode] = [function_cu]
+    visited: List[CUNode] = []
+    result_list: List[CUNode] = []
+    while len(queue) > 0:
+        cur_cu = queue.pop(0)
+        # check if cur_cu was already visited
+        if cur_cu in visited:
+            continue
+        visited.append(cur_cu)
+        # check if cur_cu inside functions body
+        if __line_contained_in_region(cur_cu.start_position(), function_cu.start_position(),
+                                      function_cu.end_position()) and \
+                __line_contained_in_region(cur_cu.end_position(), function_cu.start_position(),
+                                       function_cu.end_position()):
+            # cur_cu contained in function body
+            if cur_cu not in result_list:
+                result_list.append(cur_cu)
+        else:
+            # cur_cu not contained in function body
+            continue
+        # append children to queue
+        for e in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+            child_cu = pet.node_at(e[1])
+            queue.append(child_cu)
+    return result_list
 
 
 def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
