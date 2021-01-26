@@ -428,22 +428,36 @@ class PETGraphX(object):
         for v in self.subtree_of_type(root_loop, NodeType.LOOP):
             loops_start_lines.append(v.start_position())
 
-        undefinedVarsInLoop = [var.name for var in self.get_undefined_variables_inside_loop(
-            root_loop)]
+        allVars = self.get_undefined_variables_inside_loop(root_loop)
+        undefinedVarsInLoop = [var.name for var in allVars]
 
         for v in children:
-            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
+            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
+                         if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
                 # TODO:
-                if(self.is_first_written_in_loop(d, root_loop)):
-                    continue
                 if t not in loop_node_ids:
                     continue
+                if(self.is_first_written_in_loop(d, root_loop)):
+                    if (self.is_scalar_val(allVars, d.var_name)):
+                        continue
                 dep_set.add(self.node_at(t))
 
         return dep_set
+
+    def is_scalar_val(self, allVars: List[Variable], var: str) -> bool:
+        """Checks if variable is a scalar value
+
+        :param var: variable
+        :return: true if scalar
+        """
+        for x in allVars:
+            if x.name == var:
+                return not (x.type.endswith('**') or x.type.startswith('ARRAY' or x.type.startswith('[')))
+            else:
+                return False
 
     def __get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
         """Gets all variables in nodes
