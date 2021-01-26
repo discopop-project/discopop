@@ -72,7 +72,7 @@ def main():
     dep_file = get_path(path, arguments['--dep-file'])
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
-    file_mapping = get_path(path, 'FileMapping.txt')
+    file_mapping = get_path(path, arguments['--fmap'])
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
@@ -84,7 +84,8 @@ def main():
 
     start = time.time()
     # print(f"init time: {start-t1}")
-    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping, plugins)
+    res = run(cu_xml, dep_file, loop_counter_file,
+              reduction_file, file_mapping, plugins)
 
     end = time.time()
 
