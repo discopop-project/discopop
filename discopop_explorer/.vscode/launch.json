@@ -11,9 +11,10 @@
                // "program": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/discopop_explorer",
                "module": "discopop_explorer",
                "console": "integratedTerminal",
-               "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
+               "cwd": "/media/backuphd/norouzi/discopop/gpu/discopop/",
                "args": [
-                    "--path=/media/backuphd/norouzi/benchmarks/test27/discopop/"
+                    "--path=/media/backuphd/norouzi/benchmarks/polybench-gpu/backup/data/input/ludcmp/MINI_DATASET/",
+                    "--fmap=/media/backuphd/norouzi/benchmarks/polybench-gpu/FileMapping.txt"
                ]
           }
      ]

@@ -421,7 +421,7 @@ class PETGraphX(object):
         loop_nodes = []
         undefinedVarsInLoop = []
 
-        loop_node_ids = [n.node_id for n in self.subtree_of_type(
+        loop_node_ids = [n.id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
         children = self.subtree_of_type(node, NodeType.CU)
 
@@ -515,7 +515,6 @@ class PETGraphX(object):
                     if dep.source == d.sink:
                         result = True
                         break
-
                 # None may occur because __get_variables doesn't check for actual elements
         return result
 
