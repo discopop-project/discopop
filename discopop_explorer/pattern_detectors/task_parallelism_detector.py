@@ -22,7 +22,7 @@ from .reduction_detector import run_detection as detect_reduction
 from ..PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
 from ..parser import parse_inputs
 from ..utils import depends, calculate_workload, \
-    total_instructions_count, classify_task_vars
+    total_instructions_count, classify_task_vars, is_loop_index2
 
 __forks = set()  # type: ignore
 __workloadThreshold = 10000
@@ -301,8 +301,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __suggest_shared_clauses_for_all_tasks_in_function_body(pet, result)
     result = __remove_duplicates(result)
     result = __correct_task_suggestions_in_loop_body(pet, result)
-    result = __filter_data_sharing_clauses_by_function(pet, result, __get_var_definition_line_dict(cu_xml))
-    result = __filter_data_sharing_clauses_by_scope(pet, result, __get_var_definition_line_dict(cu_xml))
+    result = __filter_data_sharing_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __filter_data_depend_clauses(pet, result, __get_var_definition_line_dict(cu_xml))
     result = __remove_duplicate_data_sharing_clauses(result)
     result = __sort_output(result)
@@ -2113,6 +2112,49 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     return suggestions
 
 
+def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
+                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+    """Wrapper to filter data sharing clauses according to the included steps.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :return: List[PatternInfo]"""
+    suggestions = __filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
+    return suggestions
+
+
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+    """Removes clauses for shared loop indices.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return: List[PatternInfo]"""
+    for suggestion in suggestions:
+        # only consider task suggestions
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
+        if suggestion.pragma[0] != "task":
+            continue
+        # get parent loops of suggestion
+        parent_loops_plus_last_node = __get_parent_of_type(pet, suggestion._node,
+                                                           NodeType.LOOP, EdgeType.CHILD, True)
+        parent_loops = [e[0] for e in parent_loops_plus_last_node]
+        # consider only loops which enclose the suggestion
+        parent_loops = [l for l in parent_loops if __line_contained_in_region(suggestion._node.start_position(),
+                                                                              l.start_position(),
+                                                                              l.end_position())]
+        to_be_removed = []
+        for var in suggestion.shared:
+            for parent_loop in parent_loops:
+                if is_loop_index2(pet, parent_loop, var):
+                    to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
+    return suggestions
+
+
 def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
                                   var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
@@ -2122,6 +2164,7 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
     firstprivate, private, shared
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
     :return: List[PatternInfo]
     """
     for suggestion in suggestions:
