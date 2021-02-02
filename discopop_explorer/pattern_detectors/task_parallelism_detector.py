@@ -22,7 +22,7 @@ from .reduction_detector import run_detection as detect_reduction
 from ..PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
 from ..parser import parse_inputs
 from ..utils import depends, calculate_workload, \
-    total_instructions_count, classify_task_vars
+    total_instructions_count, classify_task_vars, is_loop_index2
 
 __forks = set()  # type: ignore
 __workloadThreshold = 10000
@@ -2114,13 +2114,57 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
 
 def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                   var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
-    """Removes superfluous variables from the data sharing clauses
+    """Wrapper to filter data sharing clauses according to the included steps.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :return: List[PatternInfo]"""
+    suggestions = __filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
+    return suggestions
+
+
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+    """Removes clauses for shared loop indices.
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :return: List[PatternInfo]"""
+    for suggestion in suggestions:
+        # only consider task suggestions
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
+        if suggestion.pragma[0] != "task":
+            continue
+        # get parent loops of suggestion
+        parent_loops_plus_last_node = __get_parent_of_type(pet, suggestion._node,
+                                                           NodeType.LOOP, EdgeType.CHILD, True)
+        parent_loops = [e[0] for e in parent_loops_plus_last_node]
+        # consider only loops which enclose the suggestion
+        parent_loops = [l for l in parent_loops if __line_contained_in_region(suggestion._node.start_position(),
+                                                                              l.start_position(),
+                                                                              l.end_position())]
+        to_be_removed = []
+        for var in suggestion.shared:
+            for parent_loop in parent_loops:
+                if is_loop_index2(pet, parent_loop, var):
+                    to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
+    return suggestions
+
+
+def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
+                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+    """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
     Removes entries if Variable occurs in different classes. Removes in following order:
     firstprivate, private, shared
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
     :return: List[PatternInfo]
     """
     for suggestion in suggestions:
@@ -2231,6 +2275,181 @@ def __filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo]
         suggestion.private = [var for var in suggestion.private if var not in remove_from_private]
         suggestion.first_private = [var for var in suggestion.first_private if var not in remove_from_first_private]
     return suggestions
+
+
+def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
+                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+    """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
+    suggestion.
+    Idea (per shared variable / suggestion):
+    1.  Validate based on control flow:
+        check if reverse path through successor graph from Task Suggestion CU to parent function CU exists,
+        which doesn't cross the CU containing variable definition line (i.e. definition and task suggestion in separate
+        branches of control flow graph).
+    2.  Validate based on Scoping:
+        If var-def has an incoming child-edge from X,
+        check if task suggestions CU is reachable from X by traversing the child graph (i.e. TS CU is inside or
+        below scope of X, thus var might be known).
+    :param pet: PET graph
+    :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :return: List[PatternInfo]
+    """
+    for suggestion in suggestions:
+        # only consider task suggestions
+        if type(suggestion) != TaskParallelismInfo:
+            continue
+        suggestion = cast(TaskParallelismInfo, suggestion)
+        if suggestion.pragma[0] != "task":
+            continue
+        # get function containing the task cu
+        parent_function_cu, last_node = __get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+
+        # define helper function
+        def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
+            if root in visited:
+                return False
+            visited.append(root)
+            if root == target:
+                return True
+            if root == breaker_cu:
+                return False
+            recursion_result = False
+            # start recursion for each incoming edge
+            for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
+                recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
+                    pet.node_at(tmp_e[0]),
+                    target, breaker_cu, visited)
+            return recursion_result
+
+        # filter firstprivate
+        to_be_removed = []
+        for var in suggestion.first_private:
+            for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    # accept global vars
+                    continue
+                # get CU which contains var_def_line
+                optional_var_def_cu: Optional[CUNode] = None
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
+                    if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
+                        optional_var_def_cu = child_cu
+                if optional_var_def_cu is None:
+                    continue  # Todo var Remove instead?
+                var_def_cu = cast(CUNode, optional_var_def_cu)
+                # 1. check control flow (reverse BFS from suggestion._node to parent_function
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
+                    # remove var as it may not be known
+                    to_be_removed.append(var)
+                    continue
+
+                # 2. check if task suggestion is child of same nodes as var_def_cu
+                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
+                    parent_cu = pet.node_at(in_child_edge[0])
+                    # check if task suggestion cu is reachable from parent via child edges
+                    if not __check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
+                        to_be_removed.append(var)
+
+            to_be_removed = list(set(to_be_removed))
+            suggestion.first_private = [v for v in suggestion.first_private if not v in to_be_removed]
+
+        # filter private
+        to_be_removed = []
+        for var in suggestion.private:
+            for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    # accept global vars
+                    continue
+                # get CU which contains var_def_line
+                p_optional_var_def_cu: Optional[CUNode] = None
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
+                    if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
+                        p_optional_var_def_cu = child_cu
+                if p_optional_var_def_cu is None:
+                    continue  # Todo var Remove instead?
+                var_def_cu = cast(CUNode, p_optional_var_def_cu)
+
+                # 1. check control flow (reverse BFS from suggestion._node to parent_function
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
+                    # remove var as it may not be known
+                    to_be_removed.append(var)
+                    continue
+
+                # 2. check if task suggestion is child of same nodes as var_def_cu
+                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
+                    parent_cu = pet.node_at(in_child_edge[0])
+                    # check if task suggestion cu is reachable from parent via child edges
+                    if not __check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
+                        to_be_removed.append(var)
+
+            to_be_removed = list(set(to_be_removed))
+            suggestion.private = [v for v in suggestion.private if not v in to_be_removed]
+
+        # filter shared
+        to_be_removed = []
+        for var in suggestion.shared:
+            for var_def_line in var_def_line_dict[var]:
+                if var_def_line == "GlobalVar":
+                    # accept global vars
+                    continue
+                # get CU which contains var_def_line
+                s_optional_var_def_cu: Optional[CUNode] = None
+                for child_cu in __get_cus_inside_function(pet, parent_function_cu):
+                    if __line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
+                        s_optional_var_def_cu = child_cu
+                if s_optional_var_def_cu is None:
+                    continue  # Todo var Remove instead?
+                var_def_cu = cast(CUNode, s_optional_var_def_cu)
+
+                # 1. check control flow (reverse BFS from suggestion._node to parent_function
+                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
+                    # remove var as it may not be known
+                    to_be_removed.append(var)
+                    continue
+
+                # 2. check if task suggestion is child of same nodes as var_def_cu
+                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
+                    parent_cu = pet.node_at(in_child_edge[0])
+                    # check if task suggestion cu is reachable from parent via child edges
+                    if not __check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
+                        to_be_removed.append(var)
+
+            to_be_removed = list(set(to_be_removed))
+            suggestion.shared = [v for v in suggestion.shared if not v in to_be_removed]
+
+    return suggestions
+
+
+def __get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]:
+    """Returns cus contained in function-body as a list.
+    :param pet: PET Graph
+    :param function_cu: target function node
+    :return: List[CUNode]"""
+    queue: List[CUNode] = [function_cu]
+    visited: List[CUNode] = []
+    result_list: List[CUNode] = []
+    while len(queue) > 0:
+        cur_cu = queue.pop(0)
+        # check if cur_cu was already visited
+        if cur_cu in visited:
+            continue
+        visited.append(cur_cu)
+        # check if cur_cu inside functions body
+        if __line_contained_in_region(cur_cu.start_position(), function_cu.start_position(),
+                                      function_cu.end_position()) and \
+                __line_contained_in_region(cur_cu.end_position(), function_cu.start_position(),
+                                       function_cu.end_position()):
+            # cur_cu contained in function body
+            if cur_cu not in result_list:
+                result_list.append(cur_cu)
+        else:
+            # cur_cu not contained in function body
+            continue
+        # append children to queue
+        for e in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+            child_cu = pet.node_at(e[1])
+            queue.append(child_cu)
+    return result_list
 
 
 def __suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
@@ -2562,7 +2781,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                         contained_in.type == NodeType.FUNC:
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
-                        classify_task_vars(pet, contained_in, "", [], [])
+                        classify_task_vars(pet, contained_in, "", [], [], used_in_task_parallelism_detection=True)
                     current_suggestions = TaskParallelismInfo(vx, ["task"],
                                                               pragma_line,
                                                               [v.name for v in fpriv],
