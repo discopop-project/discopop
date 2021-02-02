@@ -522,6 +522,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     reduction: List[str] = []
 
     left_sub_tree = pet.get_left_right_subtree(task, False)
+
     right_sub_tree = pet.get_left_right_subtree(task, True)
     subtree = pet.subtree_of_type(task, NodeType.CU)
     t_loop = pet.subtree_of_type(task, NodeType.LOOP)
@@ -610,7 +611,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
                 first_private.append(var)
         elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
             if is_scalar_val(var):
-                if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
+                if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree) or __is_written_prior_to_task(pet, var, task) :
                     shared.append(var)
                 else:
                     private.append(var)
@@ -618,3 +619,32 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
                 shared.append(var)
 
     return first_private, private, shared, depend_in, depend_out, depend_in_out, reduction
+
+
+def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> bool:
+    """Check if var has been written in predecessor of task.
+
+    :param pet: CU graph
+    :param var: variable
+    :param task: node
+    """
+    # get predecessors of task
+    queue: List[CUNode] = [task]
+    visited: List[CUNode] = []
+    predecessors: List[CUNode] = []
+    while queue:
+        current = queue.pop()
+        if current not in visited:
+            visited.append(current)
+        if current not in predecessors:
+            predecessors.append(current)
+        queue += [pet.node_at(edge[0]) for edge in pet.in_edges(current.id, EdgeType.SUCCESSOR) if pet.node_at(edge[0]) not in visited]
+
+    # check if raw-dependency on var to any predecessor exists)
+    for out_dep in pet.out_edges(task.id, EdgeType.DATA):
+        if out_dep[2].dtype != DepType.RAW:
+            continue
+        # check if out_dep.source in predecessors
+        if pet.node_at(out_dep[0]) in predecessors:
+            return True
+    return False
