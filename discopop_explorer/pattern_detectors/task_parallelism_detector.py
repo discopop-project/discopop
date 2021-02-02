@@ -1955,7 +1955,7 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                         if not __line_contained_in_region(test_line, cu_node.start_position(),
                                                                           cu_node.end_position()):
                                             continue
-                                        # check if path from suggestion._node to cu_node exists
+                                        # check if path from cu_node to suggestion._node exists
                                         if __check_reachability(pet, suggestion._node, cu_node,
                                                                 [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             is_valid = True
@@ -2048,7 +2048,7 @@ def __filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                         if not __line_contained_in_region(test_line, cu_node.start_position(),
                                                                           cu_node.end_position()):
                                             continue
-                                        # check if path from suggestion._node to cu_node exists
+                                        # check if path from cu_node to suggestion._node exists
                                         if __check_reachability(pet, suggestion._node, cu_node,
                                                                 [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                             prior_out_exists = True
