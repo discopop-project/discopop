@@ -610,8 +610,8 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
             else:
                 first_private.append(var)
         elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
-            if is_scalar_val(var):
-                if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree) or __is_written_prior_to_task(pet, var, task) :
+            if is_scalar_val(var) and not __is_written_prior_to_task(pet, var, task):
+                if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
                     shared.append(var)
                 else:
                     private.append(var)
