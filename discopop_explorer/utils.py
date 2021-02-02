@@ -512,7 +512,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     :param type: type of task
     :param in_deps: in dependencies
     :param out_deps: out dependencies
-    :param used_in_task_parallelism_detection: True, if called in a task-parallelism detection context
+    :param used_in_task_parallelism_detection: set True, if called in a task-parallelism detection context
     """
     first_private: List[Variable] = []
     private: List[Variable] = []
