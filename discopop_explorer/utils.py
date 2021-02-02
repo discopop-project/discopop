@@ -504,7 +504,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
 
 
 def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
-                       out_deps: List[Tuple[str, str, Dependency]]):
+                       out_deps: List[Tuple[str, str, Dependency]], used_in_task_parallelism_detection = False):
     """Classify task variables
 
     :param pet: CU graph
@@ -512,6 +512,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     :param type: type of task
     :param in_deps: in dependencies
     :param out_deps: out dependencies
+    :param used_in_task_parallelism_detection: True, if called in a task-parallelism detection context
     """
     first_private: List[Variable] = []
     private: List[Variable] = []
@@ -610,7 +611,8 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
             else:
                 first_private.append(var)
         elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
-            if is_scalar_val(var) and not __is_written_prior_to_task(pet, var, task):
+            if is_scalar_val(var) and \
+                    (not used_in_task_parallelism_detection or not __is_written_prior_to_task(pet, var, task)):
                 if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
                     shared.append(var)
                 else:

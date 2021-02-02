@@ -2781,7 +2781,7 @@ def __detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                         contained_in.type == NodeType.FUNC:
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
-                        classify_task_vars(pet, contained_in, "", [], [])
+                        classify_task_vars(pet, contained_in, "", [], [], used_in_task_parallelism_detection=True)
                     current_suggestions = TaskParallelismInfo(vx, ["task"],
                                                               pragma_line,
                                                               [v.name for v in fpriv],
