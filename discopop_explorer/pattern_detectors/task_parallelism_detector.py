@@ -212,7 +212,8 @@ class OmittableCuInfo(PatternInfo):
 
 def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
                                                file_mapping: str, cu_inst_result_file: str,
-                                               llvm_cxxfilt_path: Optional[str]) -> List[PatternInfo]:
+                                               llvm_cxxfilt_path: Optional[str], discopop_build_path: Optional[str])\
+        -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -222,6 +223,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     :param file_mapping: Path (string) to the FileMapping.txt to be used
     :param cu_inst_result_file: Path (string) to the _CUInstResult.txt to be used
     :param llvm_cxxfilt_path: Path (string) to the llvm-cxxfilt executable to be used or None.
+    :param discopop_build_path: path (string) to discopop build folder.
     :return: List of detected pattern info
     """
     global __global_llvm_cxxfilt_path
@@ -229,6 +231,8 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
         __global_llvm_cxxfilt_path = "None"
     else:
         __global_llvm_cxxfilt_path = cast(str, llvm_cxxfilt_path)
+    if discopop_build_path is None or discopop_build_path == "None":
+        raise ValueError("Path to DiscoPoP build directory not specified!")
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
                                                                    loop_counter_file, reduction_file))
@@ -237,12 +241,14 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file, cu_inst_result_file)
+    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file, cu_inst_result_file,
+                                cast(str, discopop_build_path))
 
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str, cu_ist_result_file: str) \
+def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str, cu_ist_result_file: str,
+                  discopop_build_path: str) \
         -> List[PatternInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
@@ -259,6 +265,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
         :param file_mapping: Path (string) to the FileMapping.txt to be used
         :param dep_file: Path (string) to the dependencies-file to be used
         :param cu_ist_result_file: Path(string) to the CUInstResult.txt
+        :param discopop_build_path: path to discopop build folder
         :return: List of detected pattern info
     """
     result: List[PatternInfo] = []
@@ -294,7 +301,8 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = __detect_barrier_suggestions(pet, result)
     result = __validate_barriers(pet, result)
     # result = __detect_dependency_clauses_old(pet, result)
-    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, cu_xml, dep_file, cu_ist_result_file)
+    result = __detect_dependency_clauses_alias_based(pet, result, file_mapping, cu_xml, dep_file,
+                                                     cu_ist_result_file, discopop_build_path)
     result = __suggest_missing_barriers_for_global_vars(pet, result)
     result = __combine_omittable_cus(pet, result)
     result = __suggest_barriers_for_uncovered_tasks_before_return(pet, result)
@@ -609,12 +617,16 @@ def __contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
 
 
 def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
-                                            cu_xml: str, dep_file: str, cu_inst_result_file: str) -> List[PatternInfo]:
+                                            cu_xml: str, dep_file: str, cu_inst_result_file: str,
+                                            discopop_build_path: str) -> List[PatternInfo]:
     """Wrapper for alias based dependency detection.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
     :param file_mapping_path: path to FileMapping file
+    :param cu_xml: path to cu_xml file
     :param dep_file: path to dependency file
+    :param cu_inst_result_file: path to CUInstResult.txt
+    :param discopop_build_path: path to discopop build directory
     :return: List[PatternInfo]
     """
     # Read contents of file_mapping
@@ -630,7 +642,8 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     cu_inst_result_dict = __get_dict_from_cu_inst_result_file(cu_inst_result_file)
     aliases = __get_alias_information(pet, suggestions, source_code_files)
     # get function-internal parameter aliases
-    function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml)
+    function_parameter_alias_dict = __get_function_internal_parameter_aliases(file_mapping_path, cu_xml,
+                                                                              discopop_build_path)
     # find dependencies between calls of different functions inside function scopes
     suggestions = __identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
                                                                   raw_dependency_information)
@@ -640,10 +653,13 @@ def __detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str) -> Dict[
-    str, List[Tuple[str, str]]]:
+def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str, discopop_build_path: str)\
+        -> Dict[str, List[Tuple[str, str]]]:
     """Wrapper to execute simple alias analysis and parse results into dict (function name to list of alias-tuples).
-    :result function-internal alias detection results in dict form"""
+    :param file_mapping_path: path to filemapping file
+    :param cu_xml_path: path to cu_xml file
+    :param discopop_build_path: path to discopop build directory
+    :result: function-internal alias detection results in dict form"""
     # execute simple alias detection
     pattern_detector_dir = str(pathlib.Path(__file__).parent.absolute())
     alias_detection_temp_file = os.getcwd() + "/alias_detection_temp.txt"
@@ -653,9 +669,8 @@ def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_pat
 
     # execute simple alias detection
     from .alias_detection import get_alias_information
-    # TODO BUILD PATH as parameter
     alias_detection_result = get_alias_information(file_mapping_path, cu_xml_path, alias_detection_temp_file,
-                                                   "/home/lukas/git/discopop/build")
+                                                   discopop_build_path)
 
     # check if alias_detection_result has contents
     if len(alias_detection_result) == 0:
