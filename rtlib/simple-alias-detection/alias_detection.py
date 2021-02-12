@@ -1,14 +1,3 @@
-"""Simple Alias Detector
-
-Usage:
-    alias_detection --fmap <fmap> --cu-xml <cuxml> --output <ouputfile>
-
-Options:
-    --fmap=<fmap>               File mapping [default: FileMapping.txt]
-    --cu-xml=<cuxml>            CU node xml file [default: Data.xml]
-    --output=<outputfile>       Path to output file
-    -h --help                   Show this screen
-"""
 import os
 import pathlib
 import re
@@ -28,7 +17,12 @@ docopt_schema = Schema({
 
 
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
-    """TODO"""
+    """checks if the given statement defines a new alias for var_name.
+    returns a list containing the found alias name or None, if no alias has been defined by statement.
+    :param var_name: target variable name
+    :param var_type: type of the variable
+    :param statement: statement to check for new alias definition
+    :return: None, or list containing a found alias name."""
     # prune var_name
     if ".addr" in var_name:
         var_name = var_name.replace(".addr", "")
@@ -148,11 +142,14 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     return None
 
 
-def __add_alias_information(function_information_list: List[Dict], statements_file: str):
+def __add_alias_information(function_information_list: List[Dict], statements_file: str) -> List[Dict]:
     """Wrapper to gather and append alias information to the entries in function_information as a new field.
     Aliases can be found up to a depth of 2.
     Alias detection ignores scopes.
-    Alias detection ignores a=b=c constellations."""
+    Alias detection ignores a=b=c constellations.
+    :param function_information_list: list of dictionaries representing the functions contained in cu-xml
+    :param statements_file: path to file containing the output of getStatements
+    :return: Input list of dictionaries, enriched with alias information."""
     result_list = []
     for function_information in function_information_list:
         file_id = function_information["id"].split(":")[0]
@@ -207,8 +204,10 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
     return result_list
 
 
-def __get_function_information(cu_xml):
-    """Extracts information on functions from given cu-xml file"""
+def __get_function_information(cu_xml: str) -> List[Dict]:
+    """Extracts information on functions from given cu_xml file and stores it in a dictionary representation.
+    :param cu_xml: path to cu_xml file
+    :return: List of dictionaries representing functions from cu_xml"""
     with open(cu_xml) as xml_fd:
         xml_content = ""
         for line in xml_fd.readlines():
@@ -236,7 +235,10 @@ def __get_function_information(cu_xml):
 
 
 def __create_statements_file(file_mapping: str, output_file: str, application_path: str):
-    """Wrapper to start getStatements application for each source code file in file_mapping"""
+    """Wrapper to start getStatements application for each source code file in file_mapping
+    :param file_mapping: path to file_mapping file
+    :param output_file: path to output file
+    :param application_path: path to getStatements executable"""
     file_mapping_dict = dict()  # maps path to file-id
     with open(file_mapping) as fm:
         for line in fm.readlines():
