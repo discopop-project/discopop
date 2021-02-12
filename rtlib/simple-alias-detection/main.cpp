@@ -16,7 +16,12 @@ using namespace clang::ast_matchers;
 
 static llvm::cl::OptionCategory SimpleStatement("simpleStatement");
 
+
 int main(int argc, const char **argv) {
+  /*
+    * Create a list of all declaration statement and binary operators within the source file.
+    * This information is used as the basis of the simple alias detection.
+  */
   CommonOptionsParser op(argc, argv, SimpleStatement);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
   StatementMatcher bin_stmt = clang::ast_matchers::binaryOperator(
