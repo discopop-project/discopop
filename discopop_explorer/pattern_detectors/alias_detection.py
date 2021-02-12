@@ -1,19 +1,8 @@
 import os
-import pathlib
 import re
 import subprocess
-import sys
 from typing import Dict, List, Optional
-
-from docopt import docopt
 from lxml import objectify
-from schema import Schema, Use, SchemaError
-
-docopt_schema = Schema({
-    '--fmap': Use(str),
-    '--cu-xml': Use(str),
-    '--output': Use(str),
-})
 
 
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
@@ -275,61 +264,45 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
     os.rename(output_file + "_tmp", output_file)
 
 
-def main():
-    arguments = docopt(__doc__)
-
-    try:
-        arguments = docopt_schema.validate(arguments)
-    except SchemaError as e:
-        exit(e)
-
-    file_mapping = arguments['--fmap']
-    cu_xml = arguments['--cu-xml']
-    output_file = arguments['--output']
+def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_path: str) -> str:
+    """Gather simple alias information for every file in filemapping and return the results in string format.
+    :param file_mapping: path to filemapping-file
+    :param cu_xml: path to cu_xml file
+    :param temp_file: path to temporary file(s)
+    :param build_path: path to discopop build directory
+    :return: string, containing found aliases for each function"""
+    if build_path.endswith("/"):
+        build_path = build_path[:-1]
 
     if not os.path.isfile(file_mapping):
-        print(f"File not found: \"{file_mapping}\"")
-        sys.exit()
+        raise ValueError(f"File not found: \"{file_mapping}\"")
     if not os.path.isfile(cu_xml):
-        print(f"File not found: \"{cu_xml}\"")
-        sys.exit()
+        raise ValueError(f"File not found: \"{cu_xml}\"")
 
-    # build getStatements application
-    original_cwd = os.getcwd()
-    parent_dir = str(pathlib.Path(__file__).parent.absolute())
-    if not os.path.exists(parent_dir + "/build"):
-        os.mkdir(parent_dir + "/build")
-    os.chdir(parent_dir + "/build")
-    process = subprocess.Popen("cmake .. && make", shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    os.chdir("..")
     # remove output file if it already exists
-    if os.path.exists(output_file + "_statements"):
-        os.remove(output_file + "_statements")
-    if os.path.exists(output_file):
-        os.remove(output_file)
+    if os.path.exists(temp_file + "_statements"):
+        os.remove(temp_file + "_statements")
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
     # create statements file
-    __create_statements_file(file_mapping, output_file + "_statements", parent_dir + "/build/getStatements")
+    __create_statements_file(file_mapping, temp_file + "_statements", build_path + "/rtlib/simple-alias-detection/getStatements")
     # get function information file
     function_information = __get_function_information(cu_xml)
     # add alias information to function_information
-    function_information = __add_alias_information(function_information, output_file + "_statements")
+    function_information = __add_alias_information(function_information, temp_file + "_statements")
     # create alias output file
-    with open(output_file, "w+") as of:
-        for fn_info in function_information:
-            if len(fn_info["args"]) == 0:
-                continue
-            for idx, alias_entry in enumerate(fn_info["aliases"]):
-                if len(alias_entry) > 0:
-                    for alias_name in alias_entry:
-                        of.write(fn_info["id"] + ";" + fn_info["name"] + ";" + fn_info["args"][
-                            idx] + ";" + alias_name + "\n")
+    alias_str = ""
+    for fn_info in function_information:
+        if len(fn_info["args"]) == 0:
+            continue
+        for idx, alias_entry in enumerate(fn_info["aliases"]):
+            if len(alias_entry) > 0:
+                for alias_name in alias_entry:
+                    alias_str += fn_info["id"] + ";" + fn_info["name"] + ";" \
+                                 + fn_info["args"][idx] + ";" + alias_name + "\n"
     # cleanup
-    if os.path.exists(output_file + "_statements"):
-        os.remove(output_file + "_statements")
-    # reset working directory
-    os.chdir(original_cwd)
-
-
-if __name__ == "__main__":
-    main()
+    if os.path.exists(temp_file + "_statements"):
+        os.remove(temp_file + "_statements")
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+    return alias_str

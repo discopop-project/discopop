@@ -646,38 +646,35 @@ def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_pat
     :result function-internal alias detection results in dict form"""
     # execute simple alias detection
     pattern_detector_dir = str(pathlib.Path(__file__).parent.absolute())
-    s_a_d_dir = pattern_detector_dir + "/../../scripts/simple-alias-detection"
-    application_path = s_a_d_dir + "/alias_detection.py"
-    alias_detection_result_file = s_a_d_dir + "/alias_detection_result.txt"
+    alias_detection_temp_file = os.getcwd() + "/alias_detection_temp.txt"
     # get absolute file paths
     file_mapping_path = os.path.abspath(file_mapping_path)
     cu_xml_path = os.path.abspath(cu_xml_path)
-    # remove old results if any exist
-    if os.path.exists(alias_detection_result_file):
-        os.remove(alias_detection_result_file)
-    call_string = "python3 " + application_path + "  --fmap " + file_mapping_path + " --cu-xml " + cu_xml_path + " --output " + alias_detection_result_file
-    process = subprocess.Popen(call_string, shell=True,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    process.wait()
-    # check if alias_detection_result_file exists
-    if not os.path.exists(alias_detection_result_file):
+
+    # execute simple alias detection
+    from .alias_detection import get_alias_information
+    # TODO BUILD PATH as parameter
+    alias_detection_result = get_alias_information(file_mapping_path, cu_xml_path, alias_detection_temp_file,
+                                                   "/home/lukas/git/discopop/build")
+
+    # check if alias_detection_result has contents
+    if len(alias_detection_result) == 0:
         return dict()
     # create dict:
     alias_dict: Dict[str, List[Tuple[str, str]]] = dict()
-    with open(alias_detection_result_file) as alias_file:
-        for line in alias_file.readlines():
-            line = line.replace("\n", "")
-            line_split = line.split(";")
-            fname = line_split[1]
-            var_name = line_split[2]
-            alias_name = line_split[3]
-            if var_name == alias_name:
-                continue
-            if fname not in alias_dict:
-                alias_dict[fname] = []
-            alias_dict[fname].append((var_name, alias_name))
-    # remove alias_detection_result_file
-    os.remove(alias_detection_result_file)
+    for line in alias_detection_result.split("\n"):
+        line = line.replace("\n", "")
+        if not ";" in line:
+            continue
+        line_split = line.split(";")
+        fname = line_split[1]
+        var_name = line_split[2]
+        alias_name = line_split[3]
+        if var_name == alias_name:
+            continue
+        if fname not in alias_dict:
+            alias_dict[fname] = []
+        alias_dict[fname].append((var_name, alias_name))
     return alias_dict
 
 
