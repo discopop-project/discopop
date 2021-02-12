@@ -1,8 +1,8 @@
 import os
 import re
 import subprocess
-from typing import Dict, List, Optional
-from lxml import objectify
+from typing import Dict, List, Optional, Match, cast
+from lxml import objectify  # type: ignore
 
 
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
@@ -20,9 +20,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         statement = statement[statement.rindex(":") + 1:]
     # var_name in statement?
     reg = r"\W" + re.escape(var_name) + r"\W"
-    search_string = re.search(reg, statement)
+    search_match = re.search(reg, statement)
     try:
-        search_string = search_string[0]
+        search_string: Optional[str] = cast(Match[str], search_match)[0]
     except TypeError:
         search_string = None
     if search_string is None:
@@ -62,9 +62,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     # var_name contained in function call?
     left_hand_side = statement[:stmt_copy.index("=")]
     right_hand_side = statement[stmt_copy.index("=") + 1:]
-    call_string = re.search(r"[\w]+(?=\().+\)", right_hand_side)
+    call_match = re.search(r"[\w]+(?=\().+\)", right_hand_side)
     try:
-        call_string = call_string[0]
+        call_string: Optional[str] = cast(Match[str], call_match)[0]
     except TypeError:
         call_string = None
     if call_string is not None:
@@ -162,12 +162,12 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
                 relevant_statements.append((line, int(line_code_line)))
         # order relevant statements by line number
         relevant_statements.sort(key=lambda x: x[1])
-        relevant_statements = [x[0] for x in relevant_statements]
+        relevant_statements_strings = [x[0] for x in relevant_statements]
         # get aliases for each argument
         function_information["aliases"] = []
         for arg_idx, arg_name in enumerate(function_information["args"]):
             aliases = []
-            for statement in relevant_statements:
+            for statement in relevant_statements_strings:
                 # search for first-level aliases
                 statement_result = __get_alias_from_statement(arg_name, function_information["arg_types"][arg_idx],
                                                               statement)
@@ -175,7 +175,7 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
                     for state_res_entry in statement_result:
                         # first level alias found
                         # search for second level aliases
-                        for inner_statement in relevant_statements:
+                        for inner_statement in relevant_statements_strings:
                             statement_line = statement[statement.index(":") + 1:]
                             statement_line = statement_line[: statement_line.index(":")]
                             inner_statement_line = inner_statement[inner_statement.index(":") + 1:]
@@ -232,8 +232,8 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
     with open(file_mapping) as fm:
         for line in fm.readlines():
             line = line.replace("\n", "")
-            line = line.split("\t")
-            file_mapping_dict[line[1]] = line[0]
+            split_line = line.split("\t")
+            file_mapping_dict[split_line[1]] = split_line[0]
     # execute application for each file in file_mapping
     for file in file_mapping_dict:
         process = subprocess.Popen(application_path + " " + file + " >> " + output_file, shell=True,

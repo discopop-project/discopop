@@ -504,7 +504,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
 
 
 def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
-                       out_deps: List[Tuple[str, str, Dependency]], used_in_task_parallelism_detection = False):
+                       out_deps: List[Tuple[str, str, Dependency]], used_in_task_parallelism_detection=False):
     """Classify task variables
 
     :param pet: CU graph

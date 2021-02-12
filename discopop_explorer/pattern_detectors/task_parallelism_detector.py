@@ -679,7 +679,7 @@ def __get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_pat
     alias_dict: Dict[str, List[Tuple[str, str]]] = dict()
     for line in alias_detection_result.split("\n"):
         line = line.replace("\n", "")
-        if not ";" in line:
+        if ";" not in line:
             continue
         line_split = line.split(";")
         fname = line_split[1]
@@ -2168,7 +2168,7 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sug
 
 
 def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
-                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+                                              var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
@@ -2290,7 +2290,7 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
 
 
 def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
-                                  var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+                                           var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
     suggestion.
     Idea (per shared variable / suggestion):
@@ -2363,7 +2363,7 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                         to_be_removed.append(var)
 
             to_be_removed = list(set(to_be_removed))
-            suggestion.first_private = [v for v in suggestion.first_private if not v in to_be_removed]
+            suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
 
         # filter private
         to_be_removed = []
@@ -2395,7 +2395,7 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                         to_be_removed.append(var)
 
             to_be_removed = list(set(to_be_removed))
-            suggestion.private = [v for v in suggestion.private if not v in to_be_removed]
+            suggestion.private = [v for v in suggestion.private if v not in to_be_removed]
 
         # filter shared
         to_be_removed = []
@@ -2427,7 +2427,7 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
                         to_be_removed.append(var)
 
             to_be_removed = list(set(to_be_removed))
-            suggestion.shared = [v for v in suggestion.shared if not v in to_be_removed]
+            suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
 
     return suggestions
 
@@ -2450,7 +2450,7 @@ def __get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNod
         if __line_contained_in_region(cur_cu.start_position(), function_cu.start_position(),
                                       function_cu.end_position()) and \
                 __line_contained_in_region(cur_cu.end_position(), function_cu.start_position(),
-                                       function_cu.end_position()):
+                                           function_cu.end_position()):
             # cur_cu contained in function body
             if cur_cu not in result_list:
                 result_list.append(cur_cu)
