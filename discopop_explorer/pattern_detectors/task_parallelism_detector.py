@@ -1161,14 +1161,12 @@ def __identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List
     for ts in task_suggestions:
         if ts in out_dep_updates:
             for (out_dep_var, is_pessimistic) in out_dep_updates[ts]:
-                # TODO issue warning to user: Pessimistic Dependence reported, if not already contained out_dep
                 if out_dep_var not in ts.out_dep and is_pessimistic:
                     print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: OUT  VarName:", out_dep_var)
                 ts.out_dep.append(out_dep_var)
             ts.out_dep = list(set(ts.out_dep))
         if ts in in_dep_updates:
             for (in_dep_var, is_pessimistic) in in_dep_updates[ts]:
-                # TODO issue warning to user: Pessimistic Dependence reported, if not already contained in_dep
                 if in_dep_var not in ts.in_dep and is_pessimistic:
                     print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: IN  VarName:", in_dep_var)
                 ts.in_dep.append(in_dep_var)
