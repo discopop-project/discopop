@@ -343,7 +343,7 @@ def __group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> 
             intersect.task_group.append(task_group_id)
     # combine groups by replacing taskgroup ids (higher replaced by lower id)
     # get replacements to be done
-    replacements: Dict[int, int] = []  # [target_id :  replacement_id)]
+    replacements: Dict[int, int] = dict()  # [target_id :  replacement_id)]
     for ts in task_suggestions:
         if len(ts.task_group) <= 1:
             continue
@@ -365,7 +365,6 @@ def __group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> 
                 # transitive replacement found, simplify
                 replacements[target_id] = replacements[replacement_id]
                 modification_found = True
-                print("TRANSITIVITY SIMPLIFIED!")
     # execute replacement
     for sug in task_suggestions + taskwait_suggestions:
         sug.task_group = [replacements[tg_elem] if tg_elem in replacements else tg_elem for tg_elem in sug.task_group]
