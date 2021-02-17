@@ -334,10 +334,17 @@ def __group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> 
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
-        predecessors = [tws._node]
-        for predecessor in [pet.node_at(in_edge[0]) for in_edge in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]:
-            (tmp_predecessors, __) = __get_predecessor_nodes(pet, predecessor, [], stop_on_barrier=False)
-            predecessors += tmp_predecessors
+        predecessors: List[CUNode] = [tws._node]
+        queue: List[CUNode] = [pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]
+        while len(queue) > 0:
+            cur = queue.pop(0)
+            if cur.tp_contains_taskwait:
+                continue
+            predecessors.append(cur)
+            for in_edge in pet.in_edges(cur.id, EdgeType.SUCCESSOR):
+                if pet.node_at(in_edge[0]) not in predecessors + queue:
+                    queue.append(pet.node_at(in_edge[0]))
+
         # mark intersection of predecessors and task_suggestions
         for intersect in [sug for sug in task_suggestions if sug._node in predecessors]:
             intersect.task_group.append(task_group_id)
@@ -363,8 +370,10 @@ def __group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> 
                 continue
             if replacement_id in replacements:
                 # transitive replacement found, simplify
-                replacements[target_id] = replacements[replacement_id]
-                modification_found = True
+                if replacements[target_id] != replacements[replacement_id]:
+                    replacements[target_id] = replacements[replacement_id]
+                    modification_found = True
+                    break
     # execute replacement
     for sug in task_suggestions + taskwait_suggestions:
         sug.task_group = [replacements[tg_elem] if tg_elem in replacements else tg_elem for tg_elem in sug.task_group]
@@ -2352,7 +2361,7 @@ def __validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[
     return result
 
 
-def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode], stop_on_barrier: bool = True) \
+def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode]) \
         -> Tuple[List[CUNode], List[CUNode]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
@@ -2362,7 +2371,6 @@ def __get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CU
     :param pet: PET Graph
     :param root: root node of the search
     :param visited_nodes: list of visited nodes
-    :param stop_on_barrier: Enable / Disable stopping of recursion on barrier node
     :return: Tuple[[predecessor nodes], [visited nodes]]"""
     result = [root]
     visited_nodes.append(root)
