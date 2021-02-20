@@ -343,14 +343,24 @@ class PETGraphX(object):
         :return: list of nodes in subtree
         """
         res: List[CUNode] = []
-        if root in visited:
-            return res
+        for visited_cu in visited:
+            if self.__cu_equal__(root, visited_cu):
+                return res
         visited.add(root)
         if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
         return res
+
+    def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
+        """Alternative to CUNode.__eq__, bypasses the isinstance-check and relies on MyPy for type safety.
+        :param cu_1: CUNode 1
+        :param cu_2: CUNode 2
+        :return: True, if cu_1 == cu_2. False, else"""
+        if cu_1.id == cu_2.id:
+            return True
+        return False
 
     def direct_successors(self, root: CUNode) -> List[CUNode]:
         """Gets only direct successors of any type
