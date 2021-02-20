@@ -397,7 +397,8 @@ class PETGraphX(object):
         """
         return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
-    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode, children_cache=None, dep_cache=None) -> bool:
+    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode,
+                                children_cache=None, dep_cache=None) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored
 

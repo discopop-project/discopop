@@ -128,19 +128,23 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :return: List of detected pattern info
     """
     result = []
+    children_cache = dict()
+    dependency_cache = dict()
     for node in pet.all_nodes(NodeType.LOOP):
-        node.pipeline = __detect_pipeline(pet, node)
+        node.pipeline = __detect_pipeline(pet, node, children_cache=children_cache, dep_cache=dependency_cache)
         if node.pipeline > __pipeline_threshold:
             result.append(PipelineInfo(pet, node))
 
     return result
 
 
-def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
+def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cache=None) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph
     :param root: current node
+    :param children_cache: used to cache intermediate children
+    :param dep_cache: used to cache intermediate dependencies
     :return: Pipeline scalar value
     """
 
@@ -155,7 +159,9 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
+        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root,
+                                                               children_cache=children_cache,
+                                                               dep_cache=dep_cache) else 0.0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):
@@ -164,7 +170,8 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
     min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
+            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root, children_cache=children_cache,
+                                           dep_cache=dep_cache):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:
