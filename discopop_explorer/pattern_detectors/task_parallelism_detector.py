@@ -334,19 +334,22 @@ def __group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> 
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
-        predecessors: List[CUNode] = [tws._node]
+        relatives: List[CUNode] = [tws._node]
         queue: List[CUNode] = [pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]
         while len(queue) > 0:
             cur = queue.pop(0)
             if cur.tp_contains_taskwait:
                 continue
-            predecessors.append(cur)
+            relatives.append(cur)
             for in_edge in pet.in_edges(cur.id, EdgeType.SUCCESSOR):
-                if pet.node_at(in_edge[0]) not in predecessors + queue:
+                if pet.node_at(in_edge[0]) not in relatives + queue:
                     queue.append(pet.node_at(in_edge[0]))
+            for out_edge in pet.out_edges(cur.id, EdgeType.SUCCESSOR):
+                if pet.node_at(out_edge[1]) not in relatives + queue:
+                    queue.append(pet.node_at(out_edge[1]))
 
-        # mark intersection of predecessors and task_suggestions
-        for intersect in [sug for sug in task_suggestions if sug._node in predecessors]:
+        # mark intersection of relatives and task_suggestions
+        for intersect in [sug for sug in task_suggestions if sug._node in relatives]:
             intersect.task_group.append(task_group_id)
     # combine groups by replacing taskgroup ids (higher replaced by lower id)
     # get replacements to be done
