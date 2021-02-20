@@ -3177,14 +3177,14 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
     :return: Boolean"""
     if source == target:
         return True
-    visited = []
+    visited: List[str] = []
     queue = [target]
     while len(queue) > 0:
         cur_node = queue.pop(0)
         if type(cur_node) == list:
             cur_node_list = cast(List[CUNode], cur_node)
             cur_node = cur_node_list[0]
-        visited.append(cur_node)
+        visited.append(cur_node.id)
         tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
                     if s not in visited and
                     e.etype in edge_types]
@@ -3192,7 +3192,7 @@ def __check_reachability(pet: PETGraphX, target: CUNode,
             if pet.node_at(e[0]) == source:
                 return True
             else:
-                if pet.node_at(e[0]) not in visited:
+                if e[0] not in visited:
                     queue.append(pet.node_at(e[0]))
     return False
 

@@ -70,8 +70,10 @@ def __detect_do_all(pet: PETGraphX, root: CUNode) -> bool:
     subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
 
     for i in range(0, len(subnodes)):
+        children_cache = dict()
+        dependency_cache = dict()
         for j in range(i, len(subnodes)):
-            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root):
+            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root, children_cache=children_cache, dep_cache=dependency_cache):
                 return False
 
     return True
