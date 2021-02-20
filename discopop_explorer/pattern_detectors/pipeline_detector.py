@@ -7,7 +7,7 @@
 # directory for details.
 
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
@@ -128,8 +128,8 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :return: List of detected pattern info
     """
     result = []
-    children_cache = dict()
-    dependency_cache = dict()
+    children_cache: Dict[CUNode, List[CUNode]] = dict()
+    dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):
         node.pipeline = __detect_pipeline(pet, node, children_cache=children_cache, dep_cache=dependency_cache)
         if node.pipeline > __pipeline_threshold:

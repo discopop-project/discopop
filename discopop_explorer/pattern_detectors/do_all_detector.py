@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List
+from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
@@ -70,8 +70,8 @@ def __detect_do_all(pet: PETGraphX, root: CUNode) -> bool:
     subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
 
     for i in range(0, len(subnodes)):
-        children_cache = dict()
-        dependency_cache = dict()
+        children_cache: Dict[CUNode, List[CUNode]] = dict()
+        dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
             if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root, children_cache=children_cache,
                                            dep_cache=dependency_cache):
