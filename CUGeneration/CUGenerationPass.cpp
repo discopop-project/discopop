@@ -281,13 +281,15 @@ string CUGeneration::determineVariableDefLine(Instruction *I)
 
     string varName = determineVariableName(&*I);
     varName = refineVarName(varName);
+    string varType = determineVariableType(&*I);
 
     if (programGlobalVariablesSet.count(varName))
     {
         varDefLine = "GlobalVar";
         //TODO: Find definition line of global variables
     }
-
+    
+    // Start from the beginning of a function and look for the variable
     Function *F = I->getFunction();
     for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
     {
@@ -296,21 +298,42 @@ string CUGeneration::determineVariableDefLine(Instruction *I)
         {
             if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
             {
+
                 if (auto *N = dyn_cast<MDNode>(DI->getVariable()))
                 {
                     if (auto *DV = dyn_cast<DILocalVariable>(N))
                     {
-                        if (DV->getName() == varName)
-                        {
-                            varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
-                            break;
+                        if(varType.find("ARRAY") != string::npos || 
+                            varType.find("STRUCT") != string::npos){
+                            if(DV->getName() == varName){
+                                varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                break;
+                            }
+                        }else{
+                            string vn = "----";
+                            AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DI->getAddress());
+                            if (AI) {
+                                for (User *U : AI->users()) {
+                                    if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+                                        vn = determineVariableName(&*SI);
+                                        break;
+                                    } else if(LoadInst *LI = dyn_cast<LoadInst>(U)){
+                                        vn = determineVariableName(&*LI);
+                                        break;
+                                    }
+                                }
+                                if ( vn == varName)
+                                {
+                                    varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-
     return varDefLine;
 }
 
