@@ -16,6 +16,7 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 import time
+import itertools
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -247,15 +248,32 @@ class PETGraphX(object):
         # print(f"try: {t6-t5}")
         for dep in dependencies_list:
             if dep.type == 'INIT':
+                sink = readlineToCUIdMap[dep.sink]
+                for s in sink:
+                    g.add_edge(s, s, data=parse_dependency(dep))
                 continue
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
+
             for sink_cu_id in sink_cu_ids:
                 for source_cu_id in source_cu_ids:
-                    if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
+
+                    sink_node = g.nodes[sink_cu_id]['data']
+                    source_node = g.nodes[source_cu_id]['data']
+                    vars_in_sink_node = set()
+                    vars_in_source_node = set()
+                    for var in itertools.chain(sink_node.local_vars, sink_node.global_vars):
+                        vars_in_sink_node.add(var.name)
+                    for var in itertools.chain(source_node.local_vars, source_node.global_vars):
+                        vars_in_source_node.add(var.name)
+
+                    if(dep.var_name not in vars_in_sink_node and
+                            dep.var_name not in vars_in_source_node):
                         continue
-                    elif sink_cu_id and source_cu_id:
+                        # if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
+                        #     continue
+                    if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id,
                                    data=parse_dependency(dep))
         # t7 = time.time()
@@ -418,8 +436,8 @@ class PETGraphX(object):
         """
         dep_set = set()
         loops_start_lines = []
-        loop_nodes = []
         undefinedVarsInLoop = []
+        firstWrittenVarsInLoop = []
 
         loop_node_ids = [n.id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
@@ -430,22 +448,109 @@ class PETGraphX(object):
 
         allVars = self.get_undefined_variables_inside_loop(root_loop)
         undefinedVarsInLoop = [var.name for var in allVars]
+        firstWrittenVarsInLoop = self.get_first_written_vars_in_loop(
+            undefinedVarsInLoop, node, root_loop)
 
         for v in children:
-            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
-                         if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
+            for s, t, d in [(s, t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
+                            if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
                 # TODO:
-                if t not in loop_node_ids:
+                # if the dependence is by a variable
+                # which is written first in the loop, ignore it
+                if d.var_name in firstWrittenVarsInLoop:
                     continue
-                if(self.is_first_written_in_loop(d, root_loop)):
-                    if (self.is_scalar_val(allVars, d.var_name)):
-                        continue
+                # if(self.is_first_written_in_loop(d, root_loop)):
+                #     # if (self.is_scalar_val(allVars, d.var_name)):
+                #     continue
+                # if the dependence is not inside the loop, ignore it
+                if s not in loop_node_ids or t not in loop_node_ids:
+                    continue
+# check if the var name of the dep appears in either of the CU nodes.
+# Otherwise, it should be a false pos/neg dep.
                 dep_set.add(self.node_at(t))
 
         return dep_set
+
+    def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
+        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        parent_func_sink = self.get_parent_function(self.node_at(s))
+        parent_func_source = self.get_parent_function(self.node_at(t))
+
+        res = False
+
+        if(self.is_global(d.var_name, sub) and
+            not (self.is_passed_by_reference(d, parent_func_sink) and
+                 self.is_passed_by_reference(d, parent_func_source))):
+            return res
+
+    def is_global(self, var: str, tree: List[CUNode]) -> bool:
+        """Checks if variable is global
+
+        :param var: variable name
+        :param tree: nodes to search
+        :return: true if global
+        """
+
+        for node in tree:
+            if node.type == NodeType.CU:
+                for gv in node.global_vars:
+                    if gv.name == var:
+                        # TODO from tmp global vars
+                        return False
+        return False
+
+    def is_passed_by_reference(self, dep: Dependency, func: CUNode) -> bool:
+
+        res = False
+
+        for i in func.args:
+            if(i.name == dep.var_name):
+                res = True
+                break
+
+        return res
+
+    def get_first_written_vars_in_loop(self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode) -> set[str]:
+        loop_node_ids = [n.id for n in self.subtree_of_type(
+            root_loop, NodeType.CU)]
+        fwVars = set()
+
+        raw = set()
+        war = set()
+        waw = set()
+        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        for sub_node in sub:
+            raw.update(self.get_dep(sub_node, DepType.RAW, False))
+            war.update(self.get_dep(sub_node, DepType.WAR, False))
+            waw.update(self.get_dep(sub_node, DepType.WAW, False))
+
+        for var in undefinedVarsInLoop:
+            if var not in fwVars:
+                for i in raw:
+                    if(i[2].var_name == var
+                       and i[0] in loop_node_ids and i[1] in loop_node_ids):
+                        for e in itertools.chain(war, waw):
+                            if (e[2].var_name == var
+                                    and e[0] in loop_node_ids and e[1] in loop_node_ids):
+                                if e[2].sink == i[2].source:
+                                    fwVars.add(var)
+
+        return fwVars
+
+    def get_dep(self, node: CUNode, dep_type: DepType,
+                reversed: bool) -> List[Tuple[str, str, Dependency]]:
+        """Searches all dependencies of specified type
+
+        :param node: node
+        :param dep_type: type of dependency
+        :param reversed: if true the it looks for incoming dependencies
+        :return: list of dependencies
+        """
+        return [e for e in (self.in_edges(node.id, EdgeType.DATA) if reversed else self.out_edges(node.id, EdgeType.DATA))
+                if e[2].dtype == dep_type]
 
     def is_scalar_val(self, allVars: List[Variable], var: str) -> bool:
         """Checks if variable is a scalar value
@@ -516,6 +621,7 @@ class PETGraphX(object):
         :param tree: subtree of the loop
         :return: true if first written
         """
+
         result = False
         children = self.subtree_of_type(root_loop, NodeType.CU)
 
@@ -529,9 +635,31 @@ class PETGraphX(object):
                     if dep.source == d.sink:
                         result = True
                         break
-
                 # None may occur because __get_variables doesn't check for actual elements
         return result
+
+    def is_first_written(self, var: str, raw: Set[Tuple[str, str, Dependency]],
+                         war: Set[Tuple[str, str, Dependency]], sub: List[CUNode]) -> bool:
+        """Checks whether a variable is first written inside the current node
+
+        :param var: variable name
+        :param raw: raw dependencies of the loop
+        :param war: war dependencies of the loop
+        :param sub: subtree of the loop
+        :return: true if first written
+        """
+        for e in war:
+            if e[2].var_name == var and any([n.id == e[1] for n in sub]):
+                res = False
+                for eraw in raw:
+                    # TODO check
+                    if (eraw[2].var_name == var and any([n.id == e[1] for n in sub])
+                            and e[0] == eraw[2].sink):
+                        res = True
+                        break
+                if not res:
+                    return False
+        return False
 
     def is_loop_index(self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]) -> bool:
         """Checks, whether the variable is a loop index.
@@ -585,7 +713,7 @@ class PETGraphX(object):
         return True
 
     def get_parent_function(self, node: CUNode) -> CUNode:
-        """Finds the parent of a node 
+        """Finds the parent of a node
 
         :param node: current node
         :return: number of iterations

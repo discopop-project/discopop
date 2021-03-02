@@ -13,7 +13,10 @@
                "console": "integratedTerminal",
                "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
                "args": [
-                    "--path=/media/backuphd/norouzi/benchmarks/lulesh/"
+                    // "--path=/media/backuphd/norouzi/benchmarks/lulesh/LULESH_dp/build1/"
+                    "--path=/media/backuphd/norouzi/benchmarks/hybrid/lulesh/LULESH_dp/discopop/"
+                    // "--path=/media/backuphd/norouzi/benchmarks/hybrid/polybench-gpu/data/input/2mm/MINI_DATASET"
+                    // "--path=/media/backuphd/norouzi/benchmarks/hybrid/test27/discopop"
                ]
           }
      ]
