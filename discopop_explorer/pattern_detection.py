@@ -60,7 +60,7 @@ class PatternDetectorX(object):
             self.pet.g.remove_node(n)
 
     def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
-                        llvm_cxxfilt_path):
+                        llvm_cxxfilt_path, discopop_build_path):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
@@ -79,5 +79,5 @@ class PatternDetectorX(object):
         if cu_inst_result_file.endswith("/None"):
             return res
         res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
-                             llvm_cxxfilt_path)
+                             llvm_cxxfilt_path, discopop_build_path)
         return res
