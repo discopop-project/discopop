@@ -1,8 +1,7 @@
 import copy
 from typing import List, Tuple, Optional, cast, Dict
 
-from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType
+from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, Task, \
     OmittableCuInfo

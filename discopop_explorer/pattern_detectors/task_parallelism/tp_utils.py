@@ -1,10 +1,8 @@
 import subprocess
 from typing import cast, IO, Dict, List, Tuple, Optional
 
-from lxml import objectify
-
-from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, MWType, DepType
+from lxml import objectify  # type: ignore
+from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, MWType, DepType, PETGraphX
 from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
 from discopop_explorer.utils import depends
 
