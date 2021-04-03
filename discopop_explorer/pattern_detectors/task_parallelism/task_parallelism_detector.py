@@ -16,12 +16,12 @@ from typing import List, Tuple, Dict, Optional, cast, Union, IO
 from lxml import etree  # type: ignore
 from lxml import objectify
 
-from .PatternInfo import PatternInfo
-from .do_all_detector import run_detection as detect_do_all
-from .reduction_detector import run_detection as detect_reduction
-from ..PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
-from ..parser import parse_inputs
-from ..utils import depends, calculate_workload, \
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
+from discopop_explorer.pattern_detectors.reduction_detector import run_detection as detect_reduction
+from discopop_explorer.PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType, MWType
+from discopop_explorer.parser import parse_inputs
+from discopop_explorer.utils import depends, calculate_workload, \
     total_instructions_count, classify_task_vars, is_loop_index2
 
 __forks = set()  # type: ignore
