@@ -8,7 +8,7 @@ from discopop_explorer.utils import depends
 
 __workloadThreshold = 10000
 __minParallelism = 3
-__forks = set()  # type: ignore
+__forks = set()
 __global_llvm_cxxfilt_path : str = ""
 demangling_cache: Dict[str, str] = dict()
 
