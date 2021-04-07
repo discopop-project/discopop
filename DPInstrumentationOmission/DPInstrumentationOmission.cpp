@@ -2,7 +2,7 @@
 
 #define DEBUG_TYPE "dp-omissions"
 
-#define DP_DEBUG false
+#define DP_DEBUG true
 
 STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
 STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
