@@ -51,7 +51,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 dep_line_number = dep_line[dep_line.index(":") + 1:]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
-        tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+        tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                              first_dependency_line,
                                              [], [], [])
         if v.start_position() not in suggestions:
@@ -89,7 +89,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [], used_in_task_parallelism_detection=True)
-                    current_suggestions = TaskParallelismInfo(vx, ["task"],
+                    current_suggestions = TaskParallelismInfo(vx, TPIType.TASK, ["task"],
                                                               pragma_line,
                                                               [v.name for v in fpriv],
                                                               [v.name for v in priv],

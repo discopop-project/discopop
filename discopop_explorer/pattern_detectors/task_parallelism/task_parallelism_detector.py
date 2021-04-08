@@ -14,7 +14,7 @@ from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
 from discopop_explorer.pattern_detectors.reduction_detector import run_detection as detect_reduction
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.filter import filter_data_sharing_clauses, \
     remove_useless_barrier_suggestions, remove_duplicate_data_sharing_clauses, filter_data_depend_clauses, \
     remove_duplicates
@@ -116,7 +116,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(fork.nodes[0], ["dummy_fork"], [], [], [], []))
+            result.append(TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], []))
     # Preprocessing
     check_loop_scopes(pet)
     # Suggestion generation

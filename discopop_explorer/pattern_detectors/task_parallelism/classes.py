@@ -42,9 +42,11 @@ class Task(object):
 
 
 class TPIType(Enum):
-    TASK = 0
-    TASKWAIT = 1
-    TASKLOOP = 2
+    DUMMY = 0
+    TASK = 1
+    TASKWAIT = 2
+    TASKLOOP = 3
+    PARALLELREGION = 4
 
 
 class TaskParallelismInfo(PatternInfo):
@@ -103,12 +105,13 @@ class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info.
     """
 
-    def __init__(self, node: CUNode,
+    def __init__(self, node: CUNode, type: TPIType,
                  region_start_line, region_end_line):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
         self.pragma = "#pragma omp parallel\n\t#pragma omp single"
+        self.type = type
 
     def __str__(self):
         return f'Task Parallel Region at CU: {self.node_id}\n' \

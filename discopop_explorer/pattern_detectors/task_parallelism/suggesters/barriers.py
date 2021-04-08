@@ -150,7 +150,7 @@ def detect_barrier_suggestions(pet: PETGraphX,
                     v.tp_contains_taskwait = True
                     barrier_nodes.append(v)
                     transformation_happened = True
-                    tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+                    tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                                          v_first_line,
                                                          [], [], [])
                     suggestions.append(tmp_suggestion)
@@ -163,7 +163,7 @@ def detect_barrier_suggestions(pet: PETGraphX,
                 v.tp_contains_taskwait = True
                 barrier_nodes.append(v)
                 transformation_happened = True
-                tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+                tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                                      v_first_line,
                                                      [], [], [])
                 suggestions.append(tmp_suggestion)
@@ -282,7 +282,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
             cu.tp_contains_taskwait = True
             pragma_line = cu.end_position()  # since return has to be the last statement in a CU
             pragma_line = pragma_line[pragma_line.index(":") + 1:]
-            tmp_suggestion = TaskParallelismInfo(cu,
+            tmp_suggestion = TaskParallelismInfo(cu, TPIType.TASKWAIT,
                                                  ["taskwait"],
                                                  pragma_line,
                                                  [], [], [])
@@ -427,6 +427,7 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
                         first_line = pet.node_at(succ_edge[1]).start_position()
                         first_line = first_line[first_line.index(":") + 1:]
                         tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
+                                                             TPIType.TASKWAIT,
                                                              ["taskwait"],
                                                              first_line,
                                                              [], [], [])

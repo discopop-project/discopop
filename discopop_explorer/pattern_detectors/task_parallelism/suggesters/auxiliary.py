@@ -49,7 +49,7 @@ def suggest_parallel_regions(pet: PETGraphX,
         if last_node is None:
             continue
         last_node = cast(CUNode, last_node)
-        region_suggestions.append(ParallelRegionInfo(parent,
+        region_suggestions.append(ParallelRegionInfo(parent, TPIType.PARALLELREGION,
                                                      last_node.start_position(),
                                                      last_node.end_position()))
     return region_suggestions
