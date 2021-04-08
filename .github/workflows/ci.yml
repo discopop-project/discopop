@@ -13,7 +13,7 @@ jobs:
 
   discopop_explorer:
     name: "Explorer"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: [ 3.6 ]
@@ -37,14 +37,14 @@ jobs:
 
   discopop_profiler:
     name: "Profiler"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
       - name: "Install Dependencies"
         run: |
           sudo apt-get remove clang-10 clang-9
-          sudo apt-get install libclang-8-dev
+          sudo apt-get install libclang-8-dev clang-8 llvm-8
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
