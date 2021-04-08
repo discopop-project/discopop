@@ -2,7 +2,7 @@ from typing import List, Dict, cast
 
 from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
     recursive_function_call_contained_in_worker_cu, line_contained_in_region, contains_reduction
 from discopop_explorer.utils import classify_task_vars
@@ -129,7 +129,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
     :return: Updated suggestions"""
     task_suggestions = [s for s in
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.pragma[0] == "task"]
+                        if s.type is TPIType.TASK]
     for ts in task_suggestions:
         found_critical_cus: List[CUNode] = []
         found_atomic_cus: List[CUNode] = []
@@ -162,7 +162,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
+                                if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1]) + 1
                     else:
                         # Regular loop: task = loop body, move taskwait to the end of the loop body
@@ -174,7 +174,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
+                                if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1])
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly

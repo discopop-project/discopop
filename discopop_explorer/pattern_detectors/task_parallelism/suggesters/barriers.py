@@ -3,7 +3,7 @@ from typing import List, cast, Tuple
 from discopop_explorer.PETGraphX import CUNode, EdgeType, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import ParallelRegionInfo, OmittableCuInfo, \
-    TaskParallelismInfo
+    TaskParallelismInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import check_reachability, line_contained_in_region, \
     get_predecessor_nodes
 
@@ -34,9 +34,9 @@ def detect_barrier_suggestions(pet: PETGraphX,
             omittable_suggestions.append(single_suggestion)
         elif type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
-            if single_suggestion.pragma[0] == "taskwait":
+            if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
-            elif single_suggestion.pragma[0] == "task":
+            elif single_suggestion.type is TPIType.TASK:
                 task_suggestions.append(single_suggestion)
         else:
             raise TypeError("Unknown Type: ", type(single_suggestion))
@@ -245,7 +245,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # if task is covered by a parallel region, ignore it due to the present, implicit barrier
         covered_by_parallel_region = False
@@ -311,7 +311,7 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
             try:
-                if single_suggestion.pragma[0] == "taskwait":
+                if single_suggestion.type is TPIType.TASKWAIT:
                     barrier_suggestions.append(single_suggestion)
                 else:
                     result.append(single_suggestion)
@@ -386,9 +386,9 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
             continue
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
-            if single_suggestion.pragma[0] == "taskwait":
+            if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
-            elif single_suggestion.pragma[0] == "task":
+            elif single_suggestion.type is TPIType.TASK:
                 task_suggestions.append(single_suggestion)
         else:
             raise TypeError("Unsupported Type: ", type(single_suggestion))

@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, cast, Dict
 from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, Task, \
-    OmittableCuInfo
+    OmittableCuInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
     task_contained_in_reduction_loop
 
@@ -20,7 +20,7 @@ def suggest_parallel_regions(pet: PETGraphX,
     :param suggestions: List[TaskParallelismInfo]
     :return: List[ParallelRegionInfo]"""
     # get task suggestions from suggestions
-    task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
+    task_suggestions = [s for s in suggestions if s.type is TPIType.TASK]
     # start search for each suggested task
     parents: List[Tuple[CUNode, Optional[CUNode]]] = []
     for ts in task_suggestions:
@@ -122,7 +122,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
         if not (type(s) == Task or type(s) == TaskParallelismInfo):
             output.append(s)
             continue
-        if not s.pragma[0] == "task":
+        if not s.type is TPIType.TASK:
             continue
         # check if s contained in reduction loop body
         red_vars_entry, red_loop = task_contained_in_reduction_loop(pet, s)
@@ -139,6 +139,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
             reduction_clause += red_vars_entry["name"].replace(".addr", "")
             reduction_clause += ")"
             s.pragma = ["taskloop", reduction_clause]
+            s.type = TPIType.TASKLOOP
             # update pragma line to parent reduction loop
             s.pragma_line = red_loop.start_position()
             # update pragma region
@@ -170,7 +171,7 @@ def combine_omittable_cus(pet: PETGraphX,
             if type(single_suggestion) == TaskParallelismInfo:
                 single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
                 try:
-                    if single_suggestion_tpi.pragma[0] == "task":
+                    if single_suggestion_tpi.type is TPIType.TASK:
                         task_suggestions.append(single_suggestion_tpi)
                     else:
                         result.append(single_suggestion_tpi)
