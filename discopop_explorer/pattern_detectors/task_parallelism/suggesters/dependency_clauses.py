@@ -1,5 +1,4 @@
 import os
-import pathlib
 from typing import List, Dict, Tuple, Optional, cast
 
 from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
@@ -222,7 +221,6 @@ def get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path:
     :param discopop_build_path: path to discopop build directory
     :result: function-internal alias detection results in dict form"""
     # execute simple alias detection
-    pattern_detector_dir = str(pathlib.Path(__file__).parent.absolute())
     alias_detection_temp_file = os.getcwd() + "/alias_detection_temp.txt"
     # get absolute file paths
     file_mapping_path = os.path.abspath(file_mapping_path)
@@ -800,9 +798,7 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
     try:
         function_call_string = get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
                                                                   call_position.split(":")[0], called_function_name=
-                                                                    demangle(called_function_name_not_none).split(
-                                                                        "(")[
-                                                                        0])
+                                                                  demangle(called_function_name_not_none).split("(")[0])
     except IndexError:
         return None
     # get function parameter names from recursive function call
@@ -858,11 +854,11 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
 def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, called_function_cu: CUNode,
                                                               recursively_visited: List[CUNode],
                                                               function_raw_information_cache: Dict[
-                                                                    str, List[Tuple[bool, bool]]],
+                                                                  str, List[Tuple[bool, bool]]],
                                                               cu_inst_result_dict: Dict[
-                                                                    str, List[Dict[str, Optional[str]]]],
+                                                                  str, List[Dict[str, Optional[str]]]],
                                                               function_parameter_alias_dict: Dict[
-                                                                    str, List[Tuple[str, str]]],
+                                                                  str, List[Tuple[str, str]]],
                                                               source_code_files: Dict[str, str]) \
         -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,

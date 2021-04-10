@@ -245,7 +245,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                                             else:
                                                 # append loop_cu_child to list of critical CUs
                                                 found_critical_cus.append(loop_cu_child)
-        ## CRITICAL SECTIONS
+        # CRITICAL SECTIONS
         # remove potential duplicates from critical cus
         found_critical_cus = list(set(found_critical_cus))
         # get lists of combinable cus by checking successor relation
@@ -300,7 +300,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
             critical_section_str += combination_list[-1].end_position()
             ts.critical_sections.append(critical_section_str)
 
-        ## ATOMIC SECTIONS
+        # ATOMIC SECTIONS
         # remove potential duplicates from atomic cus
         found_atomic_cus = list(set(found_atomic_cus))
         # get lists of combinable cus by checking successor relation

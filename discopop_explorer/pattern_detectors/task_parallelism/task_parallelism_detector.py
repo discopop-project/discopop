@@ -143,5 +143,3 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = sort_output(result)
 
     return result
-
-

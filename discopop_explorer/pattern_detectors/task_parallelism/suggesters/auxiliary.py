@@ -3,8 +3,8 @@ from typing import List, Tuple, Optional, cast, Dict
 
 from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, Task, \
-    OmittableCuInfo, TPIType
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+    Task, OmittableCuInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
     task_contained_in_reduction_loop
 
@@ -122,7 +122,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
         if not (type(s) == Task or type(s) == TaskParallelismInfo):
             output.append(s)
             continue
-        if not s.type is TPIType.TASK:
+        if s.type is not TPIType.TASK:
             continue
         # check if s contained in reduction loop body
         red_vars_entry, red_loop = task_contained_in_reduction_loop(pet, s)
@@ -242,14 +242,14 @@ def combine_omittable_cus(pet: PETGraphX,
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
                     if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep:
+                            omit_target_task_idx].out_dep:
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
                 if ":" not in cast(str, task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].region_end_line):
+                        omit_target_task_idx].region_end_line):
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(cast(str, task_suggestions_dict[omit_s.combine_with_node][
                                 omit_target_task_idx].region_end_line)):
