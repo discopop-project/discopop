@@ -127,6 +127,7 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     result = cast(List[PatternInfo], remove_useless_barrier_suggestions(pet, cast(List[TaskParallelismInfo], result)))
     result = detect_barrier_suggestions(pet, result)
     result = validate_barriers(pet, result)
+    # result = __detect_dependency_clauses_old(pet, result)
     result = detect_dependency_clauses_alias_based(pet, result, file_mapping, cu_xml, dep_file,
                                                    cu_ist_result_file, discopop_build_path)
     result = suggest_missing_barriers_for_global_vars(pet, result)
