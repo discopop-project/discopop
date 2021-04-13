@@ -15,13 +15,13 @@ def filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     :param suggestions: List[PatternInfo]
     :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
     :return: List[PatternInfo]"""
-    suggestions = filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
-    suggestions = filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
-    suggestions = filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
+    suggestions = __filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
     return suggestions
 
 
-def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -38,9 +38,9 @@ def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sugge
                                                          NodeType.LOOP, EdgeType.CHILD, True)
         parent_loops = [e[0] for e in parent_loops_plus_last_node]
         # consider only loops which enclose the suggestion
-        parent_loops = [l for l in parent_loops if line_contained_in_region(suggestion._node.start_position(),
-                                                                            l.start_position(),
-                                                                            l.end_position())]
+        parent_loops = [loop for loop in parent_loops if line_contained_in_region(suggestion._node.start_position(),
+                                                                                  loop.start_position(),
+                                                                                  loop.end_position())]
         to_be_removed = []
         for var in suggestion.shared:
             for parent_loop in parent_loops:
@@ -51,8 +51,8 @@ def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sugge
     return suggestions
 
 
-def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
-                                            var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
+                                              var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
@@ -104,7 +104,7 @@ def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[Pa
 
 
 def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function,
-                             var_def_line_dict: Dict[str, List[str]]):
+                            var_def_line_dict: Dict[str, List[str]]):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters shared clauses.
     :param suggestion: Suggestion to be checked
@@ -225,8 +225,8 @@ def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: CUNode, target: CUNode
     return recursion_result
 
 
-def filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
-                                         var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
+                                           var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
     suggestion.
     Idea (per shared variable / suggestion):
@@ -372,10 +372,16 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
     return result
 
 
-def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict,
-                             parent_function, out_dep_vars):
+def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
+                             parent_function: CUNode, out_dep_vars: Dict[str, List[str]]) -> bool:
     """Helper function for filter_data_depend_clauses.
-    Filters in-dependencies"""
+    Filters in-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param out_dep_vars: variables used in outgoing dependencies
+    :return: True, if a modification of suggestion.out_dep has been made. False, otherwise."""
     to_be_removed = []
     modification_found = False
     for var in suggestion.in_dep:
@@ -393,8 +399,6 @@ def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, va
                     if var in out_dep_vars:
                         for line_num in out_dep_vars[var]:
                             line_num = str(line_num)
-                            tmp_pragma_line = suggestion.pragma_line
-                            tmp_pragma_line = str(tmp_pragma_line)
                             if ":" in line_num:
                                 line_num = line_num.split(":")[1]
                             # check validity of the dependence by reachability checking on
@@ -424,10 +428,16 @@ def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, va
     return modification_found
 
 
-def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict,
-                              parent_function, in_dep_vars):
+def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
+                              parent_function: CUNode, in_dep_vars: Dict[str, List[str]]) -> bool:
     """Helper function for filter_data_depend_clauses.
-    Filters out-dependencies"""
+    Filters out-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param in_dep_vars: variables used in incoming dependencies
+    :return: True, if a modification of suggestion.out_dep has been made. False, otherwise."""
     modification_found = False
     to_be_removed = []
     for var in suggestion.out_dep:
@@ -445,8 +455,6 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
                     if var in in_dep_vars:
                         for line_num in in_dep_vars[var]:
                             line_num = str(line_num)
-                            tmp_pragma_line = suggestion.pragma_line
-                            tmp_pragma_line = str(tmp_pragma_line)
                             if ":" in line_num:
                                 line_num = line_num.split(":")[1]
                             # check validity of the dependence by reachability checking on
@@ -477,10 +485,19 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
     return modification_found
 
 
-def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict,
-                              parent_function, in_dep_vars, out_dep_vars):
+def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo,
+                                 var_def_line_dict: Dict[str, List[str]],
+                                 parent_function: CUNode, in_dep_vars: Dict[str, List[str]],
+                                 out_dep_vars: Dict[str, List[str]]) -> bool:
     """Helper function for filter_data_depend_clauses.
-    Filters in_out-dependencies"""
+    Filters in_out-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param in_dep_vars: variables used in incoming dependencies
+    :param out_dep_vars: variables used in incoming dependencies
+    :return: True, if a modification of suggestion.in_out_dep has been made. False, otherwise."""
     modification_found = False
     to_be_removed = []
     for var in suggestion.in_out_dep:
@@ -500,10 +517,6 @@ def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo
                         # check if out dep prior an in dep afterwards exist
                         prior_out_exists = False
                         successive_in_exists = False
-                        tmp_pragma_line = suggestion.pragma_line
-                        tmp_pragma_line = str(tmp_pragma_line)
-                        if ":" in tmp_pragma_line:
-                            tmp_pragma_line = tmp_pragma_line.split(":")[1]
                         for line_num in out_dep_vars[var]:
                             line_num = str(line_num)
                             if ":" in line_num:
@@ -572,6 +585,7 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     of task suggestions.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing mapping from var_name to [definition lines]
     :return: List[PatternInfo]
     """
     modification_found = True
