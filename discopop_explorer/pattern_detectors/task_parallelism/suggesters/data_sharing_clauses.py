@@ -2,7 +2,7 @@ from typing import List, cast
 
 from discopop_explorer.PETGraphX import EdgeType, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
@@ -15,7 +15,7 @@ def suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, sugges
     :return: List[PatternInfo]
     """
     task_suggestions = [s for s in [cast(TaskParallelismInfo, t) for t in suggestions
-                                    if type(t) == TaskParallelismInfo] if s.pragma[0] == "task"]
+                                    if type(t) == TaskParallelismInfo] if s.type is TPIType.TASK]
     for ts in task_suggestions:
         if ts.shared:
             # iterate over parent function(s)

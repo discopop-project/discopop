@@ -3,8 +3,8 @@ from typing import List, Tuple, Optional, cast, Dict
 
 from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, Task, \
-    OmittableCuInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+    Task, OmittableCuInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
     task_contained_in_reduction_loop
 
@@ -20,7 +20,7 @@ def suggest_parallel_regions(pet: PETGraphX,
     :param suggestions: List[TaskParallelismInfo]
     :return: List[ParallelRegionInfo]"""
     # get task suggestions from suggestions
-    task_suggestions = [s for s in suggestions if s.pragma[0] == "task"]
+    task_suggestions = [s for s in suggestions if s.type is TPIType.TASK]
     # start search for each suggested task
     parents: List[Tuple[CUNode, Optional[CUNode]]] = []
     for ts in task_suggestions:
@@ -49,7 +49,7 @@ def suggest_parallel_regions(pet: PETGraphX,
         if last_node is None:
             continue
         last_node = cast(CUNode, last_node)
-        region_suggestions.append(ParallelRegionInfo(parent,
+        region_suggestions.append(ParallelRegionInfo(parent, TPIType.PARALLELREGION,
                                                      last_node.start_position(),
                                                      last_node.end_position()))
     return region_suggestions
@@ -122,7 +122,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
         if not (type(s) == Task or type(s) == TaskParallelismInfo):
             output.append(s)
             continue
-        if not s.pragma[0] == "task":
+        if s.type is not TPIType.TASK:
             continue
         # check if s contained in reduction loop body
         red_vars_entry, red_loop = task_contained_in_reduction_loop(pet, s)
@@ -139,6 +139,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
             reduction_clause += red_vars_entry["name"].replace(".addr", "")
             reduction_clause += ")"
             s.pragma = ["taskloop", reduction_clause]
+            s.type = TPIType.TASKLOOP
             # update pragma line to parent reduction loop
             s.pragma_line = red_loop.start_position()
             # update pragma region
@@ -170,7 +171,7 @@ def combine_omittable_cus(pet: PETGraphX,
             if type(single_suggestion) == TaskParallelismInfo:
                 single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
                 try:
-                    if single_suggestion_tpi.pragma[0] == "task":
+                    if single_suggestion_tpi.type is TPIType.TASK:
                         task_suggestions.append(single_suggestion_tpi)
                     else:
                         result.append(single_suggestion_tpi)
@@ -241,14 +242,14 @@ def combine_omittable_cus(pet: PETGraphX,
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
                     if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep:
+                            omit_target_task_idx].out_dep:
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
                 if ":" not in cast(str, task_suggestions_dict[omit_s.combine_with_node][
-                    omit_target_task_idx].region_end_line):
+                        omit_target_task_idx].region_end_line):
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
                             int(cast(str, task_suggestions_dict[omit_s.combine_with_node][
                                 omit_target_task_idx].region_end_line)):

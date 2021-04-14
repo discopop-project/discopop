@@ -1,4 +1,5 @@
 import os
+import pathlib
 import re
 import subprocess
 from typing import Dict, List, Optional, Match, cast
@@ -325,7 +326,9 @@ def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_
     if os.path.exists(temp_file):
         os.remove(temp_file)
     # create statements file
-    __create_statements_file(file_mapping, temp_file + "_statements", build_path + "/rtlib/simple-alias-detection/getStatements")
+    __create_statements_file(file_mapping, temp_file + "_statements",
+                             str(pathlib.Path(build_path).joinpath('rtlib', 'simple-alias-detection',
+                                                                   'getStatements')))
     # get function information file
     function_information = __get_function_information(cu_xml)
     # add alias information to function_information

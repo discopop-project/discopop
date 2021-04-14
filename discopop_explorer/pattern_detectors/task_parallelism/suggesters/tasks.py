@@ -2,7 +2,7 @@ from typing import List, Dict, cast
 
 from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
     recursive_function_call_contained_in_worker_cu, line_contained_in_region, contains_reduction
 from discopop_explorer.utils import classify_task_vars
@@ -51,7 +51,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 dep_line_number = dep_line[dep_line.index(":") + 1:]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
-        tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+        tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                              first_dependency_line,
                                              [], [], [])
         if v.start_position() not in suggestions:
@@ -89,7 +89,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = \
                         classify_task_vars(pet, contained_in, "", [], [], used_in_task_parallelism_detection=True)
-                    current_suggestions = TaskParallelismInfo(vx, ["task"],
+                    current_suggestions = TaskParallelismInfo(vx, TPIType.TASK, ["task"],
                                                               pragma_line,
                                                               [v.name for v in fpriv],
                                                               [v.name for v in priv],
@@ -129,7 +129,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
     :return: Updated suggestions"""
     task_suggestions = [s for s in
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.pragma[0] == "task"]
+                        if s.type is TPIType.TASK]
     for ts in task_suggestions:
         found_critical_cus: List[CUNode] = []
         found_atomic_cus: List[CUNode] = []
@@ -162,7 +162,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
+                                if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1]) + 1
                     else:
                         # Regular loop: task = loop body, move taskwait to the end of the loop body
@@ -174,7 +174,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 s = cast(TaskParallelismInfo, s)
-                                if s.pragma[0] == "taskwait" and s._node == stws_cu:
+                                if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1])
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly
@@ -245,7 +245,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                                             else:
                                                 # append loop_cu_child to list of critical CUs
                                                 found_critical_cus.append(loop_cu_child)
-        ## CRITICAL SECTIONS
+        # CRITICAL SECTIONS
         # remove potential duplicates from critical cus
         found_critical_cus = list(set(found_critical_cus))
         # get lists of combinable cus by checking successor relation
@@ -300,7 +300,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
             critical_section_str += combination_list[-1].end_position()
             ts.critical_sections.append(critical_section_str)
 
-        ## ATOMIC SECTIONS
+        # ATOMIC SECTIONS
         # remove potential duplicates from atomic cus
         found_atomic_cus = list(set(found_atomic_cus))
         # get lists of combinable cus by checking successor relation
