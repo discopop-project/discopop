@@ -6,9 +6,113 @@ from typing import Dict, List, Optional, Match, cast
 from lxml import objectify  # type: ignore
 
 
+def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: str) -> Optional[List[str]]:
+    """splits a statement and performs multiple alias analyses if necessary (more than one '=' contained
+    in the given statement).
+    :param stmt_copy: cleaned copy of the target statement
+    :param statement: statement to check for new alias definition
+    :param var_name: target variable name
+    :param var_type: type of the variable
+    :return: List containing found aliases"""
+    if stmt_copy.count(",") == 0:
+        return None
+    indices = [i for i, x in enumerate(stmt_copy) if x == ","]
+    indices = indices + [len(stmt_copy)]
+    aliases: List[str] = []
+    for idx, index in enumerate(indices):
+        if idx == 0:
+            stmt = statement[:indices[idx]]
+        elif idx == len(indices) - 1:
+            stmt = statement[indices[idx - 1] + 1:index + 1]
+        else:
+            stmt = statement[indices[idx - 1] + 1: indices[idx]]
+        tmp = __get_alias_from_statement(var_name, var_type, stmt)
+        if tmp is not None:
+            aliases += tmp
+    if len(aliases) == 0:
+        return None
+    return aliases
+
+
+def __check_obvious_pointer_type(var_name: str, rhs: str) -> bool:
+    """Checks conditions for obvious pointer types.
+    :param var_name: target variable name
+    :param rhs: right hand side string to be analyzed
+    :return: True, of None should be returned by __get_alias_statement. False, otherwise.
+    """
+    # var_name has index access?
+    if rhs.index(var_name) + len(var_name) < len(rhs) and \
+            rhs[rhs.index(var_name) + len(var_name)] == "[":
+        return True
+    # '*' prior to var_name?
+    if rhs.index(var_name) - 1 >= 0 and \
+            rhs[rhs.index(var_name) - 1] == "*":
+        return True
+    # '*' and '(' prior, no ')' prior to var_name?
+    if rhs.index(var_name) - 2 >= 0 and \
+            rhs[rhs.index(var_name) - 2] == "*" and \
+            rhs[rhs.index(var_name) - 1] == "(" and \
+            ")" not in rhs[
+                       rhs.index(var_name) - 2:rhs.index(var_name) + len(var_name)]:
+        return True
+    # '->' after var_name?
+    if rhs.index(var_name) + len(var_name) + 2 > len(rhs) and \
+            rhs[rhs.index(var_name) + len(var_name): rhs.index(var_name) + len(
+                var_name) + 1] == "->":
+        return True
+    return False
+
+
+def __check_possible_pointer_type(var_name: str, rhs: str) -> bool:
+    """Checks conditions for possible pointer types.
+    :param var_name: target variable name
+    :param rhs: right hand side string to be analyzed
+    :return: True, of None should be returned by __get_alias_statement. False, otherwise.
+    """
+    # '&' prior to var_name?
+    if rhs.index(var_name) - 1 >= 0 and \
+            not rhs[rhs.index(var_name) - 1] == "&":
+        return True
+    # var_name has index access?
+    if rhs.index(var_name) + len(var_name) < len(rhs) and \
+            rhs[rhs.index(var_name) + len(var_name)] == "[":
+        return True
+    # '*' prior to '&'?
+    if rhs.index(var_name) - 2 >= 0 and \
+            rhs[rhs.index(var_name) - 1] == "&" and \
+            rhs[rhs.index(var_name) - 2] == "*":
+        return True
+    # '*' and '(' prior, no ')' prior to '&'?
+    if rhs.index(var_name) - 2 >= 0 and \
+            rhs[rhs.index(var_name) - 2] == "*" and \
+            rhs[rhs.index(var_name) - 1] == "(" and \
+            ")" not in rhs[
+                       rhs.index(var_name) - 2:rhs.index(var_name)]:
+        return True
+    # '->' after var_name?
+    if rhs.index(var_name) + len(var_name) + 2 > len(rhs) and \
+            rhs[rhs.index(var_name) + len(var_name): rhs.index(var_name) + len(
+                var_name) + 1] == "->":
+        return True
+    return False
+
+
+def __check_pointer_type(var_type: str, var_name: str, rhs: str) -> bool:
+    """Distinguishes obvious and possible pointer types.
+    :param var_type: type of the variable
+    :param var_name: target variable name
+    :param rhs: right hand side string to be analyzed
+    :return: True, if None should be returned. False, otherwise."""
+    # var_name is pointer type?
+    if "*" in var_type:
+        return __check_obvious_pointer_type(var_name, rhs)
+    else:
+        return __check_possible_pointer_type(var_name, rhs)
+
+
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
-    """checks if the given statement defines a new alias for var_name.
-    returns a list containing the found alias name or None, if no alias has been defined by statement.
+    """Checks if the given statement defines a new alias for var_name.
+    Returns a list containing the found alias name or None, if no alias has been defined by statement.
     :param var_name: target variable name
     :param var_type: type of the variable
     :param statement: statement to check for new alias definition
@@ -38,24 +142,7 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         return None
     # prune statement to single contained '='
     if stmt_copy.count("=") > 1:
-        if stmt_copy.count(",") == 0:
-            return None
-        indices = [i for i, x in enumerate(stmt_copy) if x == ","]
-        indices = indices + [len(stmt_copy)]
-        aliases = []
-        for idx, index in enumerate(indices):
-            if idx == 0:
-                stmt = statement[:indices[idx]]
-            elif idx == len(indices) - 1:
-                stmt = statement[indices[idx - 1] + 1:index + 1]
-            else:
-                stmt = statement[indices[idx - 1] + 1: indices[idx]]
-            tmp = __get_alias_from_statement(var_name, var_type, stmt)
-            if tmp is not None:
-                aliases += tmp
-        if len(aliases) == 0:
-            return None
-        return aliases
+        return __prune_statement(stmt_copy, statement, var_name, var_type)
 
     # var_name on left hand side?
     if stmt_copy.index(var_name) < stmt_copy.index("="):
@@ -71,56 +158,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     if call_string is not None:
         if var_name in call_string:
             return None
-    # var_name is pointer type?
-    if "*" in var_type:
-        # left branch in diagram
-        # var_name has index access?
-        if right_hand_side.index(var_name) + len(var_name) < len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name) + len(var_name)] == "[":
-                return None
-        # '*' prior to var_name?
-        if right_hand_side.index(var_name) - 1 >= 0:
-            if right_hand_side[right_hand_side.index(var_name) - 1] == "*":
-                return None
-        # '*' and '(' prior, no ')' prior to var_name?
-        if right_hand_side.index(var_name) - 2 >= 0:
-            if right_hand_side[right_hand_side.index(var_name) - 2] == "*" and \
-                    right_hand_side[right_hand_side.index(var_name) - 1] == "(":
-                if ")" not in right_hand_side[
-                              right_hand_side.index(var_name) - 2:right_hand_side.index(var_name) + len(var_name)]:
-                    return None
-        # '->' after var_name?
-        if right_hand_side.index(var_name) + len(var_name) + 2 > len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name) + len(var_name): right_hand_side.index(var_name) + len(
-                    var_name) + 1] == "->":
-                return None
-    else:
-        # right branch in diagram
-        # '&' prior to var_name?
-        if right_hand_side.index(var_name) - 1 >= 0:
-            if not right_hand_side[right_hand_side.index(var_name) - 1] == "&":
-                return None
-        # var_name has index access?
-        if right_hand_side.index(var_name) + len(var_name) < len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name) + len(var_name)] == "[":
-                return None
-        # '*' prior to '&'?
-        if right_hand_side.index(var_name) - 2 >= 0:
-            if right_hand_side[right_hand_side.index(var_name) - 1] == "&" and \
-                    right_hand_side[right_hand_side.index(var_name) - 2] == "*":
-                return None
-        # '*' and '(' prior, no ')' prior to '&'?
-        if right_hand_side.index(var_name) - 2 >= 0:
-            if right_hand_side[right_hand_side.index(var_name) - 2] == "*" and \
-                    right_hand_side[right_hand_side.index(var_name) - 1] == "(":
-                if ")" not in right_hand_side[
-                              right_hand_side.index(var_name) - 2:right_hand_side.index(var_name)]:
-                    return None
-        # '->' after var_name?
-        if right_hand_side.index(var_name) + len(var_name) + 2 > len(right_hand_side):
-            if right_hand_side[right_hand_side.index(var_name) + len(var_name): right_hand_side.index(var_name) + len(
-                    var_name) + 1] == "->":
-                return None
+    # check pointer tye
+    if __check_pointer_type(var_type, var_name, right_hand_side):
+        return None
     # left hand side is single token?
     left_hand_split = left_hand_side.split(" ")
     left_hand_split = [x for x in left_hand_split if len(x) > 0]
