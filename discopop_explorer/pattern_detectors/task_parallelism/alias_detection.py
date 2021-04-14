@@ -33,8 +33,8 @@ def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: s
     return aliases
 
 
-def __check_left_branch(var_name: str, rhs: str) -> bool:
-    """Checks the left branch of the alias detection diagram.
+def __check_obvious_pointer_type(var_name: str, rhs: str) -> bool:
+    """Checks conditions for obvious pointer types.
     :param var_name: target variable name
     :param rhs: right hand side string to be analyzed
     :return: True, of None should be returned by __get_alias_statement. False, otherwise.
@@ -62,8 +62,8 @@ def __check_left_branch(var_name: str, rhs: str) -> bool:
     return False
 
 
-def __check_right_branch(var_name: str, rhs: str) -> bool:
-    """Checks the right branch of the alias detection diagram.
+def __check_possible_pointer_type(var_name: str, rhs: str) -> bool:
+    """Checks conditions for possible pointer types.
     :param var_name: target variable name
     :param rhs: right hand side string to be analyzed
     :return: True, of None should be returned by __get_alias_statement. False, otherwise.
@@ -96,24 +96,22 @@ def __check_right_branch(var_name: str, rhs: str) -> bool:
     return False
 
 
-def __check_branched_section(var_type: str, var_name: str, rhs: str) -> bool:
-    """Checks conditions corresponding to the branched section in the alias detection diagram.
+def __check_pointer_type(var_type: str, var_name: str, rhs: str) -> bool:
+    """Distinguishes obvious and possible pointer types.
     :param var_type: type of the variable
     :param var_name: target variable name
     :param rhs: right hand side string to be analyzed
     :return: True, if None should be returned. False, otherwise."""
     # var_name is pointer type?
     if "*" in var_type:
-        # left branch in diagram
-        return __check_left_branch(var_name, rhs)
+        return __check_obvious_pointer_type(var_name, rhs)
     else:
-        # right branch in diagram
-        return __check_right_branch(var_name, rhs)
+        return __check_possible_pointer_type(var_name, rhs)
 
 
 def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> Optional[List[str]]:
-    """checks if the given statement defines a new alias for var_name.
-    returns a list containing the found alias name or None, if no alias has been defined by statement.
+    """Checks if the given statement defines a new alias for var_name.
+    Returns a list containing the found alias name or None, if no alias has been defined by statement.
     :param var_name: target variable name
     :param var_type: type of the variable
     :param statement: statement to check for new alias definition
@@ -159,8 +157,8 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     if call_string is not None:
         if var_name in call_string:
             return None
-    # check branched section in diagram
-    if __check_branched_section(var_type, var_name, right_hand_side):
+    # check pointer tye
+    if __check_pointer_type(var_type, var_name, right_hand_side):
         return None
     # left hand side is single token?
     left_hand_split = left_hand_side.split(" ")
