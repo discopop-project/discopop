@@ -2,7 +2,8 @@ from typing import List, cast, Dict, Optional, Tuple
 
 from discopop_explorer.PETGraphX import CUNode, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+    TPIType
 
 
 def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
@@ -20,10 +21,10 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
     :return: Updated suggestions"""
     task_suggestions = [s for s in
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.pragma[0] == "task"]
+                        if s.type is TPIType.TASK]
     taskwait_suggestions = [s for s in
                             [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                            if s.pragma[0] == "taskwait"]
+                            if s.type is TPIType.TASKWAIT]
     # mark preceeding suggestions for each taskwait suggestion
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id

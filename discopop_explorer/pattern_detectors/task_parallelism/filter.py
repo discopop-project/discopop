@@ -2,9 +2,10 @@ from typing import List, Dict, cast, Optional, Union
 
 from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, get_parent_of_type, \
-    get_cus_inside_function, check_reachability
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+    TPIType
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
+    line_contained_in_region, get_parent_of_type, get_cus_inside_function, check_reachability
 from discopop_explorer.utils import is_loop_index2
 
 
@@ -31,16 +32,16 @@ def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sugge
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # get parent loops of suggestion
         parent_loops_plus_last_node = get_parent_of_type(pet, suggestion._node,
                                                          NodeType.LOOP, EdgeType.CHILD, True)
         parent_loops = [e[0] for e in parent_loops_plus_last_node]
         # consider only loops which enclose the suggestion
-        parent_loops = [l for l in parent_loops if line_contained_in_region(suggestion._node.start_position(),
-                                                                            l.start_position(),
-                                                                            l.end_position())]
+        parent_loops = [loop for loop in parent_loops if line_contained_in_region(suggestion._node.start_position(),
+                                                                                  loop.start_position(),
+                                                                                  loop.end_position())]
         to_be_removed = []
         for var in suggestion.shared:
             for parent_loop in parent_loops:
@@ -68,7 +69,7 @@ def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[Pa
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+        if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
             continue
         # get function containing the task cu
         parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
@@ -196,11 +197,11 @@ def filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Patte
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # get function containing the task cu
         parent_function_cu, last_node = \
-        get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+            get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
 
         # define helper function
         def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
@@ -331,9 +332,9 @@ def remove_useless_barrier_suggestions(pet: PETGraphX,
     task_suggestions = []
     result_suggestions = []
     for single_suggestion in suggestions:
-        if single_suggestion.pragma[0] == "taskwait":
+        if single_suggestion.type is TPIType.TASKWAIT:
             taskwait_suggestions.append(single_suggestion)
-        elif single_suggestion.pragma[0] == "task":
+        elif single_suggestion.type is TPIType.TASK:
             task_suggestions.append(single_suggestion)
         else:
             result_suggestions.append(single_suggestion)
@@ -401,7 +402,7 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if type(suggestion) != TaskParallelismInfo:
                 continue
             suggestion = cast(TaskParallelismInfo, suggestion)
-            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+            if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             for var in suggestion.in_dep:
                 if var not in in_dep_vars:
@@ -426,7 +427,7 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if type(suggestion) != TaskParallelismInfo:
                 continue
             suggestion = cast(TaskParallelismInfo, suggestion)
-            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+            if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             # get function containing the task cu
             parent_function, last_node = \
@@ -452,7 +453,9 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # check validity of the dependence by reachability checking on
+                                    # successor + child graph
+
                                     # get CU containing line_num
                                     for cu_node in pet.all_nodes(NodeType.CU):
                                         file_id = suggestion._node.start_position().split(":")[0]
@@ -495,7 +498,9 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     tmp_pragma_line = str(tmp_pragma_line)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # check validity of the dependence by reachability checking on
+                                    # successor + child graph
+
                                     # get CU containing line_num
                                     for cu_node in pet.all_nodes(NodeType.CU):
                                         file_id = suggestion._node.start_position().split(":")[0]
@@ -545,7 +550,9 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # check validity of the dependence by reachability checking on
+                                    # successor + child graph
+
                                     # get CU containing line_num
                                     for cu_node in pet.all_nodes(NodeType.CU):
                                         file_id = suggestion._node.start_position().split(":")[0]
@@ -562,7 +569,9 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                     line_num = str(line_num)
                                     if ":" in line_num:
                                         line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on successor + child graph
+                                    # check validity of the dependence by reachability checking on
+                                    # successor + child graph
+
                                     # get CU containing line_num
                                     for cu_node in pet.all_nodes(NodeType.CU):
                                         file_id = suggestion._node.start_position().split(":")[0]
