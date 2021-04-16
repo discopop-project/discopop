@@ -9,8 +9,9 @@ from discopop_explorer.utils import depends
 __workloadThreshold = 10000
 __minParallelism = 3
 __forks = set()
-__global_llvm_cxxfilt_path : str = ""
+__global_llvm_cxxfilt_path: str = ""
 demangling_cache: Dict[str, str] = dict()
+
 
 def demangle(mangled_name: str) -> str:
     """Demangles the given mangled function name and returns the resulting string after demangling.

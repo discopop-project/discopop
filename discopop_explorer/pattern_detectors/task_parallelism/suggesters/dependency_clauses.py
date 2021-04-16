@@ -1,10 +1,9 @@
 import os
-import pathlib
 from typing import List, Dict, Tuple, Optional, cast
 
 from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, OmittableCuInfo
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, OmittableCuInfo, TPIType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
     get_function_call_from_source_code, get_called_function_and_parameter_names_from_function_call, demangle, \
     get_called_functions_recursively
@@ -134,7 +133,7 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     # iterate over task suggestions
     task_suggestions = [s for s in
                         [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.pragma[0] == "task"]
+                        if s.type is TPIType.TASK]
     # collect alias information
     aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, str, str]]]] = dict()
     called_function_cache: Dict = dict()
@@ -222,7 +221,6 @@ def get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path:
     :param discopop_build_path: path to discopop build directory
     :result: function-internal alias detection results in dict form"""
     # execute simple alias detection
-    pattern_detector_dir = str(pathlib.Path(__file__).parent.absolute())
     alias_detection_temp_file = os.getcwd() + "/alias_detection_temp.txt"
     # get absolute file paths
     file_mapping_path = os.path.abspath(file_mapping_path)
@@ -271,7 +269,7 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
             s = cast(TaskParallelismInfo, s)
-            if s.pragma[0] == "task":
+            if s.type is TPIType.TASK:
                 task_suggestions.append(s)
             else:
                 result_suggestions.append(s)
@@ -479,7 +477,7 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
             s_tpi = cast(TaskParallelismInfo, s)
-            if s_tpi.pragma[0] == "task":
+            if s_tpi.type is TPIType.TASK:
                 task_suggestions.append(s_tpi)
             else:
                 result_suggestions.append(s)
@@ -847,9 +845,7 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
     try:
         function_call_string = get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
                                                                   call_position.split(":")[0], called_function_name=
-                                                                    demangle(called_function_name_not_none).split(
-                                                                        "(")[
-                                                                        0])
+                                                                  demangle(called_function_name_not_none).split("(")[0])
     except IndexError:
         return None
     # get function parameter names from recursive function call
@@ -905,11 +901,11 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
 def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, called_function_cu: CUNode,
                                                               recursively_visited: List[CUNode],
                                                               function_raw_information_cache: Dict[
-                                                                    str, List[Tuple[bool, bool]]],
+                                                                  str, List[Tuple[bool, bool]]],
                                                               cu_inst_result_dict: Dict[
-                                                                    str, List[Dict[str, Optional[str]]]],
+                                                                  str, List[Dict[str, Optional[str]]]],
                                                               function_parameter_alias_dict: Dict[
-                                                                    str, List[Tuple[str, str]]],
+                                                                  str, List[Tuple[str, str]]],
                                                               source_code_files: Dict[str, str]) \
         -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
@@ -1052,7 +1048,7 @@ def __detect_dependency_clauses_old(pet: PETGraphX,
             if type(single_suggestion) == TaskParallelismInfo:
                 single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
                 try:
-                    if single_suggestion_tpi.pragma[0] == "task":
+                    if single_suggestion_tpi.type is TPIType.TASK:
                         task_suggestions.append(single_suggestion_tpi)
                     else:
                         result.append(single_suggestion_tpi)

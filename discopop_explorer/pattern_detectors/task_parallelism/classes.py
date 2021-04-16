@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List, Optional
 
 from discopop_explorer.PETGraphX import CUNode, MWType, PETGraphX
@@ -40,20 +41,30 @@ class Task(object):
         self.mw_type = MWType.BARRIER_WORKER if other.mw_type == MWType.BARRIER_WORKER else MWType.WORKER
 
 
+class TPIType(Enum):
+    DUMMY = 0
+    TASK = 1
+    TASKWAIT = 2
+    TASKLOOP = 3
+    PARALLELREGION = 4
+
+
 class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result
     """
 
-    def __init__(self, node: CUNode, pragma, pragma_line, first_private, private, shared):
+    def __init__(self, node: CUNode, type: TPIType, pragma, pragma_line, first_private, private, shared):
         """
         :param node: node, where task parallelism was detected
-        :param pragma: pragma to be used (task / taskwait)
+        :param type: type of the suggestion (task, taskwait, taskloop)
+        :param pragma: pragma to be used (task / taskwait / taskloop)
         :param pragma_line: line prior to which the pragma shall be inserted
         :param first_private: list of varNames
         :param private: list of varNames
         :param shared: list of varNames
         """
         PatternInfo.__init__(self, node)
+        self.type = type
         self.pragma = pragma
         self.pragma_line = pragma_line
         if ":" in self.pragma_line:
@@ -94,12 +105,13 @@ class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info.
     """
 
-    def __init__(self, node: CUNode,
+    def __init__(self, node: CUNode, type: TPIType,
                  region_start_line, region_end_line):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
         self.pragma = "#pragma omp parallel\n\t#pragma omp single"
+        self.type = type
 
     def __str__(self):
         return f'Task Parallel Region at CU: {self.node_id}\n' \

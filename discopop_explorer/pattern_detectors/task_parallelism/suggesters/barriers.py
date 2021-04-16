@@ -3,9 +3,9 @@ from typing import List, cast, Tuple
 from discopop_explorer.PETGraphX import CUNode, EdgeType, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import ParallelRegionInfo, OmittableCuInfo, \
-    TaskParallelismInfo
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import check_reachability, line_contained_in_region, \
-    get_predecessor_nodes
+    TaskParallelismInfo, TPIType
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
+    check_reachability, line_contained_in_region, get_predecessor_nodes
 
 
 def detect_barrier_suggestions(pet: PETGraphX,
@@ -34,9 +34,9 @@ def detect_barrier_suggestions(pet: PETGraphX,
             omittable_suggestions.append(single_suggestion)
         elif type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
-            if single_suggestion.pragma[0] == "taskwait":
+            if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
-            elif single_suggestion.pragma[0] == "task":
+            elif single_suggestion.type is TPIType.TASK:
                 task_suggestions.append(single_suggestion)
         else:
             raise TypeError("Unknown Type: ", type(single_suggestion))
@@ -150,7 +150,7 @@ def detect_barrier_suggestions(pet: PETGraphX,
                     v.tp_contains_taskwait = True
                     barrier_nodes.append(v)
                     transformation_happened = True
-                    tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+                    tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                                          v_first_line,
                                                          [], [], [])
                     suggestions.append(tmp_suggestion)
@@ -163,7 +163,7 @@ def detect_barrier_suggestions(pet: PETGraphX,
                 v.tp_contains_taskwait = True
                 barrier_nodes.append(v)
                 transformation_happened = True
-                tmp_suggestion = TaskParallelismInfo(v, ["taskwait"],
+                tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
                                                      v_first_line,
                                                      [], [], [])
                 suggestions.append(tmp_suggestion)
@@ -245,7 +245,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # if task is covered by a parallel region, ignore it due to the present, implicit barrier
         covered_by_parallel_region = False
@@ -282,7 +282,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
             cu.tp_contains_taskwait = True
             pragma_line = cu.end_position()  # since return has to be the last statement in a CU
             pragma_line = pragma_line[pragma_line.index(":") + 1:]
-            tmp_suggestion = TaskParallelismInfo(cu,
+            tmp_suggestion = TaskParallelismInfo(cu, TPIType.TASKWAIT,
                                                  ["taskwait"],
                                                  pragma_line,
                                                  [], [], [])
@@ -311,7 +311,7 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
             try:
-                if single_suggestion.pragma[0] == "taskwait":
+                if single_suggestion.type is TPIType.TASKWAIT:
                     barrier_suggestions.append(single_suggestion)
                 else:
                     result.append(single_suggestion)
@@ -386,9 +386,9 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
             continue
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
-            if single_suggestion.pragma[0] == "taskwait":
+            if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
-            elif single_suggestion.pragma[0] == "task":
+            elif single_suggestion.type is TPIType.TASK:
                 task_suggestions.append(single_suggestion)
         else:
             raise TypeError("Unsupported Type: ", type(single_suggestion))
@@ -427,6 +427,7 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
                         first_line = pet.node_at(succ_edge[1]).start_position()
                         first_line = first_line[first_line.index(":") + 1:]
                         tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
+                                                             TPIType.TASKWAIT,
                                                              ["taskwait"],
                                                              first_line,
                                                              [], [], [])
