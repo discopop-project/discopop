@@ -16,13 +16,13 @@ def filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     :param suggestions: List[PatternInfo]
     :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
     :return: List[PatternInfo]"""
-    suggestions = filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
-    suggestions = filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
-    suggestions = filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
+    suggestions = __filter_data_sharing_clauses_by_function(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_by_scope(pet, suggestions, var_def_line_dict)
+    suggestions = __filter_data_sharing_clauses_suppress_shared_loop_index(pet, suggestions)
     return suggestions
 
 
-def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -52,8 +52,8 @@ def filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sugge
     return suggestions
 
 
-def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
-                                            var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
+                                              var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
@@ -74,88 +74,18 @@ def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[Pa
         # get function containing the task cu
         parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
         # filter firstprivate
-        to_be_removed = []
-        for var in suggestion.first_private:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for defLine in var_def_line_dict[var]:
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    if line_contained_in_region(defLine, parent_function.start_position(),
-                                                parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError:
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
+        __filter_firstprivate_clauses(suggestion, parent_function, var_def_line_dict)
         # filter private
-        to_be_removed = []
-        for var in suggestion.private:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for defLine in var_def_line_dict[var]:
-                    # catch GlobalVar and LineNotFound
-                    if defLine == "GlobalVar":
-                        is_valid = True
-                        continue
-                    if defLine == "LineNotFound":
-                        continue
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if defLine is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    elif line_contained_in_region(defLine, parent_function.start_position(),
-                                                  parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError:
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
+        __filter_private_clauses(suggestion, parent_function, var_def_line_dict)
         # filter shared
-        to_be_removed = []
-        for var in suggestion.shared:
-            var = var.replace(".addr", "")
-            is_valid = False
-            try:
-                for def_line in var_def_line_dict[var]:
-                    # ensure backwards compatibility (no definition line present in cu_xml
-                    if def_line == "GlobalVar" or def_line == "LineNotFound":
-                        is_valid = False
-                        break
-                    if def_line is None:
-                        is_valid = True
-                    # check if var is defined in parent function
-                    if line_contained_in_region(def_line, parent_function.start_position(),
-                                                parent_function.end_position()):
-                        is_valid = True
-                    else:
-                        pass
-            except ValueError as ve:
-                raise ve
-                pass
-            if not is_valid:
-                to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
-        suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
+        __filter_shared_clauses(suggestion, parent_function, var_def_line_dict)
 
         # remove duplicates and .addr suffix from variable names
         suggestion.shared = list(set([v.replace(".addr", "") for v in suggestion.shared]))
         suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
         suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
 
-        # remove duplicates (variable occuring in different classes)
+        # remove duplicates (variable occurring in different classes)
         remove_from_first_private = []
         remove_from_private = []
         for var in suggestion.shared:
@@ -174,8 +104,138 @@ def filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[Pa
     return suggestions
 
 
-def filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
-                                         var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function,
+                            var_def_line_dict: Dict[str, List[str]]):
+    """helper function for filter_data_sharing_clauses_by_function.
+    Filters shared clauses.
+    :param suggestion: Suggestion to be checked
+    :param parent_function: parent function CU Node
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    """
+    to_be_removed = []
+    for var in suggestion.shared:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for def_line in var_def_line_dict[var]:
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if def_line == "GlobalVar" or def_line == "LineNotFound":
+                    is_valid = False
+                    break
+                if def_line is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                if line_contained_in_region(def_line, parent_function.start_position(),
+                                            parent_function.end_position()):
+                    is_valid = True
+                else:
+                    pass
+        except ValueError as ve:
+            raise ve
+            pass
+        if not is_valid:
+            to_be_removed.append(var)
+    to_be_removed = list(set(to_be_removed))
+    suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
+
+
+def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function,
+                             var_def_line_dict: Dict[str, List[str]]):
+    """helper function for filter_data_sharing_clauses_by_function.
+    Filters private clauses.
+    :param suggestion: Suggestion to be checked
+    :param parent_function: parent function CU Node
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    """
+    to_be_removed = []
+    for var in suggestion.private:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for defLine in var_def_line_dict[var]:
+                # catch GlobalVar and LineNotFound
+                if defLine == "GlobalVar":
+                    is_valid = True
+                    continue
+                if defLine == "LineNotFound":
+                    continue
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if defLine is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                elif line_contained_in_region(defLine, parent_function.start_position(),
+                                              parent_function.end_position()):
+                    is_valid = True
+                else:
+                    pass
+        except ValueError:
+            pass
+        if not is_valid:
+            to_be_removed.append(var)
+    to_be_removed = list(set(to_be_removed))
+    suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
+
+
+def __filter_firstprivate_clauses(suggestion: TaskParallelismInfo, parent_function,
+                                  var_def_line_dict: Dict[str, List[str]]):
+    """helper function for filter_data_sharing_clauses_by_function.
+    Filters firstprivate clauses.
+    :param suggestion: Suggestion to be checked
+    :param parent_function: parent function CU Node
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    """
+    to_be_removed = []
+    for var in suggestion.first_private:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for defLine in var_def_line_dict[var]:
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if defLine is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                if line_contained_in_region(defLine, parent_function.start_position(),
+                                            parent_function.end_position()):
+                    is_valid = True
+                else:
+                    pass
+        except ValueError:
+            pass
+        if not is_valid:
+            to_be_removed.append(var)
+    to_be_removed = list(set(to_be_removed))
+    suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
+
+
+def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: CUNode, target: CUNode,
+                                    breaker_cu: CUNode, visited: List[CUNode]):
+    """Helper function for filter_data_sharing_clauses_by_scope.
+    Checks if target is reachable by traversing the successor graph in reverse, starting from root,
+    without visiting breaker_cu.
+    :param pet: PET Graph
+    :param root: root node
+    :param target: target node
+    :param breaker_cu: breaker cu
+    :param visited: list of already visited CUNodes
+    :return: True, if target is reachable without visiting breaker_cu. False, otherwise."""
+    if root in visited:
+        return False
+    visited.append(root)
+    if root == target:
+        return True
+    if root == breaker_cu:
+        return False
+    recursion_result = False
+    # start recursion for each incoming edge
+    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
+        recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
+            pet, pet.node_at(tmp_e[0]),
+            target, breaker_cu, visited)
+    return recursion_result
+
+
+def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
+                                           var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
     suggestion.
     Idea (per shared variable / suggestion):
@@ -202,120 +262,65 @@ def filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Patte
         # get function containing the task cu
         parent_function_cu, last_node = \
             get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
-
-        # define helper function
-        def __reverse_reachable_w_o_breaker(root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]):
-            if root in visited:
-                return False
-            visited.append(root)
-            if root == target:
-                return True
-            if root == breaker_cu:
-                return False
-            recursion_result = False
-            # start recursion for each incoming edge
-            for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
-                recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
-                    pet.node_at(tmp_e[0]),
-                    target, breaker_cu, visited)
-            return recursion_result
-
         # filter firstprivate
-        to_be_removed = []
-        for var in suggestion.first_private:
-            for var_def_line in var_def_line_dict[var]:
-                if var_def_line == "GlobalVar":
-                    # accept global vars
-                    continue
-                # get CU which contains var_def_line
-                optional_var_def_cu: Optional[CUNode] = None
-                for child_cu in get_cus_inside_function(pet, parent_function_cu):
-                    if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
-                        optional_var_def_cu = child_cu
-                if optional_var_def_cu is None:
-                    continue  # Todo var Remove instead?
-                var_def_cu = cast(CUNode, optional_var_def_cu)
-                # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
-                    # remove var as it may not be known
-                    to_be_removed.append(var)
-                    continue
-
-                # 2. check if task suggestion is child of same nodes as var_def_cu
-                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
-                    parent_cu = pet.node_at(in_child_edge[0])
-                    # check if task suggestion cu is reachable from parent via child edges
-                    if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
-                        to_be_removed.append(var)
-
-            to_be_removed = list(set(to_be_removed))
-            suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
-
+        __filter_sharing_clause(pet, suggestion, var_def_line_dict, parent_function_cu, "FP")
         # filter private
-        to_be_removed = []
-        for var in suggestion.private:
-            for var_def_line in var_def_line_dict[var]:
-                if var_def_line == "GlobalVar":
-                    # accept global vars
-                    continue
-                # get CU which contains var_def_line
-                p_optional_var_def_cu: Optional[CUNode] = None
-                for child_cu in get_cus_inside_function(pet, parent_function_cu):
-                    if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
-                        p_optional_var_def_cu = child_cu
-                if p_optional_var_def_cu is None:
-                    continue  # Todo var Remove instead?
-                var_def_cu = cast(CUNode, p_optional_var_def_cu)
-
-                # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
-                    # remove var as it may not be known
-                    to_be_removed.append(var)
-                    continue
-
-                # 2. check if task suggestion is child of same nodes as var_def_cu
-                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
-                    parent_cu = pet.node_at(in_child_edge[0])
-                    # check if task suggestion cu is reachable from parent via child edges
-                    if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
-                        to_be_removed.append(var)
-
-            to_be_removed = list(set(to_be_removed))
-            suggestion.private = [v for v in suggestion.private if v not in to_be_removed]
-
+        __filter_sharing_clause(pet, suggestion, var_def_line_dict, parent_function_cu, "PR")
         # filter shared
-        to_be_removed = []
-        for var in suggestion.shared:
-            for var_def_line in var_def_line_dict[var]:
-                if var_def_line == "GlobalVar":
-                    # accept global vars
-                    continue
-                # get CU which contains var_def_line
-                s_optional_var_def_cu: Optional[CUNode] = None
-                for child_cu in get_cus_inside_function(pet, parent_function_cu):
-                    if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
-                        s_optional_var_def_cu = child_cu
-                if s_optional_var_def_cu is None:
-                    continue  # Todo var Remove instead?
-                var_def_cu = cast(CUNode, s_optional_var_def_cu)
-
-                # 1. check control flow (reverse BFS from suggestion._node to parent_function
-                if __reverse_reachable_w_o_breaker(pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
-                    # remove var as it may not be known
-                    to_be_removed.append(var)
-                    continue
-
-                # 2. check if task suggestion is child of same nodes as var_def_cu
-                for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
-                    parent_cu = pet.node_at(in_child_edge[0])
-                    # check if task suggestion cu is reachable from parent via child edges
-                    if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
-                        to_be_removed.append(var)
-
-            to_be_removed = list(set(to_be_removed))
-            suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
-
+        __filter_sharing_clause(pet, suggestion, var_def_line_dict, parent_function_cu, "SH")
     return suggestions
+
+
+def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
+                            parent_function_cu, target_clause_list: str):
+    """Helper function for filter_data_sharing_clauses_by_scope.
+    Filters a given suggestions private, firstprivate or shared variables list,
+    depending on the specific value of target_clause_list.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be checked
+    :param var_def_line_dict: dictionary containing: var_name -> [definition lines]
+    :param parent_function_cu: CUNode corresponding to the function which contains the suggestion
+    :param target_clause_list: One of: ['FP', 'PR', 'SH'], used to control which list of variables is filtered"""
+    to_be_removed = []
+    if target_clause_list == "FP":
+        sharing_clause_list = suggestion.first_private
+    elif target_clause_list == "PR":
+        sharing_clause_list = suggestion.private
+    else:
+        sharing_clause_list = suggestion.shared
+
+    for var in sharing_clause_list:
+        for var_def_line in var_def_line_dict[var]:
+            if var_def_line == "GlobalVar":
+                # accept global vars
+                continue
+            # get CU which contains var_def_line
+            optional_var_def_cu: Optional[CUNode] = None
+            for child_cu in get_cus_inside_function(pet, parent_function_cu):
+                if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
+                    optional_var_def_cu = child_cu
+            if optional_var_def_cu is None:
+                continue
+            var_def_cu = cast(CUNode, optional_var_def_cu)
+            # 1. check control flow (reverse BFS from suggestion._node to parent_function
+            if __reverse_reachable_w_o_breaker(pet, pet.node_at(suggestion.node_id),
+                                               parent_function_cu, var_def_cu, []):
+                # remove var as it may not be known
+                to_be_removed.append(var)
+                continue
+            # 2. check if task suggestion is child of same nodes as var_def_cu
+            for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
+                parent_cu = pet.node_at(in_child_edge[0])
+                # check if task suggestion cu is reachable from parent via child edges
+                if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
+                    to_be_removed.append(var)
+        to_be_removed = list(set(to_be_removed))
+        if target_clause_list == "FP":
+            suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
+        elif target_clause_list == "PR":
+            suggestion.private = [v for v in suggestion.private if v not in to_be_removed]
+        else:
+            suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
 
 
 def remove_useless_barrier_suggestions(pet: PETGraphX,
@@ -384,12 +389,219 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
     return result
 
 
+def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
+                             parent_function: CUNode, out_dep_vars: Dict[str, List[str]]) -> bool:
+    """Helper function for filter_data_depend_clauses.
+    Filters in-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param out_dep_vars: variables used in outgoing dependencies
+    :return: True, if a modification of suggestion.out_dep has been made. False, otherwise."""
+    to_be_removed = []
+    modification_found = False
+    for var in suggestion.in_dep:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for defLine in var_def_line_dict[var]:
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if defLine is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                if line_contained_in_region(defLine, parent_function.start_position(),
+                                            parent_function.end_position()):
+                    # check if var is contained in out_dep_vars and a previous out_dep exists
+                    if var in out_dep_vars:
+                        for line_num in out_dep_vars[var]:
+                            line_num = str(line_num)
+                            if ":" in line_num:
+                                line_num = line_num.split(":")[1]
+                            # check validity of the dependence by reachability checking on
+                            # successor + child graph
+
+                            # get CU containing line_num
+                            for cu_node in pet.all_nodes(NodeType.CU):
+                                file_id = suggestion._node.start_position().split(":")[0]
+                                test_line = file_id + ":" + line_num
+                                # check if line_num is contained in cu_node
+                                if not line_contained_in_region(test_line, cu_node.start_position(),
+                                                                cu_node.end_position()):
+                                    continue
+                                # check if path from cu_node to suggestion._node exists
+                                if check_reachability(pet, suggestion._node, cu_node,
+                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                    is_valid = True
+                else:
+                    pass
+        except ValueError:
+            pass
+        if not is_valid:
+            modification_found = True
+            to_be_removed.append(var)
+    to_be_removed = list(set(to_be_removed))
+    suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
+    return modification_found
+
+
+def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
+                              parent_function: CUNode, in_dep_vars: Dict[str, List[str]]) -> bool:
+    """Helper function for filter_data_depend_clauses.
+    Filters out-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param in_dep_vars: variables used in incoming dependencies
+    :return: True, if a modification of suggestion.out_dep has been made. False, otherwise."""
+    modification_found = False
+    to_be_removed = []
+    for var in suggestion.out_dep:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for defLine in var_def_line_dict[var]:
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if defLine is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                if line_contained_in_region(defLine, parent_function.start_position(),
+                                            parent_function.end_position()):
+                    # check if var is contained in in_dep_vars and a successive in_dep exists
+                    if var in in_dep_vars:
+                        for line_num in in_dep_vars[var]:
+                            line_num = str(line_num)
+                            if ":" in line_num:
+                                line_num = line_num.split(":")[1]
+                            # check validity of the dependence by reachability checking on
+                            # successor + child graph
+
+                            # get CU containing line_num
+                            for cu_node in pet.all_nodes(NodeType.CU):
+                                file_id = suggestion._node.start_position().split(":")[0]
+                                test_line = file_id + ":" + line_num
+                                # check if line_num is contained in cu_node
+                                if not line_contained_in_region(test_line, cu_node.start_position(),
+                                                                cu_node.end_position()):
+                                    continue
+                                # check if path from suggestion._node to cu_node exists
+                                if check_reachability(pet, cu_node, suggestion._node,
+                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                    is_valid = True
+                else:
+                    pass
+        except ValueError:
+            pass
+        if not is_valid:
+            to_be_removed.append(var)
+            modification_found = True
+    to_be_removed = list(set(to_be_removed))
+    suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
+    return modification_found
+
+
+def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo,
+                                 var_def_line_dict: Dict[str, List[str]],
+                                 parent_function: CUNode, in_dep_vars: Dict[str, List[str]],
+                                 out_dep_vars: Dict[str, List[str]]) -> bool:
+    """Helper function for filter_data_depend_clauses.
+    Filters in_out-dependencies of the given suggestion.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be filtered
+    :param var_def_line_dict: Dictionary containing: var_name -> [definition lines]
+    :param parent_function: parent function containing suggestion
+    :param in_dep_vars: variables used in incoming dependencies
+    :param out_dep_vars: variables used in incoming dependencies
+    :return: True, if a modification of suggestion.in_out_dep has been made. False, otherwise."""
+    modification_found = False
+    to_be_removed = []
+    for var in suggestion.in_out_dep:
+        var = var.replace(".addr", "")
+        is_valid = False
+        try:
+            for defLine in var_def_line_dict[var]:
+                # ensure backwards compatibility (no definition line present in cu_xml
+                if defLine is None:
+                    is_valid = True
+                # check if var is defined in parent function
+                if line_contained_in_region(defLine, parent_function.start_position(),
+                                            parent_function.end_position()):
+                    # check if var occurs more than once as in or out, i.e. at least an actual in or out
+                    # dependency exists
+                    if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
+                        # check if out dep prior an in dep afterwards exist
+                        prior_out_exists = False
+                        successive_in_exists = False
+                        for line_num in out_dep_vars[var]:
+                            line_num = str(line_num)
+                            if ":" in line_num:
+                                line_num = line_num.split(":")[1]
+                            # check validity of the dependence by reachability checking on
+                            # successor + child graph
+
+                            # get CU containing line_num
+                            for cu_node in pet.all_nodes(NodeType.CU):
+                                file_id = suggestion._node.start_position().split(":")[0]
+                                test_line = file_id + ":" + line_num
+                                # check if line_num is contained in cu_node
+                                if not line_contained_in_region(test_line, cu_node.start_position(),
+                                                                cu_node.end_position()):
+                                    continue
+                                # check if path from cu_node to suggestion._node exists
+                                if check_reachability(pet, suggestion._node, cu_node,
+                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                    prior_out_exists = True
+                        for line_num in in_dep_vars[var]:
+                            line_num = str(line_num)
+                            if ":" in line_num:
+                                line_num = line_num.split(":")[1]
+                            # check validity of the dependence by reachability checking on
+                            # successor + child graph
+
+                            # get CU containing line_num
+                            for cu_node in pet.all_nodes(NodeType.CU):
+                                file_id = suggestion._node.start_position().split(":")[0]
+                                test_line = file_id + ":" + line_num
+                                # check if line_num is contained in cu_node
+                                if not line_contained_in_region(test_line, cu_node.start_position(),
+                                                                cu_node.end_position()):
+                                    continue
+                                # check if path from suggestion._node to cu_node exists
+                                if check_reachability(pet, cu_node, suggestion._node,
+                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                    successive_in_exists = True
+                        # check and treat conditions
+                        if prior_out_exists and successive_in_exists:
+                            # proper in_out_dep
+                            is_valid = True
+                        elif prior_out_exists and not successive_in_exists:
+                            # depend in
+                            suggestion.in_dep.append(var)
+                            suggestion.in_dep = list(set(suggestion.in_dep))
+                        elif not prior_out_exists and successive_in_exists:
+                            # depend out
+                            suggestion.out_dep.append(var)
+                            suggestion.out_dep = list(set(suggestion.out_dep))
+                else:
+                    pass
+        except ValueError:
+            pass
+        if not is_valid:
+            to_be_removed.append(var)
+            modification_found = True
+    to_be_removed = list(set(to_be_removed))
+    suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
+    return modification_found
+
+
 def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
                                var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
     """Removes superfluous variables from the data depend clauses
     of task suggestions.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
+    :param var_def_line_dict: Dictionary containing mapping from var_name to [definition lines]
     :return: List[PatternInfo]
     """
     modification_found = True
@@ -433,178 +645,17 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             parent_function, last_node = \
                 get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
             # filter in_dep
-            to_be_removed = []
-            for var in suggestion.in_dep:
-                var = var.replace(".addr", "")
-                is_valid = False
-                try:
-                    for defLine in var_def_line_dict[var]:
-                        # ensure backwards compatibility (no definition line present in cu_xml
-                        if defLine is None:
-                            is_valid = True
-                        # check if var is defined in parent function
-                        if line_contained_in_region(defLine, parent_function.start_position(),
-                                                    parent_function.end_position()):
-                            # check if var is contained in out_dep_vars and a previous out_dep exists
-                            if var in out_dep_vars:
-                                for line_num in out_dep_vars[var]:
-                                    line_num = str(line_num)
-                                    tmp_pragma_line = suggestion.pragma_line
-                                    tmp_pragma_line = str(tmp_pragma_line)
-                                    if ":" in line_num:
-                                        line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on
-                                    # successor + child graph
-
-                                    # get CU containing line_num
-                                    for cu_node in pet.all_nodes(NodeType.CU):
-                                        file_id = suggestion._node.start_position().split(":")[0]
-                                        test_line = file_id + ":" + line_num
-                                        # check if line_num is contained in cu_node
-                                        if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                        cu_node.end_position()):
-                                            continue
-                                        # check if path from cu_node to suggestion._node exists
-                                        if check_reachability(pet, suggestion._node, cu_node,
-                                                              [EdgeType.SUCCESSOR, EdgeType.CHILD]):
-                                            is_valid = True
-                        else:
-                            pass
-                except ValueError:
-                    pass
-                if not is_valid:
-                    modification_found = True
-                    to_be_removed.append(var)
-            to_be_removed = list(set(to_be_removed))
-            suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
+            modification_found = modification_found or __filter_in_dependencies(pet, suggestion,
+                                                                                var_def_line_dict, parent_function,
+                                                                                out_dep_vars)
             # filter out_dep
-            to_be_removed = []
-            for var in suggestion.out_dep:
-                var = var.replace(".addr", "")
-                is_valid = False
-                try:
-                    for defLine in var_def_line_dict[var]:
-                        # ensure backwards compatibility (no definition line present in cu_xml
-                        if defLine is None:
-                            is_valid = True
-                        # check if var is defined in parent function
-                        if line_contained_in_region(defLine, parent_function.start_position(),
-                                                    parent_function.end_position()):
-                            # check if var is contained in in_dep_vars and a successive in_dep exists
-                            if var in in_dep_vars:
-                                for line_num in in_dep_vars[var]:
-                                    line_num = str(line_num)
-                                    tmp_pragma_line = suggestion.pragma_line
-                                    tmp_pragma_line = str(tmp_pragma_line)
-                                    if ":" in line_num:
-                                        line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on
-                                    # successor + child graph
-
-                                    # get CU containing line_num
-                                    for cu_node in pet.all_nodes(NodeType.CU):
-                                        file_id = suggestion._node.start_position().split(":")[0]
-                                        test_line = file_id + ":" + line_num
-                                        # check if line_num is contained in cu_node
-                                        if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                        cu_node.end_position()):
-                                            continue
-                                        # check if path from suggestion._node to cu_node exists
-                                        if check_reachability(pet, cu_node, suggestion._node,
-                                                              [EdgeType.SUCCESSOR, EdgeType.CHILD]):
-                                            is_valid = True
-
-                        else:
-                            pass
-                except ValueError:
-                    pass
-                if not is_valid:
-                    to_be_removed.append(var)
-                    modification_found = True
-            to_be_removed = list(set(to_be_removed))
-            suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
+            modification_found = modification_found or __filter_out_dependencies(pet, suggestion,
+                                                                                 var_def_line_dict, parent_function,
+                                                                                 in_dep_vars)
             # filter in_out_dep
-            to_be_removed = []
-            for var in suggestion.in_out_dep:
-                var = var.replace(".addr", "")
-                is_valid = False
-                try:
-                    for defLine in var_def_line_dict[var]:
-                        # ensure backwards compatibility (no definition line present in cu_xml
-                        if defLine is None:
-                            is_valid = True
-                        # check if var is defined in parent function
-                        if line_contained_in_region(defLine, parent_function.start_position(),
-                                                    parent_function.end_position()):
-                            # check if var occurs more than once as in or out, i.e. at least an actual in or out
-                            # dependency exists
-                            if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
-                                # check if out dep prior an in dep afterwards exist
-                                prior_out_exists = False
-                                successive_in_exists = False
-                                tmp_pragma_line = suggestion.pragma_line
-                                tmp_pragma_line = str(tmp_pragma_line)
-                                if ":" in tmp_pragma_line:
-                                    tmp_pragma_line = tmp_pragma_line.split(":")[1]
-                                for line_num in out_dep_vars[var]:
-                                    line_num = str(line_num)
-                                    if ":" in line_num:
-                                        line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on
-                                    # successor + child graph
-
-                                    # get CU containing line_num
-                                    for cu_node in pet.all_nodes(NodeType.CU):
-                                        file_id = suggestion._node.start_position().split(":")[0]
-                                        test_line = file_id + ":" + line_num
-                                        # check if line_num is contained in cu_node
-                                        if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                        cu_node.end_position()):
-                                            continue
-                                        # check if path from cu_node to suggestion._node exists
-                                        if check_reachability(pet, suggestion._node, cu_node,
-                                                              [EdgeType.SUCCESSOR, EdgeType.CHILD]):
-                                            prior_out_exists = True
-                                for line_num in in_dep_vars[var]:
-                                    line_num = str(line_num)
-                                    if ":" in line_num:
-                                        line_num = line_num.split(":")[1]
-                                    # check validity of the dependence by reachability checking on
-                                    # successor + child graph
-
-                                    # get CU containing line_num
-                                    for cu_node in pet.all_nodes(NodeType.CU):
-                                        file_id = suggestion._node.start_position().split(":")[0]
-                                        test_line = file_id + ":" + line_num
-                                        # check if line_num is contained in cu_node
-                                        if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                        cu_node.end_position()):
-                                            continue
-                                        # check if path from suggestion._node to cu_node exists
-                                        if check_reachability(pet, cu_node, suggestion._node,
-                                                              [EdgeType.SUCCESSOR, EdgeType.CHILD]):
-                                            successive_in_exists = True
-                                # check and treat conditions
-                                if prior_out_exists and successive_in_exists:
-                                    # proper in_out_dep
-                                    is_valid = True
-                                elif prior_out_exists and not successive_in_exists:
-                                    # depend in
-                                    suggestion.in_dep.append(var)
-                                    suggestion.in_dep = list(set(suggestion.in_dep))
-                                elif not prior_out_exists and successive_in_exists:
-                                    # depend out
-                                    suggestion.out_dep.append(var)
-                                    suggestion.out_dep = list(set(suggestion.out_dep))
-                        else:
-                            pass
-                except ValueError:
-                    pass
-                if not is_valid:
-                    to_be_removed.append(var)
-                    modification_found = True
-            to_be_removed = list(set(to_be_removed))
-            suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
+            modification_found = modification_found or __filter_in_out_dependencies(pet, suggestion,
+                                                                                    var_def_line_dict, parent_function,
+                                                                                    in_dep_vars, out_dep_vars)
 
             # correct in_out_vars (find in_out vars if not already detected)
             overlap = [v for v in suggestion.in_dep if v in suggestion.out_dep]
