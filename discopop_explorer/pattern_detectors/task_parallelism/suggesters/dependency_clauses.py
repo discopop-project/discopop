@@ -139,20 +139,7 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     called_function_cache: Dict = dict()
     for ts in task_suggestions:
         current_alias_entry = []
-        potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
-                                      if pet.node_at(e[0]).type == NodeType.FUNC]
-        if not potential_parent_functions:
-            # perform BFS search on incoming CHILD edges to find closest parent function,
-            # i.e. function which contains the CU.
-            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]
-            found_parent = None
-            while len(queue) > 0 or not found_parent:
-                current = queue.pop(0)
-                if current.type == NodeType.FUNC:
-                    found_parent = current
-                    break
-                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-            potential_parent_functions = [found_parent]
+        potential_parent_functions = __get_potential_parent_functions(pet, ts)
         # get parent function
         for parent_function in potential_parent_functions:
             # get recursive function call from original source code
@@ -281,20 +268,7 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
     in_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
     for ts_1 in task_suggestions:
         # get parent function
-        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
-                                        if pet.node_at(e[0]).type == NodeType.FUNC]
-        if not potential_parent_functions_1:
-            # perform BFS search on incoming CHILD edges to find closest parent function,
-            # i.e. function which contains the CU.
-            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
-            found_parent = None
-            while len(queue) > 0 or not found_parent:
-                current = queue.pop(0)
-                if current.type == NodeType.FUNC:
-                    found_parent = current
-                    break
-                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-            potential_parent_functions_1 = [found_parent]
+        potential_parent_functions_1 = __get_potential_parent_functions(pet, ts_1)
         while potential_parent_functions_1:
             potential_parent_functions_1.pop()
             # get recursive function call from original source code
@@ -308,20 +282,7 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
             for ts_2 in [s for s in task_suggestions if not s == ts_1]:
                 # get parent function
-                potential_parent_functions_2 = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
-                                                if pet.node_at(e[0]).type == NodeType.FUNC]
-                if not potential_parent_functions_2:
-                    # perform BFS search on incoming CHILD edges to find closest parent function,
-                    # i.e. function which contains the CU.
-                    queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)]
-                    found_parent = None
-                    while len(queue) > 0 or not found_parent:
-                        current = queue.pop(0)
-                        if current.type == NodeType.FUNC:
-                            found_parent = current
-                            break
-                        queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-                    potential_parent_functions_2 = [found_parent]
+                potential_parent_functions_2 = __get_potential_parent_functions(pet, ts_2)
                 while potential_parent_functions_2:
                     potential_parent_functions_2.pop()
                     # get recursive function call from original source code
