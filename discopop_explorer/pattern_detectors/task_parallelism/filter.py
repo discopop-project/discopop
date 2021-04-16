@@ -2,9 +2,10 @@ from typing import List, Dict, cast, Optional, Union
 
 from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
-    get_parent_of_type, get_cus_inside_function, check_reachability
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+    TPIType
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
+    line_contained_in_region, get_parent_of_type, get_cus_inside_function, check_reachability
 from discopop_explorer.utils import is_loop_index2
 
 
@@ -31,7 +32,7 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sug
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # get parent loops of suggestion
         parent_loops_plus_last_node = get_parent_of_type(pet, suggestion._node,
@@ -68,7 +69,7 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+        if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
             continue
         # get function containing the task cu
         parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
@@ -256,7 +257,7 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         if type(suggestion) != TaskParallelismInfo:
             continue
         suggestion = cast(TaskParallelismInfo, suggestion)
-        if suggestion.pragma[0] != "task":
+        if suggestion.type is not TPIType.TASK:
             continue
         # get function containing the task cu
         parent_function_cu, last_node = \
@@ -336,9 +337,9 @@ def remove_useless_barrier_suggestions(pet: PETGraphX,
     task_suggestions = []
     result_suggestions = []
     for single_suggestion in suggestions:
-        if single_suggestion.pragma[0] == "taskwait":
+        if single_suggestion.type is TPIType.TASKWAIT:
             taskwait_suggestions.append(single_suggestion)
-        elif single_suggestion.pragma[0] == "task":
+        elif single_suggestion.type is TPIType.TASK:
             task_suggestions.append(single_suggestion)
         else:
             result_suggestions.append(single_suggestion)
@@ -613,7 +614,7 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if type(suggestion) != TaskParallelismInfo:
                 continue
             suggestion = cast(TaskParallelismInfo, suggestion)
-            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+            if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             for var in suggestion.in_dep:
                 if var not in in_dep_vars:
@@ -638,7 +639,7 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if type(suggestion) != TaskParallelismInfo:
                 continue
             suggestion = cast(TaskParallelismInfo, suggestion)
-            if suggestion.pragma[0] != "task" and suggestion.pragma[0] != "taskloop":
+            if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             # get function containing the task cu
             parent_function, last_node = \
