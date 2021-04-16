@@ -585,6 +585,7 @@ def get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parame
     :param parameter_position: position of the parameter to be analyzed
     :param source_code_files: File-Mapping dictionary
     :param visited: List of already traversed function-index-combinations
+    :param called_function_cache: cache for results of tp_utils.get_called_functions_recursively()
     :return: alias information for the specified parameter
     """
     visited.append((function, parameter_position))
@@ -948,7 +949,7 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
             var_name_is_modified = False
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
-            function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
+            function_internal_cu_nodes: List[CUNode] = []
             queue: List[CUNode] = [called_function_cu]
             while len(queue) > 0:
                 cur: CUNode = queue.pop(0)
@@ -967,7 +968,7 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
                 dep_var_names = [x[2].var_name for x in
-                                 child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
+                                 child_in_deps + child_out_deps]
                 dep_var_names_not_none = [x for x in dep_var_names if x is not None]
                 dep_var_names_not_none = [x.replace(".addr", "") for x in dep_var_names_not_none]
                 if alias_name in dep_var_names_not_none:
