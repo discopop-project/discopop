@@ -3,8 +3,8 @@ from typing import List, Dict, cast, Optional, Union
 from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, get_parent_of_type, \
-    get_cus_inside_function, check_reachability
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
+    get_parent_of_type, get_cus_inside_function, check_reachability
 from discopop_explorer.utils import is_loop_index2
 
 
@@ -302,7 +302,8 @@ def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var
                 continue
             var_def_cu = cast(CUNode, optional_var_def_cu)
             # 1. check control flow (reverse BFS from suggestion._node to parent_function
-            if __reverse_reachable_w_o_breaker(pet, pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []):
+            if __reverse_reachable_w_o_breaker(pet, pet.node_at(suggestion.node_id),
+                                               parent_function_cu, var_def_cu, []):
                 # remove var as it may not be known
                 to_be_removed.append(var)
                 continue
