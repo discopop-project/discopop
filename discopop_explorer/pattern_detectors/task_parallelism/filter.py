@@ -84,7 +84,7 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
         suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
         suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
 
-        # remove duplicates (variable occuring in different classes)
+        # remove duplicates (variable occurring in different classes)
         remove_from_first_private = []
         remove_from_private = []
         for var in suggestion.shared:
@@ -208,7 +208,15 @@ def __filter_firstprivate_clauses(suggestion: TaskParallelismInfo, parent_functi
 
 def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: CUNode, target: CUNode,
                                     breaker_cu: CUNode, visited: List[CUNode]):
-    """Helper function for filter_data_sharing_clauses_by_scope"""
+    """Helper function for filter_data_sharing_clauses_by_scope.
+    Checks if target is reachable by traversing the successor graph in reverse, starting from root,
+    without visiting breaker_cu.
+    :param pet: PET Graph
+    :param root: root node
+    :param target: target node
+    :param breaker_cu: breaker cu
+    :param visited: list of already visited CUNodes
+    :return: True, if target is reachable without visiting breaker_cu. False, otherwise."""
     if root in visited:
         return False
     visited.append(root)
@@ -264,7 +272,14 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
 
 def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
                             parent_function_cu, target_clause_list: str):
-    """Helper function for filter_data_sharing_clauses_by_scope"""
+    """Helper function for filter_data_sharing_clauses_by_scope.
+    Filters a given suggestions private, firstprivate or shared variables list,
+    depending on the specific value of target_clause_list.
+    :param pet: PET Graph
+    :param suggestion: suggestion to be checked
+    :param var_def_line_dict: dictionary containing: var_name -> [definition lines]
+    :param parent_function_cu: CUNode corresponding to the function which contains the suggestion
+    :param target_clause_list: One of: ['FP', 'PR', 'SH'], used to control which list of variables is filtered"""
     to_be_removed = []
     if target_clause_list == "FP":
         sharing_clause_list = suggestion.first_private
@@ -472,7 +487,6 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
                                 if check_reachability(pet, cu_node, suggestion._node,
                                                       [EdgeType.SUCCESSOR, EdgeType.CHILD]):
                                     is_valid = True
-
                 else:
                     pass
         except ValueError:
