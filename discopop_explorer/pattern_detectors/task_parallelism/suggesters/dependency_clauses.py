@@ -139,20 +139,7 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     called_function_cache: Dict = dict()
     for ts in task_suggestions:
         current_alias_entry = []
-        potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
-                                      if pet.node_at(e[0]).type == NodeType.FUNC]
-        if not potential_parent_functions:
-            # perform BFS search on incoming CHILD edges to find closest parent function,
-            # i.e. function which contains the CU.
-            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]
-            found_parent = None
-            while len(queue) > 0 or not found_parent:
-                current = queue.pop(0)
-                if current.type == NodeType.FUNC:
-                    found_parent = current
-                    break
-                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-            potential_parent_functions = [found_parent]
+        potential_parent_functions = __get_potential_parent_functions(pet, ts)
         # get parent function
         for parent_function in potential_parent_functions:
             # get recursive function call from original source code
@@ -281,20 +268,7 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
     in_dep_updates: Dict[TaskParallelismInfo, List[str]] = dict()
     for ts_1 in task_suggestions:
         # get parent function
-        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
-                                        if pet.node_at(e[0]).type == NodeType.FUNC]
-        if not potential_parent_functions_1:
-            # perform BFS search on incoming CHILD edges to find closest parent function,
-            # i.e. function which contains the CU.
-            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
-            found_parent = None
-            while len(queue) > 0 or not found_parent:
-                current = queue.pop(0)
-                if current.type == NodeType.FUNC:
-                    found_parent = current
-                    break
-                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-            potential_parent_functions_1 = [found_parent]
+        potential_parent_functions_1 = __get_potential_parent_functions(pet, ts_1)
         while potential_parent_functions_1:
             potential_parent_functions_1.pop()
             # get recursive function call from original source code
@@ -308,20 +282,7 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
                 function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
             for ts_2 in [s for s in task_suggestions if not s == ts_1]:
                 # get parent function
-                potential_parent_functions_2 = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)
-                                                if pet.node_at(e[0]).type == NodeType.FUNC]
-                if not potential_parent_functions_2:
-                    # perform BFS search on incoming CHILD edges to find closest parent function,
-                    # i.e. function which contains the CU.
-                    queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_2._node.id, EdgeType.CHILD)]
-                    found_parent = None
-                    while len(queue) > 0 or not found_parent:
-                        current = queue.pop(0)
-                        if current.type == NodeType.FUNC:
-                            found_parent = current
-                            break
-                        queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-                    potential_parent_functions_2 = [found_parent]
+                potential_parent_functions_2 = __get_potential_parent_functions(pet, ts_2)
                 while potential_parent_functions_2:
                     potential_parent_functions_2.pop()
                     # get recursive function call from original source code
@@ -378,6 +339,76 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
     return result_suggestions
 
 
+def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -> List[CUNode]:
+    """Helper function for identify_dependencies_for_same_functions.
+    Creates a list of potential parents (Function CU Nodes) for a given suggestion.
+    :param pet: PET Graph
+    :param sug: target suggestion
+    :return: List of potential parents of sug (Function CU Nodes)"""
+    potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
+                                  if pet.node_at(e[0]).type == NodeType.FUNC]
+    if not potential_parent_functions:
+        # perform BFS search on incoming CHILD edges to find closest parent function,
+        # i.e. function which contains the CU.
+        queue = [pet.node_at(e[0]) for e in pet.in_edges(sug._node.id, EdgeType.CHILD)]
+        found_parent = None
+        while len(queue) > 0 or not found_parent:
+            current = queue.pop(0)
+            if current.type == NodeType.FUNC:
+                found_parent = current
+                break
+            queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+        potential_parent_functions = [found_parent]
+    return potential_parent_functions
+
+
+def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode) -> List[CUNode]:
+    """Helper function for identify_dependencies_for_same_functions.
+    Creates a list of CUNodes corresponding to the body of the given function.
+    :param pet: PET Graph
+    :param parent_function: function to be analyzed
+    :return: List of CUNodes contained in functions body."""
+    queue = pet.direct_children(parent_function)
+    potential_children = []
+    visited = []
+    while queue:
+        cur_potential_child = queue.pop()
+        visited.append(cur_potential_child)
+        # test if cur_potential_child is inside cur_potential_parent_functions scope
+        if line_contained_in_region(cur_potential_child.start_position(),
+                                    parent_function.start_position(),
+                                    parent_function.end_position()) and \
+                line_contained_in_region(cur_potential_child.end_position(),
+                                         parent_function.start_position(),
+                                         parent_function.end_position()):
+            potential_children.append(cur_potential_child)
+        for tmp_child in pet.direct_children(cur_potential_child):
+            if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
+                queue.append(tmp_child)
+    return potential_children
+
+
+def __get_recursive_calls_from_function(potential_children: List[CUNode], parent_function: CUNode) -> List[str]:
+    """Helper function for identify_dependencies_for_same_functions.
+    Creates a list of recursive function calls located inside the body of the given function.
+    :param potential_children: List of CUs contained in function's body
+    :param parent_function: Parent function
+    :return: List of recursive function call contained in parent_function's body
+    """
+    recursive_function_calls = []
+    for child in [c for c in potential_children if
+                  line_contained_in_region(c.start_position(), parent_function.start_position(),
+                                           parent_function.end_position())
+                  and
+                  line_contained_in_region(c.end_position(), parent_function.start_position(),
+                                           parent_function.end_position())]:
+        for e in child.recursive_function_calls:
+            if e is not None:
+                recursive_function_calls.append(e)
+    recursive_function_calls = list(set(recursive_function_calls))
+    return recursive_function_calls
+
+
 def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
                                              source_code_files: Dict,
                                              cu_inst_result_dict: Dict,
@@ -421,20 +452,7 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
     for ts_1 in task_suggestions:
         # 2. get parent function (pf) and called function (cf)
         # get parent function
-        potential_parent_functions_1 = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)
-                                        if pet.node_at(e[0]).type == NodeType.FUNC]
-        if not potential_parent_functions_1:
-            # perform BFS search on incoming CHILD edges to find closest parent function,
-            # i.e. function which contains the CU.
-            queue = [pet.node_at(e[0]) for e in pet.in_edges(ts_1._node.id, EdgeType.CHILD)]
-            found_parent = None
-            while len(queue) > 0 or not found_parent:
-                current = queue.pop(0)
-                if current.type == NodeType.FUNC:
-                    found_parent = current
-                    break
-                queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
-            potential_parent_functions_1 = [found_parent]
+        potential_parent_functions_1 = __get_potential_parent_functions(pet, ts_1)
         while potential_parent_functions_1:
             cur_potential_parent_function = potential_parent_functions_1.pop()
             # get recursive function call from original source code
@@ -443,36 +461,11 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
                                                    ts_1.node_id.split(":")[0])
             except IndexError:
                 continue
-            # get potential children by dfs enumerating children nodes inside cure_potential_parent_functions scope
-            queue = pet.direct_children(cur_potential_parent_function)
-            potential_children = []
-            visited = []
-            while queue:
-                cur_potential_child = queue.pop()
-                visited.append(cur_potential_child)
-                # test if cur_potential_child is inside cur_potential_parent_functions scope
-                if line_contained_in_region(cur_potential_child.start_position(),
-                                            cur_potential_parent_function.start_position(),
-                                            cur_potential_parent_function.end_position()) and \
-                        line_contained_in_region(cur_potential_child.end_position(),
-                                                 cur_potential_parent_function.start_position(),
-                                                 cur_potential_parent_function.end_position()):
-                    potential_children.append(cur_potential_child)
-                for tmp_child in pet.direct_children(cur_potential_child):
-                    if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
-                        queue.append(tmp_child)
+            # get potential children by dfs enumerating children nodes inside cur_potential_parent_functions scope
+            potential_children = __get_potential_children_of_function(pet, cur_potential_parent_function)
 
-            cppf_recursive_function_calls = []
-            for child in [c for c in potential_children if
-                          line_contained_in_region(c.start_position(), cur_potential_parent_function.start_position(),
-                                                   cur_potential_parent_function.end_position())
-                          and
-                          line_contained_in_region(c.end_position(), cur_potential_parent_function.start_position(),
-                                                   cur_potential_parent_function.end_position())]:
-                for e in child.recursive_function_calls:
-                    if e is not None:
-                        cppf_recursive_function_calls.append(e)
-            cppf_recursive_function_calls = list(set(cppf_recursive_function_calls))
+            cppf_recursive_function_calls = __get_recursive_calls_from_function(potential_children,
+                                                                                cur_potential_parent_function)
             outer_breaker = False
             for rfce_idx_1, recursive_function_call_entry_1 in enumerate(cppf_recursive_function_calls):
                 if outer_breaker:
@@ -547,6 +540,22 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
                             in_dep_updates[ts_2].append((intersection_var, is_pessimistic))
                     outer_breaker = True
     # perform updates of in and out dependencies
+    return __perform_dependency_updates(task_suggestions, in_dep_updates, out_dep_updates, result_suggestions)
+
+
+def __perform_dependency_updates(task_suggestions: List[TaskParallelismInfo],
+                                 in_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
+                                 out_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
+                                 result_suggestions: List[PatternInfo]) -> List[PatternInfo]:
+    """Helper function for identify_dependencies_for_same_functions.
+    Applies the identified updates to the in and out dependency lists of each task suggestion.
+    Returns the list of modified suggestions.
+    :param task_suggestions: list of task suggestions
+    :param in_dep_updates: updates to be done to in-dependencies
+    :param out_dep_updates: updates to be done to out-dependencies
+    :param result_suggestions: resulting suggestions as created by identify_dependencies_for_same_functions
+        prior to calling this function
+    :return: modified result_suggestions list"""
     for ts in task_suggestions:
         if ts in out_dep_updates:
             for (out_dep_var, is_pessimistic) in out_dep_updates[ts]:
@@ -563,8 +572,7 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
                 ts.in_dep.append(in_dep_var)
             ts.in_dep = list(set(ts.in_dep))
         result_suggestions.append(ts)
-
-    return suggestions
+    return result_suggestions
 
 
 def get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int,
@@ -577,6 +585,7 @@ def get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parame
     :param parameter_position: position of the parameter to be analyzed
     :param source_code_files: File-Mapping dictionary
     :param visited: List of already traversed function-index-combinations
+    :param called_function_cache: cache for results of tp_utils.get_called_functions_recursively()
     :return: alias information for the specified parameter
     """
     visited.append((function, parameter_position))
@@ -940,7 +949,7 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
             var_name_is_modified = False
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
-            function_internal_cu_nodes: List[CUNode] = []  # TODO remove pet.direct_children(called_function_cu)
+            function_internal_cu_nodes: List[CUNode] = []
             queue: List[CUNode] = [called_function_cu]
             while len(queue) > 0:
                 cur: CUNode = queue.pop(0)
@@ -959,7 +968,7 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
                 dep_var_names = [x[2].var_name for x in
-                                 child_in_deps + child_out_deps]  # TODO only in-deps might be sufficient
+                                 child_in_deps + child_out_deps]
                 dep_var_names_not_none = [x for x in dep_var_names if x is not None]
                 dep_var_names_not_none = [x.replace(".addr", "") for x in dep_var_names_not_none]
                 if alias_name in dep_var_names_not_none:
