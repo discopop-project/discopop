@@ -220,6 +220,20 @@ def __insert_missing_rwi_lines(parent):
     parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
 
 
+def __remove_unnecessary_return_instructions(target):
+    """Remove returnInstructions if they are not part of target cu anymore.
+    :param target: cu to be checked"""
+    if int(target.returnInstructions.get("count")) != 0:
+        entries = target.returnInstructions.text.split(",")
+        new_entries = []
+        for entry in entries:
+            if line_contained_in_region(entry, target.get("startsAtLine"),
+                                        target.get("endsAtLine")):
+                new_entries.append(entry)
+        target.returnInstructions._setText(",".join(new_entries))
+        target.returnInstructions.set("count", str(len(new_entries)))
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -342,24 +356,8 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __insert_missing_rwi_lines(parent)
 
                         # remove returnInstructions if they are not part of the cus anymore
-                        if int(parent_copy.returnInstructions.get("count")) != 0:
-                            entries = parent_copy.returnInstructions.text.split(",")
-                            new_entries = []
-                            for entry in entries:
-                                if line_contained_in_region(entry, parent_copy.get("startsAtLine"),
-                                                            parent_copy.get("endsAtLine")):
-                                    new_entries.append(entry)
-                            parent_copy.returnInstructions._setText(",".join(new_entries))
-                            parent_copy.returnInstructions.set("count", str(len(new_entries)))
-                        if int(parent.returnInstructions.get("count")) != 0:
-                            entries = parent.returnInstructions.text.split(",")
-                            new_entries = []
-                            for entry in entries:
-                                if line_contained_in_region(entry, parent.get("startsAtLine"),
-                                                            parent.get("endsAtLine")):
-                                    new_entries.append(entry)
-                            parent.returnInstructions._setText(",".join(new_entries))
-                            parent.returnInstructions.set("count", str(len(new_entries)))
+                        __remove_unnecessary_return_instructions(parent_copy)
+                        __remove_unnecessary_return_instructions(parent)
 
                         # add parent.id to parent_function.childrenNodes
                         parent_function = None
