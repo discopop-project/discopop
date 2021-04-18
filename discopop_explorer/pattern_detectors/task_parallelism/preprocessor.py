@@ -27,6 +27,30 @@ def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids
     self_added_node_ids.append(incremented_id)
 
 
+def __set_parent_copy_childrennodes(parent_copy):
+    """Updates the entries of childrenNodes in parent_copy.
+    :param parent_copy: cu node to be updated"""
+    parent_copy.childrenNodes._setText("")
+    for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
+        try:
+            for node_call in calls_node_entry.nodeCalled:
+                try:
+                    if node_call.text not in parent_copy.childrenNodes.text:
+                        parent_copy.childrenNodes._setText(
+                            parent_copy.childrenNodes.text + "," + node_call.text)
+                        if parent_copy.childrenNodes.text.startswith(","):
+                            parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
+                        if parent_copy.childrenNodes.text.endswith(","):
+                            parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
+                        continue
+                except AttributeError as e1:
+                    print(e1)
+                    continue
+        except AttributeError as e2:
+            print(e2)
+            continue
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -100,25 +124,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
 
                         # set parent_copy.childrenNodes
-                        parent_copy.childrenNodes._setText("")
-                        for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
-                            try:
-                                for node_call in calls_node_entry.nodeCalled:
-                                    try:
-                                        if node_call.text not in parent_copy.childrenNodes.text:
-                                            parent_copy.childrenNodes._setText(
-                                                parent_copy.childrenNodes.text + "," + node_call.text)
-                                            if parent_copy.childrenNodes.text.startswith(","):
-                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
-                                            if parent_copy.childrenNodes.text.endswith(","):
-                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
-                                            continue
-                                    except AttributeError as e1:
-                                        print(e1)
-                                        continue
-                            except AttributeError as e2:
-                                print(e2)
-                                continue
+                        __set_parent_copy_childrennodes(parent_copy)
 
                         # Preprocessor Step 4
                         # update startsAtLine and endsAtLine
