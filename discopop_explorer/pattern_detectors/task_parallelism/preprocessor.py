@@ -9,6 +9,24 @@ from discopop_explorer.PETGraphX import NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
+def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids):
+    """Generate the next free CU id and assign it to the parent CU.
+    :param parent: parent CU, id will be updated
+    :param parent_copy: copy of parent CU (newly created CU)
+    :param used_node_ids: list of used cu node id's
+    :param self_added_node_ids: list of added node id's"""
+    # get next free id for specific tmp_file_id
+    parent_copy_id = parent_copy.get("id")
+    tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
+    tmp_used_ids = [int(s[s.index(":") + 1:]) for s in
+                    used_node_ids if
+                    s.startswith(tmp_file_id + ":")]
+    next_free_id = max(tmp_used_ids) + 1
+    incremented_id = tmp_file_id + ":" + str(next_free_id)
+    parent.set("id", incremented_id)
+    self_added_node_ids.append(incremented_id)
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -65,16 +83,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
                         # Preprocessor Step 2 - generate cu id for new element
-                        # get next free id for specific tmp_file_id
-                        parent_copy_id = parent_copy.get("id")
-                        tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
-                        tmp_used_ids = [int(s[s.index(":") + 1:]) for s in
-                                        used_node_ids if
-                                        s.startswith(tmp_file_id + ":")]
-                        next_free_id = max(tmp_used_ids) + 1
-                        incremented_id = tmp_file_id + ":" + str(next_free_id)
-                        parent.set("id", incremented_id)
-                        self_added_node_ids.append(incremented_id)
+                        __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids)
 
                         # Preprocessor Step 3
                         parent_copy.callsNode.clear()
