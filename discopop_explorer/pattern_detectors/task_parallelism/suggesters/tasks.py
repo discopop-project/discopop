@@ -246,113 +246,130 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
                                                 # append loop_cu_child to list of critical CUs
                                                 found_critical_cus.append(loop_cu_child)
         # CRITICAL SECTIONS
-        # remove potential duplicates from critical cus
-        found_critical_cus = list(set(found_critical_cus))
-        # get lists of combinable cus by checking successor relation
-        combinations = []
-        for cu in found_critical_cus:
-            combinations.append([cu])
-        found_combination = True
-        while found_combination:
-            found_combination = False
-            for parent_idx in range(0, len(combinations)):
-                if found_combination:
-                    break
-                for child_idx in range(0, len(combinations)):
-                    if found_combination:
-                        break
-                    if parent_idx == child_idx:
-                        continue
-                    if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
-                        combinations[parent_idx] += combinations[child_idx]
-                        combinations.pop(child_idx)
-                        found_combination = True
-        # remove entries from combinations, if they are already covered by another combination
-        # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
-        removed_entry = True
-        while removed_entry:
-            removed_entry = False
-            for parent_idx in range(0, len(combinations)):
-                if removed_entry:
-                    break
-                # check that parent is a single-entry list
-                if len(combinations[parent_idx]) != 1:
-                    continue
-                for child_idx in range(0, len(combinations)):
-                    if removed_entry:
-                        break
-                    if parent_idx == child_idx:
-                        continue
-                    # check if parent is covered by child
-                    parent = combinations[parent_idx]
-                    child = combinations[child_idx]
-                    if line_contained_in_region(parent[0].start_position(), child[0].start_position(),
-                                                child[-1].end_position()) and \
-                            line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
-                                                     child[-1].end_position()):
-                        combinations.pop(parent_idx)
-                        removed_entry = True
-        # create a string from the gathered information and append to ts.critical_sections
-        for combination_list in combinations:
-            critical_section_str = ""
-            critical_section_str += combination_list[0].start_position()
-            critical_section_str += "-"
-            critical_section_str += combination_list[-1].end_position()
-            ts.critical_sections.append(critical_section_str)
+        __identify_critical_sections(pet, ts, found_critical_cus)
 
         # ATOMIC SECTIONS
-        # remove potential duplicates from atomic cus
-        found_atomic_cus = list(set(found_atomic_cus))
-        # get lists of combinable cus by checking successor relation
-        combinations = []
-        for cu in found_atomic_cus:
-            combinations.append([cu])
-        found_combination = True
-        while found_combination:
-            found_combination = False
-            for parent_idx in range(0, len(combinations)):
+        __identify_atomic_sections(pet, ts, found_atomic_cus)
+    return suggestions
+
+
+def __identify_atomic_sections(pet: PETGraphX, ts: TaskParallelismInfo, found_atomic_cus: List):
+    """Identifies and marks atomic sections.
+    :param pet: PET Graph
+    :param ts: task suggestion
+    :param found_atomic_cus: list of previously identified critical cus.
+    """
+    # remove potential duplicates from atomic cus
+    found_atomic_cus = list(set(found_atomic_cus))
+    # get lists of combinable cus by checking successor relation
+    combinations = []
+    for cu in found_atomic_cus:
+        combinations.append([cu])
+    found_combination = True
+    while found_combination:
+        found_combination = False
+        for parent_idx in range(0, len(combinations)):
+            if found_combination:
+                break
+            for child_idx in range(0, len(combinations)):
                 if found_combination:
                     break
-                for child_idx in range(0, len(combinations)):
-                    if found_combination:
-                        break
-                    if parent_idx == child_idx:
-                        continue
-                    if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
-                        combinations[parent_idx] += combinations[child_idx]
-                        combinations.pop(child_idx)
-                        found_combination = True
-        # remove entries from combinations, if they are already covered by another combination
-        # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
-        removed_entry = True
-        while removed_entry:
-            removed_entry = False
-            for parent_idx in range(0, len(combinations)):
+                if parent_idx == child_idx:
+                    continue
+                if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
+                    combinations[parent_idx] += combinations[child_idx]
+                    combinations.pop(child_idx)
+                    found_combination = True
+    # remove entries from combinations, if they are already covered by another combination
+    # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
+    removed_entry = True
+    while removed_entry:
+        removed_entry = False
+        for parent_idx in range(0, len(combinations)):
+            if removed_entry:
+                break
+            # check that parent is a single-entry list
+            if len(combinations[parent_idx]) != 1:
+                continue
+            for child_idx in range(0, len(combinations)):
                 if removed_entry:
                     break
-                # check that parent is a single-entry list
-                if len(combinations[parent_idx]) != 1:
+                if parent_idx == child_idx:
                     continue
-                for child_idx in range(0, len(combinations)):
-                    if removed_entry:
-                        break
-                    if parent_idx == child_idx:
-                        continue
-                    # check if parent is covered by child
-                    parent = combinations[parent_idx]
-                    child = combinations[child_idx]
-                    if line_contained_in_region(parent[0].start_position(), child[0].start_position(),
-                                                child[-1].end_position()) and \
-                            line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
-                                                     child[-1].end_position()):
-                        combinations.pop(parent_idx)
-                        removed_entry = True
-        # create a string from the gathered information and append to ts.critical_sections
-        for combination_list in combinations:
-            atomic_section_str = ""
-            atomic_section_str += combination_list[0].start_position()
-            atomic_section_str += "-"
-            atomic_section_str += combination_list[-1].end_position()
-            ts.atomic_sections.append(atomic_section_str)
+                # check if parent is covered by child
+                parent = combinations[parent_idx]
+                child = combinations[child_idx]
+                if line_contained_in_region(parent[0].start_position(), child[0].start_position(),
+                                            child[-1].end_position()) and \
+                        line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
+                                                 child[-1].end_position()):
+                    combinations.pop(parent_idx)
+                    removed_entry = True
+    # create a string from the gathered information and append to ts.critical_sections
+    for combination_list in combinations:
+        atomic_section_str = ""
+        atomic_section_str += combination_list[0].start_position()
+        atomic_section_str += "-"
+        atomic_section_str += combination_list[-1].end_position()
+        ts.atomic_sections.append(atomic_section_str)
 
-    return suggestions
+
+def __identify_critical_sections(pet: PETGraphX, ts: TaskParallelismInfo, found_critical_cus: List):
+    """Identifies and marks critical sections.
+    :param pet: PET Graph
+    :param ts: task suggestion
+    :param found_critical_cus: list of previously identified critical cus.
+    """
+    # remove potential duplicates from critical cus
+    found_critical_cus = list(set(found_critical_cus))
+    # get lists of combinable cus by checking successor relation
+    combinations = []
+    for cu in found_critical_cus:
+        combinations.append([cu])
+    found_combination = True
+    while found_combination:
+        found_combination = False
+        for parent_idx in range(0, len(combinations)):
+            if found_combination:
+                break
+            for child_idx in range(0, len(combinations)):
+                if found_combination:
+                    break
+                if parent_idx == child_idx:
+                    continue
+                if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
+                    combinations[parent_idx] += combinations[child_idx]
+                    combinations.pop(child_idx)
+                    found_combination = True
+    # remove entries from combinations, if they are already covered by another combination
+    # occurs, if line numbers are overlapping although CUs are not direct successors of each other.
+    removed_entry = True
+    while removed_entry:
+        removed_entry = False
+        for parent_idx in range(0, len(combinations)):
+            if removed_entry:
+                break
+            # check that parent is a single-entry list
+            if len(combinations[parent_idx]) != 1:
+                continue
+            for child_idx in range(0, len(combinations)):
+                if removed_entry:
+                    break
+                if parent_idx == child_idx:
+                    continue
+                # check if parent is covered by child
+                parent = combinations[parent_idx]
+                child = combinations[child_idx]
+                if line_contained_in_region(parent[0].start_position(), child[0].start_position(),
+                                            child[-1].end_position()) and \
+                        line_contained_in_region(parent[-1].end_position(), child[0].start_position(),
+                                                 child[-1].end_position()):
+                    combinations.pop(parent_idx)
+                    removed_entry = True
+    # create a string from the gathered information and append to ts.critical_sections
+    for combination_list in combinations:
+        critical_section_str = ""
+        critical_section_str += combination_list[0].start_position()
+        critical_section_str += "-"
+        critical_section_str += combination_list[-1].end_position()
+        ts.critical_sections.append(critical_section_str)
