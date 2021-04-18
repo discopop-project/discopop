@@ -149,6 +149,47 @@ def __update_rwi_lines(parent_copy):
         pass
 
 
+def __insert_separator_line(parent_copy):
+    """insert separator line to parent_copys instruction, read and writePhaseLines if not already present
+    :param parent_copy: cu node to be updated"""
+    try:
+        if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
+            parent_copy.instructionLines._setText(
+                parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
+            if parent_copy.instructionLines.text.startswith(","):
+                parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
+            parent_copy.instructionLines.set("count", str(
+                int(parent_copy.instructionLines.get("count")) + 1))
+    except TypeError:
+        parent_copy.instructionLines._setText(parent_copy.get("endsAtLine"))
+        parent_copy.instructionLines.set("count", "1")
+    try:
+        if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
+            parent_copy.readPhaseLines._setText(
+                parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
+            if parent_copy.readPhaseLines.text.startswith(","):
+                parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
+            parent_copy.readPhaseLines.set("count",
+                                           str(int(parent_copy.readPhaseLines.get("count")) + 1))
+    except TypeError:
+        parent_copy.readPhaseLines._setText(parent_copy.get("endsAtLine"))
+        parent_copy.readPhaseLines.set("count", "1")
+    try:
+        if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
+            parent_copy.writePhaseLines._setText(
+                parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
+            if parent_copy.writePhaseLines.text.startswith(","):
+                parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
+            parent_copy.writePhaseLines.set("count",
+                                            str(int(parent_copy.writePhaseLines.get("count")) + 1))
+    except TypeError:
+        parent_copy.writePhaseLines._setText(parent_copy.get("endsAtLine"))
+        parent_copy.writePhaseLines.set("count", "1")
+    parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,", ","))
+    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,", ","))
+    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,", ","))
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -265,42 +306,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
 
                         # insert separator line to parent_copys instruction,
                         # read and writePhaseLines if not already present
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
-                                parent_copy.instructionLines._setText(
-                                    parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.instructionLines.text.startswith(","):
-                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
-                                parent_copy.instructionLines.set("count", str(
-                                    int(parent_copy.instructionLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.instructionLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.instructionLines.set("count", "1")
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
-                                parent_copy.readPhaseLines._setText(
-                                    parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.readPhaseLines.text.startswith(","):
-                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
-                                parent_copy.readPhaseLines.set("count",
-                                                               str(int(parent_copy.readPhaseLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.readPhaseLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.readPhaseLines.set("count", "1")
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
-                                parent_copy.writePhaseLines._setText(
-                                    parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.writePhaseLines.text.startswith(","):
-                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
-                                parent_copy.writePhaseLines.set("count",
-                                                                str(int(parent_copy.writePhaseLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.writePhaseLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.writePhaseLines.set("count", "1")
-                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,", ","))
-                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,", ","))
-                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,", ","))
+                        __insert_separator_line(parent_copy)
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
                         cur_line = parent.get("startsAtLine")
