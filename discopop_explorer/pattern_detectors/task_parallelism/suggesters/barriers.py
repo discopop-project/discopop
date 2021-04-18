@@ -24,22 +24,11 @@ def detect_barrier_suggestions(pet: PETGraphX,
     :return List[PatternInfo]
     """
     # split suggestions into task and taskwait suggestions
-    taskwait_suggestions = []
-    task_suggestions = []
-    omittable_suggestions = []
-    for single_suggestion in suggestions:
-        if type(single_suggestion) == ParallelRegionInfo:
-            continue
-        elif type(single_suggestion) == OmittableCuInfo:
-            omittable_suggestions.append(single_suggestion)
-        elif type(single_suggestion) == TaskParallelismInfo:
-            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
-            if single_suggestion.type is TPIType.TASKWAIT:
-                taskwait_suggestions.append(single_suggestion)
-            elif single_suggestion.type is TPIType.TASK:
-                task_suggestions.append(single_suggestion)
-        else:
-            raise TypeError("Unknown Type: ", type(single_suggestion))
+    taskwait_suggestions: List[TaskParallelismInfo] = []
+    task_suggestions: List[TaskParallelismInfo] = []
+    omittable_suggestions: List[PatternInfo] = []
+    __split_suggestions(suggestions, taskwait_suggestions, task_suggestions, omittable_suggestions)
+
     for s in task_suggestions:
         s._node.tp_contains_task = True
     for s in taskwait_suggestions:
@@ -231,6 +220,28 @@ def detect_barrier_suggestions(pet: PETGraphX,
             queue = list(set(queue))
 
     return suggestions
+
+
+def __split_suggestions(suggestions: List[PatternInfo], taskwait_suggestions: List[TaskParallelismInfo],
+                        task_suggestions: List[TaskParallelismInfo], omittable_suggestions: List[PatternInfo]):
+    """Split suggestions into taskwait, task and omittable suggestions.
+    :param suggestions: list of suggestions to be split
+    :param taskwait_suggestions: list to store taskwait suggestions
+    :param task_suggestions: list to store task suggestions
+    :param omittable_suggestions: list to store omittable suggestions"""
+    for single_suggestion in suggestions:
+        if type(single_suggestion) == ParallelRegionInfo:
+            continue
+        elif type(single_suggestion) == OmittableCuInfo:
+            omittable_suggestions.append(single_suggestion)
+        elif type(single_suggestion) == TaskParallelismInfo:
+            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
+            if single_suggestion.type is TPIType.TASKWAIT:
+                taskwait_suggestions.append(single_suggestion)
+            elif single_suggestion.type is TPIType.TASK:
+                task_suggestions.append(single_suggestion)
+        else:
+            raise TypeError("Unknown Type: ", type(single_suggestion))
 
 
 def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestions: List[PatternInfo]) \
