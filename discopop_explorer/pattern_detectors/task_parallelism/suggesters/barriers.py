@@ -8,89 +8,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
     check_reachability, line_contained_in_region, get_predecessor_nodes
 
 
-def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_dep_edges: List[Tuple[Any, Any, Any]], task_nodes: List,
-                           barrier_nodes: List, omittable_nodes: List) -> Tuple[int, int, int, int]:
-    """Checks the types of nodes pointed to by out_dep_edges and increments the respective counters.
-    :param pet: PET Graph
-    :param suggestions: List[TaskParallelismInfo]
-    :param out_dep_edges: list of outgoing edges
-    :param task_nodes: list of cu nodes containing task suggestions
-    :param barrier_nodes: list of cu nodes containing barrier suggestions
-    :param omittable_nodes: list of cu nodes containing omittable suggestions
-    :return: Tuple consisting of (task_count, barrier_count, omittable_count, normal_count)
-    """
-    task_count = 0
-    barrier_count = 0
-    omittable_count = 0
-    normal_count = 0
-    task_buffer = []
-    barrier_buffer = []
-    omittable_parent_buffer = []
-    for e in out_dep_edges:
-        if pet.node_at(e[1]) in task_nodes:
-            # only count distinct tasks
-            if pet.node_at(e[1]) not in task_buffer:
-                task_buffer.append(pet.node_at(e[1]))
-                task_count += 1
-            else:
-                pass
-        elif pet.node_at(e[1]) in barrier_nodes:
-            # only count distinct barriers
-            if pet.node_at(e[1]) not in barrier_buffer:
-                barrier_buffer.append(pet.node_at(e[1]))
-                barrier_count += 1
-            else:
-                pass
-        elif pet.node_at(e[1]) in [tmp[0] for tmp in omittable_nodes]:
-            # treat omittable cus like their parent tasks
-            tmp_omit_suggestions: List[OmittableCuInfo] = cast(List[OmittableCuInfo],
-                                                               [s for s in suggestions
-                                                                if type(s) == OmittableCuInfo])
-            parent_task = [tos for tos in tmp_omit_suggestions if tos._node == pet.node_at(e[1])][
-                0].combine_with_node
-            if parent_task.id not in omittable_parent_buffer:
-                omittable_parent_buffer.append(parent_task.id)
-                omittable_count += 1
-            else:
-                pass
-        else:
-            normal_count += 1
-    return task_count, barrier_count, omittable_count, normal_count
 
-
-def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]],
-                                         parent_task: CUNode, cur_cu: CUNode):
-    """Checks if only dependences to self, parent omittable node or path to target task exists.
-    Checks if node is a direct successor of an omittable node or a task node.
-    :param pet: PET Graph
-    :param out_dep_edges: list of outgoing edges
-    :param parent_task: parent cu of cur_cu
-    :param cur_cu: current cu node
-    :return True, if a violation has been found. False, otherwise.
-    """
-    violation = False
-    # check if only dependencies to self, parent omittable node or path to target task exists
-    for e in out_dep_edges:
-        if pet.node_at(e[1]) == cur_cu:
-            continue
-        elif pet.node_at(e[1]).tp_omittable is True:
-            continue
-        elif check_reachability(pet, parent_task, cur_cu, [EdgeType.DATA]):
-            continue
-        else:
-            violation = True
-    # check if node is a direct successor of an omittable node or a task node
-    in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if
-                     e.etype == EdgeType.SUCCESSOR]
-    is_successor = False
-    for e in in_succ_edges:
-        if pet.node_at(e[0]).tp_omittable is True:
-            is_successor = True
-        elif pet.node_at(e[0]).tp_contains_task is True:
-            is_successor = True
-    if not is_successor:
-        violation = True
-    return violation
 
 
 def detect_barrier_suggestions(pet: PETGraphX,
@@ -253,6 +171,91 @@ def detect_barrier_suggestions(pet: PETGraphX,
             queue = list(set(queue))
 
     return suggestions
+
+
+def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_dep_edges: List[Tuple[Any, Any, Any]], task_nodes: List,
+                           barrier_nodes: List, omittable_nodes: List) -> Tuple[int, int, int, int]:
+    """Checks the types of nodes pointed to by out_dep_edges and increments the respective counters.
+    :param pet: PET Graph
+    :param suggestions: List[TaskParallelismInfo]
+    :param out_dep_edges: list of outgoing edges
+    :param task_nodes: list of cu nodes containing task suggestions
+    :param barrier_nodes: list of cu nodes containing barrier suggestions
+    :param omittable_nodes: list of cu nodes containing omittable suggestions
+    :return: Tuple consisting of (task_count, barrier_count, omittable_count, normal_count)
+    """
+    task_count = 0
+    barrier_count = 0
+    omittable_count = 0
+    normal_count = 0
+    task_buffer = []
+    barrier_buffer = []
+    omittable_parent_buffer = []
+    for e in out_dep_edges:
+        if pet.node_at(e[1]) in task_nodes:
+            # only count distinct tasks
+            if pet.node_at(e[1]) not in task_buffer:
+                task_buffer.append(pet.node_at(e[1]))
+                task_count += 1
+            else:
+                pass
+        elif pet.node_at(e[1]) in barrier_nodes:
+            # only count distinct barriers
+            if pet.node_at(e[1]) not in barrier_buffer:
+                barrier_buffer.append(pet.node_at(e[1]))
+                barrier_count += 1
+            else:
+                pass
+        elif pet.node_at(e[1]) in [tmp[0] for tmp in omittable_nodes]:
+            # treat omittable cus like their parent tasks
+            tmp_omit_suggestions: List[OmittableCuInfo] = cast(List[OmittableCuInfo],
+                                                               [s for s in suggestions
+                                                                if type(s) == OmittableCuInfo])
+            parent_task = [tos for tos in tmp_omit_suggestions if tos._node == pet.node_at(e[1])][
+                0].combine_with_node
+            if parent_task.id not in omittable_parent_buffer:
+                omittable_parent_buffer.append(parent_task.id)
+                omittable_count += 1
+            else:
+                pass
+        else:
+            normal_count += 1
+    return task_count, barrier_count, omittable_count, normal_count
+
+
+def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]],
+                                         parent_task: CUNode, cur_cu: CUNode):
+    """Checks if only dependences to self, parent omittable node or path to target task exists.
+    Checks if node is a direct successor of an omittable node or a task node.
+    :param pet: PET Graph
+    :param out_dep_edges: list of outgoing edges
+    :param parent_task: parent cu of cur_cu
+    :param cur_cu: current cu node
+    :return True, if a violation has been found. False, otherwise.
+    """
+    violation = False
+    # check if only dependencies to self, parent omittable node or path to target task exists
+    for e in out_dep_edges:
+        if pet.node_at(e[1]) == cur_cu:
+            continue
+        elif pet.node_at(e[1]).tp_omittable is True:
+            continue
+        elif check_reachability(pet, parent_task, cur_cu, [EdgeType.DATA]):
+            continue
+        else:
+            violation = True
+    # check if node is a direct successor of an omittable node or a task node
+    in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if
+                     e.etype == EdgeType.SUCCESSOR]
+    is_successor = False
+    for e in in_succ_edges:
+        if pet.node_at(e[0]).tp_omittable is True:
+            is_successor = True
+        elif pet.node_at(e[0]).tp_contains_task is True:
+            is_successor = True
+    if not is_successor:
+        violation = True
+    return violation
 
 
 def __split_suggestions(suggestions: List[PatternInfo], taskwait_suggestions: List[TaskParallelismInfo],
