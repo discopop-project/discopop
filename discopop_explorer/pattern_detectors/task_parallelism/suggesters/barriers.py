@@ -58,6 +58,41 @@ def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_d
     return task_count, barrier_count, omittable_count, normal_count
 
 
+def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]],
+                                         parent_task: CUNode, cur_cu: CUNode):
+    """Checks if only dependences to self, parent omittable node or path to target task exists.
+    Checks if node is a direct successor of an omittable node or a task node.
+    :param pet: PET Graph
+    :param out_dep_edges: list of outgoing edges
+    :param parent_task: parent cu of cur_cu
+    :param cur_cu: current cu node
+    :return True, if a violation has been found. False, otherwise.
+    """
+    violation = False
+    # check if only dependencies to self, parent omittable node or path to target task exists
+    for e in out_dep_edges:
+        if pet.node_at(e[1]) == cur_cu:
+            continue
+        elif pet.node_at(e[1]).tp_omittable is True:
+            continue
+        elif check_reachability(pet, parent_task, cur_cu, [EdgeType.DATA]):
+            continue
+        else:
+            violation = True
+    # check if node is a direct successor of an omittable node or a task node
+    in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if
+                     e.etype == EdgeType.SUCCESSOR]
+    is_successor = False
+    for e in in_succ_edges:
+        if pet.node_at(e[0]).tp_omittable is True:
+            is_successor = True
+        elif pet.node_at(e[0]).tp_contains_task is True:
+            is_successor = True
+    if not is_successor:
+        violation = True
+    return violation
+
+
 def detect_barrier_suggestions(pet: PETGraphX,
                                suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
@@ -195,28 +230,7 @@ def detect_barrier_suggestions(pet: PETGraphX,
 
                     if not found_cwn:
                         raise Exception("No parent task for omittable node found!")
-            violation = False
-            # check if only dependences to self, parent omittable node or path to target task exists
-            for e in out_dep_edges:
-                if pet.node_at(e[1]) == v:
-                    continue
-                elif pet.node_at(e[1]).tp_omittable is True:
-                    continue
-                elif check_reachability(pet, parent_task, v, [EdgeType.DATA]):
-                    continue
-                else:
-                    violation = True
-            # check if node is a direct successor of an omittable node or a task node
-            in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(v.id) if
-                             e.etype == EdgeType.SUCCESSOR]
-            is_successor = False
-            for e in in_succ_edges:
-                if pet.node_at(e[0]).tp_omittable is True:
-                    is_successor = True
-                elif pet.node_at(e[0]).tp_contains_task is True:
-                    is_successor = True
-            if not is_successor:
-                violation = True
+            violation = __check_dependences_and_predecessors(pet, out_dep_edges, parent_task, v)
             # suggest omittable cu if no violation occured
             if not violation:
                 if v.tp_omittable is False:
