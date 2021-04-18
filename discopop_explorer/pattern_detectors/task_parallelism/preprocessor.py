@@ -190,6 +190,36 @@ def __insert_separator_line(parent_copy):
     parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,", ","))
 
 
+def __insert_missing_rwi_lines(parent):
+    """Insert all lines contained in parent to instruction, read and writePhaseLines
+    :param parent: cu node to be updated"""
+    cur_line = parent.get("startsAtLine")
+    while line_contained_in_region(cur_line, parent.get("startsAtLine"),
+                                   parent.get("endsAtLine")):
+        if cur_line not in parent.instructionLines.text:
+            parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
+            if parent.instructionLines.text.endswith(","):
+                parent.instructionLines._setText(parent.instructionLines.text[:-1])
+            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
+        if cur_line not in parent.readPhaseLines.text:
+            parent.readPhaseLines._setText(cur_line + "," + parent.readPhaseLines.text)
+            if parent.readPhaseLines.text.endswith(","):
+                parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
+            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
+        if cur_line not in parent.writePhaseLines.text:
+            parent.writePhaseLines._setText(cur_line + "," + parent.writePhaseLines.text)
+            if parent.writePhaseLines.text.endswith(","):
+                parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
+            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
+        # increment cur_line by one
+        cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(
+            int(cur_line[cur_line.rfind(":") + 1:]) + 1)
+        continue
+    parent.instructionLines._setText(parent.instructionLines.text.replace(",,", ","))
+    parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,", ","))
+    parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -309,32 +339,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __insert_separator_line(parent_copy)
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
-                        cur_line = parent.get("startsAtLine")
-                        while line_contained_in_region(cur_line, parent.get("startsAtLine"),
-                                                       parent.get("endsAtLine")):
-                            if cur_line not in parent.instructionLines.text:
-                                parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
-                                if parent.instructionLines.text.endswith(","):
-                                    parent.instructionLines._setText(parent.instructionLines.text[:-1])
-                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
-                            if cur_line not in parent.readPhaseLines.text:
-                                parent.readPhaseLines._setText(cur_line + "," + parent.readPhaseLines.text)
-                                if parent.readPhaseLines.text.endswith(","):
-                                    parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
-                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
-                            if cur_line not in parent.writePhaseLines.text:
-                                parent.writePhaseLines._setText(cur_line + "," + parent.writePhaseLines.text)
-                                if parent.writePhaseLines.text.endswith(","):
-                                    parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
-                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
-                            # increment cur_line by one
-                            cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(
-                                int(cur_line[cur_line.rfind(":") + 1:]) + 1)
-                            continue
-
-                        parent.instructionLines._setText(parent.instructionLines.text.replace(",,", ","))
-                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,", ","))
-                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
+                        __insert_missing_rwi_lines(parent)
 
                         # remove returnInstructions if they are not part of the cus anymore
                         if int(parent_copy.returnInstructions.get("count")) != 0:
