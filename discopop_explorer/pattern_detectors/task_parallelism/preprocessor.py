@@ -51,6 +51,51 @@ def __set_parent_copy_childrennodes(parent_copy):
             continue
 
 
+def __update_start_and_end_line(parent, parent_copy):
+    """Updates startsAtLine and endsAtLine of parent and parent_copy
+    :param parent: parent node to be updated
+    :param parent_copy: copy of parent node (newly added node)
+    """
+    try:
+        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                parent.instructionLines.text:
+            parent.instructionLines._setText(parent.instructionLines.text.replace(
+                parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+            parent.instructionLines._setText(
+                parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
+                                                     ""))
+            parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
+    except TypeError:
+        parent.instructionLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+        parent.instructionLines.set("count", "1")
+
+    try:
+        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                parent.readPhaseLines.text:
+            parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(
+                parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+            parent.readPhaseLines._setText(
+                parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
+                                                   ""))
+            parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
+    except TypeError:
+        parent.readPhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+        parent.readPhaseLines.set("count", "1")
+
+    try:
+        if parent_copy.callsNode.nodeCalled.get("atLine") in \
+                parent.writePhaseLines.text:
+            parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(
+                parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+            parent.writePhaseLines._setText(
+                parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
+                                                    ""))
+            parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
+    except TypeError:
+        parent.writePhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+        parent.writePhaseLines.set("count", "1")
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -127,45 +172,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __set_parent_copy_childrennodes(parent_copy)
 
                         # Preprocessor Step 4
-                        # update startsAtLine and endsAtLine
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.instructionLines.text:
-                                parent.instructionLines._setText(parent.instructionLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.instructionLines._setText(
-                                    parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                         ""))
-                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
-                        except TypeError:
-                            parent.instructionLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.instructionLines.set("count", "1")
-
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.readPhaseLines.text:
-                                parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.readPhaseLines._setText(
-                                    parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                       ""))
-                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
-                        except TypeError:
-                            parent.readPhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.readPhaseLines.set("count", "1")
-
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.writePhaseLines.text:
-                                parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.writePhaseLines._setText(
-                                    parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                        ""))
-                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
-                        except TypeError:
-                            parent.writePhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.writePhaseLines.set("count", "1")
+                        __update_start_and_end_line(parent, parent_copy)
 
                         separator_line = parent.get("startsAtLine")
                         # select smallest recursive function call line >= separator_line + 1
