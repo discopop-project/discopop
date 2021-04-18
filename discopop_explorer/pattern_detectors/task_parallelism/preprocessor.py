@@ -9,6 +9,176 @@ from discopop_explorer.PETGraphX import NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
+def cu_xml_preprocessing(cu_xml: str) -> str:
+    """Execute CU XML Preprocessing.
+    Returns file name of modified cu xml file.
+    :param cu_xml: path to the xml file
+    :return: file name of modified cu xml file.
+    """
+    xml_fd = open(cu_xml)
+    xml_content = ""
+    for line in xml_fd.readlines():
+        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+            xml_content = xml_content + line
+
+    xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
+
+    parsed_cu = objectify.fromstring(xml_content)
+
+    iterate_over_cus = True  # used to enable re-starting
+    self_added_node_ids: List[str] = []
+    while iterate_over_cus:
+        used_node_ids = []
+        for node in parsed_cu.Node:
+            used_node_ids.append(node.get("id"))
+
+        for node in parsed_cu.Node:
+            inner_iteration = True
+            remaining_recursive_call_in_parent = False
+            while inner_iteration:
+                used_node_ids = list(set(used_node_ids + self_added_node_ids))
+
+                if node.get('type') == '0':  # iterate over CU nodes
+                    # find CU nodes with > 1 recursiveFunctionCalls in own code region
+                    if __preprocessor_cu_contains_at_least_two_recursive_calls(
+                            node) or remaining_recursive_call_in_parent:
+                        remaining_recursive_call_in_parent = False
+                        # Preprocessor Step 1
+                        tmp_cn_entry = None  # (recursiveFunctionCall, nodeCalled)
+                        for cne_idx, calls_node_entry in enumerate(node.callsNode):
+                            # get first matching entry of node.callsNode
+                            try:
+                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                    if str(rec_call_line) in str(rec_call):
+                                        tmp_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        break
+                            except AttributeError:
+                                continue
+                        if tmp_cn_entry is None:
+                            raise Exception("no matching entries for callsNode found!")
+
+                        parent = node
+                        tmp_cn_entry[0].getparent().remove(tmp_cn_entry[0])
+                        tmp_cn_entry[1].getparent().remove(tmp_cn_entry[1])
+                        parent_copy = copy.copy(parent)
+                        parsed_cu.insert(parsed_cu.index(parent), parent_copy)
+
+                        # Preprocessor Step 2 - generate cu id for new element
+                        __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids)
+
+                        # Preprocessor Step 3
+                        parent_copy.callsNode.clear()
+                        parent_copy.callsNode.append(tmp_cn_entry[1])
+                        parent_copy.callsNode.append(tmp_cn_entry[0])
+
+                        parent_copy.successors.clear()
+                        etree.SubElement(parent_copy.successors, "CU")
+                        parent_copy.successors.CU._setText(parent.get("id"))
+
+                        # delete childrenNodes-entry from parent
+                        tmp_cu_id = tmp_cn_entry[1].text
+                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id + ",", ""))
+                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
+
+                        # set parent_copy.childrenNodes
+                        __set_parent_copy_childrennodes(parent_copy)
+
+                        # Preprocessor Step 4
+                        __update_start_and_end_line(parent, parent_copy)
+
+                        separator_line = parent.get("startsAtLine")
+                        # select smallest recursive function call line >= separator_line + 1
+                        parent_new_start_line = None
+                        potential_lines = []
+                        for tmp1 in parent.callsNode:
+                            try:
+                                for tmp2 in tmp1.nodeCalled:
+                                    try:
+                                        potential_lines.append(tmp2.get("atLine"))
+                                        pass
+                                    except AttributeError:
+                                        pass
+                            except AttributeError:
+                                pass
+                        for tmp in potential_lines:
+                            if tmp == "":
+                                continue
+                            if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
+                                if parent_new_start_line is None:
+                                    parent_new_start_line = tmp
+                                    continue
+                                # select smallest instruction line
+                                if int(tmp[tmp.find(":") + 1:]) < int(
+                                        parent_new_start_line[parent_new_start_line.find(":") + 1:]):
+                                    parent_new_start_line = tmp
+                        if not potential_lines or (potential_lines and not parent_new_start_line):
+                            parent_new_start_line = str(separator_line[:separator_line.index(":")])
+                            parent_new_start_line += ":"
+                            parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
+
+                        parent.set("startsAtLine", parent_new_start_line)
+                        parent_copy.set("endsAtLine", separator_line)
+
+                        # update instruction/readPhase/writePhase lines
+                        __update_rwi_lines(parent_copy)
+
+                        # insert separator line to parent_copys instruction,
+                        # read and writePhaseLines if not already present
+                        __insert_separator_line(parent_copy)
+
+                        # insert all lines contained in parent to instruction, read and writePhaseLines
+                        __insert_missing_rwi_lines(parent)
+
+                        # remove returnInstructions if they are not part of the cus anymore
+                        __remove_unnecessary_return_instructions(parent_copy)
+                        __remove_unnecessary_return_instructions(parent)
+
+                        # add parent.id to parent_function.childrenNodes
+                        __add_parent_id_to_children(parsed_cu, parent)
+
+                        # Preprocessor Step 5 (looping)
+                        parent_further_cn_entry = None
+                        for cne_idx, calls_node_entry in enumerate(parent.callsNode):
+                            # get first matching entry of node.callsNode
+                            try:
+                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                    if str(rec_call_line) in str(rec_call):
+                                        parent_further_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        break
+                            except AttributeError:
+                                continue
+                        if parent_further_cn_entry is None:
+                            # parent has no further recursive call, restart outer loop
+                            inner_iteration = False
+                            continue
+                        else:
+                            # parent still has recursive calls
+                            inner_iteration = True
+                            node = parent
+                            remaining_recursive_call_in_parent = True
+                            continue
+                    else:
+                        inner_iteration = False
+                        continue
+                else:
+                    # node not of type CU, go to next node
+                    inner_iteration = False
+                    continue
+
+        iterate_over_cus = False  # disable restarting, preprocessing finished
+
+    # print modified Data.xml to file
+    modified_cu_xml = cu_xml.replace(".xml", "-preprocessed.xml")
+    if os.path.exists(modified_cu_xml):
+        os.remove(modified_cu_xml)
+    f = open(modified_cu_xml, "w+")
+    f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
+    f.close()
+    return modified_cu_xml
+
+
 def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids):
     """Generate the next free CU id and assign it to the parent CU.
     :param parent: parent CU, id will be updated
@@ -256,176 +426,6 @@ def __add_parent_id_to_children(parsed_cu, parent):
             parent_function.childrenNodes.text + "," + parent.get("id"))
         if parent_function.childrenNodes.text.startswith(","):
             parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
-
-
-def cu_xml_preprocessing(cu_xml: str) -> str:
-    """Execute CU XML Preprocessing.
-    Returns file name of modified cu xml file.
-    :param cu_xml: path to the xml file
-    :return: file name of modified cu xml file.
-    """
-    xml_fd = open(cu_xml)
-    xml_content = ""
-    for line in xml_fd.readlines():
-        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
-            xml_content = xml_content + line
-
-    xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
-
-    parsed_cu = objectify.fromstring(xml_content)
-
-    iterate_over_cus = True  # used to enable re-starting
-    self_added_node_ids: List[str] = []
-    while iterate_over_cus:
-        used_node_ids = []
-        for node in parsed_cu.Node:
-            used_node_ids.append(node.get("id"))
-
-        for node in parsed_cu.Node:
-            inner_iteration = True
-            remaining_recursive_call_in_parent = False
-            while inner_iteration:
-                used_node_ids = list(set(used_node_ids + self_added_node_ids))
-
-                if node.get('type') == '0':  # iterate over CU nodes
-                    # find CU nodes with > 1 recursiveFunctionCalls in own code region
-                    if __preprocessor_cu_contains_at_least_two_recursive_calls(
-                            node) or remaining_recursive_call_in_parent:
-                        remaining_recursive_call_in_parent = False
-                        # Preprocessor Step 1
-                        tmp_cn_entry = None  # (recursiveFunctionCall, nodeCalled)
-                        for cne_idx, calls_node_entry in enumerate(node.callsNode):
-                            # get first matching entry of node.callsNode
-                            try:
-                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
-                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
-                                    if str(rec_call_line) in str(rec_call):
-                                        tmp_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
-                                        break
-                            except AttributeError:
-                                continue
-                        if tmp_cn_entry is None:
-                            raise Exception("no matching entries for callsNode found!")
-
-                        parent = node
-                        tmp_cn_entry[0].getparent().remove(tmp_cn_entry[0])
-                        tmp_cn_entry[1].getparent().remove(tmp_cn_entry[1])
-                        parent_copy = copy.copy(parent)
-                        parsed_cu.insert(parsed_cu.index(parent), parent_copy)
-
-                        # Preprocessor Step 2 - generate cu id for new element
-                        __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids)
-
-                        # Preprocessor Step 3
-                        parent_copy.callsNode.clear()
-                        parent_copy.callsNode.append(tmp_cn_entry[1])
-                        parent_copy.callsNode.append(tmp_cn_entry[0])
-
-                        parent_copy.successors.clear()
-                        etree.SubElement(parent_copy.successors, "CU")
-                        parent_copy.successors.CU._setText(parent.get("id"))
-
-                        # delete childrenNodes-entry from parent
-                        tmp_cu_id = tmp_cn_entry[1].text
-                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id + ",", ""))
-                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
-
-                        # set parent_copy.childrenNodes
-                        __set_parent_copy_childrennodes(parent_copy)
-
-                        # Preprocessor Step 4
-                        __update_start_and_end_line(parent, parent_copy)
-
-                        separator_line = parent.get("startsAtLine")
-                        # select smallest recursive function call line >= separator_line + 1
-                        parent_new_start_line = None
-                        potential_lines = []
-                        for tmp1 in parent.callsNode:
-                            try:
-                                for tmp2 in tmp1.nodeCalled:
-                                    try:
-                                        potential_lines.append(tmp2.get("atLine"))
-                                        pass
-                                    except AttributeError:
-                                        pass
-                            except AttributeError:
-                                pass
-                        for tmp in potential_lines:
-                            if tmp == "":
-                                continue
-                            if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
-                                if parent_new_start_line is None:
-                                    parent_new_start_line = tmp
-                                    continue
-                                # select smallest instruction line
-                                if int(tmp[tmp.find(":") + 1:]) < int(
-                                        parent_new_start_line[parent_new_start_line.find(":") + 1:]):
-                                    parent_new_start_line = tmp
-                        if not potential_lines or (potential_lines and not parent_new_start_line):
-                            parent_new_start_line = str(separator_line[:separator_line.index(":")])
-                            parent_new_start_line += ":"
-                            parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
-
-                        parent.set("startsAtLine", parent_new_start_line)
-                        parent_copy.set("endsAtLine", separator_line)
-
-                        # update instruction/readPhase/writePhase lines
-                        __update_rwi_lines(parent_copy)
-
-                        # insert separator line to parent_copys instruction,
-                        # read and writePhaseLines if not already present
-                        __insert_separator_line(parent_copy)
-
-                        # insert all lines contained in parent to instruction, read and writePhaseLines
-                        __insert_missing_rwi_lines(parent)
-
-                        # remove returnInstructions if they are not part of the cus anymore
-                        __remove_unnecessary_return_instructions(parent_copy)
-                        __remove_unnecessary_return_instructions(parent)
-
-                        # add parent.id to parent_function.childrenNodes
-                        __add_parent_id_to_children(parsed_cu, parent)
-
-                        # Preprocessor Step 5 (looping)
-                        parent_further_cn_entry = None
-                        for cne_idx, calls_node_entry in enumerate(parent.callsNode):
-                            # get first matching entry of node.callsNode
-                            try:
-                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
-                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
-                                    if str(rec_call_line) in str(rec_call):
-                                        parent_further_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
-                                        break
-                            except AttributeError:
-                                continue
-                        if parent_further_cn_entry is None:
-                            # parent has no further recursive call, restart outer loop
-                            inner_iteration = False
-                            continue
-                        else:
-                            # parent still has recursive calls
-                            inner_iteration = True
-                            node = parent
-                            remaining_recursive_call_in_parent = True
-                            continue
-                    else:
-                        inner_iteration = False
-                        continue
-                else:
-                    # node not of type CU, go to next node
-                    inner_iteration = False
-                    continue
-
-        iterate_over_cus = False  # disable restarting, preprocessing finished
-
-    # print modified Data.xml to file
-    modified_cu_xml = cu_xml.replace(".xml", "-preprocessed.xml")
-    if os.path.exists(modified_cu_xml):
-        os.remove(modified_cu_xml)
-    f = open(modified_cu_xml, "w+")
-    f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
-    f.close()
-    return modified_cu_xml
 
 
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
