@@ -234,6 +234,30 @@ def __remove_unnecessary_return_instructions(target):
         target.returnInstructions.set("count", str(len(new_entries)))
 
 
+def __add_parent_id_to_children(parsed_cu, parent):
+    """"Add parent.id to parent_function.childrenNodes
+    :param: parsed_cu: parsed contents of cu_xml file
+    :param parent: cu node to be added to parent_function's children
+    """
+    parent_function = None
+    for tmp_node in parsed_cu.Node:
+        if tmp_node.get('type') == '1':
+            if line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"),
+                                        tmp_node.get("endsAtLine")):
+                if line_contained_in_region(parent.get("endsAtLine"),
+                                            tmp_node.get("startsAtLine"),
+                                            tmp_node.get("endsAtLine")):
+                    parent_function = tmp_node
+                    break
+    if parent_function is None:
+        print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
+    else:
+        parent_function.childrenNodes._setText(
+            parent_function.childrenNodes.text + "," + parent.get("id"))
+        if parent_function.childrenNodes.text.startswith(","):
+            parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -360,23 +384,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __remove_unnecessary_return_instructions(parent)
 
                         # add parent.id to parent_function.childrenNodes
-                        parent_function = None
-                        for tmp_node in parsed_cu.Node:
-                            if tmp_node.get('type') == '1':
-                                if line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"),
-                                                            tmp_node.get("endsAtLine")):
-                                    if line_contained_in_region(parent.get("endsAtLine"),
-                                                                tmp_node.get("startsAtLine"),
-                                                                tmp_node.get("endsAtLine")):
-                                        parent_function = tmp_node
-                                        break
-                        if parent_function is None:
-                            print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
-                        else:
-                            parent_function.childrenNodes._setText(
-                                parent_function.childrenNodes.text + "," + parent.get("id"))
-                            if parent_function.childrenNodes.text.startswith(","):
-                                parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
+                        __add_parent_id_to_children(parsed_cu, parent)
 
                         # Preprocessor Step 5 (looping)
                         parent_further_cn_entry = None
