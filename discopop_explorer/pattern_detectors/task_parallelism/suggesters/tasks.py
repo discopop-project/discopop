@@ -253,7 +253,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
 
 
 def __identify_atomic_or_critical_sections(pet: PETGraphX, ts: TaskParallelismInfo, found_cus: List, selector: bool):
-    """Identifies and marks atomic sections.
+    """Identifies and marks atomic or critical sections.
     :param pet: PET Graph
     :param ts: task suggestion
     :param found_cus: list of previously identified atomic or critical cus.
