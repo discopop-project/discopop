@@ -96,6 +96,59 @@ def __update_start_and_end_line(parent, parent_copy):
         parent.writePhaseLines.set("count", "1")
 
 
+def __update_rwi_lines(parent_copy):
+    """Updates instruction/readPhase/writePhase lines of parent_copy
+    :param parent_copy: cu node to be updated"""
+    try:
+        for tmp_line in parent_copy.instructionLines.text.split(","):
+            if not line_contained_in_region(
+                    tmp_line,
+                    parent_copy.get("startsAtLine"),
+                    parent_copy.get("endsAtLine")):
+                parent_copy.instructionLines._setText(
+                    parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
+                parent_copy.instructionLines._setText(
+                    parent_copy.instructionLines.text.replace(tmp_line, ""))
+                if parent_copy.instructionLines.text.endswith(","):
+                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
+                parent_copy.instructionLines.set("count", str(
+                    int(parent_copy.instructionLines.get("count")) - 1))
+    except AttributeError:
+        pass
+    try:
+        for tmp_line in parent_copy.readPhaseLines.text.split(","):
+            if not line_contained_in_region(
+                    tmp_line,
+                    parent_copy.get("startsAtLine"),
+                    parent_copy.get("endsAtLine")):
+                parent_copy.readPhaseLines._setText(
+                    parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
+                parent_copy.readPhaseLines._setText(
+                    parent_copy.readPhaseLines.text.replace(tmp_line, ""))
+                if parent_copy.readPhaseLines.text.endswith(","):
+                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
+                parent_copy.readPhaseLines.set("count", str(
+                    int(parent_copy.readPhaseLines.get("count")) - 1))
+    except AttributeError:
+        pass
+    try:
+        for tmp_line in parent_copy.writePhaseLines.text.split(","):
+            if not line_contained_in_region(
+                    tmp_line,
+                    parent_copy.get("startsAtLine"),
+                    parent_copy.get("endsAtLine")):
+                parent_copy.writePhaseLines._setText(
+                    parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
+                parent_copy.writePhaseLines._setText(
+                    parent_copy.writePhaseLines.text.replace(tmp_line, ""))
+                if parent_copy.writePhaseLines.text.endswith(","):
+                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
+                parent_copy.writePhaseLines.set("count", str(
+                    int(parent_copy.writePhaseLines.get("count")) - 1))
+    except AttributeError:
+        pass
+
+
 def cu_xml_preprocessing(cu_xml: str) -> str:
     """Execute CU XML Preprocessing.
     Returns file name of modified cu xml file.
@@ -208,54 +261,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
-                        try:
-                            for tmp_line in parent_copy.instructionLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.instructionLines._setText(
-                                        parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.instructionLines._setText(
-                                        parent_copy.instructionLines.text.replace(tmp_line, ""))
-                                    if parent_copy.instructionLines.text.endswith(","):
-                                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
-                                    parent_copy.instructionLines.set("count", str(
-                                        int(parent_copy.instructionLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
-                        try:
-                            for tmp_line in parent_copy.readPhaseLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.readPhaseLines._setText(
-                                        parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.readPhaseLines._setText(
-                                        parent_copy.readPhaseLines.text.replace(tmp_line, ""))
-                                    if parent_copy.readPhaseLines.text.endswith(","):
-                                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
-                                    parent_copy.readPhaseLines.set("count", str(
-                                        int(parent_copy.readPhaseLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
-                        try:
-                            for tmp_line in parent_copy.writePhaseLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.writePhaseLines._setText(
-                                        parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.writePhaseLines._setText(
-                                        parent_copy.writePhaseLines.text.replace(tmp_line, ""))
-                                    if parent_copy.writePhaseLines.text.endswith(","):
-                                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
-                                    parent_copy.writePhaseLines.set("count", str(
-                                        int(parent_copy.writePhaseLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
+                        __update_rwi_lines(parent_copy)
 
                         # insert separator line to parent_copys instruction,
                         # read and writePhaseLines if not already present
