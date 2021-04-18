@@ -150,7 +150,7 @@ def __update_rwi_lines(parent_copy):
 
 
 def __insert_separator_line(parent_copy):
-    """insert separator line to parent_copys instruction, read and writePhaseLines if not already present
+    """Insert separator line to parent_copys instruction, read and writePhaseLines if not already present
     :param parent_copy: cu node to be updated"""
     try:
         if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
