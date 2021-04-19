@@ -198,7 +198,7 @@ def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids
 
 
 def __set_parent_copy_childrennodes(parent_copy):
-    """Updates the entries of childrenNodes in parent_copy.
+    """Adds cu nodes called by parent_copy to the childrenNodes list of parent_copy, if not already contained.
     :param parent_copy: cu node to be updated"""
     parent_copy.childrenNodes._setText("")
     for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
