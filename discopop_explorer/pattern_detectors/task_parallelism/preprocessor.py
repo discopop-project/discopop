@@ -85,7 +85,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __set_parent_copy_childrennodes(parent_copy)
 
                         # Preprocessor Step 4
-                        __update_start_and_end_line(parent, parent_copy)
+                        __remove_overlapping_start_and_end_lines(parent, parent_copy)
 
                         separator_line = parent.get("startsAtLine")
                         # select smallest recursive function call line >= separator_line + 1
@@ -221,7 +221,7 @@ def __set_parent_copy_childrennodes(parent_copy):
             continue
 
 
-def __update_start_and_end_line(parent, parent_copy):
+def __remove_overlapping_start_and_end_lines(parent, parent_copy):
     """Removes the first line of parent_copy from parent´s readPhaseLines, writePhaseLines and instructionLines.
     As a result, start and end Lines of both nodes do not overlap anymore.
     :param parent: parent node to be updated
