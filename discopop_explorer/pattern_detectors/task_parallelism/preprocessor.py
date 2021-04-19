@@ -121,7 +121,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
-                        __update_rwi_lines(parent_copy)
+                        __filter_rwi_lines(parent_copy)
 
                         # insert separator line to parent_copys instruction,
                         # read and writePhaseLines if not already present
@@ -267,9 +267,10 @@ def __update_start_and_end_line(parent, parent_copy):
         parent.writePhaseLines.set("count", "1")
 
 
-def __update_rwi_lines(parent_copy):
-    """Updates instruction/readPhase/writePhase lines of parent_copy
-    :param parent_copy: cu node to be updated"""
+def __filter_rwi_lines(parent_copy):
+    """Removes entries from instructionLines, readPhaseLines and writePhraseLines of parent_copy if their value is not
+    between parent_copy.startsAtLine and parent_copy.endsAtLine.
+    :param parent_copy: cu node to be filtered"""
     try:
         for tmp_line in parent_copy.instructionLines.text.split(","):
             if not line_contained_in_region(
