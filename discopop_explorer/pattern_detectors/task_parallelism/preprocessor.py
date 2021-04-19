@@ -65,16 +65,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
                         # Preprocessor Step 2 - generate cu id for new element
-                        # get next free id for specific tmp_file_id
-                        parent_copy_id = parent_copy.get("id")
-                        tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
-                        tmp_used_ids = [int(s[s.index(":") + 1:]) for s in
-                                        used_node_ids if
-                                        s.startswith(tmp_file_id + ":")]
-                        next_free_id = max(tmp_used_ids) + 1
-                        incremented_id = tmp_file_id + ":" + str(next_free_id)
-                        parent.set("id", incremented_id)
-                        self_added_node_ids.append(incremented_id)
+                        __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids)
 
                         # Preprocessor Step 3
                         parent_copy.callsNode.clear()
@@ -91,66 +82,12 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
 
                         # set parent_copy.childrenNodes
-                        parent_copy.childrenNodes._setText("")
-                        for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
-                            try:
-                                for node_call in calls_node_entry.nodeCalled:
-                                    try:
-                                        if node_call.text not in parent_copy.childrenNodes.text:
-                                            parent_copy.childrenNodes._setText(
-                                                parent_copy.childrenNodes.text + "," + node_call.text)
-                                            if parent_copy.childrenNodes.text.startswith(","):
-                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
-                                            if parent_copy.childrenNodes.text.endswith(","):
-                                                parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
-                                            continue
-                                    except AttributeError as e1:
-                                        print(e1)
-                                        continue
-                            except AttributeError as e2:
-                                print(e2)
-                                continue
+                        __set_parent_copy_childrennodes(parent_copy)
 
                         # Preprocessor Step 4
-                        # update startsAtLine and endsAtLine
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.instructionLines.text:
-                                parent.instructionLines._setText(parent.instructionLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.instructionLines._setText(
-                                    parent.instructionLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                         ""))
-                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) - 1))
-                        except TypeError:
-                            parent.instructionLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.instructionLines.set("count", "1")
-
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.readPhaseLines.text:
-                                parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.readPhaseLines._setText(
-                                    parent.readPhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                       ""))
-                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) - 1))
-                        except TypeError:
-                            parent.readPhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.readPhaseLines.set("count", "1")
-
-                        try:
-                            if parent_copy.callsNode.nodeCalled.get("atLine") in \
-                                    parent.writePhaseLines.text:
-                                parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(
-                                    parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-                                parent.writePhaseLines._setText(
-                                    parent.writePhaseLines.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"),
-                                                                        ""))
-                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) - 1))
-                        except TypeError:
-                            parent.writePhaseLines._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
-                            parent.writePhaseLines.set("count", "1")
+                        __remove_overlapping_start_and_end_lines(parent_copy, parent.instructionLines)
+                        __remove_overlapping_start_and_end_lines(parent_copy, parent.readPhaseLines)
+                        __remove_overlapping_start_and_end_lines(parent_copy, parent.writePhaseLines)
 
                         separator_line = parent.get("startsAtLine")
                         # select smallest recursive function call line >= separator_line + 1
@@ -186,160 +123,27 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
-                        try:
-                            for tmp_line in parent_copy.instructionLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.instructionLines._setText(
-                                        parent_copy.instructionLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.instructionLines._setText(
-                                        parent_copy.instructionLines.text.replace(tmp_line, ""))
-                                    if parent_copy.instructionLines.text.endswith(","):
-                                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text[:-1])
-                                    parent_copy.instructionLines.set("count", str(
-                                        int(parent_copy.instructionLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
-                        try:
-                            for tmp_line in parent_copy.readPhaseLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.readPhaseLines._setText(
-                                        parent_copy.readPhaseLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.readPhaseLines._setText(
-                                        parent_copy.readPhaseLines.text.replace(tmp_line, ""))
-                                    if parent_copy.readPhaseLines.text.endswith(","):
-                                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[:-1])
-                                    parent_copy.readPhaseLines.set("count", str(
-                                        int(parent_copy.readPhaseLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
-                        try:
-                            for tmp_line in parent_copy.writePhaseLines.text.split(","):
-                                if not line_contained_in_region(
-                                        tmp_line,
-                                        parent_copy.get("startsAtLine"),
-                                        parent_copy.get("endsAtLine")):
-                                    parent_copy.writePhaseLines._setText(
-                                        parent_copy.writePhaseLines.text.replace(tmp_line + ",", ""))
-                                    parent_copy.writePhaseLines._setText(
-                                        parent_copy.writePhaseLines.text.replace(tmp_line, ""))
-                                    if parent_copy.writePhaseLines.text.endswith(","):
-                                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[:-1])
-                                    parent_copy.writePhaseLines.set("count", str(
-                                        int(parent_copy.writePhaseLines.get("count")) - 1))
-                        except AttributeError:
-                            pass
+                        __filter_rwi_lines(parent_copy, parent_copy.instructionLines)
+                        __filter_rwi_lines(parent_copy, parent_copy.readPhaseLines)
+                        __filter_rwi_lines(parent_copy, parent_copy.writePhaseLines)
 
                         # insert separator line to parent_copys instruction,
                         # read and writePhaseLines if not already present
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.instructionLines.text:
-                                parent_copy.instructionLines._setText(
-                                    parent_copy.instructionLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.instructionLines.text.startswith(","):
-                                    parent_copy.instructionLines._setText(parent_copy.instructionLines.text[1:])
-                                parent_copy.instructionLines.set("count", str(
-                                    int(parent_copy.instructionLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.instructionLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.instructionLines.set("count", "1")
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.readPhaseLines.text:
-                                parent_copy.readPhaseLines._setText(
-                                    parent_copy.readPhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.readPhaseLines.text.startswith(","):
-                                    parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text[1:])
-                                parent_copy.readPhaseLines.set("count",
-                                                               str(int(parent_copy.readPhaseLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.readPhaseLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.readPhaseLines.set("count", "1")
-                        try:
-                            if not parent_copy.get("endsAtLine") in parent_copy.writePhaseLines.text:
-                                parent_copy.writePhaseLines._setText(
-                                    parent_copy.writePhaseLines.text + "," + parent_copy.get("endsAtLine"))
-                                if parent_copy.writePhaseLines.text.startswith(","):
-                                    parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text[1:])
-                                parent_copy.writePhaseLines.set("count",
-                                                                str(int(parent_copy.writePhaseLines.get("count")) + 1))
-                        except TypeError:
-                            parent_copy.writePhaseLines._setText(parent_copy.get("endsAtLine"))
-                            parent_copy.writePhaseLines.set("count", "1")
-                        parent_copy.instructionLines._setText(parent_copy.instructionLines.text.replace(",,", ","))
-                        parent_copy.readPhaseLines._setText(parent_copy.readPhaseLines.text.replace(",,", ","))
-                        parent_copy.writePhaseLines._setText(parent_copy.writePhaseLines.text.replace(",,", ","))
+                        __insert_separator_line(parent_copy, parent_copy.instructionLines)
+                        __insert_separator_line(parent_copy, parent_copy.readPhaseLines)
+                        __insert_separator_line(parent_copy, parent_copy.writePhaseLines)
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
-                        cur_line = parent.get("startsAtLine")
-                        while line_contained_in_region(cur_line, parent.get("startsAtLine"),
-                                                       parent.get("endsAtLine")):
-                            if cur_line not in parent.instructionLines.text:
-                                parent.instructionLines._setText(cur_line + "," + parent.instructionLines.text)
-                                if parent.instructionLines.text.endswith(","):
-                                    parent.instructionLines._setText(parent.instructionLines.text[:-1])
-                                parent.instructionLines.set("count", str(int(parent.instructionLines.get("count")) + 1))
-                            if cur_line not in parent.readPhaseLines.text:
-                                parent.readPhaseLines._setText(cur_line + "," + parent.readPhaseLines.text)
-                                if parent.readPhaseLines.text.endswith(","):
-                                    parent.readPhaseLines._setText(parent.readPhaseLines.text[:-1])
-                                parent.readPhaseLines.set("count", str(int(parent.readPhaseLines.get("count")) + 1))
-                            if cur_line not in parent.writePhaseLines.text:
-                                parent.writePhaseLines._setText(cur_line + "," + parent.writePhaseLines.text)
-                                if parent.writePhaseLines.text.endswith(","):
-                                    parent.writePhaseLines._setText(parent.writePhaseLines.text[:-1])
-                                parent.writePhaseLines.set("count", str(int(parent.writePhaseLines.get("count")) + 1))
-                            # increment cur_line by one
-                            cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(
-                                int(cur_line[cur_line.rfind(":") + 1:]) + 1)
-                            continue
-
-                        parent.instructionLines._setText(parent.instructionLines.text.replace(",,", ","))
-                        parent.readPhaseLines._setText(parent.readPhaseLines.text.replace(",,", ","))
-                        parent.writePhaseLines._setText(parent.writePhaseLines.text.replace(",,", ","))
+                        __insert_missing_rwi_lines(parent, parent.instructionLines)
+                        __insert_missing_rwi_lines(parent, parent.readPhaseLines)
+                        __insert_missing_rwi_lines(parent, parent.writePhaseLines)
 
                         # remove returnInstructions if they are not part of the cus anymore
-                        if int(parent_copy.returnInstructions.get("count")) != 0:
-                            entries = parent_copy.returnInstructions.text.split(",")
-                            new_entries = []
-                            for entry in entries:
-                                if line_contained_in_region(entry, parent_copy.get("startsAtLine"),
-                                                            parent_copy.get("endsAtLine")):
-                                    new_entries.append(entry)
-                            parent_copy.returnInstructions._setText(",".join(new_entries))
-                            parent_copy.returnInstructions.set("count", str(len(new_entries)))
-                        if int(parent.returnInstructions.get("count")) != 0:
-                            entries = parent.returnInstructions.text.split(",")
-                            new_entries = []
-                            for entry in entries:
-                                if line_contained_in_region(entry, parent.get("startsAtLine"),
-                                                            parent.get("endsAtLine")):
-                                    new_entries.append(entry)
-                            parent.returnInstructions._setText(",".join(new_entries))
-                            parent.returnInstructions.set("count", str(len(new_entries)))
+                        __remove_unnecessary_return_instructions(parent_copy)
+                        __remove_unnecessary_return_instructions(parent)
 
                         # add parent.id to parent_function.childrenNodes
-                        parent_function = None
-                        for tmp_node in parsed_cu.Node:
-                            if tmp_node.get('type') == '1':
-                                if line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"),
-                                                            tmp_node.get("endsAtLine")):
-                                    if line_contained_in_region(parent.get("endsAtLine"),
-                                                                tmp_node.get("startsAtLine"),
-                                                                tmp_node.get("endsAtLine")):
-                                        parent_function = tmp_node
-                                        break
-                        if parent_function is None:
-                            print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
-                        else:
-                            parent_function.childrenNodes._setText(
-                                parent_function.childrenNodes.text + "," + parent.get("id"))
-                            if parent_function.childrenNodes.text.startswith(","):
-                                parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
+                        __add_parent_id_to_children(parsed_cu, parent)
 
                         # Preprocessor Step 5 (looping)
                         parent_further_cn_entry = None
@@ -381,6 +185,156 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
     f.write(etree.tostring(parsed_cu, pretty_print=True).decode("utf-8"))
     f.close()
     return modified_cu_xml
+
+
+def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids):
+    """Generate the next free CU id and assign it to the parent CU.
+    :param parent: parent CU, id will be updated
+    :param parent_copy: copy of parent CU (newly created CU)
+    :param used_node_ids: list of used cu node id's
+    :param self_added_node_ids: list of added node id's"""
+    # get next free id for specific tmp_file_id
+    parent_copy_id = parent_copy.get("id")
+    tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
+    tmp_used_ids = [int(s[s.index(":") + 1:]) for s in
+                    used_node_ids if
+                    s.startswith(tmp_file_id + ":")]
+    next_free_id = max(tmp_used_ids) + 1
+    incremented_id = tmp_file_id + ":" + str(next_free_id)
+    parent.set("id", incremented_id)
+    self_added_node_ids.append(incremented_id)
+
+
+def __set_parent_copy_childrennodes(parent_copy):
+    """Adds cu nodes called by parent_copy to the childrenNodes list of parent_copy, if not already contained.
+    :param parent_copy: cu node to be updated"""
+    parent_copy.childrenNodes._setText("")
+    for cne_idx, calls_node_entry in enumerate(parent_copy.callsNode):
+        try:
+            for node_call in calls_node_entry.nodeCalled:
+                try:
+                    if node_call.text not in parent_copy.childrenNodes.text:
+                        parent_copy.childrenNodes._setText(
+                            parent_copy.childrenNodes.text + "," + node_call.text)
+                        if parent_copy.childrenNodes.text.startswith(","):
+                            parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
+                        if parent_copy.childrenNodes.text.endswith(","):
+                            parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[:-1])
+                        continue
+                except AttributeError as e1:
+                    print(e1)
+                    continue
+        except AttributeError as e2:
+            print(e2)
+            continue
+
+
+def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
+    """Removes the first line of parent_copy from parent´s readPhaseLines, writePhaseLines or instructionLines.
+    As a result, start and end Lines of both nodes do not overlap anymore.
+    :param parent_copy: copy of parent node (newly added node)
+    :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent
+    """
+    try:
+        if parent_copy.callsNode.nodeCalled.get("atLine") in target_list.text:
+            target_list._setText(target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
+            target_list._setText(target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+            target_list.set("count", str(int(target_list.get("count")) - 1))
+    except TypeError:
+        target_list._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
+        target_list.set("count", "1")
+
+
+def __filter_rwi_lines(parent_copy, target_list):
+    """Removes entries from instructionLines, readPhaseLines and writePhraseLines of parent_copy if their value is not
+    between parent_copy.startsAtLine and parent_copy.endsAtLine.
+    :param parent_copy: cu node to be filtered
+    :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
+    try:
+        for tmp_line in target_list.text.split(","):
+            if not line_contained_in_region(tmp_line, parent_copy.get("startsAtLine"), parent_copy.get("endsAtLine")):
+                target_list._setText(target_list.text.replace(tmp_line + ",", ""))
+                target_list._setText(target_list.text.replace(tmp_line, ""))
+                if target_list.text.endswith(","):
+                    target_list._setText(target_list.text[:-1])
+                target_list.set("count", str(int(target_list.get("count")) - 1))
+    except AttributeError:
+        pass
+
+
+def __insert_separator_line(parent_copy, target_list):
+    """Insert separator line to parent_copys instruction, read and writePhaseLines if not already present
+    :param parent_copy: cu node to be updated
+    :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
+    try:
+        if not parent_copy.get("endsAtLine") in target_list.text:
+            target_list._setText(
+                target_list.text + "," + parent_copy.get("endsAtLine"))
+            if target_list.text.startswith(","):
+                target_list._setText(target_list.text[1:])
+            target_list.set("count", str(
+                int(target_list.get("count")) + 1))
+    except TypeError:
+        target_list._setText(parent_copy.get("endsAtLine"))
+        target_list.set("count", "1")
+    target_list._setText(target_list.text.replace(",,", ","))
+
+
+def __insert_missing_rwi_lines(parent, target_list):
+    """Insert all lines contained in parent to instruction, read and writePhaseLines
+    :param parent: cu node to be updated
+    :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent"""
+    cur_line = parent.get("startsAtLine")
+    while line_contained_in_region(cur_line, parent.get("startsAtLine"),
+                                   parent.get("endsAtLine")):
+        if cur_line not in target_list.text:
+            target_list._setText(cur_line + "," + target_list.text)
+            if target_list.text.endswith(","):
+                target_list._setText(target_list.text[:-1])
+            target_list.set("count", str(int(target_list.get("count")) + 1))
+        # increment cur_line by one
+        cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(
+            int(cur_line[cur_line.rfind(":") + 1:]) + 1)
+        continue
+    target_list._setText(target_list.text.replace(",,", ","))
+
+
+def __remove_unnecessary_return_instructions(target):
+    """Remove returnInstructions if they are not part of target cu anymore.
+    :param target: cu to be checked"""
+    if int(target.returnInstructions.get("count")) != 0:
+        entries = target.returnInstructions.text.split(",")
+        new_entries = []
+        for entry in entries:
+            if line_contained_in_region(entry, target.get("startsAtLine"),
+                                        target.get("endsAtLine")):
+                new_entries.append(entry)
+        target.returnInstructions._setText(",".join(new_entries))
+        target.returnInstructions.set("count", str(len(new_entries)))
+
+
+def __add_parent_id_to_children(parsed_cu, parent):
+    """"Add parent.id to parent_function.childrenNodes
+    :param: parsed_cu: parsed contents of cu_xml file
+    :param parent: cu node to be added to parent_function's children
+    """
+    parent_function = None
+    for tmp_node in parsed_cu.Node:
+        if tmp_node.get('type') == '1':
+            if line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"),
+                                        tmp_node.get("endsAtLine")):
+                if line_contained_in_region(parent.get("endsAtLine"),
+                                            tmp_node.get("startsAtLine"),
+                                            tmp_node.get("endsAtLine")):
+                    parent_function = tmp_node
+                    break
+    if parent_function is None:
+        print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
+    else:
+        parent_function.childrenNodes._setText(
+            parent_function.childrenNodes.text + "," + parent.get("id"))
+        if parent_function.childrenNodes.text.startswith(","):
+            parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
 
 def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
