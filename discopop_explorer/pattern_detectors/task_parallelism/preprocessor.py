@@ -222,7 +222,8 @@ def __set_parent_copy_childrennodes(parent_copy):
 
 
 def __update_start_and_end_line(parent, parent_copy):
-    """Updates startsAtLine and endsAtLine of parent and parent_copy
+    """Removes the first line of parent_copy from parent´s readPhaseLines, writePhaseLines and instructionLines.
+    As a result, start and end Lines of both nodes do not overlap anymore.
     :param parent: parent node to be updated
     :param parent_copy: copy of parent node (newly added node)
     """
