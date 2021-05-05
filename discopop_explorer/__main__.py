@@ -23,7 +23,7 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
-    --task-pattern              Enables the Task Pattern Detection.
+    --task-pattern              Enables the Task Parallelism Pattern Detection.
                                 Requires --cu-inst-res and --llvm-cxxfilt-path to be set.
     --cu-inst-res=<cuinstres>   CU instantiation result file.
     --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
