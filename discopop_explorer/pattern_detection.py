@@ -60,7 +60,7 @@ class PatternDetectorX(object):
             self.pet.g.remove_node(n)
 
     def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
-                        llvm_cxxfilt_path, discopop_build_path):
+                        llvm_cxxfilt_path, discopop_build_path, enable_task_pattern):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
@@ -74,10 +74,7 @@ class PatternDetectorX(object):
         res.geometric_decomposition = detect_gd(self.pet)
 
         # check if task pattern should be enabled
-        if file_mapping is None or cu_inst_result_file is None:
-            return res
-        if cu_inst_result_file.endswith("/None"):
-            return res
-        res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
-                             llvm_cxxfilt_path, discopop_build_path)
+        if enable_task_pattern:
+            res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
+                                 llvm_cxxfilt_path, discopop_build_path)
         return res

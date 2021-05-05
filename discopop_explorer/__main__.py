@@ -11,8 +11,8 @@
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
-[--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] [--discopop-build-path=<dpbuildpath>] \
-[--generate-data-cu-inst <outputdir>]
+[--task-pattern] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] \
+[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -23,10 +23,12 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
-    --cu-inst-res=<cuinstres>   CU instantiation result file. Task Pattern Detector is executed if this option is set.
+    --task-pattern              Enables the Task Pattern Detection.
+                                Requires --cu-inst-res, --llvm-cxxfilt-path and --dp-build-path to be set.
+    --cu-inst-res=<cuinstres>   CU instantiation result file.
     --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
                                 if non-standard path should be used.
-    --discopop-build-path=<dpbuildpath>     Path to DiscoPoP build folder. Required, if --cu-inst-res is set.
+    --dp-build-path=<dpbuildpath>           Path to DiscoPoP build folder
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
@@ -53,9 +55,10 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
+    '--task-pattern': Use(bool),
     '--cu-inst-res': Use(str),
     '--llvm-cxxfilt-path': Use(str),
-    '--discopop-build-path': Use(str),
+    '--dp-build-path': Use(str),
     '--generate-data-cu-inst': Use(str),
 })
 
@@ -105,7 +108,7 @@ def main():
 
     res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
               cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'],
-              discopop_build_path=arguments['--discopop-build-path'])
+              discopop_build_path=arguments['--dp-build-path'], arguments['--task-pattern'])
 
     end = time.time()
 
