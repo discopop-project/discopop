@@ -26,7 +26,7 @@ Options:
     --task-pattern              Enables the task parallelism pattern identification.
                                 Requires --cu-inst-res and --llvm-cxxfilt-path to be set.
     --cu-inst-res=<cuinstres>   CU instantiation result file.
-    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
+    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for task pattern detector
                                 if non-standard path should be used.
     --dp-build-path=<dpbuildpath>           Path to DiscoPoP build folder [default: discopop/build]
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
