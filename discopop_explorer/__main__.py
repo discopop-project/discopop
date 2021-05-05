@@ -24,11 +24,11 @@ Options:
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
     --task-pattern              Enables the Task Pattern Detection.
-                                Requires --cu-inst-res, --llvm-cxxfilt-path and --dp-build-path to be set.
+                                Requires --cu-inst-res and --llvm-cxxfilt-path to be set.
     --cu-inst-res=<cuinstres>   CU instantiation result file.
     --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for Task Pattern Detector
                                 if non-standard path should be used.
-    --dp-build-path=<dpbuildpath>           Path to DiscoPoP build folder
+    --dp-build-path=<dpbuildpath>           Path to DiscoPoP build folder [default: discopop/build]
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
@@ -42,6 +42,7 @@ import time
 
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
+from pathlib import Path
 
 from . import run, __version__
 from .json_serializer import PatternInfoSerializer
@@ -89,6 +90,12 @@ def main():
     reduction_file = get_path(path, arguments['--reduction'])
     file_mapping = get_path(path, 'FileMapping.txt')
     cu_inst_result_file = get_path(path, arguments['--cu-inst-res'])
+    if arguments['--dp-build-path'] != 'None':
+        discopop_build_path=arguments['--dp-build-path']
+    else:
+        # set default discopop build path
+        discopop_build_path = Path(__file__).resolve().parent.parent
+        discopop_build_path = os.path.join(discopop_build_path, "build")
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
         if not os.path.isfile(file):
@@ -108,7 +115,7 @@ def main():
 
     res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
               cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'],
-              discopop_build_path=arguments['--dp-build-path'], enable_task_pattern=arguments['--task-pattern'])
+              discopop_build_path=discopop_build_path, enable_task_pattern=arguments['--task-pattern'])
 
     end = time.time()
 
