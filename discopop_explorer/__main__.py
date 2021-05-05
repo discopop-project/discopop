@@ -108,7 +108,7 @@ def main():
 
     res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
               cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'],
-              discopop_build_path=arguments['--dp-build-path'], arguments['--task-pattern'])
+              discopop_build_path=arguments['--dp-build-path'], enable_task_pattern=arguments['--task-pattern'])
 
     end = time.time()
 
