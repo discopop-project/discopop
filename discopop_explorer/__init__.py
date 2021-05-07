@@ -19,7 +19,8 @@ from .pattern_detection import DetectionResult, PatternDetectorX
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str],
         file_mapping: Optional[str] = None, cu_inst_result_file: Optional[str] = None,
-        llvm_cxxfilt_path: Optional[str] = None) -> DetectionResult:
+        llvm_cxxfilt_path: Optional[str] = None, discopop_build_path: Optional[str] = None,
+        enable_task_pattern: bool = False) -> DetectionResult:
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file,
                                                     loop_counter_file, reduction_file))
     # TODO add visualization
@@ -38,7 +39,8 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     pattern_detector = PatternDetectorX(pet)
 
     res: DetectionResult = pattern_detector.detect_patterns(cu_xml, dep_file, loop_counter_file, reduction_file,
-                                                            file_mapping, cu_inst_result_file, llvm_cxxfilt_path)
+                                                            file_mapping, cu_inst_result_file, llvm_cxxfilt_path,
+                                                            discopop_build_path, enable_task_pattern)
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)

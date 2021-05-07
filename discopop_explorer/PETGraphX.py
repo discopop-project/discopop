@@ -343,14 +343,24 @@ class PETGraphX(object):
         :return: list of nodes in subtree
         """
         res: List[CUNode] = []
-        if root in visited:
-            return res
+        for visited_cu in visited:
+            if self.__cu_equal__(root, visited_cu):
+                return res
         visited.add(root)
         if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
             res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
         return res
+
+    def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
+        """Alternative to CUNode.__eq__, bypasses the isinstance-check and relies on MyPy for type safety.
+        :param cu_1: CUNode 1
+        :param cu_2: CUNode 2
+        :return: True, if cu_1 == cu_2. False, else"""
+        if cu_1.id == cu_2.id:
+            return True
+        return False
 
     def direct_successors(self, root: CUNode) -> List[CUNode]:
         """Gets only direct successors of any type
@@ -387,19 +397,39 @@ class PETGraphX(object):
         """
         return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
-    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
+    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode,
+                                children_cache: Dict[CUNode, List[CUNode]] = None,
+                                dep_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = None) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored
 
         :param source: source node for dependency detection
         :param target: target of dependency
         :param root_loop: root loop
+        :param children_cache: option to allow caching of found children, used for do-all-detection
+        :param dep_cache: option to allow caching of found dependencies, used for do-all-detection
         :return: true, if there is RAW dependency
         """
-        children = self.subtree_of_type(target, NodeType.CU)
+        if children_cache is not None:
+            if target in children_cache:
+                children = children_cache[target]
+            else:
+                children = self.subtree_of_type(target, NodeType.CU)
+                children_cache[target] = children
+        else:
+            children = self.subtree_of_type(target, NodeType.CU)
         # TODO children.append(target)
 
-        for dep in self.get_all_dependencies(source, root_loop):
+        if dep_cache is not None:
+            if (source, root_loop) in dep_cache:
+                dependencies = dep_cache[(source, root_loop)]
+            else:
+                dependencies = self.get_all_dependencies(source, root_loop)
+                dep_cache[(source, root_loop)] = dependencies
+        else:
+            dependencies = self.get_all_dependencies(source, root_loop)
+
+        for dep in dependencies:
             if dep in children:
                 return True
         return False
