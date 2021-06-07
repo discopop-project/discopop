@@ -29,7 +29,7 @@ jobs:
           python -m pip install -r discopop_explorer/requirements.txt
           python -m pip install mypy data-science-types black
       - name: "Run tests"
-        run: python -m unittest discover -t .. -v
+        run: python -m unittest discover -s discopop_explorer -v
       - name: "Run MyPy Type Checker"
         run: python -m mypy --warn-unused-ignores -p discopop_explorer -p discopop_profiler
       - name: "Check formatting of discopop_profiler"
