@@ -1,5 +1,5 @@
 import pytest
-from .vector_clock import *
+from discopop.discopop_validation.vc_data_race_detector.vector_clock import *
 
 
 class TestVectorClock:

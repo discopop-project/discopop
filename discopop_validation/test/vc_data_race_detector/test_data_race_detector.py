@@ -1,6 +1,6 @@
 import pytest
-from .data_race_detector import State, goto_next_state, check_schedule
-from .schedule import ScheduleElement, UpdateType, Schedule
+from discopop.discopop_validation.vc_data_race_detector.data_race_detector import State, goto_next_state, check_schedule
+from discopop.discopop_validation.vc_data_race_detector.schedule import ScheduleElement, UpdateType, Schedule
 
 
 class TestDataRaceDetector:

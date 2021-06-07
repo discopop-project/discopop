@@ -1,5 +1,5 @@
 import pytest
-from .schedule import ScheduleElement, Schedule, UpdateType
+from discopop.discopop_validation.vc_data_race_detector.schedule import ScheduleElement, Schedule, UpdateType
 
 
 class TestSchedule:
