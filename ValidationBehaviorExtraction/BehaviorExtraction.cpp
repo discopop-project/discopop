@@ -89,17 +89,130 @@ namespace
         BehaviorExtraction() : FunctionPass(ID) {}
         bool doInitialization(Module &M);
         stack<relevantSection> sections;
+        string getClosestCodeLocation(Instruction* inst);
 
     }; // end of struct BehaviorExtraction
 
 } // end of anonymous namespace
 
+
+string BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
+    string returnLocation = "-1:-1";
+    if(inst){
+        Instruction* curInst = inst;
+        while(curInst){
+            if(curInst->hasMetadata()){
+                returnLocation = "" + to_string(curInst->getDebugLoc().getLine()) + ":" + to_string(curInst->getDebugLoc().getCol());
+                return returnLocation;
+            }
+            curInst = curInst->getNextNode();
+        }
+        return returnLocation;
+    }
+    else{
+        return returnLocation;
+    }
+}
+
+
 bool BehaviorExtraction::runOnFunction(Function &F)
 {
+    // get parent file location
+    string parentFileName = "";
+    SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+    F.getAllMetadata(MDs);
+    for (auto &MD : MDs) {
+        if (MDNode *N = MD.second) {
+            if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
+                parentFileName = parentFileName + subProgram->getFile()->getDirectory().str();
+                parentFileName = parentFileName + "/";
+                parentFileName = parentFileName + subProgram->getFile()->getFilename().str();
+                errs() << "parentFileName: " << parentFileName << "\n";
+                break;
+            }
+        }
+    }
+
+
+    for(auto &BB : F.getBasicBlockList()){
+        for(auto &inst : BB.getInstList()){
+            // option 1: single layer array access (getelementptr + ptrtoint + [__dp_read | __dp_write])
+            // check if inst is getelementptr
+            if(isa<GetElementPtrInst>(&inst)) {
+                GetElementPtrInst *gepinst = cast<GetElementPtrInst>(&inst);
+                // check if gepinst.next is ptrtoint
+                if (isa<PtrToIntInst>(gepinst->getNextNode())) {
+                    PtrToIntInst *ptrinst = cast<PtrToIntInst>(gepinst->getNextNode());
+                    // check if next instruction is call to __dp_write or __dp_read
+                    if (ptrinst->getNextNode()) {
+                        if (isa<CallInst>(ptrinst->getNextNode())) {
+                            CallInst *ci = cast<CallInst>(ptrinst->getNextNode());
+                            if (ci->getCalledFunction()->getName().equals("__dp_write")) {
+                                // get line number of call from next instruction
+                                // next instruction is call to __dp_write
+                                if (gepinst->getPointerOperand()->hasName()) {
+                                    errs() << "next: __dp_write to ARR: " << gepinst->getPointerOperand()->getName()
+                                           << " at " << getClosestCodeLocation(ci) << "\n";
+                                } else {
+                                    errs() << "next: __dp_write: \n";
+                                }
+
+                            } else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
+                                // next instruction is call to __dp_read
+                                if(gepinst->getPointerOperand()->hasName()){
+                                    errs() << "next: __dp_read to ARR: " << gepinst->getPointerOperand()->getName()
+                                           << " at " << getClosestCodeLocation(ci) << "\n";
+                                } else{
+                                    errs() << "next: __dp_read\n";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            else
+
+                // option 2: direct variable access (ptrtoint + [__dp_read | __dp_write])
+                // check if inst is ptrtoint
+                if(isa<PtrToIntInst>(&inst)){
+                    PtrToIntInst* ptrinst = cast<PtrToIntInst>(&inst);
+                    // check if next instruction is call to __dp_write or __dp_read
+                    if(inst.getNextNode()){
+                        if(isa<CallInst>(inst.getNextNode())){
+                            CallInst* ci = cast<CallInst>(inst.getNextNode());
+                            if(ci->getCalledFunction()->getName().equals("__dp_write")){
+                                // next instruction is call to __dp_write
+                                if(ptrinst->getPointerOperand()->hasName()){
+                                    errs() << "next: __dp_write to var: " << ptrinst->getPointerOperand()->getName()
+                                           << " at " << getClosestCodeLocation(ci) << "\n";
+                                }
+                                else{
+                                    errs() << "next: __dp_write to var: \n";
+                                }
+
+                            }
+                            else if (ci->getCalledFunction()->getName().equals("__dp_read")){
+                                // next instruction is call to __dp_read
+                                if(ptrinst->getPointerOperand()->hasName()){
+                                    errs() << "next: __dp_read to var: " << ptrinst->getPointerOperand()->getName()
+                                           << " at " << getClosestCodeLocation(ci) << "\n";
+                                }
+                                else{
+                                    errs() << "next: __dp_read\n";
+                                }
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+
     ofstream outputFile(ClOutputFile);
     outputFile << "Hello from LLVM!\n";
     outputFile.close();
-    
+
     return false;
 }
 
@@ -154,6 +267,8 @@ bool BehaviorExtraction::doInitialization(Module &M){
 
     errs() << "Initialization finished.\n";
 }
+
+// todo treat function calls inside relevant section as "inlined"
 
 StringRef BehaviorExtraction::getPassName() const
 {
