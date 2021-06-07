@@ -7,7 +7,7 @@ class TestDataRaceDetector(unittest.TestCase):
 
     def test_state_init_1(self):
         state = State(2, ["test_lock"], ["x", "y"])
-        self.assertTrue(state.thread_clocks[0].clocks[0] ==1)
+        self.assertTrue(state.thread_clocks[0].clocks[0] == 1)
         self.assertTrue(state.thread_clocks[0].clocks[1] == 0)
         self.assertTrue(state.thread_clocks[1].clocks[0] == 0)
         self.assertTrue(state.thread_clocks[1].clocks[1] == 1)

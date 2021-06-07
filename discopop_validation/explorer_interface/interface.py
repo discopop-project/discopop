@@ -10,6 +10,6 @@ def get_parallelization_suggestions(cu_xml: str, dep_file: str, loop_counter_fil
                                     discopop_build_path: Optional[str] = None, enable_task_pattern: bool = False)\
         -> DetectionResult:
     """wrapper to execute discopop_explorer and obtain a list of parallelization suggestions for further processing"""
-    return run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping, cu_inst_result_file,
-               llvm_cxxfilt_path, discopop_build_path, enable_task_pattern)
-
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping, cu_inst_result_file,
+              llvm_cxxfilt_path, discopop_build_path, enable_task_pattern)
+    return res

@@ -24,26 +24,22 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !dbg !26
 
 for.body:                                         ; preds = %for.cond
-  %1 = load i32, i32* %x, align 4, !dbg !27
+  %1 = load i32, i32* %i, align 4, !dbg !27
   %2 = load i32, i32* %i, align 4, !dbg !29
   %idxprom = sext i32 %2 to i64, !dbg !30
   %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %arr, i64 0, i64 %idxprom, !dbg !30
   store i32 %1, i32* %arrayidx, align 4, !dbg !31
-  %3 = load i32, i32* %i, align 4, !dbg !32
-  %4 = load i32, i32* %x, align 4, !dbg !33
-  %add = add nsw i32 %4, %3, !dbg !33
-  store i32 %add, i32* %x, align 4, !dbg !33
-  br label %for.inc, !dbg !34
+  br label %for.inc, !dbg !32
 
 for.inc:                                          ; preds = %for.body
-  %5 = load i32, i32* %i, align 4, !dbg !35
-  %inc = add nsw i32 %5, 1, !dbg !35
-  store i32 %inc, i32* %i, align 4, !dbg !35
-  br label %for.cond, !dbg !36, !llvm.loop !37
+  %3 = load i32, i32* %i, align 4, !dbg !33
+  %inc = add nsw i32 %3, 1, !dbg !33
+  store i32 %inc, i32* %i, align 4, !dbg !33
+  br label %for.cond, !dbg !34, !llvm.loop !35
 
 for.end:                                          ; preds = %for.cond
-  %6 = load i32, i32* %retval, align 4, !dbg !39
-  ret i32 %6, !dbg !39
+  %4 = load i32, i32* %retval, align 4, !dbg !37
+  ret i32 %4, !dbg !37
 }
 
 ; Function Attrs: nounwind readnone speculatable
@@ -88,11 +84,9 @@ attributes #1 = { nounwind readnone speculatable }
 !29 = !DILocation(line: 7, column: 13, scope: !28)
 !30 = !DILocation(line: 7, column: 9, scope: !28)
 !31 = !DILocation(line: 7, column: 16, scope: !28)
-!32 = !DILocation(line: 8, column: 14, scope: !28)
-!33 = !DILocation(line: 8, column: 11, scope: !28)
-!34 = !DILocation(line: 9, column: 5, scope: !28)
-!35 = !DILocation(line: 6, column: 27, scope: !24)
-!36 = !DILocation(line: 6, column: 5, scope: !24)
-!37 = distinct !{!37, !26, !38}
-!38 = !DILocation(line: 9, column: 5, scope: !20)
-!39 = !DILocation(line: 10, column: 1, scope: !7)
+!32 = !DILocation(line: 8, column: 5, scope: !28)
+!33 = !DILocation(line: 6, column: 27, scope: !24)
+!34 = !DILocation(line: 6, column: 5, scope: !24)
+!35 = distinct !{!35, !26, !36}
+!36 = !DILocation(line: 8, column: 5, scope: !20)
+!37 = !DILocation(line: 9, column: 1, scope: !7)

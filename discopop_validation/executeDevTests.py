@@ -3,7 +3,7 @@ from termcolor import colored
 
 # initialize colored console output
 if os.name != "posix":
-	os.system("color")
+    os.system("color")
 
 # execute unit tests and generate code coverage report
 print(colored("\n====== EXECUTE PYTEST ======", "blue"))
