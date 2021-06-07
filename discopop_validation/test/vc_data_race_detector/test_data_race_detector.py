@@ -1,24 +1,24 @@
-import pytest
+import unittest
 from discopop.discopop_validation.vc_data_race_detector.data_race_detector import State, goto_next_state, check_schedule
 from discopop.discopop_validation.vc_data_race_detector.schedule import ScheduleElement, UpdateType, Schedule
 
 
-class TestDataRaceDetector:
+class TestDataRaceDetector(unittest.TestCase):
 
     def test_state_init_1(self):
         state = State(2, ["test_lock"], ["x", "y"])
-        assert state.thread_clocks[0].clocks[0] == 1
-        assert state.thread_clocks[0].clocks[1] == 0
-        assert state.thread_clocks[1].clocks[0] == 0
-        assert state.thread_clocks[1].clocks[1] == 1
+        self.assertTrue(state.thread_clocks[0].clocks[0] ==1)
+        self.assertTrue(state.thread_clocks[0].clocks[1] == 0)
+        self.assertTrue(state.thread_clocks[1].clocks[0] == 0)
+        self.assertTrue(state.thread_clocks[1].clocks[1] == 1)
 
     def test_state_init_2(self):
         state = State(2, ["test_lock"], ["x", "y"])
-        assert state.lock_clocks["test_lock"].clocks == [0, 0]
-        assert state.var_read_clocks["x"].clocks == [0, 0]
-        assert state.var_read_clocks["y"].clocks == [0, 0]
-        assert state.var_write_clocks["x"].clocks == [0, 0]
-        assert state.var_write_clocks["y"].clocks == [0, 0]
+        self.assertTrue(state.lock_clocks["test_lock"].clocks == [0, 0])
+        self.assertTrue(state.var_read_clocks["x"].clocks == [0, 0])
+        self.assertTrue(state.var_read_clocks["y"].clocks == [0, 0])
+        self.assertTrue(state.var_write_clocks["x"].clocks == [0, 0])
+        self.assertTrue(state.var_write_clocks["y"].clocks == [0, 0])
 
     def test_perform_update_1(self):
         state = State(3, [], ["x"])
@@ -28,11 +28,11 @@ class TestDataRaceDetector:
         schedule_element_1.add_update("x", UpdateType.WRITE, [])
         state = goto_next_state(state, schedule_element_0)
         state = goto_next_state(state, schedule_element_1)
-        assert state.thread_clocks[0].clocks == [2, 0, 0]
-        assert state.thread_clocks[1].clocks == [1, 1, 0]
-        assert state.thread_clocks[2].clocks == [1, 0, 1]
-        assert state.var_read_clocks["x"].clocks == [0, 0, 0]
-        assert state.var_write_clocks["x"].clocks == [0, 1, 0]
+        self.assertTrue(state.thread_clocks[0].clocks == [2, 0, 0])
+        self.assertTrue(state.thread_clocks[1].clocks == [1, 1, 0])
+        self.assertTrue(state.thread_clocks[2].clocks == [1, 0, 1])
+        self.assertTrue(state.var_read_clocks["x"].clocks == [0, 0, 0])
+        self.assertTrue(state.var_write_clocks["x"].clocks == [0, 1, 0])
 
     def test_data_race_1(self):
         state = State(3, [], ["x"])
@@ -44,8 +44,7 @@ class TestDataRaceDetector:
         schedule_element_2.add_update("x", UpdateType.WRITE, [])
         state = goto_next_state(state, schedule_element_0)
         state = goto_next_state(state, schedule_element_1)
-        with pytest.raises(ValueError):
-            goto_next_state(state, schedule_element_2)
+        self.assertRaises(ValueError, goto_next_state, state, schedule_element_2)
 
     def test_data_race_2(self):
         state = State(3, ["l"], ["x"])
@@ -64,14 +63,13 @@ class TestDataRaceDetector:
         state = goto_next_state(state, schedule_element_1)
         state = goto_next_state(state, schedule_element_2)
         state = goto_next_state(state, schedule_element_3)
-        assert state.thread_clocks[0].clocks == [2, 0, 0]
-        assert state.thread_clocks[1].clocks == [1, 2, 0]
-        assert state.thread_clocks[2].clocks == [1, 0, 1]
-        assert state.lock_clocks["l"].clocks == [1, 1, 0]
-        assert state.var_read_clocks["x"].clocks == [0, 0, 0]
-        assert state.var_write_clocks["x"].clocks == [0, 1, 0]
-        with pytest.raises(ValueError):
-            state = goto_next_state(state, schedule_element_4)
+        self.assertTrue(state.thread_clocks[0].clocks == [2, 0, 0])
+        self.assertTrue(state.thread_clocks[1].clocks == [1, 2, 0])
+        self.assertTrue(state.thread_clocks[2].clocks == [1, 0, 1])
+        self.assertTrue(state.lock_clocks["l"].clocks == [1, 1, 0])
+        self.assertTrue(state.var_read_clocks["x"].clocks == [0, 0, 0])
+        self.assertTrue(state.var_write_clocks["x"].clocks == [0, 1, 0])
+        self.assertRaises(ValueError, goto_next_state, state, schedule_element_4)
 
     def test_no_data_race_1(self):
         state = State(3, ["l"], ["x", "y"])
@@ -106,14 +104,14 @@ class TestDataRaceDetector:
         state = goto_next_state(state, schedule_element_6)
         state = goto_next_state(state, schedule_element_7)
         state = goto_next_state(state, schedule_element_8)
-        assert state.thread_clocks[0].clocks == [2, 2, 2]
-        assert state.thread_clocks[1].clocks == [1, 3, 1]
-        assert state.thread_clocks[2].clocks == [1, 0, 3]
-        assert state.lock_clocks["l"].clocks == [1, 1, 1]
-        assert state.var_read_clocks["x"].clocks == [2, 1, 0]
-        assert state.var_write_clocks["x"].clocks == [0, 0, 1]
-        assert state.var_read_clocks["y"].clocks == [2, 0, 1]
-        assert state.var_write_clocks["y"].clocks == [2, 1, 0]
+        self.assertTrue(state.thread_clocks[0].clocks == [2, 2, 2])
+        self.assertTrue(state.thread_clocks[1].clocks == [1, 3, 1])
+        self.assertTrue(state.thread_clocks[2].clocks == [1, 0, 3])
+        self.assertTrue(state.lock_clocks["l"].clocks == [1, 1, 1])
+        self.assertTrue(state.var_read_clocks["x"].clocks == [2, 1, 0])
+        self.assertTrue(state.var_write_clocks["x"].clocks == [0, 0, 1])
+        self.assertTrue(state.var_read_clocks["y"].clocks == [2, 0, 1])
+        self.assertTrue(state.var_write_clocks["y"].clocks == [2, 1, 0])
 
     def test_check_schedule_no_data_race(self):
         schedule = Schedule()
@@ -148,7 +146,7 @@ class TestDataRaceDetector:
         schedule.add_element(schedule_element_6)
         schedule.add_element(schedule_element_7)
         schedule.add_element(schedule_element_8)
-        assert check_schedule(schedule) is None
+        self.assertIsNone(check_schedule(schedule))
 
     def test_check_schedule_data_race(self):
         schedule = Schedule()
@@ -165,11 +163,11 @@ class TestDataRaceDetector:
         schedule.add_element(schedule_element_2)
         schedule.add_element(schedule_element_3)
         ret_val = check_schedule(schedule)
-        assert ret_val is not None
+        self.assertIsNotNone(ret_val)
         dr_state, dr_schedule_element = ret_val
-        assert dr_state.thread_clocks[0].clocks == [2, 0, 0]
-        assert dr_state.thread_clocks[1].clocks == [1, 1, 0]
-        assert dr_state.thread_clocks[2].clocks == [1, 0, 1]
-        assert dr_state.var_read_clocks["x"].clocks == [0, 0, 0]
-        assert dr_state.var_write_clocks["x"].clocks == [0, 1, 1]
-        assert dr_schedule_element == schedule_element_2
+        self.assertTrue(dr_state.thread_clocks[0].clocks == [2, 0, 0])
+        self.assertTrue(dr_state.thread_clocks[1].clocks == [1, 1, 0])
+        self.assertTrue(dr_state.thread_clocks[2].clocks == [1, 0, 1])
+        self.assertTrue(dr_state.var_read_clocks["x"].clocks == [0, 0, 0])
+        self.assertTrue(dr_state.var_write_clocks["x"].clocks == [0, 1, 1])
+        self.assertTrue(dr_schedule_element == schedule_element_2)
