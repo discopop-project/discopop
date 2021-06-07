@@ -2,9 +2,9 @@ import subprocess
 from typing import cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, MWType, DepType, PETGraphX
-from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
-from discopop_explorer.utils import depends
+from ...PETGraphX import CUNode, NodeType, EdgeType, MWType, DepType, PETGraphX
+from ...pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
+from ...utils import depends
 
 __workloadThreshold = 10000
 __minParallelism = 3

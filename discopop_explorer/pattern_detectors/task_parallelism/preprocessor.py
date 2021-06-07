@@ -4,9 +4,9 @@ from typing import List
 
 from lxml import objectify, etree  # type: ignore
 
-from discopop_explorer.PETGraphX import NodeType, PETGraphX
+from ...PETGraphX import NodeType, PETGraphX
 
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
+from ...pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
 def cu_xml_preprocessing(cu_xml: str) -> str:

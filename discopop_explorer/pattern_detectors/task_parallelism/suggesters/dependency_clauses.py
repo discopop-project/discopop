@@ -1,13 +1,13 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, OmittableCuInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
+from ....PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
+from ....pattern_detectors.PatternInfo import PatternInfo
+from ....pattern_detectors.task_parallelism.classes import TaskParallelismInfo, OmittableCuInfo, TPIType
+from ....pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
     get_function_call_from_source_code, get_called_function_and_parameter_names_from_function_call, demangle, \
     get_called_functions_recursively
-from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import get_alias_information \
+from ....pattern_detectors.task_parallelism.alias_detection import get_alias_information \
     as get_alias_detection_result
 
 

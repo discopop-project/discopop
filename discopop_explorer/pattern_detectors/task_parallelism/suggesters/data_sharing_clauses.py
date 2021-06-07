@@ -1,9 +1,9 @@
 from typing import List, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
+from ....PETGraphX import EdgeType, NodeType, PETGraphX
+from ....pattern_detectors.PatternInfo import PatternInfo
+from ....pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
+from ....pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
 def suggest_shared_clauses_for_all_tasks_in_function_body(pet: PETGraphX, suggestions: List[PatternInfo]) \

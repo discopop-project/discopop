@@ -9,28 +9,28 @@
 
 from typing import List, Optional, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeType, MWType
-from discopop_explorer.parser import parse_inputs
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
-from discopop_explorer.pattern_detectors.reduction_detector import run_detection as detect_reduction
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.filter import filter_data_sharing_clauses, \
+from ...PETGraphX import PETGraphX, NodeType, MWType
+from ...parser import parse_inputs
+from ...pattern_detectors.PatternInfo import PatternInfo
+from ...pattern_detectors.do_all_detector import run_detection as detect_do_all
+from ...pattern_detectors.reduction_detector import run_detection as detect_reduction
+from ...pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
+from ...pattern_detectors.task_parallelism.filter import filter_data_sharing_clauses, \
     remove_useless_barrier_suggestions, remove_duplicate_data_sharing_clauses, filter_data_depend_clauses, \
     remove_duplicates
-from discopop_explorer.pattern_detectors.task_parallelism.postprocessor import group_task_suggestions, sort_output
-from discopop_explorer.pattern_detectors.task_parallelism.preprocessor import cu_xml_preprocessing, check_loop_scopes
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.barriers import detect_barrier_suggestions, \
+from ...pattern_detectors.task_parallelism.postprocessor import group_task_suggestions, sort_output
+from ...pattern_detectors.task_parallelism.preprocessor import cu_xml_preprocessing, check_loop_scopes
+from ...pattern_detectors.task_parallelism.suggesters.barriers import detect_barrier_suggestions, \
     suggest_barriers_for_uncovered_tasks_before_return, validate_barriers, suggest_missing_barriers_for_global_vars
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.data_sharing_clauses import \
+from ...pattern_detectors.task_parallelism.suggesters.data_sharing_clauses import \
     suggest_shared_clauses_for_all_tasks_in_function_body
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.dependency_clauses import \
+from ...pattern_detectors.task_parallelism.suggesters.dependency_clauses import \
     detect_dependency_clauses_alias_based
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.tasks import detect_task_suggestions, \
+from ...pattern_detectors.task_parallelism.suggesters.tasks import detect_task_suggestions, \
     correct_task_suggestions_in_loop_body
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.auxiliary import suggest_parallel_regions, \
+from ...pattern_detectors.task_parallelism.suggesters.auxiliary import suggest_parallel_regions, \
     set_task_contained_lines, detect_taskloop_reduction, combine_omittable_cus
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import create_task_tree, __forks, \
+from ...pattern_detectors.task_parallelism.tp_utils import create_task_tree, __forks, \
     set_global_llvm_cxxfilt_path, detect_mw_types, get_var_definition_line_dict
 
 __global_llvm_cxxfilt_path: str = ""

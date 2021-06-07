@@ -1,11 +1,11 @@
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
+from ....PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
+from ....pattern_detectors.PatternInfo import PatternInfo
+from ....pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
+from ....pattern_detectors.task_parallelism.tp_utils import \
     recursive_function_call_contained_in_worker_cu, line_contained_in_region, contains_reduction
-from discopop_explorer.utils import classify_task_vars
+from ....utils import classify_task_vars
 
 
 def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:

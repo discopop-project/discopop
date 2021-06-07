@@ -1,12 +1,12 @@
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+from ...PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
+from ...pattern_detectors.PatternInfo import PatternInfo
+from ...pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
     TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
+from ...pattern_detectors.task_parallelism.tp_utils import \
     line_contained_in_region, get_parent_of_type, get_cus_inside_function, check_reachability
-from discopop_explorer.utils import is_loop_index2
+from ...utils import is_loop_index2
 
 
 def filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],

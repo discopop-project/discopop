@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PETGraphX import CUNode, MWType, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.utils import total_instructions_count, calculate_workload
+from ...PETGraphX import CUNode, MWType, PETGraphX
+from ...pattern_detectors.PatternInfo import PatternInfo
+from ...utils import total_instructions_count, calculate_workload
 
 
 class Task(object):

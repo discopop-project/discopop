@@ -1,11 +1,11 @@
 import copy
 from typing import List, Tuple, Optional, cast, Dict
 
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
+from ....PETGraphX import  CUNode, NodeType, EdgeType, PETGraphX
+from ....pattern_detectors.PatternInfo import PatternInfo
+from ....pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
     Task, OmittableCuInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
+from ....pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
     task_contained_in_reduction_loop
 
 
