@@ -56,32 +56,50 @@
 
 #include "DPUtils.h"
 
-#include <map>
-#include <set>
+#include <stack>
 #include <utility>
 #include <iomanip>
 #include <algorithm>
 #include <string.h>
+#include <iostream>
 
 using namespace llvm;
 using namespace std;
 using namespace dputil;
 
+// Command line options
+static cl::opt<string> ClInputFile("inputFile", cl::desc("path to input file"), cl::Hidden);
+static cl::opt<string> ClOutputFile("outputFile", cl::desc("path to output file"), cl::Hidden);
+
 namespace
 {
+    struct relevantSection
+    {
+        string filePath;
+        int startLine;
+        int endLine;
+        string varName;
+    };
+
     struct BehaviorExtraction : public FunctionPass
     {
         static char ID;
         virtual bool runOnFunction(Function &F);
         StringRef getPassName() const;
         BehaviorExtraction() : FunctionPass(ID) {}
+        bool doInitialization(Module &M);
+        stack<relevantSection> sections;
 
     }; // end of struct BehaviorExtraction
+
 } // end of anonymous namespace
 
 bool BehaviorExtraction::runOnFunction(Function &F)
 {
-    errs() << "HELLO WORLD!\n";
+    ofstream outputFile(ClOutputFile);
+    outputFile << "Hello from LLVM!\n";
+    outputFile.close();
+    
     return false;
 }
 
@@ -105,6 +123,36 @@ FunctionPass *createBehaviorExtractionPass()
     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeRegionInfoPassPass(*PassRegistry::getPassRegistry());
     return new BehaviorExtraction();
+}
+
+bool BehaviorExtraction::doInitialization(Module &M){
+    errs() << "Initialization  -  Read Input file to stack\n";
+    // read input file
+    ifstream inputFile(ClInputFile);
+    string line;
+    string columnDelimiter = ";";
+    while(getline(inputFile, line)){
+        // store line contents on sections-stack
+        string tmp[4];
+        string token;
+        int counter = 0;
+        size_t pos = 0;
+        while ((pos = line.find(columnDelimiter)) != std::string::npos) {
+            token = line.substr(0, pos);
+            line.erase(0, pos + columnDelimiter.length());
+            tmp[counter] = token;
+            counter++;
+        }
+        struct relevantSection curSection;
+        curSection.filePath = tmp[0];
+        curSection.startLine = stoi(tmp[1]);
+        curSection.endLine = stoi(tmp[2]);
+        curSection.varName = tmp[3];
+        sections.push(curSection);
+    }
+    inputFile.close();
+
+    errs() << "Initialization finished.\n";
 }
 
 StringRef BehaviorExtraction::getPassName() const
