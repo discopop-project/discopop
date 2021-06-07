@@ -1,0 +1,10 @@
+START 1:3
+1:6 BGN loop 10
+1:10 END loop
+1:7 NOM  INIT *|arr RAW 1:5|x RAW 1:6|i RAW 1:8|x
+1:10 NOM  RAW 1:3|retval
+1:8 NOM  RAW 1:5|x RAW 1:6|i RAW 1:8|x WAR 1:8|x
+1:5 NOM  INIT *|x
+1:3 NOM  INIT *|retval
+1:6 NOM  INIT *|i RAW 1:6|i WAR 1:6|i
+1:10 END program
