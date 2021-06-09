@@ -73,6 +73,20 @@ static cl::opt<string> ClOutputFile("outputFile", cl::desc("path to output file"
 
 namespace
 {
+    struct sharedVarAccess{
+        string varName;
+        bool read;
+        bool write;
+        string codeLocation;
+        Instruction* parentInstruction;
+    };
+
+    struct BBGraphNode{
+        BasicBlock* bb;
+        list<BBGraphNode> nextBBs;
+        list<sharedVarAccess> varAccesses;
+    };
+
     struct relevantSection
     {
         string filePath;
@@ -90,6 +104,12 @@ namespace
         bool doInitialization(Module &M);
         stack<relevantSection> sections;
         string getClosestCodeLocation(Instruction* inst);
+        map<Function*, BBGraphNode> functionToBBGraphRootNodeMap;
+        map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
+        string getParentFileNameFromFunction(Function &F);
+        list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB);
+        void exportResultsToFile();
+        void debugPrintBBGraph(BBGraphNode graphNode);
 
     }; // end of struct BehaviorExtraction
 
@@ -115,9 +135,7 @@ string BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
 }
 
 
-bool BehaviorExtraction::runOnFunction(Function &F)
-{
-    // get parent file location
+string BehaviorExtraction::getParentFileNameFromFunction(Function &F){
     string parentFileName = "";
     SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
     F.getAllMetadata(MDs);
@@ -127,87 +145,184 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 parentFileName = parentFileName + subProgram->getFile()->getDirectory().str();
                 parentFileName = parentFileName + "/";
                 parentFileName = parentFileName + subProgram->getFile()->getFilename().str();
-                errs() << "parentFileName: " << parentFileName << "\n";
                 break;
             }
         }
     }
+    return parentFileName;
+}
 
 
-    for(auto &BB : F.getBasicBlockList()){
-        for(auto &inst : BB.getInstList()){
-            // option 1: single layer array access (getelementptr + ptrtoint + [__dp_read | __dp_write])
-            // check if inst is getelementptr
-            if(isa<GetElementPtrInst>(&inst)) {
-                GetElementPtrInst *gepinst = cast<GetElementPtrInst>(&inst);
-                // check if gepinst.next is ptrtoint
-                if (isa<PtrToIntInst>(gepinst->getNextNode())) {
-                    PtrToIntInst *ptrinst = cast<PtrToIntInst>(gepinst->getNextNode());
-                    // check if next instruction is call to __dp_write or __dp_read
-                    if (ptrinst->getNextNode()) {
-                        if (isa<CallInst>(ptrinst->getNextNode())) {
-                            CallInst *ci = cast<CallInst>(ptrinst->getNextNode());
-                            if (ci->getCalledFunction()->getName().equals("__dp_write")) {
-                                // get line number of call from next instruction
-                                // next instruction is call to __dp_write
-                                if (gepinst->getPointerOperand()->hasName()) {
-                                    errs() << "next: __dp_write to ARR: " << gepinst->getPointerOperand()->getName()
-                                           << " at " << getClosestCodeLocation(ci) << "\n";
-                                } else {
-                                    errs() << "next: __dp_write: \n";
-                                }
+list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
+    list<sharedVarAccess> resultList;
 
-                            } else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
-                                // next instruction is call to __dp_read
-                                if(gepinst->getPointerOperand()->hasName()){
-                                    errs() << "next: __dp_read to ARR: " << gepinst->getPointerOperand()->getName()
-                                           << " at " << getClosestCodeLocation(ci) << "\n";
-                                } else{
-                                    errs() << "next: __dp_read\n";
-                                }
+    for(auto &inst : BB.getInstList()){
+        // option 1: single layer array access (getelementptr + ptrtoint + [__dp_read | __dp_write])
+        // check if inst is getelementptr
+        if(isa<GetElementPtrInst>(&inst)) {
+            GetElementPtrInst *gepinst = cast<GetElementPtrInst>(&inst);
+            // check if gepinst.next is ptrtoint
+            if (isa<PtrToIntInst>(gepinst->getNextNode())) {
+                PtrToIntInst *ptrinst = cast<PtrToIntInst>(gepinst->getNextNode());
+                // check if next instruction is call to __dp_write or __dp_read
+                if (ptrinst->getNextNode()) {
+                    if (isa<CallInst>(ptrinst->getNextNode())) {
+                        CallInst *ci = cast<CallInst>(ptrinst->getNextNode());
+                        if (ci->getCalledFunction()->getName().equals("__dp_write")) {
+                            // get line number of call from next instruction
+                            // next instruction is call to __dp_write
+                            if (gepinst->getPointerOperand()->hasName()) {
+                                errs() << "next: __dp_write to ARR: " << gepinst->getPointerOperand()->getName()
+                                       << " at " << getClosestCodeLocation(ci) << "\n";
+                                sharedVarAccess access;
+                                access.varName = gepinst->getPointerOperand()->getName();
+                                access.read = false;
+                                access.write = true;
+                                access.codeLocation = getClosestCodeLocation(ci);
+                                access.parentInstruction = &inst;
+                                resultList.push_back(access);
+                            } else {
+                                errs() << "next: __dp_write: \n";
+                                sharedVarAccess access;
+                                access.varName = "##UNKNOWN##";
+                                access.read = false;
+                                access.write = true;
+                                access.codeLocation = getClosestCodeLocation(ci);
+                                access.parentInstruction = &inst;
+                                resultList.push_back(access);
+                            }
+
+                        } else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
+                            // next instruction is call to __dp_read
+                            if(gepinst->getPointerOperand()->hasName()){
+                                errs() << "next: __dp_read to ARR: " << gepinst->getPointerOperand()->getName()
+                                       << " at " << getClosestCodeLocation(ci) << "\n";
+                                sharedVarAccess access;
+                                access.varName = gepinst->getPointerOperand()->getName();
+                                access.read = true;
+                                access.write = false;
+                                access.codeLocation = getClosestCodeLocation(ci);
+                                access.parentInstruction = &inst;
+                                resultList.push_back(access);
+                            } else{
+                                errs() << "next: __dp_read\n";
+                                sharedVarAccess access;
+                                access.varName = "##UNKNOWN##";
+                                access.read = true;
+                                access.write = false;
+                                access.codeLocation = getClosestCodeLocation(ci);
+                                access.parentInstruction = &inst;
+                                resultList.push_back(access);
                             }
                         }
                     }
                 }
             }
+        }
 
-            else
+        else
 
-                // option 2: direct variable access (ptrtoint + [__dp_read | __dp_write])
-                // check if inst is ptrtoint
-                if(isa<PtrToIntInst>(&inst)){
-                    PtrToIntInst* ptrinst = cast<PtrToIntInst>(&inst);
-                    // check if next instruction is call to __dp_write or __dp_read
-                    if(inst.getNextNode()){
-                        if(isa<CallInst>(inst.getNextNode())){
-                            CallInst* ci = cast<CallInst>(inst.getNextNode());
-                            if(ci->getCalledFunction()->getName().equals("__dp_write")){
-                                // next instruction is call to __dp_write
-                                if(ptrinst->getPointerOperand()->hasName()){
-                                    errs() << "next: __dp_write to var: " << ptrinst->getPointerOperand()->getName()
-                                           << " at " << getClosestCodeLocation(ci) << "\n";
-                                }
-                                else{
-                                    errs() << "next: __dp_write to var: \n";
-                                }
+            // option 2: direct variable access (ptrtoint + [__dp_read | __dp_write])
+            // check if inst is ptrtoint
+        if(isa<PtrToIntInst>(&inst)){
+            PtrToIntInst* ptrinst = cast<PtrToIntInst>(&inst);
+            // check if next instruction is call to __dp_write or __dp_read
+            if(inst.getNextNode()){
+                if(isa<CallInst>(inst.getNextNode())){
+                    CallInst* ci = cast<CallInst>(inst.getNextNode());
+                    if(ci->getCalledFunction()->getName().equals("__dp_write")){
+                        // next instruction is call to __dp_write
+                        if(ptrinst->getPointerOperand()->hasName()){
+                            errs() << "next: __dp_write to var: " << ptrinst->getPointerOperand()->getName()
+                                   << " at " << getClosestCodeLocation(ci) << "\n";
+                            sharedVarAccess access;
+                            access.varName = ptrinst->getPointerOperand()->getName();
+                            access.read = false;
+                            access.write = true;
+                            access.codeLocation = getClosestCodeLocation(ci);
+                            access.parentInstruction = &inst;
+                            resultList.push_back(access);
+                        }
+                        else{
+                            errs() << "next: __dp_write to var: \n";
+                            sharedVarAccess access;
+                            access.varName = "##UNKNOWN##";
+                            access.read = false;
+                            access.write = true;
+                            access.codeLocation = getClosestCodeLocation(ci);
+                            access.parentInstruction = &inst;
+                            resultList.push_back(access);
+                        }
 
-                            }
-                            else if (ci->getCalledFunction()->getName().equals("__dp_read")){
-                                // next instruction is call to __dp_read
-                                if(ptrinst->getPointerOperand()->hasName()){
-                                    errs() << "next: __dp_read to var: " << ptrinst->getPointerOperand()->getName()
-                                           << " at " << getClosestCodeLocation(ci) << "\n";
-                                }
-                                else{
-                                    errs() << "next: __dp_read\n";
-                                }
-                            }
+                    }
+                    else if (ci->getCalledFunction()->getName().equals("__dp_read")){
+                        // next instruction is call to __dp_read
+                        if(ptrinst->getPointerOperand()->hasName()){
+                            errs() << "next: __dp_read to var: " << ptrinst->getPointerOperand()->getName()
+                                   << " at " << getClosestCodeLocation(ci) << "\n";
+                            sharedVarAccess access;
+                            access.varName = ptrinst->getPointerOperand()->getName();
+                            access.read = true;
+                            access.write = false;
+                            access.codeLocation = getClosestCodeLocation(ci);
+                            access.parentInstruction = &inst;
+                            resultList.push_back(access);
+                        }
+                        else{
+                            errs() << "next: __dp_read\n";
+                            sharedVarAccess access;
+                            access.varName = "##UNKNOWN##";
+                            access.read = true;
+                            access.write = false;
+                            access.codeLocation = getClosestCodeLocation(ci);
+                            access.parentInstruction = &inst;
+                            resultList.push_back(access);
                         }
                     }
                 }
+            }
         }
     }
+    return resultList;
+}
 
+
+bool BehaviorExtraction::runOnFunction(Function &F)
+{
+    string parentFileName = getParentFileNameFromFunction(F);
+
+    // initialize bbToGraphNodeMap
+    for(auto &BB : F.getBasicBlockList()){
+        BBGraphNode graphNode;
+        pair<BasicBlock*, BBGraphNode> p(&BB, graphNode);
+        bbToGraphNodeMap.insert(p);
+    }
+
+    for(auto &BB : F.getBasicBlockList()){
+        errs() << "BB\n";
+
+        // construct BBGraphNode for current BB
+        BBGraphNode graphNode;
+        graphNode.bb = &BB;
+        graphNode.varAccesses = getSharedVarAccesses(BB);
+        for(auto successorBB: successors(&BB)){
+            errs() << "\tsucc\n";
+            graphNode.nextBBs.push_back(bbToGraphNodeMap.at(successorBB));
+        }
+        errs() << "\t-> len(nextBBs): " << graphNode.nextBBs.size() << "\n";
+
+        // set function entrypoint if necessary
+        BasicBlock* x = &(F.getEntryBlock());
+        if(&BB == x){
+            pair<Function*, BBGraphNode> p(&F, graphNode);
+            functionToBBGraphRootNodeMap.insert(p);
+        }
+
+    }
+
+    // DEBUG
+    //debugPrintBBGraph(bbToGraphNodeMap(&(F.getBasicBlockList().front())));
+    // ! DEBUG
 
     ofstream outputFile(ClOutputFile);
     outputFile << "Hello from LLVM!\n";
@@ -215,6 +330,37 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
     return false;
 }
+
+void BehaviorExtraction::debugPrintBBGraph(BBGraphNode graphNode){
+    errs() << "NEW NODE\n";
+    errs() << "\tnextBBs: " << graphNode.nextBBs.size() << "\n";
+    errs() << "\tShared var accesses: ";
+    for(auto sva : graphNode.varAccesses){
+        if(sva.write){
+            errs() << "W:" << sva.varName << "@" << sva.codeLocation << " ";
+        }
+        else{
+            errs() << "R:" << sva.varName << "@" << sva.codeLocation << " ";
+        }
+    }
+    errs() << "\n";
+    for(auto succ : graphNode.nextBBs){
+        errs() << "FOR\n";
+        debugPrintBBGraph(succ);
+    }
+}
+
+
+// todo construct BB block graph
+// todo append shared var R/W information to BB blocks
+// todo remove empty BB blocks, which are not part of any branching (combine with previous node)
+// todo remove branched sections, if no R/W information is contained
+
+
+void BehaviorExtraction::exportResultsToFile(){
+    // todo;
+}
+
 
 char BehaviorExtraction::ID = 0;
 
@@ -268,6 +414,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     errs() << "Initialization finished.\n";
 }
 
+// todo tread only relevantSections
 // todo treat function calls inside relevant section as "inlined"
 
 StringRef BehaviorExtraction::getPassName() const
