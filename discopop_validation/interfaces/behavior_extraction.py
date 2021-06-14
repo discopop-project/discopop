@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from typing import List, Tuple, Dict
 from ...discopop_explorer import DetectionResult
+from .BBGraph import BBGraph
 
 
 def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List[Tuple[str, str, str]]:
@@ -17,6 +18,7 @@ def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List
         end_line = do_all_sug.end_line
         for var in do_all_sug.shared:
             result.append((start_line, end_line, var.name))
+    result = list(set(result))
     return result
 
 
@@ -55,8 +57,11 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
     command = opt_executable + " < " + ll_file_path + " -load " + behavior_extraction_so + " -BehaviorExtraction" + \
               " -inputFile " + input_file_path + " -outputFile " + output_file_path
     os.system(command)
-
     os.chdir("..")
+
+    # construct BBGraph
+    bb_graph: BBGraph = BBGraph(output_file_path)
+
     # todo enable clean-up
     # shutil.rmtree("tmp_behavior_extraction")
     pass

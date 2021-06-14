@@ -74,7 +74,7 @@ static cl::opt<string> ClOutputFile("outputFile", cl::desc("path to output file"
 namespace
 {
     struct sharedVarAccess{
-        string varName;
+        string name;
         string mode;
         string codeLocation;
         Instruction* parentInstruction;
@@ -179,7 +179,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                             if (gepinst->getPointerOperand()->hasName()) {
                                 // dp write to array with known name
                                 sharedVarAccess access;
-                                access.varName = gepinst->getPointerOperand()->getName();
+                                access.name = gepinst->getPointerOperand()->getName();
                                 access.mode = "w";
                                 access.codeLocation = getClosestCodeLocation(ci);
                                 access.parentInstruction = &inst;
@@ -187,7 +187,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                             } else {
                                 // dp write to array with unknown name
                                 sharedVarAccess access;
-                                access.varName = "##UNKNOWN##";
+                                access.name = "##UNKNOWN##";
                                 access.mode = "w";
                                 access.codeLocation = getClosestCodeLocation(ci);
                                 access.parentInstruction = &inst;
@@ -199,7 +199,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                             if(gepinst->getPointerOperand()->hasName()){
                                 // dp read from array with known name
                                 sharedVarAccess access;
-                                access.varName = gepinst->getPointerOperand()->getName();
+                                access.name = gepinst->getPointerOperand()->getName();
                                 access.mode = "r";
                                 access.codeLocation = getClosestCodeLocation(ci);
                                 access.parentInstruction = &inst;
@@ -207,7 +207,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                             } else{
                                 // dp read from array with unknown name
                                 sharedVarAccess access;
-                                access.varName = "##UNKNOWN##";
+                                access.name = "##UNKNOWN##";
                                 access.mode = "r";
                                 access.codeLocation = getClosestCodeLocation(ci);
                                 access.parentInstruction = &inst;
@@ -234,7 +234,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                         if(ptrinst->getPointerOperand()->hasName()){
                             // dp write to var with known name
                             sharedVarAccess access;
-                            access.varName = ptrinst->getPointerOperand()->getName();
+                            access.name = ptrinst->getPointerOperand()->getName();
                             access.mode = "w";
                             access.codeLocation = getClosestCodeLocation(ci);
                             access.parentInstruction = &inst;
@@ -243,7 +243,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                         else{
                             // dp write to var with unknown name
                             sharedVarAccess access;
-                            access.varName = "##UNKNOWN##";
+                            access.name = "##UNKNOWN##";
                             access.mode = "w";
                             access.codeLocation = getClosestCodeLocation(ci);
                             access.parentInstruction = &inst;
@@ -256,7 +256,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                         if(ptrinst->getPointerOperand()->hasName()){
                             // dp read from var with known name
                             sharedVarAccess access;
-                            access.varName = ptrinst->getPointerOperand()->getName();
+                            access.name = ptrinst->getPointerOperand()->getName();
                             access.mode = "r";
                             access.codeLocation = getClosestCodeLocation(ci);
                             access.parentInstruction = &inst;
@@ -265,7 +265,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                         else{
                             // dp read from var with unknown name
                             sharedVarAccess access;
-                            access.varName = "##UNKNOWN##";
+                            access.name = "##UNKNOWN##";
                             access.mode = "r";
                             access.codeLocation = getClosestCodeLocation(ci);
                             access.parentInstruction = &inst;
@@ -313,7 +313,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
-            outputFile << "var:" << sva.varName << ":" << sva.mode << ":" << sva.codeLocation << "\n";
+            outputFile << "operation:" << sva.mode << ":" << sva.name << ":" << sva.codeLocation << "\n";
         }
 
         // set function entrypoint if necessary
