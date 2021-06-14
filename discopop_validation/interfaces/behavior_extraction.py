@@ -11,14 +11,17 @@ def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List
     Output format: [(<section_id>, <start_line>, <end_line>, <var_name>)]
     TODO: For now, only Do-All pattern is reported!
     """
-    result: List[Tuple[str, str, str]] = []
+    interim_result: List[Tuple[str, str, str]] = []
     # include do-all suggestions
-    for idx, do_all_sug in enumerate(suggestions.do_all):
+    for do_all_sug in suggestions.do_all:
         start_line = do_all_sug.start_line
         end_line = do_all_sug.end_line
         for var in do_all_sug.shared:
-            result.append((str(idx), start_line, end_line, var.name))
-    result = list(set(result))
+            interim_result.append((start_line, end_line, var.name))
+    interim_result = list(set(interim_result))
+    result: List[Tuple[str, str, str, str]] = []
+    for idx, r in enumerate(interim_result):
+        result.append((str(idx), r[0], r[1], r[2]))
     return result
 
 

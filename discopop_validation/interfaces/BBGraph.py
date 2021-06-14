@@ -23,11 +23,13 @@ class BBNode:
     id: int
     operations: List[Operation]
     contained_in_relevant_sections: List[int]
+    name: str
 
     def __init__(self, node_id):
         self.id = node_id
         self.operations = []
         self.contained_in_relevant_sections = []
+        self.name = ""
 
 
 class FunctionMetaData:
@@ -76,9 +78,24 @@ class BBGraph(object):
                     current_bb.operations.append(Operation(int(line[1]), line[2], line[3], int(line[4]), int(line[5])))
                     if not int(line[1]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[1]))
+                elif line[0] == "inSection":
+                    if not int(line[1]) in current_bb.contained_in_relevant_sections:
+                        current_bb.contained_in_relevant_sections.append(int(line[1]))
+                elif line[0] == "bbName":
+                    current_bb.name = line[1];
                 else:
                     raise ValueError("Unknown keyword: ", line[0])
                 print(line)
+
+        # remove edges to bb's outside of relevant sections (automatically added by networkx)
+        nodes_to_be_removed = [node for node in self.graph.nodes if "data" not in self.graph.nodes[node]]
+        edges_to_be_removed = []
+        for n in nodes_to_be_removed:
+            edges_to_be_removed += self.graph.in_edges(n)
+        for e in edges_to_be_removed:
+            self.graph.remove_edge(e[0], e[1])
+        for n in nodes_to_be_removed:
+            self.graph.remove_node(n)
 
         # show graph
         self.show()
@@ -86,6 +103,7 @@ class BBGraph(object):
     def show(self):
         """open window and plot the graph"""
         pos = nx.spring_layout(self.graph)
+        [node for node in self.graph.nodes if len(self.graph.nodes[node]["data"].operations) == 0]
         nodes_without_operations = [node for node in self.graph.nodes if len(self.graph.nodes[node]["data"].operations) == 0]
         nodes_with_operations = [node for node in self.graph.nodes if node not in nodes_without_operations]
         # draw nodes w/o operations in grey
@@ -95,9 +113,9 @@ class BBGraph(object):
         nx.draw_networkx_edges(self.graph, pos)
         labels = {}
         for node in self.graph.nodes:
-            #labels[node] = str(self.graph.nodes[node]["data"].id)
+            labels[node] = str(self.graph.nodes[node]["data"].id) + " - " + self.graph.nodes[node]["data"].name
             #labels[node] = str(len(self.graph.nodes[node]["data"].operations))
-            labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
+            #labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 
@@ -106,15 +124,21 @@ class BBGraph(object):
         modification_found = True
         while modification_found:
             modification_found = False
-            remove_node = None
             for node in self.graph.nodes:
-                # remove, if node has one successor and no operations and is not part of relevant section
+                # remove, if node has no operations, exactly one successor with no operations is part of same
+                # relevant sections as its successor.
                 if len(self.graph.nodes[node]["data"].operations) == 0 and self.graph.out_degree(node) == 1 and \
-                        self.graph.in_degree(node) != 0 and \
-                        len(self.graph.nodes[node]["data"].contained_in_relevant_sections) == 0:
+                        self.graph.in_degree(node) != 0:
                     # redirect incoming edges
                     for successor_edge in self.graph.out_edges(node):
                         successor = successor_edge[1]
+                        # check if relevant sections are equal
+                        if self.graph.nodes[node]["data"].contained_in_relevant_sections != \
+                                self.graph.nodes[successor]["data"].contained_in_relevant_sections:
+                            continue
+                        # check if successor has operation
+                        if len(self.graph.nodes[successor]["data"].operations) != 0:
+                            continue
                         edges_to_be_removed = []
                         for ie in self.graph.in_edges(node):
                             edges_to_be_removed.append(ie)
@@ -124,7 +148,8 @@ class BBGraph(object):
                             modification_found = True
                         for e in edges_to_be_removed:
                             self.graph.remove_edge(e[0], e[1])
-                    self.graph.remove_node(node)
+                    if modification_found:
+                        self.graph.remove_node(node)
                     break
 
         # test

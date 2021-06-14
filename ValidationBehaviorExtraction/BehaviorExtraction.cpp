@@ -84,6 +84,8 @@ namespace
         unsigned int bbIndex;
         BasicBlock* bb;
         list<sharedVarAccess> varAccesses;
+        pair<unsigned int, unsigned int> startLocation;
+        pair<unsigned int, unsigned int> endLocation;
     };
 
     struct relevantSection
@@ -295,6 +297,18 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         bbToGraphNodeMap.insert(p);
     }
 
+    // check if function is contained in scoped file
+    bool function_in_scoped_file = false;
+    for(auto section : sections) {
+        if (parentFileName.compare(section.filePath) == 0) {
+            function_in_scoped_file = true;
+            break;
+        }
+    }
+    if(!function_in_scoped_file){
+        return false;
+    }
+
     // open output file
     ofstream outputFile(ClOutputFile);
 
@@ -305,9 +319,28 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     for(auto &BB : F.getBasicBlockList()){
         // construct BBGraphNode for current BB
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
-        outputFile << "bbIndex:" << graphNode.bbIndex << "\n";
         graphNode.bb = &BB;
         graphNode.varAccesses = getSharedVarAccesses(BB);
+        graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))));
+        graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))));
+
+        // check if BB is inside scope
+        list<unsigned int> bb_in_sections;
+        for(auto section : sections){
+            if(graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first <= section.endLine){
+                bb_in_sections.push_back(section.sectionId);
+            }
+        }
+        if(bb_in_sections.size() == 0)
+            continue;
+
+        outputFile << "bbIndex:" << graphNode.bbIndex << "\n";
+        outputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
+        for(unsigned int sid : bb_in_sections){
+            outputFile << "inSection:" << sid << "\n";
+        }
+
+        // report successors to output file
         for(auto successorBB: successors(&BB)){
             outputFile << "successor:" << bbToGraphNodeMap.at(successorBB).bbIndex << "\n";
         }
@@ -316,14 +349,13 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         for(auto sva : graphNode.varAccesses){
             // only report operation, if it is inside of a relevant section
             for(auto section : sections){
-                if(parentFileName.compare(section.filePath) == 0){
                     if(sva.name.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
                             outputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
                                        << ":" << sva.codeLocation.second << "\n";
                         }
                     }
-                }
+
             }
         }
 
