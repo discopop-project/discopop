@@ -67,68 +67,78 @@ for.body:                                         ; preds = %for.cond
   br i1 %cmp1, label %if.then, label %if.end, !dbg !39
 
 if.then:                                          ; preds = %for.body
-  %13 = ptrtoint i32* %x to i64
-  call void @__dp_read(i32 16395, i64 %13, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
-  %14 = load i32, i32* %x, align 4, !dbg !40
-  %add = add nsw i32 %14, 3, !dbg !42
-  %15 = ptrtoint i32* %z to i64
-  call void @__dp_write(i32 16395, i64 %15, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.4, i32 0, i32 0))
-  store i32 %add, i32* %z, align 4, !dbg !43
-  br label %if.end, !dbg !44
+  %13 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16395, i64 %13, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %14 = load i32, i32* %i, align 4, !dbg !40
+  %idxprom2 = sext i32 %14 to i64, !dbg !42
+  %arrayidx3 = getelementptr inbounds [10 x i32], [10 x i32]* %arr, i64 0, i64 %idxprom2, !dbg !42
+  %15 = ptrtoint i32* %arrayidx3 to i64
+  call void @__dp_read(i32 16395, i64 %15, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0))
+  %16 = load i32, i32* %arrayidx3, align 4, !dbg !42
+  %add = add nsw i32 %16, 3, !dbg !43
+  %17 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16395, i64 %17, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %18 = load i32, i32* %i, align 4, !dbg !44
+  %idxprom4 = sext i32 %18 to i64, !dbg !45
+  %arrayidx5 = getelementptr inbounds [10 x i32], [10 x i32]* %arr, i64 0, i64 %idxprom4, !dbg !45
+  %19 = ptrtoint i32* %arrayidx5 to i64
+  call void @__dp_write(i32 16395, i64 %19, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i32 0, i32 0))
+  store i32 %add, i32* %arrayidx5, align 4, !dbg !46
+  br label %if.end, !dbg !47
 
 if.end:                                           ; preds = %if.then, %for.body
-  br label %for.inc, !dbg !45
+  br label %for.inc, !dbg !48
 
 for.inc:                                          ; preds = %if.end
-  %16 = ptrtoint i32* %i to i64
-  call void @__dp_read(i32 16391, i64 %16, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
-  %17 = load i32, i32* %i, align 4, !dbg !46
-  %inc = add nsw i32 %17, 1, !dbg !46
-  %18 = ptrtoint i32* %i to i64
-  call void @__dp_write(i32 16391, i64 %18, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
-  store i32 %inc, i32* %i, align 4, !dbg !46
-  br label %for.cond, !dbg !47, !llvm.loop !48
+  %20 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16391, i64 %20, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %21 = load i32, i32* %i, align 4, !dbg !49
+  %inc = add nsw i32 %21, 1, !dbg !49
+  %22 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16391, i64 %22, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  store i32 %inc, i32* %i, align 4, !dbg !49
+  br label %for.cond, !dbg !50, !llvm.loop !51
 
 for.end:                                          ; preds = %for.cond
   call void @__dp_loop_exit(i32 16399, i32 0)
-  %19 = ptrtoint i32* %x to i64
-  call void @__dp_read(i32 16399, i64 %19, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
-  %20 = load i32, i32* %x, align 4, !dbg !50
-  %cmp2 = icmp sgt i32 %20, 3, !dbg !52
-  br i1 %cmp2, label %if.then3, label %if.else, !dbg !53
-
-if.then3:                                         ; preds = %for.end
-  %21 = ptrtoint i32* %y to i64
-  call void @__dp_read(i32 16400, i64 %21, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
-  %22 = load i32, i32* %y, align 4, !dbg !54
   %23 = ptrtoint i32* %x to i64
-  call void @__dp_read(i32 16400, i64 %23, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
-  %24 = load i32, i32* %x, align 4, !dbg !56
-  %add4 = add nsw i32 %22, %24, !dbg !57
+  call void @__dp_read(i32 16399, i64 %23, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %24 = load i32, i32* %x, align 4, !dbg !53
+  %cmp6 = icmp sgt i32 %24, 3, !dbg !55
+  br i1 %cmp6, label %if.then7, label %if.else, !dbg !56
+
+if.then7:                                         ; preds = %for.end
   %25 = ptrtoint i32* %y to i64
-  call void @__dp_write(i32 16400, i64 %25, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
-  store i32 %add4, i32* %y, align 4, !dbg !58
-  br label %if.end5, !dbg !59
+  call void @__dp_read(i32 16400, i64 %25, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  %26 = load i32, i32* %y, align 4, !dbg !57
+  %27 = ptrtoint i32* %x to i64
+  call void @__dp_read(i32 16400, i64 %27, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %28 = load i32, i32* %x, align 4, !dbg !59
+  %add8 = add nsw i32 %26, %28, !dbg !60
+  %29 = ptrtoint i32* %y to i64
+  call void @__dp_write(i32 16400, i64 %29, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  store i32 %add8, i32* %y, align 4, !dbg !61
+  br label %if.end9, !dbg !62
 
 if.else:                                          ; preds = %for.end
-  %26 = ptrtoint i32* %y to i64
-  call void @__dp_read(i32 16403, i64 %26, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
-  %27 = load i32, i32* %y, align 4, !dbg !60
-  %28 = ptrtoint i32* %x to i64
-  call void @__dp_read(i32 16403, i64 %28, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
-  %29 = load i32, i32* %x, align 4, !dbg !62
-  %sub = sub nsw i32 %27, %29, !dbg !63
   %30 = ptrtoint i32* %y to i64
-  call void @__dp_write(i32 16403, i64 %30, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
-  store i32 %sub, i32* %y, align 4, !dbg !64
-  br label %if.end5
+  call void @__dp_read(i32 16403, i64 %30, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  %31 = load i32, i32* %y, align 4, !dbg !63
+  %32 = ptrtoint i32* %x to i64
+  call void @__dp_read(i32 16403, i64 %32, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %33 = load i32, i32* %x, align 4, !dbg !65
+  %sub = sub nsw i32 %31, %33, !dbg !66
+  %34 = ptrtoint i32* %y to i64
+  call void @__dp_write(i32 16403, i64 %34, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  store i32 %sub, i32* %y, align 4, !dbg !67
+  br label %if.end9
 
-if.end5:                                          ; preds = %if.else, %if.then3
-  %31 = ptrtoint i32* %retval to i64
-  call void @__dp_read(i32 16406, i64 %31, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.5, i32 0, i32 0))
-  %32 = load i32, i32* %retval, align 4, !dbg !65
-  call void @__dp_finalize(i32 16406), !dbg !65
-  ret i32 %32, !dbg !65
+if.end9:                                          ; preds = %if.else, %if.then7
+  %35 = ptrtoint i32* %retval to i64
+  call void @__dp_read(i32 16406, i64 %35, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.5, i32 0, i32 0))
+  %36 = load i32, i32* %retval, align 4, !dbg !68
+  call void @__dp_finalize(i32 16406), !dbg !68
+  ret i32 %36, !dbg !68
 }
 
 ; Function Attrs: nounwind readnone speculatable
@@ -199,29 +209,32 @@ attributes #1 = { nounwind readnone speculatable }
 !37 = distinct !DILexicalBlock(scope: !30, file: !8, line: 10, column: 12)
 !38 = !DILocation(line: 10, column: 14, scope: !37)
 !39 = !DILocation(line: 10, column: 12, scope: !30)
-!40 = !DILocation(line: 11, column: 17, scope: !41)
+!40 = !DILocation(line: 11, column: 26, scope: !41)
 !41 = distinct !DILexicalBlock(scope: !37, file: !8, line: 10, column: 18)
-!42 = !DILocation(line: 11, column: 19, scope: !41)
-!43 = !DILocation(line: 11, column: 15, scope: !41)
-!44 = !DILocation(line: 12, column: 9, scope: !41)
-!45 = !DILocation(line: 13, column: 5, scope: !30)
-!46 = !DILocation(line: 7, column: 27, scope: !26)
-!47 = !DILocation(line: 7, column: 5, scope: !26)
-!48 = distinct !{!48, !28, !49}
-!49 = !DILocation(line: 13, column: 5, scope: !22)
-!50 = !DILocation(line: 15, column: 8, scope: !51)
-!51 = distinct !DILexicalBlock(scope: !7, file: !8, line: 15, column: 8)
-!52 = !DILocation(line: 15, column: 10, scope: !51)
-!53 = !DILocation(line: 15, column: 8, scope: !7)
-!54 = !DILocation(line: 16, column: 13, scope: !55)
-!55 = distinct !DILexicalBlock(scope: !51, file: !8, line: 15, column: 14)
-!56 = !DILocation(line: 16, column: 17, scope: !55)
-!57 = !DILocation(line: 16, column: 15, scope: !55)
-!58 = !DILocation(line: 16, column: 11, scope: !55)
-!59 = !DILocation(line: 17, column: 5, scope: !55)
-!60 = !DILocation(line: 19, column: 13, scope: !61)
-!61 = distinct !DILexicalBlock(scope: !51, file: !8, line: 18, column: 9)
-!62 = !DILocation(line: 19, column: 17, scope: !61)
-!63 = !DILocation(line: 19, column: 15, scope: !61)
-!64 = !DILocation(line: 19, column: 11, scope: !61)
-!65 = !DILocation(line: 22, column: 1, scope: !7)
+!42 = !DILocation(line: 11, column: 22, scope: !41)
+!43 = !DILocation(line: 11, column: 29, scope: !41)
+!44 = !DILocation(line: 11, column: 17, scope: !41)
+!45 = !DILocation(line: 11, column: 13, scope: !41)
+!46 = !DILocation(line: 11, column: 20, scope: !41)
+!47 = !DILocation(line: 12, column: 9, scope: !41)
+!48 = !DILocation(line: 13, column: 5, scope: !30)
+!49 = !DILocation(line: 7, column: 27, scope: !26)
+!50 = !DILocation(line: 7, column: 5, scope: !26)
+!51 = distinct !{!51, !28, !52}
+!52 = !DILocation(line: 13, column: 5, scope: !22)
+!53 = !DILocation(line: 15, column: 8, scope: !54)
+!54 = distinct !DILexicalBlock(scope: !7, file: !8, line: 15, column: 8)
+!55 = !DILocation(line: 15, column: 10, scope: !54)
+!56 = !DILocation(line: 15, column: 8, scope: !7)
+!57 = !DILocation(line: 16, column: 13, scope: !58)
+!58 = distinct !DILexicalBlock(scope: !54, file: !8, line: 15, column: 14)
+!59 = !DILocation(line: 16, column: 17, scope: !58)
+!60 = !DILocation(line: 16, column: 15, scope: !58)
+!61 = !DILocation(line: 16, column: 11, scope: !58)
+!62 = !DILocation(line: 17, column: 5, scope: !58)
+!63 = !DILocation(line: 19, column: 13, scope: !64)
+!64 = distinct !DILexicalBlock(scope: !54, file: !8, line: 18, column: 9)
+!65 = !DILocation(line: 19, column: 17, scope: !64)
+!66 = !DILocation(line: 19, column: 15, scope: !64)
+!67 = !DILocation(line: 19, column: 11, scope: !64)
+!68 = !DILocation(line: 22, column: 1, scope: !7)

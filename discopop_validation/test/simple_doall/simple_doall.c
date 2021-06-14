@@ -8,7 +8,7 @@ int main(){
         arr[i] = i;
         int z = 0;
         if(x > 3){
-            z = x + 3;
+            arr[i] = arr[i] + 3;
         }
     }
 
