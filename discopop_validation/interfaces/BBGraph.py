@@ -1,7 +1,8 @@
 import networkx as nx  # type:ignore
 import os
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 import matplotlib.pyplot as plt
+from sys import maxsize
 
 
 class Operation:
@@ -24,12 +25,16 @@ class BBNode:
     operations: List[Operation]
     contained_in_relevant_sections: List[int]
     name: str
+    start_pos: Tuple[int, int]
+    end_pos: Tuple[int, int]
 
     def __init__(self, node_id):
         self.id = node_id
         self.operations = []
         self.contained_in_relevant_sections = []
         self.name = ""
+        self.start_pos = (maxsize, maxsize)
+        self.end_pos = (-maxsize, -maxsize)
 
 
 class FunctionMetaData:
@@ -45,12 +50,14 @@ class FunctionMetaData:
 class BBGraph(object):
     graph: nx.DiGraph
     functions: List[FunctionMetaData]
+    section_to_entry_point: Dict[int, BBNode]
 
     def __init__(self, bb_information_file):
         """parses bb_information_file and constructs BBGraph accordingly.
         Raises ValueError, if bb_information_file could not be found"""
         self.graph = nx.MultiDiGraph()
         self.function_nodes = []
+        self.section_to_entry_point = {}
 
         # parse bb_information_file
         if not os.path.exists(bb_information_file):
@@ -79,10 +86,25 @@ class BBGraph(object):
                     if not int(line[1]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[1]))
                 elif line[0] == "inSection":
-                    if not int(line[1]) in current_bb.contained_in_relevant_sections:
-                        current_bb.contained_in_relevant_sections.append(int(line[1]))
+                    section_id = int(line[1])
+                    if section_id not in current_bb.contained_in_relevant_sections:
+                        current_bb.contained_in_relevant_sections.append(section_id)
+                    if section_id not in self.section_to_entry_point:
+                        self.section_to_entry_point[section_id] = current_bb
+                    else:
+                        # section_to_entry_point might need to be updated
+                        if (current_bb.start_pos[0] < self.section_to_entry_point[section_id].start_pos[0]) or \
+                                ((current_bb.start_pos[0] == self.section_to_entry_point[section_id].start_pos[0]) and
+                                 (current_bb.start_pos[1] < self.section_to_entry_point[section_id].start_pos[1])):
+                            # section_to_entry_point needs an update
+                            self.section_to_entry_point[section_id] = current_bb
+                        pass
                 elif line[0] == "bbName":
-                    current_bb.name = line[1];
+                    current_bb.name = line[1]
+                elif line[0] == "bbStart":
+                    current_bb.start_pos = (int(line[1]), int(line[2]))
+                elif line[0] == "bbEnd":
+                    current_bb.end_pos = (int(line[1]), int(line[2]))
                 else:
                     raise ValueError("Unknown keyword: ", line[0])
                 print(line)
@@ -103,13 +125,21 @@ class BBGraph(object):
     def show(self):
         """open window and plot the graph"""
         pos = nx.spring_layout(self.graph)
-        [node for node in self.graph.nodes if len(self.graph.nodes[node]["data"].operations) == 0]
+        section_entrypoint_nodes = [bb.id for bb in self.section_to_entry_point.values()]
         nodes_without_operations = [node for node in self.graph.nodes if len(self.graph.nodes[node]["data"].operations) == 0]
         nodes_with_operations = [node for node in self.graph.nodes if node not in nodes_without_operations]
-        # draw nodes w/o operations in grey
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=nodes_without_operations, node_color="grey", node_shape="o")
-        # draw nodes with operations in blue
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=nodes_with_operations, node_shape="o")
+        normal_nodes_without_operations = [node for node in nodes_without_operations if node not in section_entrypoint_nodes]
+        normal_nodes_with_operations = [node for node in nodes_with_operations if node not in section_entrypoint_nodes]
+        entry_nodes_without_operations = [node for node in nodes_without_operations if node in section_entrypoint_nodes]
+        entry_nodes_with_operations = [node for node in nodes_with_operations if node in section_entrypoint_nodes]
+        # draw normal nodes w/o operations in grey
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal_nodes_without_operations, node_color="grey", node_shape="o")
+        # draw normal nodes with operations in blue
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal_nodes_with_operations, node_shape="o")
+        # draw section entry nodes w/o operations in grey diamonds
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=entry_nodes_without_operations, node_color="grey", node_shape="d")
+        # draw section entry nodes with operations in blue diamonds
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=entry_nodes_with_operations, node_shape="d")
         nx.draw_networkx_edges(self.graph, pos)
         labels = {}
         for node in self.graph.nodes:

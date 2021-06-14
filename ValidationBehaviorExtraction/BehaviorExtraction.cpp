@@ -336,6 +336,8 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
         outputFile << "bbIndex:" << graphNode.bbIndex << "\n";
         outputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
+        outputFile << "bbStart:" << graphNode.startLocation.first << ":" << graphNode.startLocation.second << "\n";
+        outputFile << "bbEnd:" << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
         for(unsigned int sid : bb_in_sections){
             outputFile << "inSection:" << sid << "\n";
         }
