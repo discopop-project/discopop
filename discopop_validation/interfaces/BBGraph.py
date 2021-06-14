@@ -89,8 +89,6 @@ class BBGraph(object):
         nx.draw_networkx_edges(self.graph, pos)
         labels = {}
         for node in self.graph.nodes:
-            # todo re-enable
-            # labels[node] = str(self.graph.nodes[node]["data"].id)
-            labels[node] = str(len(self.graph.nodes[node]["data"].operations))
+            labels[node] = str(self.graph.nodes[node]["data"].id)
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()

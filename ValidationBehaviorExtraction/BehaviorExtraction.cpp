@@ -76,7 +76,7 @@ namespace
     struct sharedVarAccess{
         string name;
         string mode;
-        string codeLocation;
+        pair<unsigned int, unsigned int> codeLocation;
         Instruction* parentInstruction;
     };
 
@@ -89,8 +89,8 @@ namespace
     struct relevantSection
     {
         string filePath;
-        int startLine;
-        int endLine;
+        unsigned int startLine;
+        unsigned int endLine;
         string varName;
     };
 
@@ -101,8 +101,8 @@ namespace
         StringRef getPassName() const;
         BehaviorExtraction() : FunctionPass(ID) {}
         bool doInitialization(Module &M);
-        stack<relevantSection> sections;
-        string getClosestCodeLocation(Instruction* inst);
+        list<relevantSection> sections;
+        pair<int, int> getClosestCodeLocation(Instruction* inst);
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB);
@@ -121,13 +121,13 @@ unsigned int BehaviorExtraction::getNextFreeBBId(){
 }
 
 
-string BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
-    string returnLocation = "-1:-1";
+pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
+    pair<int, int> returnLocation(-1, -1);
     if(inst){
         Instruction* curInst = inst;
         while(curInst){
             if(curInst->hasMetadata()){
-                returnLocation = "" + to_string(curInst->getDebugLoc().getLine()) + ":" + to_string(curInst->getDebugLoc().getCol());
+                returnLocation = pair<int, int>(curInst->getDebugLoc().getLine(), curInst->getDebugLoc().getCol());
                 return returnLocation;
             }
             curInst = curInst->getNextNode();
@@ -313,7 +313,17 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
-            outputFile << "operation:" << sva.mode << ":" << sva.name << ":" << sva.codeLocation << "\n";
+            // only report operation, if it is inside of a relevant section
+            for(auto section : sections){
+                if(parentFileName.compare(section.filePath) == 0){
+                    if(sva.name.compare(section.varName) == 0){
+                        if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
+                            outputFile << "operation:" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
+                                       << ":" << sva.codeLocation.second << "\n";
+                        }
+                    }
+                }
+            }
         }
 
         // set function entrypoint if necessary
@@ -380,7 +390,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.startLine = stoi(tmp[1]);
         curSection.endLine = stoi(tmp[2]);
         curSection.varName = tmp[3];
-        sections.push(curSection);
+        sections.push_back(curSection);
     }
     inputFile.close();
 }

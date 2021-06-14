@@ -42,7 +42,7 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
             file_path = file_mapping_dict[start_line.split(":")[0]]
             start_line = start_line.split(":")[1]
             end_line = end_line.split(":")[1]
-            input_file.write(file_path + ";" + start_line + ";" + end_line + ";" + var_name + "\n")
+            input_file.write(file_path + ";" + start_line + ";" + end_line + ";" + var_name + ";\n")
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
