@@ -88,6 +88,7 @@ namespace
 
     struct relevantSection
     {
+        unsigned int sectionId;
         string filePath;
         unsigned int startLine;
         unsigned int endLine;
@@ -318,7 +319,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 if(parentFileName.compare(section.filePath) == 0){
                     if(sva.name.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
-                            outputFile << "operation:" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
+                            outputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
                                        << ":" << sva.codeLocation.second << "\n";
                         }
                     }
@@ -375,7 +376,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     string columnDelimiter = ";";
     while(getline(inputFile, line)){
         // store line contents on sections-stack
-        string tmp[4];
+        string tmp[5];
         string token;
         int counter = 0;
         size_t pos = 0;
@@ -387,9 +388,10 @@ bool BehaviorExtraction::doInitialization(Module &M){
         }
         struct relevantSection curSection;
         curSection.filePath = tmp[0];
-        curSection.startLine = stoi(tmp[1]);
-        curSection.endLine = stoi(tmp[2]);
-        curSection.varName = tmp[3];
+        curSection.sectionId = stoi(tmp[1]);
+        curSection.startLine = stoi(tmp[2]);
+        curSection.endLine = stoi(tmp[3]);
+        curSection.varName = tmp[4];
         sections.push_back(curSection);
     }
     inputFile.close();

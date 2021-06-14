@@ -23,7 +23,7 @@ class MyTestCase(unittest.TestCase):
     def test_relevant_sections_simple(self):
         suggestions = self.test_obtain_simple_suggestions()
         relevant_sections = get_relevant_sections_from_suggestions(suggestions)
-        self.assertEqual([("1:6", "1:8", "arr")], relevant_sections)
+        self.assertEqual([("0", "1:7", "1:13", "arr")], relevant_sections)
 
     def test_execute_behavior_extraction(self):
         suggestions = self.test_obtain_simple_suggestions()

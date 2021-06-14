@@ -6,18 +6,18 @@ from ...discopop_explorer import DetectionResult
 from .BBGraph import BBGraph
 
 
-def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List[Tuple[str, str, str]]:
+def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List[Tuple[str, str, str, str]]:
     """extracts relevant sections in the original source code from the gathered suggestions and reports them in tuples.
-    Output format: [(<start_line>, <end_line>, <var_name>)]
+    Output format: [(<section_id>, <start_line>, <end_line>, <var_name>)]
     TODO: For now, only Do-All pattern is reported!
     """
     result: List[Tuple[str, str, str]] = []
     # include do-all suggestions
-    for do_all_sug in suggestions.do_all:
+    for idx, do_all_sug in enumerate(suggestions.do_all):
         start_line = do_all_sug.start_line
         end_line = do_all_sug.end_line
         for var in do_all_sug.shared:
-            result.append((start_line, end_line, var.name))
+            result.append((str(idx), start_line, end_line, var.name))
     result = list(set(result))
     return result
 
@@ -36,13 +36,14 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
             file_path = split_line[1].replace("\n", "")
             file_mapping_dict[file_id] = file_path
     # create input file for behavior extraction
+    relevant_sections = get_relevant_sections_from_suggestions(suggestions)
     with open("input.txt", "w+") as input_file:
-        for start_line, end_line, var_name in get_relevant_sections_from_suggestions(suggestions):
+        for section_id, start_line, end_line, var_name in relevant_sections:
             # replace file ids with path
             file_path = file_mapping_dict[start_line.split(":")[0]]
             start_line = start_line.split(":")[1]
             end_line = end_line.split(":")[1]
-            input_file.write(file_path + ";" + start_line + ";" + end_line + ";" + var_name + ";\n")
+            input_file.write(file_path + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_name + ";\n")
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
@@ -61,6 +62,8 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
 
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
+    bb_graph.compress()
+    bb_graph.show()
 
     # todo enable clean-up
     # shutil.rmtree("tmp_behavior_extraction")
