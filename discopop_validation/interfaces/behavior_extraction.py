@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import List, Tuple, Dict
 from ...discopop_explorer import DetectionResult
-from .BBGraph import BBGraph
+from .BBGraph import BBGraph, BBNode
 
 
 def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List[Tuple[str, str, str, str]]:
@@ -25,7 +25,8 @@ def get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List
     return result
 
 
-def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str, ll_file_path: str):
+def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str, ll_file_path: str)\
+        -> Dict[int, List[List[List[BBNode]]]]:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")
     os.mkdir("tmp_behavior_extraction")
@@ -66,8 +67,10 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
     bb_graph.compress()
-    bb_graph.show()
+    # bb_graph.show()
+    path_combinations_dict = bb_graph.get_possible_path_combinations_for_sections()
 
     # todo enable clean-up
     # shutil.rmtree("tmp_behavior_extraction")
-    pass
+
+    return path_combinations_dict

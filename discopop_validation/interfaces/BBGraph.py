@@ -1,9 +1,11 @@
+from itertools import chain, combinations
+from itertools import compress, product
 import networkx as nx  # type:ignore
 import os
 from typing import Optional, List, Tuple, Dict
 import matplotlib.pyplot as plt
 from sys import maxsize
-
+from itertools import combinations
 
 class Operation:
     mode: str
@@ -98,7 +100,6 @@ class BBGraph(object):
                                  (current_bb.start_pos[1] < self.section_to_entry_point[section_id].start_pos[1])):
                             # section_to_entry_point needs an update
                             self.section_to_entry_point[section_id] = current_bb
-                        pass
                 elif line[0] == "bbName":
                     current_bb.name = line[1]
                 elif line[0] == "bbStart":
@@ -147,7 +148,6 @@ class BBGraph(object):
             #labels[node] = str(len(self.graph.nodes[node]["data"].operations))
             #labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
         nx.draw_networkx_labels(self.graph, pos, labels)
-        plt.show()
 
     def compress(self):
         """compresses the bb graph iteratively until no further optimization can be found."""
@@ -189,3 +189,60 @@ class BBGraph(object):
                 to_be_removed.append(node)
         for i in to_be_removed:
             self.graph.remove_node(i)
+
+    def __get_paths_for_sections(self):
+        """constructs and returns a dictionary containing a mapping from section ids to a list of lists containing all
+        possible paths for the given section"""
+        path_dict: Dict[int, List[List[BBNode]]] = {}
+
+        def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode) -> List[List[BBNode]]:
+            children_paths: List[List[BBNode]] = []
+            for out_edge in self.graph.out_edges(root_bb_node.id):
+                # todo disable looping by checking for entry point
+                child_bb_node: BBNode = self.graph.nodes[out_edge[1]]["data"]
+                if child_bb_node is entry_point_bb:
+                    continue
+                children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb)
+            # recursion condition
+            if len(children_paths) == 0:
+                result_paths = [[root_bb_node.id]]
+            else:
+                # insert root_bb_node at beginning of each element in children_paths
+                result_paths = []
+                for path in children_paths:
+                    path.insert(0, root_bb_node.id)
+                    result_paths.append(path)
+            return result_paths
+
+        for section_id in self.section_to_entry_point:
+            entry_point = self.section_to_entry_point[section_id]
+            paths = __rec_construct_pathlist(entry_point, entry_point)
+            path_dict[section_id] = paths
+        return path_dict
+
+    def get_possible_path_combinations_for_sections(self) -> Dict[int, List[List[List[BBNode]]]]:
+        """constructs a dictionary containing a mapping from section id to a list of lists of lists.
+        The outermost list contains a list of path combinations.
+        The second list contains one combination, ie. a list of paths.
+        The innermost list contains BBNodes which belong to one path."""
+        path_dict = self.__get_paths_for_sections()
+        result_dict: Dict[int, List[List[List[BBNode]]]] = {}
+
+        def get_powerset(iterable):
+            s = list(iterable)  # allows duplicate elements
+            list_of_tuples = list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
+            list_of_lists = []
+            for e in list_of_tuples:
+                cur_list = []
+                for i in range(0, len(e)):
+                    cur_list.append(e[i])
+                list_of_lists.append(cur_list)
+            return list_of_lists
+
+        for section_id in path_dict:
+            path_combinations = get_powerset(path_dict[section_id])
+            result_dict[section_id] = path_combinations
+        return result_dict
+
+
+
