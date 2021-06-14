@@ -2,3 +2,15 @@ ARRAY, arr
 i
 retval
 x
+y
+ARRAY, arr
+i
+retval
+x
+y
+ARRAY, arr
+i
+retval
+x
+y
+z
