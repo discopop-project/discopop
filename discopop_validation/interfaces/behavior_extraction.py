@@ -66,9 +66,11 @@ def execute_behavior_extraction(suggestions: DetectionResult, file_mapping: str,
 
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
+    bb_graph.show()
     bb_graph.compress()
-    # bb_graph.show()
+    bb_graph.show()
     path_combinations_dict = bb_graph.get_possible_path_combinations_for_sections()
+    print(path_combinations_dict)
 
     # todo enable clean-up
     # shutil.rmtree("tmp_behavior_extraction")

@@ -120,9 +120,6 @@ class BBGraph(object):
         for n in nodes_to_be_removed:
             self.graph.remove_node(n)
 
-        # show graph
-        self.show()
-
     def show(self):
         """open window and plot the graph"""
         pos = nx.spring_layout(self.graph)
@@ -148,6 +145,7 @@ class BBGraph(object):
             #labels[node] = str(len(self.graph.nodes[node]["data"].operations))
             #labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
         nx.draw_networkx_labels(self.graph, pos, labels)
+        plt.show()
 
     def compress(self):
         """compresses the bb graph iteratively until no further optimization can be found."""
