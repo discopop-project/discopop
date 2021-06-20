@@ -4,12 +4,12 @@ from enum import IntEnum, Enum
 
 
 class UpdateType(Enum):
-    READ = 0
-    WRITE = 1
-    LOCK = 2
-    UNLOCK = 3
-    ENTERPARALLEL = 4
-    EXITPARALLEL = 5
+    READ = "R"
+    WRITE = "W"
+    LOCK = "L"
+    UNLOCK = "U"
+    ENTERPARALLEL = "ENTER"
+    EXITPARALLEL = "EXIT"
 
 
 class ScheduleElement:
@@ -28,6 +28,9 @@ class ScheduleElement:
         self.lock_names = []
         self.var_names = []
         self.updates = []
+
+    def __str__(self):
+        return "tid:" + str(self.thread_id) + " ".join([" "+str(update_type.value)+"->"+var_name + ";" for (var_name, update_type, _) in self.updates])
 
 
     def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None):

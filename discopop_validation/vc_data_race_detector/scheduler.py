@@ -1,5 +1,6 @@
 from typing import List, Tuple, Dict
 
+from .scheduling_graph import SchedulingGraph
 from ..interfaces.BBGraph import BBNode, BBGraph, Operation
 from ..vc_data_race_detector.schedule import Schedule, ScheduleElement, UpdateType
 
@@ -36,14 +37,19 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
         schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
             bb_graph.convert_bb_path_to_operations(elem)))
     print("SCHEDULE ELEMENT COMBINATION")
-    print(schedule_element_combination)
+    for outer in schedule_element_combination:
+        print("[")
+        for inner in outer:
+            print("\t", inner)
+        print("]")
+
+    dimensions = [len(c) for c in schedule_element_combination]
+    scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
 
     return schedules
 
 
 def __convert_operation_path_to_schedule_element_path(executing_thread_id: int, operation_path: List[Tuple[int, Operation]]) -> List[ScheduleElement]:
-    print("OPERATION PATH")
-    print(operation_path)
     schedule_elements: List[Schedule] = []
     for parent_bb_id, operation in operation_path:
         schedule_elements.append(__convert_operation_to_schedule_element(operation, executing_thread_id, parent_bb_id))
