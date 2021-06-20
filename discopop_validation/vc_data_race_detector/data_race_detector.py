@@ -24,6 +24,12 @@ class State(object):
             self.var_read_clocks[v_name] = VectorClock(thread_count)
             self.var_write_clocks[v_name] = VectorClock(thread_count)
 
+    def __str__(self):
+        return "Thread clocks: " + str(self.thread_clocks) + "\n" + \
+               "Lock clocks: " + str(self.lock_clocks) + "\n" + \
+               "Var Read clocks: " + str(self.var_read_clocks) + "\n" + \
+               "Var Write clocks: " + str(self.var_write_clocks)
+
 
 def check_schedule(schedule: Schedule) -> Optional[Tuple[State, ScheduleElement]]:
     """check the entire schedule.

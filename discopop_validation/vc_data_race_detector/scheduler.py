@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict
 from .scheduling_graph import SchedulingGraph
 from ..interfaces.BBGraph import BBNode, BBGraph, Operation
 from ..vc_data_race_detector.schedule import Schedule, ScheduleElement, UpdateType
+from ..vc_data_race_detector.data_race_detector import check_schedule, State
 
 
 def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]]) -> Dict[int, List[Schedule]]:
@@ -20,6 +21,23 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
     print("SECTIONS TO SCHEDULES")
     print(sections_to_schedules_dict)
 
+    # todo remove, debug!
+    # execute VC Check
+    for section_id in sections_to_schedules_dict:
+        for schedule in sections_to_schedules_dict[section_id]:
+            check_result = check_schedule(schedule)
+            if check_result is not None:
+                # check not successful, data race detected
+                state: State = check_result[0]
+                schedule_element = check_result[1]
+                print()
+                print("##### DATA RACE IN SECTION: ", section_id, " #####")
+                print("STATE:")
+                print(str(state))
+                print("SCHEDULE ELEMENT:")
+                print(str(schedule_element))
+
+
 
 def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination: List[BBNode]) -> List[Schedule]:
     """creates a list of Schedules based on the given combination of paths"""
@@ -29,7 +47,6 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
         # duplicate element to model schedules for "two threads execute same path"
         path_combination.append(path_combination[0])
     print("PATH COMBINATION:", path_combination)
-    schedules: List[Schedule] = []
 
     # convert path combination to schedule element combination
     schedule_element_combination: List[List[ScheduleElement]] = []
@@ -45,6 +62,7 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
 
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
+    schedules = scheduling_graph.get_schedules()
 
     return schedules
 

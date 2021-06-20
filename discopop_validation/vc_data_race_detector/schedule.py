@@ -30,7 +30,7 @@ class ScheduleElement:
         self.updates = []
 
     def __str__(self):
-        return "tid:" + str(self.thread_id) + " ".join([" "+str(update_type.value)+"->"+var_name + ";" for (var_name, update_type, _) in self.updates])
+        return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " ".join([" "+str(update_type.value)+"->"+var_name + ";" for (var_name, update_type, _) in self.updates])
 
 
     def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None):
