@@ -21,6 +21,9 @@ class Operation:
         self.col = col
         self.section_id = section_id
 
+    def __str__(self):
+        return "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
+
 
 class BBNode:
     id: int
@@ -53,6 +56,7 @@ class BBGraph(object):
     graph: nx.DiGraph
     functions: List[FunctionMetaData]
     section_to_entry_point: Dict[int, BBNode]
+    bb_path_to_operations_cache: Dict[Tuple[BBNode], List[Tuple[int, Operation]]]
 
     def __init__(self, bb_information_file):
         """parses bb_information_file and constructs BBGraph accordingly.
@@ -60,6 +64,7 @@ class BBGraph(object):
         self.graph = nx.MultiDiGraph()
         self.function_nodes = []
         self.section_to_entry_point = {}
+        self.bb_path_to_operations_cache = {}
 
         # parse bb_information_file
         if not os.path.exists(bb_information_file):
@@ -242,5 +247,18 @@ class BBGraph(object):
             result_dict[section_id] = path_combinations
         return result_dict
 
+    def convert_bb_path_to_operations(self, bb_path: List[BBNode]) -> List[Tuple[int, Operation]]:
+        """Converts a given list of BB Nodes which represent a path in the BB graph into a list of tuples containing
+        the id of the parent BB node and an Operation."""
+        bb_tuple = tuple(bb_path)
+        if bb_tuple in self.bb_path_to_operations_cache:
+            return self.bb_path_to_operations_cache[bb_tuple]
+        op_path: List[Tuple[int, Operation]] = []
+        for bb_node_id in bb_path:
+            bb_node = self.graph.nodes[bb_node_id]["data"]
+            for op in bb_node.operations:
+                op_path.append((bb_node_id, op))
+        self.bb_path_to_operations_cache[bb_tuple] = op_path
+        return op_path
 
 

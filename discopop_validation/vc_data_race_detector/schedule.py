@@ -13,6 +13,7 @@ class UpdateType(Enum):
 
 
 class ScheduleElement:
+    parent_basic_block_id: int = -1
     thread_id: int = -1
     lock_names: List[str] = []
     var_names: List[str] = []
@@ -21,11 +22,13 @@ class ScheduleElement:
     # inner List[int] represents affected thread_id´s, used for entry and exit of parallel regions
     # one ScheduleElement can contain multiple updates. example: x=x+y
 
-    def __init__(self, executing_thread_id: int):
+    def __init__(self, executing_thread_id: int, parent_basic_block_id: int = -1):
+        self.parent_basic_block_id = parent_basic_block_id
         self.thread_id = executing_thread_id
         self.lock_names = []
         self.var_names = []
         self.updates = []
+
 
     def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None):
         """Add update of type update_type to var_name to the list of updates of the current ScheduleElement
