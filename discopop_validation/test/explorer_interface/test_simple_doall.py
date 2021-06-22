@@ -7,7 +7,7 @@ from discopop.discopop_validation.interfaces.behavior_extraction import get_rele
     execute_bb_graph_extraction
 from discopop.discopop_validation.vc_data_race_detector.scheduler import create_schedules_for_sections
 
-from discopop_validation.vc_data_race_detector.data_race_detector import check_sections
+from discopop.discopop_validation.vc_data_race_detector.data_race_detector import check_sections
 
 
 class MyTestCase(unittest.TestCase):

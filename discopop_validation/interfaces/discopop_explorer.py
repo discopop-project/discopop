@@ -1,7 +1,7 @@
 from typing import Optional, List, Tuple
 
-from ...discopop_explorer import run
-from ...discopop_explorer import DetectionResult
+from ..discopop_explorer import run
+from ..discopop_explorer import DetectionResult
 
 
 def get_parallelization_suggestions(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
