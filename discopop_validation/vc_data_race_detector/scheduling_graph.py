@@ -57,9 +57,9 @@ class SchedulingGraph(object):
     def get_schedules(self) -> List[Schedule]:
         path_count = self.__count_paths(self.root_node_identifier)
         paths = self.__get_paths(self.root_node_identifier)
-        for path in paths:
-            print()
-            print([str(e) for e in path])
+        #for path in paths:
+         #   print()
+          #  print([str(e) for e in path])
         schedules: List[Schedule] = []
         for path in paths:
             schedules.append(self.__convert_path_to_schedule(path))

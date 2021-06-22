@@ -114,7 +114,6 @@ class BBGraph(object):
                     current_bb.end_pos = (int(line[1]), int(line[2]))
                 else:
                     raise ValueError("Unknown keyword: ", line[0])
-                print(line)
 
         # remove edges to bb's outside of relevant sections (automatically added by networkx)
         nodes_to_be_removed = [node for node in self.graph.nodes if "data" not in self.graph.nodes[node]]

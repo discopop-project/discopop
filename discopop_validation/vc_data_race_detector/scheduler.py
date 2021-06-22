@@ -26,19 +26,18 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
     if len(path_combination) == 1:
         # duplicate element to model schedules for "two threads execute same path"
         path_combination.append(path_combination[0])
-    print("PATH COMBINATION:", path_combination)
 
     # convert path combination to schedule element combination
     schedule_element_combination: List[List[ScheduleElement]] = []
     for thread_id, elem in enumerate(path_combination):
         schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
             bb_graph.convert_bb_path_to_operations(elem)))
-    print("SCHEDULE ELEMENT COMBINATION")
-    for outer in schedule_element_combination:
-        print("[")
-        for inner in outer:
-            print("\t", inner)
-        print("]")
+#    print("SCHEDULE ELEMENT COMBINATION")
+ #   for outer in schedule_element_combination:
+  #      print("[")
+   #     for inner in outer:
+    #        print("\t", inner)
+     #   print("]")
 
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
