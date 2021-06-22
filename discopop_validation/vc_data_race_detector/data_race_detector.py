@@ -62,6 +62,7 @@ def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement]]:
             state = goto_next_state(state, schedule_element)
         except ValueError:
             data_races.append((state, schedule_element))
+            break
     return data_races
 
 
