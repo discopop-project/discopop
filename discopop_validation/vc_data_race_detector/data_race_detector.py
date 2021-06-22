@@ -42,26 +42,43 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
                     # check not successful, data race detected
                     state: State = check_result[0]
                     schedule_element = check_result[1]
+                    previous_writes = check_result[2]
                     print()
                     print("##### DATA RACE IN SECTION: ", section_id, " #####")
-                    #print("STATE:")
-                    #print(str(state))
-                    #print("SCHEDULE ELEMENT:")
-                    print(str(schedule_element))
+                    for write in previous_writes:
+                        print("prev: ", str(write))
+                    print("===> " + str(schedule_element))
 
 
-def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement]]:
+def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
     """check the entire schedule.
     Return None, if no data race has been found.
-    Returns (problematic_state, problematic_schedule_element) if a data race has been identified.
+    Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
+    if a data race has been identified.
     TODO find proper output format (problematic statements)"""
     state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
     data_races: List[Tuple[State, ScheduleElement]] = []
-    for schedule_element in schedule.elements:
+    for idx, schedule_element in enumerate(schedule.elements):
         try:
             state = goto_next_state(state, schedule_element)
         except ValueError:
-            data_races.append((state, schedule_element))
+            # find last write accesses to var, which are performed by other threads
+            # search by traversing path in reverse
+            seen_thread_ids = [schedule_element.thread_id]
+            previous_writes = []
+            elements_reverse = schedule.elements[:]
+            elements_reverse.reverse()
+            for offset in range(idx):
+                previous_element = elements_reverse[offset+len(elements_reverse)-idx]
+                if previous_element.thread_id in seen_thread_ids:
+                    continue
+                # check updates for write to var
+                for update in previous_element.updates:
+                    if update[0] == schedule_element.updates[0][0] and update[1] is UpdateType.WRITE:
+                        # add previous_element.thread_id to seen_thread_ids
+                        seen_thread_ids.append(previous_element.thread_id)
+                        previous_writes.append(previous_element)
+            data_races.append((state, schedule_element, previous_writes))
             break
     return data_races
 
