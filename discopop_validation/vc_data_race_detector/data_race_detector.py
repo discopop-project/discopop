@@ -36,33 +36,33 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
     # execute VC Check
     for section_id in sections_to_schedules_dict:
         for schedule in sections_to_schedules_dict[section_id]:
-            check_result = check_schedule(schedule)
-            if check_result is not None:
-                # check not successful, data race detected
-                state: State = check_result[0]
-                schedule_element = check_result[1]
-                print()
-                print("##### DATA RACE IN SECTION: ", section_id, " #####")
-                #print("STATE:")
-                #print(str(state))
-                #print("SCHEDULE ELEMENT:")
-                print(str(schedule_element))
+            data_races = check_schedule(schedule)
+            if len(data_races) != 0:
+                for check_result in data_races:
+                    # check not successful, data race detected
+                    state: State = check_result[0]
+                    schedule_element = check_result[1]
+                    print()
+                    print("##### DATA RACE IN SECTION: ", section_id, " #####")
+                    #print("STATE:")
+                    #print(str(state))
+                    #print("SCHEDULE ELEMENT:")
+                    print(str(schedule_element))
 
 
-def check_schedule(schedule: Schedule) -> Optional[Tuple[State, ScheduleElement]]:
+def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement]]:
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element) if a data race has been identified.
     TODO find proper output format (problematic statements)"""
     state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
-    return_value: Optional[Tuple[State, ScheduleElement]] = None
+    data_races: List[Tuple[State, ScheduleElement]] = []
     for schedule_element in schedule.elements:
         try:
             state = goto_next_state(state, schedule_element)
         except ValueError:
-            return_value = (state, schedule_element)
-            break
-    return return_value
+            data_races.append((state, schedule_element))
+    return data_races
 
 
 def goto_next_state(state: State, schedule_element: ScheduleElement) -> State:
