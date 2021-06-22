@@ -79,7 +79,7 @@ def __check_state(state: State, schedule_element: ScheduleElement):
     Raises ValueError, if a data race has been identified."""
     read_variables = []
     written_variables = []
-    for update_var, update_type, _ in schedule_element.updates:
+    for update_var, update_type, _, _ in schedule_element.updates:
         if update_type is UpdateType.READ:
             read_variables.append(update_var)
         if update_type is UpdateType.WRITE:
@@ -97,7 +97,7 @@ def __check_state(state: State, schedule_element: ScheduleElement):
 
 def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int]]) -> State:
     """Performs single update as contained in ScheduleElement."""
-    update_var, update_type, affected_thread_ids = update
+    update_var, update_type, affected_thread_ids, operation = update
 
     if update_type is UpdateType.READ:
         # update variable read clock
