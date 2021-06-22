@@ -31,6 +31,24 @@ class State(object):
                "Var Write clocks: " + str(self.var_write_clocks)
 
 
+def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
+    """executes check_schedule for each Schedule of each section in the given dictionary."""
+    # execute VC Check
+    for section_id in sections_to_schedules_dict:
+        for schedule in sections_to_schedules_dict[section_id]:
+            check_result = check_schedule(schedule)
+            if check_result is not None:
+                # check not successful, data race detected
+                state: State = check_result[0]
+                schedule_element = check_result[1]
+                print()
+                print("##### DATA RACE IN SECTION: ", section_id, " #####")
+                print("STATE:")
+                print(str(state))
+                print("SCHEDULE ELEMENT:")
+                print(str(schedule_element))
+
+
 def check_schedule(schedule: Schedule) -> Optional[Tuple[State, ScheduleElement]]:
     """check the entire schedule.
     Return None, if no data race has been found.

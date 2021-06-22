@@ -21,22 +21,6 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
     print("SECTIONS TO SCHEDULES")
     print(sections_to_schedules_dict)
 
-    # todo remove, debug!
-    # execute VC Check
-    for section_id in sections_to_schedules_dict:
-        for schedule in sections_to_schedules_dict[section_id]:
-            check_result = check_schedule(schedule)
-            if check_result is not None:
-                # check not successful, data race detected
-                state: State = check_result[0]
-                schedule_element = check_result[1]
-                print()
-                print("##### DATA RACE IN SECTION: ", section_id, " #####")
-                print("STATE:")
-                print(str(state))
-                print("SCHEDULE ELEMENT:")
-                print(str(schedule_element))
-
 
 
 def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination: List[BBNode]) -> List[Schedule]:

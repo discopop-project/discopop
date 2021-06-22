@@ -7,6 +7,8 @@ from discopop.discopop_validation.interfaces.behavior_extraction import get_rele
     execute_bb_graph_extraction
 from discopop.discopop_validation.vc_data_race_detector.scheduler import create_schedules_for_sections
 
+from discopop_validation.vc_data_race_detector.data_race_detector import check_sections
+
 
 class MyTestCase(unittest.TestCase):
     def test_obtain_simple_suggestions(self):
@@ -40,3 +42,7 @@ class MyTestCase(unittest.TestCase):
         bb_graph = self.test_execute_bb_graph_extraction()
         path_combinations_dict = bb_graph.get_possible_path_combinations_for_sections()
         sections_to_schedules_dict = create_schedules_for_sections(bb_graph, path_combinations_dict)
+        return sections_to_schedules_dict
+
+    def test_data_race_detector(self):
+        check_sections(self.test_scheduler())
