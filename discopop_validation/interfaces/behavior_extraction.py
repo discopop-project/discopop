@@ -2,7 +2,10 @@ import os
 import shutil
 from pathlib import Path
 from typing import List, Tuple, Dict
-from ...discopop_explorer import DetectionResult
+try:
+    from discopop_explorer import DetectionResult
+except ModuleNotFoundError:
+    from ...discopop_explorer import DetectionResult
 from .BBGraph import BBGraph, BBNode, Operation
 
 

@@ -8,18 +8,14 @@ from ..vc_data_race_detector.data_race_detector import check_schedule, State
 
 def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]]) -> Dict[int, List[Schedule]]:
     """creates a mapping from sections to list of schedules to be checked based on the extracted behavior."""
-    print(sections_to_path_combinations_dict)
     sections_to_schedules_dict: Dict[int, List[Schedule]] = {}
     for section_id in sections_to_path_combinations_dict:
         for combination in sections_to_path_combinations_dict[section_id]:
-            print("combination: ", combination)
             if section_id in sections_to_schedules_dict:
                 sections_to_schedules_dict[section_id] += __create_schedules_from_path_combination(bb_graph, combination)
             else:
                 sections_to_schedules_dict[section_id] = __create_schedules_from_path_combination(bb_graph, combination)
-    print()
-    print("SECTIONS TO SCHEDULES")
-    print(sections_to_schedules_dict)
+    return sections_to_schedules_dict
 
 
 
