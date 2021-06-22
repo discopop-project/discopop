@@ -2,6 +2,8 @@ import pytest
 from typing import List, Tuple, Optional
 from enum import IntEnum, Enum
 
+from ..interfaces.BBGraph import Operation
+
 
 class UpdateType(Enum):
     READ = "R"
@@ -17,7 +19,7 @@ class ScheduleElement:
     thread_id: int = -1
     lock_names: List[str] = []
     var_names: List[str] = []
-    updates: List[Tuple[str, UpdateType, List[int]]] = []
+    updates: List[Tuple[str, UpdateType, List[int], Optional[Operation]]] = []
     # str represents variable identifier
     # inner List[int] represents affected thread_id´s, used for entry and exit of parallel regions
     # one ScheduleElement can contain multiple updates. example: x=x+y
@@ -30,21 +32,26 @@ class ScheduleElement:
         self.updates = []
 
     def __str__(self):
-        return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " ".join([" "+str(update_type.value)+"->"+var_name + ";" for (var_name, update_type, _) in self.updates])
+        return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " Operation:" + " ".join([" "+str(operation) for (var_name, update_type, _, operation) in self.updates])
+
+    #return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " ".join(
+     #   [" " + str(update_type.value) + "->" + var_name + ";" for (var_name, update_type, _, operation) in
+      #   self.updates])
 
 
-    def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None):
+    def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None, operation: Optional[Operation] = None):
         """Add update of type update_type to var_name to the list of updates of the current ScheduleElement
         raises ValueError, if updateType is ENTERPARALLEL or EXITPARALLEL and affected_thread_ids is not set.
         :param var_name: name of updated variable
         :param update_type: type of update
-        :param affected_thread_ids: Optional list of affected thread ids, used for entry and exit of parallel regions"""
+        :param affected_thread_ids: Optional list of affected thread ids, used for entry and exit of parallel regions
+        :param operation: equivalent operation in the BBGraph"""
         if update_type in [UpdateType.ENTERPARALLEL, UpdateType.EXITPARALLEL]:
             if affected_thread_ids is None:
                 raise ValueError("affected_thread_ids not set!")
-            self.updates.append((var_name, update_type, affected_thread_ids))
+            self.updates.append((var_name, update_type, affected_thread_ids, operation))
         else:
-            self.updates.append((var_name, update_type, []))
+            self.updates.append((var_name, update_type, [], operation))
 
         if update_type in [UpdateType.READ, UpdateType.WRITE]:
             if var_name not in self.var_names:

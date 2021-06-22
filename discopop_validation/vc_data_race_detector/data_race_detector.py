@@ -43,9 +43,9 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
                 schedule_element = check_result[1]
                 print()
                 print("##### DATA RACE IN SECTION: ", section_id, " #####")
-                print("STATE:")
-                print(str(state))
-                print("SCHEDULE ELEMENT:")
+                #print("STATE:")
+                #print(str(state))
+                #print("SCHEDULE ELEMENT:")
                 print(str(schedule_element))
 
 

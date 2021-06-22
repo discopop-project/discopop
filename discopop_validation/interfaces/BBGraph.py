@@ -22,6 +22,7 @@ class Operation:
         self.section_id = section_id
 
     def __str__(self):
+        # todo add file id
         return "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
 
 
