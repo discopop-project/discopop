@@ -1,0 +1,73 @@
+filepath: /home/raynard/discopop/work_tests/dac_test/test.c
+14
+20
+28
+32
+36
+Reduction at: 1:18
+Start line: 1:32
+End line: 1:34
+pragma: #pragma omp parallel for
+private: ['i']
+shared: []
+first private: ['len', 'a']
+reduction: ['+:sum']
+last private: []
+
+
+Do-all at: 1:2
+Start line: 1:14
+End line: 1:17
+iterations: 1000
+instructions: 0
+workload: 0
+pragma: "#pragma omp parallel for"
+private: ['i']
+shared: ['b', 'a']
+first private: ['len']
+reduction: []
+last private: []
+
+Do-all at: 1:23
+Start line: 1:36
+End line: 1:38
+iterations: 1000
+instructions: 0
+workload: 0
+pragma: "#pragma omp parallel for"
+private: ['i']
+shared: []
+first private: ['len', 'a']
+reduction: []
+last private: []
+
+
+Pipeline at: 1:7
+Coefficient: 1.0
+Start line: 1:20
+End line: 1:26
+Stages:
+	Node: 1:9
+	Start line: 1:23
+	End line: 1:23
+	pragma: "#pragma omp task"
+	first private: ['i', 'b']
+	private: []
+	shared: []
+	reduction: []
+	InDeps: []
+	OutDeps: []
+	InOutDeps: ['a']
+
+	Node: 1:10
+	Start line: 1:25
+	End line: 1:26
+	pragma: "#pragma omp task"
+	first private: ['i']
+	private: []
+	shared: ['b']
+	reduction: []
+	InDeps: ['a']
+	OutDeps: []
+	InOutDeps: []
+Time taken for pattern detection: 0.044504642486572266

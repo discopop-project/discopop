@@ -1,0 +1,2 @@
+ FileID : 1 Loop Line Number : 44 Reduction Line Number : 45 Variable Name : exp Operation Name : +
+ FileID : 1 Loop Line Number : 39 Reduction Line Number : 41 Variable Name : rolls Operation Name : +

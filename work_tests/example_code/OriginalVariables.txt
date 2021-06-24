@@ -1,0 +1,174 @@
+ARRAY, matrix.addr
+ARRAY, sub
+col
+det
+i
+j
+k
+matrix.addr
+n.addr
+retval
+row
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+col
+det
+i
+j
+k
+matrix.addr
+n.addr
+retval
+row
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+col
+count
+det
+exp
+i
+i1
+j
+k
+matrix.addr
+n.addr
+retval
+rolls
+row
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+col
+count
+det
+exp
+i
+i1
+j
+k
+matrix.addr
+n.addr
+retval
+rolls
+row
+t
+x.addr
+y.addr
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+array.addr
+col
+count
+det
+exp
+high.addr
+i
+i1
+j
+k
+low.addr
+matrix.addr
+n.addr
+pivot
+retval
+rolls
+row
+t
+x.addr
+y.addr
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+array.addr
+col
+count
+det
+exp
+high.addr
+i
+i1
+j
+k
+low.addr
+matrix.addr
+n.addr
+part
+pivot
+retval
+rolls
+row
+t
+x.addr
+y.addr
+ARRAY, matrix.addr
+ARRAY, sub
+__x.addr
+__y.addr
+array.addr
+col
+count
+det
+exp
+high.addr
+i
+i1
+j
+k
+low.addr
+matrix.addr
+n.addr
+part
+pivot
+retval
+rolls
+row
+t
+x.addr
+y.addr
+ARRAY, a
+ARRAY, arr
+ARRAY, matrix.addr
+ARRAY, sub
+__vla_expr0
+__x.addr
+__y.addr
+array.addr
+col
+count
+det
+exp
+high.addr
+i
+i1
+i18
+i35
+i47
+i60
+j
+k
+len
+length
+low.addr
+matrix.addr
+n
+n.addr
+part
+pivot
+r
+random
+retval
+rolls
+row
+saved_stack
+t
+vla
+x.addr
+y.addr

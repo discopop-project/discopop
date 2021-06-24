@@ -1,0 +1,110 @@
+START 1:103
+1:92 BGN loop 12
+1:97 END loop
+1:105 BGN loop 5
+1:111 END loop
+1:18 BGN loop 3
+1:25 END loop
+1:106 BGN loop 5
+1:110 END loop
+1:154 BGN loop 25
+1:158 END loop
+1:39 BGN loop 6
+1:44 END loop
+1:16 BGN loop 2
+1:27 END loop
+1:44 BGN loop 6
+1:48 END loop
+1:125 BGN loop 130
+1:131 END loop
+1:65 BGN loop 9
+1:73 END loop
+1:135 BGN loop 130
+1:139 END loop
+1:146 BGN loop 25
+1:150 END loop
+1:91 BGN loop 24
+1:98 END loop
+1:152 BGN func 1:89
+1:83 BGN func 1:77
+1:27 BGN func 1:7
+1:84 BGN func 1:77
+1:73 BGN func 1:53
+1:117 BGN func 1:35
+1:70 BGN func 1:53
+1:81 BGN func 1:60
+1:111 BGN func 1:7
+1:133 BGN func 1:77
+1:31 END func
+1:48 END func
+1:58 END func
+1:74 END func
+1:86 END func
+1:98 END func
+1:155 NOM  RAW 1:154|i60
+1:37 NOM  INIT *|rolls
+1:46 NOM  RAW 1:46|matrix.addr WAR 1:46|matrix.addr INIT *|matrix.addr
+1:93 NOM  RAW 1:22|array.addr RAW 1:92|j
+1:107 NOM  WAR 1:108|r INIT *|r
+1:147 NOM  RAW 1:146|i47
+1:38 NOM  INIT *|count
+1:135 NOM  RAW 1:122|length RAW 1:135|i35 WAR 1:135|i35 INIT *|i35
+1:133 NOM  RAW 1:122|length
+1:36 NOM  INIT *|exp
+1:126 NOM  WAR 1:127|random INIT *|random
+1:48 NOM  RAW 1:41|rolls RAW 1:45|exp
+1:45 NOM  RAW 1:36|exp RAW 1:44|i1 RAW 1:45|exp RAW 1:46|matrix.addr WAR 1:45|exp
+1:44 NOM  RAW 1:44|i1 WAR 1:44|i1 INIT *|i1
+1:146 NOM  RAW 1:144|len RAW 1:146|i47 WAR 1:146|i47 INIT *|i47
+1:144 NOM  INIT *|len
+1:136 NOM  RAW 1:56|vla RAW 1:57|vla RAW 1:135|i35
+1:39 NOM  RAW 1:39|i WAR 1:39|i INIT *|i
+1:84 NOM  RAW 1:22|array.addr RAW 1:22|high.addr RAW 1:81|part
+1:56 NOM  RAW 1:56|y.addr RAW 1:57|y.addr RAW 1:127|y.addr WAR 1:55|x.addr WAR 1:56|x.addr
+1:103 NOM  INIT *|n
+1:108 NOM  RAW 1:105|i RAW 1:106|j RAW 1:107|r INIT *|a
+1:11 NOM  RAW 1:22|matrix.addr WAR 1:31|retval INIT *|retval
+1:17 NOM  WAW 1:23|col INIT *|col
+1:158 NOM  RAW 1:123|saved_stack
+1:14 NOM  RAW 1:14|i WAR 1:14|i INIT *|i
+1:111 NOM  RAW 1:103|n INIT *|det
+1:63 NOM  WAR 1:11|i WAR 1:74|i INIT *|i
+1:16 NOM  RAW 1:16|j WAR 1:16|j INIT *|j
+1:74 NOM  RAW 1:63|i RAW 1:69|i
+1:27 NOM  RAW 1:8|det RAW 1:14|i RAW 1:22|matrix.addr RAW 1:27|det RAW 1:108|matrix.addr WAR 1:27|det
+1:62 NOM  RAW 1:56|array.addr RAW 1:57|array.addr RAW 1:127|array.addr WAR 1:67|pivot WAR 1:84|pivot INIT *|pivot
+1:65 NOM  RAW 1:65|j WAR 1:11|j WAR 1:65|j INIT *|j
+1:18 NOM  RAW 1:18|k WAR 1:18|k INIT *|k
+1:15 NOM  WAW 1:25|row INIT *|row
+1:112 NOM  RAW 1:111|det
+1:91 NOM  RAW 1:22|n.addr RAW 1:91|i WAR 1:84|i WAR 1:91|i
+1:122 NOM  INIT *|length
+1:25 NOM  RAW 1:15|row RAW 1:25|row WAR 1:25|row
+1:117 NOM  INIT *|exp
+1:70 NOM  RAW 1:65|j RAW 1:69|i
+1:23 NOM  RAW 1:17|col RAW 1:23|col WAR 1:23|col
+1:92 NOM  RAW 1:22|n.addr RAW 1:91|i RAW 1:92|j WAR 1:84|j WAR 1:92|j
+1:41 NOM  RAW 1:37|rolls RAW 1:38|count RAW 1:39|i RAW 1:41|rolls WAR 1:41|rolls
+1:125 NOM  RAW 1:122|length RAW 1:125|i18 WAR 1:125|i18 INIT *|i18
+1:105 NOM  RAW 1:103|n RAW 1:105|i WAR 1:105|i INIT *|i
+1:8 NOM  WAR 1:30|det WAW 1:8|det INIT *|det
+1:152 NOM  RAW 1:144|len
+1:55 NOM  RAW 1:56|x.addr RAW 1:57|x.addr RAW 1:127|x.addr WAR 1:57|t INIT *|t
+1:19 NOM  RAW 1:14|i RAW 1:18|k
+1:106 NOM  RAW 1:103|n RAW 1:106|j WAR 1:106|j INIT *|j
+1:22 NOM  RAW 1:15|row RAW 1:16|j RAW 1:17|col RAW 1:18|k RAW 1:22|matrix.addr RAW 1:23|col RAW 1:25|row RAW 1:108|matrix.addr WAR 1:11|sub WAR 1:22|sub WAR 1:27|sub INIT *|sub
+1:69 NOM  RAW 1:63|i RAW 1:69|i WAR 1:69|i
+1:118 NOM  RAW 1:117|exp
+1:123 NOM  RAW 1:122|length INIT *|saved_stack INIT *|__vla_expr0
+1:30 NOM  RAW 1:27|det WAR 1:31|retval INIT *|retval
+1:127 NOM  RAW 1:125|i18 RAW 1:126|random WAR 1:14|vla WAR 1:16|vla WAR 1:18|vla WAR 1:22|vla WAR 1:27|vla WAR 1:30|vla WAR 1:31|vla WAR 1:39|vla WAR 1:41|vla WAR 1:44|vla WAR 1:48|vla WAW 1:23|vla WAW 1:25|vla WAW 1:46|vla INIT *|vla
+1:31 NOM  RAW 1:11|retval RAW 1:30|retval
+1:128 NOM  RAW 1:125|i18 RAW 1:127|vla
+1:81 NOM  RAW 1:22|array.addr RAW 1:22|high.addr RAW 1:22|low.addr WAR 1:14|part WAR 1:67|part WAR 1:84|part
+1:79 NOM  RAW 1:22|high.addr RAW 1:22|low.addr
+1:67 NOM  RAW 1:56|array.addr RAW 1:57|array.addr RAW 1:62|pivot RAW 1:65|j RAW 1:127|array.addr
+1:154 NOM  RAW 1:144|len RAW 1:154|i60 WAR 1:154|i60 INIT *|i60
+1:57 NOM  RAW 1:55|t WAR 1:56|y.addr WAW 1:56|y.addr
+1:83 NOM  RAW 1:22|array.addr RAW 1:22|low.addr RAW 1:81|part
+1:73 NOM  RAW 1:63|i RAW 1:69|i
+1:158 END program
