@@ -9,7 +9,7 @@ from typing import List
 
 from .PETGraphX import PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
-from .pattern_detectors.do_across_detector import run_detection as detect_do_across, DoAcrossInfo
+# from .pattern_detectors.do_across_detector import run_detection as detect_do_across, DoAcrossInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
 from .pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
@@ -21,7 +21,7 @@ from .pattern_detectors.PatternInfo import PatternInfo
 class DetectionResult(object):
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
-    do_across : List[DoAcrossInfo]
+    # do_across : List[DoAcrossInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
     task: List[PatternInfo]
@@ -72,7 +72,7 @@ class PatternDetectorX(object):
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
         res.do_all = detect_do_all(self.pet)
-        res.do_across = detect_do_across(self.pet)
+        # res.do_across = detect_do_across(self.pet)
         res.pipeline = detect_pipeline(self.pet)
         res.geometric_decomposition = detect_gd(self.pet)
 
