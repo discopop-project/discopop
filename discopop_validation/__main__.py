@@ -2,7 +2,7 @@
 
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--profiling <value>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -13,10 +13,12 @@ Options:
     --ll-file=<llfile>          Path to .ll file to be analyzed
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --plugins=<plugs>           Plugins to execute
+    --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
     -h --help                   Show this screen
 """
 import os
 import sys
+import cProfile
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use
@@ -36,6 +38,7 @@ docopt_schema = Schema({
     '--ll-file': Use(str),
     '--fmap': Use(str),
     '--plugins': Use(str),
+    '--profiling': Use(str),
 })
 
 
@@ -55,6 +58,10 @@ def main():
         arguments = docopt_schema.validate(arguments)
     except SchemaError as e:
         exit(e)
+    if arguments["--profiling"] == "true":
+        profile = cProfile.Profile()
+        profile.enable()
+
     path = arguments["--path"]
     cu_xml = get_path(path, arguments['--cu-xml'])
     dep_file = get_path(path, arguments['--dep-file'])
@@ -73,6 +80,10 @@ def main():
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
                                                                bb_graph.get_possible_path_combinations_for_sections())
     check_sections(sections_to_schedules_dict)
+
+    if arguments["--profiling"] == "true":
+        profile.disable()
+        profile.print_stats()
 
 
 if __name__ == "__main__":
