@@ -23,8 +23,8 @@ class DoAcrossInfo(object):
 
     def __str__(self):
         return f'Doacross loop at: {self.lnode.id}\n'\
-               f'Start line: {self.lnode.start_line}\n'\
-               f'End line: {self.lnode.end_line}\n'\
+               f'Start line: {self.lnode.file_id}:{self.lnode.start_line}\n'\
+               f'End line: {self.lnode.file_id}:{self.lnode.end_line}\n'\
                f'pragma: "pragma omp parallel for ordered"\n'\
                f'Ordered directive pragma: "pragma omp ordered"\n'\
                f'Ordered directive line: {self.node.start_line} - {self.node.end_line}\n' \
