@@ -103,6 +103,7 @@ class CUNode:
     node_calls: List[Dict[str, str]] = []
     reduction: bool = False
     do_all: bool = False
+    do_across: bool = False
     geometric_decomposition: bool = False
     pipeline: float = -1
     local_vars: List[Variable] = []

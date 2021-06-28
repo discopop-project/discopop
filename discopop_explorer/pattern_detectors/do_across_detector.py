@@ -1,8 +1,6 @@
 # Detect all of the data races
 from ..PETGraphX import *
 from ..utils import classify_loop_variables
-# from parser import *
-# import os.path
 
 class DoAcrossInfo(object):
     """Class, that contains do-all detection result
@@ -36,29 +34,12 @@ class DoAcrossInfo(object):
                f'reduction: {[v.name for v in self.reduction]}\n' \
                f'last private: {[v.name for v in self.last_private]}'
 
-
-
-def run_detection(pet:PETGraphX) -> List[DoAcrossInfo]:
-    result = []
-
-    for node in pet.all_nodes(NodeType.LOOP):
-        subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)]
-        for i in range(0, len(subnodes)):
-            children_cache: Dict[CUNode, List[CUNode]] = dict()
-            dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
-            for j in range(i, len(subnodes)):
-                dep_list = get_dep(pet, subnodes[i], subnodes[j], node,
-                                      children_cache=children_cache, dep_cache=dependency_cache)
-                if not (len(dep_list) == 0):
-                    result.append(DoAcrossInfo(pet, node, dep_list[0]))
-                    # result[node] = dep_list[0]
-
-    return result
-
 def get_dep(pet: PETGraphX, source: CUNode, target: CUNode, root_loop: CUNode,
             children_cache: Dict[CUNode, List[CUNode]] = None,
             dep_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = None):
     dep_list = []
+    raw = False
+
     if children_cache is not None:
         if target in children_cache:
             children = children_cache[target]
@@ -80,5 +61,40 @@ def get_dep(pet: PETGraphX, source: CUNode, target: CUNode, root_loop: CUNode,
     for dep in dependencies:
         if dep in children:
             dep_list.append(dep)
+            raw = True
 
-    return dep_list
+    return dep_list, raw
+
+def __detect_do_across(pet:PETGraphX, root:CUNode):
+    """Calculate do-across value for node
+       :param pet: PET graph
+       :param root: root node
+       """
+
+    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)]
+    for i in range (0, len(subnodes)):
+        children_cache: Dict[CUNode, List[CUNode]] = dict()
+        dependency_cache: Dict[Tuple[CUNode, CUNode], set[CUNode]] = dict()
+        for j in range(i, len(subnodes)):
+            dep_list, raw = get_dep(pet, subnodes[i], subnodes[j], root, children_cache=children_cache, dep_cache=dependency_cache)
+            if raw:
+                return dep_list, raw
+
+    return None, False
+
+def run_detection(pet:PETGraphX) -> List[DoAcrossInfo]:
+    """Search for do-across loop pattern
+       :param pet: PET graph
+       :return: List of detected pattern info
+       """
+
+    result = []
+    for node in pet.all_nodes(NodeType.LOOP):
+        dep_list, raw = __detect_do_across(pet, node)
+        if raw:
+            node.do_across = True
+            if not node.reduction and not node.do_all and node.loop_iterations > 0 and len(dep_list) > 0:
+                for dep in dep_list:
+                    result.append(DoAcrossInfo(pet, node, dep))
+
+    return result
