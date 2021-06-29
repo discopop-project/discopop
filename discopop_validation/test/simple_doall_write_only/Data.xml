@@ -61,20 +61,21 @@
 	<Node id="1:4" type="0" name="" startsAtLine = "1:8" endsAtLine = "1:9">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>0</readDataSize>
+		<readDataSize>32</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="2">1:8,1:9</instructionLines>
-		<readPhaseLines count="0"></readPhaseLines>
+		<readPhaseLines count="1">1:8</readPhaseLines>
 		<writePhaseLines count="1">1:8</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:5</CU>
 		</successors>
 		<localVariables>
-			<local type="i32*" defLine="1:8">z</local>
 		</localVariables>
 		<globalVariables>
+			<global type="i32*" defLine="1:7">i</global>
+			<global type="i32*" defLine="1:5">x</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
