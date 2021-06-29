@@ -5,7 +5,8 @@ int main(){
     int x = 0;
     int y = 0;
     for(int i=0; i < 10; i++){
-        int z = 0;
+        int z = arr[i];
+        z = z * 2;
     }
 
     if(x > 3){
