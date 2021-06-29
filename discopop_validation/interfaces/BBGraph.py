@@ -163,6 +163,7 @@ class BBGraph(object):
                 if len(self.graph.nodes[node]["data"].operations) == 0 and self.graph.out_degree(node) == 1 and \
                         self.graph.in_degree(node) != 0:
                     # redirect incoming edges
+                    edges_to_be_removed = []
                     for successor_edge in self.graph.out_edges(node):
                         successor = successor_edge[1]
                         # check if relevant sections are equal
@@ -172,15 +173,14 @@ class BBGraph(object):
                         # check if successor has operation
                         if len(self.graph.nodes[successor]["data"].operations) != 0:
                             continue
-                        edges_to_be_removed = []
                         for ie in self.graph.in_edges(node):
                             edges_to_be_removed.append(ie)
                             predecessor = ie[0]
                             if not self.graph.has_edge(predecessor, successor):  # prevent duplicating edges
                                 self.graph.add_edge(predecessor, successor)
                             modification_found = True
-                        for e in edges_to_be_removed:
-                            self.graph.remove_edge(e[0], e[1])
+                    for e in edges_to_be_removed:
+                        self.graph.remove_edge(e[0], e[1])
                     if modification_found:
                         self.graph.remove_node(node)
                     break
@@ -199,6 +199,8 @@ class BBGraph(object):
         path_dict: Dict[int, List[List[BBNode]]] = {}
 
         def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode) -> List[List[BBNode]]:
+            if root_bb_node.id not in self.graph.nodes:
+                return []
             children_paths: List[List[BBNode]] = []
             for out_edge in self.graph.out_edges(root_bb_node.id):
                 # todo disable looping by checking for entry point
