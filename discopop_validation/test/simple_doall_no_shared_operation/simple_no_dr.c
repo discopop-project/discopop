@@ -6,7 +6,6 @@ int main(){
     int y = 0;
     for(int i=0; i < 10; i++){
         int z = 0;
-        z = z + 1;
     }
 
     if(x > 3){
