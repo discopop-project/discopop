@@ -32,12 +32,6 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
     for thread_id, elem in enumerate(path_combination):
         schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
             bb_graph.convert_bb_path_to_operations(elem)))
-#    print("SCHEDULE ELEMENT COMBINATION")
- #   for outer in schedule_element_combination:
-  #      print("[")
-   #     for inner in outer:
-    #        print("\t", inner)
-     #   print("]")
 
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)

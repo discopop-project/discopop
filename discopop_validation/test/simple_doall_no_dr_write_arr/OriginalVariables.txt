@@ -33,3 +33,31 @@ retval
 x
 y
 z
+ARRAY, arr
+i
+retval
+x
+y
+z
+ARRAY, arr
+i
+retval
+x
+y
+z
+ARRAY, arr
+i
+retval
+x
+y
+z
+i
+retval
+x
+y
+z
+ARRAY, arr
+i
+retval
+x
+y

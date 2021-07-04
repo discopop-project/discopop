@@ -14,6 +14,9 @@ class VectorClock(object):
             self.clocks += [0]
         self.length = thread_count
 
+    def __str__(self):
+        return "(" + " ".join([str(c) for c in self.clocks]) + ")"
+
 
 def get_updated_vc(vc_1: VectorClock, vc_2: VectorClock) -> VectorClock:
     """calculate and return the updated vector clock on the basis of vc_1 and vc_2.

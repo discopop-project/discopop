@@ -146,7 +146,8 @@ class TestDataRaceDetector(unittest.TestCase):
         schedule.add_element(schedule_element_6)
         schedule.add_element(schedule_element_7)
         schedule.add_element(schedule_element_8)
-        self.assertIsNone(check_schedule(schedule))
+        self.assertEqual(len(check_schedule(schedule)), 0)
+        # self.assertIsNone(check_schedule(schedule))
 
     def test_check_schedule_data_race(self):
         schedule = Schedule()
@@ -162,9 +163,9 @@ class TestDataRaceDetector(unittest.TestCase):
         schedule.add_element(schedule_element_1)
         schedule.add_element(schedule_element_2)
         schedule.add_element(schedule_element_3)
-        ret_val = check_schedule(schedule)
-        self.assertIsNotNone(ret_val)
-        dr_state, dr_schedule_element = ret_val
+        data_races = check_schedule(schedule)
+        self.assertNotEqual(0, len(data_races))
+        dr_state, dr_schedule_element = data_races[0]
         self.assertTrue(dr_state.thread_clocks[0].clocks == [2, 0, 0])
         self.assertTrue(dr_state.thread_clocks[1].clocks == [1, 1, 0])
         self.assertTrue(dr_state.thread_clocks[2].clocks == [1, 0, 1])
