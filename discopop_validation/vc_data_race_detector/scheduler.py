@@ -12,15 +12,16 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
     for section_id in sections_to_path_combinations_dict:
         for combination in sections_to_path_combinations_dict[section_id]:
             if section_id in sections_to_schedules_dict:
-                sections_to_schedules_dict[section_id] += __create_schedules_from_path_combination(bb_graph, combination)
+                sections_to_schedules_dict[section_id] += __create_schedules_from_path_combination(bb_graph, section_id, combination)
             else:
-                sections_to_schedules_dict[section_id] = __create_schedules_from_path_combination(bb_graph, combination)
+                sections_to_schedules_dict[section_id] = __create_schedules_from_path_combination(bb_graph, section_id, combination)
     return sections_to_schedules_dict
 
 
 
-def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination: List[List[BBNode]]) -> List[Schedule]:
+def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int, path_combination: List[List[BBNode]]) -> List[Schedule]:
     """creates a list of Schedules based on the given combination of paths"""
+
     if len(path_combination) == 0:
         return []
     if len(path_combination) == 1:
@@ -31,7 +32,7 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
     schedule_element_combination: List[List[ScheduleElement]] = []
     for thread_id, elem in enumerate(path_combination):
         schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
-            bb_graph.convert_bb_path_to_operations(elem)))
+            bb_graph.convert_bb_path_to_operations(section_id, elem)))
 
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
