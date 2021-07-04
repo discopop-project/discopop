@@ -1,0 +1,13 @@
+START 1:4
+1:7 BGN loop 10
+1:16 END loop
+1:6 NOM  INIT *|y
+1:10 NOM  WAW 1:10|z INIT *|z
+1:5 NOM  INIT *|x
+1:11 NOM  RAW 1:5|x
+1:16 NOM  RAW 1:5|x
+1:20 NOM  RAW 1:5|x RAW 1:6|y WAR 1:20|y
+1:7 NOM  RAW 1:7|a WAR 1:7|a INIT *|a
+1:8 NOM  RAW 1:7|a WAR 1:9|i_0 WAR 1:9|i_1 WAR 1:9|i_2 WAR 1:9|i_3 INIT *|i_0 INIT *|i_1 INIT *|i_2 INIT *|i_3
+1:9 NOM  RAW 1:7|a RAW 1:8|i_0 RAW 1:8|i_1 RAW 1:8|i_2 RAW 1:8|i_3 INIT *|arr
+1:23 END program

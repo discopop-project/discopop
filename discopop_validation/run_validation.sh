@@ -40,5 +40,10 @@ echo "#########################################"
 echo ""
 python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_read_write --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
 
-echo "===> shouldn't x be shared?"
-echo "===> Possible solution: if private is correct: check if definition is inside loop relevant section (~each thread will have local copy)"
+echo ""
+echo "#########################################"
+echo "#### SIMPLE_DOALL DEEP ARRAY ####"
+echo "#########################################"
+echo ""
+python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+
