@@ -324,7 +324,6 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
             }
         }
     }
-
     // todo include function calls
     return resultList;
 }
@@ -518,7 +517,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         if(&BB == x){
             outputFile << "functionEntryBB:" << graphNode.bbIndex << "\n";
         }
-
     }
 
     outputFile.close();
