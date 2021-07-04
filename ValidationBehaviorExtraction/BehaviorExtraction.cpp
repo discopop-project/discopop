@@ -109,8 +109,14 @@ namespace
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB);
+        string determineVarName(Instruction *const I);
+        Type *pointsToStruct(PointerType *PTy);
+        void processStructTypes(string const &fullStructName, MDNode *structNode);
+        string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+        void initializeStructs(BasicBlock &BB);
         unsigned int nextFreeBBId;
         unsigned int getNextFreeBBId();
+        map<string, MDNode *> Structs;
 
     }; // end of struct BehaviorExtraction
 
@@ -161,127 +167,268 @@ string BehaviorExtraction::getParentFileNameFromFunction(Function &F){
 }
 
 
+void BehaviorExtraction::processStructTypes(string const &fullStructName, MDNode *structNode)
+{
+    assert(structNode && "structNode cannot be NULL");
+    DIType *strDes = cast<DIType>(structNode);
+    // DIType strDes(structNode);
+    assert(strDes->getTag() == dwarf::DW_TAG_structure_type);
+    // sometimes it's impossible to get the list of struct members (e.g badref)
+    if (structNode->getNumOperands() <= 10 || structNode->getOperand(10) == NULL)
+    {
+        errs() << "cannot process member list of this struct: \n";
+        structNode->dump();
+        return;
+    }
+    Structs[fullStructName] = structNode;
+
+    MDNode *memberListNodes = cast<MDNode>(structNode->getOperand(10));
+    for (unsigned i = 0; i < memberListNodes->getNumOperands(); ++i)
+    {
+        assert(memberListNodes->getOperand(i));
+        MDNode *member = cast<MDNode>(memberListNodes->getOperand(i));
+        DINode *memberDes = cast<DINode>(member);
+        // DIDescriptor memberDes(member);
+        if (memberDes->getTag() == dwarf::DW_TAG_member)
+        {
+            assert(member->getOperand(9));
+            MDNode *memberType = cast<MDNode>(member->getOperand(9));
+            DIType *memberTypeDes = cast<DIType>(memberType);
+            // DIType memberTypeDes(memberType);
+            if (memberTypeDes->getTag() == dwarf::DW_TAG_structure_type)
+            {
+                string fullName = "";
+                // try to get namespace
+                if (memberType->getNumOperands() > 2 && structNode->getOperand(2) != NULL)
+                {
+                    MDNode *namespaceNode = cast<MDNode>(structNode->getOperand(2));
+                    DINamespace *dins = cast<DINamespace>(namespaceNode);
+                    // DINameSpace dins(namespaceNode);
+                    fullName = "struct." + string(dins->getName().data()) + "::";
+                }
+                //fullName += string(memberType->getOperand(3)->getName().data());
+                fullName += (dyn_cast<MDString>(memberType->getOperand(3)))->getString();
+
+                if (Structs.find(fullName) == Structs.end())
+                    processStructTypes(fullName, memberType);
+            }
+        }
+    }
+}
+
+
+Type *BehaviorExtraction::pointsToStruct(PointerType *PTy)
+{
+    assert(PTy);
+    Type *structType = PTy;
+    if (PTy->getTypeID() == Type::PointerTyID)
+    {
+        while(structType->getTypeID() == Type::PointerTyID)
+        {
+            structType = cast<PointerType>(structType)->getElementType();
+        }
+    }
+    return structType->getTypeID() == Type::StructTyID ? structType : NULL;
+}
+
+
+string BehaviorExtraction::determineVarName(Instruction *const I)
+{
+    assert(I && "Instruction cannot be NULL \n");
+    int index = isa<StoreInst>(I) ? 1 : 0;
+    Value *operand = I->getOperand(index);
+
+    IRBuilder<> builder(I);
+
+    if (operand == NULL)
+    {
+        return "##UNKNOWN##";
+    }
+
+    if (operand->hasName())
+    {   
+        if (isa<GetElementPtrInst>(*operand))
+        {
+            GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
+            Value *ptrOperand = gep->getPointerOperand();
+            PointerType *PTy = cast<PointerType>(ptrOperand->getType());
+
+            // we've found a struct/class
+            Type *structType = pointsToStruct(PTy);
+            if (structType && gep->getNumOperands() > 2)
+            {
+                Value *constValue = gep->getOperand(2);
+                if (constValue && isa<ConstantInt>(*constValue))
+                {
+                    ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
+                    uint64_t memberIdx = *(idxPtr->getValue().getRawData());
+
+                    StructType *STy = cast<StructType>(structType);
+                    if(!STy ->isLiteral()){
+                        string strName(structType->getStructName().data());
+                        map<string, MDNode *>::iterator it = Structs.find(strName);
+                        if (it != Structs.end())
+                        {
+                            string ret = findStructMemberName(it->second, memberIdx, builder);
+                            return ret;
+                        }
+                    }
+                }
+            }
+
+            // we've found an array
+            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
+            {
+                return determineVarName((Instruction *)ptrOperand);
+            }
+            return determineVarName((Instruction *)gep);
+        }
+
+        // we've found a variable
+        return string(operand->getName().data());
+        
+    }
+
+    if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
+    {
+        return determineVarName((Instruction *)(operand));
+    }
+    // if we cannot determine the name, then return Unknown
+    return "##UNKNOWN##";
+}
+
+
 list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
     list<sharedVarAccess> resultList;
 
     for(auto &inst : BB.getInstList()){
-        // option 1: single layer array access (getelementptr + ptrtoint + [__dp_read | __dp_write])
-        // check if inst is getelementptr
-        if(isa<GetElementPtrInst>(&inst)) {
-            GetElementPtrInst *gepinst = cast<GetElementPtrInst>(&inst);
-            // check if gepinst.next is ptrtoint
-            if (isa<PtrToIntInst>(gepinst->getNextNode())) {
-                PtrToIntInst *ptrinst = cast<PtrToIntInst>(gepinst->getNextNode());
-                // check if next instruction is call to __dp_write or __dp_read
-                if (ptrinst->getNextNode()) {
-                    if (isa<CallInst>(ptrinst->getNextNode())) {
-                        CallInst *ci = cast<CallInst>(ptrinst->getNextNode());
-                        if (ci->getCalledFunction()->getName().equals("__dp_write")) {
-                            // get line number of call from next instruction
-                            // next instruction is call to __dp_write
-                            if (gepinst->getPointerOperand()->hasName()) {
-                                // dp write to array with known name
-                                sharedVarAccess access;
-                                access.name = gepinst->getPointerOperand()->getName();
-                                access.mode = "w";
-                                access.codeLocation = getClosestCodeLocation(ci);
-                                access.parentInstruction = &inst;
-                                resultList.push_back(access);
-                            } else {
-                                // dp write to array with unknown name
-                                sharedVarAccess access;
-                                access.name = "##UNKNOWN##";
-                                access.mode = "w";
-                                access.codeLocation = getClosestCodeLocation(ci);
-                                access.parentInstruction = &inst;
-                                resultList.push_back(access);
-                            }
-
-                        } else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
-                            // next instruction is call to __dp_read
-                            if(gepinst->getPointerOperand()->hasName()){
-                                // dp read from array with known name
-                                sharedVarAccess access;
-                                access.name = gepinst->getPointerOperand()->getName();
-                                access.mode = "r";
-                                access.codeLocation = getClosestCodeLocation(ci);
-                                access.parentInstruction = &inst;
-                                resultList.push_back(access);
-                            } else{
-                                // dp read from array with unknown name
-                                sharedVarAccess access;
-                                access.name = "##UNKNOWN##";
-                                access.mode = "r";
-                                access.codeLocation = getClosestCodeLocation(ci);
-                                access.parentInstruction = &inst;
-                                resultList.push_back(access);
-                            }
-                        }
-                    }
-                }
+        if(isa<CallInst>(inst)){
+            CallInst *ci = cast<CallInst>(&inst);
+            if (ci->getCalledFunction()->getName().equals("__dp_write")) {
+                // next instruction is a store
+                sharedVarAccess access;
+                access.name = determineVarName(ci->getNextNode());
+                access.mode = "w";
+                access.codeLocation = getClosestCodeLocation(ci);
+                access.parentInstruction = &inst;
+                resultList.push_back(access);
+            }
+            else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
+                // next instruction is a load
+                sharedVarAccess access;
+                access.name = determineVarName(ci->getNextNode());
+                access.mode = "w";
+                access.codeLocation = getClosestCodeLocation(ci);
+                access.parentInstruction = &inst;
+                resultList.push_back(access);
             }
         }
-
-        else
-
-            // option 2: direct variable access (ptrtoint + [__dp_read | __dp_write])
-            // check if inst is ptrtoint
-        if(isa<PtrToIntInst>(&inst)){
-            PtrToIntInst* ptrinst = cast<PtrToIntInst>(&inst);
-            // check if next instruction is call to __dp_write or __dp_read
-            if(inst.getNextNode()){
-                if(isa<CallInst>(inst.getNextNode())){
-                    CallInst* ci = cast<CallInst>(inst.getNextNode());
-                    if(ci->getCalledFunction()->getName().equals("__dp_write")){
-                        // next instruction is call to __dp_write
-                        if(ptrinst->getPointerOperand()->hasName()){
-                            // dp write to var with known name
-                            sharedVarAccess access;
-                            access.name = ptrinst->getPointerOperand()->getName();
-                            access.mode = "w";
-                            access.codeLocation = getClosestCodeLocation(ci);
-                            access.parentInstruction = &inst;
-                            resultList.push_back(access);
-                        }
-                        else{
-                            // dp write to var with unknown name
-                            sharedVarAccess access;
-                            access.name = "##UNKNOWN##";
-                            access.mode = "w";
-                            access.codeLocation = getClosestCodeLocation(ci);
-                            access.parentInstruction = &inst;
-                            resultList.push_back(access);
-                        }
-
-                    }
-                    else if (ci->getCalledFunction()->getName().equals("__dp_read")){
-                        // next instruction is call to __dp_read
-                        if(ptrinst->getPointerOperand()->hasName()){
-                            // dp read from var with known name
-                            sharedVarAccess access;
-                            access.name = ptrinst->getPointerOperand()->getName();
-                            access.mode = "r";
-                            access.codeLocation = getClosestCodeLocation(ci);
-                            access.parentInstruction = &inst;
-                            resultList.push_back(access);
-                        }
-                        else{
-                            // dp read from var with unknown name
-                            sharedVarAccess access;
-                            access.name = "##UNKNOWN##";
-                            access.mode = "r";
-                            access.codeLocation = getClosestCodeLocation(ci);
-                            access.parentInstruction = &inst;
-                            resultList.push_back(access);
-                        }
-                    }
-                }
-            }
-        }
-
-        // todo include function calls
     }
+
+    // todo include function calls
     return resultList;
+}
+
+string BehaviorExtraction::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder)
+{
+    assert(structNode);
+    assert(structNode->getOperand(10));
+    MDNode *memberListNodes = cast<MDNode>(structNode->getOperand(10));
+    if (idx < memberListNodes->getNumOperands())
+    {
+        assert(memberListNodes->getOperand(idx));
+        MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
+        //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
+        if (member->getOperand(3))
+            return dyn_cast<MDString>(member->getOperand(3))->getString();
+    }
+    return "##UNKNOWN##";
+}
+
+
+void BehaviorExtraction::initializeStructs(BasicBlock &BB){
+    for(BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI){
+        if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
+        {
+            assert(DI->getOperand(0));
+            //MDNode* node = cast<MDNode>(DI->getOperand(0));
+            // llvm.dbg.declare changes from LLVM 3.3 to 3.6.1:
+            // LLVM 3.6.1: call @llvm.dbg.declare(metadata %struct.x* %1, metadata !1, metadata !2)
+            // LLVM 3.3:   call @llvm.dbg.declare(metadata !{%struct.x* %1}, metadata !1, metadata !2)
+            // diff: operand 0 changes from MDNode* to Value*
+            if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0)))
+            {
+                Type *type = alloc->getAllocatedType();
+                Type *structType = type;
+                unsigned depth = 0;
+                if (type->getTypeID() == Type::PointerTyID)
+                {
+                    while(structType->getTypeID() == Type::PointerTyID)
+                    {
+                        structType = cast<PointerType>(structType)->getElementType();
+                        ++depth;
+                    }
+                }
+                if (structType->getTypeID() == Type::StructTyID)
+                {
+                    assert(DI->getOperand(1));
+                    // LLVM 3.6.1:
+                    // DbgDeclareInst *DI->getOperand(1) ==> MDNode* getVariable()
+                    //                *DI->getOperand(2) ==> MDNode* getExpression()
+                    // Methods Metadata* getRawVariable() and Metadata* getRawExpression() are listed on
+                    // LLVM online document, but do not exist in source code of 3.6.1.
+                    MDNode *varDesNode = DI->getVariable();
+                    assert(varDesNode->getOperand(5));
+                    MDNode *typeDesNode = cast<MDNode>(varDesNode->getOperand(5));
+                    MDNode *structNode = typeDesNode;
+                    if (type->getTypeID() == Type::PointerTyID)
+                    {
+                        MDNode *ptr = typeDesNode;
+                        for (unsigned i = 0; i < depth; ++i)
+                        {
+                            assert(ptr->getOperand(9));
+                            ptr = cast<MDNode>(ptr->getOperand(9));
+                        }
+                        structNode = ptr;
+                    }
+                    DINode *strDes = cast<DINode>(structNode);
+                    // DIDescriptor strDes(structNode);
+                    // handle the case when we have pointer to struct (or pointer to pointer to struct ...)
+                    if (strDes->getTag() == dwarf::DW_TAG_pointer_type)
+                    {
+                        DINode *ptrDes = strDes;
+                        // DIDescriptor* ptrDes = &strDes;
+                        do
+                        {
+                            if (structNode->getNumOperands() < 10)
+                                break;
+                            assert(structNode->getOperand(9));
+                            structNode = cast<MDNode>(structNode->getOperand(9));
+                            ptrDes = cast<DINode>(structNode);
+                            // ptrDes = new DIDescriptor(structNode);
+                        }
+                        while (ptrDes->getTag() != dwarf::DW_TAG_structure_type);
+                    }
+
+                    if (strDes->getTag() == dwarf::DW_TAG_typedef)
+                    {
+                        assert(strDes->getOperand(9));
+                        structNode = cast<MDNode>(strDes->getOperand(9));
+                    }
+                    strDes = cast<DINode>(structNode);
+                    // strDes = DIDescriptor(structNode);
+                    if (strDes->getTag() == dwarf::DW_TAG_structure_type)
+                    {
+                        string strName(structType->getStructName().data());
+                        if (Structs.find(strName) == Structs.end())
+                        {
+                            processStructTypes(strName, structNode);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -295,6 +442,11 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         graphNode.bbIndex = getNextFreeBBId();
         pair<BasicBlock*, BBGraphNode> p(&BB, graphNode);
         bbToGraphNodeMap.insert(p);
+    }
+
+    // initialize Structs
+    for(auto &BB : F.getBasicBlockList()){
+        initializeStructs(BB);
     }
 
     // check if function is contained in scoped file
@@ -401,7 +553,10 @@ FunctionPass *createBehaviorExtractionPass()
 }
 
 bool BehaviorExtraction::doInitialization(Module &M){
-    //set first bb id to 0;
+    // clear Structs
+    Structs.clear();
+
+    // set first bb id to 0;
     nextFreeBBId = 0;
 
     // read input file
