@@ -1,3 +1,5 @@
+
+from ..interfaces.BBGraph import Operation
 from typing import Dict, List, Tuple, Optional, cast
 from .vector_clock import VectorClock, get_updated_vc, increase, compare_vc
 from .schedule import Schedule, ScheduleElement, UpdateType
@@ -57,7 +59,7 @@ def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, Lis
     if a data race has been identified.
     TODO find proper output format (problematic statements)"""
     state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
-    data_races: List[Tuple[State, ScheduleElement]] = []
+    data_races: List[Tuple[State, ScheduleElement, List[ScheduleElement]]] = []
     for idx, schedule_element in enumerate(schedule.elements):
         try:
             state = goto_next_state(state, schedule_element)
@@ -113,7 +115,7 @@ def __check_state(state: State, schedule_element: ScheduleElement):
             raise ValueError("Data Race detected!")
 
 
-def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int]]) -> State:
+def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:
     """Performs single update as contained in ScheduleElement."""
     update_var, update_type, affected_thread_ids, operation = update
 
