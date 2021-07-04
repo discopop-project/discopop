@@ -19,7 +19,7 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
 
 
 
-def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination: List[BBNode]) -> List[Schedule]:
+def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination: List[List[BBNode]]) -> List[Schedule]:
     """creates a list of Schedules based on the given combination of paths"""
     if len(path_combination) == 0:
         return []
@@ -41,7 +41,7 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, path_combination
 
 
 def __convert_operation_path_to_schedule_element_path(executing_thread_id: int, operation_path: List[Tuple[int, Operation]]) -> List[ScheduleElement]:
-    schedule_elements: List[Schedule] = []
+    schedule_elements: List[ScheduleElement] = []
     for parent_bb_id, operation in operation_path:
         schedule_elements.append(__convert_operation_to_schedule_element(operation, executing_thread_id, parent_bb_id))
     return schedule_elements
