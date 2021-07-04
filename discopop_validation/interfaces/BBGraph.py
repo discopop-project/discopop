@@ -2,8 +2,8 @@ from itertools import chain, combinations
 from itertools import compress, product
 import networkx as nx  # type:ignore
 import os
-from typing import Optional, List, Tuple, Dict
-import matplotlib.pyplot as plt
+from typing import Optional, List, Tuple, Dict, cast
+import matplotlib.pyplot as plt  # type:ignore
 from sys import maxsize
 from itertools import combinations
 
@@ -57,7 +57,7 @@ class BBGraph(object):
     graph: nx.DiGraph
     functions: List[FunctionMetaData]
     section_to_entry_point: Dict[int, BBNode]
-    bb_path_to_operations_cache: Dict[Tuple[BBNode], List[Tuple[int, Operation]]]
+    bb_path_to_operations_cache: Dict[Tuple[BBNode, ...], List[Tuple[int, Operation]]]
 
     def __init__(self, bb_information_file):
         """parses bb_information_file and constructs BBGraph accordingly.
@@ -210,12 +210,12 @@ class BBGraph(object):
                 children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb)
             # recursion condition
             if len(children_paths) == 0:
-                result_paths = [[root_bb_node.id]]
+                result_paths = [[root_bb_node]]
             else:
                 # insert root_bb_node at beginning of each element in children_paths
                 result_paths = []
                 for path in children_paths:
-                    path.insert(0, root_bb_node.id)
+                    path.insert(0, root_bb_node)
                     result_paths.append(path)
             return result_paths
 
@@ -256,10 +256,9 @@ class BBGraph(object):
         if bb_tuple in self.bb_path_to_operations_cache:
             return self.bb_path_to_operations_cache[bb_tuple]
         op_path: List[Tuple[int, Operation]] = []
-        for bb_node_id in bb_path:
-            bb_node = self.graph.nodes[bb_node_id]["data"]
+        for bb_node in bb_path:
             for op in bb_node.operations:
-                op_path.append((bb_node_id, op))
+                op_path.append((bb_node.id, op))
         self.bb_path_to_operations_cache[bb_tuple] = op_path
         return op_path
 
