@@ -80,3 +80,9 @@ class Schedule(object):
             self.thread_count = element.thread_id + 1
         self.lock_names = list(set(self.lock_names + element.lock_names))
         self.var_names = list(set(self.var_names + element.var_names))
+
+    def __str__(self):
+        return_string = "Schedule:\n"
+        for elem in self.elements:
+            return_string += "==> " + str(elem) + "\n"
+        return return_string
