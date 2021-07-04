@@ -1,7 +1,7 @@
-import networkx as nx
-import matplotlib.pyplot as plt
+import networkx as nx  # type:ignore
+import matplotlib.pyplot as plt  # type:ignore
 
-from networkx.drawing.nx_agraph import graphviz_layout
+from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 from typing import List, Tuple, Dict
 
 from .schedule import ScheduleElement, Schedule
@@ -37,7 +37,7 @@ class SchedulingGraph(object):
             # add new node if not already contained in graph
             new_node_id = list(parent_node_id)
             new_node_id[i] += 1
-            new_node_id = tuple(new_node_id)
+            new_node_id_tuple = tuple(new_node_id)
             # check for root node
             if self.graph.nodes[parent_node_identifier]["data"] is None:
                 # root node
@@ -45,9 +45,9 @@ class SchedulingGraph(object):
             else:
                 # not root node
                 last_thread_id = self.graph.nodes[parent_node_identifier]["data"].thread_id
-            new_node_identifier = (new_node_id, last_thread_id)
+            new_node_identifier = (new_node_id_tuple, last_thread_id)
             if new_node_identifier not in self.graph.nodes:
-                self.graph.add_node(new_node_identifier, data=schedule_element_combinations[i][new_node_id[i]-1])
+                self.graph.add_node(new_node_identifier, data=schedule_element_combinations[i][new_node_id_tuple[i]-1])
             # add from parent_node_id to new_node_id
             if not (parent_node_identifier, new_node_identifier) in self.graph.edges:
                 self.graph.add_edge(parent_node_identifier, new_node_identifier)
