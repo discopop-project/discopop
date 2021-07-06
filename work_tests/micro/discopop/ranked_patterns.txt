@@ -1,0 +1,30 @@
+59
+60
+64
+65
+Do-all at: 1:2
+Start line: 1:59
+End line: 1:61
+iterations: 1000
+instructions: 0
+workload: 0
+pragma: "#pragma omp parallel for"
+private: ['i', 'j']
+shared: ['b']
+first private: ['m', 'n']
+reduction: []
+last private: []
+
+Do-all at: 1:5
+Start line: 1:60
+End line: 1:61
+iterations: 1000
+instructions: 0
+workload: 0
+pragma: "#pragma omp parallel for"
+private: ['j']
+shared: ['b']
+first private: ['i', 'm']
+reduction: []
+last private: []
+Time taken for pattern detection: 0.0597996711730957

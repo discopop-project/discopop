@@ -1,0 +1,8 @@
+ARRAY, b
+argc.addr
+argv.addr
+i
+j
+m
+n
+retval
