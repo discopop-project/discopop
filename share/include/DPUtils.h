@@ -119,5 +119,14 @@ namespace dputil
 
     string get_exe_dir();
 
+    class VariableNameFinder{
+        private:
+            map<string, vector<string>> StructMemberMap;
+        public:
+            VariableNameFinder(Module &M);
+    
+            string getVarName(Value const *V);
+    };
+
 } // namespace
 #endif
