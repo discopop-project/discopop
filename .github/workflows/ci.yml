@@ -42,7 +42,7 @@ jobs:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
       - name: "Install Dependencies"
-          run: |
+        run: |
             sudo apt-get remove clang-10 clang-9
             sudo apt-get install libclang-8-dev
       - name: "Build DiscoPoP Profiler"
