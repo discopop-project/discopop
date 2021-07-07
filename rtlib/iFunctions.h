@@ -25,7 +25,9 @@
 #include <utility>
 #include <string.h>
 #include "DPUtils.h"
-
+// hybrid analysis
+ #include <regex>
+ // End HA
 namespace __dp
 {
 
@@ -42,11 +44,14 @@ namespace __dp
 
     struct AccessInfo
     {
-        AccessInfo(bool isRead, LID lid, char *var, ADDR addr)
-            : isRead(isRead), lid(lid), var(var), addr(addr) {}
+        AccessInfo(bool isRead, LID lid, char *var, ADDR addr, bool skip = false)
+            : isRead(isRead), lid(lid), var(var), addr(addr), skip(skip) {}
         AccessInfo() : lid(0) {}
 
         bool isRead;
+        // hybrid analysis 
+        bool skip;
+        // End HA
         LID lid;
         char *var;
         ADDR addr;
@@ -87,6 +92,9 @@ namespace __dp
 
     typedef std::set<Dep, compDep> depSet;
     typedef std::unordered_map<LID, depSet *> depMap;
+    // Hybrid anaysis
+    typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
+    // End HA
 
     // For loop tracking
     struct LoopTableEntry
@@ -119,6 +127,10 @@ namespace __dp
 
     typedef std::unordered_map<LID, std::set<LID>*> BGNFuncList;
 
+    // Hybrid analysis
+    typedef std::set<int32_t> ReportedBBSet;
+    typedef std::set<std::string> ReportedBBPairSet;
+    // End HA
     // 2) when two END func are identical
 
     typedef std::set<LID> ENDFuncList;
@@ -141,10 +153,23 @@ namespace __dp
 #ifdef SKIP_DUP_INSTR
         void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
         void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+        // hybrid analysis
+        void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+        void __dp_alloca(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+        // End HA
 #else
         void __dp_read(LID lid, ADDR addr, char *var);
         void __dp_write(LID lid, ADDR addr, char *var);
+        // hybrid analysis
+        void __dp_decl(LID lid, ADDR addr, char *var);
+        void __dp_alloca(LID lid, ADDR addr, char *var);
+        // End HA
 #endif
+        // hybrid analysis
+        void __dp_report_bb(int32_t bbIndex);
+        void __dp_report_bb_pair(int32_t counter, int32_t bbIndex);
+        void __dp_add_bb_deps(char* depStringPtr);
+        // End HA
         void __dp_finalize(LID lid);
         void __dp_call(LID lid);
         void __dp_func_entry(LID lid, int32_t isStart);
