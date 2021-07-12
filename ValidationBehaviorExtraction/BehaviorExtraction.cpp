@@ -350,11 +350,6 @@ void BehaviorExtraction::initializeStructs(BasicBlock &BB){
         if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
         {
             assert(DI->getOperand(0));
-            //MDNode* node = cast<MDNode>(DI->getOperand(0));
-            // llvm.dbg.declare changes from LLVM 3.3 to 3.6.1:
-            // LLVM 3.6.1: call @llvm.dbg.declare(metadata %struct.x* %1, metadata !1, metadata !2)
-            // LLVM 3.3:   call @llvm.dbg.declare(metadata !{%struct.x* %1}, metadata !1, metadata !2)
-            // diff: operand 0 changes from MDNode* to Value*
             if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0)))
             {
                 Type *type = alloc->getAllocatedType();
@@ -371,11 +366,6 @@ void BehaviorExtraction::initializeStructs(BasicBlock &BB){
                 if (structType->getTypeID() == Type::StructTyID)
                 {
                     assert(DI->getOperand(1));
-                    // LLVM 3.6.1:
-                    // DbgDeclareInst *DI->getOperand(1) ==> MDNode* getVariable()
-                    //                *DI->getOperand(2) ==> MDNode* getExpression()
-                    // Methods Metadata* getRawVariable() and Metadata* getRawExpression() are listed on
-                    // LLVM online document, but do not exist in source code of 3.6.1.
                     MDNode *varDesNode = DI->getVariable();
                     assert(varDesNode->getOperand(5));
                     MDNode *typeDesNode = cast<MDNode>(varDesNode->getOperand(5));
