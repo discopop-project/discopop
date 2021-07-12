@@ -324,7 +324,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                 // next instruction is a load
                 sharedVarAccess access;
                 access.name = determineVarName(ci->getNextNode());
-                access.mode = "w";
+                access.mode = "r";
                 access.codeLocation = getClosestCodeLocation(ci);
                 access.originLocation = access.codeLocation;
                 access.parentInstruction = &inst;
@@ -384,11 +384,12 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
         list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB);
         // filter bbAccesses for argName / argPtrName
         for(sharedVarAccess sva : bbAccesses){
+            errs() << "SVA: MODE: " << sva.mode << "\n";
             if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
                 // access to arg, append entry to accesses
                 sharedVarAccess access;
                 access.name = sva.name;
-                access.mode = "cw";
+                access.mode = "c" + sva.mode;
                 access.codeLocation = sva.codeLocation;
                 access.originLocation = access.codeLocation;
                 access.parentInstruction = sva.parentInstruction;
