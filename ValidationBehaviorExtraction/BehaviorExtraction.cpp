@@ -76,7 +76,12 @@ namespace
     struct sharedVarAccess{
         string name;
         string mode;
+        // for regular reads / writed, codeLocation and originLocation will be equal.
+        // for reads / writes which occur as results of a function call, codeLocation will
+        // contain the location of the function call, originLocation will contain
+        // the location of the read / write inside the called function.
         pair<unsigned int, unsigned int> codeLocation;
+        pair<unsigned int, unsigned int> originLocation;
         Instruction* parentInstruction;
     };
 
@@ -114,6 +119,7 @@ namespace
         void processStructTypes(string const &fullStructName, MDNode *structNode);
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         void initializeStructs(BasicBlock &BB);
+        list<sharedVarAccess> getVarAccessesForFunctionCall(Function* calledFunction, int arg_index);
         unsigned int nextFreeBBId;
         unsigned int getNextFreeBBId();
         map<string, MDNode *> Structs;
@@ -310,6 +316,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                 access.name = determineVarName(ci->getNextNode());
                 access.mode = "w";
                 access.codeLocation = getClosestCodeLocation(ci);
+                access.originLocation = access.codeLocation;
                 access.parentInstruction = &inst;
                 resultList.push_back(access);
             }
@@ -317,16 +324,78 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                 // next instruction is a load
                 sharedVarAccess access;
                 access.name = determineVarName(ci->getNextNode());
-                access.mode = "w";
+                access.mode = "r";
                 access.codeLocation = getClosestCodeLocation(ci);
+                access.originLocation = access.codeLocation;
                 access.parentInstruction = &inst;
                 resultList.push_back(access);
+            }
+            else if (ci->getCalledFunction()->getName().equals("__dp_call")) {
+                // todo currently useless
+                // next instruction is a function call
+                CallInst *call = cast<CallInst>(ci->getNextNode());
+
+                // errs() << "Called: " << call->getCalledFunction()->getName() << "\n";
+                // iterate over call arguments
+                int position = 0;
+                for(auto arg = call->arg_begin(); arg != call->arg_end(); ++arg){
+                    string argName = determineVarName(cast<Instruction>(arg));
+                    if(argName.compare("##UNKNOWN##") != 0){
+                        // argument has a known name
+                        // errs() << "\tArg " << position <<" : " << argName << "\n";
+                        list<sharedVarAccess> accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position);
+                        // append gathered accesses to result List, effectively inlining the called functions' results
+                        for(sharedVarAccess sva : accessesFromCall){
+                            // overwrite argument name from withing called function with var name used in the function call
+                            // this step also resolves: var.addr to var
+                            // errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
+                            sva.name = argName;
+                            // overwrite code location with location of function call
+                            sva.codeLocation = getClosestCodeLocation(ci);
+                            resultList.push_back(sva);
+                        }
+                    }
+                    position++;
+                }
             }
         }
     }
     // todo include function calls
     return resultList;
 }
+
+
+// returns a list of read an write accesses for the argument at the given index of calledFunction
+// recursively constructs a list for subsequent function calls.
+// TODO: could get costly, caching required
+// TODO: support recursive function calls -> add recursion condition
+list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex)
+{
+    list<sharedVarAccess> accesses;
+    // get argument
+    string argName = std::next(calledFunction->arg_begin(), argIndex)->getName().str();
+    string argPtrName = argName + ".addr";
+
+    // check for accesses to the argument
+    for(auto &BB : calledFunction->getBasicBlockList()){
+        list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB);
+        // filter bbAccesses for argName / argPtrName
+        for(sharedVarAccess sva : bbAccesses){
+            if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
+                // access to arg, append entry to accesses
+                sharedVarAccess access;
+                access.name = sva.name;
+                access.mode = "c" + sva.mode;
+                access.codeLocation = sva.codeLocation;
+                access.originLocation = access.codeLocation;
+                access.parentInstruction = sva.parentInstruction;
+                accesses.push_back(access);
+            }
+        }
+    }
+    return accesses;
+}
+
 
 string BehaviorExtraction::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder)
 {
@@ -350,11 +419,6 @@ void BehaviorExtraction::initializeStructs(BasicBlock &BB){
         if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
         {
             assert(DI->getOperand(0));
-            //MDNode* node = cast<MDNode>(DI->getOperand(0));
-            // llvm.dbg.declare changes from LLVM 3.3 to 3.6.1:
-            // LLVM 3.6.1: call @llvm.dbg.declare(metadata %struct.x* %1, metadata !1, metadata !2)
-            // LLVM 3.3:   call @llvm.dbg.declare(metadata !{%struct.x* %1}, metadata !1, metadata !2)
-            // diff: operand 0 changes from MDNode* to Value*
             if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0)))
             {
                 Type *type = alloc->getAllocatedType();
@@ -371,11 +435,6 @@ void BehaviorExtraction::initializeStructs(BasicBlock &BB){
                 if (structType->getTypeID() == Type::StructTyID)
                 {
                     assert(DI->getOperand(1));
-                    // LLVM 3.6.1:
-                    // DbgDeclareInst *DI->getOperand(1) ==> MDNode* getVariable()
-                    //                *DI->getOperand(2) ==> MDNode* getExpression()
-                    // Methods Metadata* getRawVariable() and Metadata* getRawExpression() are listed on
-                    // LLVM online document, but do not exist in source code of 3.6.1.
                     MDNode *varDesNode = DI->getVariable();
                     assert(varDesNode->getOperand(5));
                     MDNode *typeDesNode = cast<MDNode>(varDesNode->getOperand(5));
@@ -467,6 +526,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     outputFile << "function:" << F.getName().str() << "\n";
     outputFile << "fileName:" << parentFileName << "\n";
 
+    // get shared var accesses
     for(auto &BB : F.getBasicBlockList()){
         // construct BBGraphNode for current BB
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
@@ -482,8 +542,9 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 bb_in_sections.push_back(section.sectionId);
             }
         }
-        if(bb_in_sections.size() == 0)
+        if(bb_in_sections.size() == 0){
             continue;
+        }
 
         outputFile << "bbIndex:" << graphNode.bbIndex << "\n";
         outputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
@@ -505,7 +566,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                     if(sva.name.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
                             outputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
-                                       << ":" << sva.codeLocation.second << "\n";
+                                       << ":" << sva.codeLocation.second << ":" <<  sva.originLocation.first << ":" << sva.originLocation.second << "\n";
                         }
                     }
 

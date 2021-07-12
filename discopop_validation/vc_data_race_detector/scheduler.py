@@ -50,10 +50,11 @@ def __convert_operation_path_to_schedule_element_path(executing_thread_id: int, 
 
 def __convert_operation_to_schedule_element(operation: Operation, executing_thread_id: int, parent_bb_id: int) -> ScheduleElement:
     schedule_element: ScheduleElement = ScheduleElement(executing_thread_id, parent_basic_block_id=parent_bb_id)
-    # todo mode c (call)
-    if operation.mode == "w":
+    # w -> write; cw -> write inside called function
+    # r -> read; cr -> read inside called function
+    if operation.mode == "w" or operation.mode == "cw":
         update_type = UpdateType.WRITE
-    elif operation.mode == "r":
+    elif operation.mode == "r" or operation.mode == "cr":
         update_type = UpdateType.READ
     else:
         raise ValueError("Unsupported mode: ", operation.mode)

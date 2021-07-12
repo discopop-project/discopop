@@ -12,18 +12,28 @@ class Operation:
     target_name: str
     line: int
     col: int
+    # origin line and col will only be different from line / col if Operation occured inside a called function
+    origin_line: int
+    origin_col: int
     section_id: int
 
-    def __init__(self, section_id, mode, target_name, line, col):
+    def __init__(self, section_id, mode, target_name, line, col, origin_line, origin_col):
         self.mode = mode
         self.target_name = target_name
         self.line = line
         self.col = col
+        self.origin_line = origin_line
+        self.origin_col = origin_col
         self.section_id = section_id
 
     def __str__(self):
+        # if operation occurs inside called function, report origin line and col additionally
+        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
+        if self.mode == "cw" or self.mode == "cr":
+            return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
+        return return_str
+
         # todo add file id
-        return "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
 
 
 class BBNode:
@@ -90,7 +100,7 @@ class BBGraph(object):
                 elif line[0] == "successor":
                     self.graph.add_edge(current_bb.id, int(line[1]))
                 elif line[0] == "operation":
-                    current_bb.operations.append(Operation(int(line[1]), line[2], line[3], int(line[4]), int(line[5])))
+                    current_bb.operations.append(Operation(int(line[1]), line[2], line[3], int(line[4]), int(line[5]), int(line[6]), int(line[7])))
                     if not int(line[1]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[1]))
                 elif line[0] == "inSection":
