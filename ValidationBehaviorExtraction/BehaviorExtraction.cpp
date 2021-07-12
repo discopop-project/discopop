@@ -335,20 +335,20 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                 // next instruction is a function call
                 CallInst *call = cast<CallInst>(ci->getNextNode());
 
-                errs() << "Called: " << call->getCalledFunction()->getName() << "\n";
+                // errs() << "Called: " << call->getCalledFunction()->getName() << "\n";
                 // iterate over call arguments
                 int position = 0;
                 for(auto arg = call->arg_begin(); arg != call->arg_end(); ++arg){
                     string argName = determineVarName(cast<Instruction>(arg));
                     if(argName.compare("##UNKNOWN##") != 0){
                         // argument has a known name
-                        errs() << "\tArg " << position <<" : " << argName << "\n";
+                        // errs() << "\tArg " << position <<" : " << argName << "\n";
                         list<sharedVarAccess> accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position);
                         // append gathered accesses to result List, effectively inlining the called functions' results
                         for(sharedVarAccess sva : accessesFromCall){
                             // overwrite argument name from withing called function with var name used in the function call
                             // this step also resolves: var.addr to var
-                            errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
+                            // errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
                             sva.name = argName;
                             // overwrite code location with location of function call
                             sva.codeLocation = getClosestCodeLocation(ci);
@@ -357,7 +357,6 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                     }
                     position++;
                 }
-                errs() << "\n";
             }
         }
     }
@@ -376,15 +375,12 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
     // get argument
     string argName = std::next(calledFunction->arg_begin(), argIndex)->getName().str();
     string argPtrName = argName + ".addr";
-    errs() << "gVAFFC: arg: " << argName << "\n";
-    errs() << "gVAFFC: argPtr: " << argPtrName << "\n";
 
     // check for accesses to the argument
     for(auto &BB : calledFunction->getBasicBlockList()){
         list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB);
         // filter bbAccesses for argName / argPtrName
         for(sharedVarAccess sva : bbAccesses){
-            errs() << "SVA: MODE: " << sva.mode << "\n";
             if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
                 // access to arg, append entry to accesses
                 sharedVarAccess access;
@@ -575,9 +571,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                     }
 
             }
-            // todo remove debug
-            errs() << "operation:" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
-                                       << ":" << sva.codeLocation.second << "\n";
         }
 
         // set function entrypoint if necessary
