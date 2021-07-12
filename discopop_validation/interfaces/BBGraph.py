@@ -27,8 +27,13 @@ class Operation:
         self.section_id = section_id
 
     def __str__(self):
+        # if operation occurs inside called function, report origin line and col additionally
+        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
+        if self.mode == "cw" or self.mode == "cr":
+            return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
+        return return_str
+
         # todo add file id
-        return "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
 
 
 class BBNode:
