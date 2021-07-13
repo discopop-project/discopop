@@ -49,8 +49,14 @@ echo ""
 
 echo ""
 echo "#########################################"
-echo "#### SIMPLE_DOALL - FUNCTION CALL ####"
+echo "#### SIMPLE_DOALL - FUNCTION CALL - SINGLE LEVEL####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_function_call --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_function_call --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
 
+echo ""
+echo "#########################################"
+echo "#### SIMPLE_DOALL - FUNCTION CALL - TWO LEVELS####"
+echo "#########################################"
+echo ""
+python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_two_level_call --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll

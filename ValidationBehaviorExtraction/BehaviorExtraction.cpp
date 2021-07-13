@@ -387,7 +387,7 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
                 access.name = sva.name;
                 access.mode = "c" + sva.mode;
                 access.codeLocation = sva.codeLocation;
-                access.originLocation = access.codeLocation;
+                access.originLocation = sva.originLocation;
                 access.parentInstruction = sva.parentInstruction;
                 accesses.push_back(access);
             }

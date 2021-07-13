@@ -52,9 +52,11 @@ def __convert_operation_to_schedule_element(operation: Operation, executing_thre
     schedule_element: ScheduleElement = ScheduleElement(executing_thread_id, parent_basic_block_id=parent_bb_id)
     # w -> write; cw -> write inside called function
     # r -> read; cr -> read inside called function
-    if operation.mode == "w" or operation.mode == "cw":
+    # note: variable amount of c's, each representing a function call layer
+    # note: since e.g 'w' and 'cw' are treated equally, it is sufficient to unpack the last character of operation.mode and ignore the c's
+    if operation.mode[-1] == "w":
         update_type = UpdateType.WRITE
-    elif operation.mode == "r" or operation.mode == "cr":
+    elif operation.mode[-1] == "r":
         update_type = UpdateType.READ
     else:
         raise ValueError("Unsupported mode: ", operation.mode)
