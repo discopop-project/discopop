@@ -27,8 +27,13 @@ class Operation:
         self.section_id = section_id
 
     def __str__(self):
+        if self.mode.startswith("c"):
+            pretty_mode = "c" + str(self.mode.count("c")) + self.mode[-1]
+        else:
+            pretty_mode = self.mode
+
         # if operation occurs inside called function, report origin line and col additionally
-        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + self.mode + "->" + self.target_name
+        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
