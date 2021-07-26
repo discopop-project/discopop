@@ -89,7 +89,7 @@ def main():
         profile.disable()
         profile.print_stats()
 
-    # print(parallelization_suggestions)
+    print(parallelization_suggestions)
 
 
 if __name__ == "__main__":

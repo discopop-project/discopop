@@ -1,0 +1,22 @@
+START 1:24
+1:28 BGN loop 10
+1:38 END loop
+1:13 BGN func 1:7
+1:31 BGN func 1:12
+1:18 BGN func 1:16
+1:27 BGN func 1:16
+1:10 END func
+1:14 END func
+1:20 END func
+1:28 NOM  RAW 1:28|a WAR 1:28|a INIT *|a
+1:26 NOM  INIT *|y
+1:32 NOM  WAW 1:32|z INIT *|z
+1:25 NOM  INIT *|x
+1:38 NOM  RAW 1:25|x
+1:29 NOM  RAW 1:28|a WAR 1:31|i_0 INIT *|i_0
+1:42 NOM  RAW 1:25|x RAW 1:26|y WAR 1:42|y
+1:30 NOM  RAW 1:28|a RAW 1:29|i_0 INIT *|arr
+1:31 NOM  RAW 1:29|i_0
+1:33 NOM  RAW 1:25|x
+1:8 NOM  RAW 1:28|p_read_value.addr WAW 1:30|p_arr.addr
+1:45 END program
