@@ -3,7 +3,8 @@ from typing import List, Tuple, Dict
 from .scheduling_graph import SchedulingGraph
 from ..interfaces.BBGraph import BBNode, BBGraph, Operation
 from ..vc_data_race_detector.schedule import Schedule, ScheduleElement, UpdateType
-from ..vc_data_race_detector.data_race_detector import check_schedule, State
+from ..vc_data_race_detector.data_race_detector import check_schedule
+from .data_race_classes import State
 
 
 def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]]) -> Dict[int, List[Schedule]]:

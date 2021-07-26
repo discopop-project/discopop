@@ -1,40 +1,14 @@
-
+from .data_race_classes import State, DataRace
 from ..interfaces.BBGraph import Operation
-from typing import Dict, List, Tuple, Optional, cast
-from .vector_clock import VectorClock, get_updated_vc, increase, compare_vc
+from typing import Dict, List, Tuple, Optional
+from .vector_clock import get_updated_vc, increase, compare_vc
 from .schedule import Schedule, ScheduleElement, UpdateType
 
 
-class State(object):
-    # represents a state of the data race detector. Updated by each element of schedule.
-    thread_clocks: Dict[int, VectorClock] = dict()
-    lock_clocks: Dict[str, VectorClock] = dict()
-    var_read_clocks: Dict[str, VectorClock] = dict()
-    var_write_clocks: Dict[str, VectorClock] = dict()
-
-    def __init__(self, thread_count: int, lock_names: List[str], var_names: List[str]):
-        self.thread_clocks = dict()
-        self.lock_clocks = dict()
-        self.var_read_clocks = dict()
-        self.var_write_clocks = dict()
-        for i in range(thread_count):
-            self.thread_clocks[i] = VectorClock(thread_count)
-            self.thread_clocks[i].clocks[i] = 1
-        for l_name in lock_names:
-            self.lock_clocks[l_name] = VectorClock(thread_count)
-        for v_name in var_names:
-            self.var_read_clocks[v_name] = VectorClock(thread_count)
-            self.var_write_clocks[v_name] = VectorClock(thread_count)
-
-    def __str__(self):
-        return "Thread clocks: " + str(self.thread_clocks) + "\n" + \
-               "Lock clocks: " + str(self.lock_clocks) + "\n" + \
-               "Var Read clocks: " + str(self.var_read_clocks) + "\n" + \
-               "Var Write clocks: " + str(self.var_write_clocks)
-
-
-def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
-    """executes check_schedule for each Schedule of each section in the given dictionary."""
+def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> List[DataRace]:
+    """executes check_schedule for each Schedule of each section in the given dictionary.
+    Returns an unfiltered list of found DataRaces (may contain duplicates!)."""
+    found_data_races: List[DataRace] = []
     # execute VC Check
     for section_id in sections_to_schedules_dict:
         for schedule in sections_to_schedules_dict[section_id]:
@@ -45,11 +19,9 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]):
                     state: State = check_result[0]
                     schedule_element = check_result[1]
                     previous_writes = check_result[2]
-                    print()
-                    print("##### DATA RACE IN SECTION: ", section_id, " #####")
-                    for write in previous_writes:
-                        print("prev: ", str(write))
-                    print("===> " + str(schedule_element))
+                    data_race: DataRace = DataRace(section_id, schedule_element, previous_writes)
+                    found_data_races.append(data_race)
+    return found_data_races
 
 
 def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
@@ -146,3 +118,16 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
     # todo check if constraints for multiple / nested parallel sections are met
 
     return state
+
+
+def get_filtered_data_race_strings(unfiltered_data_races: List[DataRace]) -> List[DataRace]:
+    """Takes a unfiltered list of found data races and returns a filtered list of strings.
+    The filtering removes duplicates. Entries are duplicates, if another entry with
+    the exact same string representation exists.
+    The output of this functions is used only for outputting to the console."""
+    filtered_data_race_strings: List[str] = []
+    for dr in unfiltered_data_races:
+        dr_str = str(dr)
+        if dr_str not in [fdr_str for fdr_str in filtered_data_race_strings]:
+            filtered_data_race_strings.append(dr_str)
+    return filtered_data_race_strings

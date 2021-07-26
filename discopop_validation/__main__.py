@@ -25,7 +25,7 @@ from schema import SchemaError, Schema, Use
 
 from .interfaces.behavior_extraction import get_relevant_sections_from_suggestions, \
     execute_bb_graph_extraction
-from .vc_data_race_detector.data_race_detector import check_sections
+from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
 from .interfaces.discopop_explorer import get_parallelization_suggestions
 
@@ -79,7 +79,11 @@ def main():
     bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
                                                                bb_graph.get_possible_path_combinations_for_sections())
-    check_sections(sections_to_schedules_dict)
+    unfiltered_data_races = check_sections(sections_to_schedules_dict)
+    filtered_data_race_strings = get_filtered_data_race_strings(unfiltered_data_races)
+    # print found data races
+    for dr_str in filtered_data_race_strings:
+        print(dr_str)
 
     if arguments["--profiling"] == "true":
         profile.disable()
