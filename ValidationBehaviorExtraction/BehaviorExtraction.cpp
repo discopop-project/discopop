@@ -240,7 +240,9 @@ Type *BehaviorExtraction::pointsToStruct(PointerType *PTy)
 
 string BehaviorExtraction::determineVarName(Instruction *const I)
 {
+    errs() << "ASDF\n";
     assert(I && "Instruction cannot be NULL \n");
+    errs() << "ASDF2\n";
     int index = isa<StoreInst>(I) ? 1 : 0;
     Value *operand = I->getOperand(index);
 
@@ -251,6 +253,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I)
         return "##UNKNOWN##";
     }
 
+    errs() << "PRE DVN IF 1\n";
     if (operand->hasName())
     {   
         if (isa<GetElementPtrInst>(*operand))
@@ -294,6 +297,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I)
         return string(operand->getName().data());
         
     }
+    errs() << "POST DVN IF 1\n";
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
@@ -307,6 +311,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I)
 list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion=false){
     list<sharedVarAccess> resultList;
 
+    errs() << "PRE 1\n";
     for(auto &inst : BB.getInstList()){
         if(isa<CallInst>(inst)){
             CallInst *ci = cast<CallInst>(&inst);
@@ -332,29 +337,45 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
             }
             else if (ci->getCalledFunction()->getName().equals("__dp_call")) {
                 // next instruction is a function call
+                // check if recursive of regular function call
+                if(isa<CallInst>(ci->getNextNode())){
+                    errs() << "Regular call\n";
+                }
+                else{
+                    errs() << "Recursive call\n";
+                }
                 CallInst *call = cast<CallInst>(ci->getNextNode());
 
                 // errs() << "Called: " << call->getCalledFunction()->getName() << "\n";
                 // iterate over call arguments
                 int position = 0;
                 for(auto arg = call->arg_begin(); arg != call->arg_end(); ++arg){
+                    errs() << "BEGIN LOOP 1\n";
+                    if(isa<CallInst>(arg)){
+                        errs() << "ARG IS CALLINST\n";
+                    }
+                    errs() << "POST CAST\n";
                     string argName = determineVarName(cast<Instruction>(arg));
+                    errs() << "POST_DET_VAR_NAME 1\n";
                     if(argName.compare("##UNKNOWN##") != 0){
                         // argument has a known name
                         errs() << "\tArg " << position <<" : " << argName << "\n";
                         list<sharedVarAccess> accessesFromCall;
                         // check if recursive function call
+                        errs() << "PRE IF 1\n";
                         if(call->getCalledFunction() == &F){
                             // recursion
                             // check if already inside recursion
+                            errs() << "PRE IF 2\n";
                             if(!currentlyInsideRecursion){
                                 // go into recursion
                                 errs() << "GOTO REC\n";
                                 accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, true);
                             }
                             else{
-                                errs() << "IGNORE REC\n";
+                                errs() << "IGNORE REC, push dummy\n";
                             }
+                            errs() << "POST IF 2\n";
                             // else: ignore recursive call
 
                         }
@@ -363,8 +384,10 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                             errs() << "NO REC\n";
                             accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, false);
                         }
+                        errs() << "POST IF 1\n";
                         // append gathered accesses to result List, effectively inlining the called functions' results
                         errs() << "AFC len: " << accessesFromCall.size() << "\n";
+                        errs() << "PRE LOOP 2\n";
                         for(sharedVarAccess sva : accessesFromCall){
                             // overwrite argument name from withing called function with var name used in the function call
                             // this step also resolves: var.addr to var
@@ -375,12 +398,15 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                             sva.codeLocation = getClosestCodeLocation(ci);
                             resultList.push_back(sva);
                         }
+                        errs() << "POST LOOP 2\n";
                     }
                     position++;
+                    errs() << "END LOOP 1\n";
                 }
             }
         }
     }
+    errs() << "POST 1\n";
     // todo include function calls
     return resultList;
 }
