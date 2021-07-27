@@ -404,7 +404,7 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
 
     // check for accesses to the argument
     for(auto &BB : calledFunction->getBasicBlockList()){
-        list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB, F, currentlyInsideRecursion);
+        list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB, *calledFunction, currentlyInsideRecursion);
         // filter bbAccesses for argName / argPtrName
         for(sharedVarAccess sva : bbAccesses){
             if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
@@ -587,6 +587,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
+            // errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
             // only report operation, if it is inside of a relevant section
             for(auto section : sections){
                     if(sva.name.compare(section.varName) == 0){
