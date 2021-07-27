@@ -113,13 +113,13 @@ namespace
         pair<int, int> getClosestCodeLocation(Instruction* inst);
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
-        list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB);
+        list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion);
         string determineVarName(Instruction *const I);
         Type *pointsToStruct(PointerType *PTy);
         void processStructTypes(string const &fullStructName, MDNode *structNode);
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         void initializeStructs(BasicBlock &BB);
-        list<sharedVarAccess> getVarAccessesForFunctionCall(Function* calledFunction, int arg_index);
+        list<sharedVarAccess> getVarAccessesForFunctionCall(Function* calledFunction, int arg_index, Function &F, bool currentlyInsideRecursion);
         unsigned int nextFreeBBId;
         unsigned int getNextFreeBBId();
         map<string, MDNode *> Structs;
@@ -304,7 +304,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I)
 }
 
 
-list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
+list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion=false){
     list<sharedVarAccess> resultList;
 
     for(auto &inst : BB.getInstList()){
@@ -331,24 +331,50 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
                 resultList.push_back(access);
             }
             else if (ci->getCalledFunction()->getName().equals("__dp_call")) {
-                // todo currently useless
                 // next instruction is a function call
+                // check if recursive of regular function call
                 CallInst *call = cast<CallInst>(ci->getNextNode());
 
-                // errs() << "Called: " << call->getCalledFunction()->getName() << "\n";
                 // iterate over call arguments
                 int position = 0;
+
                 for(auto arg = call->arg_begin(); arg != call->arg_end(); ++arg){
-                    string argName = determineVarName(cast<Instruction>(arg));
+                    string argName;
+                    // exclude constants
+                    if(isa<Constant>(arg->get())){
+                        // constant used as argument
+                        argName = "##UNKNOWN##";
+                    }
+                    else{
+                        // argument is not a constant
+                        argName = determineVarName(cast<Instruction>(arg->get()));
+                    }
+
                     if(argName.compare("##UNKNOWN##") != 0){
                         // argument has a known name
                         // errs() << "\tArg " << position <<" : " << argName << "\n";
-                        list<sharedVarAccess> accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position);
+                        list<sharedVarAccess> accessesFromCall;
+                        // check if recursive function call
+                        if(call->getCalledFunction() == &F){
+                            // recursion
+                            // check if already inside recursion
+                            if(!currentlyInsideRecursion){
+                                // go into recursion
+                                accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, true);
+                            }
+                            // else: ignore recursive call
+
+                        }
+                        else {
+                            // no recursion
+                            accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, false);
+                        }
                         // append gathered accesses to result List, effectively inlining the called functions' results
                         for(sharedVarAccess sva : accessesFromCall){
                             // overwrite argument name from withing called function with var name used in the function call
                             // this step also resolves: var.addr to var
                             // errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
+                            // errs() << "\t\t\tmode: " << sva.mode << "\n";
                             sva.name = argName;
                             // overwrite code location with location of function call
                             sva.codeLocation = getClosestCodeLocation(ci);
@@ -369,7 +395,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB){
 // recursively constructs a list for subsequent function calls.
 // TODO: could get costly, caching required
 // TODO: support recursive function calls -> add recursion condition
-list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex)
+list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex, Function &F, bool currentlyInsideRecursion)
 {
     list<sharedVarAccess> accesses;
     // get argument
@@ -378,7 +404,7 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
 
     // check for accesses to the argument
     for(auto &BB : calledFunction->getBasicBlockList()){
-        list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB);
+        list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB, *calledFunction, currentlyInsideRecursion);
         // filter bbAccesses for argName / argPtrName
         for(sharedVarAccess sva : bbAccesses){
             if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
@@ -531,7 +557,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         // construct BBGraphNode for current BB
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
         graphNode.bb = &BB;
-        graphNode.varAccesses = getSharedVarAccesses(BB);
+        graphNode.varAccesses = getSharedVarAccesses(BB, F);
         graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))));
         graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))));
 
@@ -561,6 +587,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
 
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
+            // errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
             // only report operation, if it is inside of a relevant section
             for(auto section : sections){
                     if(sva.name.compare(section.varName) == 0){
