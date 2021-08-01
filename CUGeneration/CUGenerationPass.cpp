@@ -834,7 +834,6 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         vector<CU *> basicBlockCUVector;
         basicBlockCUVector.push_back(cu);
         BBIDToCUIDsMap.insert(pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
-
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
             //NOTE: 'instruction' --> '&*instruction'
@@ -962,7 +961,6 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         cu->basicBlockName = basicBlockName;
         CUVector.push_back(cu);
         suspiciousVariables.clear();
-
         //check for call instructions in current basic block
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
@@ -975,88 +973,88 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 {
 
                     Function *f = (cast<CallInst>(instruction))->getCalledFunction();
-                    //TODO: DO the same for Invoke inst
+                    if(f){
+                        //TODO: DO the same for Invoke inst
 
-                    //Mohammad 6.7.2020
-                    Function::iterator FI = f->begin();
-                    bool externalFunction = true;
-                    string lid;
-
-                    for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI)
-                    {
-                        externalFunction = false;
-                        auto tempBI = FI->begin();
-                        if (DebugLoc dl = tempBI->getDebugLoc())
+                        //Mohammad 6.7.2020
+                        Function::iterator FI = f->begin();
+                        bool externalFunction = true;
+                        string lid;
+                        for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI)
                         {
-                            lid = to_string(dl->getLine());
-                        }
-                        else
-                        {
-                            if (tempBI->getFunction()->getSubprogram())
-                                lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
+                            externalFunction = false;
+                            auto tempBI = FI->begin();
+                            if (DebugLoc dl = tempBI->getDebugLoc())
+                            {
+                                lid = to_string(dl->getLine());
+                            }
                             else
                             {
-                                lid = "LineNotFound";
+                                if (tempBI->getFunction()->getSubprogram())
+                                    lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
+                                else
+                                {
+                                    lid = "LineNotFound";
+                                }
+                            }
+                            break;
+                        }
+                        if (externalFunction)
+                            continue;
+
+                        Node *n = new Node;
+                        n->type = nodeTypes::dummy;
+                        // For ordinary function calls, F has a name.
+                        // However, sometimes the function being called
+                        // in IR is encapsulated by "bitcast()" due to
+                        // the way of compiling and linking. In this way,
+                        // getCalledFunction() method returns NULL.
+                        // Also, getName() returns NULL if this is an indirect function call.
+                        if (f)
+                        {
+                            n->name = f->getName();
+
+                            // @Zia: This for loop appeared after the else part. For some function calls, the value of f is null.
+                            // I guess that is why you have checked if f is not null here. Anyway, I (Mohammad) had to bring the
+                            // for loop inside to avoid the segmentation fault. If you think it is not appropriate, find a solution for it.
+                            // 14.2.2016
+                            for (Function::arg_iterator it = f->arg_begin(); it != f->arg_end(); it++)
+                            {
+                                string type_str;
+                                raw_string_ostream rso(type_str);
+                                (it->getType())->print(rso);
+                                Variable v(string(it->getName()), rso.str(), lid);
+                                n->argumentsList.push_back(v);
                             }
                         }
-                        break;
-                    }
-                    if (externalFunction)
-                        continue;
-
-                    Node *n = new Node;
-                    n->type = nodeTypes::dummy;
-                    // For ordinary function calls, F has a name.
-                    // However, sometimes the function being called
-                    // in IR is encapsulated by "bitcast()" due to
-                    // the way of compiling and linking. In this way,
-                    // getCalledFunction() method returns NULL.
-                    // Also, getName() returns NULL if this is an indirect function call.
-                    if (f)
-                    {
-                        n->name = f->getName();
-
-                        // @Zia: This for loop appeared after the else part. For some function calls, the value of f is null.
-                        // I guess that is why you have checked if f is not null here. Anyway, I (Mohammad) had to bring the
-                        // for loop inside to avoid the segmentation fault. If you think it is not appropriate, find a solution for it.
-                        // 14.2.2016
-                        for (Function::arg_iterator it = f->arg_begin(); it != f->arg_end(); it++)
+                        else // get name of the indirect function which is called
                         {
-                            string type_str;
-                            raw_string_ostream rso(type_str);
-                            (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid);
-                            n->argumentsList.push_back(v);
+                            Value *v = (cast<CallInst>(instruction))->getCalledValue();
+                            Value *sv = v->stripPointerCasts();
+                            StringRef fname = sv->getName();
+                            n->name = fname;
                         }
-                    }
-                    else // get name of the indirect function which is called
-                    {
-                        Value *v = (cast<CallInst>(instruction))->getCalledValue();
-                        Value *sv = v->stripPointerCasts();
-                        StringRef fname = sv->getName();
-                        n->name = fname;
-                    }
 
-                    //Recursive functions (Mo 5.11.2019)
-                    CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
-                    if (isRecursive(*f, CGWP->getCallGraph()))
-                    {
-                        int lid = getLID(&*instruction, fileID);
-                        n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
-                    }
-
-                    vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
-                    //locate the CU where this function call belongs
-                    for (auto i : BBCUsVector)
-                    {
-                        int lid = getLID(&*instruction, fileID);
-                        if (lid >= i->startLine && lid <= i->endLine)
+                        //Recursive functions (Mo 5.11.2019)
+                        CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
+                        if (isRecursive(*f, CGWP->getCallGraph()))
                         {
-                            i->instructionsLineNumbers.insert(lid);
-                            i->childrenNodes.push_back(n);
+                            int lid = getLID(&*instruction, fileID);
+                            n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
+                        }
+                        vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
+                        //locate the CU where this function call belongs
+                        for (auto i : BBCUsVector)
+                        {
+                            int lid = getLID(&*instruction, fileID);
+                            if (lid >= i->startLine && lid <= i->endLine)
+                            {
+                                i->instructionsLineNumbers.insert(lid);
+                                i->childrenNodes.push_back(n);
 
-                            i->callLineTofunctionMap[lid].push_back(n);
-                            break;
+                                i->callLineTofunctionMap[lid].push_back(n);
+                                break;
+                            }
                         }
                     }
                 }
