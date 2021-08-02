@@ -547,21 +547,21 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     }
 
     // open output file
-    ofstream outputFile(ClOutputFile);
-
+    ofstream outputFile(ClOutputFile, std::ios_base::app);
     // fill output file
     outputFile << "function:" << F.getName().str() << "\n";
     outputFile << "fileName:" << parentFileName << "\n";
+    outputFile.close();
 
     // get shared var accesses
     for(auto &BB : F.getBasicBlockList()){
+        ofstream tmpOutputFile(ClOutputFile, std::ios_base::app);
         // construct BBGraphNode for current BB
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
         graphNode.bb = &BB;
         graphNode.varAccesses = getSharedVarAccesses(BB, F);
         graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))));
         graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))));
-
         // check if BB is inside scope
         list<unsigned int> bb_in_sections;
         for(auto section : sections){
@@ -574,18 +574,17 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         if(bb_in_sections.size() == 0){
             continue;
         }
-
-        outputFile << "bbIndex:" << graphNode.bbIndex << "\n";
-        outputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
-        outputFile << "bbStart:" << graphNode.startLocation.first << ":" << graphNode.startLocation.second << "\n";
-        outputFile << "bbEnd:" << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
+        tmpOutputFile << "bbIndex:" << graphNode.bbIndex << "\n";
+        tmpOutputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
+        tmpOutputFile << "bbStart:" << graphNode.startLocation.first << ":" << graphNode.startLocation.second << "\n";
+        tmpOutputFile << "bbEnd:" << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
         for(unsigned int sid : bb_in_sections){
-            outputFile << "inSection:" << sid << "\n";
+            tmpOutputFile << "inSection:" << sid << "\n";
         }
 
         // report successors to output file
         for(auto successorBB: successors(&BB)){
-            outputFile << "successor:" << bbToGraphNodeMap.at(successorBB).bbIndex << "\n";
+            tmpOutputFile << "successor:" << bbToGraphNodeMap.at(successorBB).bbIndex << "\n";
         }
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
@@ -594,7 +593,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             for(auto section : sections){
                     if(sva.name.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
-                            outputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
+                            tmpOutputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
                                        << ":" << sva.codeLocation.second << ":" <<  sva.originLocation.first << ":" << sva.originLocation.second << "\n";
                         }
                     }
@@ -605,11 +604,12 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         // set function entrypoint if necessary
         BasicBlock* x = &(F.getEntryBlock());
         if(&BB == x){
-            outputFile << "functionEntryBB:" << graphNode.bbIndex << "\n";
+            tmpOutputFile << "functionEntryBB:" << graphNode.bbIndex << "\n";
         }
+        tmpOutputFile.close();
     }
 
-    outputFile.close();
+    
 
     return false;
 }
