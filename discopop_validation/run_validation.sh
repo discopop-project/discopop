@@ -66,4 +66,25 @@ echo "#########################################"
 echo "#### SIMPLE_DOALL - SIMPLE RECURSION ####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_recursive --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+# python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_recursive --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+
+echo ""
+echo "#########################################"
+echo "#### BOTS - OWN FIB ####"
+echo "#########################################"
+echo ""
+#python -m discopop_validation --path=/home/lukas/Schreibtisch/bots/own_fib/discopop-tmp --dep-file=own_fib_dp_run_dep.txt --ll-file=own_fib_dp.ll
+
+echo ""
+echo "#########################################"
+echo "#### BOTS - OWN NQUEENS ####"
+echo "#########################################"
+echo ""
+#python -m discopop_validation --path=/home/lukas/Schreibtisch/bots/own_nqueens/discopop-tmp --dep-file=own_nqueens_dp_run_dep.txt --ll-file=own_nqueens_dp.ll
+
+echo ""
+echo "#########################################"
+echo "#### POLYBENCH - ATAX ####"
+echo "#########################################"
+echo ""
+python -m discopop_validation --path=/home/lukas/Dokumente/Hiwi/polybench/atax_only/discopop/ --dep-file=dp_run_dep.txt --ll-file=complete.ll

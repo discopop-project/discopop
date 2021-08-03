@@ -213,7 +213,7 @@ class BBGraph(object):
         possible paths for the given section"""
         path_dict: Dict[int, List[List[BBNode]]] = {}
 
-        def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode) -> List[List[BBNode]]:
+        def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[List[BBNode]]:
             if root_bb_node.id not in self.graph.nodes:
                 return []
             children_paths: List[List[BBNode]] = []
@@ -222,7 +222,10 @@ class BBGraph(object):
                 child_bb_node: BBNode = self.graph.nodes[out_edge[1]]["data"]
                 if child_bb_node is entry_point_bb:
                     continue
-                children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb)
+                if child_bb_node in visited_root_bbs:
+                    continue
+                visited_root_bbs.append(child_bb_node)
+                children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb, visited_root_bbs)
             # recursion condition
             if len(children_paths) == 0:
                 result_paths = [[root_bb_node]]
@@ -236,7 +239,8 @@ class BBGraph(object):
 
         for section_id in self.section_to_entry_point:
             entry_point = self.section_to_entry_point[section_id]
-            paths = __rec_construct_pathlist(entry_point, entry_point)
+            visited_root_bbs = []
+            paths = __rec_construct_pathlist(entry_point, entry_point, visited_root_bbs)
             path_dict[section_id] = paths
         return path_dict
 

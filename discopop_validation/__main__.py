@@ -19,6 +19,7 @@ Options:
 import os
 import sys
 import cProfile
+import time
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use
@@ -74,13 +75,18 @@ def main():
             print(f"File not found: \"{file}\"")
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+    time_start_ps = time.time()
     parallelization_suggestions = get_parallelization_suggestions(cu_xml, dep_file, loop_counter_file, reduction_file,
                                                                   plugins, file_mapping=file_mapping)
+    time_end_ps = time.time()
     bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
+    time_end_bb = time.time()
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
                                                                bb_graph.get_possible_path_combinations_for_sections())
+    time_end_schedules = time.time()
     unfiltered_data_races = check_sections(sections_to_schedules_dict)
     filtered_data_race_strings = get_filtered_data_race_strings(unfiltered_data_races)
+    time_end_data_races = time.time()
     # print found data races
     for dr_str in filtered_data_race_strings:
         print(dr_str)
@@ -89,7 +95,13 @@ def main():
         profile.disable()
         profile.print_stats()
 
-    print(parallelization_suggestions)
+    # print(parallelization_suggestions)
+
+    print("\n### Measured Times: ###")
+    print("--- Get Parallelization Suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
+    print("--- Construct BB Graph: %s seconds ---" % (time_end_bb - time_end_ps))
+    print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
+    print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
 
 
 if __name__ == "__main__":
