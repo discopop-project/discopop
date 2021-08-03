@@ -52,7 +52,9 @@ def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, Lis
                         # add previous_element.thread_id to seen_thread_ids
                         seen_thread_ids.append(previous_element.thread_id)
                         previous_writes.append(previous_element)
-            data_races.append((state, schedule_element, previous_writes))
+            # data races can only occur, if a previous write exists
+            if len(previous_writes) > 0:
+                data_races.append((state, schedule_element, previous_writes))
             break
     return data_races
 

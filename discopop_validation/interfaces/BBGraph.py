@@ -161,7 +161,8 @@ class BBGraph(object):
         nx.draw_networkx_edges(self.graph, pos)
         labels = {}
         for node in self.graph.nodes:
-            labels[node] = str(self.graph.nodes[node]["data"].id) + " - " + self.graph.nodes[node]["data"].name
+            labels[node] = str(self.graph.nodes[node]["data"].start_pos) + " - " + self.graph.nodes[node]["data"].name
+            #labels[node] = str(self.graph.nodes[node]["data"].id) + " - " + self.graph.nodes[node]["data"].name
             #labels[node] = str(len(self.graph.nodes[node]["data"].operations))
             #labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
         nx.draw_networkx_labels(self.graph, pos, labels)
