@@ -323,13 +323,27 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                 }
                 else if (ci->getCalledFunction()->getName().equals("__dp_read")) {
                     // next instruction is a load
-                    sharedVarAccess access;
-                    access.name = determineVarName(ci->getNextNode());
-                    access.mode = "r";
-                    access.codeLocation = getClosestCodeLocation(ci);
-                    access.originLocation = access.codeLocation;
-                    access.parentInstruction = &inst;
-                    resultList.push_back(access);
+
+                    // filter out reads form ** to * type and ignore such cases,
+                    // as they represent loading the base address of an array etc.
+                    bool skipCurrentLoad = false;
+                    if(isa<LoadInst>(ci->getNextNode())){
+                        LoadInst *load = cast<LoadInst>(ci->getNextNode());
+                        if(load->getPointerOperandType()->isPointerTy() && load->getPointerOperandType()->getContainedType(0)->isPointerTy()){
+                            if(load->getType()->isPointerTy()){
+                                skipCurrentLoad = true;
+                            }
+                        }
+                    }
+                    if(! skipCurrentLoad) {
+                        sharedVarAccess access;
+                        access.name = determineVarName(ci->getNextNode());
+                        access.mode = "r";
+                        access.codeLocation = getClosestCodeLocation(ci);
+                        access.originLocation = access.codeLocation;
+                        access.parentInstruction = &inst;
+                        resultList.push_back(access);
+                    }
                 }
                 else if (ci->getCalledFunction()->getName().equals("__dp_call")) {
                     // next instruction is a function call
