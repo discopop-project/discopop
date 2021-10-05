@@ -45,7 +45,7 @@ echo "#########################################"
 echo "#### SIMPLE_DOALL DEEP ARRAY ####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
 
 echo ""
 echo "#########################################"
