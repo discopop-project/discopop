@@ -45,7 +45,7 @@ echo "#########################################"
 echo "#### SIMPLE_DOALL DEEP ARRAY ####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --profiling=true
 
 echo ""
 echo "#########################################"
@@ -87,4 +87,11 @@ echo "#########################################"
 echo "#### POLYBENCH - ATAX ####"
 echo "#########################################"
 echo ""
-#python -m discopop_validation --path=/home/lukas/Dokumente/Hiwi/polybench/atax_only/discopop/ --dep-file=dp_run_dep.txt --ll-file=complete.ll
+#python -m discopop_validation --path=/home/lukas/git/DP_Maker/atax_Makefile/ --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
+
+echo ""
+echo "#########################################"
+echo "#### POLYBENCH - 2MM ####"
+echo "#########################################"
+echo ""
+python -m discopop_validation --path=/home/lukas/Dokumente/Hiwi/polybench/2mm_Makefile/ --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
