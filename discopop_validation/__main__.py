@@ -97,7 +97,7 @@ def main():
 
     if arguments["--profiling"] == "true":
         profile.disable()
-        profile.print_stats()
+        profile.print_stats(sort="tottime")
 
     print("### DiscoPoP Suggestions: ###")
     print("-------------------------------------------")
