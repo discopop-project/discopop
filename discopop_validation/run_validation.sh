@@ -45,7 +45,7 @@ echo "#########################################"
 echo "#### SIMPLE_DOALL DEEP ARRAY ####"
 echo "#########################################"
 echo ""
-#python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
+python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall_deep_arr --dep-file=simple_no_dr_dp_run_dep.txt --ll-file=simple_no_dr_dp.ll
 
 echo ""
 echo "#########################################"
@@ -87,4 +87,4 @@ echo "#########################################"
 echo "#### POLYBENCH - ATAX ####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=/home/lukas/Dokumente/Hiwi/polybench/atax_only/discopop/ --dep-file=dp_run_dep.txt --ll-file=complete.ll
+#python -m discopop_validation --path=/home/lukas/Dokumente/Hiwi/polybench/atax_only/discopop/ --dep-file=dp_run_dep.txt --ll-file=complete.ll

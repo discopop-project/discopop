@@ -91,13 +91,20 @@ def main():
     for dr_str in filtered_data_race_strings:
         print(dr_str)
 
+    print("\n###########################################")
+    print("######### AUXILIARY INFORMATION ###########")
+    print("###########################################\n")
+
     if arguments["--profiling"] == "true":
         profile.disable()
         profile.print_stats()
 
-    # print(parallelization_suggestions)
+    print("### DiscoPoP Suggestions: ###")
+    print("-------------------------------------------")
+    print(parallelization_suggestions)
 
     print("\n### Measured Times: ###")
+    print("-------------------------------------------")
     print("--- Get Parallelization Suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
     print("--- Construct BB Graph: %s seconds ---" % (time_end_bb - time_end_ps))
     print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
