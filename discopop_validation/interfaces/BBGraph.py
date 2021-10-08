@@ -10,6 +10,7 @@ from itertools import combinations
 class Operation:
     mode: str
     target_name: str
+    target_indices: List[str]
     line: int
     col: int
     # origin line and col will only be different from line / col if Operation occured inside a called function
@@ -17,9 +18,10 @@ class Operation:
     origin_col: int
     section_id: int
 
-    def __init__(self, section_id, mode, target_name, line, col, origin_line, origin_col):
+    def __init__(self, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
         self.mode = mode
         self.target_name = target_name
+        self.target_indices = target_indices
         self.line = line
         self.col = col
         self.origin_line = origin_line
@@ -105,7 +107,15 @@ class BBGraph(object):
                 elif line[0] == "successor":
                     self.graph.add_edge(current_bb.id, int(line[1]))
                 elif line[0] == "operation":
-                    current_bb.operations.append(Operation(int(line[1]), line[2], line[3], int(line[4]), int(line[5]), int(line[6]), int(line[7])))
+                    # split operation target into name and indices, if any present
+                    target_indices: List[str] = []
+                    if "[" in line[3]:
+                        target_name = line[3][0:line[3].index("[")]
+                        line[3] = line[3][line[3].index("["):]
+                        target_indices = [var_name for var_name in line[3].replace("[", "").split("]") if len(var_name) > 0]
+                    else:
+                        target_name = line[3]
+                    current_bb.operations.append(Operation(int(line[1]), line[2], target_name, int(line[4]), int(line[5]), int(line[6]), int(line[7]), target_indices=target_indices))
                     if not int(line[1]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[1]))
                 elif line[0] == "inSection":
