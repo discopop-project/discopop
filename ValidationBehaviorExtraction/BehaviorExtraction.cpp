@@ -114,7 +114,7 @@ namespace
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion);
-        string determineVarName(Instruction *const I);
+        string determineVarName(Instruction *const I, bool isIndex);
         Type *pointsToStruct(PointerType *PTy);
         void processStructTypes(string const &fullStructName, MDNode *structNode);
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
@@ -238,21 +238,23 @@ Type *BehaviorExtraction::pointsToStruct(PointerType *PTy)
 }
 
 
-string BehaviorExtraction::determineVarName(Instruction *const I)
+string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
 {
     assert(I && "Instruction cannot be NULL \n");
+    if(I->getNumOperands() == 0){
+        // -> not an instruction, but a raw value
+        return "";
+    }
     int index = isa<StoreInst>(I) ? 1 : 0;
     Value *operand = I->getOperand(index);
-
     IRBuilder<> builder(I);
-
     if (operand == NULL)
     {
         return "##UNKNOWN##";
     }
 
     if (operand->hasName())
-    {   
+    {
         if (isa<GetElementPtrInst>(*operand))
         {
             GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
@@ -282,22 +284,50 @@ string BehaviorExtraction::determineVarName(Instruction *const I)
                 }
             }
 
+
             // we've found an array
             if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
-                return determineVarName((Instruction *)ptrOperand);
+//                errs() << "ARR: " << determineVarName((Instruction *)ptrOperand, isIndex) << "\n";
+                string indexString = "";
+                if(isa<GetElementPtrInst>(ptrOperand)){
+                    GetElementPtrInst* ptrOpGep = cast<GetElementPtrInst>(ptrOperand);
+                    for(auto &index : ptrOpGep->indices()){
+                        Value* idxVal = index.get();
+                        indexString += determineVarName((Instruction *) idxVal, true);
+                    }
+                }
+                for(auto &index : gep->indices()){
+                    Value* idxVal = index.get();
+                    indexString += determineVarName((Instruction *) idxVal, true);
+                }
+//                errs() << "IndexString: " << indexString << "\n";
+                return determineVarName((Instruction *)ptrOperand, isIndex) + indexString;
             }
-            return determineVarName((Instruction *)gep);
+//            errs() << "VAR_ACCESS " << determineVarName((Instruction *)gep, isIndex) << "\n";
+            string indexString = "";
+            for(auto &index : gep->indices()){
+                Value* idxVal = index.get();
+//                errs() << "INDEX_VAL: " << determineVarName((Instruction *) idxVal, true) << "\n";
+                indexString += determineVarName((Instruction *) idxVal, true);
+            }
+
+            return determineVarName((Instruction *)gep, isIndex) + indexString;
         }
 
         // we've found a variable
-        return string(operand->getName().data());
+        if(isIndex){
+            return "[" + string(operand->getName().data()) + "]";
+        }
+        else{
+            return string(operand->getName().data());
+        }
+
         
     }
-
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
-        return determineVarName((Instruction *)(operand));
+        return determineVarName((Instruction *)(operand), isIndex);
     }
     // if we cannot determine the name, then return Unknown
     return "##UNKNOWN##";
@@ -314,7 +344,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                 if (ci->getCalledFunction()->getName().equals("__dp_write")) {
                     // next instruction is a store
                     sharedVarAccess access;
-                    access.name = determineVarName(ci->getNextNode());
+                    access.name = determineVarName(ci->getNextNode(), false);
                     access.mode = "w";
                     access.codeLocation = getClosestCodeLocation(ci);
                     access.originLocation = access.codeLocation;
@@ -337,7 +367,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                     }
                     if(! skipCurrentLoad) {
                         sharedVarAccess access;
-                        access.name = determineVarName(ci->getNextNode());
+                        access.name = determineVarName(ci->getNextNode(), false);
                         access.mode = "r";
                         access.codeLocation = getClosestCodeLocation(ci);
                         access.originLocation = access.codeLocation;
@@ -362,7 +392,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                             }
                             else{
                                 // argument is not a constant
-                                argName = determineVarName(cast<Instruction>(arg->get()));
+                                argName = determineVarName(cast<Instruction>(arg->get()), false);
                             }
                             if(argName.compare("##UNKNOWN##") != 0){
                                 // argument has a known name
@@ -423,7 +453,8 @@ list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function
         list<sharedVarAccess> bbAccesses = getSharedVarAccesses(BB, *calledFunction, currentlyInsideRecursion);
         // filter bbAccesses for argName / argPtrName
         for(sharedVarAccess sva : bbAccesses){
-            if(sva.name.compare(argName) == 0 || sva.name.compare(argPtrName) == 0){
+            string svaNameWithoutIndices = sva.name.substr(0, sva.name.find("["));
+            if(svaNameWithoutIndices.compare(argName) == 0 || svaNameWithoutIndices.compare(argPtrName) == 0){
                 // access to arg, append entry to accesses
                 sharedVarAccess access;
                 access.name = sva.name;
@@ -604,8 +635,9 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         for(auto sva : graphNode.varAccesses){
             // errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
             // only report operation, if it is inside of a relevant section
+            string svaNameWithoutIndices = sva.name.substr(0, sva.name.find("["));
             for(auto section : sections){
-                    if(sva.name.compare(section.varName) == 0){
+                    if(svaNameWithoutIndices.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
                             tmpOutputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
                                        << ":" << sva.codeLocation.second << ":" <<  sva.originLocation.first << ":" << sva.originLocation.second << "\n";
