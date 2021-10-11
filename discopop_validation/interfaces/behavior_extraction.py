@@ -69,7 +69,7 @@ def execute_bb_graph_extraction(suggestions: DetectionResult, file_mapping: str,
 
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
-    bb_graph.compress()
+    # bb_graph.compress()
     # cleanup
     #shutil.rmtree("tmp_behavior_extraction")
 
