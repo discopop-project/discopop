@@ -19,7 +19,7 @@ class Operation:
     section_id: int
     cu_id: str
 
-    def __init__(self, cu_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
+    def __init__(self, suggestion_type, cu_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
         self.mode = mode
         self.target_name = target_name
         self.target_indices = target_indices
@@ -29,6 +29,7 @@ class Operation:
         self.origin_col = origin_col
         self.section_id = section_id
         self.cu_id = cu_id
+        self.suggestion_type = suggestion_type
 
     def __str__(self):
         if self.mode.startswith("c"):
@@ -111,15 +112,15 @@ class BBGraph(object):
                 elif line[0] == "operation":
                     # split operation target into name and indices, if any present
                     target_indices: List[str] = []
-                    if "[" in line[4]:
-                        target_name = line[4][0:line[4].index("[")]
-                        line[4] = line[4][line[4].index("["):]
-                        target_indices = [var_name for var_name in line[3].replace("[", "").split("]") if len(var_name) > 0]
+                    if "[" in line[5]:
+                        target_name = line[5][0:line[5].index("[")]
+                        line[5] = line[5][line[5].index("["):]
+                        target_indices = [var_name for var_name in line[5].replace("[", "").split("]") if len(var_name) > 0]
                     else:
-                        target_name = line[4]
-                    current_bb.operations.append(Operation(line[1], int(line[2]), line[3], target_name, int(line[5]), int(line[6]), int(line[7]), int(line[8]), target_indices=target_indices))
-                    if not int(line[2]) in current_bb.contained_in_relevant_sections:
-                        current_bb.contained_in_relevant_sections.append(int(line[2]))
+                        target_name = line[5]
+                    current_bb.operations.append(Operation(line[1], line[2], int(line[3]), line[4], target_name, int(line[6]), int(line[7]), int(line[8]), int(line[9]), target_indices=target_indices))
+                    if not int(line[3]) in current_bb.contained_in_relevant_sections:
+                        current_bb.contained_in_relevant_sections.append(int(line[3]))
                 elif line[0] == "inSection":
                     section_id = int(line[1])
                     if section_id not in current_bb.contained_in_relevant_sections:

@@ -3,6 +3,7 @@ from ..interfaces.BBGraph import Operation
 from typing import Dict, List, Tuple, Optional
 from .vector_clock import get_updated_vc, increase, compare_vc
 from .schedule import Schedule, ScheduleElement, UpdateType
+from ..interfaces.discopop_explorer import is_loop_index
 
 
 def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> List[DataRace]:
@@ -133,3 +134,38 @@ def get_filtered_data_race_strings(unfiltered_data_races: List[DataRace]) -> Lis
         if dr_str not in [fdr_str for fdr_str in filtered_data_race_strings]:
             filtered_data_race_strings.append(dr_str)
     return filtered_data_race_strings
+
+
+def apply_exception_rules(unfiltered_data_races: List[DataRace], pet) -> List[DataRace]:
+    """apllies suggestion-type-specific exception rules and removes unnecessary / incorrect Data races."""
+    filtered_data_races: List[DataRace] = []
+    for data_race in unfiltered_data_races:
+        dr_is_valid = False
+        if data_race.get_parent_suggestion_type() == "do_all":
+            dr_is_valid = __check_do_all_exception_rules(data_race, pet)
+
+        if dr_is_valid:
+            filtered_data_races.append(data_race)
+
+    return filtered_data_races
+
+
+def __check_do_all_exception_rules(data_race: DataRace, pet) -> bool:
+    """Checks if the given data race is valid according to the do_all exception rules.
+    Returns True, if the data race is valid and should be kept.
+    Returns False, if the data race is invalid and should be removed."""
+    is_valid = True
+    is_valid = is_valid and __do_all_exception_rule_1(data_race, pet)
+    return is_valid
+
+
+def __do_all_exception_rule_1(data_race: DataRace, pet) -> bool:
+    """exception 1: If at least one used index is loop index of parent suggestion loop, the data race can be removed."""
+    for index in data_race.get_used_indices():
+        print("INDEX: ", index)
+        if is_loop_index(pet, pet.node_at(data_race.get_cu_id()), index):
+            print("LOOP INDEX: ", index)
+            return False
+        else:
+            print("NO LOOP INDEX")
+    return True

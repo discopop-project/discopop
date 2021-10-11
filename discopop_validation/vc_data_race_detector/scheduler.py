@@ -22,7 +22,6 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
 
 def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int, path_combination: List[List[BBNode]]) -> List[Schedule]:
     """creates a list of Schedules based on the given combination of paths"""
-
     if len(path_combination) == 0:
         return []
     if len(path_combination) == 1:

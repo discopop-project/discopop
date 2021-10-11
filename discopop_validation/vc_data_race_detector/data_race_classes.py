@@ -50,7 +50,16 @@ class DataRace(object):
             result_str += "prev: " + str(write) + "\n"
         result_str += "===> " + str(self.schedule_element) + "\n"
         result_str += "===> indices: " + " ".join(self.get_used_indices()) + "\n"
+
+        result_str += "===> parent suggestion type: " + self.get_parent_suggestion_type() + "\n"
         return result_str
+
+    def get_parent_suggestion_type(self) -> str:
+        """returns the type of the suggestion which 'contains' the current DataRace."""
+        for _, _, _, operation in self.schedule_element.updates:
+            if operation.suggestion_type != "":
+                return operation.suggestion_type
+        return "UNDEF"
 
     def get_used_indices(self) -> List[str]:
         """returns the indices used in the operations in schedule_element."""
@@ -61,6 +70,13 @@ class DataRace(object):
             indices += operation.target_indices
         indices = list(set(indices))
         return indices
+
+    def get_cu_id(self) -> str:
+        """returns the cu_id which is stored in the schedule element's operations."""
+        for _, _, _, operation in self.schedule_element.updates:
+            if operation.cu_id != "":
+                return operation.cu_id
+        return "UNDEF"
 
     def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
         """returns the stored information as a tuple.

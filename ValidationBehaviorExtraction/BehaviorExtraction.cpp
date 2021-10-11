@@ -101,6 +101,7 @@ namespace
         unsigned int endLine;
         string varName;
         string cuId;
+        string suggestionType;
     };
 
     struct BehaviorExtraction : public FunctionPass
@@ -640,8 +641,8 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             for(auto section : sections){
                     if(svaNameWithoutIndices.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
-                            tmpOutputFile << "operation;" << section.cuId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
-                                       << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << ";\n";
+                            tmpOutputFile << "operation;" << section.suggestionType << ";" << section.cuId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
+                                       << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << "\n";
                         }
                     }
 
@@ -700,7 +701,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     string columnDelimiter = ";";
     while(getline(inputFile, line)){
         // store line contents on sections-stack
-        string tmp[6];
+        string tmp[7];
         string token;
         int counter = 0;
         size_t pos = 0;
@@ -717,6 +718,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.endLine = stoi(tmp[3]);
         curSection.varName = tmp[4];
         curSection.cuId = tmp[5];
+        curSection.suggestionType = tmp[6];
         sections.push_back(curSection);
     }
     inputFile.close();
