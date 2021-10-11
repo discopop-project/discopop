@@ -162,10 +162,6 @@ def __check_do_all_exception_rules(data_race: DataRace, pet) -> bool:
 def __do_all_exception_rule_1(data_race: DataRace, pet) -> bool:
     """exception 1: If at least one used index is loop index of parent suggestion loop, the data race can be removed."""
     for index in data_race.get_used_indices():
-        print("INDEX: ", index)
         if is_loop_index(pet, pet.node_at(data_race.get_cu_id()), index):
-            print("LOOP INDEX: ", index)
             return False
-        else:
-            print("NO LOOP INDEX")
     return True
