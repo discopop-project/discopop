@@ -60,7 +60,6 @@ class ScheduleElement:
             if var_name not in self.lock_names:
                 self.lock_names.append(var_name)
 
-
 class Schedule(object):
     thread_count: int = -1
     lock_names: List[str] = []

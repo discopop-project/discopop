@@ -33,6 +33,10 @@ class State(object):
 
 
 class DataRace(object):
+    section_id: int
+    schedule_element: ScheduleElement
+    previous_writes: List[ScheduleElement]
+
     # represents a found data race for the output to the user
     def __init__(self, section_id: int, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
         self.section_id: int = section_id
@@ -45,7 +49,18 @@ class DataRace(object):
         for write in self.previous_writes:
             result_str += "prev: " + str(write) + "\n"
         result_str += "===> " + str(self.schedule_element) + "\n"
+        result_str += "===> indices: " + " ".join(self.get_used_indices()) + "\n"
         return result_str
+
+    def get_used_indices(self) -> List[str]:
+        """returns the indices used in the operations in schedule_element."""
+        indices: List[str] = []
+        for _, _, _, operation in self.schedule_element.updates:
+            if operation is None:
+                continue
+            indices += operation.target_indices
+        indices = list(set(indices))
+        return indices
 
     def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
         """returns the stored information as a tuple.

@@ -100,6 +100,7 @@ namespace
         unsigned int startLine;
         unsigned int endLine;
         string varName;
+        string cuId;
     };
 
     struct BehaviorExtraction : public FunctionPass
@@ -594,8 +595,8 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     // open output file
     ofstream outputFile(ClOutputFile, std::ios_base::app);
     // fill output file
-    outputFile << "function:" << F.getName().str() << "\n";
-    outputFile << "fileName:" << parentFileName << "\n";
+    outputFile << "function;" << F.getName().str() << "\n";
+    outputFile << "fileName;" << parentFileName << "\n";
     outputFile.close();
 
     // get shared var accesses
@@ -619,17 +620,17 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         if(bb_in_sections.size() == 0){
             continue;
         }
-        tmpOutputFile << "bbIndex:" << graphNode.bbIndex << "\n";
-        tmpOutputFile << "bbName:" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
-        tmpOutputFile << "bbStart:" << graphNode.startLocation.first << ":" << graphNode.startLocation.second << "\n";
-        tmpOutputFile << "bbEnd:" << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
+        tmpOutputFile << "bbIndex;" << graphNode.bbIndex << "\n";
+        tmpOutputFile << "bbName;" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
+        tmpOutputFile << "bbStart;" << graphNode.startLocation.first << ";" << graphNode.startLocation.second << "\n";
+        tmpOutputFile << "bbEnd;" << graphNode.endLocation.first << ";" << graphNode.endLocation.second << "\n";
         for(unsigned int sid : bb_in_sections){
-            tmpOutputFile << "inSection:" << sid << "\n";
+            tmpOutputFile << "inSection;" << sid << "\n";
         }
 
         // report successors to output file
         for(auto successorBB: successors(&BB)){
-            tmpOutputFile << "successor:" << bbToGraphNodeMap.at(successorBB).bbIndex << "\n";
+            tmpOutputFile << "successor;" << bbToGraphNodeMap.at(successorBB).bbIndex << "\n";
         }
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
@@ -639,8 +640,8 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             for(auto section : sections){
                     if(svaNameWithoutIndices.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
-                            tmpOutputFile << "operation:" << section.sectionId << ":" << sva.mode << ":" << sva.name << ":" << sva.codeLocation.first
-                                       << ":" << sva.codeLocation.second << ":" <<  sva.originLocation.first << ":" << sva.originLocation.second << "\n";
+                            tmpOutputFile << "operation;" << section.cuId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
+                                       << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << ";\n";
                         }
                     }
 
@@ -650,7 +651,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         // set function entrypoint if necessary
         BasicBlock* x = &(F.getEntryBlock());
         if(&BB == x){
-            tmpOutputFile << "functionEntryBB:" << graphNode.bbIndex << "\n";
+            tmpOutputFile << "functionEntryBB;" << graphNode.bbIndex << "\n";
         }
         tmpOutputFile.close();
     }
@@ -699,7 +700,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     string columnDelimiter = ";";
     while(getline(inputFile, line)){
         // store line contents on sections-stack
-        string tmp[5];
+        string tmp[6];
         string token;
         int counter = 0;
         size_t pos = 0;
@@ -715,6 +716,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.startLine = stoi(tmp[2]);
         curSection.endLine = stoi(tmp[3]);
         curSection.varName = tmp[4];
+        curSection.cuId = tmp[5];
         sections.push_back(curSection);
     }
     inputFile.close();

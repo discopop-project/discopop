@@ -24,8 +24,7 @@ import time
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
-from .interfaces.behavior_extraction import get_relevant_sections_from_suggestions, \
-    execute_bb_graph_extraction
+from .interfaces.behavior_extraction import execute_bb_graph_extraction
 from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
 from .interfaces.discopop_explorer import get_parallelization_suggestions
