@@ -82,9 +82,9 @@
 	<Node id="1:5" type="0" name="" startsAtLine = "1:8" endsAtLine = "1:9">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>32</readDataSize>
+		<readDataSize>0</readDataSize>
 		<writeDataSize>64</writeDataSize>
-		<instructionsCount>6</instructionsCount>
+		<instructionsCount>3</instructionsCount>
 		<instructionLines count="2">1:8,1:9</instructionLines>
 		<readPhaseLines count="1">1:8</readPhaseLines>
 		<writePhaseLines count="1">1:8</writePhaseLines>
@@ -140,7 +140,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="LineNotFound">i5</global>
+			<global type="i32*" defLine="LineNotFound">i3</global>
 			<global type="i32*" defLine="1:11">x</global>
 		</globalVariables>
 		<callsNode>
@@ -153,7 +153,7 @@
 
 	<Node id="1:9" type="0" name="" startsAtLine = "1:12" endsAtLine = "1:12">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.cond6</BasicBlockID>
+		<BasicBlockID>for.cond4</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>0</writeDataSize>
 		<instructionsCount>3</instructionsCount>
@@ -168,7 +168,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="LineNotFound">i5</global>
+			<global type="i32*" defLine="LineNotFound">i3</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -176,7 +176,7 @@
 
 	<Node id="1:10" type="0" name="" startsAtLine = "1:13" endsAtLine = "1:13">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body8</BasicBlockID>
+		<BasicBlockID>for.body6</BasicBlockID>
 		<readDataSize>128</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<instructionsCount>8</instructionsCount>
@@ -191,7 +191,7 @@
 			<local type="ARRAY,i32*" defLine="1:4">arr</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="LineNotFound">i5</global>
+			<global type="i32*" defLine="LineNotFound">i3</global>
 			<global type="i32*" defLine="1:11">x</global>
 		</globalVariables>
 		<callsNode>
@@ -200,10 +200,10 @@
 
 	<Node id="1:11" type="0" name="" startsAtLine = "1:14" endsAtLine = "1:15">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body8</BasicBlockID>
-		<readDataSize>32</readDataSize>
+		<BasicBlockID>for.body6</BasicBlockID>
+		<readDataSize>0</readDataSize>
 		<writeDataSize>64</writeDataSize>
-		<instructionsCount>6</instructionsCount>
+		<instructionsCount>3</instructionsCount>
 		<instructionLines count="2">1:14,1:15</instructionLines>
 		<readPhaseLines count="1">1:14</readPhaseLines>
 		<writePhaseLines count="1">1:14</writePhaseLines>
@@ -223,7 +223,7 @@
 
 	<Node id="1:12" type="0" name="" startsAtLine = "1:12" endsAtLine = "1:12">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.inc16</BasicBlockID>
+		<BasicBlockID>for.inc12</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<instructionsCount>4</instructionsCount>
@@ -237,7 +237,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="LineNotFound">i5</global>
+			<global type="i32*" defLine="LineNotFound">i3</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -245,7 +245,7 @@
 
 	<Node id="1:13" type="0" name="" startsAtLine = "1:17" endsAtLine = "1:17">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.end18</BasicBlockID>
+		<BasicBlockID>for.end14</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>0</writeDataSize>
 		<instructionsCount>2</instructionsCount>

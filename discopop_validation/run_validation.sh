@@ -87,7 +87,7 @@ echo "#########################################"
 echo "#### POLYBENCH - ATAX ####"
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=/home/lukas/git/DP_Maker/atax_Makefile/ --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
+#python -m discopop_validation --path=/home/lukas/git/DP_Maker/atax_Makefile/ --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
 
 echo ""
 echo "#########################################"

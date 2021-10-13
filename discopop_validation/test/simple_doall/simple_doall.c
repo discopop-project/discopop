@@ -5,13 +5,13 @@ int main(){
 
     for(int i=0; i < 10; i++){
         arr[i] = i;
-        arr[i] = arr[i] + 3;
+        arr[i] += 3;
     }
 
-    int x = 42;
+    int x = 3;
     for(int i=0; i < 10; i++){
         arr[x] = i;
-        arr[x] = arr[x] + 3;
+        arr[x] += 3;
     }
 
 }
