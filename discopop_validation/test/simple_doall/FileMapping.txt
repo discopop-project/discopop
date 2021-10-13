@@ -1,1 +1,1 @@
-1	/home/lukas/Schreibtisch/dpvsc_test/simple_doall.c
+1	/home/lukas/git/discopop/discopop_validation/test/simple_doall/simple_doall.c
