@@ -37,7 +37,6 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int,
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
     schedules = scheduling_graph.get_schedules()
-
     return schedules
 
 
@@ -58,6 +57,10 @@ def __convert_operation_to_schedule_element(operation: Operation, executing_thre
         update_type = UpdateType.WRITE
     elif operation.mode[-1] == "r":
         update_type = UpdateType.READ
+    elif operation.mode[-1] == "l":
+        update_type = UpdateType.LOCK
+    elif operation.mode[-1] == "u":
+        update_type = UpdateType.UNLOCK
     else:
         raise ValueError("Unsupported mode: ", operation.mode)
     schedule_element.add_update(operation.target_name, update_type, operation=operation)

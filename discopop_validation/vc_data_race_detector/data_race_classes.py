@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 
-from .schedule import ScheduleElement
+from .schedule import ScheduleElement, Schedule
 from .vector_clock import VectorClock
 
 
@@ -34,12 +34,14 @@ class State(object):
 
 class DataRace(object):
     section_id: int
+    schedule: Schedule
     schedule_element: ScheduleElement
     previous_writes: List[ScheduleElement]
 
     # represents a found data race for the output to the user
-    def __init__(self, section_id: int, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
+    def __init__(self, section_id: int, schedule: Schedule, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
         self.section_id: int = section_id
+        self.schedule = schedule
         self.schedule_element: ScheduleElement = schedule_element
         self.previous_writes: List[ScheduleElement] = previous_writes
 

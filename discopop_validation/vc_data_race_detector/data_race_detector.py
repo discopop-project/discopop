@@ -20,7 +20,7 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> Lis
                     state: State = check_result[0]
                     schedule_element = check_result[1]
                     previous_writes = check_result[2]
-                    data_race: DataRace = DataRace(section_id, schedule_element, previous_writes)
+                    data_race: DataRace = DataRace(section_id, schedule, schedule_element, previous_writes)
                     found_data_races.append(data_race)
     return found_data_races
 

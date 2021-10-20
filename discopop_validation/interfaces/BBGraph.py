@@ -38,7 +38,7 @@ class Operation:
             pretty_mode = self.mode
 
         # if operation occurs inside called function, report origin line and col additionally
-        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
+        return_str = "CU(" + str(self.cu_id) + ");" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
@@ -53,6 +53,7 @@ class BBNode:
     name: str
     start_pos: Tuple[int, int]
     end_pos: Tuple[int, int]
+    file_id: int
 
     def __init__(self, node_id):
         self.id = node_id
@@ -61,6 +62,7 @@ class BBNode:
         self.name = ""
         self.start_pos = (maxsize, maxsize)
         self.end_pos = (-maxsize, -maxsize)
+        self.file_id = -1
 
 
 class FunctionMetaData:
@@ -140,6 +142,8 @@ class BBGraph(object):
                     current_bb.start_pos = (int(line[1]), int(line[2]))
                 elif line[0] == "bbEnd":
                     current_bb.end_pos = (int(line[1]), int(line[2]))
+                elif line[0] == "bbFileId":
+                    current_bb.file_id = int(line[1])
                 else:
                     raise ValueError("Unknown keyword: ", line[0])
 
@@ -181,6 +185,7 @@ class BBGraph(object):
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 
+    # todo erroneous, currently unusable!
     def compress(self):
         """compresses the bb graph iteratively until no further optimization can be found."""
         modification_found = True
@@ -292,7 +297,7 @@ class BBGraph(object):
         for bb_node in bb_path:
             for op in bb_node.operations:
                 # only consider the relevant section id
-                if op.section_id == section_id:
+                if op.section_id == section_id or op.section_id is None:
                     op_path.append((bb_node.id, op))
         self.bb_path_to_operations_cache[cache_tuple] = op_path
         return op_path

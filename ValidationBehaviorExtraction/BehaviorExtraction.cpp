@@ -95,6 +95,7 @@ namespace
 
     struct relevantSection
     {
+        unsigned int fileId;
         unsigned int sectionId;
         string filePath;
         unsigned int startLine;
@@ -625,6 +626,11 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         tmpOutputFile << "bbName;" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
         tmpOutputFile << "bbStart;" << graphNode.startLocation.first << ";" << graphNode.startLocation.second << "\n";
         tmpOutputFile << "bbEnd;" << graphNode.endLocation.first << ";" << graphNode.endLocation.second << "\n";
+        for(auto section : sections){
+            tmpOutputFile << "bbFileId;" << section.fileId << "\n";
+            break;
+        }
+
         for(unsigned int sid : bb_in_sections){
             tmpOutputFile << "inSection;" << sid << "\n";
         }
@@ -662,7 +668,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     return false;
 }
 
-// todo in python: remove empty BB blocks, which are not part of any branching (combine with previous node)
 // todo in python: remove branched sections, if no R/W information is contained
 
 
@@ -701,7 +706,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     string columnDelimiter = ";";
     while(getline(inputFile, line)){
         // store line contents on sections-stack
-        string tmp[7];
+        string tmp[8];
         string token;
         int counter = 0;
         size_t pos = 0;
@@ -713,12 +718,13 @@ bool BehaviorExtraction::doInitialization(Module &M){
         }
         struct relevantSection curSection;
         curSection.filePath = tmp[0];
-        curSection.sectionId = stoi(tmp[1]);
-        curSection.startLine = stoi(tmp[2]);
-        curSection.endLine = stoi(tmp[3]);
-        curSection.varName = tmp[4];
-        curSection.cuId = tmp[5];
-        curSection.suggestionType = tmp[6];
+        curSection.fileId = stoi(tmp[1]);
+        curSection.sectionId = stoi(tmp[2]);
+        curSection.startLine = stoi(tmp[3]);
+        curSection.endLine = stoi(tmp[4]);
+        curSection.varName = tmp[5];
+        curSection.cuId = tmp[6];
+        curSection.suggestionType = tmp[7];
         sections.push_back(curSection);
     }
     inputFile.close();

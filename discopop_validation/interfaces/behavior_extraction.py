@@ -48,9 +48,10 @@ def execute_bb_graph_extraction(suggestions: Dict, file_mapping: str, ll_file_pa
         for section_id, start_line, end_line, var_name, cu_id, suggestion_type in relevant_sections:
             # replace file ids with path
             file_path = file_mapping_dict[start_line.split(":")[0]]
+            file_id = start_line.split(":")[0]
             start_line = start_line.split(":")[1]
             end_line = end_line.split(":")[1]
-            input_file.write(file_path + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_name + ";" + cu_id + ";" + suggestion_type + ";\n")
+            input_file.write(file_path + ";" + file_id + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_name + ";" + cu_id + ";" + suggestion_type + ";\n")
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
@@ -69,8 +70,10 @@ def execute_bb_graph_extraction(suggestions: Dict, file_mapping: str, ll_file_pa
 
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
+    # todo compression currently not correct!
     # bb_graph.compress()
     # cleanup
+    # todo re-enable
     #shutil.rmtree("tmp_behavior_extraction")
 
     return bb_graph
