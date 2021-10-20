@@ -37,7 +37,6 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int,
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
     schedules = scheduling_graph.get_schedules()
-
     return schedules
 
 

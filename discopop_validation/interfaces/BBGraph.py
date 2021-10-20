@@ -287,7 +287,6 @@ class BBGraph(object):
             result_dict[section_id] = path_combinations
         return result_dict
 
-    # todo include locking
     def convert_bb_path_to_operations(self, section_id: int, bb_path: List[BBNode]) -> List[Tuple[int, Operation]]:
         """Converts a given list of BB Nodes which represent a path in the BB graph into a list of tuples containing
         the id of the parent BB node and an Operation."""
