@@ -58,7 +58,12 @@ def __convert_operation_to_schedule_element(operation: Operation, executing_thre
         update_type = UpdateType.WRITE
     elif operation.mode[-1] == "r":
         update_type = UpdateType.READ
+    elif operation.mode[-1] == "l":
+        update_type = UpdateType.LOCK
+    elif operation.mode[-1] == "u":
+        update_type = UpdateType.UNLOCK
     else:
         raise ValueError("Unsupported mode: ", operation.mode)
     schedule_element.add_update(operation.target_name, update_type, operation=operation)
+    print(schedule_element)
     return schedule_element

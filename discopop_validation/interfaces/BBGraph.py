@@ -38,7 +38,7 @@ class Operation:
             pretty_mode = self.mode
 
         # if operation occurs inside called function, report origin line and col additionally
-        return_str = "CU(" + self.cu_id + ");" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
+        return_str = "CU(" + str(self.cu_id) + ");" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
@@ -297,8 +297,9 @@ class BBGraph(object):
         op_path: List[Tuple[int, Operation]] = []
         for bb_node in bb_path:
             for op in bb_node.operations:
+                print("OP: ", str(op))
                 # only consider the relevant section id
-                if op.section_id == section_id:
+                if op.section_id == section_id or op.section_id is None:
                     op_path.append((bb_node.id, op))
         self.bb_path_to_operations_cache[cache_tuple] = op_path
         return op_path
