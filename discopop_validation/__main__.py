@@ -138,11 +138,6 @@ def main():
     filtered_data_races = apply_exception_rules(unfiltered_data_races, pet)
     filtered_data_race_strings = get_filtered_data_race_strings(filtered_data_races)
     time_end_data_races = time.time()
-    # print found data race schedules:
-    for dr in filtered_data_races:
-        print(dr)
-        print(dr.schedule)
-        print()
 
     # print found data races
     for dr_str in filtered_data_race_strings:

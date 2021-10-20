@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 
 from .schedule import ScheduleElement, Schedule
 from .vector_clock import VectorClock
+from termcolor import colored
 
 
 class State(object):
@@ -47,7 +48,7 @@ class DataRace(object):
 
     def __str__(self):
         result_str = ""
-        result_str += "##### DATA RACE IN SECTION: " + str(self.section_id) + " #####\n"
+        result_str += colored("##### DATA RACE IN SECTION: " + str(self.section_id) + " #####\n", 'red', attrs=['bold'])
         for write in self.previous_writes:
             result_str += "prev: " + str(write) + "\n"
         result_str += "===> " + str(self.schedule_element) + "\n"
