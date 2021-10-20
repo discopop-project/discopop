@@ -89,19 +89,53 @@ def main():
     # todo remove
     # insert critical sections (locking statements to random hash values) into bb_graph
     for critical_section in parallelization_suggestions["critical_section"]:
-        cs_file_id = critical_section["start_line"].split(":")[0]
-        cs_start_line = critical_section["start_line"].split(":")[1]
-        cs_end_line = critical_section["end_line"].split(":")[1]
+        cs_file_id = int(critical_section["start_line"].split(":")[0])
+        cs_start_line = int(critical_section["start_line"].split(":")[1])
+        cs_end_line = int(critical_section["end_line"].split(":")[1])
+        print("CRIT: ", cs_file_id, ":", cs_start_line, "-", cs_end_line)
         # iterate over bb graph nodes
-        for bb_node in bb_graph.graph.nodes:
-            # todo remove: list operations
-            print("bb_node: ", bb_graph.graph.nodes[bb_node]["data"].start_pos[0], "->", bb_graph.graph.nodes[bb_node]["data"].end_pos[0])
-            print([str(x) for x in bb_graph.graph.nodes[bb_node]["data"].operations])
+        for bb_node_id in bb_graph.graph.nodes:
+            bb_node = bb_graph.graph.nodes[bb_node_id]["data"]
             # check if critical section is contained in bb_node
-            #if cs_file_id == bb_node
-            for op_idx, operation in enumerate(bb_graph.graph.nodes[bb_node]["data"].operations):
-                pass
+            if not cs_file_id == bb_node.file_id:
+                continue
+            if not bb_node.start_pos[0] <= cs_start_line:
+                continue
+            if not bb_node.end_pos[0] >= cs_end_line:
+                continue
+            # todo remove: list operations
+            print("bb_node: ", bb_node.file_id, ":", bb_node.start_pos[0], "->", bb_node.end_pos[0])
+            print([str(x) for x in bb_node.operations])
+            # determine insertion points of locking instructions into list of operations
+            insert_idx_lock = 0
+            insert_idx_unlock = len(bb_node.operations)
+            operation_lines = [op.line for op in bb_node.operations]
+            print(operation_lines)
 
+            print("pre insert_idx_lock:", insert_idx_lock)
+            print("pre insert_idx_unlock:", insert_idx_unlock)
+
+            # determine lock index
+            for idx, operation_line in enumerate(operation_lines):
+                if operation_line >= cs_start_line:
+                    insert_idx_lock = idx
+                    break
+            # determine unlock index
+            while insert_idx_unlock > 0 and operation_lines[insert_idx_unlock - 1] > cs_end_line:
+                insert_idx_unlock -= 1
+
+
+
+            print("insert_idx_lock:", insert_idx_lock)
+            print("insert_idx_unlock:", insert_idx_unlock)
+            # insert unlock operation
+            bb_node.operations.insert(insert_idx_unlock, "UNLOCK")
+            # insert lock operation
+            bb_node.operations.insert(insert_idx_lock, "LOCK")
+
+
+
+            print([str(x) for x in bb_node.operations])
             print()
     import sys
     sys.exit(0)

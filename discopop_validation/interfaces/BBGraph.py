@@ -53,6 +53,7 @@ class BBNode:
     name: str
     start_pos: Tuple[int, int]
     end_pos: Tuple[int, int]
+    file_id: int
 
     def __init__(self, node_id):
         self.id = node_id
@@ -61,6 +62,7 @@ class BBNode:
         self.name = ""
         self.start_pos = (maxsize, maxsize)
         self.end_pos = (-maxsize, -maxsize)
+        self.file_id = -1
 
 
 class FunctionMetaData:
@@ -140,6 +142,8 @@ class BBGraph(object):
                     current_bb.start_pos = (int(line[1]), int(line[2]))
                 elif line[0] == "bbEnd":
                     current_bb.end_pos = (int(line[1]), int(line[2]))
+                elif line[0] == "bbFileId":
+                    current_bb.file_id = int(line[1])
                 else:
                     raise ValueError("Unknown keyword: ", line[0])
 
