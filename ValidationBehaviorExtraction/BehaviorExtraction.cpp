@@ -662,7 +662,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     return false;
 }
 
-// todo in python: remove empty BB blocks, which are not part of any branching (combine with previous node)
 // todo in python: remove branched sections, if no R/W information is contained
 
 

@@ -31,7 +31,7 @@ from .interfaces.behavior_extraction import execute_bb_graph_extraction
 from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings, \
     apply_exception_rules
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
-from .interfaces.discopop_explorer import unused_get_parallelization_suggestions, get_pet_graph, load_parallelization_suggestions
+from .interfaces.discopop_explorer import get_pet_graph, load_parallelization_suggestions
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -86,6 +86,26 @@ def main():
         parallelization_suggestions = json.load(f)
     time_end_ps = time.time()
     bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
+    # todo remove
+    # insert critical sections (locking statements to random hash values) into bb_graph
+    for critical_section in parallelization_suggestions["critical_section"]:
+        cs_file_id = critical_section["start_line"].split(":")[0]
+        cs_start_line = critical_section["start_line"].split(":")[1]
+        cs_end_line = critical_section["end_line"].split(":")[1]
+        # iterate over bb graph nodes
+        for bb_node in bb_graph.graph.nodes:
+            # todo remove: list operations
+            print("bb_node: ", bb_graph.graph.nodes[bb_node]["data"].start_pos[0], "->", bb_graph.graph.nodes[bb_node]["data"].end_pos[0])
+            print([str(x) for x in bb_graph.graph.nodes[bb_node]["data"].operations])
+            # check if critical section is contained in bb_node
+            #if cs_file_id == bb_node
+            for op_idx, operation in enumerate(bb_graph.graph.nodes[bb_node]["data"].operations):
+                pass
+
+            print()
+    import sys
+    sys.exit(0)
+
     time_end_bb = time.time()
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
                                                                bb_graph.get_possible_path_combinations_for_sections())
@@ -110,6 +130,11 @@ def main():
     print("-------------------------------------------")
     for suggestion in parallelization_suggestions["do_all"]:
         print("-->",suggestion, "\n")
+
+    print("### DiscoPoP Critical-Section Suggestions: ###")
+    print("-------------------------------------------")
+    for suggestion in parallelization_suggestions["critical_section"]:
+        print("-->", suggestion, "\n")
 
 
     print("\n### Measured Times: ###")

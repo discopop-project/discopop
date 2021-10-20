@@ -38,7 +38,7 @@ class Operation:
             pretty_mode = self.mode
 
         # if operation occurs inside called function, report origin line and col additionally
-        return_str = "" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
+        return_str = "CU(" + self.cu_id + ");" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
@@ -181,6 +181,7 @@ class BBGraph(object):
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 
+    # todo erroneous, currently unusable!
     def compress(self):
         """compresses the bb graph iteratively until no further optimization can be found."""
         modification_found = True
@@ -282,6 +283,7 @@ class BBGraph(object):
             result_dict[section_id] = path_combinations
         return result_dict
 
+    # todo include locking
     def convert_bb_path_to_operations(self, section_id: int, bb_path: List[BBNode]) -> List[Tuple[int, Operation]]:
         """Converts a given list of BB Nodes which represent a path in the BB graph into a list of tuples containing
         the id of the parent BB node and an Operation."""
