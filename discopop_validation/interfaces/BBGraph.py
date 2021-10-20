@@ -296,7 +296,6 @@ class BBGraph(object):
         op_path: List[Tuple[int, Operation]] = []
         for bb_node in bb_path:
             for op in bb_node.operations:
-                print("OP: ", str(op))
                 # only consider the relevant section id
                 if op.section_id == section_id or op.section_id is None:
                     op_path.append((bb_node.id, op))

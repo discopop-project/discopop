@@ -94,7 +94,6 @@ def main():
             cs_file_id = int(critical_section["start_line"].split(":")[0])
             cs_start_line = int(critical_section["start_line"].split(":")[1])
             cs_end_line = int(critical_section["end_line"].split(":")[1])
-            print("CRIT: ", cs_file_id, ":", cs_start_line, "-", cs_end_line)
             # iterate over bb graph nodes
             for bb_node_id in bb_graph.graph.nodes:
                 bb_node = bb_graph.graph.nodes[bb_node_id]["data"]
@@ -105,9 +104,6 @@ def main():
                     continue
                 if not bb_node.end_pos[0] >= cs_end_line:
                     continue
-                # todo remove: prints
-                print("bb_node: ", bb_node.file_id, ":", bb_node.start_pos[0], "->", bb_node.end_pos[0])
-                print([str(x) for x in bb_node.operations])
                 # determine insertion points of locking instructions into list of operations
                 insert_idx_lock = 0
                 insert_idx_unlock = len(bb_node.operations)
@@ -131,9 +127,6 @@ def main():
                 # insert lock operation
                 lock_operation = Operation("critical_section", None, None, "l", hash, cs_start_line, unlock_column, cs_start_line, unlock_column)
                 bb_node.operations.insert(insert_idx_lock, lock_operation)
-
-                print([str(x) for x in bb_node.operations])
-                print()
     #import sys
     #sys.exit(0)
 

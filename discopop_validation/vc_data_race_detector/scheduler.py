@@ -64,5 +64,4 @@ def __convert_operation_to_schedule_element(operation: Operation, executing_thre
     else:
         raise ValueError("Unsupported mode: ", operation.mode)
     schedule_element.add_update(operation.target_name, update_type, operation=operation)
-    print(schedule_element)
     return schedule_element
