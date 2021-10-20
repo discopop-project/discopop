@@ -3,7 +3,8 @@ echo "#######################################"
 echo "#### SIMPLE_DOALL with data races #### "
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall --dep-file=out_dep.txt --ll-file=out_dp_inst.ll
+python -m discopop_validation --path=${PWD}/discopop_validation/test/simple_doall --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json
+exit 0
 
 echo ""
 echo "#########################################"

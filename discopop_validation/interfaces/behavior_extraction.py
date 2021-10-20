@@ -9,18 +9,18 @@ except ModuleNotFoundError:
 from .BBGraph import BBGraph, BBNode, Operation
 
 
-def __get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> List[Tuple[str, str, str, str, str]]:
+def __get_relevant_sections_from_suggestions(suggestions: Dict) -> List[Tuple[str, str, str, str, str]]:
     """extracts relevant sections in the original source code from the gathered suggestions and reports them in tuples.
     Output format: [(<section_id>, <start_line>, <end_line>, <var_name>, <cu_id>, <suggestion_type>)]
     TODO: For now, only Do-All pattern is reported!
     """
     interim_result: List[Tuple[str, str, str]] = []
     # include do-all suggestions
-    for do_all_sug in suggestions.do_all:
-        start_line = do_all_sug.start_line
-        end_line = do_all_sug.end_line
-        for var in do_all_sug.shared:
-            interim_result.append((start_line, end_line, var.name, do_all_sug.node_id, "do_all"))
+    for do_all_sug in suggestions["do_all"]:
+        start_line = do_all_sug["start_line"]
+        end_line = do_all_sug["end_line"]
+        for var in do_all_sug["shared"]:
+            interim_result.append((start_line, end_line, var, do_all_sug["node_id"], "do_all"))
     interim_result = list(set(interim_result))
     result: List[Tuple[str, str, str, str]] = []
     for idx, r in enumerate(interim_result):
@@ -28,7 +28,7 @@ def __get_relevant_sections_from_suggestions(suggestions: DetectionResult) -> Li
     return result
 
 
-def execute_bb_graph_extraction(suggestions: DetectionResult, file_mapping: str, ll_file_path: str)\
+def execute_bb_graph_extraction(suggestions: Dict, file_mapping: str, ll_file_path: str)\
         -> BBGraph:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")

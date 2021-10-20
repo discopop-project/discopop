@@ -2,7 +2,8 @@
 
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--profiling <value>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
+[--profiling <value>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -11,6 +12,7 @@ Options:
     --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
     --ll-file=<llfile>          Path to .ll file to be analyzed
+    --json=<jsonfile>           Path to .json file, which contains parallelization suggestions to be analyzed
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --plugins=<plugs>           Plugins to execute
     --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
@@ -20,6 +22,7 @@ import os
 import sys
 import cProfile
 import time
+import json
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use
@@ -28,7 +31,7 @@ from .interfaces.behavior_extraction import execute_bb_graph_extraction
 from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings, \
     apply_exception_rules
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
-from .interfaces.discopop_explorer import get_parallelization_suggestions
+from .interfaces.discopop_explorer import unused_get_parallelization_suggestions, get_pet_graph, load_parallelization_suggestions
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -37,6 +40,7 @@ docopt_schema = Schema({
     '--loop-counter': Use(str),
     '--reduction': Use(str),
     '--ll-file': Use(str),
+    '--json': Use(str),
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--profiling': Use(str),
@@ -69,6 +73,7 @@ def main():
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
     ll_file = get_path(path, arguments['--ll-file'])
+    json_file = get_path(path, arguments['--json'])
     file_mapping = get_path(path, 'FileMapping.txt')
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
         if not os.path.isfile(file):
@@ -76,8 +81,9 @@ def main():
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
     time_start_ps = time.time()
-    parallelization_suggestions, pet = get_parallelization_suggestions(cu_xml, dep_file, loop_counter_file, reduction_file,
-                                                                  plugins, file_mapping=file_mapping)
+    pet = get_pet_graph(cu_xml, dep_file, loop_counter_file, reduction_file)
+    with open(json_file) as f:
+        parallelization_suggestions = json.load(f)
     time_end_ps = time.time()
     bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
     time_end_bb = time.time()
@@ -100,9 +106,11 @@ def main():
         profile.disable()
         profile.print_stats(sort="tottime")
 
-    print("### DiscoPoP Suggestions: ###")
+    print("### DiscoPoP Do-All Suggestions: ###")
     print("-------------------------------------------")
-    print(parallelization_suggestions)
+    for suggestion in parallelization_suggestions["do_all"]:
+        print("-->",suggestion, "\n")
+
 
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
