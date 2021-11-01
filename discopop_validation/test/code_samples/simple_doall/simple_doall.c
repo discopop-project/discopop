@@ -9,7 +9,7 @@ int main(){
     }
 
     int x = 3;
-    for(int i=0; i < 10; i++){
+    for(int i=0; i < 100000; i++){
         arr[x] = i;
         arr[x] += 3;
     }

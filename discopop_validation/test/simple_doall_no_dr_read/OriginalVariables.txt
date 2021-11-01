@@ -1,6 +1,0 @@
-ARRAY, arr
-i
-retval
-x
-y
-z

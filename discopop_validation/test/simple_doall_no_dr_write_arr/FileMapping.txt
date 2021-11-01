@@ -1,1 +1,0 @@
-1	/home/lukas/Schreibtisch/dp_no_dr/simple_no_dr.c
