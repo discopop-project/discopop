@@ -1,0 +1,8 @@
+1	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/app-desc.h
+2	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/bots_common.c
+3	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/bots_common.h
+4	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/bots.h
+5	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/bots_main.c
+6	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/bots_main.h
+7	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/nqueens.c
+8	/home/lukas/git/discopop/discopop_validation/test/code_samples/bots_reduced/serial/nqueens/serial-app.h
