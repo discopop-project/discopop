@@ -3,7 +3,12 @@ echo "#######################################"
 echo "#### SIMPLE_DOALL with data races #### "
 echo "#########################################"
 echo ""
-python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_acc_1 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/simple --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true
+
+# PROFILING
+
+# 1 path 3 operations
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_3 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true
 
 
 echo ""
