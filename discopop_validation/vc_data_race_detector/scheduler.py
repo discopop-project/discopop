@@ -7,15 +7,22 @@ from ..vc_data_race_detector.data_race_detector import check_schedule
 from .data_race_classes import State
 
 
-def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]]) -> Dict[int, List[Schedule]]:
+def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]], verbose: bool = False) -> Dict[int, List[Schedule]]:
     """creates a mapping from sections to list of schedules to be checked based on the extracted behavior."""
     sections_to_schedules_dict: Dict[int, List[Schedule]] = {}
-    for section_id in sections_to_path_combinations_dict:
-        for combination in sections_to_path_combinations_dict[section_id]:
+    verbose_progress_str = ""
+    for s_idx, section_id in enumerate(sections_to_path_combinations_dict):
+        comb_len = len(sections_to_path_combinations_dict[section_id])
+        for c_idx, combination in enumerate(sections_to_path_combinations_dict[section_id]):
+            if verbose:
+                verbose_progress_str = "\t" + str(s_idx) + "-" + str(c_idx) + " / " + str(s_idx) + "-" + str(comb_len) + "\t" + "(" + str(s_idx) + " / " + str(len(sections_to_path_combinations_dict)) + ")"
+                print(verbose_progress_str, end="\r")
             if section_id in sections_to_schedules_dict:
                 sections_to_schedules_dict[section_id] += __create_schedules_from_path_combination(bb_graph, section_id, combination)
             else:
                 sections_to_schedules_dict[section_id] = __create_schedules_from_path_combination(bb_graph, section_id, combination)
+    if verbose:
+        print(verbose_progress_str)
     return sections_to_schedules_dict
 
 

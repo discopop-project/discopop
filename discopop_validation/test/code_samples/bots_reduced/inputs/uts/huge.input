@@ -1,0 +1,21 @@
+2000 0.4999995 2 559 1 157063495159 758577 78531748579
+#-----------------------------------------------------------------------------#
+# Sample UTS Workloads:
+#
+#  This file contains sample workloads for UTS, along with the tree statistics
+#  for verifying correct output from the benchmark.
+#
+#-----------------------------------------------------------------------------#
+# Wicked Large Workload (~160 billion nodes):
+#-----------------------------------------------------------------------------#
+#----------------------------------- inputs ----------------------------------#
+# root branching factor: 2000
+# probability of non-leaf node: 0.4999995
+# number of children for non-leaf node: 2
+# root seed 0 <= r < 2^31: 559
+# compute granularity: 1
+#---------------------------------- outputs ----------------------------------#
+# Binomial Tree size = T3WL: Tree size = 157063495159, tree depth = 758577, num leaves = 78531748579 (50.00%) 
+#-----------------------------------------------------------------------------#
+
+

@@ -1,0 +1,10 @@
+START 1:4
+1:6 BGN loop 100000
+1:13 END loop
+1:5 NOM  INIT *|x
+1:8 NOM  RAW 1:5|x RAW 1:7|arr WAR 1:8|arr
+1:9 NOM  RAW 1:5|x RAW 1:8|arr WAR 1:9|arr
+1:10 NOM  RAW 1:5|x WAW 1:9|arr
+1:6 NOM  RAW 1:6|i WAR 1:6|i INIT *|i
+1:7 NOM  RAW 1:5|x RAW 1:6|i WAW 1:10|arr INIT *|arr
+1:13 END program

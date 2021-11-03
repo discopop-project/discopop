@@ -1,0 +1,69 @@
+START 5:477
+7:70 BGN loop 3
+7:75 END loop
+7:67 BGN loop 2
+7:76 END loop
+7:92 BGN loop 7
+7:99 END loop
+5:281 BGN loop 1
+5:431 END loop
+2:176 BGN func 2:104
+5:528 BGN func 2:117
+5:515 BGN func 2:80
+7:94 BGN func 7:62
+7:95 BGN func 7:79
+7:108 BGN func 7:79
+2:175 BGN func 2:93
+5:514 BGN func 7:101
+5:486 BGN func 5:449
+5:513 BGN func 2:80
+5:279 BGN func 2:86
+5:438 BGN func 5:275
+5:484 BGN func 5:436
+2:82 END func
+2:91 END func
+2:100 END func
+2:109 END func
+2:336 END func
+5:431 END func
+5:440 END func
+5:471 END func
+7:77 END func
+7:99 END func
+7:110 END func
+7:85 NOM  RAW 7:70|solutions.addr WAR 7:96|solutions.addr INIT *|solutions.addr
+5:285 NOM  RAW 5:281|i
+5:281 NOM  RAW 5:281|i RAW 5:347|i WAR 5:281|i INIT *|i
+5:515 NOM  INIT *|bots_t_end
+5:347 NOM  RAW 5:281|i WAR 5:347|i
+7:72 NOM  RAW 7:67|i RAW 7:68|p RAW 7:70|j RAW 7:71|q
+7:96 NOM  RAW 7:70|solutions.addr RAW 7:85|res RAW 7:89|solutions.addr RAW 7:89|res RAW 7:96|solutions.addr RAW 7:96|res WAR 7:96|solutions.addr
+7:93 NOM  RAW 7:92|i WAR 7:68|a.addr WAR 7:71|a.addr INIT *|a.addr
+7:92 NOM  RAW 7:76|n.addr RAW 7:92|i WAR 7:92|i INIT *|i
+7:70 NOM  RAW 7:67|i RAW 7:70|j WAR 7:70|j WAR 7:71|j WAR 7:72|j WAR 7:85|j WAR 7:89|j WAR 7:96|j INIT *|j
+5:283 NOM  RAW 5:281|i
+7:83 NOM  RAW 7:76|n.addr
+5:516 NOM  RAW 5:513|bots_t_start RAW 5:515|bots_t_end INIT *|bots_time_program
+7:106 NOM  INIT *|a
+7:68 NOM  RAW 7:67|i RAW 7:93|a.addr WAR 7:72|p WAW 7:68|p INIT *|p
+7:89 NOM  RAW 7:70|solutions.addr WAR 7:96|solutions.addr WAW 7:105|solutions.addr INIT *|solutions.addr
+5:348 NOM  RAW 5:347|i
+2:171 NOM  RAW 5:516|bots_time_program
+7:105 NOM  INIT *|total_count
+2:95 NOM  INIT *|ncpus
+7:67 NOM  RAW 7:67|i WAR 7:67|i WAR 7:70|i WAR 7:72|i INIT *|i
+7:95 NOM  RAW 7:76|n.addr
+5:450 NOM  RAW 5:349|bots_arg_size
+7:73 NOM  WAR 7:77|retval WAR 7:83|retval WAR 7:92|retval INIT *|retval
+7:71 NOM  RAW 7:70|j RAW 7:93|a.addr WAR 7:72|q INIT *|q
+2:99 NOM  RAW 2:95|ncpus
+2:82 NOM  RAW 7:106|t
+5:346 NOM  RAW 5:281|i INIT *|argv.addr
+7:77 NOM  RAW 7:73|retval RAW 7:76|retval
+5:513 NOM  INIT *|bots_t_start
+7:108 NOM  RAW 7:106|a
+5:514 NOM  RAW 5:349|bots_arg_size
+7:76 NOM  WAR 7:77|retval WAR 7:92|retval INIT *|retval
+2:163 NOM  RAW 5:516|bots_time_program
+5:349 NOM  RAW 5:347|i INIT *|bots_arg_size
+5:529 END program
