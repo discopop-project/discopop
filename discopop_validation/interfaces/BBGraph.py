@@ -227,7 +227,7 @@ class BBGraph(object):
         for i in to_be_removed:
             self.graph.remove_node(i)
 
-    def __get_paths_for_sections(self):
+    def get_paths_for_sections(self):
         """constructs and returns a dictionary containing a mapping from section ids to a list of lists containing all
         possible paths for the given section"""
         path_dict: Dict[int, List[List[BBNode]]] = {}
@@ -268,7 +268,7 @@ class BBGraph(object):
         The outermost list contains a list of path combinations.
         The second list contains one combination, ie. a list of paths.
         The innermost list contains BBNodes which belong to one path."""
-        path_dict = self.__get_paths_for_sections()
+        path_dict = self.get_paths_for_sections()
         result_dict: Dict[int, List[List[List[BBNode]]]] = {}
 
         def get_powerset(iterable):

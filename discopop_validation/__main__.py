@@ -3,7 +3,7 @@
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
-[--profiling <value>]
+[--profiling <value>] [--verbose <value>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -16,6 +16,7 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --plugins=<plugs>           Plugins to execute
     --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
+    --verbose=<value>           Enable debug prints. Values: true / false [default: false]
     -h --help                   Show this screen
 """
 import os
@@ -45,6 +46,7 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--profiling': Use(str),
+    '--verbose': Use(str),
 })
 
 
@@ -76,18 +78,25 @@ def main():
     ll_file = get_path(path, arguments['--ll-file'])
     json_file = get_path(path, arguments['--json'])
     file_mapping = get_path(path, 'FileMapping.txt')
+    verbose_mode = arguments["--verbose"] == "true"
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+    if verbose_mode:
+        print("creating PET Graph...")
     time_start_ps = time.time()
     pet = get_pet_graph(cu_xml, dep_file, loop_counter_file, reduction_file)
     with open(json_file) as f:
         parallelization_suggestions = json.load(f)
     time_end_ps = time.time()
+    if verbose_mode:
+        print("creating BB Graph...")
     bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
     # todo move
+    if verbose_mode:
+        print("insering critical sections into BB Graph...")
     # insert critical sections (locking statements to random hash values) into bb_graph
     if "critical_section" in parallelization_suggestions:
         for critical_section in parallelization_suggestions["critical_section"]:
@@ -127,14 +136,20 @@ def main():
                 # insert lock operation
                 lock_operation = Operation("critical_section", None, None, "l", hash, cs_start_line, unlock_column, cs_start_line, unlock_column)
                 bb_node.operations.insert(insert_idx_lock, lock_operation)
-    #import sys
-    #sys.exit(0)
 
+
+    if verbose_mode:
+        print("creating Schedules....")
     time_end_bb = time.time()
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
-                                                               bb_graph.get_possible_path_combinations_for_sections())
+                                                               bb_graph.get_possible_path_combinations_for_sections(),
+                                                               verbose=verbose_mode)
+    if verbose_mode:
+        print("checking for Data Races...")
     time_end_schedules = time.time()
     unfiltered_data_races = check_sections(sections_to_schedules_dict)
+    if verbose_mode:
+        print("filtering Data Races...")
     filtered_data_races = apply_exception_rules(unfiltered_data_races, pet)
     filtered_data_race_strings = get_filtered_data_race_strings(filtered_data_races)
     time_end_data_races = time.time()
@@ -162,6 +177,21 @@ def main():
         for suggestion in parallelization_suggestions["critical_section"]:
             print("-->", suggestion, "\n")
 
+    # print graph information
+    if verbose_mode:
+        print("### Counted sections, paths and shared var operations: ###")
+        print("-------------------------------------------")
+        path_dict = bb_graph.get_paths_for_sections()
+        total_paths = 0
+        for section_id in path_dict:
+            total_paths += len(path_dict[section_id])
+        total_operations = 0
+        for bb_node_id in bb_graph.graph.nodes:
+            total_operations += len(bb_graph.graph.nodes[bb_node_id]["data"].operations)
+        print("\ttotal section count: ", len(path_dict))
+        print("\ttotal path count: ", total_paths)
+        print("\ttotal operations count: ", total_operations)
+
 
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
@@ -169,7 +199,7 @@ def main():
     print("--- Construct BB Graph: %s seconds ---" % (time_end_bb - time_end_ps))
     print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
     print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
-
+    print("--- Total time: %s seconds ---" % (time_end_data_races - time_start_ps))
 
 if __name__ == "__main__":
     main()
