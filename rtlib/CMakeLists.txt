@@ -19,4 +19,4 @@ add_library(DiscoPoP_RT STATIC
     ${DiscoPoP_SOURCES})
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
-add_subdirectory(simple-alias-detection)
+#add_subdirectory(simple-alias-detection)

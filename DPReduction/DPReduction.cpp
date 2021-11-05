@@ -28,15 +28,17 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Pass.h>
-#include <llvm/PassSupport.h>
+//#include <llvm/PassSupport.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
-#include "llvm/PassAnalysisSupport.h"
+//#include "llvm/PassAnalysisSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include <llvm/InitializePasses.h>
+
 
 #include "Utils.h"
 
@@ -134,7 +136,7 @@ void DPReduction::create_function_bindings() {
   llvm::FunctionType* fn_type =
       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), fn_args, false);
   add_instr_fn_ = llvm::dyn_cast<llvm::Function>(
-      module_->getOrInsertFunction("add_instr_rec", fn_type));
+      module_->getOrInsertFunction("add_instr_rec", fn_type).getCallee());
 
   // add_ptr_instr
   type_array[3] = llvm::Type::getInt64Ty(*ctx_);  // pointer address
@@ -142,7 +144,7 @@ void DPReduction::create_function_bindings() {
   llvm::FunctionType* ptr_fn_type =
       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), ptr_fn_args, false);
   add_ptr_instr_fn_ = llvm::dyn_cast<llvm::Function>(
-      module_->getOrInsertFunction("add_ptr_instr_rec", ptr_fn_type));
+      module_->getOrInsertFunction("add_ptr_instr_rec", ptr_fn_type).getCallee());
 
   // incr_loop_counter
   llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
@@ -150,13 +152,13 @@ void DPReduction::create_function_bindings() {
   llvm::FunctionType* loop_incr_fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
   loop_incr_fn_ = llvm::dyn_cast<llvm::Function>(
-      module_->getOrInsertFunction("incr_loop_counter", loop_incr_fn_type));
+      module_->getOrInsertFunction("incr_loop_counter", loop_incr_fn_type).getCallee());
 
   // loop_counter_output
   llvm::FunctionType* output_fn_type =
       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
   output_fn_ = llvm::dyn_cast<llvm::Function>(
-      module_->getOrInsertFunction("loop_counter_output", output_fn_type));
+      module_->getOrInsertFunction("loop_counter_output", output_fn_type).getCallee());
 }
 
 // Inserts calls to allow for dynamic analysis of the loops.
@@ -428,7 +430,7 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   for (size_t i = 0; i < basic_blocks.size(); ++i) {
     llvm::BasicBlock* const bb = basic_blocks[i];
 
-    std::string bb_name = bb->getName();
+    std::string bb_name = bb->getName().str();
     if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) ||
         (std::strncmp("for.cond", bb_name.c_str(), 8) == 0)) {
       continue;
@@ -535,7 +537,7 @@ void DPReduction::instrument_module(llvm::Module* module) {
   for (llvm::Module::iterator func_it = module->begin();
        func_it != module->end(); ++func_it) {
     llvm::Function* func = &(*func_it);
-    std::string fn_name = func->getName();
+    std::string fn_name = func->getName().str();
     if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
         fn_name.find("llvm") != std::string::npos) {
       continue;

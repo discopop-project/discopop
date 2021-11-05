@@ -39,14 +39,16 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
+//#include "llvm/PassAnalysisSupport.h"
+//#include "llvm/PassSupport.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include <llvm/InitializePasses.h>
+
 
 #include "DPUtils.h"
 
@@ -246,8 +248,8 @@ string CUInstantiation::findStructMemberName(MDNode* structNode, unsigned idx, I
         if (member->getOperand(3)) {
             //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
             //return string(member->getOperand(3)->getName().data());
-            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
     }
     return NULL;
@@ -266,11 +268,11 @@ string CUInstantiation::getFunctionName(Instruction *instruction){
 
     if(isa<CallInst>(instruction)){
         f = (cast<CallInst>(instruction))->getCalledFunction();
-        v = (cast<CallInst>(instruction))->getCalledValue();
+        v = (cast<CallInst>(instruction))->getCalledOperand();
     }
     else {
         f = (cast<InvokeInst>(instruction))->getCalledFunction();
-        v = (cast<InvokeInst>(instruction))->getCalledValue();
+        v = (cast<InvokeInst>(instruction))->getCalledOperand();
     }
 
     // For ordinary function calls, F has a name.
@@ -304,12 +306,12 @@ void CUInstantiation::setupCallbacks() {
      * NULL
      */
 
-    CUInstInitialize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationInitialize",
+    auto CUInstInitialize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationInitialize",
         Void,
-        CharPtr));
+        CharPtr).getCallee());
 
     CUInstFinalize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationFinalize",
-        Void));
+        Void).getCallee());
 
     CUInstRead = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationRead",
             Void,
@@ -317,7 +319,7 @@ void CUInstantiation::setupCallbacks() {
             Int32,
             Int64,
             CharPtr,
-            CharPtr));
+            CharPtr).getCallee());
 
     CUInstWrite = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationWrite",
             Void,
@@ -325,16 +327,16 @@ void CUInstantiation::setupCallbacks() {
             Int32,
             Int64,
             CharPtr,
-            CharPtr));
+            CharPtr).getCallee());
 
     CUInstCallBefore = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallBefore",
             Void,
-            Int32));
+            Int32).getCallee());
 
     CUInstCallAfter = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallAfter",
             Void,
             Int32,
-            Int32));
+            Int32).getCallee());
 }
 
 bool CUInstantiation::doInitialization(Module &M) {

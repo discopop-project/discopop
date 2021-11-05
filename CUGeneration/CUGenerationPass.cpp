@@ -41,8 +41,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
+//#include "llvm/PassAnalysisSupport.h"
+//#include "llvm/PassSupport.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -53,6 +53,7 @@
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include <llvm/InitializePasses.h>
 
 #include "DPUtils.h"
 
@@ -469,8 +470,8 @@ string CUGeneration::findStructMemberName(MDNode *structNode, unsigned idx, IRBu
         {
             //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
             //return string(member->getOperand(3)->getName().data());
-            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
     }
     return NULL;
@@ -929,7 +930,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
                         currentNode->childrenNodes.push_back(cu);
                         temp->successorCUs.push_back(cu->ID);
-                        BBIDToCUIDsMap[bb->getName()].push_back(cu);
+                        BBIDToCUIDsMap[bb->getNameOrAsOperand()].push_back(cu);
                         if (lid > 0)
                         {
                             cu->readPhaseLineNumbers.insert(lid);
@@ -1031,7 +1032,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     }
                     else // get name of the indirect function which is called
                     {
-                        Value *v = (cast<CallInst>(instruction))->getCalledValue();
+                        Value *v = (cast<CallInst>(instruction))->getCalledOperand();
                         Value *sv = v->stripPointerCasts();
                         StringRef fname = sv->getName();
                         n->name = fname;
@@ -1045,7 +1046,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
                     }
 
-                    vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
+                    vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getNameOrAsOperand()];
                     //locate the CU where this function call belongs
                     for (auto i : BBCUsVector)
                     {
@@ -1075,7 +1076,7 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
 
     for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb)
     {
-        CU *lastCU = BBIDToCUIDsMap[bb->getName()].back(); //get the last CU in the basic block
+        CU *lastCU = BBIDToCUIDsMap[bb->getNameOrAsOperand()].back(); //get the last CU in the basic block
         //get all successor basic blocks for bb
         TInst = bb->getTerminator();
         for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i)
@@ -1086,7 +1087,7 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
             lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
         }
 
-        auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
+        auto bbCU = BBIDToCUIDsMap[bb->getNameOrAsOperand()].begin();
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction))
@@ -1304,8 +1305,7 @@ bool CUGeneration::runOnFunction(Function &F)
         string type_str;
         raw_string_ostream rso(type_str);
         (it->getType())->print(rso);
-
-        Variable v(it->getName(), rso.str(), to_string(fileID) + ":" + lid);
+        Variable v(string(it->getName()), rso.str(), to_string(fileID) + ":" + lid);
         root->argumentsList.push_back(v);
     }
     /********************* End of initialize root values ***************************/

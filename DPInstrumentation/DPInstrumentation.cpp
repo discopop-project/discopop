@@ -34,12 +34,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
+//#include "llvm/PassAnalysisSupport.h"
+//#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include <llvm/InitializePasses.h>
+
 
 #include "DPUtils.h"
 
@@ -181,11 +183,11 @@ void DiscoPoP::setupCallbacks()
      */
     DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
                             Void,
-                            Int32, Int32, Int32));
+                            Int32, Int32, Int32).getCallee());
 
     DpFinalize = cast<Function>(ThisModule->getOrInsertFunction("__dp_finalize",
                                 Void,
-                                Int32));
+                                Int32).getCallee());
 
     DpRead = cast<Function>(ThisModule->getOrInsertFunction("__dp_read",
                             Void,
@@ -194,7 +196,7 @@ void DiscoPoP::setupCallbacks()
 #else
                             Int32, Int64, CharPtr
 #endif
-                            ));
+                            ).getCallee());
 
     DpWrite = cast<Function>(ThisModule->getOrInsertFunction("__dp_write",
                              Void,
@@ -203,27 +205,27 @@ void DiscoPoP::setupCallbacks()
 #else
                              Int32, Int64, CharPtr
 #endif
-                             ));
+                             ).getCallee());
 
     DpCallOrInvoke = cast<Function>(ThisModule->getOrInsertFunction("__dp_call",
                                     Void,
-                                    Int32));
+                                    Int32).getCallee());
 
     DpFuncEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32).getCallee());
 
     DpFuncExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32).getCallee());
 
     DpLoopEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32).getCallee());
 
     DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32).getCallee());
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -554,7 +556,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
+            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
     return NULL;
 }
