@@ -84,7 +84,6 @@ def main():
     data_race_output_path = arguments["--data-race-output"]
     if data_race_output_path != "None":
         data_race_output_path = get_path(path, data_race_output_path)
-    print("DR OUT: ", data_race_output_path)
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
@@ -156,7 +155,7 @@ def main():
     unfiltered_data_races = check_sections(sections_to_schedules_dict)
     if verbose_mode:
         print("filtering Data Races...")
-    filtered_data_races = apply_exception_rules(unfiltered_data_races, pet)
+    filtered_data_races = apply_exception_rules(unfiltered_data_races, pet, parallelization_suggestions)
     filtered_data_race_strings = get_filtered_data_race_strings(filtered_data_races)
     time_end_data_races = time.time()
 
