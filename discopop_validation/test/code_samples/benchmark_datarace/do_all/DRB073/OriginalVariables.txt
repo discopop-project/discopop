@@ -1,0 +1,4 @@
+ARRAY, a
+a
+i
+j

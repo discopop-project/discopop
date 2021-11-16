@@ -1,0 +1,3 @@
+ARRAY, a
+a
+i
