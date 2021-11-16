@@ -1,4 +1,0 @@
-ARRAY, arr
-i
-retval
-x

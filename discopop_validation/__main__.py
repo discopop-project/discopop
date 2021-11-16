@@ -3,7 +3,7 @@
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
-[--profiling <value>] [--verbose <value>]
+[--profiling <value>] [--verbose <value>] [--data-race-output <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -17,6 +17,7 @@ Options:
     --plugins=<plugs>           Plugins to execute
     --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
     --verbose=<value>           Enable debug prints. Values: true / false [default: false]
+    --data-race-output=<path>   Output found data races to the specified file if set.
     -h --help                   Show this screen
 """
 import os
@@ -47,6 +48,7 @@ docopt_schema = Schema({
     '--plugins': Use(str),
     '--profiling': Use(str),
     '--verbose': Use(str),
+    '--data-race-output': Use(str),
 })
 
 
@@ -79,6 +81,10 @@ def main():
     json_file = get_path(path, arguments['--json'])
     file_mapping = get_path(path, 'FileMapping.txt')
     verbose_mode = arguments["--verbose"] == "true"
+    data_race_output_path = arguments["--data-race-output"]
+    if data_race_output_path != "None":
+        data_race_output_path = get_path(path, data_race_output_path)
+    print("DR OUT: ", data_race_output_path)
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
@@ -157,6 +163,16 @@ def main():
     # print found data races
     for dr_str in filtered_data_race_strings:
         print(dr_str)
+
+    # write found data races to file if requested
+    try:
+        os.remove(data_race_output_path)
+    except OSError:
+        pass
+    if data_race_output_path != "None":
+        with open(data_race_output_path, "w+") as f:
+            for dr_str in filtered_data_race_strings:
+                f.write(dr_str)
 
     print("\n###########################################")
     print("######### AUXILIARY INFORMATION ###########")
