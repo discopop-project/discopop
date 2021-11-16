@@ -1,5 +1,5 @@
-; ModuleID = 'DRB073-doall2-orig-yes.c'
-source_filename = "DRB073-doall2-orig-yes.c"
+; ModuleID = 'DRB093-doall2-collapse-orig-no.c'
+source_filename = "DRB093-doall2-collapse-orig-no.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
@@ -41,9 +41,9 @@ for.body3:                                        ; preds = %for.cond1
   %idxprom4 = sext i32 %3 to i64, !dbg !36
   %arrayidx5 = getelementptr inbounds [100 x i32], [100 x i32]* %arrayidx, i64 0, i64 %idxprom4, !dbg !36
   %4 = ptrtoint i32* %arrayidx5 to i64
-  call void @add_ptr_instr_rec(i32 61, i64 1, i32 0, i64 %4)
+  call void @add_ptr_instr_rec(i32 58, i64 1, i32 0, i64 %4)
   %5 = ptrtoint i32* %arrayidx5 to i64
-  call void @add_ptr_instr_rec(i32 60, i64 2, i32 0, i64 %5)
+  call void @add_ptr_instr_rec(i32 57, i64 2, i32 0, i64 %5)
   %6 = load i32, i32* %arrayidx5, align 4, !dbg !36
   %add = add nsw i32 %6, 1, !dbg !38
   %7 = load i32, i32* %i, align 4, !dbg !39
@@ -53,9 +53,9 @@ for.body3:                                        ; preds = %for.cond1
   %idxprom8 = sext i32 %8 to i64, !dbg !40
   %arrayidx9 = getelementptr inbounds [100 x i32], [100 x i32]* %arrayidx7, i64 0, i64 %idxprom8, !dbg !40
   %9 = ptrtoint i32* %arrayidx9 to i64
-  call void @add_ptr_instr_rec(i32 61, i64 1, i32 1, i64 %9)
+  call void @add_ptr_instr_rec(i32 58, i64 1, i32 1, i64 %9)
   %10 = ptrtoint i32* %arrayidx9 to i64
-  call void @add_ptr_instr_rec(i32 60, i64 2, i32 1, i64 %10)
+  call void @add_ptr_instr_rec(i32 57, i64 2, i32 1, i64 %10)
   store i32 %add, i32* %arrayidx9, align 4, !dbg !42
   br label %for.inc, !dbg !40
 
@@ -98,9 +98,9 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.ident = !{!13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 55, type: !6, isLocal: false, isDefinition: true)
+!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 52, type: !6, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 8.0.1-9 (tags/RELEASE_801/final)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: None)
-!3 = !DIFile(filename: "DRB073-doall2-orig-yes.c", directory: "/home/lukas/git/discopop/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB073")
+!3 = !DIFile(filename: "DRB093-doall2-collapse-orig-no.c", directory: "/home/lukas/git/discopop/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB093")
 !4 = !{}
 !5 = !{!0}
 !6 = !DICompositeType(tag: DW_TAG_array_type, baseType: !7, size: 320000, elements: !8)
@@ -111,41 +111,41 @@ attributes #1 = { nounwind readnone speculatable }
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{!"clang version 8.0.1-9 (tags/RELEASE_801/final)"}
-!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 56, type: !15, scopeLine: 57, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 53, type: !15, scopeLine: 54, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!7}
-!17 = !DILocalVariable(name: "i", scope: !14, file: !3, line: 58, type: !7)
-!18 = !DILocation(line: 58, column: 7, scope: !14)
-!19 = !DILocalVariable(name: "j", scope: !14, file: !3, line: 58, type: !7)
-!20 = !DILocation(line: 58, column: 9, scope: !14)
-!21 = !DILocation(line: 60, column: 9, scope: !22)
-!22 = distinct !DILexicalBlock(scope: !14, file: !3, line: 60, column: 3)
-!23 = !DILocation(line: 60, column: 8, scope: !22)
-!24 = !DILocation(line: 60, column: 12, scope: !25)
-!25 = distinct !DILexicalBlock(scope: !22, file: !3, line: 60, column: 3)
-!26 = !DILocation(line: 60, column: 13, scope: !25)
-!27 = !DILocation(line: 60, column: 3, scope: !22)
-!28 = !DILocation(line: 61, column: 11, scope: !29)
-!29 = distinct !DILexicalBlock(scope: !25, file: !3, line: 61, column: 5)
-!30 = !DILocation(line: 61, column: 10, scope: !29)
-!31 = !DILocation(line: 61, column: 14, scope: !32)
-!32 = distinct !DILexicalBlock(scope: !29, file: !3, line: 61, column: 5)
-!33 = !DILocation(line: 61, column: 15, scope: !32)
-!34 = !DILocation(line: 61, column: 5, scope: !29)
-!35 = !DILocation(line: 62, column: 17, scope: !32)
-!36 = !DILocation(line: 62, column: 15, scope: !32)
-!37 = !DILocation(line: 62, column: 20, scope: !32)
-!38 = !DILocation(line: 62, column: 22, scope: !32)
-!39 = !DILocation(line: 62, column: 9, scope: !32)
-!40 = !DILocation(line: 62, column: 7, scope: !32)
-!41 = !DILocation(line: 62, column: 12, scope: !32)
-!42 = !DILocation(line: 62, column: 14, scope: !32)
-!43 = !DILocation(line: 61, column: 21, scope: !32)
-!44 = !DILocation(line: 61, column: 5, scope: !32)
+!17 = !DILocalVariable(name: "i", scope: !14, file: !3, line: 55, type: !7)
+!18 = !DILocation(line: 55, column: 7, scope: !14)
+!19 = !DILocalVariable(name: "j", scope: !14, file: !3, line: 55, type: !7)
+!20 = !DILocation(line: 55, column: 9, scope: !14)
+!21 = !DILocation(line: 57, column: 9, scope: !22)
+!22 = distinct !DILexicalBlock(scope: !14, file: !3, line: 57, column: 3)
+!23 = !DILocation(line: 57, column: 8, scope: !22)
+!24 = !DILocation(line: 57, column: 12, scope: !25)
+!25 = distinct !DILexicalBlock(scope: !22, file: !3, line: 57, column: 3)
+!26 = !DILocation(line: 57, column: 13, scope: !25)
+!27 = !DILocation(line: 57, column: 3, scope: !22)
+!28 = !DILocation(line: 58, column: 11, scope: !29)
+!29 = distinct !DILexicalBlock(scope: !25, file: !3, line: 58, column: 5)
+!30 = !DILocation(line: 58, column: 10, scope: !29)
+!31 = !DILocation(line: 58, column: 14, scope: !32)
+!32 = distinct !DILexicalBlock(scope: !29, file: !3, line: 58, column: 5)
+!33 = !DILocation(line: 58, column: 15, scope: !32)
+!34 = !DILocation(line: 58, column: 5, scope: !29)
+!35 = !DILocation(line: 59, column: 17, scope: !32)
+!36 = !DILocation(line: 59, column: 15, scope: !32)
+!37 = !DILocation(line: 59, column: 20, scope: !32)
+!38 = !DILocation(line: 59, column: 22, scope: !32)
+!39 = !DILocation(line: 59, column: 9, scope: !32)
+!40 = !DILocation(line: 59, column: 7, scope: !32)
+!41 = !DILocation(line: 59, column: 12, scope: !32)
+!42 = !DILocation(line: 59, column: 14, scope: !32)
+!43 = !DILocation(line: 58, column: 21, scope: !32)
+!44 = !DILocation(line: 58, column: 5, scope: !32)
 !45 = distinct !{!45, !34, !46}
-!46 = !DILocation(line: 62, column: 23, scope: !29)
-!47 = !DILocation(line: 60, column: 19, scope: !25)
-!48 = !DILocation(line: 60, column: 3, scope: !25)
+!46 = !DILocation(line: 59, column: 23, scope: !29)
+!47 = !DILocation(line: 57, column: 19, scope: !25)
+!48 = !DILocation(line: 57, column: 3, scope: !25)
 !49 = distinct !{!49, !27, !50}
-!50 = !DILocation(line: 62, column: 23, scope: !22)
-!51 = !DILocation(line: 63, column: 3, scope: !14)
+!50 = !DILocation(line: 59, column: 23, scope: !22)
+!51 = !DILocation(line: 60, column: 3, scope: !14)
