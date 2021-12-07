@@ -1,8 +1,7 @@
-import pytest
 from typing import List, Tuple, Optional
-from enum import IntEnum, Enum
+from enum import Enum
 
-from ..interfaces.BBGraph import Operation
+from discopop_validation.data_race_prediction.behavior_modeller.BBGraph import Operation
 
 
 class UpdateType(Enum):

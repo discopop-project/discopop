@@ -1,5 +1,5 @@
 from .data_race_classes import State, DataRace
-from ..interfaces.BBGraph import Operation
+from discopop_validation.data_race_prediction.behavior_modeller.BBGraph import Operation
 from typing import Dict, List, Tuple, Optional
 from .vector_clock import get_updated_vc, increase, compare_vc
 from .schedule import Schedule, ScheduleElement, UpdateType

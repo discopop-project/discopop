@@ -3,7 +3,7 @@
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
-[--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>]
+[--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -16,9 +16,10 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --plugins=<plugs>           Plugins to execute
     --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
-    --call-graph=<value>        Enable call graph creation. Output to pycallgraph.png. Values: true / false [default: false]
+    --call-graph=<path>         Enable call graph creation and output result to given path.
     --verbose=<value>           Enable debug prints. Values: true / false [default: false]
     --data-race-output=<path>   Output found data races to the specified file if set.
+    --dp-build-path=<path>      Path to discopop build folder. [default: build]
     -h --help                   Show this screen
 """
 import os
@@ -30,12 +31,12 @@ import json
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
-from .interfaces.behavior_extraction import execute_bb_graph_extraction
-from .interfaces.BBGraph import Operation
+from discopop_validation.data_race_prediction.behavior_modeller.behavior_extraction import execute_bb_graph_extraction
+from discopop_validation.data_race_prediction.behavior_modeller.BBGraph import Operation
 from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings, \
     apply_exception_rules
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
-from .interfaces.discopop_explorer import get_pet_graph, load_parallelization_suggestions
+from .interfaces.discopop_explorer import get_pet_graph
 from pycallgraph2 import PyCallGraph
 from pycallgraph2.output import GraphvizOutput
 from pycallgraph2 import Config
@@ -56,6 +57,7 @@ docopt_schema = Schema({
     '--call-graph': Use(str),
     '--verbose': Use(str),
     '--data-race-output': Use(str),
+    '--dp-build-path': Use(str),
 })
 
 
@@ -94,14 +96,15 @@ def main():
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    if arguments["--call-graph"] == "true":
+    if arguments["--call-graph"] is not "None":
         print("call graph creation enabled...")
-        trace_grouper = Grouper(groups=['discopop_validation.data_race_prediction.*',
-                                        'discopop_validation.interfaces.*',
-                                        'discopop_validation.output.*',
-                                        'discopop_validation.vc_data_race_detector.*',
-                                        ])
-
+        groups = []
+        for dir in os.walk(os.getcwd()+"/discopop_validation"):
+            groups.append(dir[0].replace(os.getcwd()+"/", "").replace("/", ".")+".*")
+        groups = sorted(groups, reverse=True)
+        for g in groups:
+            print(g)
+        trace_grouper = Grouper(groups)
 
         config = Config()
         config.trace_grouper = trace_grouper
@@ -110,7 +113,7 @@ def main():
             '__main_*',
             'data_race_prediction.*',
         ])
-        with PyCallGraph(output=GraphvizOutput(), config=config):
+        with PyCallGraph(output=GraphvizOutput(output_file=arguments["--call-graph"]), config=config):
             __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
     else:
         __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
@@ -130,7 +133,7 @@ def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, 
     time_end_ps = time.time()
     if verbose_mode:
         print("creating BB Graph...")
-    bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file)
+    bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file, arguments["--dp-build-path"])
     # todo move
     if verbose_mode:
         print("insering critical sections into BB Graph...")
