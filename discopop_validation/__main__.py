@@ -3,7 +3,7 @@
 Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
-[--profiling <value>] [--verbose <value>] [--data-race-output <path>]
+[--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -16,6 +16,7 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --plugins=<plugs>           Plugins to execute
     --profiling=<value>         Enable profiling mode. Values: true / false [default: false]
+    --call-graph=<value>        Enable call graph creation. Output to pycallgraph.png. Values: true / false [default: false]
     --verbose=<value>           Enable debug prints. Values: true / false [default: false]
     --data-race-output=<path>   Output found data races to the specified file if set.
     -h --help                   Show this screen
@@ -35,6 +36,11 @@ from .vc_data_race_detector.data_race_detector import check_sections, get_filter
     apply_exception_rules
 from .vc_data_race_detector.scheduler import create_schedules_for_sections
 from .interfaces.discopop_explorer import get_pet_graph, load_parallelization_suggestions
+from pycallgraph2 import PyCallGraph
+from pycallgraph2.output import GraphvizOutput
+from pycallgraph2 import Config
+from pycallgraph2 import GlobbingFilter
+from pycallgraph2 import Grouper
 
 docopt_schema = Schema({
     '--path': Use(str),
@@ -47,6 +53,7 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--profiling': Use(str),
+    '--call-graph': Use(str),
     '--verbose': Use(str),
     '--data-race-output': Use(str),
 })
@@ -68,9 +75,6 @@ def main():
         arguments = docopt_schema.validate(arguments)
     except SchemaError as e:
         exit(e)
-    if arguments["--profiling"] == "true":
-        profile = cProfile.Profile()
-        profile.enable()
 
     path = arguments["--path"]
     cu_xml = get_path(path, arguments['--cu-xml'])
@@ -89,6 +93,34 @@ def main():
             print(f"File not found: \"{file}\"")
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+
+    if arguments["--call-graph"] == "true":
+        print("call graph creation enabled...")
+        trace_grouper = Grouper(groups=['discopop_validation.data_race_prediction.*',
+                                        'discopop_validation.interfaces.*',
+                                        'discopop_validation.output.*',
+                                        'discopop_validation.vc_data_race_detector.*',
+                                        ])
+
+
+        config = Config()
+        config.trace_grouper = trace_grouper
+        config.trace_filter = GlobbingFilter(include=[
+            'discopop_validation.*',
+            '__main_*',
+            'data_race_prediction.*',
+        ])
+        with PyCallGraph(output=GraphvizOutput(), config=config):
+            __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
+    else:
+        __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
+
+
+def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments):
+    if arguments["--profiling"] == "true":
+        profile = cProfile.Profile()
+        profile.enable()
+        print("profiling enabled...")
     if verbose_mode:
         print("creating PET Graph...")
     time_start_ps = time.time()

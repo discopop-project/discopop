@@ -41,7 +41,7 @@ echo ""
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB046 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB047 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB073 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
-python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB093 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB093 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true --call-graph=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB094 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB095 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB096 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
