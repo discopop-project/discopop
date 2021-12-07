@@ -31,11 +31,13 @@ import json
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
-from discopop_validation.data_race_prediction.behavior_modeller.behavior_extraction import execute_bb_graph_extraction
-from discopop_validation.data_race_prediction.behavior_modeller.BBGraph import Operation
-from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings, \
-    apply_exception_rules
-from .vc_data_race_detector.scheduler import create_schedules_for_sections
+from discopop_validation.data_race_prediction.behavior_modeller.core.behavior_extraction import execute_bb_graph_extraction
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
+from discopop_validation.data_race_prediction.behavior_modeller.utils.utils import get_paths_for_sections, \
+    get_possible_path_combinations_for_sections
+from .vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings
+from discopop_validation.vc_data_race_detector.exception_rules.application import apply_exception_rules
+from discopop_validation.data_race_prediction.scheduler.core.scheduler import create_schedules_for_sections
 from .interfaces.discopop_explorer import get_pet_graph
 from pycallgraph2 import PyCallGraph
 from pycallgraph2.output import GraphvizOutput
@@ -96,14 +98,12 @@ def main():
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    if arguments["--call-graph"] is not "None":
+    if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
         groups = []
         for dir in os.walk(os.getcwd()+"/discopop_validation"):
             groups.append(dir[0].replace(os.getcwd()+"/", "").replace("/", ".")+".*")
         groups = sorted(groups, reverse=True)
-        for g in groups:
-            print(g)
         trace_grouper = Grouper(groups)
 
         config = Config()
@@ -182,7 +182,8 @@ def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, 
         print("creating Schedules....")
     time_end_bb = time.time()
     sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
-                                                               bb_graph.get_possible_path_combinations_for_sections(),
+                                                               get_possible_path_combinations_for_sections(
+                                                                   bb_graph),
                                                                verbose=verbose_mode)
     if verbose_mode:
         print("checking for Data Races...")
@@ -231,7 +232,7 @@ def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, 
     if verbose_mode:
         print("### Counted sections, paths and shared var operations: ###")
         print("-------------------------------------------")
-        path_dict = bb_graph.get_paths_for_sections()
+        path_dict = get_paths_for_sections(bb_graph)
         total_paths = 0
         for section_id in path_dict:
             total_paths += len(path_dict[section_id])

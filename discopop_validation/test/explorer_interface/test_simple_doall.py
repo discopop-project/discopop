@@ -9,6 +9,9 @@ from discopop.discopop_validation.vc_data_race_detector.scheduler import create_
 
 from discopop.discopop_validation.vc_data_race_detector.data_race_detector import check_sections
 
+from discopop_validation.data_race_prediction.behavior_modeller.utils.utils import \
+    get_possible_path_combinations_for_sections
+
 
 class MyTestCase(unittest.TestCase):
     def test_obtain_simple_suggestions(self):
@@ -40,7 +43,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_scheduler(self):
         bb_graph = self.test_execute_bb_graph_extraction()
-        path_combinations_dict = bb_graph.get_possible_path_combinations_for_sections()
+        path_combinations_dict = get_possible_path_combinations_for_sections(bb_graph)
         sections_to_schedules_dict = create_schedules_for_sections(bb_graph, path_combinations_dict)
         return sections_to_schedules_dict
 
