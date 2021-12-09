@@ -1,7 +1,7 @@
 from typing import List
 
-from discopop_validation.vc_data_race_detector.classes.data_race import DataRace
-from discopop_validation.vc_data_race_detector.exception_rules.do_all import __check_do_all_exception_rules
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.data_race import DataRace
+from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.do_all import __check_do_all_exception_rules
 
 
 def apply_exception_rules(unfiltered_data_races: List[DataRace], pet, parallelization_suggestions) -> List[DataRace]:

@@ -1,5 +1,5 @@
 from discopop_validation.interfaces.discopop_explorer import is_loop_index
-from discopop_validation.vc_data_race_detector.classes.data_race import DataRace
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.data_race import DataRace
 
 
 def __check_do_all_exception_rules(data_race: DataRace, pet, parallelization_suggestions) -> bool:
