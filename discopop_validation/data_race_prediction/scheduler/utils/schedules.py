@@ -20,6 +20,7 @@ def __get_paths(graph, current_node_identifier) -> List[List[ScheduleElement]]:
     return paths
 
 
+# TODO currently unused, kept for now for possible debugging
 def __count_paths(graph, current_node_identifier) -> int:
     if len(graph.out_edges(current_node_identifier)) == 0:
         count = 1
@@ -42,7 +43,6 @@ def __convert_path_to_schedule(path: List[ScheduleElement]) -> Schedule:
 
 
 def get_schedules(graph, root_node_identifier) -> List[Schedule]:
-    path_count = __count_paths(graph, root_node_identifier)
     paths = __get_paths(graph, root_node_identifier)
     #for path in paths:
      #   print()
