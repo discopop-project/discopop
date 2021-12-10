@@ -1,8 +1,8 @@
 from typing import List
 
-from discopop_validation.data_race_prediction.old_scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.old_scheduler.classes.ScheduleElement import ScheduleElement
-from discopop_validation.data_race_prediction.old_scheduler.utils.filtering import filter_schedules
+from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.scheduler.utils.filtering import filter_schedules
 
 
 def __get_paths(graph, current_node_identifier) -> List[List[ScheduleElement]]:

@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from discopop_validation.data_race_prediction.old_scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
 
 
 class ScheduleElement:

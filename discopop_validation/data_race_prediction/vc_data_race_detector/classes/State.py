@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from .vector_clock import VectorClock
+from .VectorClock import VectorClock
 
 
 class State(object):
@@ -25,9 +25,9 @@ class State(object):
             self.var_write_clocks[v_name] = VectorClock(thread_count)
 
     def __str__(self):
-        return "Thread clocks: " + str(self.thread_clocks) + "\n" + \
-               "Lock clocks: " + str(self.lock_clocks) + "\n" + \
-               "Var Read clocks: " + str(self.var_read_clocks) + "\n" + \
-               "Var Write clocks: " + str(self.var_write_clocks)
+        return "Thread clocks: " + " ".join([str(key)+":"+str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
+               "Lock clocks: " + " ".join([str(key)+":"+str(self.lock_clocks[key]) for key in self.lock_clocks]) + "\n" + \
+               "Var Read clocks: " + " ".join([str(key)+":"+str(self.var_read_clocks[key]) for key in self.var_read_clocks]) + "\n" + \
+               "Var Write clocks: " + " ".join([str(key)+":"+str(self.var_write_clocks[key]) for key in self.var_write_clocks])
 
 

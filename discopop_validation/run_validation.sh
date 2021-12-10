@@ -31,16 +31,16 @@ echo ""
 
 # PROFILING
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_3 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true#
-python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_6 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_6 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_7 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
-#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_8 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_8 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_9 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
 
 # DATARACE BENCHMARK
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB045 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB046 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB047 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
-#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB073 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB073 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB093 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true --call-graph=/home/lukas/Schreibtisch/cg.png --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB094 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB095 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true

@@ -3,12 +3,13 @@ from typing import List
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.old_scheduler.core.scheduler import \
+from discopop_validation.data_race_prediction.scheduler.core.scheduler import \
     create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_suggestion
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_behavior_models
-
+from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
+from copy import deepcopy
 
 def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, suggestion_type, suggestion, parallelization_suggestions):
     if run_configuration.verbose_mode:
@@ -28,8 +29,13 @@ def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, sugges
         if run_configuration.verbose_mode:
             print("creating scheduling graph...")
         # simulation for 2 threads
-        behavior_model_list = [behavior_models[0], behavior_models[0]]
+        behavior_model_list = [behavior_models[0], deepcopy(behavior_models[0])]
         # dimensions can be used to determine the depth of the graph and thus the cutoff-point for task creation
+
         scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_model_list)
-        scheduling_graph.plot_graph()
+
+
+        if run_configuration.verbose_mode:
+            print("check scheduling graph for data races...")
         # todo task creation
+        check_scheduling_graph(scheduling_graph, dimensions)

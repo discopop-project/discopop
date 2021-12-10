@@ -1,15 +1,15 @@
 from typing import List, Tuple, Dict
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.old_scheduler.utils.conversions import convert_bb_path_to_operations
-from discopop_validation.data_race_prediction.old_scheduler.classes.SchedulingGraph import SchedulingGraph
+from discopop_validation.data_race_prediction.scheduler.utils.conversions import convert_bb_path_to_operations
+from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph import BBGraph
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from discopop_validation.data_race_prediction.old_scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.old_scheduler.classes.ScheduleElement import ScheduleElement
-from discopop_validation.data_race_prediction.old_scheduler.classes.UpdateType import UpdateType
-from discopop_validation.data_race_prediction.old_scheduler.utils.schedules import get_schedules
+from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 
 
 def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]], verbose: bool = False) -> Dict[int, List[Schedule]]:
@@ -60,7 +60,6 @@ def create_scheduling_graph_from_behavior_models(behavior_models: List[BehaviorM
     # create conversion of BehaviorModel's operations to ScheduleElements
     for thread_id, behavior_model in enumerate(behavior_models):
         behavior_model.scheduleElements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_id)
-
     dimensions = [len(model.scheduleElements) for model in behavior_models]
     scheduling_graph = SchedulingGraph(dimensions, behavior_models)
     return scheduling_graph, dimensions
