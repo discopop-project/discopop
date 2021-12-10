@@ -14,19 +14,14 @@ class ScheduleElement:
     # inner List[int] represents affected thread_id´s, used for entry and exit of parallel regions
     # one ScheduleElement can contain multiple updates. example: x=x+y
 
-    def __init__(self, executing_thread_id: int, parent_basic_block_id: int = -1):
-        self.parent_basic_block_id = parent_basic_block_id
+    def __init__(self, executing_thread_id: int):
         self.thread_id = executing_thread_id
         self.lock_names = []
         self.var_names = []
         self.updates = []
 
     def __str__(self):
-        return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " Operation:" + " ".join([" "+str(operation) for (var_name, update_type, _, operation) in self.updates])
-
-    #return "BBid:" + str(self.parent_basic_block_id) + " tid:" + str(self.thread_id) + " ".join(
-     #   [" " + str(update_type.value) + "->" + var_name + ";" for (var_name, update_type, _, operation) in
-      #   self.updates])
+        return "Thread:" + str(self.thread_id) + " Operation:" + " ".join([" "+str(operation) for (var_name, update_type, _, operation) in self.updates])
 
 
     def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None, operation: Optional[Operation] = None):

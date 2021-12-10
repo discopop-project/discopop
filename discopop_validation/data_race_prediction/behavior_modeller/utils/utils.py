@@ -3,6 +3,7 @@ from itertools import chain, combinations
 from typing import Dict, List, Tuple
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
@@ -106,31 +107,31 @@ def get_possible_path_combinations_for_sections(bb_graph) -> Dict[int, List[List
     return result_dict
 
 
-def get_unmodified_operation_sequences(bb_graph) -> List[List[Operation]]:
+def get_unmodified_behavior_models(bb_graph) -> List[BehaviorModel]:
     paths = get_paths(bb_graph)
     # convert paths to read/write sequences
-    operation_sequences: List[List[Operation]] = []
+    behavior_models: List[BehaviorModel] = []
     # todo section_id only for compatibility with old BBGraph, might be removed in the future
     for section_id in paths:
         for path in paths[section_id]:
             current_sequence = []
             for bb_node in path:
                 current_sequence += bb_node.operations
-            operation_sequences.append(current_sequence)
-    return operation_sequences
+            behavior_models.append(BehaviorModel(current_sequence))
+    return behavior_models
 
 
-def modify_operation_sequences(unmodified_operation_sequences: List[List[Operation]],
-                               target_code_section: Tuple[str, str, str, str, str, str]):
+def modify_behavior_models(unmodified_behavior_models: List[BehaviorModel],
+                           target_code_section: Tuple[str, str, str, str, str, str]):
     """modify the given operation sequences to represent the behavior of the given target code section,
     considering the underlying parallelization suggestion"""
     suggestion_type = target_code_section[5]
     # todo currently, only doall is supported
     if suggestion_type == "do_all":
         # return unmodified
-        return unmodified_operation_sequences
+        return unmodified_behavior_models
     else:
         import warnings
         warnings.warn("TODO: Suggestion type: "+suggestion_type+ " not supported!")
-        return unmodified_operation_sequences
+        return unmodified_behavior_models
 

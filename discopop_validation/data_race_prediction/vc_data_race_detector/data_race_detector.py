@@ -27,13 +27,16 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> Lis
     return found_data_races
 
 
-def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
+def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
     if a data race has been identified.
     TODO find proper output format (problematic statements)"""
-    state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
+    if initial_state is None:
+        state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
+    else:
+        state = initial_state
     data_races: List[Tuple[State, ScheduleElement, List[ScheduleElement]]] = []
     for idx, schedule_element in enumerate(schedule.elements):
         try:
