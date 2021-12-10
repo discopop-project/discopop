@@ -31,12 +31,17 @@ import json
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
+from discopop_explorer import PETGraphX
+from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.behavior_modeller.core.behavior_extraction import execute_bb_graph_extraction
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.utils.bb_graph_modifications import \
     insert_critical_sections
 from discopop_validation.data_race_prediction.behavior_modeller.utils.utils import get_paths_for_sections, \
     get_possible_path_combinations_for_sections
+from discopop_validation.data_race_prediction.core import validate_suggestion
+#from discopop_validation.data_race_prediction.target_code_sections.extraction import \
+#    identify_target_sections_from_suggestions
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_sections, get_filtered_data_race_strings
 from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.application import apply_exception_rules
 from discopop_validation.data_race_prediction.scheduler.core.scheduler import create_schedules_for_sections
@@ -101,6 +106,9 @@ def main():
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
+    run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
+                                      file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
+
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
         groups = []
@@ -117,12 +125,46 @@ def main():
             'data_race_prediction.*',
         ])
         with PyCallGraph(output=GraphvizOutput(output_file=arguments["--call-graph"]), config=config):
-            __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
+            __main_start_execution(run_configuration)
     else:
-        __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments)
+        __main_start_execution(run_configuration)
 
 
-def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments):
+def __main_start_execution(run_configuration: Configuration):
+    if run_configuration.arguments["--profiling"] == "true":
+        profile = cProfile.Profile()
+        profile.enable()
+        print("profiling enabled...")
+    if run_configuration.verbose_mode:
+        print("creating PET Graph...")
+    time_start_ps = time.time()
+    pet: PETGraphX = get_pet_graph(run_configuration)
+    with open(run_configuration.json_file) as f:
+        parallelization_suggestions = json.load(f)
+    time_end_ps = time.time()
+    for suggestion_type in parallelization_suggestions:
+        for suggestion in parallelization_suggestions[suggestion_type]:
+            # todo add Data Races as return type
+            validate_suggestion(run_configuration, pet, suggestion_type, suggestion)
+
+
+
+    time_end_bb = time.time()
+
+
+
+    time_end_execution = time.time()
+    print("\n### Measured Times: ###")
+    print("-------------------------------------------")
+    print("--- Get Parallelization Suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
+    print("--- Construct BB Graph: %s seconds ---" % (time_end_bb - time_end_ps))
+    #print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
+    #print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
+    print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
+
+
+"""
+def __old_main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments):
     if arguments["--profiling"] == "true":
         profile = cProfile.Profile()
         profile.enable()
@@ -135,8 +177,11 @@ def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, 
         parallelization_suggestions = json.load(f)
     time_end_ps = time.time()
     if verbose_mode:
+        print("identify target code sections")
+    target_code_sections = identify_target_sections_from_suggestions(parallelization_suggestions)
+    if verbose_mode:
         print("creating BB Graph...")
-    bb_graph = execute_bb_graph_extraction(parallelization_suggestions, file_mapping, ll_file, arguments["--dp-build-path"])
+    bb_graph = execute_bb_graph_extraction(parallelization_suggestions, target_code_sections, file_mapping, ll_file, arguments["--dp-build-path"])
     if verbose_mode:
         print("insering critical sections into BB Graph...")
     insert_critical_sections(bb_graph, parallelization_suggestions)
@@ -214,6 +259,7 @@ def __main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, 
     print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
     print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
     print("--- Total time: %s seconds ---" % (time_end_data_races - time_start_ps))
+"""
 
 if __name__ == "__main__":
     main()
