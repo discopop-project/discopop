@@ -136,3 +136,4 @@ _deps
 
 # Temporary files for validation
 *tmp_behavior_extraction*
+pycallgraph.png

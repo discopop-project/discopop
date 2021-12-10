@@ -22,5 +22,11 @@ def load_parallelization_suggestions(suggestions_path: str):
         print(json.load(suggestions_file, cls=json_serializer.PatternInfoSerializer))
 
 
+is_loop_index_cache = dict()
 def is_loop_index(pet: PETGraphX, root_loop, var_name: str):
-    return utils.is_loop_index2(pet, root_loop, var_name)
+    global is_loop_index_cache
+    if (pet, root_loop, var_name) in is_loop_index_cache:
+        return is_loop_index_cache[(pet, root_loop, var_name)]
+    result = utils.is_loop_index2(pet, root_loop, var_name)
+    is_loop_index_cache[(pet, root_loop, var_name)] = result
+    return result

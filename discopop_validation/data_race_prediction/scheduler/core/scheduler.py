@@ -1,10 +1,14 @@
 from typing import List, Tuple, Dict
 
-from .scheduling_graph import SchedulingGraph
-from ..interfaces.BBGraph import BBNode, BBGraph, Operation
-from ..vc_data_race_detector.schedule import Schedule, ScheduleElement, UpdateType
-from ..vc_data_race_detector.data_race_detector import check_schedule
-from .data_race_classes import State
+from discopop_validation.data_race_prediction.scheduler.utils.conversions import convert_bb_path_to_operations
+from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph import BBGraph
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
+from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 
 
 def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]], verbose: bool = False) -> Dict[int, List[Schedule]]:
@@ -39,11 +43,13 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int,
     schedule_element_combination: List[List[ScheduleElement]] = []
     for thread_id, elem in enumerate(path_combination):
         schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
-            bb_graph.convert_bb_path_to_operations(section_id, elem)))
+                                                                                              convert_bb_path_to_operations(
+                                                                                                  bb_graph.bb_path_to_operations_cache,
+                                                                                                  section_id, elem)))
 
     dimensions = [len(c) for c in schedule_element_combination]
     scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
-    schedules = scheduling_graph.get_schedules()
+    schedules = get_schedules(scheduling_graph.graph, scheduling_graph.root_node_identifier)
     return schedules
 
 

@@ -1,78 +1,13 @@
-from itertools import chain, combinations
-from itertools import compress, product
 import networkx as nx  # type:ignore
-import os
-from typing import Optional, List, Tuple, Dict, cast
 import matplotlib.pyplot as plt  # type:ignore
-from sys import maxsize
-from itertools import combinations
 
-class Operation:
-    mode: str
-    target_name: str
-    target_indices: List[str]
-    line: int
-    col: int
-    # origin line and col will only be different from line / col if Operation occured inside a called function
-    origin_line: int
-    origin_col: int
-    section_id: int
-    cu_id: str
+import os
 
-    def __init__(self, suggestion_type, cu_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
-        self.mode = mode
-        self.target_name = target_name
-        self.target_indices = target_indices
-        self.line = line
-        self.col = col
-        self.origin_line = origin_line
-        self.origin_col = origin_col
-        self.section_id = section_id
-        self.cu_id = cu_id
-        self.suggestion_type = suggestion_type
+from typing import List, Dict, Tuple
 
-    def __str__(self):
-        if self.mode.startswith("c"):
-            pretty_mode = "c" + str(self.mode.count("c")) + self.mode[-1]
-        else:
-            pretty_mode = self.mode
-
-        # if operation occurs inside called function, report origin line and col additionally
-        return_str = "CU(" + str(self.cu_id) + ");" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
-        if self.mode.startswith("c"):
-            return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
-        return return_str
-
-        # todo add file id
-
-
-class BBNode:
-    id: int
-    operations: List[Operation]
-    contained_in_relevant_sections: List[int]
-    name: str
-    start_pos: Tuple[int, int]
-    end_pos: Tuple[int, int]
-    file_id: int
-
-    def __init__(self, node_id):
-        self.id = node_id
-        self.operations = []
-        self.contained_in_relevant_sections = []
-        self.name = ""
-        self.start_pos = (maxsize, maxsize)
-        self.end_pos = (-maxsize, -maxsize)
-        self.file_id = -1
-
-
-class FunctionMetaData:
-    name: str
-    file_name: str
-    function_entry_bb: int
-
-    # stores meta data regarding a function and points to it's root BB node
-    def __init__(self, fn_name):
-        self.name = fn_name
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
+from discopop_validation.data_race_prediction.behavior_modeller.classes.FunctionMetaData import FunctionMetaData
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
 class BBGraph(object):
@@ -120,7 +55,8 @@ class BBGraph(object):
                         target_indices = [var_name for var_name in line[5].replace("[", "").split("]") if len(var_name) > 0]
                     else:
                         target_name = line[5]
-                    current_bb.operations.append(Operation(line[1], line[2], int(line[3]), line[4], target_name, int(line[6]), int(line[7]), int(line[8]), int(line[9]), target_indices=target_indices))
+                    current_bb.operations.append(
+                        Operation(line[1], line[2], int(line[3]), line[4], target_name, int(line[6]), int(line[7]), int(line[8]), int(line[9]), target_indices=target_indices))
                     if not int(line[3]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[3]))
                 elif line[0] == "inSection":
@@ -226,80 +162,4 @@ class BBGraph(object):
                 to_be_removed.append(node)
         for i in to_be_removed:
             self.graph.remove_node(i)
-
-    def get_paths_for_sections(self):
-        """constructs and returns a dictionary containing a mapping from section ids to a list of lists containing all
-        possible paths for the given section"""
-        path_dict: Dict[int, List[List[BBNode]]] = {}
-
-        def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[List[BBNode]]:
-            if root_bb_node.id not in self.graph.nodes:
-                return []
-            children_paths: List[List[BBNode]] = []
-            for out_edge in self.graph.out_edges(root_bb_node.id):
-                # todo disable looping by checking for entry point
-                child_bb_node: BBNode = self.graph.nodes[out_edge[1]]["data"]
-                if child_bb_node is entry_point_bb:
-                    continue
-                if child_bb_node in visited_root_bbs:
-                    continue
-                visited_root_bbs.append(child_bb_node)
-                children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb, visited_root_bbs)
-            # recursion condition
-            if len(children_paths) == 0:
-                result_paths = [[root_bb_node]]
-            else:
-                # insert root_bb_node at beginning of each element in children_paths
-                result_paths = []
-                for path in children_paths:
-                    path.insert(0, root_bb_node)
-                    result_paths.append(path)
-            return result_paths
-
-        for section_id in self.section_to_entry_point:
-            entry_point = self.section_to_entry_point[section_id]
-            visited_root_bbs = []
-            paths = __rec_construct_pathlist(entry_point, entry_point, visited_root_bbs)
-            path_dict[section_id] = paths
-        return path_dict
-
-    def get_possible_path_combinations_for_sections(self) -> Dict[int, List[List[List[BBNode]]]]:
-        """constructs a dictionary containing a mapping from section id to a list of lists of lists.
-        The outermost list contains a list of path combinations.
-        The second list contains one combination, ie. a list of paths.
-        The innermost list contains BBNodes which belong to one path."""
-        path_dict = self.get_paths_for_sections()
-        result_dict: Dict[int, List[List[List[BBNode]]]] = {}
-
-        def get_powerset(iterable):
-            s = list(iterable)  # allows duplicate elements
-            list_of_tuples = list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
-            list_of_lists = []
-            for e in list_of_tuples:
-                cur_list = []
-                for i in range(0, len(e)):
-                    cur_list.append(e[i])
-                list_of_lists.append(cur_list)
-            return list_of_lists
-
-        for section_id in path_dict:
-            path_combinations = get_powerset(path_dict[section_id])
-            result_dict[section_id] = path_combinations
-        return result_dict
-
-    def convert_bb_path_to_operations(self, section_id: int, bb_path: List[BBNode]) -> List[Tuple[int, Operation]]:
-        """Converts a given list of BB Nodes which represent a path in the BB graph into a list of tuples containing
-        the id of the parent BB node and an Operation."""
-        cache_tuple = (section_id, tuple(bb_path))
-        if cache_tuple in self.bb_path_to_operations_cache:
-            return self.bb_path_to_operations_cache[cache_tuple]
-        op_path: List[Tuple[int, Operation]] = []
-        for bb_node in bb_path:
-            for op in bb_node.operations:
-                # only consider the relevant section id
-                if op.section_id == section_id or op.section_id is None:
-                    op_path.append((bb_node.id, op))
-        self.bb_path_to_operations_cache[cache_tuple] = op_path
-        return op_path
-
 
