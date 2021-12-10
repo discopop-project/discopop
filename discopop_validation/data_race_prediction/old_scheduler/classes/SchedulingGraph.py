@@ -1,6 +1,6 @@
 from typing import Tuple, List
 
-from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.old_scheduler.classes.ScheduleElement import ScheduleElement
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 

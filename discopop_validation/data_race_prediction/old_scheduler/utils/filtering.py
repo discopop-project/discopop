@@ -1,7 +1,7 @@
 from typing import List
 
-from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.old_scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.old_scheduler.classes.UpdateType import UpdateType
 
 
 def filter_schedules(schedules: List[Schedule]):

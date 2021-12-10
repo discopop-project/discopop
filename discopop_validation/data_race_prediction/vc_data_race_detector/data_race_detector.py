@@ -3,9 +3,9 @@ from .classes.data_race import DataRace
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from typing import Dict, List, Tuple, Optional
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.vector_clock import get_updated_vc, increase, compare_vc
-from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
-from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.old_scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.old_scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.old_scheduler.classes.UpdateType import UpdateType
 
 
 def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> List[DataRace]:

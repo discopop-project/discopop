@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.old_scheduler.classes.Schedule import Schedule
+from discopop_validation.data_race_prediction.old_scheduler.classes.ScheduleElement import ScheduleElement
 from termcolor import colored
 
 class DataRace(object):

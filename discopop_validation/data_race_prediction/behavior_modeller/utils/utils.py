@@ -1,11 +1,49 @@
 from itertools import chain, combinations
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
-def get_paths_for_sections(bb_graph):
+def get_paths(bb_graph):
+    """constructs and returns a list containing a list of all possible paths through the given BBGraph."""
+    path_dict: Dict[int, List[List[BBNode]]] = {}
+
+    def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[List[
+        BBNode]]:
+        if root_bb_node.id not in bb_graph.graph.nodes:
+            return []
+        children_paths: List[List[BBNode]] = []
+        for out_edge in bb_graph.graph.out_edges(root_bb_node.id):
+            # todo disable looping by checking for entry point
+            child_bb_node: BBNode = bb_graph.graph.nodes[out_edge[1]]["data"]
+            if child_bb_node is entry_point_bb:
+                continue
+            if child_bb_node in visited_root_bbs:
+                continue
+            visited_root_bbs.append(child_bb_node)
+            children_paths += __rec_construct_pathlist(child_bb_node, entry_point_bb, visited_root_bbs)
+        # recursion condition
+        if len(children_paths) == 0:
+            result_paths = [[root_bb_node]]
+        else:
+            # insert root_bb_node at beginning of each element in children_paths
+            result_paths = []
+            for path in children_paths:
+                path.insert(0, root_bb_node)
+                result_paths.append(path)
+        return result_paths
+
+    for section_id in bb_graph.section_to_entry_point:
+        entry_point = bb_graph.section_to_entry_point[section_id]
+        visited_root_bbs = []
+        paths = __rec_construct_pathlist(entry_point, entry_point, visited_root_bbs)
+        path_dict[section_id] = paths
+    return path_dict
+
+
+def old_get_paths_for_sections(bb_graph):
     """constructs and returns a dictionary containing a mapping from section ids to a list of lists containing all
     possible paths for the given section"""
     path_dict: Dict[int, List[List[BBNode]]] = {}
@@ -48,7 +86,7 @@ def get_possible_path_combinations_for_sections(bb_graph) -> Dict[int, List[List
     The outermost list contains a list of path combinations.
     The second list contains one combination, ie. a list of paths.
     The innermost list contains BBNodes which belong to one path."""
-    path_dict = get_paths_for_sections(bb_graph)
+    path_dict = old_get_paths_for_sections(bb_graph)
     result_dict: Dict[int, List[List[List[BBNode]]]] = {}
 
     def get_powerset(iterable):
@@ -67,4 +105,32 @@ def get_possible_path_combinations_for_sections(bb_graph) -> Dict[int, List[List
         result_dict[section_id] = path_combinations
     return result_dict
 
+
+def get_unmodified_operation_sequences(bb_graph) -> List[List[Operation]]:
+    paths = get_paths(bb_graph)
+    # convert paths to read/write sequences
+    operation_sequences: List[List[Operation]] = []
+    # todo section_id only for compatibility with old BBGraph, might be removed in the future
+    for section_id in paths:
+        for path in paths[section_id]:
+            current_sequence = []
+            for bb_node in path:
+                current_sequence += bb_node.operations
+            operation_sequences.append(current_sequence)
+    return operation_sequences
+
+
+def modify_operation_sequences(unmodified_operation_sequences: List[List[Operation]],
+                               target_code_section: Tuple[str, str, str, str, str, str]):
+    """modify the given operation sequences to represent the behavior of the given target code section,
+    considering the underlying parallelization suggestion"""
+    suggestion_type = target_code_section[5]
+    # todo currently, only doall is supported
+    if suggestion_type == "do_all":
+        # return unmodified
+        return unmodified_operation_sequences
+    else:
+        import warnings
+        warnings.warn("TODO: Suggestion type: "+suggestion_type+ " not supported!")
+        return unmodified_operation_sequences
 
