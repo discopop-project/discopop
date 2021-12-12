@@ -11,15 +11,13 @@ class DataRace(object):
     previous_writes: List[ScheduleElement]
 
     # represents a found data race for the output to the user
-    def __init__(self, section_id: int, schedule: Schedule, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
-        self.section_id: int = section_id
-        self.schedule = schedule
+    def __init__(self, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
         self.schedule_element: ScheduleElement = schedule_element
         self.previous_writes: List[ScheduleElement] = previous_writes
 
     def __str__(self):
         result_str = ""
-        result_str += colored("##### DATA RACE IN SECTION: " + str(self.section_id) + " #####\n", 'red', attrs=['bold'])
+        result_str += colored("##### DATA RACE: #####\n", 'red', attrs=['bold'])
         for write in self.previous_writes:
             result_str += "prev: " + str(write) + "\n"
         result_str += "===> " + str(self.schedule_element) + "\n"
@@ -52,7 +50,7 @@ class DataRace(object):
                 return operation.cu_id
         return "UNDEF"
 
-    def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
+    def get_tuples(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
         """returns the stored information as a tuple.
         Used for duplicate filtering."""
         return self.section_id, self.schedule_element, self.previous_writes
