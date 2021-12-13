@@ -1,7 +1,7 @@
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from .classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.VectorClock import get_updated_vc, increase, compare_vc
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
@@ -65,18 +65,18 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
     return data_races
 
 
-def goto_next_state(state: State, schedule_element: ScheduleElement) -> State:
+def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
     for update in schedule_element.updates:
         state = __perform_update(state, schedule_element.thread_id, update)
-    __check_state(state, schedule_element)
-    return state
+    return __check_state(state, schedule_element, previous_writes)
 
 
-def __check_state(state: State, schedule_element: ScheduleElement):
+def __check_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """checks the current state for data races.
-    Raises ValueError, if a data race has been identified."""
+    Raises ValueError, if a data race has been identified.
+    Returns state, if no data race has been identified."""
     read_variables = []
     written_variables = []
     for update_var, update_type, _, _ in schedule_element.updates:
@@ -88,11 +88,14 @@ def __check_state(state: State, schedule_element: ScheduleElement):
     written_variables = list(set(written_variables))
     for var in read_variables:
         if not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id]):
-            raise ValueError("Data Race detected!")
+            data_race = DataRace(schedule_element, previous_writes, state)
+            return data_race
     for var in written_variables:
         if (not compare_vc(state.var_read_clocks[var], state.thread_clocks[schedule_element.thread_id])) or \
                 (not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id])):
-            raise ValueError("Data Race detected!")
+            data_race = DataRace(schedule_element, previous_writes, state)
+            return data_race
+    return state
 
 
 def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:

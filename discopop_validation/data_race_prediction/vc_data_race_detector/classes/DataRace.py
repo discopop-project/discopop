@@ -4,16 +4,21 @@ from discopop_validation.data_race_prediction.scheduler.classes.Schedule import 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from termcolor import colored
 
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
+
+
 class DataRace(object):
     section_id: int
     schedule: Schedule
     schedule_element: ScheduleElement
     previous_writes: List[ScheduleElement]
+    state: State
 
     # represents a found data race for the output to the user
-    def __init__(self, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]):
+    def __init__(self, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement], state: State):
         self.schedule_element: ScheduleElement = schedule_element
         self.previous_writes: List[ScheduleElement] = previous_writes
+        self.state = state
 
     def __str__(self):
         result_str = ""
@@ -24,6 +29,8 @@ class DataRace(object):
         result_str += "===> indices: " + " ".join(self.get_used_indices()) + "\n"
 
         result_str += "===> parent suggestion type: " + self.get_parent_suggestion_type() + "\n"
+        result_str += "=== State ===" + "\n"
+        result_str += str(self.state)
         return result_str
 
     def get_parent_suggestion_type(self) -> str:

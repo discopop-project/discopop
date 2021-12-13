@@ -38,4 +38,7 @@ def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, sugges
         if run_configuration.verbose_mode:
             print("check scheduling graph for data races...")
         # todo task creation
-        check_scheduling_graph(scheduling_graph, dimensions)
+        data_races = check_scheduling_graph(scheduling_graph, dimensions)
+        for dr in data_races:
+            print()
+            print(dr)
