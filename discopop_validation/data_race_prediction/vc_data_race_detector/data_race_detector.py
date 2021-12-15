@@ -37,7 +37,6 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
         state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
     else:
         state = initial_state
-    data_races: List[DataRace] = []
     previous_writes: List[ScheduleElement] = []
     for idx, schedule_element in enumerate(schedule.elements):
         result = goto_next_state(state, schedule_element, previous_writes)

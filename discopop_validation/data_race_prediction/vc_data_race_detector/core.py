@@ -43,7 +43,7 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
                 #data_races += __check_node(scheduling_graph, target, state_copy, previous_writes_copy)
         for future in futures:
             if future.result() is not None:
-                data_races.append(future.result())
+                data_races += future.result()
     else:
         # no multithreading
         for source, target in scheduling_graph.graph.out_edges(node_identifier):
