@@ -27,7 +27,7 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> Lis
     return found_data_races
 
 
-def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
+def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[DataRace]:
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
@@ -37,32 +37,19 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
         state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
     else:
         state = initial_state
-    data_races: List[Tuple[State, ScheduleElement, List[ScheduleElement]]] = []
+    data_races: List[DataRace] = []
+    previous_writes: List[ScheduleElement] = []
     for idx, schedule_element in enumerate(schedule.elements):
-        try:
-            state = goto_next_state(state, schedule_element)
-        except ValueError:
-            # find last write accesses to var, which are performed by other threads
-            # search by traversing path in reverse
-            seen_thread_ids = [schedule_element.thread_id]
-            previous_writes = []
-            elements_reverse = schedule.elements[:]
-            elements_reverse.reverse()
-            for offset in range(idx):
-                previous_element = elements_reverse[offset+len(elements_reverse)-idx]
-                if previous_element.thread_id in seen_thread_ids:
-                    continue
-                # check updates for write to var
-                for update in previous_element.updates:
-                    if update[0] == schedule_element.updates[0][0] and update[1] is UpdateType.WRITE:
-                        # add previous_element.thread_id to seen_thread_ids
-                        seen_thread_ids.append(previous_element.thread_id)
-                        previous_writes.append(previous_element)
-            # data races can only occur, if a previous write exists
-            if len(previous_writes) > 0:
-                data_races.append((state, schedule_element, previous_writes))
-            break
-    return data_races
+        result = goto_next_state(state, schedule_element, previous_writes)
+        if type(result) is State:
+            state = result
+            # todo might be removed / might be unnecessary
+            if schedule_element.contains_write():
+                previous_writes.append(schedule_element)
+        else:
+            data_race = result
+            return [data_race]
+    return []
 
 
 def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
