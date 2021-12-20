@@ -46,10 +46,21 @@ def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, sugges
             run_configuration.validation_time_limit = int(run_configuration.validation_time_limit)
             data_races = __bound_validation(run_configuration, behavior_model_list)
 
-        for dr in data_races:
+        # remove duplicates from data races
+        data_races_without_duplicates = []
+        data_race_tuple_buffer = []
+        for data_race in data_races:
+            tuple = data_race.get_tuple()
+            if tuple in data_race_tuple_buffer:
+                continue
+            data_race_tuple_buffer.append(tuple)
+            data_races_without_duplicates.append(data_race)
+        for dr in data_races_without_duplicates:
             print()
             print(dr)
         print("Found Data Races: ", len(data_races))
+        print("W/O Duplicates: ", len(data_races_without_duplicates))
+
 
 
 def __bound_validation(run_configuration: Configuration, behavior_model_list: List[BehaviorModel]) -> List[DataRace]:
