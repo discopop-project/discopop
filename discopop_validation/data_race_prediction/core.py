@@ -15,7 +15,7 @@ from discopop_validation.data_race_prediction.target_code_sections.extraction im
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_behavior_models
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
@@ -69,14 +69,12 @@ def __bound_validation(run_configuration: Configuration, behavior_model_list: Li
     for thread_idx, behavior_model in enumerate(behavior_model_list):
         behavior_model_list[thread_idx].schedule_elements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_idx)
 
-    time_start = time.time()
-    # todo move thread count to run_configuration
-    thread_count = 8
+
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # create schedule creation and validation threads
-        for i in range(0, thread_count):
-            futures.append(executor.submit(__build_and_validate_schedules, run_configuration, behavior_model_list, time_start))
+        for i in range(0, run_configuration.thread_count):
+            futures.append(executor.submit(__build_and_validate_schedules, run_configuration, behavior_model_list))
     # collect found data_races from futures
     for future in futures:
         data_races += future.result()
@@ -84,8 +82,9 @@ def __bound_validation(run_configuration: Configuration, behavior_model_list: Li
     return data_races
 
 
-def __build_and_validate_schedules(run_configuration: Configuration, behavior_model_list: List[BehaviorModel], time_start: float) -> List[DataRace]:
+def __build_and_validate_schedules(run_configuration: Configuration, behavior_model_list: List[BehaviorModel]) -> List[DataRace]:
     data_races: List[DataRace] = []
+    time_start = time.time()
     while time.time() - time_start < run_configuration.validation_time_limit:
         # build a random schedule
         schedule = Schedule()
@@ -114,7 +113,6 @@ def __full_validation(run_configuration: Configuration, behavior_model_list: Lis
         # check scheduling graph recursively for data races
         if run_configuration.verbose_mode:
             print("check scheduling graph for data races...")
-        # todo task creation
         data_races = check_scheduling_graph(scheduling_graph, dimensions)
     else:
         # create schedules and validate the afterwards

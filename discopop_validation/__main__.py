@@ -4,7 +4,7 @@ Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>]
+[--validation-time-limit <seconds>] [--thread-count <threads>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -24,6 +24,7 @@ Options:
     --validation-time-limit=<seconds>   Maximum time in seconds to validate a single suggestion.
                                         Using this flag can lead to an underestimation of data races
                                         and nondeterministic results.
+    --thread-count=<threads>    Thread count to be used for multithreaded program parts.
     -h --help                   Show this screen
 """
 import os
@@ -63,6 +64,7 @@ docopt_schema = Schema({
     '--data-race-output': Use(str),
     '--dp-build-path': Use(str),
     '--validation-time-limit': Use(str),
+    '--thread-count': Use(str),
 })
 
 
@@ -96,6 +98,11 @@ def main():
     data_race_output_path = arguments["--data-race-output"]
     dp_build_path = arguments["--dp-build-path"]
     validation_time_limit = arguments["--validation-time-limit"]
+    thread_count = arguments["--thread-count"]
+    if thread_count == "None":
+        thread_count = 1
+    else:
+        thread_count = int(thread_count)
     if data_race_output_path != "None":
         data_race_output_path = get_path(path, data_race_output_path)
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
@@ -106,7 +113,7 @@ def main():
 
     run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
-                                      validation_time_limit, arguments)
+                                      validation_time_limit, thread_count, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")

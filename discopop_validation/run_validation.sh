@@ -35,7 +35,8 @@ echo ""
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_7 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_8 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/
 #--call-graph=/home/lukas/Schreibtisch/cg.png
-python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_9 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --validation-time-limit=2
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_9 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --validation-time-limit=5 --thread-count=7
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_9 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_doall/path_1_op_12 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=original_suggestions.json --verbose=true --dp-build-path=/home/lukas/git/discopop/build/
 
 # DATARACE BENCHMARK
