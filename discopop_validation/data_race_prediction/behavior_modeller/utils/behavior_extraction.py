@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from typing import List, Tuple, Dict
 
-from discopop_validation.data_race_prediction.target_code_sections.extraction import identify_target_sections_from_suggestions
 
 try:
     from discopop_explorer import DetectionResult
@@ -14,7 +13,8 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode i
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
-def execute_bb_graph_extraction(suggestions: Dict, file_mapping: str, ll_file_path: str, dp_build_path: str)\
+def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str]],
+                                file_mapping: str, ll_file_path: str, dp_build_path: str)\
         -> BBGraph:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")
@@ -29,9 +29,8 @@ def execute_bb_graph_extraction(suggestions: Dict, file_mapping: str, ll_file_pa
             file_path = split_line[1].replace("\n", "")
             file_mapping_dict[file_id] = file_path
     # create input file for behavior extraction
-    relevant_sections = identify_target_sections_from_suggestions(suggestions)
     with open("input.txt", "w+") as input_file:
-        for section_id, start_line, end_line, var_name, cu_id, suggestion_type in relevant_sections:
+        for section_id, start_line, end_line, var_name, cu_id, suggestion_type in target_code_sections:
             # replace file ids with path
             file_path = file_mapping_dict[start_line.split(":")[0]]
             file_id = start_line.split(":")[0]

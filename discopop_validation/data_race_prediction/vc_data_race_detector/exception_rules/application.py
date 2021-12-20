@@ -1,6 +1,6 @@
 from typing import List
 
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.data_race import DataRace
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.do_all import __check_do_all_exception_rules
 
 

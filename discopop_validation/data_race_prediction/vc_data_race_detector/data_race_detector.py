@@ -1,8 +1,8 @@
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.detector_state import State
-from .classes.data_race import DataRace
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
+from .classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from typing import Dict, List, Tuple, Optional
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.vector_clock import get_updated_vc, increase, compare_vc
+from typing import Dict, List, Tuple, Optional, Union
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.VectorClock import get_updated_vc, increase, compare_vc
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
@@ -27,53 +27,42 @@ def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> Lis
     return found_data_races
 
 
-def check_schedule(schedule: Schedule) -> List[Tuple[State, ScheduleElement, List[ScheduleElement]]]:
+def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[DataRace]:
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
     if a data race has been identified.
     TODO find proper output format (problematic statements)"""
-    state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
-    data_races: List[Tuple[State, ScheduleElement, List[ScheduleElement]]] = []
+    if initial_state is None:
+        state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
+    else:
+        state = initial_state
+    previous_writes: List[ScheduleElement] = []
     for idx, schedule_element in enumerate(schedule.elements):
-        try:
-            state = goto_next_state(state, schedule_element)
-        except ValueError:
-            # find last write accesses to var, which are performed by other threads
-            # search by traversing path in reverse
-            seen_thread_ids = [schedule_element.thread_id]
-            previous_writes = []
-            elements_reverse = schedule.elements[:]
-            elements_reverse.reverse()
-            for offset in range(idx):
-                previous_element = elements_reverse[offset+len(elements_reverse)-idx]
-                if previous_element.thread_id in seen_thread_ids:
-                    continue
-                # check updates for write to var
-                for update in previous_element.updates:
-                    if update[0] == schedule_element.updates[0][0] and update[1] is UpdateType.WRITE:
-                        # add previous_element.thread_id to seen_thread_ids
-                        seen_thread_ids.append(previous_element.thread_id)
-                        previous_writes.append(previous_element)
-            # data races can only occur, if a previous write exists
-            if len(previous_writes) > 0:
-                data_races.append((state, schedule_element, previous_writes))
-            break
-    return data_races
+        result = goto_next_state(state, schedule_element, previous_writes)
+        if type(result) is State:
+            state = result
+            # todo might be removed / might be unnecessary
+            if schedule_element.contains_write():
+                previous_writes.append(schedule_element)
+        else:
+            data_race = result
+            return [data_race]
+    return []
 
 
-def goto_next_state(state: State, schedule_element: ScheduleElement) -> State:
+def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
     for update in schedule_element.updates:
         state = __perform_update(state, schedule_element.thread_id, update)
-    __check_state(state, schedule_element)
-    return state
+    return __check_state(state, schedule_element, previous_writes)
 
 
-def __check_state(state: State, schedule_element: ScheduleElement):
+def __check_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """checks the current state for data races.
-    Raises ValueError, if a data race has been identified."""
+    Raises ValueError, if a data race has been identified.
+    Returns state, if no data race has been identified."""
     read_variables = []
     written_variables = []
     for update_var, update_type, _, _ in schedule_element.updates:
@@ -85,11 +74,14 @@ def __check_state(state: State, schedule_element: ScheduleElement):
     written_variables = list(set(written_variables))
     for var in read_variables:
         if not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id]):
-            raise ValueError("Data Race detected!")
+            data_race = DataRace(schedule_element, previous_writes, state)
+            return data_race
     for var in written_variables:
         if (not compare_vc(state.var_read_clocks[var], state.thread_clocks[schedule_element.thread_id])) or \
                 (not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id])):
-            raise ValueError("Data Race detected!")
+            data_race = DataRace(schedule_element, previous_writes, state)
+            return data_race
+    return state
 
 
 def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:

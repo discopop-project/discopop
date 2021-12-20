@@ -1,5 +1,6 @@
 from typing import List, Tuple, Dict
 
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.utils.conversions import convert_bb_path_to_operations
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph import BBGraph
@@ -30,7 +31,6 @@ def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinatio
     return sections_to_schedules_dict
 
 
-
 def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int, path_combination: List[List[BBNode]]) -> List[Schedule]:
     """creates a list of Schedules based on the given combination of paths"""
     if len(path_combination) == 0:
@@ -53,15 +53,27 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int,
     return schedules
 
 
-def __convert_operation_path_to_schedule_element_path(executing_thread_id: int, operation_path: List[Tuple[int, Operation]]) -> List[ScheduleElement]:
+def create_scheduling_graph_from_behavior_models(behavior_models: List[BehaviorModel]) -> Tuple[SchedulingGraph, List[int]]:
+    """creates a scheduling graph based on the given combination of BehaviorModels"""
+    if len(behavior_models) == 0:
+        return SchedulingGraph([], behavior_models)
+    # create conversion of BehaviorModel's operations to ScheduleElements
+    for thread_id, behavior_model in enumerate(behavior_models):
+        behavior_model.scheduleElements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_id)
+    dimensions = [len(model.scheduleElements) for model in behavior_models]
+    scheduling_graph = SchedulingGraph(dimensions, behavior_models)
+    return scheduling_graph, dimensions
+
+
+def __convert_operation_list_to_schedule_element_list(operation_list: List[Operation], thread_id: int) -> List[ScheduleElement]:
     schedule_elements: List[ScheduleElement] = []
-    for parent_bb_id, operation in operation_path:
-        schedule_elements.append(__convert_operation_to_schedule_element(operation, executing_thread_id, parent_bb_id))
+    for operation in operation_list:
+        schedule_elements.append(__convert_operation_to_schedule_element(operation, thread_id))
     return schedule_elements
 
 
-def __convert_operation_to_schedule_element(operation: Operation, executing_thread_id: int, parent_bb_id: int) -> ScheduleElement:
-    schedule_element: ScheduleElement = ScheduleElement(executing_thread_id, parent_basic_block_id=parent_bb_id)
+def __convert_operation_to_schedule_element(operation: Operation, executing_thread_id: int) -> ScheduleElement:
+    schedule_element: ScheduleElement = ScheduleElement(executing_thread_id)
     # w -> write; cw -> write inside called function
     # r -> read; cr -> read inside called function
     # note: variable amount of c's, each representing a function call layer

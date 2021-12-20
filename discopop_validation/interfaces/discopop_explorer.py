@@ -1,6 +1,8 @@
 from typing import Optional, List, Tuple
 import json
 
+from discopop_validation.classes.Configuration import Configuration
+
 try:
     from discopop_explorer import run, DetectionResult, PETGraphX, utils, parser, json_serializer
 except ModuleNotFoundError:
@@ -11,9 +13,10 @@ except ModuleNotFoundError:
     from discopop.discopop_explorer import json_serializer
 
 
-def get_pet_graph(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str) -> PETGraphX:
-    pet = PETGraphX.from_parsed_input(*parser.parse_inputs(cu_xml, dep_file,
-                                                    loop_counter_file, reduction_file))
+def get_pet_graph(run_configuration: Configuration) -> PETGraphX:
+    pet = PETGraphX.from_parsed_input(*parser.parse_inputs(run_configuration.cu_xml, run_configuration.dep_file,
+                                                    run_configuration.loop_counter_file,
+                                                        run_configuration.reduction_file))
     return pet
 
 
