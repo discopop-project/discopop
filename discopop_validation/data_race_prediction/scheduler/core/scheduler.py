@@ -59,8 +59,8 @@ def create_scheduling_graph_from_behavior_models(behavior_models: List[BehaviorM
         return SchedulingGraph([], behavior_models)
     # create conversion of BehaviorModel's operations to ScheduleElements
     for thread_id, behavior_model in enumerate(behavior_models):
-        behavior_model.scheduleElements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_id)
-    dimensions = [len(model.scheduleElements) for model in behavior_models]
+        behavior_model.schedule_elements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_id)
+    dimensions = [len(model.schedule_elements) for model in behavior_models]
     scheduling_graph = SchedulingGraph(dimensions, behavior_models)
     return scheduling_graph, dimensions
 
