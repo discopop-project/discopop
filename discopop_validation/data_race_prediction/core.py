@@ -71,6 +71,7 @@ def __bound_validation(run_configuration: Configuration, behavior_model_list: Li
             progress[thread_id] += 1
         count += 1
         #validate the schedule
+        data_races += check_schedule(schedule)
 
     print(count)
 
