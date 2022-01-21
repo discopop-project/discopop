@@ -37,4 +37,9 @@ class Operation:
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
 
+    def get_location_str(self):
+        """used to output found data races if requested.
+        Format: file_id;line;column"""
+        return str(self.cu_id[0:self.cu_id.index(":")]) + ";" + str(self.line) + ";" + str(self.col)
+
         # todo add file id

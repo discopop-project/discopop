@@ -32,6 +32,9 @@ class DataRace(object):
         result_str += str(self.state)
         return result_str
 
+    def get_location_str(self):
+        return self.schedule_element.get_location_str()
+
     def get_parent_suggestion_type(self) -> str:
         """returns the type of the suggestion which 'contains' the current DataRace."""
         for _, _, _, operation in self.schedule_element.updates:

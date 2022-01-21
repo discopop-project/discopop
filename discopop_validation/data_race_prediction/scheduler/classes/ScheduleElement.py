@@ -23,6 +23,13 @@ class ScheduleElement:
     def __str__(self):
         return "Thread:" + str(self.thread_id) + " Operation:" + " ".join([" "+str(operation) for (var_name, update_type, _, operation) in self.updates])
 
+    def get_location_str(self):
+        """used for outputting data races to file"""
+        result_str = " ".join([operation.get_location_str() for (var_name, update_type, _, operation) in self.updates])
+        while result_str.startswith(" "):
+            result_str = result_str[1:]
+        return result_str
+
     def contains_write(self) -> bool:
         for _, update_type, _, _ in self.updates:
             if update_type == UpdateType.WRITE:

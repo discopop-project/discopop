@@ -1,3 +1,4 @@
+import os
 import time
 import concurrent.futures
 from random import randrange
@@ -58,6 +59,14 @@ def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, sugges
         for dr in data_races_without_duplicates:
             print()
             print(dr)
+        # output found data races to file if requested
+        if run_configuration.data_race_ouput_path != "None":
+            if os.path.exists(run_configuration.data_race_ouput_path):
+                os.remove(run_configuration.data_race_ouput_path)
+            with open(run_configuration.data_race_ouput_path, "w+") as f:
+                f.write("fileID;line;column\n")
+                for dr in data_races_without_duplicates:
+                    f.write(dr.get_location_str() + "\n")
         print("Found Data Races: ", len(data_races))
         print("W/O Duplicates: ", len(data_races_without_duplicates))
 
