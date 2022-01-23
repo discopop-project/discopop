@@ -37,6 +37,12 @@ class Operation:
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         return return_str
 
+    def __eq__(self, other):
+        return self.mode == other.mode and \
+            self.target_name == other.target_name and \
+            self.target_indices == other.target_indices and \
+            self.cu_id == other.cu_id
+
     def get_location_str(self):
         """used to output found data races if requested.
         Format: file_id;line;column"""
