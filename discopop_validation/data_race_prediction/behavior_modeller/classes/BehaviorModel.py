@@ -6,7 +6,7 @@ from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement 
 
 class BehaviorModel(object):
     operations: List[Operation]
-    scheduleElements: List[ScheduleElement]
+    schedule_elements: List[ScheduleElement]
 
     def __init__(self, operations: List[Operation]):
         self.operations = operations

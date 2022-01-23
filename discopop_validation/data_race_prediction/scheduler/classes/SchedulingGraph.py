@@ -21,7 +21,7 @@ class SchedulingGraph(object):
         self.__old_add_nodes_rec((tuple(0 for _ in range(len(dim))), -1), dim.copy(), behavior_models)
         # determine lock and var names
         for behavior_model in behavior_models:
-            for schedule_element in behavior_model.scheduleElements:
+            for schedule_element in behavior_model.schedule_elements:
                 self.lock_names += schedule_element.lock_names
                 self.lock_names = list(set(self.lock_names))
                 self.var_names += schedule_element.var_names
@@ -59,7 +59,7 @@ class SchedulingGraph(object):
             new_node_identifier = (new_node_id_tuple, last_thread_id)
             if new_node_identifier not in self.graph.nodes:
                 # update thread id
-                self.graph.add_node(new_node_identifier, data=behavior_models[i].scheduleElements[new_node_id_tuple[i]-1])
+                self.graph.add_node(new_node_identifier, data=behavior_models[i].schedule_elements[new_node_id_tuple[i] - 1])
 
             # add edge from parent_node_id to new_node_id
             if not (parent_node_identifier, new_node_identifier) in self.graph.edges:

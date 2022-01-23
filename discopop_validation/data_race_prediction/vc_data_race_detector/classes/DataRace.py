@@ -8,7 +8,6 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Stat
 
 
 class DataRace(object):
-    section_id: int
     schedule: Schedule
     schedule_element: ScheduleElement
     previous_writes: List[ScheduleElement]
@@ -32,6 +31,9 @@ class DataRace(object):
         result_str += "=== State ===" + "\n"
         result_str += str(self.state)
         return result_str
+
+    def get_location_str(self):
+        return self.schedule_element.get_location_str()
 
     def get_parent_suggestion_type(self) -> str:
         """returns the type of the suggestion which 'contains' the current DataRace."""
@@ -57,7 +59,7 @@ class DataRace(object):
                 return operation.cu_id
         return "UNDEF"
 
-    def get_tuples(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
+    def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
         """returns the stored information as a tuple.
         Used for duplicate filtering."""
-        return self.section_id, self.schedule_element, self.previous_writes
+        return self.schedule_element, self.previous_writes
