@@ -7,11 +7,18 @@ from discopop_validation.data_race_prediction.behavior_modeller.utils.bb_graph_m
     insert_critical_sections
 from discopop_validation.data_race_prediction.behavior_modeller.utils.behavior_extraction import \
     execute_bb_graph_extraction
+from discopop_validation.data_race_prediction.behavior_modeller.utils.postprocessing import apply_post_processing
 from discopop_validation.data_race_prediction.behavior_modeller.utils.utils import get_unmodified_behavior_models, \
     modify_behavior_models
 
 
-def extract_behavior_models(run_configuration: Configuration, pet, tcs, parallelization_suggestions) -> List[List[Operation]]:
+def extract_postprocessed_behavior_models(run_configuration: Configuration, pet, tcs, parallelization_suggestions) -> List[BehaviorModel]:
+    behavior_models = __extract_behavior_models(run_configuration, pet, tcs, parallelization_suggestions)
+    postprocessed_behavior_models = apply_post_processing(behavior_models)
+    return postprocessed_behavior_models
+
+
+def __extract_behavior_models(run_configuration: Configuration, pet, tcs, parallelization_suggestions) -> List[BehaviorModel]:
     if run_configuration.verbose_mode:
         print("extracting BB Graph...")
     bb_graph = execute_bb_graph_extraction([tcs], run_configuration.file_mapping, run_configuration.ll_file, run_configuration.dp_build_path)

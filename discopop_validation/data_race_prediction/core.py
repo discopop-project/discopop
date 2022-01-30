@@ -13,7 +13,7 @@ from discopop_validation.data_race_prediction.scheduler.core.scheduler import \
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_suggestion
-from discopop_validation.data_race_prediction.behavior_modeller.core import extract_behavior_models
+from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
 from copy import deepcopy, copy
@@ -29,7 +29,7 @@ def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, sugges
     if run_configuration.verbose_mode:
         print("extract behavior model...")
     for tcs in target_code_sections:
-        behavior_models: List[BehaviorModel] = extract_behavior_models(run_configuration, pet, tcs, parallelization_suggestions)
+        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, parallelization_suggestions)
         if run_configuration.verbose_mode:
             for model in behavior_models:
                 print("Behavior Model:")
