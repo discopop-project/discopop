@@ -8,7 +8,7 @@ from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
-from discopop_validation.data_race_prediction.scheduler.core.scheduler import \
+from discopop_validation.data_race_prediction.scheduler.core import \
     create_scheduling_graph_from_behavior_models, __convert_operation_list_to_schedule_element_list
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
@@ -16,7 +16,7 @@ from discopop_validation.data_race_prediction.target_code_sections.extraction im
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
-from copy import deepcopy, copy
+from copy import deepcopy
 
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
