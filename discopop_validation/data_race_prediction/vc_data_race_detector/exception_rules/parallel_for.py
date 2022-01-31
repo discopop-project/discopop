@@ -2,17 +2,18 @@ from discopop_validation.interfaces.discopop_explorer import is_loop_index
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 
 
-def __check_do_all_exception_rules(data_race: DataRace, pet, parallelization_suggestions) -> bool:
-    """Checks if the given data race is valid according to the do_all exception rules.
+# todo not included yet
+def __check_parallel_for_exception_rules(data_race: DataRace, pet, parallelization_suggestions) -> bool:
+    """Checks if the given data race is valid according to the parallel_for exception rules.
     Returns True, if the data race is valid and should be kept.
     Returns False, if the data race is invalid and should be removed."""
     is_valid = True
-    is_valid = is_valid and __do_all_exception_rule_1(data_race, pet)
-    is_valid = is_valid and __do_all_exception_rule_2(data_race, pet, parallelization_suggestions)
+    is_valid = is_valid and __parallel_for_exception_rule_1(data_race, pet)
+    is_valid = is_valid and __parallel_for_exception_rule_2(data_race, pet, parallelization_suggestions)
     return is_valid
 
 
-def __do_all_exception_rule_1(data_race: DataRace, pet) -> bool:
+def __parallel_for_exception_rule_1(data_race: DataRace, pet) -> bool:
     """exception 1: If only one index is used and it is a loop index of parent suggestion loop, the data race can be removed."""
     if len(data_race.get_used_indices()) > 1:
         return True
@@ -24,7 +25,7 @@ def __do_all_exception_rule_1(data_race: DataRace, pet) -> bool:
         return True
 
 
-def __do_all_exception_rule_2(data_race: DataRace, pet, parallelization_suggestions) -> bool:
+def __parallel_for_exception_rule_2(data_race: DataRace, pet, parallelization_suggestions) -> bool:
     """exception 1: If multiple loop indices are used and no inner index is shared, the data race can be removed.
     shared: either explicitly mentioned as shared, or not mentioned as private / firstprivate"""
     if len(data_race.get_used_indices()) <= 1:

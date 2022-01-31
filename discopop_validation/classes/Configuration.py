@@ -1,6 +1,7 @@
 class Configuration(object):
     def __init__(self, path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping,
-                 ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count, arguments):
+                 ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count, arguments,
+                 omp_pragmas_file):
         self.path = path
         self.cu_xml = cu_xml
         self.dep_file = dep_file
@@ -15,3 +16,4 @@ class Configuration(object):
         self.validation_time_limit = validation_time_limit
         self.thread_count = thread_count
         self.arguments = arguments
+        self.omp_pragmas_file = omp_pragmas_file

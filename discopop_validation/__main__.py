@@ -4,7 +4,7 @@ Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>] [--thread-count <threads>]
+[--validation-time-limit <seconds>] [--thread-count <threads>] [--omp-pragmas-file <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -25,6 +25,7 @@ Options:
                                         Using this flag can lead to an underestimation of data races
                                         and nondeterministic results.
     --thread-count=<threads>    Thread count to be used for multithreaded program parts.
+    --omp-pragmas-file=<path>   Check OpenMP pragmas in file. Specific formatting required!
     -h --help                   Show this screen
 """
 import os
@@ -38,7 +39,8 @@ from schema import SchemaError, Schema, Use
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.data_race_prediction.core import validate_suggestion
+from discopop_validation.classes.OmpPragma import OmpPragma
+from discopop_validation.data_race_prediction.core import validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
 from .interfaces.discopop_explorer import get_pet_graph
@@ -65,6 +67,7 @@ docopt_schema = Schema({
     '--dp-build-path': Use(str),
     '--validation-time-limit': Use(str),
     '--thread-count': Use(str),
+    '--omp-pragmas-file': Use(str),
 })
 
 
@@ -99,6 +102,7 @@ def main():
     dp_build_path = arguments["--dp-build-path"]
     validation_time_limit = arguments["--validation-time-limit"]
     thread_count = arguments["--thread-count"]
+    omp_pragmas_file = get_path(path, arguments["--omp-pragmas-file"])
     if thread_count == "None":
         thread_count = 1
     else:
@@ -113,7 +117,7 @@ def main():
 
     run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
-                                      validation_time_limit, thread_count, arguments)
+                                      validation_time_limit, thread_count, arguments, omp_pragmas_file)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
@@ -145,17 +149,27 @@ def __main_start_execution(run_configuration: Configuration):
         print("creating PET Graph...")
     time_start_ps = time.time()
     pet: PETGraphX = get_pet_graph(run_configuration)
-    with open(run_configuration.json_file) as f:
-        parallelization_suggestions = json.load(f)
+    omp_pragmas = []
+    with open(run_configuration.omp_pragmas_file) as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            while line.startswith(" "):
+                line = line[1:]
+            if line.startswith("//"):
+                # use // as comment marker
+                continue
+            while "  " in line:
+                line = line.replace("  ", " ")
+            omp_pragmas.append(OmpPragma(line))
+
     time_end_ps = time.time()
 
-    for suggestion_type in parallelization_suggestions:
-        for suggestion in parallelization_suggestions[suggestion_type]:
-            if run_configuration.verbose_mode:
-                print("validating: ", suggestion)
-            # todo add Data Races as return type
-            validate_suggestion(run_configuration, pet, suggestion_type, suggestion, parallelization_suggestions)
-            if run_configuration.verbose_mode:
+    for pragma in omp_pragmas:
+        if run_configuration.verbose_mode:
+            print("validating: ", pragma)
+        # todo add Data Races as return type
+        validate_omp_pragma(run_configuration, pet, pragma, omp_pragmas)
+        if run_configuration.verbose_mode:
                 print()
 
 

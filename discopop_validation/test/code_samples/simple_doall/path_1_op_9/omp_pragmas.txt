@@ -1,0 +1,2 @@
+//fileId;startLine;endLine;pragma
+1;6;11;parallel for firstprivate(x) private(i) shared(arr) 
