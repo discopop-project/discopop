@@ -43,6 +43,7 @@ from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.core import validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
+from discopop_validation.discopop_suggestion_interpreter.core import get_omp_pragmas_from_dp_suggestions
 from .interfaces.discopop_explorer import get_pet_graph
 from pycallgraph2 import PyCallGraph
 from pycallgraph2.output import GraphvizOutput
@@ -149,18 +150,8 @@ def __main_start_execution(run_configuration: Configuration):
         print("creating PET Graph...")
     time_start_ps = time.time()
     pet: PETGraphX = get_pet_graph(run_configuration)
-    omp_pragmas = []
-    with open(run_configuration.omp_pragmas_file) as f:
-        for line in f.readlines():
-            line = line.replace("\n", "")
-            while line.startswith(" "):
-                line = line[1:]
-            if line.startswith("//"):
-                # use // as comment marker
-                continue
-            while "  " in line:
-                line = line.replace("  ", " ")
-            omp_pragmas.append(OmpPragma(line))
+
+    omp_pragmas = __get_omp_pragmas(run_configuration)
 
     time_end_ps = time.time()
 
@@ -172,11 +163,7 @@ def __main_start_execution(run_configuration: Configuration):
         if run_configuration.verbose_mode:
                 print()
 
-
     time_end_validation = time.time()
-
-
-
     time_end_execution = time.time()
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
@@ -185,6 +172,29 @@ def __main_start_execution(run_configuration: Configuration):
     #print("--- Create schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
     #print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
     print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
+
+
+def __get_omp_pragmas(run_configuration: Configuration):
+    omp_pragmas = []
+    # parse openmp pragmas file if parameter is set and file exists
+    if os.path.isfile(run_configuration.omp_pragmas_file):
+        with open(run_configuration.omp_pragmas_file) as f:
+            for line in f.readlines():
+                line = line.replace("\n", "")
+                while line.startswith(" "):
+                    line = line[1:]
+                if line.startswith("//"):
+                    # use // as comment marker
+                    continue
+                while "  " in line:
+                    line = line.replace("  ", " ")
+                omp_pragmas.append(OmpPragma().init_with_pragma_line(line))
+    # interpret DiscoPoP suggestions if parameter is set and file exists
+    if os.path.isfile(run_configuration.json_file):
+        with open(run_configuration.json_file) as f:
+            parallelization_suggestions = json.load(f)
+            omp_pragmas += get_omp_pragmas_from_dp_suggestions(parallelization_suggestions)
+    return omp_pragmas
 
 
 """
