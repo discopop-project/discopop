@@ -27,7 +27,7 @@ class DataRace(object):
         result_str += "===> " + str(self.schedule_element) + "\n"
         result_str += "===> indices: " + " ".join(self.get_used_indices()) + "\n"
 
-        result_str += "===> parent suggestion type: " + self.get_parent_suggestion_type() + "\n"
+        result_str += "===> parent pragma type: " + self.get_parent_suggestion_type() + "\n"
         result_str += "=== State ===" + "\n"
         result_str += str(self.state)
         return result_str
@@ -55,6 +55,7 @@ class DataRace(object):
     def get_cu_id(self) -> str:
         """returns the cu_id which is stored in the schedule element's operations."""
         for _, _, _, operation in self.schedule_element.updates:
+            raise ValueError("TODO: Determine CUID from file_id and line + column")
             if operation.cu_id != "":
                 return operation.cu_id
         return "UNDEF"

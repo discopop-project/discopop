@@ -101,7 +101,6 @@ namespace
         unsigned int startLine;
         unsigned int endLine;
         string varName;
-        string cuId;
         string suggestionType;
     };
 
@@ -647,7 +646,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             for(auto section : sections){
                     if(svaNameWithoutIndices.compare(section.varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
-                            tmpOutputFile << "operation;" << section.suggestionType << ";" << section.cuId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
+                            tmpOutputFile << "operation;" << section.suggestionType << ";" << section.fileId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
                                        << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << "\n";
                         }
                     }
@@ -723,8 +722,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.startLine = stoi(tmp[3]);
         curSection.endLine = stoi(tmp[4]);
         curSection.varName = tmp[5];
-        curSection.cuId = tmp[6];
-        curSection.suggestionType = tmp[7];
+        curSection.suggestionType = tmp[6];
         sections.push_back(curSection);
     }
     inputFile.close();

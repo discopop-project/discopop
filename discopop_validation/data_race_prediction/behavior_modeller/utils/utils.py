@@ -2,6 +2,7 @@ from itertools import chain, combinations
 
 from typing import Dict, List, Tuple
 
+from discopop_validation.classes.OmpPragma import PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
@@ -125,13 +126,13 @@ def modify_behavior_models(unmodified_behavior_models: List[BehaviorModel],
                            target_code_section: Tuple[str, str, str, str, str, str]):
     """modify the given operation sequences to represent the behavior of the given target code section,
     considering the underlying parallelization suggestion"""
-    suggestion_type = target_code_section[5]
-    # todo currently, only doall is supported
-    if suggestion_type == "do_all":
+    pragma_type = target_code_section[5]
+    # todo currently, only parallel_for is supported
+    if pragma_type == str(PragmaType.PARALLEL_FOR):
         # return unmodified
         return unmodified_behavior_models
     else:
         import warnings
-        warnings.warn("TODO: Suggestion type: "+suggestion_type+ " not supported!")
+        warnings.warn("TODO: Pragma type: "+pragma_type+ " not supported!")
         return unmodified_behavior_models
 

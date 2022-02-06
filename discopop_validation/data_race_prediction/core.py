@@ -6,6 +6,7 @@ from typing import List
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
+from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.core import \
@@ -21,15 +22,15 @@ from copy import deepcopy
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
 
-def validate_suggestion(run_configuration: Configuration, pet: PETGraphX, suggestion_type, suggestion, parallelization_suggestions):
+def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
     if run_configuration.verbose_mode:
         print("identify target code sections...")
-    target_code_sections = identify_target_sections_from_suggestion(suggestion_type, suggestion)
+    target_code_sections = identify_target_sections_from_suggestion(pragma)
 
     if run_configuration.verbose_mode:
         print("extract behavior model...")
     for tcs in target_code_sections:
-        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, parallelization_suggestions)
+        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, omp_pragmas)
         if run_configuration.verbose_mode:
             for model in behavior_models:
                 print("Behavior Model:")
