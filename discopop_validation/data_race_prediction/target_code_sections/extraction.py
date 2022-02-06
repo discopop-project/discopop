@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple
 from discopop_validation.classes.OmpPragma import PragmaType
 from discopop_validation.classes.OmpPragma import OmpPragma
 
-def identify_target_sections_from_suggestion(pragma: OmpPragma) -> List[Tuple[str, str, str, str, str, str]]:
+def identify_target_sections_from_pragma(pragma: OmpPragma) -> List[Tuple[str, str, str, str, str, str]]:
     """extracts relevant section in the original source code from the given suggestion and reports it as a tuple.
     Output format: [(<section_id>, <file_id>, <start_line>, <end_line>, <var_name>, <suggestion_type>)]
     TODO: For now, only Do-All pattern is reported!
@@ -10,7 +10,7 @@ def identify_target_sections_from_suggestion(pragma: OmpPragma) -> List[Tuple[st
     interim_result: List[Tuple[str, str, str, str, str]] = []
     # include parallel for pragmas
     if pragma.get_type() == PragmaType.PARALLEL_FOR:
-        for var in pragma.get_shared_variables():
+        for var in pragma.get_variables_listed_as("shared"):
             interim_result.append((pragma.file_id, pragma.start_line, pragma.end_line, var, pragma.get_type()))
         interim_result = list(set(interim_result))
         result: List[Tuple[str, str, str, str, str]] = []
