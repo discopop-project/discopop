@@ -31,8 +31,7 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
-    if a data race has been identified.
-    TODO find proper output format (problematic statements)"""
+    if a data race has been identified."""
     if initial_state is None:
         state = State(schedule.thread_count, schedule.lock_names, schedule.var_names)
     else:
@@ -42,7 +41,6 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
         result = goto_next_state(state, schedule_element, previous_writes)
         if type(result) is State:
             state = result
-            # todo might be removed / might be unnecessary
             if schedule_element.contains_write():
                 previous_writes.append(schedule_element)
         else:
@@ -112,7 +110,7 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
         state.lock_clocks[update_var] = get_updated_vc(state.lock_clocks[update_var], state.thread_clocks[thread_id])
         increase(state.thread_clocks[thread_id], thread_id)
 
-    # todo check if constraints for multiple / nested parallel sections are met
+    # todo (check if constraints for multiple / nested parallel sections are met)
 
     return state
 

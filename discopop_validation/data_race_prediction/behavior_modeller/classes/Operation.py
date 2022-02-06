@@ -48,5 +48,3 @@ class Operation:
         """used to output found data races if requested.
         Format: file_id;line;column"""
         return str(self.file_id) + ";" + str(self.line) + ";" + str(self.col)
-
-        # todo add file id

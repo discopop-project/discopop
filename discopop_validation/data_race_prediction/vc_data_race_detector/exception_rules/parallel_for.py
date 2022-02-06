@@ -2,7 +2,7 @@ from discopop_validation.interfaces.discopop_explorer import is_loop_index
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 
 
-# todo not included yet
+# todo include parallel_for exception rules
 def __check_parallel_for_exception_rules(data_race: DataRace, pet, parallelization_suggestions) -> bool:
     """Checks if the given data race is valid according to the parallel_for exception rules.
     Returns True, if the data race is valid and should be kept.

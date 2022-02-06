@@ -8,8 +8,8 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Stat
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 import concurrent.futures
 
-# todo arbitrary selected, might be tuned later on
-futures_cutoff_level = 14  # determines cutoff level (bottom-up)
+
+futures_cutoff_level = 14  # determines cutoff level (bottom-up), arbitrarily selected
 def check_scheduling_graph(scheduling_graph: SchedulingGraph, dimensions: List[int]) -> List[DataRace]:
     # todo use dimensions to determine cutoff depth for task creation -> e.g. create tasks above 6 remaining levels
     initial_state = State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names)
