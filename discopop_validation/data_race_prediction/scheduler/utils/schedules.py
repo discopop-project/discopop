@@ -20,15 +20,14 @@ def __get_paths(graph, current_node_identifier) -> List[List[ScheduleElement]]:
     return paths
 
 
-# TODO currently unused, kept for now for possible debugging
-def __count_paths(graph, current_node_identifier) -> int:
+def __debug_count_paths(graph, current_node_identifier) -> int:
     if len(graph.out_edges(current_node_identifier)) == 0:
         count = 1
     else:
         count = 0
     for out_edge in graph.out_edges(current_node_identifier):
         child_node_identifier = out_edge[1]
-        count += __count_paths(graph, child_node_identifier)
+        count += __debug_count_paths(graph, child_node_identifier)
     return count
 
 

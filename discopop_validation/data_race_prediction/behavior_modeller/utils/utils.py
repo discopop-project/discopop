@@ -18,7 +18,6 @@ def get_paths(bb_graph):
             return []
         children_paths: List[List[BBNode]] = []
         for out_edge in bb_graph.graph.out_edges(root_bb_node.id):
-            # todo disable looping by checking for entry point
             child_bb_node: BBNode = bb_graph.graph.nodes[out_edge[1]]["data"]
             if child_bb_node is entry_point_bb:
                 continue
@@ -56,7 +55,6 @@ def old_get_paths_for_sections(bb_graph):
             return []
         children_paths: List[List[BBNode]] = []
         for out_edge in bb_graph.graph.out_edges(root_bb_node.id):
-            # todo disable looping by checking for entry point
             child_bb_node: BBNode = bb_graph.graph.nodes[out_edge[1]]["data"]
             if child_bb_node is entry_point_bb:
                 continue
@@ -112,7 +110,6 @@ def get_unmodified_behavior_models(bb_graph) -> List[BehaviorModel]:
     paths = get_paths(bb_graph)
     # convert paths to read/write sequences
     behavior_models: List[BehaviorModel] = []
-    # todo section_id only for compatibility with old BBGraph, might be removed in the future
     for section_id in paths:
         for path in paths[section_id]:
             current_sequence = []

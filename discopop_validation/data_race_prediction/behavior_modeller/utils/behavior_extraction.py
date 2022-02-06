@@ -54,8 +54,6 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
 
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
-    # todo compression currently not correct!
-    # bb_graph.compress()
     # cleanup
     # todo re-enable
     #shutil.rmtree("tmp_behavior_extraction")
