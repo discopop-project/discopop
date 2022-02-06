@@ -49,3 +49,5 @@ python -m discopop_validation --path=${PWD}/discopop_validation/test/code_sample
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB095 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/benchmark_datarace/do_all/DRB096 --dep-file=out_dep.txt --l-file=out_dp_inst.ll --json=manual_suggestions.json --verbose=true
 
+# REDUCTION
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_reduction/simple --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7 --json=original_suggestions.json

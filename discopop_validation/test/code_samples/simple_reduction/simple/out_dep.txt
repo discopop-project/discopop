@@ -1,7 +1,0 @@
-START 1:4
-1:5 BGN loop 100000
-1:9 END loop
-1:5 NOM  RAW 1:5|i WAR 1:5|i INIT *|i
-1:4 NOM  INIT *|x
-1:6 NOM  RAW 1:4|x RAW 1:5|i RAW 1:6|x WAR 1:6|x
-1:9 END program

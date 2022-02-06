@@ -1,11 +1,8 @@
 from itertools import chain, combinations
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-from discopop_validation.classes.OmpPragma import PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
-from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
 def get_paths(bb_graph):
@@ -104,32 +101,3 @@ def get_possible_path_combinations_for_sections(bb_graph) -> Dict[int, List[List
         path_combinations = get_powerset(path_dict[section_id])
         result_dict[section_id] = path_combinations
     return result_dict
-
-
-def get_unmodified_behavior_models(bb_graph) -> List[BehaviorModel]:
-    paths = get_paths(bb_graph)
-    # convert paths to read/write sequences
-    behavior_models: List[BehaviorModel] = []
-    for section_id in paths:
-        for path in paths[section_id]:
-            current_sequence = []
-            for bb_node in path:
-                current_sequence += bb_node.operations
-            behavior_models.append(BehaviorModel(current_sequence))
-    return behavior_models
-
-
-def modify_behavior_models(unmodified_behavior_models: List[BehaviorModel],
-                           target_code_section: Tuple[str, str, str, str, str, str]):
-    """modify the given operation sequences to represent the behavior of the given target code section,
-    considering the underlying parallelization suggestion"""
-    pragma_type = target_code_section[5]
-    # todo currently, only parallel_for is supported
-    if pragma_type == str(PragmaType.PARALLEL_FOR):
-        # return unmodified
-        return unmodified_behavior_models
-    else:
-        import warnings
-        warnings.warn("TODO: Pragma type: "+pragma_type+ " not supported!")
-        return unmodified_behavior_models
-
