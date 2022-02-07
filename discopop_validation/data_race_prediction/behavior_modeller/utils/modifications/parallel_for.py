@@ -7,16 +7,7 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Behavior
 def apply_behavior_modification(unmodified_behavior_models: List[BehaviorModel], omp_pragmas: List[OmpPragma]):
     modified_behavior_models: List[BehaviorModel] = []
     for model in unmodified_behavior_models:
-        print("model pre: ")
-        for op in model.operations:
-            print(op)
-        print()
         modified_model = __remove_reduction_var_writes(model, omp_pragmas)
-
-        print("model post:")
-        for op in model.operations:
-            print(op)
-        print()
         modified_behavior_models.append(modified_model)
     return modified_behavior_models
 
