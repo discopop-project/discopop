@@ -37,17 +37,29 @@ class OmpPragma(object):
             return PragmaType.PARALLEL_FOR
         raise ValueError("Unsupported pragma-type:", self.pragma)
 
-    def get_shared_variables(self) -> List[str]:
-        shared_vars: List[str] = []
-        shared_strings =  [x.group() for x in re.finditer(r'shared\(\w*(\,\s*\w*)*\)', self.pragma)]
-        for shared_str in shared_strings:
-            tmp_vars = shared_str[shared_str.index("(")+1:shared_str.index(")")].split(",")
-            # clean up and  add to shared_vars
+    def get_variables_listed_as(self, type: str) -> List[str]:
+        """possible types: firstprivate, private, shared, reduction"""
+        listed_vars: List[str] = []
+        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\([\w\s\,\:\+\-\*\&\|\^]*\)', self.pragma)]
+        for found_str in found_strings:
+            # separate treatment of reduction clauses required, since operations and ':' need to be removed
+            if type == "reduction":
+                inner_str = found_str[found_str.index("(") + 1:found_str.index(")")]
+                # remove whitespaces
+                inner_str = inner_str.replace(" ", "")
+                # since only variable names are needed, operations and : can be removed
+                inner_str = inner_str.replace(":","").replace("+","").replace("-","").replace("*","").replace("&","")
+                inner_str = inner_str.replace("|", "").replace("^", "")
+                # split on ,
+                tmp_vars = inner_str.split(",")
+            else:
+                tmp_vars = found_str[found_str.index("(")+1:found_str.index(")")].split(",")
+            # clean up and  add to listed_vars
             for var in tmp_vars:
                 while var.startswith(" "):
                     var = var[1:]
                 while var.endswith(" "):
                     var = var[:-1]
                 if len(var) > 0:
-                    shared_vars.append(var)
-        return shared_vars
+                    listed_vars.append(var)
+        return listed_vars

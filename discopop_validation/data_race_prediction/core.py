@@ -13,7 +13,7 @@ from discopop_validation.data_race_prediction.scheduler.core import \
     create_scheduling_graph_from_behavior_models, __convert_operation_list_to_schedule_element_list
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
-    identify_target_sections_from_suggestion
+    identify_target_sections_from_pragma
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
@@ -25,7 +25,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_de
 def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
     if run_configuration.verbose_mode:
         print("identify target code sections...")
-    target_code_sections = identify_target_sections_from_suggestion(pragma)
+    target_code_sections = identify_target_sections_from_pragma(pragma)
 
     if run_configuration.verbose_mode:
         print("extract behavior model...")
