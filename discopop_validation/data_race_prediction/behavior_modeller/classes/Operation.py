@@ -1,4 +1,6 @@
-from typing import List
+from typing import List, Tuple
+
+from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import OperationModifierType
 
 
 class Operation:
@@ -12,6 +14,7 @@ class Operation:
     origin_col: int
     section_id: int
     file_id: str
+    modifiers: List[Tuple[OperationModifierType, str]]
 
     def __init__(self, suggestion_type, file_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
         self.mode = mode
@@ -24,6 +27,7 @@ class Operation:
         self.section_id = section_id
         self.suggestion_type = suggestion_type
         self.file_id = file_id
+        self.modifiers = []
 
     def __str__(self):
         if self.mode.startswith("c"):
@@ -48,3 +52,6 @@ class Operation:
         """used to output found data races if requested.
         Format: file_id;line;column"""
         return str(self.file_id) + ";" + str(self.line) + ";" + str(self.col)
+
+    def add_modifier(self, modifier_type: OperationModifierType, value_string: str):
+        self.modifiers.append((modifier_type, value_string))
