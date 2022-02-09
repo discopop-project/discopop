@@ -47,6 +47,8 @@ def __apply_reduction_modification(behavior_model: BehaviorModel, pragma: OmpPra
                 # add a random hash value to the modifier to allow matching between copied operations
                 operation_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
                 operation.add_modifier(OperationModifierType.REDUCTION_OPERATION, operation_id)
+                # add modifier to second reduction operation (read or write respectively
+                buffer[operation.target_name].add_modifier(OperationModifierType.REDUCTION_OPERATION, operation_id)
         else:
             # line + col different -> no reduction, update buffer
             buffer[operation.target_name] = operation
