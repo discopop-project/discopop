@@ -76,7 +76,7 @@ namespace
     struct sharedVarAccess{
         string name;
         string mode;
-        // for regular reads / writed, codeLocation and originLocation will be equal.
+        // for regular reads / writes, codeLocation and originLocation will be equal.
         // for reads / writes which occur as results of a function call, codeLocation will
         // contain the location of the function call, originLocation will contain
         // the location of the read / write inside the called function.
