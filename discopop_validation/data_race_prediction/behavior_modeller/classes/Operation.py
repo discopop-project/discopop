@@ -39,6 +39,8 @@ class Operation:
         return_str = "" + str(self.file_id) + ";" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
+        #if len(self.modifiers) > 0:
+        #    return_str += " Modifiers: " + " ".join([str(m[0]) for m in self.modifiers])
         return return_str
 
     def __eq__(self, other):

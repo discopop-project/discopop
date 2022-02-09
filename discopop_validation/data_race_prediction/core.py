@@ -34,7 +34,7 @@ def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma
     if run_configuration.verbose_mode:
         print("extract behavior model...")
     for tcs in target_code_sections:
-        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, omp_pragmas)
+        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, pragma, omp_pragmas)
         if run_configuration.verbose_mode:
             for model in behavior_models:
                 print("Behavior Model:")
