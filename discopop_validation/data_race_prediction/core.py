@@ -23,6 +23,9 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_de
 
 
 def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
+    # apply preprocessing to pragma
+    pragma.apply_preprocessing()
+
     if run_configuration.verbose_mode:
         print("identify target code sections...")
     target_code_sections = identify_target_sections_from_pragma(pragma)

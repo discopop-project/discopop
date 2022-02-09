@@ -10,8 +10,8 @@ def identify_target_sections_from_pragma(pragma: OmpPragma) -> List[Tuple[str, s
     interim_result: List[Tuple[str, str, str, str, str]] = []
     # include parallel for pragmas
     if pragma.get_type() == PragmaType.PARALLEL_FOR:
-        for var in pragma.get_variables_listed_as("shared"):
-            interim_result.append((pragma.file_id, pragma.start_line, pragma.end_line, var, pragma.get_type()))
+        # list of variable names must end with ','!
+        interim_result.append((pragma.file_id, pragma.start_line, pragma.end_line, ",".join(pragma.get_variables_listed_as("shared"))+",", pragma.get_type()))
         interim_result = list(set(interim_result))
         result: List[Tuple[str, str, str, str, str]] = []
         for idx, r in enumerate(interim_result):
