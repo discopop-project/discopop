@@ -12,6 +12,7 @@ from discopop_validation.data_race_prediction.scheduler.classes.Schedule import 
 from discopop_validation.data_race_prediction.scheduler.core import \
     create_scheduling_graph_from_behavior_models, __convert_operation_list_to_schedule_element_list
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
+from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
@@ -40,8 +41,8 @@ def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma
                 for op in model.operations:
                     print("\t", op)
 
-        # simulation for 2 threads
-        behavior_model_list = [behavior_models[0], deepcopy(behavior_models[0])]
+        # prepare extracted behavior models for simulation
+        behavior_model_list = prepare_for_simulation(behavior_models)
 
         if run_configuration.validation_time_limit == "None":
             # no time limit set, execute full validation
