@@ -50,8 +50,7 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     command = opt_executable + " < " + ll_file_path + " -load " + behavior_extraction_so + " -BehaviorExtraction" + \
               " -inputFile " + input_file_path + " -outputFile " + output_file_path
     os.system(command)
-    os.chdir("../../..")
-
+    os.chdir("..")
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
     # cleanup
