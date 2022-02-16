@@ -26,7 +26,7 @@ def __extract_behavior_models(run_configuration: Configuration, pet, tcs, pragma
         print("insering critical sections into BB Graph...")
     insert_critical_sections(bb_graph, omp_pragmas)
     unmodified_behavior_models: List[BehaviorModel] = get_unmodified_behavior_models(bb_graph)
-    modified_behavior_models: List[BehaviorModel] = modify_behavior_models(unmodified_behavior_models, tcs, pragma, omp_pragmas)
+    modified_behavior_models: List[BehaviorModel] = modify_behavior_models(unmodified_behavior_models, tcs, pragma, omp_pragmas, run_configuration)
     return modified_behavior_models
 
 
