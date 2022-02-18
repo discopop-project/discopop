@@ -1,4 +1,11 @@
+from typing import List, Optional
+
+from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
+from discopop_validation.classes.OmpPragma import OmpPragma
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
+from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
+from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
@@ -7,11 +14,15 @@ from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeRe
 class TaskGraphNode(object):
     node_id: int
     result: TaskGraphNodeResult
+    pragma: Optional[OmpPragma]
+    behavior_models: List[BehaviorModel]
 
     def __init__(self, node_id):
         self.node_id = node_id
         self.result = None
         self.pragma = None
+        self.behavior_models = []
+
 
     def get_label(self):
         return "TGN"
@@ -46,18 +57,23 @@ class TaskGraphNode(object):
             print("succ: ", successor)
             task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
-    def insert_behavior_model(self, run_configuration: Configuration):
-        if self.pragma is None:
-            return
-        self.pragma.apply_preprocessing()
-        if run_configuration.verbose_mode:
-            print("identify target code sections...")
-        target_code_sections = identify_target_sections_from_pragma(self.pragma)
-
-        # todo current
-
-
     def __node_specific_result_computation(self):
         # This generic node does not perform any specific computations.
         # needs to be implemented in each node class
         return
+
+    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+        if self.pragma is None:
+            return
+        self.pragma.apply_preprocessing()
+        target_code_sections = identify_target_sections_from_pragma(self.pragma)
+        for tcs in target_code_sections:
+            behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs,
+                                                                                         self.pragma, omp_pragmas)
+            if run_configuration.verbose_mode:
+                for model in behavior_models:
+                    print("Behavior Model (NodeID: ", self.node_id, "):")
+                    for op in model.operations:
+                        print("\t", op)
+            # prepare extracted behavior models for simulation
+            self.behavior_models = prepare_for_simulation(behavior_models)

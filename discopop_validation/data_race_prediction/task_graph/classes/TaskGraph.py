@@ -4,6 +4,8 @@ import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
+from discopop_explorer import PETGraphX
+from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.ConcurrentSimulationNode import ConcurrentSimulationNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
@@ -78,7 +80,7 @@ class TaskGraph(object):
         # trigger result computation for root node
         self.graph.nodes[0]["data"].compute_result(self)
 
-    def insert_behavior_models(self):
+    def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         for node_id in self.graph.nodes:
             print("node_id:", node_id)
-            self.graph.nodes[node_id]["data"].insert_behavior_model()
+            self.graph.nodes[node_id]["data"].insert_behavior_model(run_configuration, pet, omp_pragmas)

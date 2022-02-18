@@ -169,7 +169,7 @@ def __main_start_execution(run_configuration: Configuration):
     for pragma in omp_pragmas:
         task_graph.add_pragma(pragma)
     # extract and insert behavior models for pragmas
-    task_graph.insert_behavior_models()
+    task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
     # todo enable
