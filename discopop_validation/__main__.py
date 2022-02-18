@@ -172,9 +172,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
-    # todo enable
-    #task_graph.compute_results()
-    task_graph.plot_graph()
+    task_graph.compute_results()
+#    task_graph.plot_graph()
 
     time_end_validation = time.time()
     time_end_execution = time.time()
