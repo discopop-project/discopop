@@ -9,7 +9,7 @@ from discopop_validation.data_race_prediction.simulation_preparation.core import
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
-
+import copy
 
 class TaskGraphNode(object):
     node_id: int
@@ -36,7 +36,7 @@ class TaskGraphNode(object):
         #if single predecessor exists, relay result of previous node
         if len(predecessor_edges) == 1:
             predecessor, _ = predecessor_edges[0]
-            self.result = task_graph.graph.nodes[predecessor]["data"].result
+            self.result = copy.deepcopy(task_graph.graph.nodes[predecessor]["data"].result)
             print("relayed result.")
         #if multiple predecessors exist, relay combination of results of previous nodes
         elif len(predecessor_edges) > 1:
