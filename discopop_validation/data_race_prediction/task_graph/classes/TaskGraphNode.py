@@ -27,8 +27,12 @@ class TaskGraphNode(object):
     def get_label(self):
         return "TGN"
 
-    def get_color(self):
-        return "green"
+    def get_color(self, mark_data_races: bool):
+        color = "green"
+        if mark_data_races:
+            if len(self.result.data_races) > 0:
+                color = "red"
+        return color
 
     def compute_result(self, task_graph):
         print("COMPUTING: ", self.node_id)

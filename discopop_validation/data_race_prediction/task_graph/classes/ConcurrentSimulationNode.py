@@ -29,8 +29,12 @@ class ConcurrentSimulationNode(TaskGraphNode):
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
-    def get_color(self):
-        return "blue"
+    def get_color(self, mark_data_races: bool):
+        color = "blue"
+        if mark_data_races:
+            if len(self.result.data_races) > 0:
+                color = "red"
+        return color
 
     def compute_result(self, task_graph):
         # copied from TaskGraphNode, since overwritten __node_specific_result_computation could not be invoked correctly

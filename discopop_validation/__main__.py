@@ -173,7 +173,7 @@ def __main_start_execution(run_configuration: Configuration):
 
     # trigger result computation
     task_graph.compute_results()
-#    task_graph.plot_graph()
+    task_graph.plot_graph(mark_data_races=True)
 
     time_end_validation = time.time()
     time_end_execution = time.time()

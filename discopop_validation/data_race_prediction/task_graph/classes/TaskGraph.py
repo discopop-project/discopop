@@ -28,12 +28,12 @@ class TaskGraph(object):
         self.next_free_node_id += 1
         return buffer
 
-    def plot_graph(self):
+    def plot_graph(self, mark_data_races=False):
         plt.subplot(121)
         pos = nx.fruchterman_reingold_layout(self.graph)
         colors = []
         for node in self.graph.nodes:
-            colors.append(self.graph.nodes[node]["data"].get_color())
+            colors.append(self.graph.nodes[node]["data"].get_color(mark_data_races))
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors)
         labels = {}
         for node in self.graph.nodes:
