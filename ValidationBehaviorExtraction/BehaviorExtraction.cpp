@@ -76,7 +76,7 @@ namespace
     struct sharedVarAccess{
         string name;
         string mode;
-        // for regular reads / writed, codeLocation and originLocation will be equal.
+        // for regular reads / writes, codeLocation and originLocation will be equal.
         // for reads / writes which occur as results of a function call, codeLocation will
         // contain the location of the function call, originLocation will contain
         // the location of the read / write inside the called function.
@@ -100,7 +100,7 @@ namespace
         string filePath;
         unsigned int startLine;
         unsigned int endLine;
-        string varName;
+        list<string> varNames;
         string suggestionType;
     };
 
@@ -644,13 +644,15 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             // only report operation, if it is inside of a relevant section
             string svaNameWithoutIndices = sva.name.substr(0, sva.name.find("["));
             for(auto section : sections){
-                    if(svaNameWithoutIndices.compare(section.varName) == 0){
+                // check for presence for each entry in section.varNames
+                for(auto varName : section.varNames){
+                    if(svaNameWithoutIndices.compare(varName) == 0){
                         if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
                             tmpOutputFile << "operation;" << section.suggestionType << ";" << section.fileId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
-                                       << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << "\n";
+                                          << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << "\n";
                         }
                     }
-
+                }
             }
         }
 
@@ -703,6 +705,7 @@ bool BehaviorExtraction::doInitialization(Module &M){
     ifstream inputFile(ClInputFile);
     string line;
     string columnDelimiter = ";";
+    string columnEntryDelimiter = ",";
     while(getline(inputFile, line)){
         // store line contents on sections-stack
         string tmp[8];
@@ -721,7 +724,12 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.sectionId = stoi(tmp[2]);
         curSection.startLine = stoi(tmp[3]);
         curSection.endLine = stoi(tmp[4]);
-        curSection.varName = tmp[5];
+        // split tmp[5] at "," and add to curSection.varNames
+        while ((pos = tmp[5].find(columnEntryDelimiter)) != std::string::npos) {
+            token = tmp[5].substr(0, pos);
+            tmp[5].erase(0, pos + columnEntryDelimiter.length());
+            curSection.varNames.push_back(token);
+        }
         curSection.suggestionType = tmp[6];
         sections.push_back(curSection);
     }

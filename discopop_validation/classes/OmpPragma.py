@@ -63,3 +63,18 @@ class OmpPragma(object):
                 if len(var) > 0:
                     listed_vars.append(var)
         return listed_vars
+
+    def apply_preprocessing(self):
+        # if a variable is used in an reduction clause, make sure it is shared
+        original_shared_vars = self.get_variables_listed_as("shared")
+        vars_to_add: List[str] = []
+        for reduction_var in self.get_variables_listed_as("reduction"):
+            if not reduction_var in original_shared_vars:
+                vars_to_add.append(reduction_var)
+        for var in vars_to_add:
+            self.__add_to_shared(var)
+
+    def __add_to_shared(self, var_name: str):
+        split_pragma = self.pragma.split(" shared(")
+        self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
+

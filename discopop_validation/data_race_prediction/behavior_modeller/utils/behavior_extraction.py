@@ -30,11 +30,11 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
             file_mapping_dict[file_id] = file_path
     # create input file for behavior extraction
     with open("input.txt", "w+") as input_file:
-        for section_id, file_id, start_line, end_line, var_name, suggestion_type in target_code_sections:
+        for section_id, file_id, start_line, end_line, var_names, suggestion_type in target_code_sections:
             # replace file ids with path
             print(file_mapping_dict)
             file_path = file_mapping_dict[file_id]
-            input_file.write(file_path + ";" + file_id + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_name + ";" + suggestion_type + ";\n")
+            input_file.write(file_path + ";" + file_id + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_names + ";" + suggestion_type + ";\n")
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
@@ -50,8 +50,7 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     command = opt_executable + " < " + ll_file_path + " -load " + behavior_extraction_so + " -BehaviorExtraction" + \
               " -inputFile " + input_file_path + " -outputFile " + output_file_path
     os.system(command)
-    os.chdir("../../..")
-
+    os.chdir("..")
     # construct BBGraph
     bb_graph: BBGraph = BBGraph(output_file_path)
     # cleanup
