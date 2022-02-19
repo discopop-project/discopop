@@ -5,21 +5,44 @@ from typing import List, Optional, Tuple
 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
+from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 import concurrent.futures
 
 
-def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int]) -> Tuple[List[DataRace], List[State]]:
+def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int], init_information: TaskGraphNodeResult) -> Tuple[List[DataRace], List[State]]:
     # todo use dimensions to determine cutoff depth for task creation -> e.g. create tasks above 6 remaining levels
     initial_state = State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names)
     warnings.warn("Initial state does not consider previously known states! TODO")
     graph_depth = 0
     for entry in dimensions:
         graph_depth += entry
-    data_races, successful_states = __check_node(scheduling_graph, scheduling_graph.root_node_identifier, initial_state, [], 0, graph_depth)
-    return data_races, list(set(successful_states))
+    # get a list of possible initial / previous states without duplicates
+    initial_states: List[State] = []
+    for state in init_information.states:
+        if state not in initial_states:
+            initial_states.append(state)
+    # if list of initial States is empty, create a new State (required for root node)
+    if len(initial_states) == 0:
+        print("CREATE NEW")
+        initial_states.append(State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names))
+    print("INITIAL STATES:")
+    # start data race detection for each possible initial state and combine the results
+    data_races: List[DataRace] = []
+    successful_states: List[State] = []
+    for state in initial_states:
+        print(state)
+        print()
+        data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, scheduling_graph.root_node_identifier,
+                                                     copy.deepcopy(state), [], 0, graph_depth)
+        print("DRBV: ", [elem for elem in data_races_buffer if not elem in data_races])
+        data_races += [elem for elem in data_races_buffer if not elem in data_races]
+        successful_states += [elem for elem in successful_states_buffer if not elem in successful_states]
+    print()
+
+    return data_races, successful_states
 
 
 def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_writes: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:

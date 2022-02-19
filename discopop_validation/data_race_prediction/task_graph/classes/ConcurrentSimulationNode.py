@@ -63,7 +63,8 @@ class ConcurrentSimulationNode(TaskGraphNode):
         # create scheduling graph from behavior models
         scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(self.behavior_models)
         # check for data races and extract set of next states
-        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, dimensions)
+        print("NODE ID: ", self.node_id)
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, dimensions, self.result)
         # store results
         self.result.data_races = data_races
         self.result.states = successful_states
