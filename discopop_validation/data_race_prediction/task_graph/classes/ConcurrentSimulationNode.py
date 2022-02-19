@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from discopop_validation.classes.OmpPragma import OmpPragma
+from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
@@ -52,8 +52,21 @@ class ConcurrentSimulationNode(TaskGraphNode):
         else:
             self.result = TaskGraphNodeResult()
 
+        # check if new fingerprints (for scoping) need to be generated
+        if self.pragma is not None:
+            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+                self.result.push_new_fingerprint()
+        # modify behavior models to represent current fingerprint
+        for model in self.behavior_models:
+            model.use_fingerprint(self.result.get_current_fingerprint())
+
         # perform node-specific computation
         self.__node_specific_result_computation()
+
+        # check if fingerprints need to be removed from the stack
+        if self.pragma is not None:
+            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+                self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
         for _, successor in task_graph.graph.out_edges(self.node_id):
@@ -63,7 +76,6 @@ class ConcurrentSimulationNode(TaskGraphNode):
         # create scheduling graph from behavior models
         scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(self.behavior_models)
         # check for data races and extract set of next states
-        print("NODE ID: ", self.node_id)
         data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, dimensions, self.result)
         # store results
         self.result.data_races = data_races

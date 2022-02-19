@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.classes.OmpPragma import OmpPragma
+from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
@@ -49,8 +49,21 @@ class TaskGraphNode(object):
         else:
             self.result = TaskGraphNodeResult()
 
+        # check if new fingerprints (for scoping) need to be generated
+        if self.pragma is not None:
+            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+                self.result.push_new_fingerprint()
+        # modify behavior models to represent current fingerprint
+        for model in self.behavior_models:
+            model.use_fingerprint(self.result.get_current_fingerprint())
+
         # perform node-specific computation
         self.__node_specific_result_computation()
+
+        # check if fingerprints need to be removed from the stack
+        if self.pragma is not None:
+            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+                self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
         for _, successor in task_graph.graph.out_edges(self.node_id):

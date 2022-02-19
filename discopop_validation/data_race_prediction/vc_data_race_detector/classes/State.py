@@ -49,3 +49,17 @@ class State(object):
             self.var_read_clocks[var_name] = VectorClock(self.thread_count)
         if var_name not in self.var_write_clocks:
             self.var_write_clocks[var_name] = VectorClock(self.thread_count)
+
+    def remove_clocks_with_fingerprint(self, fingerprint: str):
+        """removes clocks which have been created for the given fingerprint"""
+        # keys which end with _+fingerprint need to be removed from the dictionaries
+        # get keys which shall be removed
+        remove_keys: List[str] = []
+        for key in self.lock_clocks.keys():
+            if key.endswith("_"+fingerprint):
+                remove_keys.append(key)
+        for key in remove_keys:
+            del self.lock_clocks[key]
+            del self.var_read_clocks[key]
+            del self.var_write_clocks[key]
+            print("REMOVED: ", key)
