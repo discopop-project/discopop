@@ -26,21 +26,15 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
             initial_states.append(state)
     # if list of initial States is empty, create a new State (required for root node)
     if len(initial_states) == 0:
-        print("CREATE NEW")
         initial_states.append(State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names))
-    print("INITIAL STATES:")
     # start data race detection for each possible initial state and combine the results
     data_races: List[DataRace] = []
     successful_states: List[State] = []
     for state in initial_states:
-        print(state)
-        print()
         data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, scheduling_graph.root_node_identifier,
                                                      copy.deepcopy(state), [], 0, graph_depth)
-        print("DRBV: ", [elem for elem in data_races_buffer if not elem in data_races])
         data_races += [elem for elem in data_races_buffer if not elem in data_races]
         successful_states += [elem for elem in successful_states_buffer if not elem in successful_states]
-    print()
 
     return data_races, successful_states
 

@@ -62,4 +62,3 @@ class State(object):
             del self.lock_clocks[key]
             del self.var_read_clocks[key]
             del self.var_write_clocks[key]
-            print("REMOVED: ", key)
