@@ -40,9 +40,10 @@ from schema import SchemaError, Schema, Use
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma
-from discopop_validation.data_race_prediction.core import validate_omp_pragma
+from discopop_validation.data_race_prediction.core import old_validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
+from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
 from discopop_validation.discopop_suggestion_interpreter.core import get_omp_pragmas_from_dp_suggestions
 from .interfaces.discopop_explorer import get_pet_graph
 from pycallgraph2 import PyCallGraph
@@ -155,13 +156,24 @@ def __main_start_execution(run_configuration: Configuration):
 
     time_end_ps = time.time()
 
+    #for pragma in omp_pragmas:
+    #    if run_configuration.verbose_mode:
+    #        print("validating: ", pragma)
+    #    # todo add Data Races as return type
+    #    validate_omp_pragma(run_configuration, pet, pragma, omp_pragmas)
+    #    if run_configuration.verbose_mode:
+    #            print()
+
+    # construct task graph
+    task_graph = TaskGraph()
     for pragma in omp_pragmas:
-        if run_configuration.verbose_mode:
-            print("validating: ", pragma)
-        # todo add Data Races as return type
-        validate_omp_pragma(run_configuration, pet, pragma, omp_pragmas)
-        if run_configuration.verbose_mode:
-                print()
+        task_graph.add_pragma(pragma)
+    # extract and insert behavior models for pragmas
+    task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+
+    # trigger result computation
+    task_graph.compute_results()
+    task_graph.plot_graph(mark_data_races=True)
 
     time_end_validation = time.time()
     time_end_execution = time.time()

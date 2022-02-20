@@ -23,7 +23,7 @@ from copy import deepcopy
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
 
-def validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
+def old_validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
     # apply preprocessing to pragma
     pragma.apply_preprocessing()
 

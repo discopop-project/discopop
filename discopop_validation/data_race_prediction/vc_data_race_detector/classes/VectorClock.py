@@ -17,6 +17,11 @@ class VectorClock(object):
     def __str__(self):
         return "(" + " ".join([str(c) for c in self.clocks]) + ")"
 
+    def __eq__(self, other):
+        if self.clocks == other.clocks and self.length == other.length:
+            return True
+        return False
+
 
 def get_updated_vc(vc_1: VectorClock, vc_2: VectorClock) -> VectorClock:
     """calculate and return the updated vector clock on the basis of vc_1 and vc_2.

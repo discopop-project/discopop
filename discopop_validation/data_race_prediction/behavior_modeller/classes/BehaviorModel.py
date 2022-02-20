@@ -10,3 +10,11 @@ class BehaviorModel(object):
 
     def __init__(self, operations: List[Operation]):
         self.operations = operations
+
+    def use_fingerprint(self, fingerprint: str):
+        """appends the given fingerprints to all operations.
+        When this function is called, schedule_elements has not yet been initialized."""
+        # todo might be implemented in a more sophisticated way.
+        # todo instead of modifying the var_name, consider adding a separate field for a fingerprint in State.
+        for op in self.operations:
+            op.target_name = op.target_name+"_"+fingerprint
