@@ -46,7 +46,7 @@ class TaskGraph(object):
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
         for node in self.graph.nodes:
-            labels[node] = str(node) + "\n" + str(self.graph.nodes[node]["data"].get_label())
+            labels[node] = str(self.graph.nodes[node]["data"].get_label())
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 

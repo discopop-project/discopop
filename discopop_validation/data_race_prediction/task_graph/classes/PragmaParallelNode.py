@@ -25,7 +25,7 @@ class PragmaParallelNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "None"
-        label = ""
+        label = "Par\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
@@ -75,4 +75,10 @@ class PragmaParallelNode(TaskGraphNode):
             task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
     def __node_specific_result_computation(self):
-        pass
+        # create scheduling graph from behavior models
+        scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(self.behavior_models)
+        # check for data races and extract set of next states
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, dimensions, self.result)
+        # store results
+        self.result.data_races = data_races
+        self.result.states = successful_states

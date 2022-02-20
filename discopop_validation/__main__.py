@@ -164,7 +164,7 @@ def __main_start_execution(run_configuration: Configuration):
     #    if run_configuration.verbose_mode:
     #            print()
 
-    pet.show()
+    #pet.show()
 
     # construct task graph
     task_graph = TaskGraph()
@@ -179,15 +179,13 @@ def __main_start_execution(run_configuration: Configuration):
     # move successor edges if source is contained in another pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
     #task_graph.plot_graph()
-    #import sys
-    #sys.exit(0)
 
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
     task_graph.compute_results()
-    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=True)
 
     time_end_validation = time.time()
     time_end_execution = time.time()
