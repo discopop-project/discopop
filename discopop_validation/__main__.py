@@ -179,6 +179,8 @@ def __main_start_execution(run_configuration: Configuration):
     # move successor edges if source is contained in another pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
     #task_graph.plot_graph()
+    # create implicit barriers
+    task_graph.create_implicit_barriers()
 
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
@@ -186,6 +188,7 @@ def __main_start_execution(run_configuration: Configuration):
     # trigger result computation
     task_graph.compute_results()
     task_graph.plot_graph(mark_data_races=True)
+    #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
     time_end_execution = time.time()

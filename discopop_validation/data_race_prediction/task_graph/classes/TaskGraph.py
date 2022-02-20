@@ -9,6 +9,7 @@ from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelForNode import PragmaParallelForNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaSingleNode import PragmaSingleNode
@@ -225,6 +226,39 @@ class TaskGraph(object):
                 self.graph.remove_edge(remove_edge[0], remove_edge[1])
                 self.graph.add_edge(add_edge[0], add_edge[1], type=EdgeType.SEQUENTIAL)
                 modification_found = True
+        pass
+
+    def create_implicit_barriers(self):
+        add_barrier_buffer = []
+        for node in self.graph.nodes():
+            node_pragma = self.graph.nodes[node]["data"].pragma
+            if node_pragma is None:
+                continue
+            # detect implicit barriers
+            # single-pragma has an implicit barrier at the end
+            if node_pragma.get_type() == PragmaType.SINGLE:
+                add_barrier_buffer.append(node)
+        # create barriers
+        for new_barrier_source in add_barrier_buffer:
+            barrier_node_id = self.__get_new_node_id()
+            self.graph.add_node(barrier_node_id, data=PragmaBarrierNode(barrier_node_id,
+                                                                        pragma=OmpPragma().init_with_values(
+                                                                            self.graph.nodes[new_barrier_source]["data"].pragma.file_id, self.graph.nodes[new_barrier_source]["data"].pragma.end_line,
+                                                                            self.graph.nodes[new_barrier_source]["data"].pragma.end_line, "barrier")))
+            self.graph.add_edge(new_barrier_source, barrier_node_id, type=EdgeType.SEQUENTIAL)
+            # redirect outgoing SEQUENTIAL edges
+            remove_edges = []
+            add_edges = []
+            for source, target in self.graph.out_edges(new_barrier_source):
+                if target == barrier_node_id:
+                    continue
+                if self.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
+                    remove_edges.append((source, target))
+                    add_edges.append((barrier_node_id, target))
+            for source, target in remove_edges:
+                self.graph.remove_edge(source, target)
+            for source, target in add_edges:
+                self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         pass
 
 

@@ -7,6 +7,7 @@ class PragmaType(IntEnum):
     PARALLEL_FOR = 1
     PARALLEL = 2
     SINGLE = 3
+    BARRIER = 4
 
 
 class OmpPragma(object):
@@ -41,6 +42,8 @@ class OmpPragma(object):
             return PragmaType.PARALLEL
         if self.pragma.startswith("single"):
             return PragmaType.SINGLE
+        if self.pragma.startswith("barrier"):
+            return PragmaType.BARRIER
         raise ValueError("Unsupported pragma-type:", self.pragma)
 
     def get_variables_listed_as(self, type: str) -> List[str]:

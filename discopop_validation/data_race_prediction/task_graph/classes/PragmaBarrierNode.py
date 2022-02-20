@@ -8,7 +8,7 @@ from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeRe
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
 
-class PragmaSingleNode(TaskGraphNode):
+class PragmaBarrierNode(TaskGraphNode):
     result : Optional[TaskGraphNodeResult]
     pragma: Optional[OmpPragma]
     behavior_models : List[BehaviorModel]
@@ -24,13 +24,13 @@ class PragmaSingleNode(TaskGraphNode):
 
     def get_label(self):
         if self.pragma is None:
-            return "None"
-        label = "Sin\n"
+            return "BAR"
+        label = "BAR\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
     def get_color(self, mark_data_races: bool):
-        color = "yellow"
+        color = "brown"
         if mark_data_races:
             if len(self.result.data_races) > 0:
                 color = "red"
@@ -71,7 +71,6 @@ class PragmaSingleNode(TaskGraphNode):
                 self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
-        # todo maybe use SEQUENTIAL edges?
         for _, successor in task_graph.graph.out_edges(self.node_id):
             task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
