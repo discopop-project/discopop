@@ -92,7 +92,7 @@ class TaskGraph(object):
 
     def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         for node_id in self.graph.nodes:
-            self.graph.nodes[node_id]["data"].insert_behavior_model(run_configuration, pet, omp_pragmas)
+            self.graph.nodes[node_id]["data"].insert_behavior_model(run_configuration, pet, self, omp_pragmas)
 
     def add_edges(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         """extract dependencies between omp pragmas from the PET Graph and create edges in the TaskGraph accordingly."""
@@ -125,7 +125,6 @@ class TaskGraph(object):
                             # check if other_pragma is a successor of pragma
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
                                 self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SUCCESSOR)
-                                print("V1")
 
         # add contains edges
         for pragma in omp_pragmas:
@@ -136,6 +135,10 @@ class TaskGraph(object):
                 if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
                     if pragma.start_line < other_pragma.start_line:
                         # pragma contains other_pragma
+                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                else:
+                    # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
+                    if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]), pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
                         self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
 
         # Fallback: add edge from root node to current node if no predecessor exists
@@ -152,7 +155,7 @@ class TaskGraph(object):
                 pragma.end_line <= pet.g.nodes[pet_node]["data"].end_line:
                 potential_nodes.append(pet_node)
         if len(potential_nodes) == 0:
-            raise ValueError("No valid CUID found for pragma: ", pragma)
+            raise ValueError("No valid CUID found for pragma: ", str(pragma))
         # find narrowest matching node
         narrowest_node_buffer = potential_nodes[0]
         for pet_node in potential_nodes:

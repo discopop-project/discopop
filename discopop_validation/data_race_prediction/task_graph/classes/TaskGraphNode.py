@@ -66,8 +66,6 @@ class TaskGraphNode(object):
         if self.pragma is not None:
             if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
                 self.result.pop_fingerprint()
-            if self.pragma.get_type() == PragmaType.PARALLEL:
-                self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
         for _, successor in task_graph.graph.out_edges(self.node_id):
@@ -78,18 +76,19 @@ class TaskGraphNode(object):
         # needs to be implemented in each node class
         return
 
-    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, task_graph, omp_pragmas: List[OmpPragma]):
         if self.pragma is None:
             return
         self.pragma.apply_preprocessing()
-        target_code_sections = identify_target_sections_from_pragma(self.pragma)
+        target_code_sections = identify_target_sections_from_pragma(task_graph, self.pragma)
+        behavior_models: List[BehaviorModel] = []
         for tcs in target_code_sections:
-            behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs,
+             behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
                                                                                          self.pragma, omp_pragmas)
-            if run_configuration.verbose_mode:
-                for model in behavior_models:
-                    print("Behavior Model (NodeID: ", self.node_id, "):")
-                    for op in model.operations:
-                        print("\t", op)
-            # prepare extracted behavior models for simulation
-            self.behavior_models = prepare_for_simulation(behavior_models)
+        if run_configuration.verbose_mode:
+            for model in behavior_models:
+                print("Behavior Model (NodeID: ", self.node_id, "):")
+                for op in model.operations:
+                    print("\t", op)
+        # prepare extracted behavior models for simulation
+        self.behavior_models = prepare_for_simulation(behavior_models)

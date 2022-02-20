@@ -69,8 +69,6 @@ class PragmaParallelForNode(TaskGraphNode):
         if self.pragma is not None:
             if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
                 self.result.pop_fingerprint()
-            if self.pragma.get_type() == PragmaType.PARALLEL:
-                self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
         for _, successor in task_graph.graph.out_edges(self.node_id):
