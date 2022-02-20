@@ -107,8 +107,6 @@ class TaskGraph(object):
             for other_pragma in omp_pragmas:
                 if pragma == other_pragma:
                     continue
-                print("pragma: ", pragma.pragma)
-                print("other_pragma: ", other_pragma.pragma)
                 # check if pragma is reachable from other_pragma in pet graph using successor edges
                 if check_reachability(pet, pet.node_at(pragma_to_cuid[pragma]), pet.node_at(pragma_to_cuid[other_pragma]), [PETEdgeType.SUCCESSOR]):
                     # pragma is a successor of other_pragma or based on same CU
