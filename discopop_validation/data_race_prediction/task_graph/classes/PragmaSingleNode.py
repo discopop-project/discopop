@@ -1,3 +1,5 @@
+import warnings
+
 from typing import Optional, List
 
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
@@ -76,4 +78,5 @@ class PragmaSingleNode(TaskGraphNode):
             task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
     def __node_specific_result_computation(self):
+        warnings.warn("TODO")
         pass

@@ -7,6 +7,7 @@ from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode i
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
+import warnings
 
 class PragmaBarrierNode(TaskGraphNode):
     result : Optional[TaskGraphNodeResult]
@@ -75,4 +76,5 @@ class PragmaBarrierNode(TaskGraphNode):
             task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
     def __node_specific_result_computation(self):
+        warnings.warn("TODO")
         pass
