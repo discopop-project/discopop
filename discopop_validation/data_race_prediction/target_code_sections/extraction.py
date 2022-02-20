@@ -17,6 +17,9 @@ def identify_target_sections_from_pragma(pragma: OmpPragma) -> List[Tuple[str, s
         for idx, r in enumerate(interim_result):
             result.append((str(idx), str(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4])))
         return result
+    # no target section for "parallel" pragma
+    elif pragma.get_type() == PragmaType.PARALLEL:
+        return []
     else:
         return []
 

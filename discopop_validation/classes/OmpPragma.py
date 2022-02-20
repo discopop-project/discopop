@@ -5,6 +5,7 @@ from typing import List
 
 class PragmaType(IntEnum):
     PARALLEL_FOR = 1
+    PARALLEL = 2
 
 
 class OmpPragma(object):
@@ -35,6 +36,8 @@ class OmpPragma(object):
     def get_type(self):
         if self.pragma.startswith("parallel for "):
             return PragmaType.PARALLEL_FOR
+        if self.pragma.startswith("parallel"):
+            return PragmaType.PARALLEL
         raise ValueError("Unsupported pragma-type:", self.pragma)
 
     def get_variables_listed_as(self, type: str) -> List[str]:

@@ -9,6 +9,7 @@ from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelForNode import PragmaParallelForNode
+from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
@@ -57,12 +58,19 @@ class TaskGraph(object):
         # get dependencies to previous nodes
         if pragma_obj.get_type() == PragmaType.PARALLEL_FOR:
             node_id = self.__add_parallel_for_pragma(pragma_obj)
+        if pragma_obj.get_type() == PragmaType.PARALLEL:
+            node_id = self.__add_parallel_pragma(pragma_obj)
         # create entry in dictionary
         self.pragma_to_node_id[pragma_obj] = node_id
 
     def __add_parallel_for_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.__get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaParallelForNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
+
+    def __add_parallel_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.__get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaParallelNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def compute_results(self):
