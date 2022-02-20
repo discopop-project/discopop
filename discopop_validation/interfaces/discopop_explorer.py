@@ -1,6 +1,7 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, cast
 import json
 
+from discopop_explorer.PETGraphX import CUNode, EdgeType
 from discopop_validation.classes.Configuration import Configuration
 
 try:
@@ -33,3 +34,34 @@ def is_loop_index(pet: PETGraphX, root_loop, var_name: str):
     result = utils.is_loop_index2(pet, root_loop, var_name)
     is_loop_index_cache[(pet, root_loop, var_name)] = result
     return result
+
+
+def check_reachability(pet: PETGraphX, target: CUNode,
+                       source: CUNode, edge_types: List[EdgeType]) -> bool:
+    """check if target is reachable from source via edges of types edge_type.
+    :param pet: PET graph
+    :param source: CUNode
+    :param target: CUNode
+    :param edge_types: List[EdgeType]
+    :return: Boolean"""
+    if source == target:
+        return True
+    visited: List[str] = []
+    queue = [target]
+    while len(queue) > 0:
+        print(queue)
+        cur_node = queue.pop(0)
+        if type(cur_node) == list:
+            cur_node_list = cast(List[CUNode], cur_node)
+            cur_node = cur_node_list[0]
+        visited.append(cur_node.id)
+        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
+                    if s not in visited and
+                    e.etype in edge_types]
+        for e in tmp_list:
+            if pet.node_at(e[0]) == source:
+                return True
+            else:
+                if e[0] not in visited:
+                    queue.append(pet.node_at(e[0]))
+    return False

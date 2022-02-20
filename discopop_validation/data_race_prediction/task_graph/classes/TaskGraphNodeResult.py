@@ -16,9 +16,14 @@ class TaskGraphNodeResult(object):
         self.fingerprint_stack = []
 
     def combine(self, node_result):
-        """update this result with the given node_result by combining the results"""
-        # todo
-        raise ValueError("TODO Implement")
+        """combine the current states with the states of node_result, if fingerprint_stacks are equal"""
+        if node_result is None:
+            # necessary to catch root node
+            return
+        if self.fingerprint_stack == node_result.fingerprint_stack:
+            self.states += [state for state in node_result.states if state not in self.states]
+        else:
+            raise ValueError("Fingerprint stacks not equal!")
 
     def push_new_fingerprint(self):
         """create and push a new fingerprint"""
