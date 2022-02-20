@@ -8,8 +8,8 @@ def identify_target_sections_from_pragma(pragma: OmpPragma) -> List[Tuple[str, s
     TODO: For now, only Do-All pattern is reported!
     """
     interim_result: List[Tuple[str, str, str, str, str]] = []
-    # include parallel for pragmas
-    if pragma.get_type() == PragmaType.PARALLEL_FOR:
+    # include parallel, parallel for and single pragmas
+    if pragma.get_type() in [PragmaType.PARALLEL_FOR, PragmaType.PARALLEL, PragmaType.SINGLE]:
         # list of variable names must end with ','!
         interim_result.append((pragma.file_id, pragma.start_line, pragma.end_line, ",".join(pragma.get_variables_listed_as("shared"))+",", pragma.get_type()))
         interim_result = list(set(interim_result))
@@ -17,9 +17,6 @@ def identify_target_sections_from_pragma(pragma: OmpPragma) -> List[Tuple[str, s
         for idx, r in enumerate(interim_result):
             result.append((str(idx), str(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4])))
         return result
-    # no target section for "parallel" pragma
-    elif pragma.get_type() == PragmaType.PARALLEL:
-        return []
     else:
         return []
 

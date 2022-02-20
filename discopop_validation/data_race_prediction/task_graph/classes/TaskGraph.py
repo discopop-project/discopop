@@ -8,8 +8,10 @@ from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelForNode import PragmaParallelForNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
+from discopop_validation.data_race_prediction.task_graph.classes.PragmaSingleNode import PragmaSingleNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
@@ -37,7 +39,11 @@ class TaskGraph(object):
         colors = []
         for node in self.graph.nodes:
             colors.append(self.graph.nodes[node]["data"].get_color(mark_data_races))
-        nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors)
+        edge_color_map = {EdgeType.SUCCESSOR: "black",
+                          EdgeType.CONTAINS: "orange",
+                          EdgeType.DEPENDS: "red"}
+        edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
+        nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
         for node in self.graph.nodes:
             labels[node] = str(node) + "\n" + str(self.graph.nodes[node]["data"].get_label())
@@ -60,8 +66,15 @@ class TaskGraph(object):
             node_id = self.__add_parallel_for_pragma(pragma_obj)
         if pragma_obj.get_type() == PragmaType.PARALLEL:
             node_id = self.__add_parallel_pragma(pragma_obj)
+        if pragma_obj.get_type() == PragmaType.SINGLE:
+            node_id = self.__add_single_pragma(pragma_obj)
         # create entry in dictionary
         self.pragma_to_node_id[pragma_obj] = node_id
+
+    def __add_single_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.__get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaSingleNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
 
     def __add_parallel_for_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.__get_new_node_id()
@@ -96,8 +109,12 @@ class TaskGraph(object):
                     continue
                 # check if pragma is reachable from other_pragma in pet graph using successor edges
                 if check_reachability(pet, pet.node_at(pragma_to_cuid[pragma]), pet.node_at(pragma_to_cuid[other_pragma]), [PETEdgeType.SUCCESSOR]):
-                    # pragma is a successor of other_pragma
-                    self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma])
+                    # pragma is a successor of other_pragma or based on same CU
+                    # check if CUIDs are different
+                    if pragma_to_cuid[other_pragma] != pragma_to_cuid[pragma]:
+                        # pragma is a successor of other_pragma
+                        # this check prevents cycles due to same CU Node
+                        self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SUCCESSOR)
                 else:
                     # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
                     pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)]
@@ -107,12 +124,24 @@ class TaskGraph(object):
                             # pragma and other pragma share a common parent
                             # check if other_pragma is a successor of pragma
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
-                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma])
+                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SUCCESSOR)
+                                print("V1")
+
+        # add contains edges
+        for pragma in omp_pragmas:
+            for other_pragma in omp_pragmas:
+                if pragma == other_pragma:
+                    continue
+                # if two pragmas are based on the same CU, the first appearing contains the second
+                if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
+                    if pragma.start_line < other_pragma.start_line:
+                        # pragma contains other_pragma
+                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
             if len(self.graph.in_edges(node)) == 0 and node != 0:
-                self.graph.add_edge(0, node)
+                self.graph.add_edge(0, node, type=EdgeType.SUCCESSOR)
 
     def __get_pet_node_id_from_pragma(self, pet: PETGraphX, pragma: OmpPragma):
         """Returns the ID of the pet-graph node which contains the given pragma"""
@@ -130,6 +159,8 @@ class TaskGraph(object):
             if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
                 pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
                 narrowest_node_buffer = pet_node
+        print("Pragma: ", pragma)
+        print("--> CUID: ", narrowest_node_buffer)
         return narrowest_node_buffer
 
     def remove_redundant_successor_edges(self):
