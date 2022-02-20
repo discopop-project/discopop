@@ -8,7 +8,7 @@ from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeRe
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
 
-class ConcurrentSimulationNode(TaskGraphNode):
+class PragmaParallelForNode(TaskGraphNode):
     result : Optional[TaskGraphNodeResult]
     pragma: Optional[OmpPragma]
     behavior_models : List[BehaviorModel]

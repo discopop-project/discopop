@@ -1,27 +1,29 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
 from discopop_explorer import PETGraphX
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
-from discopop_validation.data_race_prediction.task_graph.classes.ConcurrentSimulationNode import ConcurrentSimulationNode
+from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelForNode import PragmaParallelForNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+from discopop_validation.interfaces.discopop_explorer import check_reachability
 
 
 class TaskGraph(object):
     graph: nx.DiGraph
     next_free_node_id: int
+    pragma_to_node_id: Dict[OmpPragma, int]
 
     def __init__(self):
         self.graph = nx.DiGraph()
         # add root node, id = (tuple of n zero´s, last executed thread id)
         self.next_free_node_id = 0
+        self.pragma_to_node_id = dict()
         self.graph.add_node(self.__get_new_node_id(), data=TaskGraphNode(0))
-        # todo remove
-        self.add_generic_child_node([0])
 
     def __get_new_node_id(self) -> int:
         buffer = self.next_free_node_id
@@ -50,31 +52,18 @@ class TaskGraph(object):
             self.graph.add_edge(parent_node_id, new_node_id)
         return new_node_id
 
-    def add_pragma(self, pragma_obj: OmpPragma):
+    def add_pragma_node(self, pragma_obj: OmpPragma):
         """create a new node in the graph which represents the given pragma"""
         # get dependencies to previous nodes
-        depends_on = self.__get_pragma_dependences(pragma_obj)
-        # if no dependencies have been identified, insert after newest node in graph (last added)
-        if len(depends_on) == 0:
-            depends_on = [self.next_free_node_id - 1]
         if pragma_obj.get_type() == PragmaType.PARALLEL_FOR:
-            self.__add_parallel_for_pragma(depends_on, pragma_obj)
+            node_id = self.__add_parallel_for_pragma(pragma_obj)
+        # create entry in dictionary
+        self.pragma_to_node_id[pragma_obj] = node_id
 
-    def __add_parallel_for_pragma(self, depends_on, pragma_obj: OmpPragma):
+    def __add_parallel_for_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.__get_new_node_id()
-        self.graph.add_node(new_node_id, data=ConcurrentSimulationNode(new_node_id, pragma=pragma_obj))
-        for parent_node_id in depends_on:
-            self.graph.add_edge(parent_node_id, new_node_id)
+        self.graph.add_node(new_node_id, data=PragmaParallelForNode(new_node_id, pragma=pragma_obj))
         return new_node_id
-
-
-
-    def __get_pragma_dependences(self, pragma_obj: OmpPragma):
-        """returns a list of node identifiers which are predecessors of pragma_obj to represent dependences"""
-        # search for dependency matches in PET Graph
-        # todo
-
-        return []
 
     def compute_results(self):
         # trigger result computation for root node
@@ -82,5 +71,84 @@ class TaskGraph(object):
 
     def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         for node_id in self.graph.nodes:
-            print("node_id:", node_id)
             self.graph.nodes[node_id]["data"].insert_behavior_model(run_configuration, pet, omp_pragmas)
+
+    def add_edges(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+        """extract dependencies between omp pragmas from the PET Graph and create edges in the TaskGraph accordingly."""
+        pragma_to_cuid: Dict[OmpPragma, str] = dict()
+        for pragma in omp_pragmas:
+            cu_id = self.__get_pet_node_id_from_pragma(pet, pragma)
+            pragma_to_cuid[pragma] = cu_id
+
+        # todo more efficient edge creation (potentially traverse upwards and find pragmas along each path instead of pairwise calculation)
+        # add successor edges
+        for pragma in omp_pragmas:
+            for other_pragma in omp_pragmas:
+                if pragma == other_pragma:
+                    continue
+                # check if pragma is reachable from other_pragma in pet graph using successor edges
+                if check_reachability(pet, pet.node_at(pragma_to_cuid[pragma]), pet.node_at(pragma_to_cuid[other_pragma]), [PETEdgeType.SUCCESSOR]):
+                    # pragma is a successor of other_pragma
+                    self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma])
+                else:
+                    # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
+                    pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)]
+                    # check if other_pragma is a direct child of parent
+                    for parent in pragma_parents:
+                        if pet.node_at(pragma_to_cuid[other_pragma]) in pet.direct_children(pet.node_at(parent)):
+                            # pragma and other pragma share a common parent
+                            # check if other_pragma is a successor of pragma
+                            if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
+                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma])
+
+        # Fallback: add edge from root node to current node if no predecessor exists
+        for node in self.graph.nodes:
+            if len(self.graph.in_edges(node)) == 0 and node != 0:
+                self.graph.add_edge(0, node)
+
+    def __get_pet_node_id_from_pragma(self, pet: PETGraphX, pragma: OmpPragma):
+        """Returns the ID of the pet-graph node which contains the given pragma"""
+        potential_nodes = []
+        for pet_node in pet.g.nodes:
+            if pragma.file_id == pet.g.nodes[pet_node]["data"].file_id and \
+                pragma.start_line >= pet.g.nodes[pet_node]["data"].start_line and \
+                pragma.end_line <= pet.g.nodes[pet_node]["data"].end_line:
+                potential_nodes.append(pet_node)
+        if len(potential_nodes) == 0:
+            raise ValueError("No valid CUID found for pragma: ", pragma)
+        # find narrowest matching node
+        narrowest_node_buffer = potential_nodes[0]
+        for pet_node in potential_nodes:
+            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
+                pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
+                narrowest_node_buffer = pet_node
+        return narrowest_node_buffer
+
+    def remove_redundant_successor_edges(self):
+        # calculate code line distances and remove all but the shortest edge
+        for node in self.graph.nodes:
+            shortest_edge_source = None
+            shortest_edge_distance = None
+            for edge_source, _ in self.graph.in_edges(node):
+                if self.graph.nodes[edge_source]["data"].pragma is None:
+                    continue
+                distance = self.graph.nodes[node]["data"].pragma.start_line - self.graph.nodes[edge_source]["data"].pragma.start_line
+                if shortest_edge_source is None:
+                    shortest_edge_source = edge_source
+                    shortest_edge_distance = distance
+                    continue
+                if distance < shortest_edge_distance:
+                    shortest_edge_source = edge_source
+                    shortest_edge_distance = distance
+            # remove unnecessary edges
+            edge_remove_buffer = []
+            for edge_source, _ in self.graph.in_edges(node):
+                if self.graph.nodes[edge_source]["data"].pragma is None:
+                    continue
+                if edge_source == shortest_edge_source:
+                    continue
+                edge_remove_buffer.append((edge_source, node))
+            for source, target in edge_remove_buffer:
+                self.graph.remove_edge(source, target)
+
+        pass

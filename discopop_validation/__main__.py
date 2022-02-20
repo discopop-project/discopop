@@ -164,10 +164,21 @@ def __main_start_execution(run_configuration: Configuration):
     #    if run_configuration.verbose_mode:
     #            print()
 
+    #pet.show()
+
     # construct task graph
     task_graph = TaskGraph()
     for pragma in omp_pragmas:
-        task_graph.add_pragma(pragma)
+        task_graph.add_pragma_node(pragma)
+    # insert edges into the graph
+    task_graph.add_edges(pet, omp_pragmas)
+    task_graph.plot_graph()
+    # remove redundant successor edges
+    task_graph.remove_redundant_successor_edges()
+    task_graph.plot_graph()
+    #import sys
+    #sys.exit(0)
+
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
