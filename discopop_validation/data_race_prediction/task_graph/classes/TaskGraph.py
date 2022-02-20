@@ -39,7 +39,7 @@ class TaskGraph(object):
         colors = []
         for node in self.graph.nodes:
             colors.append(self.graph.nodes[node]["data"].get_color(mark_data_races))
-        edge_color_map = {EdgeType.SUCCESSOR: "black",
+        edge_color_map = {EdgeType.SEQUENTIAL: "black",
                           EdgeType.CONTAINS: "orange",
                           EdgeType.DEPENDS: "red"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
@@ -107,6 +107,8 @@ class TaskGraph(object):
             for other_pragma in omp_pragmas:
                 if pragma == other_pragma:
                     continue
+                print("pragma: ", pragma.pragma)
+                print("other_pragma: ", other_pragma.pragma)
                 # check if pragma is reachable from other_pragma in pet graph using successor edges
                 if check_reachability(pet, pet.node_at(pragma_to_cuid[pragma]), pet.node_at(pragma_to_cuid[other_pragma]), [PETEdgeType.SUCCESSOR]):
                     # pragma is a successor of other_pragma or based on same CU
@@ -114,17 +116,17 @@ class TaskGraph(object):
                     if pragma_to_cuid[other_pragma] != pragma_to_cuid[pragma]:
                         # pragma is a successor of other_pragma
                         # this check prevents cycles due to same CU Node
-                        self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SUCCESSOR)
+                        self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
                 else:
                     # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
                     pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)]
                     # check if other_pragma is a direct child of parent
                     for parent in pragma_parents:
-                        if pet.node_at(pragma_to_cuid[other_pragma]) in pet.direct_children(pet.node_at(parent)):
+                        if pet.node_at(pragma_to_cuid[other_pragma]) in pet.direct_children(pet.node_at(parent)) + [pet.node_at(parent)]:
                             # pragma and other pragma share a common parent
                             # check if other_pragma is a successor of pragma
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
-                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SUCCESSOR)
+                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
 
         # add contains edges
         for pragma in omp_pragmas:
@@ -146,7 +148,7 @@ class TaskGraph(object):
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
             if len(self.graph.in_edges(node)) == 0 and node != 0:
-                self.graph.add_edge(0, node, type=EdgeType.SUCCESSOR)
+                self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
     def __get_pet_node_id_from_pragma(self, pet: PETGraphX, pragma: OmpPragma):
         """Returns the ID of the pet-graph node which contains the given pragma"""
@@ -204,10 +206,10 @@ class TaskGraph(object):
             remove_edge = None
             add_edge = None
             for source, target in self.graph.edges:
-                # check if edge is of type SUCCESSOR
-                if self.graph.edges[(source, target)]["type"] != EdgeType.SUCCESSOR:
+                # check if edge is of type SEQUENTIAL
+                if self.graph.edges[(source, target)]["type"] != EdgeType.SEQUENTIAL:
                     continue
-                # edge is SUCCESSOR type
+                # edge is SEQUENTIAL type
                 # check if source is contained in another pragma
                 source_incoming_edges = self.graph.in_edges(source)
                 # check if any of the incoming edges is a CONTAINS edge
@@ -223,7 +225,7 @@ class TaskGraph(object):
                     break
             if remove_edge is not None and add_edge is not None:
                 self.graph.remove_edge(remove_edge[0], remove_edge[1])
-                self.graph.add_edge(add_edge[0], add_edge[1], type=EdgeType.SUCCESSOR)
+                self.graph.add_edge(add_edge[0], add_edge[1], type=EdgeType.SEQUENTIAL)
                 modification_found = True
         pass
 

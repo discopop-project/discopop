@@ -3,5 +3,6 @@ from enum import Enum
 
 class EdgeType(Enum):
     CONTAINS = "contains"
-    SUCCESSOR = "successor"
+    SEQUENTIAL = "sequential"
+    CONCURRENT = "concurrent"
     DEPENDS = "depends"

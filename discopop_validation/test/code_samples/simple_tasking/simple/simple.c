@@ -6,7 +6,6 @@ int main()
     result = 2;
    #pragma omp single
     {
-        # pragma omp single
       result += 2;
     }
     #pragma omp task shared(result)
