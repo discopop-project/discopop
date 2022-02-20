@@ -168,7 +168,7 @@ class TaskGraph(object):
         print("--> CUID: ", narrowest_node_buffer)
         return narrowest_node_buffer
 
-    def remove_redundant_successor_edges(self):
+    def remove_redundant_edges(self):
         # calculate code line distances and remove all but the shortest edge
         for node in self.graph.nodes:
             shortest_edge_source = None
@@ -194,5 +194,37 @@ class TaskGraph(object):
                 edge_remove_buffer.append((edge_source, node))
             for source, target in edge_remove_buffer:
                 self.graph.remove_edge(source, target)
-
         pass
+
+    def move_successor_edges_if_source_is_contained_in_pragma(self):
+        """relocate successor edges to the outer most possible pragma in case that a edge source is contained in another pragma"""
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            remove_edge = None
+            add_edge = None
+            for source, target in self.graph.edges:
+                # check if edge is of type SUCCESSOR
+                if self.graph.edges[(source, target)]["type"] != EdgeType.SUCCESSOR:
+                    continue
+                # edge is SUCCESSOR type
+                # check if source is contained in another pragma
+                source_incoming_edges = self.graph.in_edges(source)
+                # check if any of the incoming edges is a CONTAINS edge
+                incoming_contains_edge = None
+                for edge in source_incoming_edges:
+                    if self.graph.edges[(edge[0], edge[1])]["type"] == EdgeType.CONTAINS:
+                        incoming_contains_edge = edge
+                        break
+                # if incoming_contains_edge exists, move successor edge to the source of the incoming contains edge
+                if incoming_contains_edge is not None:
+                    remove_edge = (source, target)
+                    add_edge = (incoming_contains_edge[0], target)
+                    break
+            if remove_edge is not None and add_edge is not None:
+                self.graph.remove_edge(remove_edge[0], remove_edge[1])
+                self.graph.add_edge(add_edge[0], add_edge[1], type=EdgeType.SUCCESSOR)
+                modification_found = True
+        pass
+
+

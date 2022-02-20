@@ -172,10 +172,13 @@ def __main_start_execution(run_configuration: Configuration):
         task_graph.add_pragma_node(pragma)
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # remove redundant successor edges
-    task_graph.remove_redundant_successor_edges()
-    task_graph.plot_graph()
+    task_graph.remove_redundant_edges()
+    #task_graph.plot_graph()
+    # move successor edges if source is contained in another pragma
+    task_graph.move_successor_edges_if_source_is_contained_in_pragma()
+    #task_graph.plot_graph()
     #import sys
     #sys.exit(0)
 
