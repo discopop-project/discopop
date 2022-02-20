@@ -49,7 +49,6 @@ def check_reachability(pet: PETGraphX, target: CUNode,
     visited: List[str] = []
     queue = [target]
     while len(queue) > 0:
-        print(queue)
         cur_node = queue.pop(0)
         if type(cur_node) == list:
             cur_node_list = cast(List[CUNode], cur_node)
