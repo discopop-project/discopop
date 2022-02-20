@@ -172,6 +172,7 @@ def __main_start_execution(run_configuration: Configuration):
         task_graph.add_pragma_node(pragma)
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
+    task_graph.plot_graph()
     # remove redundant successor edges
     task_graph.remove_redundant_successor_edges()
     task_graph.plot_graph()

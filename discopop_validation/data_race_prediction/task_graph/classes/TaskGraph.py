@@ -139,7 +139,9 @@ class TaskGraph(object):
                 else:
                     # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
                     if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]), pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        # ensure, that other_pragma lies within the boundary of pragma
+                        if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:

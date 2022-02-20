@@ -26,8 +26,8 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma) -> List[
                 for region_start, region_end in pragma_target_regions:
                     if contained_pragma_start_line >= region_start and contained_pragma_end_line <= region_end:
                         remove_regions.append((region_start, region_end))
-                        add_regions.append((region_start, contained_pragma_start_line))
-                        add_regions.append((contained_pragma_end_line, region_end))
+                        add_regions.append((region_start, contained_pragma_start_line-1))
+                        add_regions.append((contained_pragma_end_line+1, region_end))
                 # remove or add regions
                 for region in remove_regions:
                     pragma_target_regions.remove(region)
