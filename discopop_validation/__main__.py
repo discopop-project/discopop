@@ -188,14 +188,6 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
-    # print node to behaviormodel length
-    for node in task_graph.graph.nodes:
-        print(task_graph.graph.nodes[node]["data"].pragma)
-        for model in task_graph.graph.nodes[node]["data"].behavior_models:
-            print("model")
-            for op in model.operations:
-                print("\t", op)
-
     time_end_validation = time.time()
     time_end_execution = time.time()
     print("\n### Measured Times: ###")

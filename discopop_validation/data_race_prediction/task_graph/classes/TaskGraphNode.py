@@ -28,7 +28,6 @@ class TaskGraphNode(object):
         self.pragma = pragma
         self.behavior_models = []
 
-
     def get_label(self):
         if self.node_id == 0:
             return "ROOT"
@@ -58,6 +57,8 @@ class TaskGraphNode(object):
 
         # check if new fingerprints (for scoping) need to be generated
         if self.pragma is not None:
+            if self.pragma.get_type() == PragmaType.FOR:
+                self.result.push_new_fingerprint()
             if self.pragma.get_type() == PragmaType.PARALLEL:
                 self.result.push_new_fingerprint()
         # modify behavior models to represent current fingerprint
@@ -69,14 +70,12 @@ class TaskGraphNode(object):
             # TaskGraphNode is generic and does not perform a specific computation
             pass
         else:
-            perform_node_specific_result_computation(self)
+            perform_node_specific_result_computation(self, task_graph)
 
 
         # check if fingerprints need to be removed from the stack
         if self.pragma is not None:
-            # todo PARALLEL_FOR Unnecessary.
-            # todo PARALLEL may be required
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+            if self.pragma.get_type() == PragmaType.FOR:
                 self.result.pop_fingerprint()
             if self.pragma.get_type() == PragmaType.PARALLEL:
                 self.result.pop_fingerprint()
@@ -103,9 +102,8 @@ class TaskGraphNode(object):
                 print("Behavior Model (NodeID: ", self.node_id, "):")
                 for op in model.operations:
                     print("\t", op)
-
-        # todo remove / replace
-        # prepare extracted behavior models for simulation
-        # self.behavior_models = prepare_for_simulation(behavior_models)
-
         self.behavior_models = behavior_models
+
+    def get_behavior_models(self):
+        """returns a list of behavior models which represent the behavior of the subtree which starts at the current node"""
+        return self.behavior_models
