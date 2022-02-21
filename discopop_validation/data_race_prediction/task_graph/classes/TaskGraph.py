@@ -132,9 +132,9 @@ class TaskGraph(object):
                 if check_reachability(pet, pet.node_at(pragma_to_cuid[pragma]), pet.node_at(pragma_to_cuid[other_pragma]), [PETEdgeType.SUCCESSOR]):
                     # pragma is a successor of other_pragma or based on same CU
                     # check if CUIDs are different
-                    if pragma_to_cuid[other_pragma] != pragma_to_cuid[pragma]:
-                        # pragma is a successor of other_pragma
-                        # this check prevents cycles due to same CU Node
+                    # pragma is a successor of other_pragma
+                    # this check prevents cycles due to same CU Node
+                    if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
                         self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
                 else:
                     # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
@@ -156,13 +156,17 @@ class TaskGraph(object):
                 if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
                     if pragma.start_line < other_pragma.start_line:
                         # pragma contains other_pragma
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        # only create CONTAIS edge, if no SEQUENTIAL edge exists
+                        if (self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma]) not in self.graph.edges:
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
                 else:
                     # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
                     if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]), pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
                         # ensure, that other_pragma lies within the boundary of pragma
                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                            # only create CONTAIS edge, if no SEQUENTIAL edge exists
+                            if (self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma]) not in self.graph.edges:
+                                self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
@@ -190,11 +194,15 @@ class TaskGraph(object):
         return narrowest_node_buffer
 
     def remove_redundant_edges(self):
+        # todo currently, only SEQUENTIAL edges are considered, rename?
         # calculate code line distances and remove all but the shortest edge
         for node in self.graph.nodes:
             shortest_edge_source = None
             shortest_edge_distance = None
-            for edge_source, _ in self.graph.in_edges(node):
+            for edge_source, edge_target in self.graph.in_edges(node):
+                # only consider SEQUENTIAL edges
+                if self.graph.edges[(edge_source, edge_target)]["type"] != EdgeType.SEQUENTIAL:
+                    continue
                 if self.graph.nodes[edge_source]["data"].pragma is None:
                     continue
                 distance = self.graph.nodes[node]["data"].pragma.start_line - self.graph.nodes[edge_source]["data"].pragma.start_line
@@ -207,7 +215,10 @@ class TaskGraph(object):
                     shortest_edge_distance = distance
             # remove unnecessary edges
             edge_remove_buffer = []
-            for edge_source, _ in self.graph.in_edges(node):
+            for edge_source, edge_target in self.graph.in_edges(node):
+                # only consider SEQUENTIAL edges
+                if self.graph.edges[(edge_source, edge_target)]["type"] != EdgeType.SEQUENTIAL:
+                    continue
                 if self.graph.nodes[edge_source]["data"].pragma is None:
                     continue
                 if edge_source == shortest_edge_source:

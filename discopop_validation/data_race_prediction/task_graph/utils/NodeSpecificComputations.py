@@ -13,7 +13,7 @@ def perform_node_specific_result_computation(node_obj):
     elif node_obj.pragma.get_type() == PragmaType.SINGLE:
         __single_result_computation(node_obj)
     else:
-        warnings.warn("NOT SUPPORTED: ", node_obj)
+        warnings.warn("NOT SUPPORTED: " + str(node_obj.pragma))
 
 
 def __parallel_result_computation(node_obj):

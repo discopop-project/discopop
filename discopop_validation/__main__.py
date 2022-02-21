@@ -186,9 +186,9 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
-    task_graph.compute_results()
-    task_graph.plot_graph(mark_data_races=True)
-    #task_graph.plot_graph(mark_data_races=False)
+    #task_graph.compute_results()
+    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
     time_end_execution = time.time()
