@@ -22,7 +22,7 @@ from discopop_validation.interfaces.discopop_explorer import check_reachability
 
 
 class TaskGraph(object):
-    graph: nx.DiGraph
+    graph: nx.MultiDiGraph
     next_free_node_id: int
     pragma_to_node_id: Dict[OmpPragma, int]
 
@@ -152,21 +152,17 @@ class TaskGraph(object):
             for other_pragma in omp_pragmas:
                 if pragma == other_pragma:
                     continue
-                # if two pragmas are based on the same CU, the first appearing contains the second
+                # if two pragmas are based on the same CU, the first appearing contains the second, if their source code lines overlap
                 if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
-                    if pragma.start_line < other_pragma.start_line:
+                    if pragma.start_line < other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
                         # pragma contains other_pragma
-                        # only create CONTAIS edge, if no SEQUENTIAL edge exists
-                        if (self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma]) not in self.graph.edges:
-                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
                 else:
                     # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
                     if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]), pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
                         # ensure, that other_pragma lies within the boundary of pragma
                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                            # only create CONTAIS edge, if no SEQUENTIAL edge exists
-                            if (self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma]) not in self.graph.edges:
-                                self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
@@ -229,7 +225,7 @@ class TaskGraph(object):
         pass
 
     def move_successor_edges_if_source_is_contained_in_pragma(self):
-        """relocate successor edges to the outer most possible pragma in case that a edge source is contained in another pragma"""
+        """relocate successor edges to the outer most possible pragma in case that a edge source is contained in another pragma."""
         modification_found = True
         while modification_found:
             modification_found = False
@@ -243,15 +239,28 @@ class TaskGraph(object):
                 # check if source is contained in another pragma
                 source_incoming_edges = self.graph.in_edges(source)
                 # check if any of the incoming edges is a CONTAINS edge
-                incoming_contains_edge = None
+                source_incoming_contains_edge = None
                 for edge in source_incoming_edges:
                     if self.graph.edges[(edge[0], edge[1])]["type"] == EdgeType.CONTAINS:
-                        incoming_contains_edge = edge
+                        source_incoming_contains_edge = edge
                         break
-                # if incoming_contains_edge exists, move successor edge to the source of the incoming contains edge
-                if incoming_contains_edge is not None:
+                # check if target is contained in another pragma
+                target_incoming_edges = self.graph.in_edges(target)
+                # check if any of the incoming edges is a CONTAINS edge
+                target_incoming_contains_edge = None
+                for edge in target_incoming_edges:
+                    if self.graph.edges[(edge[0], edge[1])]["type"] == EdgeType.CONTAINS:
+                        target_incoming_contains_edge = edge
+                        break
+                # if source and target are contained in the same pragma, ignore
+                if source_incoming_contains_edge is not None and target_incoming_contains_edge is not None:
+                    if source_incoming_contains_edge[0] == target_incoming_contains_edge[0]:
+                        # source and target are contained in the same pragma
+                        continue
+                # if source_incoming_contains_edge exists, move successor edge to the source of the incoming contains edge
+                if source_incoming_contains_edge is not None:
                     remove_edge = (source, target)
-                    add_edge = (incoming_contains_edge[0], target)
+                    add_edge = (source_incoming_contains_edge[0], target)
                     break
             if remove_edge is not None and add_edge is not None:
                 self.graph.remove_edge(remove_edge[0], remove_edge[1])
