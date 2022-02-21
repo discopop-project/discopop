@@ -26,4 +26,16 @@ int main()
     for(int i = 0; i < 100; i++){
         result += 3;
     }   
+
+    #pragma omp parallel for shared(result) reduction(+:result)
+    for(int i = 0; i < 100; i++){
+        result = 4;
+        result += 3;
+    }   
+
+    #pragma omp parallel for shared(result)
+    for(int i = 0; i < 100; i++){
+        int z = result;
+        z = z + result;
+    } 
 }
