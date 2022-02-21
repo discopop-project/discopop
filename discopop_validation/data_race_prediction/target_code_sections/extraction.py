@@ -37,7 +37,6 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma) -> List[
         for p_start_line, p_end_line in pragma_target_regions:
             # list of variable names must end with ','!
             interim_result.append((pragma.file_id, p_start_line, p_end_line, ",".join(pragma.get_variables_listed_as("shared"))+",", pragma.get_type()))
-            interim_result = list(set(interim_result))
             result: List[Tuple[str, str, str, str, str]] = []
             for idx, r in enumerate(interim_result):
                 result.append((str(idx), str(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4])))
