@@ -138,7 +138,7 @@ class TaskGraph(object):
                         self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
                 else:
                     # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
-                    pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)]
+                    pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)] + [pragma_to_cuid[pragma]]
                     # check if other_pragma is a direct child of parent
                     for parent in pragma_parents:
                         if pet.node_at(pragma_to_cuid[other_pragma]) in pet.direct_children(pet.node_at(parent)) + [pet.node_at(parent)]:

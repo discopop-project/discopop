@@ -10,4 +10,8 @@ int main()
     result += 2;
     # pragma omp taskwait
   }
+    #pragma omp parallel shared(result)
+    {
+      int z = result;
+    }
 }
