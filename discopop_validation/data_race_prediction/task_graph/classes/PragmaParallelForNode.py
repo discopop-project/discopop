@@ -3,6 +3,7 @@ from typing import Optional, List
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
+from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
@@ -15,7 +16,7 @@ class PragmaParallelForNode(TaskGraphNode):
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
-        self.result = None
+        self.result = TaskGraphNodeResult()
         self.pragma = pragma
         self.behavior_models = []
 
@@ -71,8 +72,9 @@ class PragmaParallelForNode(TaskGraphNode):
                 self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
-        for _, successor in task_graph.graph.out_edges(self.node_id):
-            task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
+        for node, successor in task_graph.graph.out_edges(self.node_id):
+            if task_graph.graph.edges[(node, successor)]["type"] == EdgeType.SEQUENTIAL:
+                task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
     def __node_specific_result_computation(self):
         # create scheduling graph from behavior models

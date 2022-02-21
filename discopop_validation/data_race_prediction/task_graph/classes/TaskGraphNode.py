@@ -8,6 +8,7 @@ from discopop_validation.data_race_prediction.behavior_modeller.core import extr
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
+from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 import copy
 
@@ -19,7 +20,7 @@ class TaskGraphNode(object):
 
     def __init__(self, node_id):
         self.node_id = node_id
-        self.result = None
+        self.result = TaskGraphNodeResult()
         self.pragma = None
         self.behavior_models = []
 
@@ -68,8 +69,9 @@ class TaskGraphNode(object):
                 self.result.pop_fingerprint()
 
         # trigger result computation for each successor node
-        for _, successor in task_graph.graph.out_edges(self.node_id):
-            task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
+        for node, successor in task_graph.graph.out_edges(self.node_id):
+            if task_graph.graph.edges[(node, successor)]["type"] == EdgeType.SEQUENTIAL:
+                task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
     def __node_specific_result_computation(self):
         # This generic node does not perform any specific computations.

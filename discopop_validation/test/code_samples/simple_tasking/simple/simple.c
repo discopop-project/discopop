@@ -1,3 +1,8 @@
+int test(n){
+    n = n + 2;
+    return n;
+}
+
 int main()
 {
   int result = 0;
@@ -8,6 +13,7 @@ int main()
     {
       result = 2;
     }
+    test(result);
     #pragma omp task shared(result)
 //    result = 4;
     #pragma omp task shared(result)
