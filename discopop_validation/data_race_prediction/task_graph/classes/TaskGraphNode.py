@@ -95,10 +95,17 @@ class TaskGraphNode(object):
         for tcs in target_code_sections:
              behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
                                                                                          self.pragma, omp_pragmas)
+        # remove empty models
+        behavior_models = [model for model in behavior_models if len(model.operations)>0]
+
         if run_configuration.verbose_mode:
             for model in behavior_models:
                 print("Behavior Model (NodeID: ", self.node_id, "):")
                 for op in model.operations:
                     print("\t", op)
+
+        # todo remove / replace
         # prepare extracted behavior models for simulation
-        self.behavior_models = prepare_for_simulation(behavior_models)
+        # self.behavior_models = prepare_for_simulation(behavior_models)
+
+        self.behavior_models = behavior_models

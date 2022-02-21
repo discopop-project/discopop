@@ -170,13 +170,13 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     # remove redundant successor edges
     task_graph.remove_redundant_edges()
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # move successor edges if source is contained in a different pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # move successor edges if target is contained in a different pragma
     task_graph.move_successor_edges_if_target_is_contained_in_pragma()
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # create implicit barriers
     task_graph.create_implicit_barriers()
 
@@ -187,6 +187,14 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.compute_results()
     task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
+
+    # print node to behaviormodel length
+    for node in task_graph.graph.nodes:
+        print(task_graph.graph.nodes[node]["data"].pragma)
+        for model in task_graph.graph.nodes[node]["data"].behavior_models:
+            print("model")
+            for op in model.operations:
+                print("\t", op)
 
     time_end_validation = time.time()
     time_end_execution = time.time()
