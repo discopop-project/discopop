@@ -11,7 +11,7 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma) -> List[
     """
     interim_result: List[Tuple[str, str, str, str, str]] = []
     # include parallel, parallel for and single pragmas
-    if pragma.get_type() in [PragmaType.PARALLEL_FOR, PragmaType.PARALLEL, PragmaType.SINGLE]:
+    if pragma.get_type() in [PragmaType.PARALLEL_FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK]:
         # split pragma region if outgoing contains-edges exist
         pragma_target_regions: List[Tuple[int, int]] = [(pragma.start_line, pragma.end_line)]
         for edge in task_graph.graph.out_edges(task_graph.pragma_to_node_id[pragma]):
