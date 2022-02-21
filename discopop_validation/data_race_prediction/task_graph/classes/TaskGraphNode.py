@@ -58,8 +58,6 @@ class TaskGraphNode(object):
 
         # check if new fingerprints (for scoping) need to be generated
         if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
-                self.result.push_new_fingerprint()
             if self.pragma.get_type() == PragmaType.PARALLEL:
                 self.result.push_new_fingerprint()
         # modify behavior models to represent current fingerprint
@@ -76,7 +74,11 @@ class TaskGraphNode(object):
 
         # check if fingerprints need to be removed from the stack
         if self.pragma is not None:
+            # todo PARALLEL_FOR Unnecessary.
+            # todo PARALLEL may be required
             if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
+                self.result.pop_fingerprint()
+            if self.pragma.get_type() == PragmaType.PARALLEL:
                 self.result.pop_fingerprint()
 
         # trigger result computation for each successor node

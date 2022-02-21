@@ -12,7 +12,7 @@ from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelForNode import PragmaParallelForNode
+from discopop_validation.data_race_prediction.task_graph.classes.PragmaForNode import PragmaForNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaSingleNode import PragmaSingleNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaTaskNode import PragmaTaskNode
@@ -67,8 +67,8 @@ class TaskGraph(object):
     def add_pragma_node(self, pragma_obj: OmpPragma):
         """create a new node in the graph which represents the given pragma"""
         # get dependencies to previous nodes
-        if pragma_obj.get_type() == PragmaType.PARALLEL_FOR:
-            node_id = self.__add_parallel_for_pragma(pragma_obj)
+        if pragma_obj.get_type() == PragmaType.FOR:
+            node_id = self.__add_for_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.PARALLEL:
             node_id = self.__add_parallel_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.SINGLE:
@@ -87,9 +87,9 @@ class TaskGraph(object):
         self.graph.add_node(new_node_id, data=PragmaSingleNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
-    def __add_parallel_for_pragma(self, pragma_obj: OmpPragma):
+    def __add_for_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.__get_new_node_id()
-        self.graph.add_node(new_node_id, data=PragmaParallelForNode(new_node_id, pragma=pragma_obj))
+        self.graph.add_node(new_node_id, data=PragmaForNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_parallel_pragma(self, pragma_obj: OmpPragma):
@@ -261,6 +261,50 @@ class TaskGraph(object):
                 if source_incoming_contains_edge is not None:
                     remove_edge = (source, target)
                     add_edge = (source_incoming_contains_edge[0], target)
+                    break
+            if remove_edge is not None and add_edge is not None:
+                self.graph.remove_edge(remove_edge[0], remove_edge[1])
+                self.graph.add_edge(add_edge[0], add_edge[1], type=EdgeType.SEQUENTIAL)
+                modification_found = True
+        pass
+
+    def move_successor_edges_if_target_is_contained_in_pragma(self):
+        """relocate successor edges to the outer most possible pragma in case that a edge target is contained in another pragma."""
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            remove_edge = None
+            add_edge = None
+            for source, target in self.graph.edges:
+                # check if edge is of type SEQUENTIAL
+                if self.graph.edges[(source, target)]["type"] != EdgeType.SEQUENTIAL:
+                    continue
+                # edge is SEQUENTIAL type
+                # check if source is contained in another pragma
+                source_incoming_edges = self.graph.in_edges(source)
+                # check if any of the incoming edges is a CONTAINS edge
+                source_incoming_contains_edge = None
+                for edge in source_incoming_edges:
+                    if self.graph.edges[(edge[0], edge[1])]["type"] == EdgeType.CONTAINS:
+                        source_incoming_contains_edge = edge
+                        break
+                # check if target is contained in another pragma
+                target_incoming_edges = self.graph.in_edges(target)
+                # check if any of the incoming edges is a CONTAINS edge
+                target_incoming_contains_edge = None
+                for edge in target_incoming_edges:
+                    if self.graph.edges[(edge[0], edge[1])]["type"] == EdgeType.CONTAINS:
+                        target_incoming_contains_edge = edge
+                        break
+                # if source and target are contained in the same pragma, ignore
+                if source_incoming_contains_edge is not None and target_incoming_contains_edge is not None:
+                    if source_incoming_contains_edge[0] == target_incoming_contains_edge[0]:
+                        # source and target are contained in the same pragma
+                        continue
+                # if target_incoming_contains_edge exists, move successor edge to the target of the incoming contains edge
+                if target_incoming_contains_edge is not None:
+                    remove_edge = (source, target)
+                    add_edge = (source, target_incoming_contains_edge[0])
                     break
             if remove_edge is not None and add_edge is not None:
                 self.graph.remove_edge(remove_edge[0], remove_edge[1])

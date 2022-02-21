@@ -9,7 +9,7 @@ from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeRe
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
 
-class PragmaParallelForNode(TaskGraphNode):
+class PragmaForNode(TaskGraphNode):
     result : Optional[TaskGraphNodeResult]
     pragma: Optional[OmpPragma]
     behavior_models : List[BehaviorModel]
@@ -23,7 +23,7 @@ class PragmaParallelForNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "None"
-        label = "ParFor\n"
+        label = "For\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
