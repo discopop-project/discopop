@@ -33,13 +33,14 @@ import sys
 import cProfile
 import time
 import json
+from typing import List
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.classes.OmpPragma import OmpPragma
+from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.core import old_validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
@@ -154,15 +155,9 @@ def __main_start_execution(run_configuration: Configuration):
 
     omp_pragmas = __get_omp_pragmas(run_configuration)
 
-    time_end_ps = time.time()
+    omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
 
-    #for pragma in omp_pragmas:
-    #    if run_configuration.verbose_mode:
-    #        print("validating: ", pragma)
-    #    # todo add Data Races as return type
-    #    validate_omp_pragma(run_configuration, pet, pragma, omp_pragmas)
-    #    if run_configuration.verbose_mode:
-    #            print()
+    time_end_ps = time.time()
 
     #pet.show()
 
@@ -176,8 +171,11 @@ def __main_start_execution(run_configuration: Configuration):
     # remove redundant successor edges
     task_graph.remove_redundant_edges()
     task_graph.plot_graph()
-    # move successor edges if source is contained in another pragma
+    # move successor edges if source is contained in a different pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
+    task_graph.plot_graph()
+    # move successor edges if target is contained in a different pragma
+    task_graph.move_successor_edges_if_target_is_contained_in_pragma()
     task_graph.plot_graph()
     # create implicit barriers
     task_graph.create_implicit_barriers()
@@ -186,9 +184,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
-    # todo enable
-    #task_graph.compute_results()
-    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.compute_results()
+    task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
@@ -200,6 +197,31 @@ def __main_start_execution(run_configuration: Configuration):
     #print("--- Create schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
     #print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
     print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
+
+
+def __preprocess_omp_pragmas(omp_pragmas: List[OmpPragma]):
+    result = []
+    for omp_pragma in omp_pragmas:
+        # split parallel for pragma
+        if omp_pragma.get_type() == PragmaType.PARALLEL_FOR:
+            parallel_pragma = OmpPragma()
+            parallel_pragma.file_id = omp_pragma.file_id
+            parallel_pragma.start_line = omp_pragma.start_line-1
+            parallel_pragma.end_line = omp_pragma.end_line
+            first_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("first_private")])
+            privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("private")])
+            last_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("last_private")])
+            shared = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("shared")])
+            parallel_pragma.pragma = "parallel "
+            parallel_pragma.pragma += "firstprivate(" + first_privates + ") "
+            parallel_pragma.pragma += "private(" + privates + ") "
+            parallel_pragma.pragma += "lastprivate(" + last_privates + ") "
+            parallel_pragma.pragma += "shared(" + shared + ") "
+            result.append(parallel_pragma)
+            omp_pragma.pragma = omp_pragma.pragma.replace("parallel ", "")
+        result.append(omp_pragma)
+    return result
+
 
 
 def __get_omp_pragmas(run_configuration: Configuration):
