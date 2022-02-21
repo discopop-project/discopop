@@ -14,14 +14,14 @@ int main()
       result = 2;
     }
     test(result);
-    #pragma omp task shared(result)
-//    result = 4;
-    #pragma omp task shared(result)
-//    result = result - 3;
-    #pragma omp taskwait
   }
 
   #pragma omp parallel for shared(result) reduction(+:result)
+  for(int i = 0; i < 100; i++){
+    result += i;
+  }
+
+  #pragma omp parallel for shared(result)
   for(int i = 0; i < 100; i++){
     result += i;
   }

@@ -26,6 +26,8 @@ class TaskGraphNode(object):
 
 
     def get_label(self):
+        if self.node_id == 0:
+            return "ROOT"
         return "TGN"
 
     def get_color(self, mark_data_races: bool):
