@@ -16,10 +16,7 @@ class PragmaBarrierNode(TaskGraphNode):
     behavior_models : List[BehaviorModel]
 
     def __init__(self, node_id, pragma=None):
-        self.node_id = node_id
-        self.result = TaskGraphNodeResult()
-        self.pragma = pragma
-        self.behavior_models = []
+        super().__init__(node_id, pragma)
 
     def __str__(self):
         return str(self.node_id)
@@ -37,46 +34,3 @@ class PragmaBarrierNode(TaskGraphNode):
             if len(self.result.data_races) > 0:
                 color = "red"
         return color
-
-    def compute_result(self, task_graph):
-        # copied from TaskGraphNode, since overwritten __node_specific_result_computation could not be invoked correctly
-        predecessor_edges = list(task_graph.graph.in_edges(self.node_id))
-        #if single predecessor exists, relay result of previous node
-        if len(predecessor_edges) == 1:
-            predecessor, _ = predecessor_edges[0]
-            self.result = copy.deepcopy(task_graph.graph.nodes[predecessor]["data"].result)
-        #if multiple predecessors exist, relay combination of results of previous nodes
-        elif len(predecessor_edges) > 1:
-            self.result = TaskGraphNodeResult()
-            for pred, _ in predecessor_edges:
-                self.result.combine(task_graph.graph.nodes[pred]["data"].result)
-        #if no predecessor exists, create empty TaskGraphNodeResult
-        else:
-            self.result = TaskGraphNodeResult()
-
-        # check if new fingerprints (for scoping) need to be generated
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
-                self.result.push_new_fingerprint()
-            if self.pragma.get_type() == PragmaType.PARALLEL:
-                self.result.push_new_fingerprint()
-        # modify behavior models to represent current fingerprint
-        for model in self.behavior_models:
-            model.use_fingerprint(self.result.get_current_fingerprint())
-
-        # perform node-specific computation
-        self.__node_specific_result_computation()
-
-        # check if fingerprints need to be removed from the stack
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
-                self.result.pop_fingerprint()
-
-        # trigger result computation for each successor node
-        for node, successor in task_graph.graph.out_edges(self.node_id):
-            if task_graph.graph.edges[(node, successor)]["type"] == EdgeType.SEQUENTIAL:
-                task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
-
-    def __node_specific_result_computation(self):
-        warnings.warn("TODO")
-        pass

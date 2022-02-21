@@ -12,16 +12,20 @@ from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 import copy
 
+from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import \
+    perform_node_specific_result_computation
+
+
 class TaskGraphNode(object):
     node_id: int
     result: TaskGraphNodeResult
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
 
-    def __init__(self, node_id):
+    def __init__(self, node_id, pragma=None):
         self.node_id = node_id
         self.result = TaskGraphNodeResult()
-        self.pragma = None
+        self.pragma = pragma
         self.behavior_models = []
 
 
@@ -63,7 +67,12 @@ class TaskGraphNode(object):
             model.use_fingerprint(self.result.get_current_fingerprint())
 
         # perform node-specific computation
-        self.__node_specific_result_computation()
+        if self.__class__ == TaskGraphNode:
+            # TaskGraphNode is generic and does not perform a specific computation
+            pass
+        else:
+            perform_node_specific_result_computation(self)
+
 
         # check if fingerprints need to be removed from the stack
         if self.pragma is not None:
@@ -74,11 +83,6 @@ class TaskGraphNode(object):
         for node, successor in task_graph.graph.out_edges(self.node_id):
             if task_graph.graph.edges[(node, successor)]["type"] == EdgeType.SEQUENTIAL:
                 task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
-
-    def __node_specific_result_computation(self):
-        # This generic node does not perform any specific computations.
-        # needs to be implemented in each node class
-        return
 
     def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, task_graph, omp_pragmas: List[OmpPragma]):
         if self.pragma is None:
