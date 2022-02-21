@@ -17,6 +17,7 @@ def perform_node_specific_result_computation(node_obj):
 
 
 def __parallel_result_computation(node_obj):
+    # todo collect behavior models from subgraph, starting with CONTAINED-child without incoming successor edge
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(node_obj.behavior_models)
     # check for data races and extract set of next states
