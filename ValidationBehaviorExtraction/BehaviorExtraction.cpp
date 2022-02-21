@@ -599,7 +599,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     outputFile << "function;" << F.getName().str() << "\n";
     outputFile << "fileName;" << parentFileName << "\n";
     outputFile.close();
-
     // get shared var accesses
     for(auto &BB : F.getBasicBlockList()){
         ofstream tmpOutputFile(ClOutputFile, std::ios_base::app);
@@ -618,8 +617,17 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 bb_in_sections.push_back(section.sectionId);
             }
         }
+        // if no BBs inside scope have been found, check if scope is inside BB
         if(bb_in_sections.size() == 0){
+            for(auto section : sections){
+                if(graphNode.startLocation.first <= section.startLine && graphNode.endLocation.first >= section.endLine){
+                    bb_in_sections.push_back(section.sectionId);
+                }
+            }
+
+            if(bb_in_sections.size() == 0){
             continue;
+            }
         }
         tmpOutputFile << "bbIndex;" << graphNode.bbIndex << "\n";
         tmpOutputFile << "bbName;" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";

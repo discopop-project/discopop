@@ -15,7 +15,6 @@ import concurrent.futures
 def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int], init_information: TaskGraphNodeResult) -> Tuple[List[DataRace], List[State]]:
     # todo use dimensions to determine cutoff depth for task creation -> e.g. create tasks above 6 remaining levels
     initial_state = State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names)
-    warnings.warn("Initial state does not consider previously known states! TODO")
     graph_depth = 0
     for entry in dimensions:
         graph_depth += entry
