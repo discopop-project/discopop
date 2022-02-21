@@ -13,10 +13,11 @@ def perform_node_specific_result_computation(node_obj):
     elif node_obj.pragma.get_type() == PragmaType.SINGLE:
         __single_result_computation(node_obj)
     else:
-        warnings.warn("NOT SUPPORTED: ", node_obj)
+        warnings.warn("NOT SUPPORTED: " + str(node_obj.pragma))
 
 
 def __parallel_result_computation(node_obj):
+    # todo collect behavior models from subgraph, starting with CONTAINED-child without incoming successor edge
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(node_obj.behavior_models)
     # check for data races and extract set of next states

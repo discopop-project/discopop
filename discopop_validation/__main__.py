@@ -175,10 +175,10 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     # remove redundant successor edges
     task_graph.remove_redundant_edges()
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
     # move successor edges if source is contained in another pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
     # create implicit barriers
     task_graph.create_implicit_barriers()
 
@@ -186,8 +186,9 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
-    task_graph.compute_results()
-    task_graph.plot_graph(mark_data_races=True)
+    # todo enable
+    #task_graph.compute_results()
+    #task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
