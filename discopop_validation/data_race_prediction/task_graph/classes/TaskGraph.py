@@ -438,6 +438,7 @@ class TaskGraph(object):
                             self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[target]["data"].pragma.start_line:
                         # bhv_storage_node is a predecessor of target
                         self.graph.add_edge(bhv_storage_node, target, type=EdgeType.SEQUENTIAL)
+                        continue
 
                 # if target has no outgoing SEQUENTIAL edge, check if bhv_storage_node is a successor
                 if outgoing == 0:
@@ -448,6 +449,60 @@ class TaskGraph(object):
                             self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() >= self.graph.nodes[target]["data"].pragma.end_line:
                         # bhv_storage_node is a successor of target
                         self.graph.add_edge(target, bhv_storage_node, type=EdgeType.SEQUENTIAL)
+                        continue
+                # bhv needs to be inserted into existing sequence
+                if incoming == 0:
+                    if bhv_storage_node == target:
+                        continue
+                    # target is sequence entry. From previous checks it is known, that bhv_storage_node is no predecessor of target
+                    # search along each path for possible location
+                    predecessor_queue = [target]
+                    visited_predecessors = []
+                    while len(predecessor_queue) > 0:
+                        current_predecessor = predecessor_queue.pop(0)
+                        visited_predecessors.append(current_predecessor)
+                        add_edges: List[Tuple[int, int, EdgeType]] = []
+                        remove_edges: List[Tuple[int, int]] = []
+                        for inner_source, inner_target in self.graph.out_edges(current_predecessor):
+                            if self.graph.edges[(inner_source, inner_target)]["type"] != EdgeType.SEQUENTIAL:
+                                continue
+                            # check if inner_target is a successor of bhv_storage_node
+                            # separate treatment of regular and behavior storage nodes required due to missing pragmas
+                            if self.graph.nodes[inner_target]["data"].pragma is None:
+                                if self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[inner_target]["data"].behavior_models[0].get_start_line() and \
+                                self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[inner_target]["data"].behavior_models[0].get_start_line():
+                                    # inner_target is a successor of bhv_storage_node
+                                    # insert bhv_storage_node inbetween current_predecessor and inner_target
+                                    add_edges.append((current_predecessor, bhv_storage_node, EdgeType.SEQUENTIAL))
+                                    add_edges.append((bhv_storage_node, inner_target, EdgeType.SEQUENTIAL))
+                                    # remove edge from current_predecessor to inner_target
+                                    remove_edges.append((current_predecessor, inner_target))
+                                else:
+                                    # inner_target is not a successor of bhv_storage_node
+                                    # add inner_target to predecessor_queue
+                                    if inner_target not in visited_predecessors:
+                                        predecessor_queue.append(inner_target)
+                            else:
+                                if self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[inner_target]["data"].pragma.start_line and \
+                                self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[inner_target]["data"].pragma.start_line:
+                                    # inner_target is a successor of bhv_storage_node
+                                    # insert bhv_storage_node inbetween current_predecessor and inner_target
+                                    add_edges.append((current_predecessor, bhv_storage_node, EdgeType.SEQUENTIAL))
+                                    add_edges.append((bhv_storage_node, inner_target, EdgeType.SEQUENTIAL))
+                                    # remove edge from current_predecessor to inner_target
+                                    remove_edges.append((current_predecessor, inner_target))
+                                else:
+                                    # inner_target is not a successor of bhv_storage_node
+                                    # add inner_target to predecessor_queue
+                                    if inner_target not in visited_predecessors:
+                                        predecessor_queue.append(inner_target)
+                        for s, t in remove_edges:
+                            self.graph.remove_edge(s, t)
+                        for s, t, ty in add_edges:
+                            self.graph.add_edge(s, t, type=ty)
+
+
+
 
 
 

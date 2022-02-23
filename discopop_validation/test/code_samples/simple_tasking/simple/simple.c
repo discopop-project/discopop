@@ -9,7 +9,7 @@ int main()
     # pragma omp task shared(result)
     result += 2;
     # pragma omp taskwait
-
+    int q = result;
     # pragma omp task shared(result)
     int z = result;
     # pragma omp task shared(result)

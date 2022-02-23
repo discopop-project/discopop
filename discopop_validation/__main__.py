@@ -182,7 +182,7 @@ def __main_start_execution(run_configuration: Configuration):
     # branch on successive tasks
     #task_graph.plot_graph()
     task_graph.branch_on_successive_tasks()
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
