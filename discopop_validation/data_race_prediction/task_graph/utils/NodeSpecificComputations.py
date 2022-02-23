@@ -89,12 +89,10 @@ def __parallel_result_computation(node_obj, task_graph):
             behavior_information = prepare_for_simulation([behavior_information])  # todo use global variables to save states regarding reduction removal etc.
             # create scheduling graph from behavior models
             scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_information)
-            print("DIM: ", dimensions)
             return scheduling_graph
 
         elif behavior_information[0] in ["SEQ", "PAR"]:
             scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_information[1])
-            print("BLUB")
             if len(behavior_information) > 2:
                 for elem in behavior_information[2:]:
                     if behavior_information[0] == "SEQ":
@@ -106,16 +104,12 @@ def __parallel_result_computation(node_obj, task_graph):
             if type(behavior_information) == list:
                 if len(behavior_information) == 1:
                     return __unpack_behavior_models_to_scheduling_graph(behavior_information[0])
-                else:
-                    print("SADFafa")
-            else:
-                print("SADF")
+
             raise ValueError("Unknown: ", behavior_information)
 
 
-    print("UNPACK")
     scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_model_sequence)
-    print("DIM2: ", scheduling_graph.dimensions)
+
     scheduling_graph.plot_graph()
 
     data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
