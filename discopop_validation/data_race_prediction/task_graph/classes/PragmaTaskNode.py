@@ -35,3 +35,30 @@ class PragmaTaskNode(TaskGraphNode):
             if len(self.result.data_races) > 0:
                 color = "red"
         return color
+
+    def get_behavior_models(self, task_graph, result_obj) -> List[List[BehaviorModel]]:
+        """gather behavior models of sequence-starting contained nodes (should only be 1 in case of a FOR pragma)"""
+        print("TC For")
+        gathered_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
+        # gather behavior models of contained nodes
+        for source, target in task_graph.graph.out_edges(self.node_id):
+            behavior_models = ["PAR"]
+            if task_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS:
+                # check if contained node is at the beginning of a sequence
+                incoming = 0
+                for inner_source, inner_target in task_graph.graph.in_edges(target):
+                    if task_graph.graph.edges[(inner_source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
+                        incoming += 1
+                if incoming == 0:
+                    # target is the beginning of a new sequence
+                    behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                    print("TASK BM: ", behavior_models)
+            if len(behavior_models) > 1:
+                gathered_behavior_models.append(behavior_models)
+            print("TASK GBM:", gathered_behavior_models)
+
+        # gather behavior models of successor nodes
+        for source, target in task_graph.graph.out_edges(self.node_id):
+            if task_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
+                gathered_behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+        return gathered_behavior_models

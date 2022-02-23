@@ -191,6 +191,8 @@ def __main_start_execution(run_configuration: Configuration):
     # remove redundant CONTAINS edges
     task_graph.remove_redundant_edges([EdgeType.CONTAINS])
 
+    #task_graph.plot_graph()
+
     # trigger result computation
     task_graph.compute_results()
     task_graph.plot_graph(mark_data_races=True)

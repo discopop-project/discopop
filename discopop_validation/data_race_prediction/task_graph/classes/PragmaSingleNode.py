@@ -40,8 +40,11 @@ class PragmaSingleNode(TaskGraphNode):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
         updates results thread count entry."""
         result_obj.push_thread_count(1)
-        gathered_behavior_models: List[BehaviorModel] = []
+        print("TC single")
+
+        gathered_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
         for source, target in task_graph.graph.out_edges(self.node_id):
+            behavior_models = ["PAR"]
             if task_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS:
                 # check if contained node is at the beginning of a sequence
                 incoming = 0
@@ -50,7 +53,11 @@ class PragmaSingleNode(TaskGraphNode):
                         incoming += 1
                 if incoming == 0:
                     # target is the beginning of a new sequence
-                    gathered_behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj)
+                    behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                    print("BHV: ", behavior_models)
+            if len(behavior_models) > 1:
+                gathered_behavior_models.append(behavior_models)
+            print("GBM:", gathered_behavior_models)
 
         result_obj.pop_thread_count()
         return gathered_behavior_models

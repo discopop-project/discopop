@@ -34,4 +34,5 @@ class BehaviorModel(object):
         # todo might be implemented in a more sophisticated way.
         # todo instead of modifying the var_name, consider adding a separate field for a fingerprint in State.
         for op in self.operations:
-            op.target_name = op.target_name+"_"+fingerprint
+            if not op.target_name.endswith(fingerprint):
+                op.target_name = op.target_name+"_"+fingerprint

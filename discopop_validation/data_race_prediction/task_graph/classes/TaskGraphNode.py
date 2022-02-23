@@ -114,4 +114,4 @@ class TaskGraphNode(object):
         # set behavior_models.simulation_thread_count according to current request
         for model in self.behavior_models:
             model.simulation_thread_count = result_obj.get_current_thread_count()
-        return self.behavior_models
+        return ["PAR", self.behavior_models]

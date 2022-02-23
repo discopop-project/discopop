@@ -16,7 +16,6 @@ def __simulate_multiple_threads(behavior_models: List[BehaviorModel]) -> List[Be
     # -> duplicate every entry in the list of behavior models for each thread which has to be simulated
     prepared_list: List[BehaviorModel] = []
     for model in behavior_models:
-        print("TC: ", model.simulation_thread_count)
         for i in range(0, model.simulation_thread_count):
             prepared_list.append(deepcopy(model))
     return prepared_list

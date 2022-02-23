@@ -1,6 +1,6 @@
 int main()
 {
-  int result = 0;
+  int result = 0, i=0, j=0;
 #pragma omp parallel shared(result)
 /*  {
     int x = foo(result);
@@ -18,14 +18,16 @@ int main()
     int r = result;
   }
 */
-    # pragma omp parallel shared(result)
+    # pragma omp parallel shared(result, i, j)
     {
-    # pragma omp single shared(result)
+    # pragma omp single shared(result, i, j)
     {
-        # pragma omp task shared(result)
-        result = 3;
-        # pragma omp task shared(result)
-        result = 3;
+        # pragma omp task shared(result, i, j)
+        i = 3;
+        # pragma omp task shared(result, i, j)
+        j = 3;
+        # pragma omp taskwait
+        result = i + j;
     }
     }
 }

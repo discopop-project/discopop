@@ -13,7 +13,6 @@ import concurrent.futures
 
 
 def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int], init_information: TaskGraphNodeResult) -> Tuple[List[DataRace], List[State]]:
-    # todo use dimensions to determine cutoff depth for task creation -> e.g. create tasks above 6 remaining levels
     initial_state = State(len(dimensions), scheduling_graph.lock_names, scheduling_graph.var_names)
     graph_depth = 0
     for entry in dimensions:
@@ -34,7 +33,6 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
                                                      copy.deepcopy(state), [], 0, graph_depth)
         data_races += [elem for elem in data_races_buffer if not elem in data_races]
         successful_states += [elem for elem in successful_states_buffer if not elem in successful_states]
-
     return data_races, successful_states
 
 
