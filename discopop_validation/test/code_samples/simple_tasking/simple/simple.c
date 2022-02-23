@@ -38,4 +38,18 @@ int main()
         int z = result;
         z = z + result;
     } 
+
+#pragma omp parallel shared(result)
+  {
+    #pragma omp taskwait
+    #pragma omp task shared(result)
+    int u = result;
+    #pragma omp task shared(result)
+    int z = result;
+    #pragma omp single
+    int y = result;
+    #pragma omp task shared(result)
+    int w = result;
+    #pragma omp taskwait
+  }
 }

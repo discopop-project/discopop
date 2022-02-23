@@ -312,7 +312,8 @@ class TaskGraph(object):
                 modification_found = True
         pass
 
-    def create_implicit_barriers(self):
+    def insert_implicit_barriers(self):
+        """Insert implicit barriers. Currently supports: SINGLE"""
         add_barrier_buffer = []
         for node in self.graph.nodes():
             node_pragma = self.graph.nodes[node]["data"].pragma
@@ -345,4 +346,47 @@ class TaskGraph(object):
                 self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         pass
 
+    def branch_on_successive_tasks(self):
+        """If one task is a successor of the other, create a parallel branch instead.
+        Search follows successor paths and stops, if a barrier or taskwait has been encountered."""
 
+        def __rec_find_successive_task(root):
+            result = []
+            for source, target in self.graph.out_edges(root):
+                if self.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
+                    # check if target is task
+                    if self.graph.nodes[target]["data"].pragma.get_type() == PragmaType.TASK:
+                        # task found -> add to result and stop search along this path
+                        result.append(target)
+                        continue
+                    if self.graph.nodes[target]["data"].pragma.get_type() in [PragmaType.BARRIER, PragmaType.TASKWAIT]:
+                        # barrier or taskwait found -> stop search along this path
+                        continue
+                    # nothing found, go into recursion
+                    result += __rec_find_successive_task(target)
+            return result
+
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for node in self.graph.nodes:
+                if self.graph.nodes[node]["data"].pragma is None:
+                    continue
+                if self.graph.nodes[node]["data"].pragma.get_type() == PragmaType.TASK:
+                    successive_tasks = __rec_find_successive_task(node)
+                    for successive_task in successive_tasks:
+                        # Two successive tasks found, create a parallel branch
+                        # 1. copy outgoing SEQUENTIAL edges of target to source
+                        for t_source, t_target in self.graph.out_edges(successive_task):
+                            if self.graph.edges[(t_source, t_target)]["type"] == EdgeType.SEQUENTIAL:
+                                self.graph.add_edge(node, t_target, type=EdgeType.SEQUENTIAL)
+                        # 2. copy incoming SEQUENTIAL edges of source to target
+                        for s_source, s_target in self.graph.in_edges(node):
+                            if self.graph.edges[(s_source, s_target)]["type"] == EdgeType.SEQUENTIAL:
+                                self.graph.add_edge(s_source, successive_task, type=EdgeType.SEQUENTIAL)
+                        # 3. remove edge between source and target
+                        self.graph.remove_edge(node, successive_task)
+                        modification_found = True
+                        break
+                if modification_found:
+                    break
