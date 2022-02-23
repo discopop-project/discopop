@@ -93,6 +93,9 @@ class OmpPragma(object):
             self.__add_to_shared(var)
 
     def __add_to_shared(self, var_name: str):
-        split_pragma = self.pragma.split(" shared(")
-        self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
+        if " shared(" in self.pragma:
+            split_pragma = self.pragma.split(" shared(")
+            self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
+        else:
+            self.pragma += " shared(" + var_name + ")"
 

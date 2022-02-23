@@ -17,6 +17,14 @@ int main()
     # pragma omp taskwait
     int r = result;
   }
+
+  # pragma omp parallel for reduction(+:result)
+    for(int i = 0; i < 100; i++){
+//    result += i;
+    int y = result;
+    result = y;
+    y = result * 2;    
+    }
 }
 
 int foo(int n){

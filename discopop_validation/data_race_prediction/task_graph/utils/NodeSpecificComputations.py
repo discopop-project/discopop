@@ -40,7 +40,7 @@ def __parallel_result_computation(node_obj, task_graph):
             if target_has_incoming_seq_edge:
                 continue
             # target is the beginning of a contained sequence -> collect behavior model
-            behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models()
+            behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph)
 
     # modify behavior models to use current fingerprint
     for model in behavior_models:

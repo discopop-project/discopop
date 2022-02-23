@@ -108,6 +108,7 @@ class TaskGraphNode(object):
                     print("\t", op)
         self.behavior_models = behavior_models
 
-    def get_behavior_models(self):
-        """returns a list of behavior models which represent the behavior of the subtree which starts at the current node"""
+    def get_behavior_models(self, task_graph):
+        """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
+        Should be overwritten by each node type."""
         return self.behavior_models
