@@ -5,19 +5,19 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Operatio
     OperationModifierType
 
 
-def prepare_for_simulation(behavior_models: List[BehaviorModel], thread_count=2) -> List[BehaviorModel]:
-    behavior_models = __simulate_multiple_threads(behavior_models, thread_count)
+def prepare_for_simulation(behavior_models: List[BehaviorModel]) -> List[BehaviorModel]:
+    behavior_models = __simulate_multiple_threads(behavior_models)
     behavior_models = __remove_multiples_of_reduction_operations(behavior_models)
     return behavior_models
 
 
-def __simulate_multiple_threads(behavior_models: List[BehaviorModel], thread_count) -> List[BehaviorModel]:
+def __simulate_multiple_threads(behavior_models: List[BehaviorModel]) -> List[BehaviorModel]:
     # simulation for thread_count threads
     # -> duplicate every entry in the list of behavior models for each thread which has to be simulated
     prepared_list: List[BehaviorModel] = []
     for model in behavior_models:
-        prepared_list.append(model)
-        for i in range(0, thread_count - 1):
+        print("TC: ", model.simulation_thread_count)
+        for i in range(0, model.simulation_thread_count):
             prepared_list.append(deepcopy(model))
     return prepared_list
 

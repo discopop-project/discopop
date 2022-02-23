@@ -34,7 +34,7 @@ class PragmaForNode(TaskGraphNode):
                 color = "red"
         return color
 
-    def get_behavior_models(self, task_graph) -> List[BehaviorModel]:
+    def get_behavior_models(self, task_graph, result_obj) -> List[BehaviorModel]:
         """gather behavior models of sequence-starting contained nodes (should only be 1 in case of a FOR pragma)"""
         gathered_behavior_models: List[BehaviorModel] = []
         for source, target in task_graph.graph.out_edges(self.node_id):
@@ -46,5 +46,5 @@ class PragmaForNode(TaskGraphNode):
                         incoming += 1
                 if incoming == 0:
                     # target is the beginning of a new sequence
-                    gathered_behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph)
+                    gathered_behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj)
         return gathered_behavior_models

@@ -9,11 +9,13 @@ class TaskGraphNodeResult(object):
     states: List[State]
     data_races: List[DataRace]
     fingerprint_stack: List[str]
+    thread_count_stack: List[int]
 
     def __init__(self):
         self.states = []
         self.data_races = []
         self.fingerprint_stack = []
+        self.thread_count_stack = [2]
 
     def combine(self, node_result):
         """combine the current states with the states of node_result, if fingerprint_stacks are equal"""
@@ -41,3 +43,14 @@ class TaskGraphNodeResult(object):
 
     def get_current_fingerprint(self):
         return self.fingerprint_stack[-1]
+
+    def get_current_thread_count(self):
+        return self.thread_count_stack[-1]
+
+    def push_thread_count(self, tc: int):
+        self.thread_count_stack.append(tc)
+
+    def pop_thread_count(self):
+        buffer = self.get_current_thread_count()
+        del self.thread_count_stack[-1]
+        return buffer

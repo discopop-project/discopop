@@ -76,7 +76,6 @@ class TaskGraphNode(object):
         else:
             perform_node_specific_result_computation(self, task_graph)
 
-
         # check if fingerprints need to be removed from the stack
         if self.pragma is not None:
             if self.pragma.get_type() == PragmaType.FOR:
@@ -108,7 +107,11 @@ class TaskGraphNode(object):
                     print("\t", op)
         self.behavior_models = behavior_models
 
-    def get_behavior_models(self, task_graph):
+    def get_behavior_models(self, task_graph, result_obj):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
         Should be overwritten by each node type."""
+        print("TC TGN:", result_obj.get_current_thread_count())
+        # set behavior_models.simulation_thread_count according to current request
+        for model in self.behavior_models:
+            model.simulation_thread_count = result_obj.get_current_thread_count()
         return self.behavior_models

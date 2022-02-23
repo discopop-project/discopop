@@ -2,7 +2,7 @@ int main()
 {
   int result = 0;
 #pragma omp parallel shared(result)
-  {
+/*  {
     int x = foo(result);
     # pragma omp task shared(result)
     int y = result;
@@ -17,13 +17,14 @@ int main()
     # pragma omp taskwait
     int r = result;
   }
+*/
+    # pragma omp parallel shared(result)
+    {
+    # pragma omp single shared(result)
+    {
+    result = 3;
+    }
 
-  # pragma omp parallel for reduction(+:result)
-    for(int i = 0; i < 100; i++){
-//    result += i;
-    int y = result;
-    result = y;
-    y = result * 2;    
     }
 }
 

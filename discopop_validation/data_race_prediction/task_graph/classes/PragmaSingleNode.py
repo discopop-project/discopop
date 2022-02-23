@@ -35,3 +35,22 @@ class PragmaSingleNode(TaskGraphNode):
             if len(self.result.data_races) > 0:
                 color = "red"
         return color
+
+    def get_behavior_models(self, task_graph, result_obj):
+        """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
+        updates results thread count entry."""
+        result_obj.push_thread_count(1)
+        gathered_behavior_models: List[BehaviorModel] = []
+        for source, target in task_graph.graph.out_edges(self.node_id):
+            if task_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS:
+                # check if contained node is at the beginning of a sequence
+                incoming = 0
+                for inner_source, inner_target in task_graph.graph.in_edges(target):
+                    if task_graph.graph.edges[(inner_source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
+                        incoming += 1
+                if incoming == 0:
+                    # target is the beginning of a new sequence
+                    gathered_behavior_models += task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj)
+
+        result_obj.pop_thread_count()
+        return gathered_behavior_models
