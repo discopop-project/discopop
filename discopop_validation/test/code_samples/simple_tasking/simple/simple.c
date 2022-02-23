@@ -30,6 +30,11 @@ int main()
         result = i + j;
     }
     }
+
+    #pragma omp parallel for reduction(+:result)
+    for(int i = 0; i < 100; i++){
+        result += 3;   
+    }
 }
 
 int foo(int n){
