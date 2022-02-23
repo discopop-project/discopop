@@ -1,6 +1,6 @@
 import warnings
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -119,7 +119,7 @@ class TaskGraph(object):
         """extract dependencies between omp pragmas from the PET Graph and create edges in the TaskGraph accordingly."""
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
-            cu_id = self.__get_pet_node_id_from_pragma(pet, pragma)
+            cu_id = self.__get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
         # todo more efficient edge creation (potentially traverse upwards and find pragmas along each path instead of pairwise calculation)
@@ -169,23 +169,23 @@ class TaskGraph(object):
             if len(self.graph.in_edges(node)) == 0 and node != 0:
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
-    def __get_pet_node_id_from_pragma(self, pet: PETGraphX, pragma: OmpPragma):
+    def __get_pet_node_id_from_source_code_lines(self, pet: PETGraphX, file_id: int, start_line: int, end_line: int):
         """Returns the ID of the pet-graph node which contains the given pragma"""
         potential_nodes = []
         for pet_node in pet.g.nodes:
-            if pragma.file_id == pet.g.nodes[pet_node]["data"].file_id and \
-                pragma.start_line >= pet.g.nodes[pet_node]["data"].start_line and \
-                pragma.end_line <= pet.g.nodes[pet_node]["data"].end_line:
+            if file_id == pet.g.nodes[pet_node]["data"].file_id and \
+                start_line >= pet.g.nodes[pet_node]["data"].start_line and \
+                end_line <= pet.g.nodes[pet_node]["data"].end_line:
                 potential_nodes.append(pet_node)
         if len(potential_nodes) == 0:
-            raise ValueError("No valid CUID found for pragma: ", str(pragma))
+            raise ValueError("No valid CUID found for: ", str(file_id) + ":"+ str(start_line)+"-"+str(end_line))
         # find narrowest matching node
         narrowest_node_buffer = potential_nodes[0]
         for pet_node in potential_nodes:
             if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
                 pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
                 narrowest_node_buffer = pet_node
-        print("Pragma: ", pragma)
+        print("search: ", str(file_id) + ":"+ str(start_line)+"-"+str(end_line))
         print("--> CUID: ", narrowest_node_buffer)
         return narrowest_node_buffer
 
@@ -390,3 +390,65 @@ class TaskGraph(object):
                         break
                 if modification_found:
                     break
+
+    def insert_behavior_storage_nodes(self):
+        """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
+        create_nodes: List[Tuple[int, TaskGraphNode]] = []
+        create_edges: List[Tuple[int, int, EdgeType]] = []
+        bhv_storage_node_to_parent: Dict[int, int] = dict()
+        for node in self.graph.nodes:
+            # create contained BehaviorStorageNodes
+            for model in self.graph.nodes[node]["data"].behavior_models:
+                new_node_id = self.__get_new_node_id()
+                behavior_storage_node = TaskGraphNode(new_node_id)
+                behavior_storage_node.behavior_models.append(model)
+                create_nodes.append((new_node_id, behavior_storage_node))
+                create_edges.append((node, new_node_id, EdgeType.CONTAINS))
+                bhv_storage_node_to_parent[new_node_id] = node
+
+        # create identified nodes
+        for node_id, graph_node_data in create_nodes:
+            self.graph.add_node(node_id, data=graph_node_data)
+        # create identified edges
+        for source, target, edge_type in create_edges:
+            self.graph.add_edge(source, target, type=edge_type)
+
+        # connect created behavior storage nodes
+        for bhv_storage_node, _ in create_nodes:
+            # check if bhv_storage_node precedes or succedes contained sequence-start or sequences-end nodes
+            for parent, target in self.graph.out_edges(bhv_storage_node_to_parent[bhv_storage_node]):
+                if self.graph.edges[(parent, target)]["type"] != EdgeType.CONTAINS:
+                    continue
+                # get amount of incoming and outgoing SEQUENTIAL edges of target
+                incoming = 0
+                outgoing = 0
+                for source, inner_target in self.graph.in_edges(target):
+                    if self.graph.edges[(source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
+                        incoming += 1
+                for source, inner_target in self.graph.out_edges(target):
+                    if self.graph.edges[(source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
+                        outgoing += 1
+
+                # if target has no incoming SEQUENTIAL edge, check if bhv_storage_node is a predecessor
+                if incoming == 0:
+                    if self.graph.nodes[target]["data"].pragma is None:
+                        pass
+                    elif self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_file_id() == self.graph.nodes[target]["data"].pragma.file_id and \
+                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[target]["data"].pragma.start_line and \
+                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[target]["data"].pragma.start_line:
+                        # bhv_storage_node is a predecessor of target
+                        self.graph.add_edge(bhv_storage_node, target, type=EdgeType.SEQUENTIAL)
+
+                # if target has no outgoing SEQUENTIAL edge, check if bhv_storage_node is a successor
+                if outgoing == 0:
+                    if self.graph.nodes[target]["data"].pragma is None:
+                        pass
+                    elif self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_file_id() == self.graph.nodes[target]["data"].pragma.file_id and \
+                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() >= self.graph.nodes[target]["data"].pragma.start_line and \
+                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() >= self.graph.nodes[target]["data"].pragma.end_line:
+                        # bhv_storage_node is a successor of target
+                        self.graph.add_edge(target, bhv_storage_node, type=EdgeType.SEQUENTIAL)
+
+
+
+

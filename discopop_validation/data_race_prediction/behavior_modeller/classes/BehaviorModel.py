@@ -14,7 +14,7 @@ class BehaviorModel(object):
     def get_file_id(self) -> Optional[int]:
         if len(self.operations) == 0:
             return None
-        return self.operations[0].file_id
+        return int(self.operations[0].file_id)
 
     def get_start_line(self) -> Optional[int]:
         if len(self.operations) == 0:
