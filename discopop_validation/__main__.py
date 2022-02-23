@@ -182,14 +182,14 @@ def __main_start_execution(run_configuration: Configuration):
     # branch on successive tasks
     task_graph.plot_graph()
     task_graph.branch_on_successive_tasks()
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
 
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # trigger result computation
     task_graph.compute_results()
-    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()

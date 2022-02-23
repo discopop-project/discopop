@@ -17,6 +17,11 @@ def perform_node_specific_result_computation(node_obj, task_graph):
         __barrier_result_computation(node_obj)
     elif node_obj.pragma.get_type() == PragmaType.SINGLE:
         __single_result_computation(node_obj)
+    elif node_obj.pragma.get_type() == PragmaType.TASK:
+        __task_result_computation(node_obj)
+    elif node_obj.pragma.get_type() == PragmaType.TASKWAIT:
+        __taskwait_result_computation(node_obj)
+
     else:
         warnings.warn("NOT SUPPORTED: " + str(node_obj.pragma))
 
@@ -51,9 +56,6 @@ def __parallel_result_computation(node_obj, task_graph):
     # store results
     node_obj.result.data_races = data_races
     node_obj.result.states = successful_states
-    for succ in node_obj.result.states:
-        print()
-        print(succ)
 
 
 def __for_result_computation(node_obj):
@@ -67,5 +69,13 @@ def __barrier_result_computation(self):
 
 
 def __single_result_computation(self):
+    warnings.warn("TODO")
+    pass
+
+def __task_result_computation(self):
+    warnings.warn("TODO")
+    pass
+
+def __taskwait_result_computation(self):
     warnings.warn("TODO")
     pass
