@@ -57,6 +57,9 @@ def __parallel_result_computation(node_obj, task_graph):
     node_obj.result.data_races = data_races
     node_obj.result.states = successful_states
 
+    for dr in data_races:
+        print(dr)
+
 
 def __for_result_computation(node_obj):
     warnings.warn("TODO")

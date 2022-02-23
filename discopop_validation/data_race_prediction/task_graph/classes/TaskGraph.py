@@ -189,19 +189,28 @@ class TaskGraph(object):
         print("--> CUID: ", narrowest_node_buffer)
         return narrowest_node_buffer
 
-    def remove_redundant_edges(self):
+    def remove_redundant_edges(self, edge_types: List[EdgeType]):
         # todo currently, only SEQUENTIAL edges are considered, rename?
+
+        def __get_start_line(stl_target):
+            if self.graph.nodes[stl_target]["data"].pragma is None:
+                return self.graph.nodes[stl_target]["data"].behavior_models[0].get_start_line()
+            else:
+                return self.graph.nodes[stl_target]["data"].pragma.start_line
+
         # calculate code line distances and remove all but the shortest edge
         for node in self.graph.nodes:
             shortest_edge_source = None
             shortest_edge_distance = None
             for edge_source, edge_target in self.graph.in_edges(node):
-                # only consider SEQUENTIAL edges
-                if self.graph.edges[(edge_source, edge_target)]["type"] != EdgeType.SEQUENTIAL:
+                if self.graph.edges[(edge_source, edge_target)]["type"] not in edge_types:
                     continue
-                if self.graph.nodes[edge_source]["data"].pragma is None:
+                try:
+                    distance = __get_start_line(node) - __get_start_line(edge_source)
+                except AttributeError:
                     continue
-                distance = self.graph.nodes[node]["data"].pragma.start_line - self.graph.nodes[edge_source]["data"].pragma.start_line
+                except IndexError:
+                    continue
                 if shortest_edge_source is None:
                     shortest_edge_source = edge_source
                     shortest_edge_distance = distance
@@ -213,7 +222,7 @@ class TaskGraph(object):
             edge_remove_buffer = []
             for edge_source, edge_target in self.graph.in_edges(node):
                 # only consider SEQUENTIAL edges
-                if self.graph.edges[(edge_source, edge_target)]["type"] != EdgeType.SEQUENTIAL:
+                if self.graph.edges[(edge_source, edge_target)]["type"] not in edge_types:
                     continue
                 if self.graph.nodes[edge_source]["data"].pragma is None:
                     continue

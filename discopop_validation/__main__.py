@@ -44,6 +44,7 @@ from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.core import old_validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
+from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
 from discopop_validation.discopop_suggestion_interpreter.core import get_omp_pragmas_from_dp_suggestions
 from .interfaces.discopop_explorer import get_pet_graph
@@ -169,7 +170,7 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.add_edges(pet, omp_pragmas)
     #task_graph.plot_graph()
     # remove redundant successor edges
-    task_graph.remove_redundant_edges()
+    task_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
     #task_graph.plot_graph()
     # move successor edges if source is contained in a different pragma
     task_graph.move_successor_edges_if_source_is_contained_in_pragma()
@@ -187,6 +188,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
     task_graph.insert_behavior_storage_nodes()
+    # remove redundant CONTAINS edges
+    task_graph.remove_redundant_edges([EdgeType.CONTAINS])
 
     # trigger result computation
     task_graph.compute_results()

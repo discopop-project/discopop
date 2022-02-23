@@ -22,9 +22,11 @@ int main()
     {
     # pragma omp single shared(result)
     {
-    result = 3;
+        # pragma omp task shared(result)
+        result = 3;
+        # pragma omp task shared(result)
+        result = 3;
     }
-
     }
 }
 
