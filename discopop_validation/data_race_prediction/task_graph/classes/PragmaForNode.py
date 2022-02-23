@@ -60,5 +60,4 @@ class PragmaForNode(TaskGraphNode):
             if task_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
                 outer_seq_behavior_models.append(
                     task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
-        print("--> ", outer_seq_behavior_models)
         return outer_seq_behavior_models

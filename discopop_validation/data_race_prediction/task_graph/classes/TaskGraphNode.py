@@ -110,7 +110,6 @@ class TaskGraphNode(object):
     def get_behavior_models(self, task_graph, result_obj):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
         Should be overwritten by each node type."""
-        print("TC TGN:", result_obj.get_current_thread_count())
         # set behavior_models.simulation_thread_count according to current request
         for model in self.behavior_models:
             model.simulation_thread_count = result_obj.get_current_thread_count()

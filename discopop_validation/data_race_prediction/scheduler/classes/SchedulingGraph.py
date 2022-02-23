@@ -88,8 +88,6 @@ class SchedulingGraph(object):
 
     def sequential_compose(self, other_graph):
         """add edges between leaf nodes of this and root node of other_graph."""
-        print("dim1: ", self.dimensions)
-        print("dim2: ", other_graph.dimensions)
         # new dimensions are the component-wise maximum of both
         new_dimensions = []
         while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
@@ -111,5 +109,16 @@ class SchedulingGraph(object):
 
 
     def parallel_compose(self, other_graph):
+        # new dimensions are the component-wise maximum of both
+        new_dimensions = []
+        while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
+            new_dimensions.append(max(self.dimensions.pop(0), other_graph.dimensions.pop(0)))
+        if len(self.dimensions) > 0:
+            new_dimensions += self.dimensions
+        elif len(other_graph.dimensions) > 0:
+            new_dimensions += other_graph.dimensions
+        self.dimensions = new_dimensions
+
+
         print("PARALLEL COMPOSE")
         warnings.warn("TODO")
