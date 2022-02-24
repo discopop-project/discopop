@@ -26,14 +26,15 @@ class SchedulingGraph(object):
         # add root node, id = (tuple of n zero´s, last executed thread id)
         self.root_node_identifier = (tuple(0 for _ in range(len(dim))), -1, self.fingerprint)
         self.graph.add_node((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), data=None)
-        self.__old_add_nodes_rec((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), dim.copy(), behavior_models)
-        # determine lock and var names
-        for behavior_model in behavior_models:
-            for schedule_element in behavior_model.schedule_elements:
-                self.lock_names += schedule_element.lock_names
-                self.lock_names = list(set(self.lock_names))
-                self.var_names += schedule_element.var_names
-                self.var_names = list(set(self.var_names))
+        if len(behavior_models) > 0:
+            self.__old_add_nodes_rec((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), dim.copy(), behavior_models)
+            # determine lock and var names
+            for behavior_model in behavior_models:
+                for schedule_element in behavior_model.schedule_elements:
+                    self.lock_names += schedule_element.lock_names
+                    self.lock_names = list(set(self.lock_names))
+                    self.var_names += schedule_element.var_names
+                    self.var_names = list(set(self.var_names))
 
     def plot_graph(self):
         plt.subplot(121)
@@ -88,6 +89,8 @@ class SchedulingGraph(object):
 
     def sequential_compose(self, other_graph):
         """add edges between leaf nodes of this and root node of other_graph."""
+        if other_graph is None:
+            return self
         # new dimensions are the component-wise maximum of both
         new_dimensions = []
         while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
@@ -107,8 +110,12 @@ class SchedulingGraph(object):
         self.lock_names += [ln for ln in other_graph.lock_names if ln not in self.lock_names]
         self.var_names += [vn for vn in other_graph.var_names if vn not in self.var_names]
 
+        return self
+
 
     def parallel_compose(self, other_graph):
+        if other_graph is None:
+            return self
         # new dimensions are the component-wise maximum of both
         new_dimensions = []
         while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
@@ -120,5 +127,67 @@ class SchedulingGraph(object):
         self.dimensions = new_dimensions
 
 
+        composed_graph = SchedulingGraph(new_dimensions, [])
+
+        def construct_composed_graph(composed_graph_node, node_id_1, node_id_2, rec_depth=0):
+            # node_id_1 -> self
+            # node_id_2 -> other_graph
+            print()
+            print("Composed_ID: ", composed_graph_node)
+            print("Node_ID_1: ", node_id_1)
+            print("Node_ID_2: ", node_id_2)
+            print("REC DEPTH: ", rec_depth)
+
+            # step on 1. graph
+            # create copy of node_id_1 in composed_graph
+            modified_node_id_1 = (node_id_1, rec_depth)
+            if modified_node_id_1 not in composed_graph.graph.nodes:
+                composed_graph.graph.add_node(modified_node_id_1, data=self.graph.nodes[node_id_1]["data"])
+            else:
+                print("INCLUDED NODE")
+            # connect composed_graph_node with newly created node
+            if (composed_graph_node, modified_node_id_1) not in composed_graph.graph.edges:
+                composed_graph.graph.add_edge(composed_graph_node, modified_node_id_1)
+            else:
+                print("INCLUDED EDGE")
+            # enter recursion
+            for child_edge_source, child_edge_target in self.graph.out_edges(node_id_1):
+                construct_composed_graph(modified_node_id_1, child_edge_target, node_id_2, rec_depth=rec_depth+1)
+
+
+            # step on 2. graph
+            # create copy of node_id_2 in composed_graph
+            modified_node_id_2 = (node_id_2, rec_depth)
+            if modified_node_id_2 not in composed_graph.graph.nodes:
+                composed_graph.graph.add_node(modified_node_id_2, data=other_graph.graph.nodes[node_id_2]["data"])
+            else:
+                print("INCLUDED NODE")
+            # connect composed_graph_node with newly created node
+            if (composed_graph_node, modified_node_id_2) not in composed_graph.graph.edges:
+                composed_graph.graph.add_edge(composed_graph_node, modified_node_id_2)
+            else:
+                print("INCLUDED EDGE")
+            # enter recursion
+            for child_edge_source, child_edge_target in other_graph.graph.out_edges(node_id_2):
+                construct_composed_graph(modified_node_id_2, node_id_1, child_edge_target, rec_depth=rec_depth+1)
+
+            pass
+
+        #construct_composed_graph(composed_graph.get_root_node_identifier(), self.get_root_node_identifier(), other_graph.get_root_node_identifier())
+        #composed_graph.plot_graph()
+
+        print()
+        for node in self.graph.nodes:
+            print("NodeID 1: ", node)
+        print()
+        for node in other_graph.graph.nodes:
+            print("NodeID 2: ", node)
+
+
+
+
         print("PARALLEL COMPOSE")
         warnings.warn("TODO")
+        return composed_graph
+        #import sys
+        #sys.exit(0)

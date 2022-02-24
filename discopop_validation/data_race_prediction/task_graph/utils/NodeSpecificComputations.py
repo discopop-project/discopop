@@ -81,6 +81,7 @@ def __parallel_result_computation(node_obj, task_graph):
     # todo implement SchedulingGraph.Parallel_composition
 
     def __unpack_behavior_models_to_scheduling_graph(behavior_information):
+        print("BEHV: ", behavior_information)
         if type(behavior_information) == BehaviorModel:
             # create Scheduling Graph from Behavior Model
             # modify behavior models to use current fingerprint
@@ -91,26 +92,36 @@ def __parallel_result_computation(node_obj, task_graph):
             scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_information)
             return scheduling_graph
 
-        elif behavior_information[0] in ["SEQ", "PAR"]:
-            scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_information[1])
-            if len(behavior_information) > 2:
-                for elem in behavior_information[2:]:
-                    if behavior_information[0] == "SEQ":
-                        scheduling_graph.sequential_compose(__unpack_behavior_models_to_scheduling_graph(elem))
-                    else:
-                        scheduling_graph.parallel_compose(__unpack_behavior_models_to_scheduling_graph(elem))
-            return scheduling_graph
         else:
             if type(behavior_information) == list:
+                if len(behavior_information) == 0:
+                    return None
                 if len(behavior_information) == 1:
                     return __unpack_behavior_models_to_scheduling_graph(behavior_information[0])
+                if behavior_information[0] in ["SEQ", "PAR"]:
+                    scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_information[1])
+                    if len(behavior_information) > 2:
+                        for elem in behavior_information[2:]:
+                            if behavior_information[0] == "SEQ":
+                                scheduling_graph = scheduling_graph.sequential_compose(__unpack_behavior_models_to_scheduling_graph(elem))
+                            else:
+                                scheduling_graph = scheduling_graph.parallel_compose(__unpack_behavior_models_to_scheduling_graph(elem))
+                    return scheduling_graph
 
-            raise ValueError("Unknown: ", behavior_information)
+
+
+        raise ValueError("Unknown: ", behavior_information)
+
+
+
+
+
+
 
 
     scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_model_sequence)
 
-    scheduling_graph.plot_graph()
+    # scheduling_graph.plot_graph()
 
     data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
     # todo remove duplicates from successful states
