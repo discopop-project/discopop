@@ -77,6 +77,8 @@ class TaskGraph(object):
             node_id = self.__add_task_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.TASKWAIT:
             node_id = self.__add_taskwait_pragma(pragma_obj)
+        elif pragma_obj.get_type() == PragmaType.BARRIER:
+            node_id = self.__add_barrier_pragma(pragma_obj)
         else:
             raise ValueError("No Supported Pragma for: ", pragma_obj.pragma)
         # create entry in dictionary
@@ -105,6 +107,11 @@ class TaskGraph(object):
     def __add_taskwait_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.__get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaTaskwaitNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
+
+    def __add_barrier_pragma(self, pragma_obj):
+        new_node_id = self.__get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaBarrierNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def compute_results(self):
@@ -509,6 +516,8 @@ class TaskGraph(object):
                             self.graph.remove_edge(s, t)
                         for s, t, ty in add_edges:
                             self.graph.add_edge(s, t, type=ty)
+
+
 
 
 
