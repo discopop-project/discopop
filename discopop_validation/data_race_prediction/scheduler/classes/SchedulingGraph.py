@@ -116,74 +116,79 @@ class SchedulingGraph(object):
     def parallel_compose(self, other_graph):
         if other_graph is None:
             return self
-        # new dimensions are the component-wise maximum of both
-        new_dimensions = []
-        while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
-            new_dimensions.append(max(self.dimensions.pop(0), other_graph.dimensions.pop(0)))
-        if len(self.dimensions) > 0:
-            new_dimensions += self.dimensions
-        elif len(other_graph.dimensions) > 0:
-            new_dimensions += other_graph.dimensions
+        new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
 
+        # set thread ids # TODO NICER
+        warnings.warn("THREAD IDS NEED TO BE SET AUTOMATICALLY TO SUPPORT NESTING! TODO")
+        for node in self.graph.nodes:
+            schedule_element = self.graph.nodes[node]["data"]
+            if schedule_element is None:
+                continue
+            schedule_element.thread_id = 1
+            self.graph.nodes[node]["data"] = schedule_element
+
+        for node in other_graph.graph.nodes:
+            schedule_element = other_graph.graph.nodes[node]["data"]
+            if schedule_element is None:
+                continue
+            schedule_element.thread_id = 0
+            other_graph.graph.nodes[node]["data"] = schedule_element
 
         composed_graph = SchedulingGraph(new_dimensions, [])
+        # add end node
 
-        def construct_composed_graph(composed_graph_node, node_id_1, node_id_2, rec_depth=0):
+        def construct_composed_graph(composed_graph_node_id, node_id_1, node_id_2, rec_depth=0):
             # node_id_1 -> self
             # node_id_2 -> other_graph
-            print()
-            print("Composed_ID: ", composed_graph_node)
-            print("Node_ID_1: ", node_id_1)
-            print("Node_ID_2: ", node_id_2)
-            print("REC DEPTH: ", rec_depth)
 
             # step on 1. graph
             # create copy of node_id_1 in composed_graph
-            modified_node_id_1 = (node_id_1, rec_depth)
+
+            # construct new node number
+            depth_1, depth_2 = composed_graph_node_id[0]
+
+            # update depth value
+            if type(depth_1) == int:
+                depth_1 = tuple([depth_1])
+            #updated_depth_1 = tuple(map(lambda x, y: x if x > y else y, depth_1, node_id_1[0]))
+            updated_depth_1 = tuple(map(lambda x, y: x + y , depth_1, [1]))
+
+            #modified_node_id_1 = ((updated_depth_1, depth_2), composed_graph_node_id[1], composed_graph_node_id[2])
+            modified_node_id_1 = ((updated_depth_1, depth_2), node_id_1[1], composed_graph_node_id[2])
+            # modified_node_id_1 = (node_id_1, rec_depth, 1)
             if modified_node_id_1 not in composed_graph.graph.nodes:
                 composed_graph.graph.add_node(modified_node_id_1, data=self.graph.nodes[node_id_1]["data"])
-            else:
-                print("INCLUDED NODE")
             # connect composed_graph_node with newly created node
-            if (composed_graph_node, modified_node_id_1) not in composed_graph.graph.edges:
-                composed_graph.graph.add_edge(composed_graph_node, modified_node_id_1)
-            else:
-                print("INCLUDED EDGE")
+            if (composed_graph_node_id, modified_node_id_1) not in composed_graph.graph.edges:
+                composed_graph.graph.add_edge(composed_graph_node_id, modified_node_id_1)
             # enter recursion
             for child_edge_source, child_edge_target in self.graph.out_edges(node_id_1):
                 construct_composed_graph(modified_node_id_1, child_edge_target, node_id_2, rec_depth=rec_depth+1)
 
 
             # step on 2. graph
+            # update depth value
+            if type(depth_2) == int:
+                depth_2 = tuple([depth_2])
+            #updated_depth_2 = tuple(map(lambda x, y: x if x > y else y, depth_2, node_id_2[0]))
+            updated_depth_2 = tuple(map(lambda x, y: x + y, depth_2, [1]))
+
+            #modified_node_id_2 = ((depth_1, updated_depth_2), composed_graph_node_id[1], composed_graph_node_id[2])
+            modified_node_id_2 = ((depth_1, updated_depth_2), node_id_2[1], composed_graph_node_id[2])
             # create copy of node_id_2 in composed_graph
-            modified_node_id_2 = (node_id_2, rec_depth)
+            # modified_node_id_2 = (node_id_2, rec_depth, 2)
             if modified_node_id_2 not in composed_graph.graph.nodes:
                 composed_graph.graph.add_node(modified_node_id_2, data=other_graph.graph.nodes[node_id_2]["data"])
-            else:
-                print("INCLUDED NODE")
             # connect composed_graph_node with newly created node
-            if (composed_graph_node, modified_node_id_2) not in composed_graph.graph.edges:
-                composed_graph.graph.add_edge(composed_graph_node, modified_node_id_2)
-            else:
-                print("INCLUDED EDGE")
+            if (composed_graph_node_id, modified_node_id_2) not in composed_graph.graph.edges:
+                composed_graph.graph.add_edge(composed_graph_node_id, modified_node_id_2)
             # enter recursion
             for child_edge_source, child_edge_target in other_graph.graph.out_edges(node_id_2):
                 construct_composed_graph(modified_node_id_2, node_id_1, child_edge_target, rec_depth=rec_depth+1)
 
-            pass
-
-        #construct_composed_graph(composed_graph.get_root_node_identifier(), self.get_root_node_identifier(), other_graph.get_root_node_identifier())
-        #composed_graph.plot_graph()
-
-        print()
-        for node in self.graph.nodes:
-            print("NodeID 1: ", node)
-        print()
-        for node in other_graph.graph.nodes:
-            print("NodeID 2: ", node)
-
-
+        construct_composed_graph(composed_graph.get_root_node_identifier(), self.get_root_node_identifier(), other_graph.get_root_node_identifier())
+#        composed_graph.plot_graph()
 
 
         print("PARALLEL COMPOSE")

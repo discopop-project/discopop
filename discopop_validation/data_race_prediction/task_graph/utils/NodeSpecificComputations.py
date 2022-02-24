@@ -11,6 +11,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Stat
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import warnings
 import copy
+import networkx as nx
 
 def perform_node_specific_result_computation(node_obj, task_graph):
     if node_obj.pragma.get_type() == PragmaType.FOR:
@@ -116,10 +117,8 @@ def __parallel_result_computation(node_obj, task_graph):
 
 
 
-
-
-
     scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_model_sequence)
+    nx.drawing.nx_pydot.write_dot(scheduling_graph.graph, "/home/lukas/graph.dot")
 
     # scheduling_graph.plot_graph()
 
@@ -132,6 +131,9 @@ def __parallel_result_computation(node_obj, task_graph):
 
     for dr in node_obj.result.data_races:
         print(dr)
+
+    #for succ_states in node_obj.result.states:
+    #    print(succ_states)
 
 
     # todo List[List[BehaviorModel]] to enable successive parallel and sequential sections

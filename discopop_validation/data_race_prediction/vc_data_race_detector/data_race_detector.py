@@ -52,6 +52,7 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
 def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
+    #print(schedule_element)
     for update in schedule_element.updates:
         state = __perform_update(state, schedule_element.thread_id, update)
     return __check_state(state, schedule_element, previous_writes)
