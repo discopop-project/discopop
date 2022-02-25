@@ -7,6 +7,7 @@
 # directory for details.
 
 from enum import IntEnum, Enum
+from platform import node
 from typing import Dict, List, Tuple, Set, Optional
 
 import matplotlib.pyplot as plt
@@ -161,22 +162,28 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
     n.instructions_count = node.get("instructionsCount", 0)
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
-        n.args = [Variable(v.get('type'), v.text) for v in node.funcArguments.arg]
+        n.args = [Variable(v.get('type'), v.text)
+                  for v in node.funcArguments.arg]
 
     if hasattr(node, 'callsNode') and hasattr(node.callsNode, 'recursiveFunctionCall'):
-        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
+        n.recursive_function_calls = [
+            n.text for n in node.callsNode.recursiveFunctionCall]
 
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, 'local'):
-            n.local_vars = [Variable(v.get('type'), v.text) for v in node.localVariables.local]
+            n.local_vars = [Variable(v.get('type'), v.text)
+                            for v in node.localVariables.local]
         if hasattr(node.globalVariables, 'global'):
-            n.global_vars = [Variable(v.get('type'), v.text) for v in getattr(node.globalVariables, 'global')]
+            n.global_vars = [Variable(v.get('type'), v.text)
+                             for v in getattr(node.globalVariables, 'global')]
         if hasattr(node, 'BasicBlockID'):
             n.basic_block_id = getattr(node, 'BasicBlockID')
         if hasattr(node, 'returnInstructions'):
-            n.return_instructions_count = int(getattr(node, 'returnInstructions').get('count'))
+            n.return_instructions_count = int(
+                getattr(node, 'returnInstructions').get('count'))
         if hasattr(node.callsNode, 'nodeCalled'):
-            n.node_calls = [{"cuid": v.text,  "atLine": v.get('atLine')} for v in getattr(node.callsNode, 'nodeCalled') if v.get('atLine') is not None]
+            n.node_calls = [{"cuid": v.text,  "atLine": v.get('atLine')} for v in getattr(
+                node.callsNode, 'nodeCalled') if v.get('atLine') is not None]
     return n
 
 
@@ -224,7 +231,8 @@ class PETGraphX(object):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
                         print(f"WARNING: no successor node {successor} found")
-                    g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+                    g.add_edge(source, successor,
+                               data=Dependency(EdgeType.SUCCESSOR))
 
         for _, node in g.nodes(data='data'):
             if node.type == NodeType.LOOP:
@@ -252,7 +260,8 @@ class PETGraphX(object):
                     if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                         continue
                     elif sink_cu_id and source_cu_id:
-                        g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+                        g.add_edge(sink_cu_id, source_cu_id,
+                                   data=parse_dependency(dep))
 
         return cls(g, reduction_vars, pos)
 
@@ -350,7 +359,8 @@ class PETGraphX(object):
         if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
+            res.extend(self.__subtree_of_type_rec(
+                self.node_at(t), type, visited))
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
@@ -398,7 +408,8 @@ class PETGraphX(object):
         return any(rv for rv in self.reduction_vars if rv['loop_line'] == line and rv['name'] == name)
 
     def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode,
-                                children_cache: Dict[CUNode, List[CUNode]] = None,
+                                children_cache: Dict[CUNode,
+                                                     List[CUNode]] = None,
                                 dep_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = None) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored
@@ -445,16 +456,25 @@ class PETGraphX(object):
         dep_set = set()
         children = self.subtree_of_type(node, NodeType.CU)
 
-        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
+        loops_start_lines = [v.start_position()
+                             for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
 
         for v in children:
-            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
+            for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW and self.is_inside_node(d, root_loop)]:
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
                 dep_set.add(self.node_at(t))
 
         return dep_set
+
+    def is_inside_node(self, d: Dependency, tmpNode: node) -> bool:
+        sink = int(d.sink.split(":")[1])
+        source = int(d.source.split(":")[1])
+        if sink >= tmpNode.start_line and sink <= tmpNode.end_line and source >= tmpNode.start_line and source <= tmpNode.end_line:
+            return True
+        else:
+            return False
 
     def is_loop_index(self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]) -> bool:
         """Checks, whether the variable is a loop index.
@@ -486,7 +506,8 @@ class PETGraphX(object):
         :return: true if variable is read-only in loop body
         """
         # TODO pass as param?
-        loops_start_lines = [v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
+        loops_start_lines = [v.start_position()
+                             for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
         children = self.subtree_of_type(root_loop, NodeType.CU)
 
         for v in children:

@@ -2,7 +2,7 @@
 
 #define DEBUG_TYPE "dp-omissions"
 
-#define DP_DEBUG true
+#define DP_DEBUG false
 
 STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
 STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
@@ -34,7 +34,6 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
     set<Instruction*> omittableInstructions;
     
     set<Value*> staticallyPredictableValues;
-
     // Get local values (variables)
     for (Instruction& I: F.getEntryBlock()) {
       if (AllocaInst* AI = dyn_cast<AllocaInst>(&I)) {
@@ -48,13 +47,22 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
           if(Fun->getName() == "__dp_write" || Fun->getName() == "__dp_read" || Fun->getName() == "__dp_alloca"){
             ++totalInstrumentations;
           }
+          // if(DP_DEBUG) errs() << " ----5 " << Fun->getName() << " " << call_inst->getNumOperands() << "\n";
+          // if(dl = call_inst->getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
           for(uint i = 0; i < call_inst->getNumOperands() - 1; ++i){
             V = call_inst->getArgOperand(i);
-            for(Value *w: staticallyPredictableValues){
-              if(w == V){
-                staticallyPredictableValues.erase(V);
-              }
+            std::set<Value*>::iterator it = staticallyPredictableValues.find(V);
+            if(it != staticallyPredictableValues.end()){
+              staticallyPredictableValues.erase(V);
+              if(DP_DEBUG) errs() << VNF->getVarName(V) << "\n";
             }
+            // for(Value *w: staticallyPredictableValues){
+              // for (auto w = staticallyPredictableValues.begin(); w != staticallyPredictableValues.end(); ) {
+              // if(w == V){
+                // w = staticallyPredictableValues.erase(w);
+                // if(DP_DEBUG) errs() << VNF->getVarName(V) << "\n";
+              // }
+            // }
           }
         }
       }
