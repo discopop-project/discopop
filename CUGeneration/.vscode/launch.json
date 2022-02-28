@@ -1,0 +1,32 @@
+{
+     // Use IntelliSense to learn about possible attributes.
+     // Hover to view descriptions of existing attributes.
+     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+     "version": "0.2.0",
+     "configurations": [
+          {
+               "name": "(gdb) Launch",
+               "type": "cppdbg",
+               "request": "launch",
+               "program": "/media/backuphd/norouzi/discopop/discopop-profiler/llvm-project/build/bin/opt",
+               "stopAtEntry": false,
+               "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
+               "environment": [],
+               "externalConsole": false,
+               // "console": "integratedTerminal",
+               "MIMode": "gdb",
+               "setupCommands": [
+                    {
+                         "description": "Enable pretty-printing for gdb",
+                         "text": "-enable-pretty-printing",
+                         "ignoreFailures": true
+                    }
+               ],
+               "args": [
+                    "-load=/media/backuphd/norouzi/discopop/discopop-profiler/discopop/build/libi/LLVMCUGeneration.so",
+                    "-CUGeneration",
+                    "< /media/backuphd/norouzi/benchmarks/lulesh/LULESH_dp/lulesh.bc"
+               ]
+          }
+     ]
+}

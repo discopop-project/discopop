@@ -161,8 +161,8 @@ void determineFileID(Function &F, int32_t& fileID)
             }
         }
     }
-    if(fileID == 0)
-        errs() << "------------ " << F.getName() << "\n";
+    // if(fileID == 0)
+    //     errs() << "------------ " << F.getName() << "\n";
 }
 
 string get_exe_dir() {
