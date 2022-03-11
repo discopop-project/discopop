@@ -3,6 +3,9 @@ data*/
 # our test data
 !/test/*/data/
 
+# discopop temporary files
+discopop-tmp/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
