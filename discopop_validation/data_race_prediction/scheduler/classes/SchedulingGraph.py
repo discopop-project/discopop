@@ -146,7 +146,7 @@ class SchedulingGraph(object):
         def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id):
             # step on first graph
             # construct new node id
-            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, target_graph.fingerprint)
+            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, first_graph_node[2])
             # create ScheduleElement in target_graph
             target_graph.graph.add_node(new_node_id, data=first_graph.graph.nodes[first_graph_node]["data"])
             # connect previous node with newly created node
@@ -163,7 +163,7 @@ class SchedulingGraph(object):
 
             # step on second graph
             # construct new node id
-            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, target_graph.fingerprint)
+            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, second_graph_node[2])
             # create ScheduleElement in target_graph
             target_graph.graph.add_node(new_node_id, data=second_graph.graph.nodes[second_graph_node]["data"])
             # connect previous node with newly created node
