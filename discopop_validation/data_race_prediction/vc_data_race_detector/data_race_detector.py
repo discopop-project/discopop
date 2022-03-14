@@ -73,12 +73,12 @@ def __check_state(state: State, schedule_element: ScheduleElement, previous_writ
     written_variables = list(set(written_variables))
     for var in read_variables:
         if not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id]):
-            data_race = DataRace(schedule_element, previous_writes, state)
+            data_race = DataRace(schedule_element, previous_writes, state, var_name=var)
             return data_race
     for var in written_variables:
         if (not compare_vc(state.var_read_clocks[var], state.thread_clocks[schedule_element.thread_id])) or \
                 (not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id])):
-            data_race = DataRace(schedule_element, previous_writes, state)
+            data_race = DataRace(schedule_element, previous_writes, state, var_name=var)
             return data_race
     return state
 

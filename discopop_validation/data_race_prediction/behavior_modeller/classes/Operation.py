@@ -50,6 +50,10 @@ class Operation:
                self.file_id == other.file_id and \
                self.line == other.line
 
+    def get_target_name_without_fingerprint(self):
+        # fingerprint length of 8 characters assumed
+        return self.target_name[:-9]
+
     def get_location_str(self):
         """used to output found data races if requested.
         Format: file_id;line;column"""

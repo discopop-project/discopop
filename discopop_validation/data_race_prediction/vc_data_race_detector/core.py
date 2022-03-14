@@ -24,7 +24,6 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
     data_races: List[DataRace] = []
     successful_states: List[State] = []
     for state in initial_states:
-        print(state)
         data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, scheduling_graph.root_node_identifier,
                                                      copy.deepcopy(state), [], 0, graph_depth)
         data_races += [elem for elem in data_races_buffer if not elem in data_races]
@@ -32,12 +31,12 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
     return data_races, successful_states
 
 
-def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_writes: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:
+def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_accesses: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:
     global futures_cutoff_level
     node_schedule_element: ScheduleElement = scheduling_graph.graph.nodes[node_identifier]["data"]
     if node_schedule_element is not None:
         # perform State update
-        result = goto_next_state(state, node_schedule_element, previous_writes)
+        result = goto_next_state(state, node_schedule_element, previous_accesses)
         if type(result) == State:
             state = result
         else:
@@ -50,11 +49,10 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
     # no multithreading
     for source, target in scheduling_graph.graph.out_edges(node_identifier):
         state_copy = copy.deepcopy(state)
-        previous_writes_copy = copy.copy(previous_writes)
+        previous_accesses_copy = copy.copy(previous_accesses)
         if node_schedule_element is not None:
-            if node_schedule_element.contains_write():
-                previous_writes_copy.append(node_schedule_element)
-        data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, target, state_copy, previous_writes_copy, level + 1, graph_depth)
+            previous_accesses_copy.append(node_schedule_element)
+        data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, target, state_copy, previous_accesses_copy, level + 1, graph_depth)
         data_races += data_races_buffer
         successful_states += successful_states_buffer
     # check for successful states
