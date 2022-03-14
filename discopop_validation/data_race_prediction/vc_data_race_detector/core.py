@@ -19,8 +19,7 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
     # if list of initial States is empty, create a new State (required for root node)
     initial_states = []
     if len(initial_states) == 0:
-        thread_count = max(dimensions)
-        initial_states.append(State(thread_count, scheduling_graph.lock_names, scheduling_graph.var_names))
+        initial_states.append(State(scheduling_graph.thread_count, scheduling_graph.lock_names, scheduling_graph.var_names))
     # start data race detection for each possible initial state and combine the results
     data_races: List[DataRace] = []
     successful_states: List[State] = []

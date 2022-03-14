@@ -19,9 +19,11 @@ class SchedulingGraph(object):
     lock_names: List[str] = []
     var_names: List[str] = []
     dimensions: List[int]
+    thread_count : int
     fingerprint: str
     def __init__(self, dim: List[int], behavior_models: List[BehaviorModel]):
         self.dimensions = dim
+        self.thread_count = len(dim)
         self.fingerprint = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
         self.graph = nx.DiGraph()
         # add root node, id = (tuple of n zero´s, last executed thread id)
@@ -102,6 +104,8 @@ class SchedulingGraph(object):
             new_dimensions += other_graph.dimensions
         self.dimensions = new_dimensions
 
+        self.thread_count = max(self.thread_count, other_graph.thread_count)
+
         leaf_node_ids_buffer = self.get_leaf_node_identifiers()
         self.graph.add_nodes_from(other_graph.graph.nodes(data=True))
         self.graph.add_edges_from(other_graph.graph.edges(data=True))
@@ -121,7 +125,7 @@ class SchedulingGraph(object):
             return self
         new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
-        thread_id_offset = len(self.dimensions)  # added to other_graphs thread ids to prevent conflicts
+        thread_id_offset = self.thread_count  # added to other_graphs thread ids to prevent conflicts
 
         # set correct thread id's
         # thread id's of self remain in current state
@@ -142,6 +146,7 @@ class SchedulingGraph(object):
 
         # create composed graph
         composed_graph = SchedulingGraph(new_dimensions, [])
+        composed_graph.thread_count = self.thread_count + other_graph.thread_count
 
         def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id):
             # step on first graph
@@ -187,7 +192,6 @@ class SchedulingGraph(object):
                                                     composed_graph.get_root_node_identifier(), -1)
 
         composed_graph.fix_node_ids()
-
         return composed_graph
 
 
