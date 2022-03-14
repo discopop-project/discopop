@@ -47,15 +47,12 @@ def __parallel_result_computation(node_obj, task_graph):
                 continue
             # target is the beginning of a contained sequence -> collect behavior model
             behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, node_obj.result))
-            print("PRL BM:", behavior_models)
         if len(behavior_models) > 1:
             behavior_model_sequence.append(behavior_models)
 
     # todo recursive unpacking
 
     # todo move closest to computation to avoid double unpacking
-    print("SEQ")
-    print(behavior_model_sequence)
 
     def __simplify_sequence(sequence):
         # SEQ or PAR entries of length 1 are trivial
@@ -76,13 +73,10 @@ def __parallel_result_computation(node_obj, task_graph):
 
 
     #behavior_model_sequence = __simplify_sequence(behavior_model_sequence)
-    print("SIMPLE SEQ")
-    print(behavior_model_sequence)
 
     # todo implement SchedulingGraph.Parallel_composition
 
     def __unpack_behavior_models_to_scheduling_graph(behavior_information):
-        print("BEHV: ", behavior_information)
         if type(behavior_information) == BehaviorModel:
             # create Scheduling Graph from Behavior Model
             # modify behavior models to use current fingerprint
