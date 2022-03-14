@@ -8,6 +8,7 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Behavior
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
+import copy
 
 from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
@@ -109,6 +110,23 @@ class SchedulingGraph(object):
 
         self.lock_names += [ln for ln in other_graph.lock_names if ln not in self.lock_names]
         self.var_names += [vn for vn in other_graph.var_names if vn not in self.var_names]
+
+        # fix node ids
+        node_ids = copy.deepcopy(self.graph.nodes)
+        for counter, node_id in enumerate(node_ids):
+            in_edges = list(self.graph.in_edges(node_id))
+            if len(in_edges) == 0:
+                preceding_thread_id = -1
+            else:
+                preceding_schedule_element = self.graph.nodes[in_edges[0][0]]["data"]
+                if preceding_schedule_element is None:
+                    preceding_thread_id = -1
+                else:
+                    preceding_thread_id = preceding_schedule_element.thread_id
+            mapping = {node_id : (counter, preceding_thread_id, node_id[2])}
+            if node_id == self.root_node_identifier:
+                self.root_node_identifier = mapping[node_id]
+            self.graph = nx.relabel_nodes(self.graph, mapping, copy=False)
 
         return self
 
