@@ -54,18 +54,19 @@ def __parallel_result_computation(node_obj, task_graph):
 
     # todo move closest to computation to avoid double unpacking
 
-    def __clean_behavior_models(sequence):
+
+    def __clean_behavior_model_sequence(sequence):
         result_sequence = []
         for elem in sequence:
             if type(elem) == list:
                 if elem not in [["PAR"], ["SEQ"]]:
-                    result_sequence.append(__clean_behavior_models(elem))
+                    result_sequence.append(__clean_behavior_model_sequence(elem))
             else:
                 result_sequence.append(elem)
         return result_sequence
 
     print(behavior_model_sequence)
-    behavior_model_sequence = __clean_behavior_models(behavior_model_sequence)
+    behavior_model_sequence = __clean_behavior_model_sequence(behavior_model_sequence)
     print()
     print(behavior_model_sequence)
     print()
@@ -118,8 +119,8 @@ def __parallel_result_computation(node_obj, task_graph):
     node_obj.result.data_races = data_races
     node_obj.result.states = successful_states
 
-    for dr in node_obj.result.data_races:
-        print(dr)
+#    for dr in node_obj.result.data_races:
+#        print(dr)
 
     #for succ_states in node_obj.result.states:
     #    print(succ_states)
