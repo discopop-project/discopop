@@ -39,6 +39,11 @@ class PragmaTaskwaitNode(TaskGraphNode):
         """gather behavior models of sequence-starting contained nodes (should only be 1 in case of a FOR pragma)"""
         outer_seq_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
         outer_par_behavior_models: List[List[BehaviorModel]] = ["PAR"]
+
+        # add TASKWAIT mark
+        outer_seq_behavior_models.append("TASKWAIT")
+
+
         # gather behavior models of contained nodes
         for source, target in task_graph.graph.out_edges(self.node_id):
             inner_par_behavior_models = ["PAR"]
