@@ -70,8 +70,8 @@ def __parallel_result_computation(node_obj, task_graph):
     print(behavior_model_sequence)
     print()
 
+    # todo: Why is line 30 read before 28 is written? should be suppressed by sequential composition
 
-    # todo implement SchedulingGraph.Parallel_composition
 
     def __unpack_behavior_models_to_scheduling_graph(behavior_information):
         if type(behavior_information) == BehaviorModel:
