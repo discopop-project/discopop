@@ -45,6 +45,7 @@ class TaskGraph(object):
         for node in self.graph.nodes:
             colors.append(self.graph.nodes[node]["data"].get_color(mark_data_races))
         edge_color_map = {EdgeType.SEQUENTIAL: "black",
+                          EdgeType.VIRTUAL_SEQUENTIAL: "grey",
                           EdgeType.CONTAINS: "orange",
                           EdgeType.DEPENDS: "red"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
@@ -516,6 +517,19 @@ class TaskGraph(object):
                             self.graph.remove_edge(s, t)
                         for s, t, ty in add_edges:
                             self.graph.add_edge(s, t, type=ty)
+
+    def add_virtual_sequential_edges(self):
+        """replace a sequential edge with a virtual sequential edge, if the target is a Taskwait node."""
+        # todo maybe include barrier nodes aswell
+        for edge in self.graph.edges:
+            if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL:
+                # check if target is Taskwait node
+                target = edge[1]
+                target_type = type(self.graph.nodes[target]["data"])
+                if  target_type == PragmaTaskwaitNode:
+                    # replace edge type
+                    self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
+        pass
 
 
 

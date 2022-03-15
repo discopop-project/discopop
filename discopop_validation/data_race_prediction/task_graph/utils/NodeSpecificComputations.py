@@ -54,25 +54,22 @@ def __parallel_result_computation(node_obj, task_graph):
 
     # todo move closest to computation to avoid double unpacking
 
-    def __simplify_sequence(sequence):
-        # SEQ or PAR entries of length 1 are trivial
-        if sequence[0] in ["SEQ", "PAR"]:
-            if len(sequence) == 2:
-                # trivial
-                return __simplify_sequence(sequence[1])
+    def __clean_behavior_models(sequence):
+        result_sequence = []
+        for elem in sequence:
+            if type(elem) == list:
+                if elem not in [["PAR"], ["SEQ"]]:
+                    result_sequence.append(__clean_behavior_models(elem))
             else:
-                return_sequence = [sequence[0]]
-                for seq_elem in sequence[1:]:
-                    return_sequence += __simplify_sequence(seq_elem)
-                return return_sequence
-        else:
-            # behavior entries, nothing to simplify
-            return sequence
+                result_sequence.append(elem)
+        return result_sequence
 
+    print(behavior_model_sequence)
+    behavior_model_sequence = __clean_behavior_models(behavior_model_sequence)
+    print()
+    print(behavior_model_sequence)
+    print()
 
-
-
-    #behavior_model_sequence = __simplify_sequence(behavior_model_sequence)
 
     # todo implement SchedulingGraph.Parallel_composition
 
@@ -106,8 +103,6 @@ def __parallel_result_computation(node_obj, task_graph):
 
 
         raise ValueError("Unknown: ", behavior_information)
-
-
 
 
 

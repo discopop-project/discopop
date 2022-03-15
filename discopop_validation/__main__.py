@@ -190,6 +190,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_storage_nodes()
     # remove redundant CONTAINS edges
     task_graph.remove_redundant_edges([EdgeType.CONTAINS])
+    # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
+    task_graph.add_virtual_sequential_edges()
 
     #task_graph.plot_graph()
 
