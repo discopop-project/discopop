@@ -522,7 +522,7 @@ class TaskGraph(object):
         """replace a sequential edge with a virtual sequential edge, if the target is a Taskwait node."""
         # todo maybe include barrier nodes aswell
         for edge in self.graph.edges:
-            if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL:
+            if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and type(self.graph.nodes[edge[0]]["data"]) == PragmaTaskNode:
                 # check if target is Taskwait node
                 target = edge[1]
                 target_type = type(self.graph.nodes[target]["data"])

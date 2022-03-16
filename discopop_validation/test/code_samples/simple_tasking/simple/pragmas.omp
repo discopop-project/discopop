@@ -3,4 +3,5 @@
 1;26;26;task shared(result, i, j)
 1;28;28;task shared(result, i, j)
 //1;29;29;taskwait
-1;35;37;parallel for shared(result) reduction(+:result)
+//1;35;37;parallel for shared(result)
+//reduction(+:result)

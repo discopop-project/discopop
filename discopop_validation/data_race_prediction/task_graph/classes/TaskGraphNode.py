@@ -113,4 +113,28 @@ class TaskGraphNode(object):
         # set behavior_models.simulation_thread_count according to current request
         for model in self.behavior_models:
             model.simulation_thread_count = result_obj.get_current_thread_count()
-        return ["PAR", self.behavior_models]
+        # if more than one incoming sequential edge exists, issue a JOINNODE command
+        counter = 0
+        for edge in task_graph.graph.in_edges(self.node_id):
+            if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL:
+                counter += 1
+        if counter > 1:
+            result = ["SEQ", "JOINNODE", ["PAR", self.behavior_models]]
+        else:
+            result = ["SEQ", ["PAR", self.behavior_models]]
+        # add sucesseors to the result
+        out_edges = task_graph.graph.out_edges(self.node_id)
+        relevant_edges = [edge for edge in out_edges if edge[0] != edge[1]]
+        if len(relevant_edges) > 0:
+            # add targets of relevant edges to parallel section
+            parallel_section = ["PAR"]
+            if len(relevant_edges) > 1:
+                # todo replace with marker to create new scheduling graph
+                parallel_section.append("TASKWAIT")
+            for edge in relevant_edges:
+                print("Adding: ", task_graph.graph.nodes[edge[1]]["data"].get_behavior_models(task_graph, result_obj))
+
+                parallel_section.append(task_graph.graph.nodes[edge[1]]["data"].get_behavior_models(task_graph, result_obj))
+            result.append(parallel_section)
+
+        return result

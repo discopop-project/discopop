@@ -26,6 +26,20 @@ class State(object):
             self.var_read_clocks[v_name] = VectorClock(thread_count)
             self.var_write_clocks[v_name] = VectorClock(thread_count)
 
+    def fill_to_thread_count(self, new_thread_count):
+        for i in range(self.thread_count, new_thread_count):
+            for key in self.thread_clocks:
+                self.thread_clocks[key].add_clock()
+            for key in self.lock_clocks:
+                self.lock_clocks[key].add_clock()
+            for key in self.var_read_clocks:
+                self.var_read_clocks[key].add_clock()
+            for key in self.var_write_clocks:
+                self.var_write_clocks[key].add_clock()
+        while self.thread_count < new_thread_count:
+            self.thread_clocks[self.thread_count] = VectorClock(new_thread_count)
+            self.thread_count += 1
+
     def __str__(self):
         return "Thread clocks: " + " ".join([str(key)+":"+str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
                "Lock clocks: " + " ".join([str(key)+":"+str(self.lock_clocks[key]) for key in self.lock_clocks]) + "\n" + \

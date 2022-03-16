@@ -193,7 +193,7 @@ def __main_start_execution(run_configuration: Configuration):
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     task_graph.add_virtual_sequential_edges()
 
-    #task_graph.plot_graph()
+    # task_graph.plot_graph()
 
     # trigger result computation
     task_graph.compute_results()
