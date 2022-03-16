@@ -28,13 +28,6 @@ int main()
         j = 3;
         # pragma omp taskwait
         result = i + j;
-        # pragma omp task shared(result, i, j)
-        i = 3;
-        # pragma omp task shared(result, i, j)
-        j = 3;
-        # pragma omp taskwait
-        result = i + j;
-	result = result + 4;
     }
     }
 
