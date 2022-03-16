@@ -2,7 +2,9 @@ from typing import List
 
 from discopop_validation.classes.OmpPragma import PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
+from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
@@ -12,6 +14,9 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.core import 
 import warnings
 import copy
 import networkx as nx
+
+from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
+
 
 def perform_node_specific_result_computation(node_obj, task_graph):
     if node_obj.pragma.get_type() == PragmaType.FOR:
@@ -138,11 +143,23 @@ def __parallel_result_computation(node_obj, task_graph):
     data_races: List[DataRace] = []
     successful_states = []
     for graph in scheduling_graphs:
-        print("INIT: ")
+        print("SUCCESS: ")
         for state in successful_states:
             print()
             print(state)
-        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
+        # combine successful states into one initial state
+        initial_states = []
+        for state in successful_states:
+            # synchronize thread clocks
+            exit_parallel_sched_elem = ScheduleElement(0)
+            affected_thread_ids = range(1, state.thread_count)
+            exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
+            state = goto_next_state(state, exit_parallel_sched_elem, [])
+            initial_states.append(state)
+        print("INITIAL STATE")
+        if len(initial_states) > 0:
+            print(initial_states[0])
+        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, initial_states)
         data_races += tmp_data_races
         # remove duplicates from successful states
         successful_states_wo_duplicates = []

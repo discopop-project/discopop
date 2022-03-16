@@ -86,7 +86,6 @@ def __check_state(state: State, schedule_element: ScheduleElement, previous_writ
 def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:
     """Performs single update as contained in ScheduleElement."""
     update_var, update_type, affected_thread_ids, operation = update
-    # todo might not be correct due to incoherent clocks
     # ensure that state has vector clocks for given variable
     state.add_var_entries_if_missing(update_var)
 

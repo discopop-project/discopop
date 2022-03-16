@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from .VectorClock import VectorClock
+from .VectorClock import VectorClock, get_updated_vc
 
 
 class State(object):

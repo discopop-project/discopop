@@ -28,6 +28,7 @@ int main()
         j = 3;
         # pragma omp taskwait
         result = i + j;
+	result = result + 4;
     }
     }
 
