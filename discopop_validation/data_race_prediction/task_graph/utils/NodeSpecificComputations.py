@@ -143,11 +143,23 @@ def __parallel_result_computation(node_obj, task_graph):
     data_races: List[DataRace] = []
     successful_states = []
     for graph in scheduling_graphs:
+        print("SUCCESS: ")
         for state in successful_states:
             print()
-            print("INITIAL STATE ")
             print(state)
-        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
+        # combine successful states into one initial state
+        initial_states = []
+        for state in successful_states:
+            # synchronize thread clocks
+            exit_parallel_sched_elem = ScheduleElement(0)
+            affected_thread_ids = range(1, state.thread_count)
+            exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
+            state = goto_next_state(state, exit_parallel_sched_elem, [])
+            initial_states.append(state)
+        print("INITIAL STATE")
+        if len(initial_states) > 0:
+            print(initial_states[0])
+        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, initial_states)
         data_races += tmp_data_races
         # remove duplicates from successful states
         successful_states_wo_duplicates = []
