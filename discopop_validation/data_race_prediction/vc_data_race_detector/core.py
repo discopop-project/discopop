@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
@@ -24,11 +25,28 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
     data_races: List[DataRace] = []
     successful_states: List[State] = []
     for state in initial_states:
+        # enter parallel region
+        enter_parallel_sched_elem = ScheduleElement(0)
+        affected_thread_ids = range(1, state.thread_count)
+        enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL, affected_thread_ids=affected_thread_ids)
+        state = goto_next_state(state, enter_parallel_sched_elem, [])
+
+        # calculate data races and successful states
         data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, scheduling_graph.root_node_identifier,
                                                      copy.deepcopy(state), [], 0, graph_depth)
         data_races += [elem for elem in data_races_buffer if not elem in data_races]
         successful_states += [elem for elem in successful_states_buffer if not elem in successful_states]
-    return data_races, successful_states
+
+    # synchronize thread clocks in successful states by exiting parallel region
+    synchronized_successful_states: List[State] = []
+    for state in successful_states:
+        exit_parallel_sched_elem = ScheduleElement(0)
+        affected_thread_ids = range(1, state.thread_count)
+        exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
+        state = goto_next_state(state, exit_parallel_sched_elem, [])
+        synchronized_successful_states.append(state)
+
+    return data_races, synchronized_successful_states
 
 
 def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_accesses: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:
