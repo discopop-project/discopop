@@ -174,27 +174,6 @@ def __parallel_result_computation(node_obj, task_graph):
     #    print(succ_states)
 
 
-    # todo List[List[BehaviorModel]] to enable successive parallel and sequential sections
-    # todo --> schedule each entry individually and pass states forward
-
-    #for behavior_models in behavior_model_sequence:
-    #    # create scheduling graph from behavior models
-    #    scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
-    #    print(scheduling_graph)
-    #    # check for data races and extract set of next states
-    #    data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, dimensions, node_obj.result)
-    #    # store results
-    #    node_obj.result.data_races = data_races
-    #    node_obj.result.states = successful_states
-
-    #for behavior_models in behavior_model_sequence:
-    #    print("###")
-    #    for model in behavior_models:
-    #        print("\t###")
-    #        for op in model.operations:
-    #            print(op)
-
-
 def __for_result_computation(node_obj):
     warnings.warn("TODO")
     pass
