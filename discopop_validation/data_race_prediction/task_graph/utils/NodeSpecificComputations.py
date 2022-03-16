@@ -124,22 +124,7 @@ def __parallel_result_computation(node_obj, task_graph):
                                 else:
                                     scheduling_graphs[-1] = scheduling_graphs[-1].parallel_compose(tmp_graphs[0])
                                 scheduling_graphs += tmp_graphs[1:]
-
-                    #scheduling_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(behavior_information[1])
-                    #if len(behavior_information) > 2:
-                    #    print("HERE: ", behavior_information)
-                    #    for elem in behavior_information[2:]:
-                    #        if behavior_information[0] == "SEQ":
-                    #            print("ELEM: ", elem)
-                    #            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
-                    #            if tmp_graphs is not None:
-                    #                scheduling_graphs[-1] = scheduling_graphs[-1].sequential_compose(tmp_graphs[-1])
-                    #        else:
-                    #            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
-                    #            if tmp_graphs is not None:
-                    #                scheduling_graphs[-1] = scheduling_graphs[-1].parallel_compose(tmp_graphs[-1])
                     return scheduling_graphs
-
 
         raise ValueError("Unknown: ", behavior_information)
 
