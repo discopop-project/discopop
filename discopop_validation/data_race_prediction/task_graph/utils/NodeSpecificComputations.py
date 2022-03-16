@@ -74,7 +74,8 @@ def __parallel_result_computation(node_obj, task_graph):
     # todo: Why is line 30 read before 28 is written? should be suppressed by sequential composition
 
 
-    def __unpack_behavior_models_to_scheduling_graph(behavior_information):
+    def __unpack_behavior_models_to_successive_scheduling_graphs(behavior_information):
+        graph_list: List[SchedulingGraph] = []
         if type(behavior_information) == BehaviorModel:
             # create Scheduling Graph from Behavior Model
             # modify behavior models to use current fingerprint
@@ -83,44 +84,101 @@ def __parallel_result_computation(node_obj, task_graph):
             behavior_information = prepare_for_simulation([behavior_information])  # todo use global variables to save states regarding reduction removal etc.
             # create scheduling graph from behavior models
             scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_information)
-            return scheduling_graph
+            return [scheduling_graph]
 
         else:
             if type(behavior_information) == list:
                 if len(behavior_information) == 0:
                     return None
                 if len(behavior_information) == 1:
-                    return __unpack_behavior_models_to_scheduling_graph(behavior_information[0])
+                    return __unpack_behavior_models_to_successive_scheduling_graphs(behavior_information[0])
                 if behavior_information[0] in ["SEQ", "PAR"]:
-                    scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_information[1])
-                    if len(behavior_information) > 2:
-                        for elem in behavior_information[2:]:
-                            if behavior_information[0] == "SEQ":
-                                scheduling_graph = scheduling_graph.sequential_compose(__unpack_behavior_models_to_scheduling_graph(elem))
-                            else:
-                                scheduling_graph = scheduling_graph.parallel_compose(__unpack_behavior_models_to_scheduling_graph(elem))
-                    return scheduling_graph
+                    scheduling_graphs = [None]
+                    if behavior_information[0] == "SEQ":
+                        # sequential composition
+                        for elem in behavior_information[1:]:
+                            if elem == "TASKWAIT":
+                                # create a new, successive scheduling graph
+                                scheduling_graphs.append(None)
+                                continue
+                            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
+                            if tmp_graphs is not None:
+                                if scheduling_graphs[-1] is None:
+                                    # shortcut to prevent unnecessary compositions and graph inflation
+                                    scheduling_graphs[-1] = tmp_graphs[0]
+                                else:
+                                    scheduling_graphs[-1] = scheduling_graphs[-1].sequential_compose(tmp_graphs[0])
+                                scheduling_graphs += tmp_graphs[1:]
+                    else:
+                        # parallel composition
+                        for elem in behavior_information[1:]:
+                            if elem == "TASKWAIT":
+                                # create a new, successive scheduling graph
+                                scheduling_graphs.append(None)
+                                continue
+                            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
+                            if tmp_graphs is not None:
+                                if scheduling_graphs[-1] is None:
+                                    # shortcut to prevent unnecessary compositions and graph inflation
+                                    scheduling_graphs[-1] = tmp_graphs[0]
+                                else:
+                                    scheduling_graphs[-1] = scheduling_graphs[-1].parallel_compose(tmp_graphs[0])
+                                scheduling_graphs += tmp_graphs[1:]
 
+                    #scheduling_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(behavior_information[1])
+                    #if len(behavior_information) > 2:
+                    #    print("HERE: ", behavior_information)
+                    #    for elem in behavior_information[2:]:
+                    #        if behavior_information[0] == "SEQ":
+                    #            print("ELEM: ", elem)
+                    #            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
+                    #            if tmp_graphs is not None:
+                    #                scheduling_graphs[-1] = scheduling_graphs[-1].sequential_compose(tmp_graphs[-1])
+                    #        else:
+                    #            tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
+                    #            if tmp_graphs is not None:
+                    #                scheduling_graphs[-1] = scheduling_graphs[-1].parallel_compose(tmp_graphs[-1])
+                    return scheduling_graphs
 
 
         raise ValueError("Unknown: ", behavior_information)
 
 
 
-    scheduling_graph = __unpack_behavior_models_to_scheduling_graph(behavior_model_sequence)
-    nx.drawing.nx_pydot.write_dot(scheduling_graph.graph, "/home/lukas/graph.dot")
+    scheduling_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(behavior_model_sequence)
+    for idx, graph in enumerate(scheduling_graphs):
+        nx.drawing.nx_pydot.write_dot(graph.graph, "/home/lukas/graph"+str(idx)+".dot")
 
     # scheduling_graph.plot_graph()
+    data_races: List[DataRace] = []
+    successful_states = []
+    for graph in scheduling_graphs:
+        print("INIT: ")
+        for state in successful_states:
+            print()
+            print(state)
+        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
+        data_races += tmp_data_races
+        # remove duplicates from successful states
+        successful_states_wo_duplicates = []
+        for state in successful_states:
+            is_known = False
+            for known_state in successful_states_wo_duplicates:
+                if state == known_state:
+                    is_known = True
+                    break
+            if not is_known:
+                successful_states_wo_duplicates.append(state)
+        successful_states = successful_states_wo_duplicates
 
-    data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
-    # todo remove duplicates from successful states
+    #data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
 
     # store results
     node_obj.result.data_races = data_races
     node_obj.result.states = successful_states
 
-#    for dr in node_obj.result.data_races:
-#        print(dr)
+    for dr in node_obj.result.data_races:
+        print(dr)
 
     #for succ_states in node_obj.result.states:
     #    print(succ_states)
