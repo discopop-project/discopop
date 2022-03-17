@@ -31,7 +31,7 @@ class TaskGraphNode(object):
     def get_label(self):
         if self.node_id == 0:
             return "ROOT"
-        label = "Bhv\n"
+        label = str(self.node_id) +" " +  "Bhv\n"
         if len(self.behavior_models) == 0:
             return label
         label += str(self.behavior_models[0].get_file_id()) + ":" + str(self.behavior_models[0].get_start_line()) + "-" + str(self.behavior_models[0].get_end_line())

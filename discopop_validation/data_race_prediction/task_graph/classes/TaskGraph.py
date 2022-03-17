@@ -531,6 +531,37 @@ class TaskGraph(object):
                     self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
         pass
 
+    def redirect_tasks_successors(self):
+        def __get_closest_barrier_or_taskwait(node_id):
+            queue = [node_id]
+            visited = []
+            while len(queue) > 0:
+                current = queue.pop()
+                visited.append(current)
+                if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
+                    return current
+                # add successors of current to queue
+                successors = [edge[1] for edge in self.graph.out_edges(current) if
+                              self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                queue += [s for s in successors if s not in visited]
+            return None
+
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
+                # find next BARRIER or TASKWAIT
+                next_barrier = __get_closest_barrier_or_taskwait(node)
+                if next_barrier is not None:
+                    print("NEXT BARR: ", next_barrier)
+                    # redirect outgoing SEQUENTIAL edge to barrier
+                    out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    print(out_seq_edges)
+                    for edge in out_seq_edges:
+                        self.graph.remove_edge(edge[0], edge[1])
+                    self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+
+
+        pass
+
 
 
 

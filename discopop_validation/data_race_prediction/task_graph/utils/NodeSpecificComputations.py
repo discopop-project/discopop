@@ -187,6 +187,12 @@ def __parallel_result_computation(node_obj, task_graph):
                 if state.thread_count < graph.thread_count:
                     stc_buffer = state.thread_count
                     state.fill_to_thread_count(graph.thread_count)
+                    # synchronize threads
+                    enter_parallel_sched_elem = ScheduleElement(0)
+                    affected_thread_ids = range(1, state.thread_count)
+                    enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
+                                                         affected_thread_ids=affected_thread_ids)
+                    successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
 
                     #print("STC: ", state.thread_count)
                     #print(state)

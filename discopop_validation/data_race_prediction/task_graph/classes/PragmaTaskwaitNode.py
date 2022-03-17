@@ -24,7 +24,7 @@ class PragmaTaskwaitNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "Wait"
-        label = "Wait\n"
+        label = str(self.node_id) +" " +  "Wait\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
