@@ -37,6 +37,34 @@ def perform_node_specific_result_computation(node_obj, task_graph):
 
 
 def __parallel_result_computation(node_obj, task_graph):
+    warnings.warn("TODO")
+    pass
+
+
+def __for_result_computation(node_obj):
+    warnings.warn("TODO")
+    pass
+
+
+def __barrier_result_computation(self):
+    warnings.warn("TODO")
+    pass
+
+
+def __single_result_computation(self):
+    """"""
+    warnings.warn("TODO")
+    pass
+
+def __task_result_computation(self):
+    warnings.warn("TODO")
+    pass
+
+def __taskwait_result_computation(self):
+    warnings.warn("TODO")
+    pass
+
+def __unused_parallel_result_computation(node_obj, task_graph):
     # collect behavior models from all contained nodes without incoming SEQUENTIAL edge
     behavior_model_sequence = ["SEQ"]
     for source, target in task_graph.graph.out_edges(node_obj.node_id):
@@ -224,27 +252,3 @@ def __parallel_result_computation(node_obj, task_graph):
 
     #for succ_states in node_obj.result.states:
     #    print(succ_states)
-
-
-def __for_result_computation(node_obj):
-    warnings.warn("TODO")
-    pass
-
-
-def __barrier_result_computation(self):
-    warnings.warn("TODO")
-    pass
-
-
-def __single_result_computation(self):
-    """"""
-    warnings.warn("TODO")
-    pass
-
-def __task_result_computation(self):
-    warnings.warn("TODO")
-    pass
-
-def __taskwait_result_computation(self):
-    warnings.warn("TODO")
-    pass

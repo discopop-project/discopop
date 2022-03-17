@@ -180,9 +180,6 @@ def __main_start_execution(run_configuration: Configuration):
     # create implicit barriers
     #task_graph.plot_graph()
     task_graph.insert_implicit_barriers()
-    # branch on successive tasks
-    #task_graph.plot_graph()
-    task_graph.branch_on_successive_tasks()
     #task_graph.plot_graph()
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
@@ -195,10 +192,10 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.redirect_tasks_successors()
     #task_graph.plot_graph()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
-    task_graph.add_virtual_sequential_edges()
+    # task_graph.add_virtual_sequential_edges()
 
 
-    task_graph.plot_graph()
+    # task_graph.plot_graph()
 
     # trigger result computation
     task_graph.compute_results()
