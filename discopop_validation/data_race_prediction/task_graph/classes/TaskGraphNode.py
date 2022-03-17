@@ -44,13 +44,9 @@ class TaskGraphNode(object):
     def compute_result(self, task_graph, result_obj, thread_ids: List[int]):
         """compute_result is used to calculate the result following a path consisting of SEQUENTIAL edges.
         """
-        print("COMPUTE: ", self.node_id)
-        print("\tthreads: ", thread_ids)
         # modify result obj according to current node
         if not self.seen_in_result_computation:
             result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
-        else:
-            print("ALREADY SEEN")
 
         # pass result obj to successive nodes
         successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
@@ -60,7 +56,6 @@ class TaskGraphNode(object):
         elif len(successors) == 0:
             # if no children exist, print current state
             # todo handle and store results for further use
-            print(result_obj)
             return result_obj
         else:
             raise ValueError("Invalid number of successors: " +  str(len(successors)) + " at node_id: " + str(self.node_id))

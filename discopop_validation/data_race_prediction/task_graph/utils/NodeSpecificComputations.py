@@ -57,9 +57,15 @@ def __get_sequence_entry_points(task_graph, root_id) -> List[int]:
 
 
 def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    print("JOIN")
-    warnings.warn("TODO")
-    pass
+    # exit parallel section
+    for idx, state in enumerate(result_obj.states):
+        # Exit parallel section
+        exit_parallel_sched_elem = ScheduleElement(0)
+        affected_thread_ids = range(1, state.thread_count)
+        exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL,
+                                             affected_thread_ids=affected_thread_ids)
+        result_obj.states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
+    return result_obj
 
 
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
@@ -86,7 +92,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     scheduling_graph = None
     for path in paths:
         # todo might be solved nicer
-        thread_count = 2  # maybe remove single from graph by updating / overwriting simulation_thread_count field
+        thread_count = 2  # todo: maybe remove single from graph by updating / overwriting simulation_thread_count field
         path_scheduling_graph = None
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
@@ -106,8 +112,24 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             scheduling_graph = path_scheduling_graph
         else:
             scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
-    result_obj.update(scheduling_graph)
 
+    # create new clocks if necessary
+    for idx, state in enumerate(result_obj.states):
+        # create new thread clocks for state if necessary
+        if state.thread_count < scheduling_graph.thread_count:
+            stc_buffer = state.thread_count
+            state.fill_to_thread_count(scheduling_graph.thread_count)
+    # enter parallel
+    for idx, state in enumerate(result_obj.states):
+        # Enter parallel section
+        enter_parallel_sched_elem = ScheduleElement(0)
+        affected_thread_ids = range(1, state.thread_count)
+        enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
+                                             affected_thread_ids=affected_thread_ids)
+        result_obj.states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
+
+    result_obj.update(scheduling_graph)
+    return result_obj
 
 
 def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
@@ -145,8 +167,8 @@ def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
 
 
 def __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
-    pass
+    # at this point in time, barrier has no effect on it's own.
+    return result_obj
 
 
 def __single_result_computation(node_obj, task_graph, result_obj, thread_ids):

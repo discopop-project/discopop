@@ -130,7 +130,11 @@ class TaskGraph(object):
 
     def compute_results(self):
         # trigger result computation for root node
-        self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
+        computed_result = self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
+        # display detected data races
+        for data_race in computed_result.data_races:
+            print(data_race)
+
 
     def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         for node_id in self.graph.nodes:
