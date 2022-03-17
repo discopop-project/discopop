@@ -104,6 +104,11 @@ def __parallel_result_computation(node_obj, task_graph):
                         for elem in behavior_information[1:]:
                             if elem == "TASKWAIT":
                                 # create a new, successive scheduling graph
+                                scheduling_graphs.append("EXITPARALLEL")
+                                scheduling_graphs.append("ENTERPARALLEL")
+                                continue
+                            if elem == "JOINNODE":
+                                # create a new successive scheduling graph but omit the clock synchronization
                                 scheduling_graphs.append(None)
                                 continue
                             tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
@@ -111,6 +116,8 @@ def __parallel_result_computation(node_obj, task_graph):
                                 if scheduling_graphs[-1] is None:
                                     # shortcut to prevent unnecessary compositions and graph inflation
                                     scheduling_graphs[-1] = tmp_graphs[0]
+                                elif type(scheduling_graphs[-1]) == str:
+                                    scheduling_graphs.append(tmp_graphs[0])
                                 else:
                                     scheduling_graphs[-1] = scheduling_graphs[-1].sequential_compose(tmp_graphs[0])
                                 scheduling_graphs += tmp_graphs[1:]
@@ -118,7 +125,12 @@ def __parallel_result_computation(node_obj, task_graph):
                         # parallel composition
                         for elem in behavior_information[1:]:
                             if elem == "TASKWAIT":
-                                # create a new, successive scheduling graph
+                                # create a new, successive scheduling graph and synchronize previous clocks
+                                scheduling_graphs.append("EXITPARALLEL")
+                                scheduling_graphs.append("ENTERPARALLEL")
+                                continue
+                            if elem == "JOINNODE":
+                                # create a new successive scheduling graph but omit the clock synchronization
                                 scheduling_graphs.append(None)
                                 continue
                             tmp_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(elem)
@@ -126,6 +138,8 @@ def __parallel_result_computation(node_obj, task_graph):
                                 if scheduling_graphs[-1] is None:
                                     # shortcut to prevent unnecessary compositions and graph inflation
                                     scheduling_graphs[-1] = tmp_graphs[0]
+                                elif type(scheduling_graphs[-1]) == str:
+                                    scheduling_graphs.append(tmp_graphs[0])
                                 else:
                                     scheduling_graphs[-1] = scheduling_graphs[-1].parallel_compose(tmp_graphs[0])
                                 scheduling_graphs += tmp_graphs[1:]
@@ -137,41 +151,67 @@ def __parallel_result_computation(node_obj, task_graph):
 
     scheduling_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(behavior_model_sequence)
     for idx, graph in enumerate(scheduling_graphs):
-        nx.drawing.nx_pydot.write_dot(graph.graph, "/home/lukas/graph"+str(idx)+".dot")
+        if type(graph) != str and graph is not None:
+            nx.drawing.nx_pydot.write_dot(graph.graph, "/home/lukas/graph"+str(idx)+".dot")
 
-    # scheduling_graph.plot_graph()
     data_races: List[DataRace] = []
     successful_states = []
     for graph in scheduling_graphs:
-        print("SUCCESS: ")
-        for state in successful_states:
-            print()
-            print(state)
-        # combine successful states into one initial state
-        initial_states = []
-        for state in successful_states:
-            # synchronize thread clocks
-            exit_parallel_sched_elem = ScheduleElement(0)
-            affected_thread_ids = range(1, state.thread_count)
-            exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
-            state = goto_next_state(state, exit_parallel_sched_elem, [])
-            initial_states.append(state)
-        print("INITIAL STATE")
-        if len(initial_states) > 0:
-            print(initial_states[0])
-        tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, initial_states)
-        data_races += tmp_data_races
-        # remove duplicates from successful states
-        successful_states_wo_duplicates = []
-        for state in successful_states:
-            is_known = False
-            for known_state in successful_states_wo_duplicates:
-                if state == known_state:
-                    is_known = True
-                    break
-            if not is_known:
-                successful_states_wo_duplicates.append(state)
-        successful_states = successful_states_wo_duplicates
+        print("GRAPH:")
+        print(graph)
+
+        if graph == "ENTERPARALLEL":
+            # modify successful states using a ENTERPARALLEL update
+            for idx, state in enumerate(successful_states):
+                enter_parallel_sched_elem = ScheduleElement(0)
+                affected_thread_ids = range(1, state.thread_count)
+                enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL, affected_thread_ids=affected_thread_ids)
+                successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
+        elif graph == "EXITPARALLEL":
+            # modify successful states using a EXITPARALLEL update
+            for idx, state in enumerate(successful_states):
+                exit_parallel_sched_elem = ScheduleElement(0)
+                affected_thread_ids = range(1, state.thread_count)
+                exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
+                successful_states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
+        elif graph is None:
+            # used as a separator
+            continue
+        else:
+            # calculate new data races and successful states using the old successful states as initial states
+            print("ELSE: ", graph)
+            print("DIM: ", graph.dimensions)
+            print("GTC: ", graph.thread_count)
+            for idx, state in enumerate(successful_states):
+                # create new thread clocks for state if necessary
+                if state.thread_count < graph.thread_count:
+                    stc_buffer = state.thread_count
+                    state.fill_to_thread_count(graph.thread_count)
+                    # synchronize threads
+                    enter_parallel_sched_elem = ScheduleElement(0)
+                    affected_thread_ids = range(1, state.thread_count)
+                    enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
+                                                         affected_thread_ids=affected_thread_ids)
+                    successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
+
+                    #print("STC: ", state.thread_count)
+                    #print(state)
+
+            tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
+            data_races += tmp_data_races
+            # remove duplicates from successful states
+            successful_states_wo_duplicates = []
+            for state in successful_states:
+                is_known = False
+                for known_state in successful_states_wo_duplicates:
+                    if state == known_state:
+                        is_known = True
+                        break
+                if not is_known:
+                    successful_states_wo_duplicates.append(state)
+            successful_states = successful_states_wo_duplicates
+            if len(successful_states) == 0:
+                raise ValueError("BLUB")
 
     #data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
 
