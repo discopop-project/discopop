@@ -48,6 +48,7 @@ class TaskGraphNode(object):
         result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
 
         # pass result obj to successive nodes
+        print("PASS")
         successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
         if len(successors) == 1:
             result_obj = task_graph.graph.nodes[successors[0]]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)

@@ -57,31 +57,49 @@ def __get_sequence_entry_points(task_graph, root_id) -> List[int]:
 
 
 def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    print("JOIN")
     warnings.warn("TODO")
     pass
 
 
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    print("FORK")
     warnings.warn("TODO")
     pass
 
 
 def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
-    pass
+    # get scheduling graph
+    behavior_models = node_obj.behavior_models
+    for model in behavior_models:
+        model.use_fingerprint(result_obj.get_current_fingerprint())
+    # todo include?: prepare behavior models for simulation
+    #behavior_information = prepare_for_simulation(
+    #    [behavior_information])  # todo use global variables to save states regarding reduction removal etc.
+    # create scheduling graph from behavior models
+    scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
+    # update result_obj
+    result_obj.update(scheduling_graph)
+    # return result_obj
+    return result_obj
 
 
 def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
+    # entering a parallel region creates a new scope
+    result_obj.push_new_fingerprint()
     # parallel node has exactly one entry point (Fork node)
-    # get entry point (has exactly one incoming contains edge)
     entry_point = __get_sequence_entry_points(task_graph, node_obj.node_id)[0]
-    return task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+    # exiting a parallel region closes the current scope
+    calculated_result.pop_fingerprint()
+    return calculated_result
 
 
 def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
-    pass
+    # FOR has no effect aside from storing behavior information
+    entry_point = __get_sequence_entry_points(task_graph, node_obj.node_id)[0]
+    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+    return calculated_result
 
 
 def __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids):

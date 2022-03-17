@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state

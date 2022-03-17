@@ -1,9 +1,14 @@
+import warnings
+
 from typing import List
 
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 import random
 import string
+
+from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
+
 
 class ResultObject(object):
     states: List[State]
@@ -62,3 +67,19 @@ class ResultObject(object):
         buffer = self.get_current_thread_count()
         del self.thread_count_stack[-1]
         return buffer
+
+    def update(self, scheduling_graph):
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions,
+                                                                                 self.states)
+        self.data_races += data_races
+        # remove duplicates from successful states
+        successful_states_wo_duplicates = []
+        for state in successful_states:
+            is_known = False
+            for known_state in successful_states_wo_duplicates:
+                if state == known_state:
+                    is_known = True
+                    break
+            if not is_known:
+                successful_states_wo_duplicates.append(state)
+        self.states = successful_states_wo_duplicates
