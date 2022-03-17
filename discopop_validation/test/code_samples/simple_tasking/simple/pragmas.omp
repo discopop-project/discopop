@@ -1,8 +1,10 @@
-1;22;38;parallel shared(result, i, j)
-1;24;37;single shared(result, i, j)
-1;26;26;task shared(result, i, j)
-1;28;28;task shared(result, i, j)
+//1;22;38;parallel shared(result, i, j)
+//1;24;37;single shared(result, i, j)
+//1;26;26;task shared(result, i, j)
+//1;28;28;task shared(result, i, j)
 //1;29;29;taskwait
 //1;32;32;task shared(result, i, j)
 //1;34;34;task shared(result, i, j)
 //1;35;35;taskwait
+1;41;43;parallel for shared(result)
+// reduction(+:result)

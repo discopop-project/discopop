@@ -18,51 +18,92 @@ import networkx as nx
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 
 
-def perform_node_specific_result_computation(node_obj, task_graph):
+def perform_node_specific_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    if node_obj.pragma is None:
+        if node_obj.get_label() == "Fork":
+            return __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
+        elif node_obj.get_label() == "Join":
+            return __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
+        else:
+            return __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     if node_obj.pragma.get_type() == PragmaType.FOR:
-        __for_result_computation(node_obj)
+        return __for_result_computation(node_obj, task_graph, result_obj, thread_ids)
     elif node_obj.pragma.get_type() == PragmaType.PARALLEL:
-        __parallel_result_computation(node_obj, task_graph)
+        return __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids)
     elif node_obj.pragma.get_type() == PragmaType.BARRIER:
-        __barrier_result_computation(node_obj)
+        return __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids)
     elif node_obj.pragma.get_type() == PragmaType.SINGLE:
-        __single_result_computation(node_obj)
+        return __single_result_computation(node_obj, task_graph, result_obj, thread_ids)
     elif node_obj.pragma.get_type() == PragmaType.TASK:
-        __task_result_computation(node_obj)
+        return __task_result_computation(node_obj, task_graph, result_obj, thread_ids)
     elif node_obj.pragma.get_type() == PragmaType.TASKWAIT:
-        __taskwait_result_computation(node_obj)
+        return __taskwait_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
     else:
         warnings.warn("NOT SUPPORTED: " + str(node_obj.pragma))
+        return result_obj
 
 
-def __parallel_result_computation(node_obj, task_graph):
+def __get_sequence_entry_points(task_graph, root_id) -> List[int]:
+    entry_points = []
+    contained_nodes = [edge[1] for edge in task_graph.graph.out_edges(root_id) if
+                       task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+    for node in contained_nodes:
+        incoming_seq_edges = [edge for edge in task_graph.graph.in_edges(node) if
+                              task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        if len(incoming_seq_edges) == 0:
+            entry_points.append(node)
+    return entry_points
+
+
+def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     warnings.warn("TODO")
     pass
 
 
-def __for_result_computation(node_obj):
+def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     warnings.warn("TODO")
     pass
 
 
-def __barrier_result_computation(self):
+def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     warnings.warn("TODO")
     pass
 
 
-def __single_result_computation(self):
+def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    warnings.warn("TODO")
+    # parallel node has exactly one entry point (Fork node)
+    # get entry point (has exactly one incoming contains edge)
+    entry_point = __get_sequence_entry_points(task_graph, node_obj.node_id)[0]
+    return task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+
+
+def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    warnings.warn("TODO")
+    pass
+
+
+def __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids):
+    warnings.warn("TODO")
+    pass
+
+
+def __single_result_computation(node_obj, task_graph, result_obj, thread_ids):
     """"""
     warnings.warn("TODO")
     pass
 
-def __task_result_computation(self):
+
+def __task_result_computation(node_obj, task_graph, result_obj, thread_ids):
     warnings.warn("TODO")
     pass
 
-def __taskwait_result_computation(self):
+
+def __taskwait_result_computation(node_obj, task_graph, result_obj, thread_ids):
     warnings.warn("TODO")
     pass
+
 
 def __unused_parallel_result_computation(node_obj, task_graph):
     # collect behavior models from all contained nodes without incoming SEQUENTIAL edge

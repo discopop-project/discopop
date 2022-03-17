@@ -5,13 +5,13 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Behavior
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
 import warnings
 
 class PragmaBarrierNode(TaskGraphNode):
-    result : Optional[TaskGraphNodeResult]
+    result : Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models : List[BehaviorModel]
 

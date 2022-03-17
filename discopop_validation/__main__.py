@@ -193,13 +193,14 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     # task_graph.add_virtual_sequential_edges()
+    task_graph.add_fork_and_join_nodes()
 
 
     # task_graph.plot_graph()
 
     # trigger result computation
     task_graph.compute_results()
-    task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=False)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()

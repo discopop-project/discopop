@@ -1,7 +1,7 @@
 import warnings
 
 from typing import List, Optional, Dict, Tuple
-
+import copy
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
@@ -11,12 +11,15 @@ from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.task_graph.classes.ForkNode import ForkNode
+from discopop_validation.data_race_prediction.task_graph.classes.JoinNode import JoinNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaForNode import PragmaForNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaSingleNode import PragmaSingleNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaTaskNode import PragmaTaskNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaTaskwaitNode import PragmaTaskwaitNode
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
@@ -115,9 +118,19 @@ class TaskGraph(object):
         self.graph.add_node(new_node_id, data=PragmaBarrierNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
+    def __add_fork_node(self):
+        new_node_id = self.__get_new_node_id()
+        self.graph.add_node(new_node_id, data=ForkNode(new_node_id))
+        return new_node_id
+
+    def __add_join_node(self):
+        new_node_id = self.__get_new_node_id()
+        self.graph.add_node(new_node_id, data=JoinNode(new_node_id))
+        return new_node_id
+
     def compute_results(self):
         # trigger result computation for root node
-        self.graph.nodes[0]["data"].compute_result(self)
+        self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
 
     def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         for node_id in self.graph.nodes:
@@ -528,6 +541,30 @@ class TaskGraph(object):
                 for edge in out_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
                 self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+
+    def add_fork_and_join_nodes(self):
+        node_ids = copy.deepcopy(self.graph.nodes())
+        for node in node_ids:
+            if type(self.graph.nodes[node]["data"]) == PragmaParallelNode:
+                contains_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                if len(contains_edges) > 0:
+                    # create fork and join nodes
+                    fork_node_id = self.__add_fork_node()
+                    join_node_id = self.__add_join_node()
+                    self.graph.add_edge(node, fork_node_id, type=EdgeType.CONTAINS)
+                    self.graph.add_edge(node, join_node_id, type=EdgeType.CONTAINS)
+                    # connect fork and join nodes to contained nodes
+                    for _, child in contains_edges:
+                        # add fork node before each child without incoming SEQUENTIAL edge
+                        incoming_sequential_edges = [edge for edge in self.graph.in_edges(child) if
+                                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                        if len(incoming_sequential_edges) == 0:
+                            self.graph.add_edge(fork_node_id, child, type=EdgeType.SEQUENTIAL)
+                        # add join node after each child without outgoing SEQUENTIAL edge
+                        outgoing_sequential_edges = [edge for edge in self.graph.out_edges(child) if
+                                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                        if len(outgoing_sequential_edges) == 0:
+                            self.graph.add_edge(child, join_node_id, type=EdgeType.SEQUENTIAL)
 
 
 

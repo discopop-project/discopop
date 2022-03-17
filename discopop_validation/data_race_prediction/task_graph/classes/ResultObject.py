@@ -5,7 +5,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Stat
 import random
 import string
 
-class TaskGraphNodeResult(object):
+class ResultObject(object):
     states: List[State]
     data_races: List[DataRace]
     fingerprint_stack: List[str]
@@ -15,7 +15,15 @@ class TaskGraphNodeResult(object):
         self.states = []
         self.data_races = []
         self.fingerprint_stack = []
-        self.thread_count_stack = [2]
+        self.thread_count_stack = []
+
+    def __str__(self):
+        res_str = "ResultObject:\n"
+        res_str += "\tstates: " + str(len(self.states)) + "\n"
+        res_str += "\tdata_races: " + str(len(self.data_races)) + "\n"
+        res_str += "\tfingerprints: " + " ".join(self.fingerprint_stack) + "\n"
+        res_str += "\tthread count stack: "+ " ".join(self.thread_count_stack) + "\n"
+        return res_str
 
     def combine(self, node_result):
         """combine the current states with the states of node_result, if fingerprint_stacks are equal"""

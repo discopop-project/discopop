@@ -9,7 +9,7 @@ from discopop_validation.data_race_prediction.simulation_preparation.core import
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 import copy
 
 from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import \
@@ -18,13 +18,11 @@ from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificCompu
 
 class TaskGraphNode(object):
     node_id: int
-    result: TaskGraphNodeResult
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
-        self.result = TaskGraphNodeResult()
         self.pragma = pragma
         self.behavior_models = []
 
@@ -39,54 +37,34 @@ class TaskGraphNode(object):
 
     def get_color(self, mark_data_races: bool):
         color = "green"
-        if mark_data_races:
-            if len(self.result.data_races) > 0:
-                color = "red"
         return color
 
-    def compute_result(self, task_graph):
-        predecessor_edges = list(task_graph.graph.in_edges(self.node_id))
-        #if single predecessor exists, relay result of previous node
-        if len(predecessor_edges) == 1:
-            predecessor, _ = predecessor_edges[0]
-            self.result = copy.deepcopy(task_graph.graph.nodes[predecessor]["data"].result)
-        #if multiple predecessors exist, relay combination of results of previous nodes
-        elif len(predecessor_edges) > 1:
-            self.result = TaskGraphNodeResult()
-            for pred, _ in predecessor_edges:
-                self.result.combine(task_graph.graph.nodes[pred]["data"].result)
-        #if no predecessor exists, create empty TaskGraphNodeResult
+    def compute_result(self, task_graph, result_obj, thread_ids: List[int]):
+        """compute_result is used to calculate the result following a path consisting of SEQUENTIAL edges.
+        """
+        print("COMPUTE: ", self.node_id)
+        print("\tthreads: ", thread_ids)
+        # modify result obj according to current node
+        result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
+
+        # pass result obj to successive nodes
+        successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        if len(successors) == 1:
+            result_obj = task_graph.graph.nodes[successors[0]]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+            return result_obj
+        elif len(successors) == 0:
+            # if no children exist, print current state
+            # todo handle and store results for further use
+            print(result_obj)
+            return result_obj
         else:
-            self.result = TaskGraphNodeResult()
+            raise ValueError("Invalid number of successors: " +  str(len(successors)) + " at node_id: " + str(self.node_id))
 
-        # check if new fingerprints (for scoping) need to be generated
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.FOR:
-                self.result.push_new_fingerprint()
-            if self.pragma.get_type() == PragmaType.PARALLEL:
-                self.result.push_new_fingerprint()
-        # modify behavior models to represent current fingerprint
-        for model in self.behavior_models:
-            model.use_fingerprint(self.result.get_current_fingerprint())
 
-        # perform node-specific computation
-        if self.__class__ == TaskGraphNode:
-            # TaskGraphNode is generic and does not perform a specific computation
-            pass
-        else:
-            perform_node_specific_result_computation(self, task_graph)
 
-        # check if fingerprints need to be removed from the stack
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.FOR:
-                self.result.pop_fingerprint()
-            if self.pragma.get_type() == PragmaType.PARALLEL:
-                self.result.pop_fingerprint()
 
-        # trigger result computation for each successor node
-        for node, successor in task_graph.graph.out_edges(self.node_id):
-            if task_graph.graph.edges[(node, successor)]["type"] == EdgeType.SEQUENTIAL:
-                task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
+
+
 
     def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, task_graph, omp_pragmas: List[OmpPragma]):
         if self.pragma is None:
