@@ -63,9 +63,51 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
 
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    print("FORK")
-    warnings.warn("TODO")
-    pass
+    """construct scheduling graph until next join node"""
+    out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+    # construct paths to next join node in a BFS manner
+    paths = []
+    path_queue = []
+    for _, successor in out_seq_edges:
+        path_queue.append(([], successor))
+    while len(path_queue) > 0:
+        current_path, current_node = path_queue.pop()
+        if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
+            paths.append(current_path)
+            continue
+        # add new queue entry for each successor
+        out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        for _, target in out_seq_edges:
+            current_path.append(current_node)
+            path_queue.append((current_path, target))
+
+
+    scheduling_graph = None
+    for path in paths:
+        # todo might be solved nicer
+        thread_count = 2  # maybe remove single from graph by updating / overwriting simulation_thread_count field
+        path_scheduling_graph = None
+        for elem in path:
+            task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
+            behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
+            for model in behavior_models:
+                model.use_fingerprint(result_obj.get_current_fingerprint())
+                model.simulation_thread_count = thread_count
+
+            behavior_models = prepare_for_simulation(behavior_models)
+            elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
+            if path_scheduling_graph is None:
+                path_scheduling_graph = elem_scheduling_graph
+            else:
+                path_scheduling_graph = path_scheduling_graph.sequential_compose(elem_scheduling_graph)
+
+        if scheduling_graph is None:
+            scheduling_graph = path_scheduling_graph
+        else:
+            scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
+    result_obj.update(scheduling_graph)
+
 
 
 def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_ids):

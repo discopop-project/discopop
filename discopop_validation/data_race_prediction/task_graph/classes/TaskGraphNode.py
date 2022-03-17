@@ -20,11 +20,13 @@ class TaskGraphNode(object):
     node_id: int
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
+    seen_in_result_computation: bool
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
         self.pragma = pragma
         self.behavior_models = []
+        self.seen_in_result_computation = False
 
     def get_label(self):
         if self.node_id == 0:
@@ -45,10 +47,12 @@ class TaskGraphNode(object):
         print("COMPUTE: ", self.node_id)
         print("\tthreads: ", thread_ids)
         # modify result obj according to current node
-        result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
+        if not self.seen_in_result_computation:
+            result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
+        else:
+            print("ALREADY SEEN")
 
         # pass result obj to successive nodes
-        print("PASS")
         successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
         if len(successors) == 1:
             result_obj = task_graph.graph.nodes[successors[0]]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
