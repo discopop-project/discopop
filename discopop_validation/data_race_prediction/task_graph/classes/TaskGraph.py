@@ -338,8 +338,10 @@ class TaskGraph(object):
                 continue
             # detect implicit barriers
             # single-pragma has an implicit barrier at the end
-            if node_pragma.get_type() == PragmaType.SINGLE:
+            # parallel-pragma has an implicit barrier at the end
+            if node_pragma.get_type() in [PragmaType.SINGLE, PragmaType.PARALLEL]:
                 add_barrier_buffer.append(node)
+
         # create barriers
         for new_barrier_source in add_barrier_buffer:
             barrier_node_id = self.__get_new_node_id()
