@@ -526,13 +526,13 @@ class TaskGraph(object):
                 # check if target is Taskwait node
                 target = edge[1]
                 target_type = type(self.graph.nodes[target]["data"])
-                if  target_type == PragmaTaskwaitNode:
+                if  target_type in [PragmaTaskwaitNode, PragmaBarrierNode]:
                     # replace edge type
                     self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
         pass
 
     def redirect_tasks_successors(self):
-        def __get_closest_barrier_or_taskwait(node_id):
+        def __get_closest_successor_barrier_or_taskwait(node_id):
             queue = [node_id]
             visited = []
             while len(queue) > 0:
@@ -546,18 +546,40 @@ class TaskGraph(object):
                 queue += [s for s in successors if s not in visited]
             return None
 
+        def __get_closest_parent_barrier_or_taskwait(node_id):
+            queue = [node_id]
+            visited = []
+            while len(queue) > 0:
+                current = queue.pop()
+                visited.append(current)
+                result = __get_closest_successor_barrier_or_taskwait(current)
+                if result is not None:
+                    print("NOT NONE: ", result)
+                    return result
+                for edge in self.graph.in_edges(current):
+                    if self.graph.edges[edge]["type"] == EdgeType.CONTAINS:
+                        queue.append(edge[0])
+                print("STILL NONE")
+
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
                 # find next BARRIER or TASKWAIT
-                next_barrier = __get_closest_barrier_or_taskwait(node)
-                if next_barrier is not None:
-                    print("NEXT BARR: ", next_barrier)
-                    # redirect outgoing SEQUENTIAL edge to barrier
-                    out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                    print(out_seq_edges)
-                    for edge in out_seq_edges:
-                        self.graph.remove_edge(edge[0], edge[1])
-                    self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+                next_barrier = __get_closest_successor_barrier_or_taskwait(node)
+                print("NEXT BARR: ", next_barrier)
+                if next_barrier is None:
+                    print("NONE")
+                    # no barrier found in successors, search in parent node
+                    next_barrier = __get_closest_parent_barrier_or_taskwait(node)
+                # redirect outgoing SEQUENTIAL edge to barrier
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                print(out_seq_edges)
+                for edge in out_seq_edges:
+                    self.graph.remove_edge(edge[0], edge[1])
+                self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+
+
+
+
 
 
         pass
