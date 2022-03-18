@@ -356,7 +356,7 @@ class TaskGraph(object):
             # detect implicit barriers
             # single-pragma has an implicit barrier at the end
             # parallel-pragma has an implicit barrier at the end
-            if node_pragma.get_type() in [PragmaType.SINGLE, PragmaType.PARALLEL]:
+            if node_pragma.get_type() == PragmaType.SINGLE:
                 add_barrier_buffer.append(node)
 
         # create barriers
@@ -367,6 +367,11 @@ class TaskGraph(object):
                                                                             self.graph.nodes[new_barrier_source]["data"].pragma.file_id, self.graph.nodes[new_barrier_source]["data"].pragma.end_line,
                                                                             self.graph.nodes[new_barrier_source]["data"].pragma.end_line, "barrier")))
             self.graph.add_edge(new_barrier_source, barrier_node_id, type=EdgeType.SEQUENTIAL)
+            # create CONTAINS edge from parent of new_barrier_source if necessarry
+            in_contains_edges = [edge for edge in self.graph.in_edges(new_barrier_source) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for edge in in_contains_edges:
+                self.graph.add_edge(edge[0], barrier_node_id, type=EdgeType.CONTAINS)
+
             # redirect outgoing SEQUENTIAL edges
             remove_edges = []
             add_edges = []
@@ -570,7 +575,20 @@ class TaskGraph(object):
                         if len(outgoing_sequential_edges) == 0:
                             self.graph.add_edge(child, join_node_id, type=EdgeType.SEQUENTIAL)
 
+    def add_join_nodes_before_barriers(self):
+        self.plot_graph()
+        node_ids = copy.deepcopy(self.graph.nodes)
+        for node in node_ids:
+            if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+                join_node_id = self.__add_join_node()
+                # add SEQUENTIAL edge from join node to barrier node
+                self.graph.add_edge(join_node_id, node, type=EdgeType.SEQUENTIAL)
 
+                incoming_seq_edge = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != join_node_id]
+                # redirect incoming edges
+                for edge in incoming_seq_edge:
+                    self.graph.add_edge(edge[0], join_node_id, type=EdgeType.SEQUENTIAL)
+                    self.graph.remove_edge(edge[0], node)
 
 
 
