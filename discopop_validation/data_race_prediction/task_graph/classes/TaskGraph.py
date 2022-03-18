@@ -23,6 +23,9 @@ from discopop_validation.data_race_prediction.task_graph.classes.ResultObject im
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
+from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import get_sequence_entry_points, \
+    get_contained_exit_points
+
 
 class TaskGraph(object):
     graph: nx.MultiDiGraph
@@ -576,7 +579,6 @@ class TaskGraph(object):
                             self.graph.add_edge(child, join_node_id, type=EdgeType.SEQUENTIAL)
 
     def add_join_nodes_before_barriers(self):
-        self.plot_graph()
         node_ids = copy.deepcopy(self.graph.nodes)
         for node in node_ids:
             if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
@@ -589,6 +591,36 @@ class TaskGraph(object):
                 for edge in incoming_seq_edge:
                     self.graph.add_edge(edge[0], join_node_id, type=EdgeType.SEQUENTIAL)
                     self.graph.remove_edge(edge[0], node)
+
+    def replace_pragma_single_nodes(self):
+        remove_nodes = []
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == PragmaSingleNode:
+                remove_nodes.append(node)
+                # set simulation_thread_count to 1 for each contained node
+                out_contains_edges = [edge for edge in self.graph.out_edges(node) if
+                                  self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                for _, target in out_contains_edges:
+                    self.graph.nodes[target]["data"].set_simulation_thread_count(1)
+
+                # replace node with contained sequences
+                in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                sequence_entry_points = get_sequence_entry_points(self, node)
+                # redirect incoming edges
+                for entry in sequence_entry_points:
+                    for edge in in_seq_edges:
+                        self.graph.add_edge(edge[0], entry, type=EdgeType.SEQUENTIAL)
+                # redirect outgoing edges
+                sequence_exit_points = get_contained_exit_points(self, node)
+                for exit in sequence_exit_points:
+                    for edge in out_seq_edges:
+                        self.graph.add_edge(exit, edge[1], type=EdgeType.SEQUENTIAL)
+        for node in remove_nodes:
+            self.graph.remove_node(node)
+
 
 
 

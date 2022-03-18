@@ -44,7 +44,7 @@ def perform_node_specific_result_computation(node_obj, task_graph, result_obj, t
         return result_obj
 
 
-def __get_sequence_entry_points(task_graph, root_id) -> List[int]:
+def get_sequence_entry_points(task_graph, root_id) -> List[int]:
     entry_points = []
     contained_nodes = [edge[1] for edge in task_graph.graph.out_edges(root_id) if
                        task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
@@ -55,6 +55,18 @@ def __get_sequence_entry_points(task_graph, root_id) -> List[int]:
             entry_points.append(node)
     return entry_points
 
+def get_contained_exit_points(task_graph, root_id) -> List[int]:
+    """returns nodeIds of exit points of root's contained sequences"""
+    exit_points = []
+    out_contained_edges = [edge for edge in task_graph.graph.out_edges(root_id)
+                           if task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+    for _, target in out_contained_edges:
+        target_out_seq_edges = [edge for edge in task_graph.graph.out_edges(target)
+                                if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        if len(target_out_seq_edges) == 0:
+            # end of sequence found
+            exit_points.append(target)
+    return exit_points
 
 def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # exit parallel section
@@ -88,18 +100,18 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             current_path.append(current_node)
             path_queue.append((current_path, target))
 
-
     scheduling_graph = None
     for path in paths:
         # todo might be solved nicer
-        thread_count = 2  # todo: maybe remove single from graph by updating / overwriting simulation_thread_count field
+    #    thread_count = 2  # todo: maybe remove single from graph by updating / overwriting simulation_thread_count field
         path_scheduling_graph = None
         for elem in path:
+
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
             behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
             for model in behavior_models:
                 model.use_fingerprint(result_obj.get_current_fingerprint())
-                model.simulation_thread_count = thread_count
+#                model.simulation_thread_count = thread_count
 
             behavior_models = prepare_for_simulation(behavior_models)
             elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
@@ -152,7 +164,7 @@ def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # entering a parallel region creates a new scope
     result_obj.push_new_fingerprint()
     # parallel node has exactly one entry point (Fork node)
-    entry_point = __get_sequence_entry_points(task_graph, node_obj.node_id)[0]
+    entry_point = get_sequence_entry_points(task_graph, node_obj.node_id)[0]
     calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
     # exiting a parallel region closes the current scope
     calculated_result.pop_fingerprint()
@@ -161,7 +173,7 @@ def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
 
 def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # FOR has no effect aside from storing behavior information
-    entry_point = __get_sequence_entry_points(task_graph, node_obj.node_id)[0]
+    entry_point = get_sequence_entry_points(task_graph, node_obj.node_id)[0]
     calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
     return calculated_result
 

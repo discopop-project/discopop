@@ -196,6 +196,10 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.add_fork_and_join_nodes()
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
+    # remove single nodes from graph and replace with contained nodes
+    task_graph.plot_graph()
+    task_graph.replace_pragma_single_nodes()
+
     # todo remove / ignore irrelevant join nodes
 
 

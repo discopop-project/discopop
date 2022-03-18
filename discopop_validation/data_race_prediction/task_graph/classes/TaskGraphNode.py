@@ -61,7 +61,10 @@ class TaskGraphNode(object):
             raise ValueError("Invalid number of successors: " +  str(len(successors)) + " at node_id: " + str(self.node_id))
 
 
-
+    def set_simulation_thread_count(self, new_thread_count: int):
+        # todo: note: may be required to execute recursively on contained nodes aswell
+        for model in self.behavior_models:
+            model.simulation_thread_count = new_thread_count
 
 
 
