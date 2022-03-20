@@ -110,11 +110,17 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
                 successive_join_node = current_node
             paths.append(current_path)
             continue
+
+        out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+        # check if end of path reached
+        if len(out_seq_edges) == 0:
+            # end of path found
+            paths.append(current_path)
+            print("ASDF")
+            continue
         # add new queue entry for each successor
-        out_contained_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
-                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-        print(out_contained_edges)
-        for _, target in out_contained_edges:
+        for _, target in out_seq_edges:
             current_path.append(current_node)
             if (current_path, target) not in visited:
                 path_queue.append((current_path, target))

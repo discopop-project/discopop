@@ -187,7 +187,7 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_storage_nodes()
     # remove redundant CONTAINS edges
     task_graph.remove_redundant_edges([EdgeType.CONTAINS])
-    task_graph.plot_graph()
+    # task_graph.plot_graph()
     # redirect successor edges of TASKS to next BARRIER or TASKWAIT
     task_graph.redirect_tasks_successors()
     #task_graph.plot_graph()
