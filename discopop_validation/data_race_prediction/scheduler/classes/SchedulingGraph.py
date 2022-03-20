@@ -123,9 +123,14 @@ class SchedulingGraph(object):
     def parallel_compose(self, other_graph):
         if other_graph is None:
             return self
+        print("DIM: ", self.dimensions)
+        print("OTH: ", other_graph.dimensions)
+
         new_dimensions = self.dimensions + other_graph.dimensions
+        print("NEW: ", new_dimensions)
         self.dimensions = new_dimensions
-        thread_id_offset = self.thread_count  # added to other_graphs thread ids to prevent conflicts
+        thread_id_offset = self.thread_count # added to other_graphs thread ids to prevent conflicts
+
 
         # set correct thread id's
         # thread id's of self remain in current state

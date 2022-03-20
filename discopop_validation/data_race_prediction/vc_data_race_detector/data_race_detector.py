@@ -95,6 +95,12 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
             state.var_read_clocks[update_var].clocks[thread_id] = state.thread_clocks[thread_id].clocks[thread_id]
     elif update_type is UpdateType.WRITE:
         # update variable write clock
+        print("UPDATE: ", update[3])
+        print("TID: ", thread_id)
+        print("CLOCKS2: ")
+        for clock in state.thread_clocks:
+            print("--> ", clock)
+            print(state.thread_clocks[clock])
         if state.var_write_clocks[update_var].clocks[thread_id] < state.thread_clocks[thread_id].clocks[thread_id]:
             state.var_write_clocks[update_var].clocks[thread_id] = state.thread_clocks[thread_id].clocks[thread_id]
     elif update_type is UpdateType.ENTERPARALLEL:

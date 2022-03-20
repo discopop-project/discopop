@@ -23,7 +23,7 @@ class PragmaForNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "None"
-        label = "For\n"
+        label = str(self.node_id) +" " +  "For\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 

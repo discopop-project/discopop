@@ -81,37 +81,55 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
 
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    """construct scheduling graph until next join node"""
-    out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+    """construct scheduling graph until next join node. Connects Fork and join node with a SEQUENTIAL edge.
+    Replaces outgoing SEQUENTIAL edges with contained edges"""
+    print("FORK")
+    # replace outgoing contains with sequential edges, if the target is not a JOIN node
+    out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
+                           task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+    for edge in out_seq_edges:
+        if task_graph.graph.nodes[edge[1]]["data"].get_label() == "Join":
+            continue
+        task_graph.graph.edges[edge]["type"] = EdgeType.CONTAINS
+
+    out_contained_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
+                           task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
     # construct paths to next join node in a BFS manner
     paths = []
     path_queue = []
-    for _, successor in out_seq_edges:
+    visited = []
+    # todo: more intelligent calculation of successive_join_node (lookahead and find first join for all branches)
+    successive_join_node = None
+    for _, successor in out_contained_edges:
         path_queue.append(([], successor))
     while len(path_queue) > 0:
         current_path, current_node = path_queue.pop()
+        visited.append((current_path, current_node))
         if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
+            if successive_join_node is None:
+                successive_join_node = current_node
             paths.append(current_path)
             continue
         # add new queue entry for each successor
-        out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+        out_contained_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
                          task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-        for _, target in out_seq_edges:
+        print(out_contained_edges)
+        for _, target in out_contained_edges:
             current_path.append(current_node)
-            path_queue.append((current_path, target))
+            if (current_path, target) not in visited:
+                path_queue.append((current_path, target))
+
+    # connect FORK to JOIN node with SEQUENTIAL edge
+    task_graph.graph.add_edge(node_obj.node_id, successive_join_node, type=EdgeType.SEQUENTIAL)
 
     scheduling_graph = None
     for path in paths:
-        # todo might be solved nicer
-    #    thread_count = 2  # todo: maybe remove single from graph by updating / overwriting simulation_thread_count field
         path_scheduling_graph = None
         for elem in path:
-
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
             behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
             for model in behavior_models:
                 model.use_fingerprint(result_obj.get_current_fingerprint())
-#                model.simulation_thread_count = thread_count
 
             behavior_models = prepare_for_simulation(behavior_models)
             elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
@@ -128,9 +146,14 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     # create new clocks if necessary
     for idx, state in enumerate(result_obj.states):
         # create new thread clocks for state if necessary
+        print("STC: ", state.thread_count)
+        print("SGTC: ", scheduling_graph.thread_count)
         if state.thread_count < scheduling_graph.thread_count:
             stc_buffer = state.thread_count
             state.fill_to_thread_count(scheduling_graph.thread_count)
+        print("POST")
+        print("STC: ", state.thread_count)
+        print("SGTC: ", scheduling_graph.thread_count)
     # enter parallel
     for idx, state in enumerate(result_obj.states):
         # Enter parallel section
@@ -150,8 +173,7 @@ def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_
     for model in behavior_models:
         model.use_fingerprint(result_obj.get_current_fingerprint())
     # todo include?: prepare behavior models for simulation
-    #behavior_information = prepare_for_simulation(
-    #    [behavior_information])  # todo use global variables to save states regarding reduction removal etc.
+    #behavior_information = prepare_for_simulation([behavior_information])
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
     # update result_obj
@@ -179,7 +201,7 @@ def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
 
 
 def __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    # at this point in time, barrier has no effect on it's own.
+    # at this point in time, BARRIER has no effect on it's own.
     return result_obj
 
 
@@ -195,8 +217,8 @@ def __task_result_computation(node_obj, task_graph, result_obj, thread_ids):
 
 
 def __taskwait_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
-    pass
+    # at this point in time, TASKWAIT has no effect on it's own.
+    return result_obj
 
 
 def __unused_parallel_result_computation(node_obj, task_graph):

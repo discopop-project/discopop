@@ -359,7 +359,7 @@ class TaskGraph(object):
             # detect implicit barriers
             # single-pragma has an implicit barrier at the end
             # parallel-pragma has an implicit barrier at the end
-            if node_pragma.get_type() == PragmaType.SINGLE:
+            if node_pragma.get_type() in [PragmaType.SINGLE, PragmaType.PARALLEL]:
                 add_barrier_buffer.append(node)
 
         # create barriers
@@ -548,11 +548,20 @@ class TaskGraph(object):
                 if next_barrier is None:
                     # no barrier found in successors, search in parent node
                     next_barrier = __get_closest_parent_barrier_or_taskwait(node)
-                # redirect outgoing SEQUENTIAL edge to barrier
+
                 out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                # redirect incoming SEQUENTIAL edges to Successors
+                for edge in in_seq_edges:
+                    self.graph.remove_edge(edge[0], edge[1])
+                    for out_edge in out_seq_edges:
+                        self.graph.add_edge(edge[0], out_edge[1], type=EdgeType.SEQUENTIAL)
+                # redirect outgoing SEQUENTIAL edge to barrier
                 for edge in out_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
                 self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+
 
     def add_fork_and_join_nodes(self):
         node_ids = copy.deepcopy(self.graph.nodes())
@@ -620,9 +629,6 @@ class TaskGraph(object):
                         self.graph.add_edge(exit, edge[1], type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
-
-
-
 
 
 
