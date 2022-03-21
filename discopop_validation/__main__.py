@@ -193,12 +193,14 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     # task_graph.add_virtual_sequential_edges()
+    task_graph.plot_graph()
     task_graph.add_fork_and_join_nodes()
+    #task_graph.plot_graph()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
+    #task_graph.plot_graph()
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
-    #task_graph.plot_graph()
     # remove single nodes from graph and replace with contained nodes
     task_graph.replace_pragma_single_nodes()
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
@@ -207,7 +209,7 @@ def __main_start_execution(run_configuration: Configuration):
     # todo enable nested fork nodes
 
 
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
 
     # trigger result computation
     task_graph.compute_results()

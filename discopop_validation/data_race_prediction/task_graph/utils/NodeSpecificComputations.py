@@ -57,12 +57,16 @@ def get_sequence_entry_points(task_graph, root_id) -> List[int]:
 
 def get_contained_exit_points(task_graph, root_id) -> List[int]:
     """returns nodeIds of exit points of root's contained sequences"""
+    print("root_id: ", root_id)
     exit_points = []
     out_contained_edges = [edge for edge in task_graph.graph.out_edges(root_id)
                            if task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+    print("oce: ", out_contained_edges)
     for _, target in out_contained_edges:
+        print("target: ", target)
         target_out_seq_edges = [edge for edge in task_graph.graph.out_edges(target)
-                                if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                                if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+        print("tose: ", target_out_seq_edges)
         if len(target_out_seq_edges) == 0:
             # end of sequence found
             exit_points.append(target)
@@ -113,8 +117,13 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
                          task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
         # check if end of path reached
+        print("current: ", current_node)
+        print("current path: ", current_path)
+        print("ose: ", out_seq_edges)
         if len(out_seq_edges) == 0:
-            # end of path found
+            # end of path found, append current_node to current_path
+            # append current_path to paths
+            current_path.append(current_node)
             paths.append(current_path)
             continue
         # add new queue entry for each successor
@@ -128,6 +137,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         task_graph.graph.add_edge(node_obj.node_id, successive_join_node, type=EdgeType.SEQUENTIAL)
 
     scheduling_graph = None
+    print("paths: ", paths)
     for path in paths:
         path_scheduling_graph = None
         for elem in path:
@@ -147,6 +157,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             scheduling_graph = path_scheduling_graph
         else:
             scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
+        scheduling_graph.plot_graph()
 
     # create new clocks if necessary
     for idx, state in enumerate(result_obj.states):
@@ -177,7 +188,6 @@ def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
     # update result_obj
-
     result_obj.update(scheduling_graph)
     # return result_obj
     return result_obj

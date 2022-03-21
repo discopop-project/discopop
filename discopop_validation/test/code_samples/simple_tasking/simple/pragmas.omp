@@ -1,5 +1,5 @@
 1;22;38;parallel shared(result, i, j)
-1;24;37;single shared(result, i, j)
+//1;24;37;single shared(result, i, j)
 //1;26;26;task shared(result, i, j)
 //1;28;28;task shared(result, i, j)
 1;29;29;taskwait
