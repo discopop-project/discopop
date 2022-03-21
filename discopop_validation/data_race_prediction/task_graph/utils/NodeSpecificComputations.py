@@ -176,6 +176,7 @@ def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
     # update result_obj
+
     result_obj.update(scheduling_graph)
     # return result_obj
     return result_obj

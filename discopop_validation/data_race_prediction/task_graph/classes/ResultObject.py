@@ -74,8 +74,7 @@ class ResultObject(object):
         return buffer
 
     def update(self, scheduling_graph):
-        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions,
-                                                                                 self.states)
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions, self.states)
         self.data_races += data_races
         # remove duplicates from successful states
         successful_states_wo_duplicates = []
