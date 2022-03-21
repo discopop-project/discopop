@@ -83,7 +83,6 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     """construct scheduling graph until next join node. Connects Fork and join node with a SEQUENTIAL edge.
     Replaces outgoing SEQUENTIAL edges with contained edges"""
-    print("FORK")
     # replace outgoing contains with sequential edges, if the target is not a JOIN node
     out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
                            task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
@@ -117,7 +116,6 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         if len(out_seq_edges) == 0:
             # end of path found
             paths.append(current_path)
-            print("ASDF")
             continue
         # add new queue entry for each successor
         for _, target in out_seq_edges:
@@ -152,14 +150,9 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     # create new clocks if necessary
     for idx, state in enumerate(result_obj.states):
         # create new thread clocks for state if necessary
-        print("STC: ", state.thread_count)
-        print("SGTC: ", scheduling_graph.thread_count)
         if state.thread_count < scheduling_graph.thread_count:
             stc_buffer = state.thread_count
             state.fill_to_thread_count(scheduling_graph.thread_count)
-        print("POST")
-        print("STC: ", state.thread_count)
-        print("SGTC: ", scheduling_graph.thread_count)
     # enter parallel
     for idx, state in enumerate(result_obj.states):
         # Enter parallel section
