@@ -124,7 +124,8 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
                 path_queue.append((current_path, target))
 
     # connect FORK to JOIN node with SEQUENTIAL edge
-    task_graph.graph.add_edge(node_obj.node_id, successive_join_node, type=EdgeType.SEQUENTIAL)
+    if successive_join_node is not None:
+        task_graph.graph.add_edge(node_obj.node_id, successive_join_node, type=EdgeType.SEQUENTIAL)
 
     scheduling_graph = None
     for path in paths:
