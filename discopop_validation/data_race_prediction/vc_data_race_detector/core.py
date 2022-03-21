@@ -31,7 +31,6 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
 
 
 def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_accesses: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:
-    print("NODE: ", node_identifier)
     global futures_cutoff_level
     node_schedule_element: ScheduleElement = scheduling_graph.graph.nodes[node_identifier]["data"]
     if node_schedule_element is not None:
@@ -49,13 +48,7 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
     # no multithreading
     for source, target in scheduling_graph.graph.out_edges(node_identifier):
 
-        try:
-            state_copy = copy.deepcopy(state)
-        except Exception as ex:
-            print()
-            print(ex)
-            print()
-            print(state)
+        state_copy = copy.deepcopy(state)
         previous_accesses_copy = copy.copy(previous_accesses)
         if node_schedule_element is not None:
             previous_accesses_copy.append(node_schedule_element)

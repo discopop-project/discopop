@@ -193,9 +193,7 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     # task_graph.add_virtual_sequential_edges()
-    task_graph.plot_graph()
     task_graph.add_fork_and_join_nodes()
-    #task_graph.plot_graph()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
     #task_graph.plot_graph()
