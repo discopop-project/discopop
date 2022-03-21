@@ -630,21 +630,21 @@ class TaskGraph(object):
         for node in remove_nodes:
             self.graph.remove_node(node)
 
-    def remove_taskwait_without_prior_task(self):
-        def __has_preceeding_task_node(root_node) -> bool:
-            if type(self.graph.nodes[root_node]["data"]) == PragmaTaskNode:
+    def __has_preceeding_task_node(self, root_node) -> bool:
+        if type(self.graph.nodes[root_node]["data"]) == PragmaTaskNode:
+            return True
+        in_seq_edges = [edge for edge in self.graph.in_edges(root_node) if
+                        self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        for edge in in_seq_edges:
+            if self.__has_preceeding_task_node(edge[0]):
                 return True
-            in_seq_edges = [edge for edge in self.graph.in_edges(root_node) if
-                            self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-            for edge in in_seq_edges:
-                if __has_preceeding_task_node(edge[0]):
-                    return True
-            return False
+        return False
 
+    def remove_taskwait_without_prior_task(self):
         remove_nodes = []
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == PragmaTaskwaitNode:
-                if not __has_preceeding_task_node(node):
+                if not self.__has_preceeding_task_node(node):
                     remove_nodes.append(node)
 
         for node in remove_nodes:
@@ -656,3 +656,21 @@ class TaskGraph(object):
                 for out_edge in out_seq_edges:
                     self.graph.add_edge(in_edge[0], out_edge[1], type=EdgeType.SEQUENTIAL)
             self.graph.remove_node(node)
+
+    def skip_taskwait_if_no_prior_task_exists(self):
+        for node in self.graph.nodes:
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                            self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            for _, target in out_seq_edges:
+                # check if target is a TASKWAIT node
+                if type(self.graph.nodes[target]["data"]) == PragmaTaskwaitNode:
+                    # skip TASKWAIT, if no TASK is a predecessor of node
+                    if not self.__has_preceeding_task_node(node):
+                        # redirect successor edge
+                        # remove edge from node to TASKWAIT
+                        self.graph.remove_edge(node, target)
+                        # add edges from node to all successors of TASKWAIT
+                        taskwait_out_seq_edges = [edge for edge in self.graph.out_edges(target) if
+                                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                        for edge in taskwait_out_seq_edges:
+                            self.graph.add_edge(node, edge[1], type=EdgeType.SEQUENTIAL)
