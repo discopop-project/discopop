@@ -54,6 +54,7 @@ def goto_next_state(state: State, schedule_element: ScheduleElement, previous_wr
     Raises ValueError, if a data race has been detected."""
     #print(schedule_element)
     for update in schedule_element.updates:
+        print("GOTO TID: ", schedule_element.thread_id)
         state = __perform_update(state, schedule_element.thread_id, update)
     return __check_state(state, schedule_element, previous_writes)
 
@@ -89,29 +90,40 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
     # ensure that state has vector clocks for given variable
     state.add_var_entries_if_missing(update_var)
 
+    thread_clock_index = state.thread_id_to_clock_position_dict[thread_id]
+    print("ID: ", thread_id, " --> ", "index: ", thread_clock_index)
+
     if update_type is UpdateType.READ:
         # update variable read clock
-        if state.var_read_clocks[update_var].clocks[thread_id] < state.thread_clocks[thread_id].clocks[thread_id]:
-            state.var_read_clocks[update_var].clocks[thread_id] = state.thread_clocks[thread_id].clocks[thread_id]
+        if state.var_read_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
+            state.var_read_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
     elif update_type is UpdateType.WRITE:
+        print("state.var_write_clocks[update_var].clocks: ", state.var_write_clocks[update_var].clocks )
+        print("state.thread_clocks[thread_clock_index].clocks: ", state.thread_clocks)
         # update variable write clock
-        if state.var_write_clocks[update_var].clocks[thread_id] < state.thread_clocks[thread_id].clocks[thread_id]:
-            state.var_write_clocks[update_var].clocks[thread_id] = state.thread_clocks[thread_id].clocks[thread_id]
+        if state.var_write_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
+            state.var_write_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
     elif update_type is UpdateType.ENTERPARALLEL:
+        print("AFFECTED: ", affected_thread_ids)
         for tid in affected_thread_ids:
+
             state.thread_clocks[tid] = get_updated_vc(state.thread_clocks[tid],
                                                       state.thread_clocks[thread_id])
-        increase(state.thread_clocks[thread_id], thread_id)
+        increase(state.thread_clocks[thread_id], thread_clock_index)
     elif update_type is UpdateType.EXITPARALLEL:
+        print("STATE")
+        print(state)
         for tid in affected_thread_ids:
+            print("AFFTID: ", tid)
             state.thread_clocks[thread_id] = get_updated_vc(state.thread_clocks[thread_id],
-                                                            state.thread_clocks[tid])
-            increase(state.thread_clocks[tid], tid)
+                                                                     state.thread_clocks[tid])
+
+            increase(state.thread_clocks[tid], state.thread_id_to_clock_position_dict[tid])
     elif update_type is UpdateType.LOCK:
         state.thread_clocks[thread_id] = get_updated_vc(state.thread_clocks[thread_id], state.lock_clocks[update_var])
     elif update_type is UpdateType.UNLOCK:
         state.lock_clocks[update_var] = get_updated_vc(state.lock_clocks[update_var], state.thread_clocks[thread_id])
-        increase(state.thread_clocks[thread_id], thread_id)
+        increase(state.thread_clocks[thread_id], thread_clock_index)
 
     # todo (check if constraints for multiple / nested parallel sections are met)
 

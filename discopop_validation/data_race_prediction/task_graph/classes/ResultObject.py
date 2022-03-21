@@ -35,6 +35,12 @@ class ResultObject(object):
         res_str += "\tthread count stack: "+ " ".join(self.thread_count_stack) + "\n"
         return res_str
 
+    def print_states(self):
+        print("STATES:")
+        for state in self.states:
+            print(state)
+            print()
+
     def combine(self, node_result):
         """combine the current states with the states of node_result, if fingerprint_stacks are equal"""
         if node_result is None:

@@ -209,7 +209,7 @@ def __main_start_execution(run_configuration: Configuration):
     # todo enable nested fork nodes
 
 
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
 
     # trigger result computation
     task_graph.compute_results()

@@ -73,7 +73,7 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     for idx, state in enumerate(result_obj.states):
         # Exit parallel section
         exit_parallel_sched_elem = ScheduleElement(0)
-        affected_thread_ids = range(1, state.thread_count)
+        affected_thread_ids = [tid for tid in state.thread_id_to_clock_position_dict.keys() if tid != 0]
         exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL,
                                              affected_thread_ids=affected_thread_ids)
         result_obj.states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
@@ -83,6 +83,9 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     """construct scheduling graph until next join node. Connects Fork and join node with a SEQUENTIAL edge.
     Replaces outgoing SEQUENTIAL edges with contained edges"""
+    print("FORK")
+    print(result_obj)
+    result_obj.print_states()
     # replace outgoing contains with sequential edges, if the target is not a JOIN node
     out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
                            task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
@@ -152,18 +155,37 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
     # create new clocks if necessary
     for idx, state in enumerate(result_obj.states):
+        ## create new thread clocks for state if necessary
+        #if state.thread_count < scheduling_graph.thread_count:
+        #    stc_buffer = state.thread_count
+        #    state.fill_to_thread_count(scheduling_graph.thread_count)
+
         # create new thread clocks for state if necessary
-        if state.thread_count < scheduling_graph.thread_count:
-            stc_buffer = state.thread_count
-            state.fill_to_thread_count(scheduling_graph.thread_count)
+        # check if all necessary thread_ids are contained in state
+        for thread_id in scheduling_graph.thread_ids:
+            print("TID: ", thread_id)
+            if thread_id not in state.thread_clocks:
+                print("NOT CONTAINED IN STATE")
+                # create new entry for thread_id in state
+                state.create_new_entries(thread_id)
+                print(state)
+
     # enter parallel
     for idx, state in enumerate(result_obj.states):
         # Enter parallel section
         enter_parallel_sched_elem = ScheduleElement(0)
-        affected_thread_ids = range(1, state.thread_count)
+        affected_thread_ids = [tid for tid in state.thread_id_to_clock_position_dict.keys() if tid != 0]
         enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
                                              affected_thread_ids=affected_thread_ids)
         result_obj.states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
+
+    print("FORK - PRE UPDATE")
+    print(result_obj)
+    result_obj.print_states()
+    print("STC: ", scheduling_graph.thread_count)
+    used_thread_ids = []
+    #for node_in in scheduling_graph.graph.nodes:
+     #   print("DATA: ", type(scheduling_graph.graph.nodes[node_in]["data"]))
 
     result_obj.update(scheduling_graph)
     return result_obj
