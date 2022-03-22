@@ -29,6 +29,6 @@ class JoinNode(TaskGraphNode):
     def get_color(self, mark_data_races: bool):
         color = "yellow"
         if mark_data_races:
-            if len(self.result.data_races) > 0:
+            if len(self.data_races) > 0:
                 color = "red"
         return color

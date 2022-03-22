@@ -15,18 +15,22 @@ import copy
 from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import \
     perform_node_specific_result_computation
 
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
+
 
 class TaskGraphNode(object):
     node_id: int
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
     seen_in_result_computation: bool
+    data_races: List[DataRace]
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
         self.pragma = pragma
         self.behavior_models = []
         self.seen_in_result_computation = False
+        self.data_races = []
 
     def get_label(self):
         if self.node_id == 0:
@@ -39,6 +43,9 @@ class TaskGraphNode(object):
 
     def get_color(self, mark_data_races: bool):
         color = "green"
+        if mark_data_races:
+            if len(self.data_races) > 0:
+                color = "red"
         return color
 
     def compute_result(self, task_graph, result_obj, thread_ids: List[int]):
@@ -50,8 +57,6 @@ class TaskGraphNode(object):
 
         # pass result obj to successive nodes
         successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL if edge[0] != edge[1]]
-        print("SELF: ", self.node_id)
-        print("SUCC: ", successors)
         if len(successors) == 1:
             result_obj = task_graph.graph.nodes[successors[0]]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
             return result_obj

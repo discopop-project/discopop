@@ -29,4 +29,7 @@ class PragmaParallelNode(TaskGraphNode):
 
     def get_color(self, mark_data_races: bool):
         color = "orange"
+        if mark_data_races:
+            if len(self.data_races) > 0:
+                color = "red"
         return color

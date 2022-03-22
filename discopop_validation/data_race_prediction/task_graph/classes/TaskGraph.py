@@ -51,9 +51,9 @@ class TaskGraph(object):
         for node in self.graph.nodes:
             colors.append(self.graph.nodes[node]["data"].get_color(mark_data_races))
         edge_color_map = {EdgeType.SEQUENTIAL: "black",
-                          EdgeType.VIRTUAL_SEQUENTIAL: "grey",
                           EdgeType.CONTAINS: "orange",
-                          EdgeType.DEPENDS: "red"}
+                          EdgeType.DEPENDS: "green",
+                          EdgeType.DATA_RACE: "red"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
@@ -137,6 +137,7 @@ class TaskGraph(object):
         # display detected data races
         for data_race in computed_result.data_races:
             print(data_race)
+        return computed_result
 
 
     def insert_behavior_models(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
@@ -674,3 +675,62 @@ class TaskGraph(object):
                                                   self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                         for edge in taskwait_out_seq_edges:
                             self.graph.add_edge(node, edge[1], type=EdgeType.SEQUENTIAL)
+
+    def add_data_races_to_graph(self, computed_result):
+        for node in self.graph.nodes:
+            node_behavior_models = self.graph.nodes[node]["data"].behavior_models
+            if node_behavior_models is None:
+                continue
+            node_operations = []
+            for model in node_behavior_models:
+                for operation in model.operations:
+                    node_operations.append(operation)
+
+
+            for data_race in computed_result.data_races:
+                # check if node is origin of data_race
+                origin_node = None
+                for _,_,_, operation in data_race.schedule_element.updates:
+                    if operation is None:
+                        continue
+                    if operation in node_operations:
+                        origin_node = node
+                        break
+                if origin_node is None:
+                    continue
+                # search for previous node and mark via DATA_RACE edge
+                last_access_node = None
+                if len(data_race.previous_accesses) > 0:
+                    last_access_schedule_element = data_race.previous_accesses[-1]
+                    loop_breaker = False
+                    for _,_,_, last_access_operation in last_access_schedule_element.updates:
+                        if loop_breaker:
+                            break
+                        if last_access_operation is None:
+                            continue
+                        # find node which contains last_access_operation
+                        for inner_node in self.graph.nodes:
+                            inner_node_behavior_models = self.graph.nodes[inner_node]["data"].behavior_models
+                            if inner_node_behavior_models is None:
+                                continue
+                            inner_node_operations = []
+                            for model in inner_node_behavior_models:
+                                for operation in model.operations:
+                                    inner_node_operations.append(operation)
+                            # check if last_access_operation contained in inner_node_operations
+                            if last_access_operation in inner_node_operations:
+                                last_access_node = inner_node
+                                loop_breaker = True
+                                break
+                # append data_race to origin_node
+                self.graph.nodes[origin_node]["data"].data_races.append(data_race)
+                # create DATA_RACE edge from last_access_node to origin_node
+                if last_access_node is not None:
+                    self.graph.add_edge(last_access_node, origin_node, type=EdgeType.DATA_RACE)
+
+
+
+
+
+
+
