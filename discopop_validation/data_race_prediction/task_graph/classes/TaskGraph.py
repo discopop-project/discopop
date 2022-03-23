@@ -214,8 +214,6 @@ class TaskGraph(object):
             if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
                 pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
                 narrowest_node_buffer = pet_node
-        print("search: ", str(file_id) + ":"+ str(start_line)+"-"+str(end_line))
-        print("--> CUID: ", narrowest_node_buffer)
         return narrowest_node_buffer
 
     def remove_redundant_edges(self, edge_types: List[EdgeType]):

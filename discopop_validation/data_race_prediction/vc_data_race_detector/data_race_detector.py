@@ -52,9 +52,7 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
 def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
-    #print(schedule_element)
     for update in schedule_element.updates:
-        print("GOTO TID: ", schedule_element.thread_id)
         state = __perform_update(state, schedule_element.thread_id, update)
     return __check_state(state, schedule_element, previous_writes)
 
@@ -91,30 +89,23 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
     state.add_var_entries_if_missing(update_var)
 
     thread_clock_index = state.thread_id_to_clock_position_dict[thread_id]
-    print("ID: ", thread_id, " --> ", "index: ", thread_clock_index)
 
     if update_type is UpdateType.READ:
         # update variable read clock
         if state.var_read_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
             state.var_read_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
     elif update_type is UpdateType.WRITE:
-        print("state.var_write_clocks[update_var].clocks: ", state.var_write_clocks[update_var].clocks )
-        print("state.thread_clocks[thread_clock_index].clocks: ", state.thread_clocks)
         # update variable write clock
         if state.var_write_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
             state.var_write_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
     elif update_type is UpdateType.ENTERPARALLEL:
-        print("AFFECTED: ", affected_thread_ids)
         for tid in affected_thread_ids:
 
             state.thread_clocks[tid] = get_updated_vc(state.thread_clocks[tid],
                                                       state.thread_clocks[thread_id])
         increase(state.thread_clocks[thread_id], thread_clock_index)
     elif update_type is UpdateType.EXITPARALLEL:
-        print("STATE")
-        print(state)
         for tid in affected_thread_ids:
-            print("AFFTID: ", tid)
             state.thread_clocks[thread_id] = get_updated_vc(state.thread_clocks[thread_id],
                                                                      state.thread_clocks[tid])
 

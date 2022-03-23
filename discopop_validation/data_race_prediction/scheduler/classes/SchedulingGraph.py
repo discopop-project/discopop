@@ -49,7 +49,6 @@ class SchedulingGraph(object):
             if schedule_element is not None:
                 if schedule_element.thread_id not in self.thread_ids:
                     self.thread_ids.append(schedule_element.thread_id)
-        print("Thread ids: ", self.thread_ids)
 
 
     def plot_graph(self):

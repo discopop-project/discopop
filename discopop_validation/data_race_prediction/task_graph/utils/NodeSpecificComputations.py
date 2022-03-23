@@ -83,9 +83,6 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     """construct scheduling graph until next join node. Connects Fork and join node with a SEQUENTIAL edge.
     Replaces outgoing SEQUENTIAL edges with contained edges"""
-    print("FORK")
-    print(result_obj)
-    result_obj.print_states()
     # replace outgoing contains with sequential edges, if the target is not a JOIN node
     out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
                            task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
@@ -163,12 +160,9 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         # create new thread clocks for state if necessary
         # check if all necessary thread_ids are contained in state
         for thread_id in scheduling_graph.thread_ids:
-            print("TID: ", thread_id)
             if thread_id not in state.thread_clocks:
-                print("NOT CONTAINED IN STATE")
                 # create new entry for thread_id in state
                 state.create_new_entries(thread_id)
-                print(state)
 
     # enter parallel
     for idx, state in enumerate(result_obj.states):
@@ -178,14 +172,6 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
                                              affected_thread_ids=affected_thread_ids)
         result_obj.states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
-
-    print("FORK - PRE UPDATE")
-    print(result_obj)
-    result_obj.print_states()
-    print("STC: ", scheduling_graph.thread_count)
-    used_thread_ids = []
-    #for node_in in scheduling_graph.graph.nodes:
-     #   print("DATA: ", type(scheduling_graph.graph.nodes[node_in]["data"]))
 
     result_obj.update(scheduling_graph)
     return result_obj
@@ -279,11 +265,7 @@ def __unused_parallel_result_computation(node_obj, task_graph):
                 result_sequence.append(elem)
         return result_sequence
 
-    print(behavior_model_sequence)
     behavior_model_sequence = __clean_behavior_model_sequence(behavior_model_sequence)
-    print()
-    print(behavior_model_sequence)
-    print()
 
     # todo: Why is line 30 read before 28 is written? should be suppressed by sequential composition
 
@@ -366,9 +348,6 @@ def __unused_parallel_result_computation(node_obj, task_graph):
     data_races: List[DataRace] = []
     successful_states = []
     for graph in scheduling_graphs:
-        print("GRAPH:")
-        print(graph)
-
         if graph == "ENTERPARALLEL":
             # modify successful states using a ENTERPARALLEL update
             for idx, state in enumerate(successful_states):
@@ -388,9 +367,6 @@ def __unused_parallel_result_computation(node_obj, task_graph):
             continue
         else:
             # calculate new data races and successful states using the old successful states as initial states
-            print("ELSE: ", graph)
-            print("DIM: ", graph.dimensions)
-            print("GTC: ", graph.thread_count)
             for idx, state in enumerate(successful_states):
                 # create new thread clocks for state if necessary
                 if state.thread_count < graph.thread_count:
@@ -402,9 +378,6 @@ def __unused_parallel_result_computation(node_obj, task_graph):
                     enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
                                                          affected_thread_ids=affected_thread_ids)
                     successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
-
-                    #print("STC: ", state.thread_count)
-                    #print(state)
 
             tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
             data_races += tmp_data_races
