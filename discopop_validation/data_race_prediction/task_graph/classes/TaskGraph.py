@@ -240,6 +240,8 @@ class TaskGraph(object):
                     continue
                 except IndexError:
                     continue
+                if distance < 0:
+                    continue
                 if shortest_edge_source is None:
                     shortest_edge_source = edge_source
                     shortest_edge_distance = distance
@@ -247,6 +249,8 @@ class TaskGraph(object):
                 if distance < shortest_edge_distance:
                     shortest_edge_source = edge_source
                     shortest_edge_distance = distance
+            if shortest_edge_distance is None:
+                continue
             # remove unnecessary edges
             edge_remove_buffer = []
             for edge_source, edge_target in self.graph.in_edges(node):
