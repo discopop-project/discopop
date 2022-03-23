@@ -215,7 +215,7 @@ def __main_start_execution(run_configuration: Configuration):
     # add identified data races to graph nodes for plotting
     task_graph.add_data_races_to_graph(computed_result)
 
-    task_graph.plot_graph(mark_data_races=True)
+    #task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
