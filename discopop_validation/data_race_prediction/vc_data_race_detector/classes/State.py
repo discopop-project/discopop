@@ -23,8 +23,6 @@ class State(object):
             self.thread_clocks[i] = VectorClock(thread_count)
             self.thread_clocks[i].clocks[i] = 1
             self.thread_id_to_clock_position_dict[i] = [i]
-        print("POS DICT: ")
-        print(self.thread_id_to_clock_position_dict)
         for l_name in lock_names:
             self.lock_clocks[l_name] = VectorClock(thread_count)
         for v_name in var_names:
@@ -55,11 +53,8 @@ class State(object):
         for key in self.var_write_clocks:
             self.var_write_clocks[key].add_clock()
         self.thread_id_to_clock_position_dict[thread_id] = self.thread_count
-        print("POS DICT: ")
-        print(self.thread_id_to_clock_position_dict)
         self.thread_count += 1
         self.thread_clocks[thread_id] = VectorClock(self.thread_count)
-        print("CREATED")
 
     def __str__(self):
         return "Thread clocks: " + " ".join([str(key)+":"+str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
