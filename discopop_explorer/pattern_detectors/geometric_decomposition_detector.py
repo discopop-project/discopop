@@ -29,7 +29,8 @@ class GDInfo(PatternInfo):
         """
         PatternInfo.__init__(self, node)
 
-        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
+        self.do_all_children, self.reduction_children = get_child_loops(
+            pet, node)
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
@@ -47,8 +48,9 @@ class GDInfo(PatternInfo):
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List = []
-        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
-        fp.append(Variable('int', 'i'))
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(
+            pet, node, "GeometricDecomposition", [], [])
+        fp.append(Variable('int', 'i', ''))
 
         self.first_private = fp
         self.private = p
@@ -109,7 +111,8 @@ def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> Tuple[bool, Optional[int
         children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
 
     for child in children:
-        inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
+        inner_loop_iter[child.start_position(
+        )] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
         if min_iterations_count is None or v < min_iterations_count:

@@ -17,7 +17,8 @@ except ModuleNotFoundError:
 def get_pet_graph(run_configuration: Configuration) -> PETGraphX:
     pet = PETGraphX.from_parsed_input(*parser.parse_inputs(run_configuration.cu_xml, run_configuration.dep_file,
                                                     run_configuration.loop_counter_file,
-                                                        run_configuration.reduction_file))
+                                                        run_configuration.reduction_file,
+                                                           run_configuration.file_mapping))
     return pet
 
 

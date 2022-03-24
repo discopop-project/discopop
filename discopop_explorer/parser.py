@@ -6,15 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-
+import re
 import os
 from collections import defaultdict
 
 from lxml import objectify  # type:ignore
 
-readlineToCUIdMap = defaultdict(set)  # Map to record which line belongs to read set of nodes. LID -> NodeIds
-writelineToCUIdMap = defaultdict(set)  # Map to record which line belongs to write set of nodes. LID -> NodeIds
-lineToCUIdMap = defaultdict(set)  # Map to record which line belongs to set of nodes. LID -> NodeIds
+# Map to record which line belongs to read set of nodes. LID -> NodeIds
+readlineToCUIdMap = defaultdict(set)
+# Map to record which line belongs to write set of nodes. LID -> NodeIds
+writelineToCUIdMap = defaultdict(set)
+# Map to record which line belongs to set of nodes. LID -> NodeIds
+lineToCUIdMap = defaultdict(set)
 
 
 class DependenceItem(object):
@@ -36,7 +39,8 @@ def __parse_xml_input(xml_fd):
     parsed_cu = objectify.fromstring(xml_content)
     cu_dict = dict()
     for node in parsed_cu.Node:
-        node.childrenNodes = str(node.childrenNodes).split(',') if node.childrenNodes else []
+        node.childrenNodes = str(node.childrenNodes).split(
+            ',') if node.childrenNodes else []
         if node.get('type') == '0':
             for instruction_id in str(node.instructionLines).split(','):
                 lineToCUIdMap[instruction_id].add(node.get('id'))
@@ -95,16 +99,18 @@ def __parse_dep_file(dep_fd):
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
         sink = dep_fields[0]
-        for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:  # pairwise iteration over dependencies source
+        # pairwise iteration over dependencies source
+        for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:
             type = dep_pair[0]
             source_fields = dep_pair[1].split('|')
             var_str = "" if len(source_fields) == 1 else source_fields[1]
-            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_str))
+            dependencies_list.append(DependenceItem(
+                sink, source_fields[0], type, var_str))
 
     return dependencies_list
 
 
-def parse_inputs(cu_file, dependencies, loop_counter, reduction_file):
+def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mapping):
     with open(cu_file) as f:
         cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
@@ -123,25 +129,116 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file):
     else:
         loop_data = None
 
+    fmap_file = open(file_mapping)
+    fmap_lines = fmap_file.read().splitlines()
+    fmap_file.close()
+
     if os.path.exists(reduction_file):
         reduction_vars = []
 
         # parse reduction variables
         with open(reduction_file) as f:
             content = f.readlines()
-
         for line in content:
-            line = line.replace("\n", "")
-            s = line.split(' ')
-            # line = FileId + LineNr
-            var = {
-                'loop_line': f'{s[3]}:{s[8]}',
-                'name': s[17],
-                'reduction_line': f'{s[3]}:{s[13]}',
-                'operation': s[21]
-            }
-            reduction_vars.append(var)
+            if is_reduction(line, fmap_lines):
+                line = line.replace("\n", "")
+                s = line.split(' ')
+                var = {
+                    'loop_line': f'{s[3]}:{s[8]}',
+                    'name': s[17],
+                    'reduction_line': f'{s[3]}:{s[13]}',
+                    'operation': s[21]
+                }
+                reduction_vars.append(var)
     else:
         reduction_vars = None
 
     return cu_dict, dependencies, loop_data, reduction_vars
+
+
+def is_reduction(reduction_line, fmap_lines):
+    rex = re.compile(
+        'FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line Number : ([0-9]*) ')
+    if not rex:
+        return False
+    res = rex.search(reduction_line)
+    file_id = int(res.group(1))
+    file_line = int(res.group(2))
+    # print("file_line: " + str(file_line))
+
+    filepath = get_filepath(file_id, fmap_lines)
+    print("filepath: " + filepath)
+    src_file = open(filepath)
+    src_lines = src_file.read().splitlines()
+    src_file.close()
+
+    return possible_reduction(file_line, src_lines)
+
+
+def possible_reduction(line, src_lines):
+    assert line > 0 and line <= len(src_lines), 'invalid src line'
+    src_line = src_lines[line - 1]
+    while not ';' in src_line:
+        line = line + 1
+        if line > len(src_lines):
+            return False
+        src_line = src_line + ' ' + src_lines[line - 1]
+
+    pos = src_line.find('=')
+    if pos == -1:
+        return True
+
+    bracket_a = src_line[0:pos].find('[')
+    if bracket_a == -1:
+        return True
+    bracket_b = src_line[0:pos].rfind(']')
+    assert bracket_b != -1
+
+    rex_search_res = re.search(
+        '([A-Za-z0-9_]+)\[', src_line[0:(bracket_a + 1)])
+    if not rex_search_res:
+        return True
+
+    array_name = rex_search_res[1]
+    array_index = src_line[(bracket_a + 1): bracket_b]
+    # print('"{} {}"'.format(array_name, array_index))
+
+    array_indices = find_array_indices(array_name, src_line[pos:len(src_line)])
+    for index in array_indices:
+        print("index, array_index: " + index + " " + array_index)
+        if index == array_index:
+            return False
+
+    return True
+
+
+def get_filepath(file_id, fmap_lines):
+    assert file_id > 0 and file_id <= len(fmap_lines), 'invalid file id'
+    line = fmap_lines[file_id - 1]
+    tokens = line.split(sep='\t')
+    return tokens[1]
+
+
+def get_enclosed_str(data):
+    num_open_brackets = 1
+    for i in range(0, len(data)):
+        if data[i] == '[':
+            num_open_brackets = num_open_brackets + 1
+        elif data[i] == ']':
+            num_open_brackets = num_open_brackets - 1
+            if num_open_brackets == 0:
+                return data[0:i]
+
+
+def find_array_indices(array_name, src_line):
+    indices = []
+    uses = list(re.finditer(array_name, src_line))
+    for use in uses:
+        # print(use.end())
+        if src_line[use.end()] == '[':
+            indices.append(get_enclosed_str(
+                src_line[(use.end() + 1): len(src_line)]))
+        else:
+            indices.append('')
+
+    return indices
