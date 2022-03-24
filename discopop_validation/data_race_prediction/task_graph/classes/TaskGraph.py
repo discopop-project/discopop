@@ -10,6 +10,7 @@ from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.data_race_prediction.task_graph.classes.CalledFunctionNode import CalledFunctionNode
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.ForkNode import ForkNode
 from discopop_validation.data_race_prediction.task_graph.classes.JoinNode import JoinNode
@@ -53,7 +54,8 @@ class TaskGraph(object):
         edge_color_map = {EdgeType.SEQUENTIAL: "black",
                           EdgeType.CONTAINS: "orange",
                           EdgeType.DEPENDS: "green",
-                          EdgeType.DATA_RACE: "red"}
+                          EdgeType.DATA_RACE: "red",
+                          EdgeType.CALLS: "violet"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
@@ -130,6 +132,42 @@ class TaskGraph(object):
         new_node_id = self.__get_new_node_id()
         self.graph.add_node(new_node_id, data=JoinNode(new_node_id))
         return new_node_id
+
+    def insert_called_function_nodes(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+        # copied from add_edges
+        pragma_to_cuid: Dict[OmpPragma, str] = dict()
+        for pragma in omp_pragmas:
+            cu_id = self.__get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
+                                                                  pragma.end_line)
+            pragma_to_cuid[pragma] = cu_id
+
+        cuid_to_node_id_map = dict()
+        for pragma in omp_pragmas:
+            # check if function is called inside pragma
+            print("Pragma: ", pragma)
+            print("NodeId: ", pragma_to_cuid[pragma])
+            print("Calls: ", pet.node_at(pragma_to_cuid[pragma]).node_calls)
+            print(pet.node_at(pragma_to_cuid[pragma]).node_calls)
+            for called_function_dict in pet.node_at(pragma_to_cuid[pragma]).node_calls:
+                if called_function_dict["cuid"] not in cuid_to_node_id_map:
+                    called_cu_id = called_function_dict["cuid"]
+                    new_node_id = self.__get_new_node_id()
+                    cuid_to_node_id_map[called_cu_id] = new_node_id
+                    function_name = pet.node_at(called_cu_id).name
+                    print("NAME: ", function_name)
+                    self.graph.add_node(new_node_id, data=CalledFunctionNode(new_node_id, name=function_name))
+                    self.graph.add_edge(self.pragma_to_node_id[pragma], new_node_id, type=EdgeType.CALLS)
+                else:
+                    self.graph.add_edge(self.pragma_to_node_id[pragma], cuid_to_node_id_map[called_function_dict["cuid"]], type=EdgeType.CALLS)
+                    print("ELSE")
+
+
+        # todo: collect all called functions inside parent node and check for line numbers to circumvent non-matching pragma and CU ranges
+
+
+
+
+
 
     def compute_results(self):
         # trigger result computation for root node

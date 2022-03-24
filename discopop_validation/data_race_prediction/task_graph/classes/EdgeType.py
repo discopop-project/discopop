@@ -8,3 +8,4 @@ class EdgeType(Enum):
     CONCURRENT = "concurrent"  # currently unused
     DEPENDS = "depends"
     DATA_RACE = "data_race"
+    CALLS = "calls"
