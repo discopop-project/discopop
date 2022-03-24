@@ -177,6 +177,7 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
             n.return_instructions_count = int(getattr(node, 'returnInstructions').get('count'))
         if hasattr(node.callsNode, 'nodeCalled'):
             n.node_calls = [{"cuid": v.text,  "atLine": v.get('atLine')} for v in getattr(node.callsNode, 'nodeCalled') if v.get('atLine') is not None]
+            print("PETGraphx:", n, " CALLS: ", n.node_calls)
     return n
 
 

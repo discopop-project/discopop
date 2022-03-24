@@ -84,7 +84,7 @@ def __map_dummy_nodes(cu_dict):
             if 'callsNode' in dir(node):
                 for idx, i in enumerate(node.callsNode.nodeCalled):
                     if i in dummy_to_func_ids_map:
-                        cu_dict[node_id].callsNode.nodeCalled[idx] = dummy_to_func_ids_map[i]
+                        cu_dict[node_id].callsNode.nodeCalled[idx]._setText(dummy_to_func_ids_map[i])
     return cu_dict
 
 
