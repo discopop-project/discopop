@@ -5,13 +5,13 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Behavior
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import copy
 import warnings
 
 class PragmaTaskwaitNode(TaskGraphNode):
-    result : Optional[TaskGraphNodeResult]
+    result : Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models : List[BehaviorModel]
 
@@ -24,14 +24,14 @@ class PragmaTaskwaitNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "Wait"
-        label = "Wait\n"
+        label = str(self.node_id) +" " +  "Wait\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
     def get_color(self, mark_data_races: bool):
         color = "brown"
         if mark_data_races:
-            if len(self.result.data_races) > 0:
+            if len(self.data_races) > 0:
                 color = "red"
         return color
 
@@ -39,6 +39,11 @@ class PragmaTaskwaitNode(TaskGraphNode):
         """gather behavior models of sequence-starting contained nodes (should only be 1 in case of a FOR pragma)"""
         outer_seq_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
         outer_par_behavior_models: List[List[BehaviorModel]] = ["PAR"]
+
+        # add TASKWAIT mark
+        outer_seq_behavior_models.append("TASKWAIT")
+
+
         # gather behavior models of contained nodes
         for source, target in task_graph.graph.out_edges(self.node_id):
             inner_par_behavior_models = ["PAR"]

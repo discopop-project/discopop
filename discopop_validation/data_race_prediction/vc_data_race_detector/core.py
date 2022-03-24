@@ -5,19 +5,18 @@ from typing import List, Optional, Tuple
 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 import concurrent.futures
 
 
-def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int]) -> Tuple[List[DataRace], List[State]]:
+def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dimensions: List[int], initial_states: List[State]) -> Tuple[List[DataRace], List[State]]:
     graph_depth = 0
     for entry in dimensions:
         graph_depth += entry
     # if list of initial States is empty, create a new State (required for root node)
-    initial_states = []
+    # initial_states = []
     if len(initial_states) == 0:
         initial_states.append(State(scheduling_graph.thread_count, scheduling_graph.lock_names, scheduling_graph.var_names))
     # start data race detection for each possible initial state and combine the results
@@ -48,6 +47,7 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
 
     # no multithreading
     for source, target in scheduling_graph.graph.out_edges(node_identifier):
+
         state_copy = copy.deepcopy(state)
         previous_accesses_copy = copy.copy(previous_accesses)
         if node_schedule_element is not None:

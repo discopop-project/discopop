@@ -13,6 +13,7 @@ class PragmaType(IntEnum):
     FOR = 7
 
 
+
 class OmpPragma(object):
     file_id: int
     start_line: int

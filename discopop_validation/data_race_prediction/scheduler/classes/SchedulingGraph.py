@@ -20,6 +20,7 @@ class SchedulingGraph(object):
     var_names: List[str] = []
     dimensions: List[int]
     thread_count : int
+    thread_ids: List[int]
     fingerprint: str
     def __init__(self, dim: List[int], behavior_models: List[BehaviorModel]):
         self.dimensions = dim
@@ -38,6 +39,17 @@ class SchedulingGraph(object):
                     self.lock_names = list(set(self.lock_names))
                     self.var_names += schedule_element.var_names
                     self.var_names = list(set(self.var_names))
+        # get contained thread id's
+        self.thread_ids = []
+        self.__update_contained_thread_ids()
+
+    def __update_contained_thread_ids(self):
+        for node_in in self.graph.nodes:
+            schedule_element = self.graph.nodes[node_in]["data"]
+            if schedule_element is not None:
+                if schedule_element.thread_id not in self.thread_ids:
+                    self.thread_ids.append(schedule_element.thread_id)
+
 
     def plot_graph(self):
         plt.subplot(121)
@@ -117,15 +129,19 @@ class SchedulingGraph(object):
 
         self.fix_node_ids()
 
+        self.__update_contained_thread_ids()
+
         return self
 
 
     def parallel_compose(self, other_graph):
         if other_graph is None:
             return self
+
         new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
-        thread_id_offset = self.thread_count  # added to other_graphs thread ids to prevent conflicts
+        thread_id_offset = self.thread_count # added to other_graphs thread ids to prevent conflicts
+
 
         # set correct thread id's
         # thread id's of self remain in current state
@@ -192,6 +208,8 @@ class SchedulingGraph(object):
                                                     composed_graph.get_root_node_identifier(), -1)
 
         composed_graph.fix_node_ids()
+        composed_graph.__update_contained_thread_ids()
+
         return composed_graph
 
 

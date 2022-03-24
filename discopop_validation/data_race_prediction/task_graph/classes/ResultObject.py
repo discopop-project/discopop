@@ -1,21 +1,45 @@
+import warnings
+
 from typing import List
 
+from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
+from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 import random
 import string
 
-class TaskGraphNodeResult(object):
+from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
+from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
+
+
+class ResultObject(object):
     states: List[State]
     data_races: List[DataRace]
     fingerprint_stack: List[str]
     thread_count_stack: List[int]
+    current_thread_count: int
 
     def __init__(self):
         self.states = []
         self.data_races = []
         self.fingerprint_stack = []
-        self.thread_count_stack = [2]
+        self.thread_count_stack = []
+        self.current_thread_count = 0
+
+    def __str__(self):
+        res_str = "ResultObject:\n"
+        res_str += "\tstates: " + str(len(self.states)) + "\n"
+        res_str += "\tdata_races: " + str(len(self.data_races)) + "\n"
+        res_str += "\tfingerprints: " + " ".join(self.fingerprint_stack) + "\n"
+        res_str += "\tthread count stack: "+ " ".join(self.thread_count_stack) + "\n"
+        return res_str
+
+    def print_states(self):
+        print("STATES:")
+        for state in self.states:
+            print(state)
+            print()
 
     def combine(self, node_result):
         """combine the current states with the states of node_result, if fingerprint_stacks are equal"""
@@ -54,3 +78,18 @@ class TaskGraphNodeResult(object):
         buffer = self.get_current_thread_count()
         del self.thread_count_stack[-1]
         return buffer
+
+    def update(self, scheduling_graph):
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions, self.states)
+        self.data_races += data_races
+        # remove duplicates from successful states
+        successful_states_wo_duplicates = []
+        for state in successful_states:
+            is_known = False
+            for known_state in successful_states_wo_duplicates:
+                if state == known_state:
+                    is_known = True
+                    break
+            if not is_known:
+                successful_states_wo_duplicates.append(state)
+        self.states = successful_states_wo_duplicates
