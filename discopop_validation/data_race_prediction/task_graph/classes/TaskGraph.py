@@ -180,6 +180,25 @@ class TaskGraph(object):
             __include_called_functions(self.pragma_to_node_id[pragma], pragma_to_cuid[pragma], pragma)
 
 
+    def insert_function_contains_edges(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == CalledFunctionNode:
+                for other_node in self.graph.nodes:
+                    if node == other_node:
+                        continue
+                    if self.graph.nodes[other_node]["data"].pragma is None:
+                        continue
+                    # check if other_node contained in node
+                    if self.graph.nodes[node]["data"].file_id != self.graph.nodes[other_node]["data"].pragma.file_id:
+                        continue
+                    if self.graph.nodes[node]["data"].start_line <= self.graph.nodes[other_node]["data"].pragma.start_line <= self.graph.nodes[node]["data"].end_line and \
+                            self.graph.nodes[node]["data"].start_line <= self.graph.nodes[other_node]["data"].pragma.end_line <= self.graph.nodes[node]["data"].end_line:
+                        # other_node contained in node
+                        # create contains edge between node and other_node
+                        self.graph.add_edge(node, other_node, type=EdgeType.CONTAINS)
+
+
+
     def compute_results(self):
         # trigger result computation for root node
         computed_result = self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
