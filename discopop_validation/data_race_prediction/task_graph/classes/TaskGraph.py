@@ -133,7 +133,7 @@ class TaskGraph(object):
         self.graph.add_node(new_node_id, data=JoinNode(new_node_id))
         return new_node_id
 
-    def insert_called_function_nodes(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+    def insert_called_function_nodes_and_calls_edges(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         # copied from add_edges
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
@@ -144,29 +144,40 @@ class TaskGraph(object):
         cuid_to_node_id_map = dict()
         for pragma in omp_pragmas:
             # check if function is called inside pragma
-            print("Pragma: ", pragma)
-            print("NodeId: ", pragma_to_cuid[pragma])
-            print("Calls: ", pet.node_at(pragma_to_cuid[pragma]).node_calls)
-            print(pet.node_at(pragma_to_cuid[pragma]).node_calls)
-            for called_function_dict in pet.node_at(pragma_to_cuid[pragma]).node_calls:
-                if called_function_dict["cuid"] not in cuid_to_node_id_map:
-                    called_cu_id = called_function_dict["cuid"]
-                    new_node_id = self.__get_new_node_id()
-                    cuid_to_node_id_map[called_cu_id] = new_node_id
-                    function_name = pet.node_at(called_cu_id).name
-                    print("NAME: ", function_name)
-                    self.graph.add_node(new_node_id, data=CalledFunctionNode(new_node_id, name=function_name))
-                    self.graph.add_edge(self.pragma_to_node_id[pragma], new_node_id, type=EdgeType.CALLS)
-                else:
-                    self.graph.add_edge(self.pragma_to_node_id[pragma], cuid_to_node_id_map[called_function_dict["cuid"]], type=EdgeType.CALLS)
-                    print("ELSE")
+            seen_configurations = []
+            def __include_called_functions(origin_node_id, root_cu_id, given_pragma):
+                seen_configurations.append((origin_node_id, root_cu_id, given_pragma))
+                for called_function_dict in pet.node_at(root_cu_id).node_calls:
+                    called_file_id, called_atLine = called_function_dict["atLine"].split(":")
+                    called_file_id = int(called_file_id)
+                    called_atLine = int(called_atLine)
+                    # check if function call is inside pragmas scope
+                    if called_file_id != pragma.file_id or called_atLine < given_pragma.start_line or called_atLine > given_pragma.end_line:
+                        continue
+                    # create edge and node if not already present
+                    if called_function_dict["cuid"] not in cuid_to_node_id_map:
+                        called_cu_id = called_function_dict["cuid"]
+                        new_node_id = self.__get_new_node_id()
+                        cuid_to_node_id_map[called_cu_id] = new_node_id
+                        function_name = pet.node_at(called_cu_id).name
+                        function_file_id = pet.node_at(called_cu_id).file_id
+                        function_start_line = pet.node_at(called_cu_id).start_line
+                        function_end_line = pet.node_at(called_cu_id).end_line
 
+                        self.graph.add_node(new_node_id, data=CalledFunctionNode(new_node_id, name=function_name,
+                                                                                 file_id=function_file_id,
+                                                                                 start_line=function_start_line,
+                                                                                 end_line=function_end_line))
+                        self.graph.add_edge(origin_node_id, new_node_id, type=EdgeType.CALLS)
+                    else:
+                        self.graph.add_edge(origin_node_id, cuid_to_node_id_map[called_function_dict["cuid"]], type=EdgeType.CALLS)
+                # start recursion over all unseen children of root_cu_id
 
-        # todo: collect all called functions inside parent node and check for line numbers to circumvent non-matching pragma and CU ranges
+                for child_cu in pet.direct_children(pet.node_at(root_cu_id)):
+                    if (origin_node_id, child_cu.id, given_pragma) not in seen_configurations:
+                        __include_called_functions(origin_node_id, child_cu.id, given_pragma)
 
-
-
-
+            __include_called_functions(self.pragma_to_node_id[pragma], pragma_to_cuid[pragma], pragma)
 
 
     def compute_results(self):
