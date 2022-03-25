@@ -1,0 +1,6 @@
+{
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "clangd.path": "/usr/bin/clangd-14",
+  "editor.defaultFormatter": "xaver.clang-format"
+}
