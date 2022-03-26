@@ -168,9 +168,9 @@ class TaskGraph(object):
                                                                                  file_id=function_file_id,
                                                                                  start_line=function_start_line,
                                                                                  end_line=function_end_line))
-                        self.graph.add_edge(origin_node_id, new_node_id, type=EdgeType.CALLS)
+                        self.graph.add_edge(origin_node_id, new_node_id, type=EdgeType.CALLS, atLine=called_function_dict["atLine"])
                     else:
-                        self.graph.add_edge(origin_node_id, cuid_to_node_id_map[called_function_dict["cuid"]], type=EdgeType.CALLS)
+                        self.graph.add_edge(origin_node_id, cuid_to_node_id_map[called_function_dict["cuid"]], type=EdgeType.CALLS, atLine=called_function_dict["atLine"])
                 # start recursion over all unseen children of root_cu_id
 
                 for child_cu in pet.direct_children(pet.node_at(root_cu_id)):
