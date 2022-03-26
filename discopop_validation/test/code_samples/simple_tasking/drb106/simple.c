@@ -7,21 +7,27 @@ Markus Schordan, and Ian Karlin
 schordan1@llnl.gov, karlin1@llnl.gov)
 LLNL-CODE-732144
 All rights reserved.
+
 This file is part of DataRaceBench. For details, see
 https://github.com/LLNL/dataracebench. Please also see the LICENSE file
 for our additional BSD notice.
+
 Redistribution and use in source and binary forms, with
 or without modification, are permitted provided that the following
 conditions are met:
+
 * Redistributions of source code must retain the above copyright
   notice, this list of conditions and the disclaimer below.
+
 * Redistributions in binary form must reproduce the above copyright
   notice, this list of conditions and the disclaimer (as noted below)
   in the documentation and/or other materials provided with the
   distribution.
+
 * Neither the name of the LLNS/LLNL nor the names of its contributors
   may be used to endorse or promote products derived from this
   software without specific prior written permission.
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -80,3 +86,4 @@ int main()
   printf ("Fib(%d)=%d (correct answer should be 55)\n", input, result);
   return 0;
 }
+

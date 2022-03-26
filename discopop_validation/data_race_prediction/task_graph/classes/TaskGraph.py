@@ -198,6 +198,46 @@ class TaskGraph(object):
                         self.graph.add_edge(node, other_node, type=EdgeType.CONTAINS)
 
 
+    def remove_incorrect_function_contains_edges(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == CalledFunctionNode:
+                in_calls_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CALLS]
+                # group edges by their atLine-value
+                grouping_dict = dict()
+                for edge in in_calls_edges:
+                    atLine_value = self.graph.edges[edge]["atLine"]
+                    if atLine_value in grouping_dict:
+                        grouping_dict[atLine_value].append(edge)
+                    else:
+                        grouping_dict[atLine_value] = [edge]
+                # if more than one entry for a key exists, remove all but the best fitting one
+                for atLine in grouping_dict:
+                    if len(grouping_dict[atLine]) <= 1:
+                        continue
+                    # get the best fitting parent node
+                    current_best_node = None
+                    current_difference_to_start = None
+                    current_difference_to_end = None
+                    for edge_source, _ in grouping_dict[atLine]:
+                        if current_best_node is None:#
+                            current_best_node = self.graph.nodes[edge_source]
+                            current_difference_to_start = int(atLine.split(":")[1]) - self.graph.nodes[edge_source]["data"].pragma.start_line
+                            current_difference_to_end = self.graph.nodes[edge_source]["data"].pragma.end_line - int(atLine.split(":")[1])
+                        else:
+                            # check if edge_source is a better fit than current_best_node
+                            difference_to_start =  int(atLine.split(":")[1]) - self.graph.nodes[edge_source]["data"].pragma.start_line
+                            difference_to_end = self.graph.nodes[edge_source]["data"].pragma.end_line - int(atLine.split(":")[1])
+
+                            # check for improvement in line difference values
+                            if difference_to_start <= current_difference_to_start and difference_to_end <= current_difference_to_end:
+                                current_best_node = edge_source
+                                current_difference_to_start = difference_to_start
+                                current_difference_to_end = difference_to_end
+                    # remove all but the edge from the best fitting parent node
+                    edges_to_be_removed = [edge for edge in grouping_dict[atLine] if edge[0] != current_best_node]
+                    for source, target in edges_to_be_removed:
+                        self.graph.remove_edge(source, target)
+
 
     def compute_results(self):
         # trigger result computation for root node

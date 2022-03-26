@@ -170,6 +170,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
     # insert contains edges between function nodes and contained pragma nodes
     task_graph.insert_function_contains_edges()
+    # remove all but the best fitting CALLS edges for each function call in the source code
+    task_graph.remove_incorrect_function_contains_edges()
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
@@ -185,7 +187,7 @@ def __main_start_execution(run_configuration: Configuration):
     # create implicit barriers
     #task_graph.plot_graph()
     task_graph.insert_implicit_barriers()
-    #task_graph.plot_graph()
+
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
