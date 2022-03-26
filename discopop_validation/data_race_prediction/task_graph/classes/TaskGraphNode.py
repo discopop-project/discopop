@@ -80,7 +80,8 @@ class TaskGraphNode(object):
         if self.pragma is None:
             return
         self.pragma.apply_preprocessing()
-        target_code_sections = identify_target_sections_from_pragma(task_graph, self.pragma)
+        print("Pragma: ", self.pragma)
+        target_code_sections = identify_target_sections_from_pragma(task_graph, self.pragma, self.node_id)
         for tcs in target_code_sections:
             print("TCS: ", tcs)
         behavior_models: List[BehaviorModel] = []
