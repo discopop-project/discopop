@@ -23,9 +23,16 @@ int main()
     # pragma omp single shared(result, i, j)
     {
         # pragma omp task shared(result, i, j)
-        i = 3;
+        {
+        	i = 3;
+        	i = 3;
+        	i = 3;
+        }
         # pragma omp task shared(result, i, j)
-        j = 3;
+        {
+        	j = 3;
+        	j = 3;
+        }
         # pragma omp taskwait
         result = i + j;
 //        # pragma omp task shared(result, i, j)
