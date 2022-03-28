@@ -172,6 +172,7 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_function_contains_edges()
     # remove all but the best fitting CALLS edges for each function call in the source code
     task_graph.remove_incorrect_function_contains_edges()
+    task_graph.plot_graph()
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
@@ -192,6 +193,7 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
     task_graph.insert_behavior_storage_nodes()
+    task_graph.plot_graph()
     # remove CalledFunctionNodes
     task_graph.remove_called_function_nodes()
     # remove redundant CONTAINS edges
@@ -224,7 +226,7 @@ def __main_start_execution(run_configuration: Configuration):
     # add identified data races to graph nodes for plotting
     task_graph.add_data_races_to_graph(computed_result)
 
-    task_graph.plot_graph(mark_data_races=True)
+    #task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()
