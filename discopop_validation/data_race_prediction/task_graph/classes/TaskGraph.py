@@ -259,6 +259,28 @@ class TaskGraph(object):
             cu_id = self.__get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
+        # add contains edges
+        for pragma in omp_pragmas:
+            for other_pragma in omp_pragmas:
+                if pragma == other_pragma:
+                    continue
+                # if two pragmas are based on the same CU, the first appearing contains the second, if their source code lines overlap
+                if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
+                    if pragma.start_line < other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
+                        # pragma contains other_pragma
+                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
+                                            type=EdgeType.CONTAINS)
+                else:
+                    # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
+                    if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]),
+                                          pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
+                        # todo maybe remove dead code
+                        # ensure, that other_pragma lies within the boundary of pragma
+                        # if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
+                        #    self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
+                                            type=EdgeType.CONTAINS)
+
         # todo more efficient edge creation (potentially traverse upwards and find pragmas along each path instead of pairwise calculation)
         # add successor edges
         for pragma in omp_pragmas:
@@ -284,24 +306,21 @@ class TaskGraph(object):
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
                                 self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
 
-        # add contains edges
-        for pragma in omp_pragmas:
-            for other_pragma in omp_pragmas:
-                if pragma == other_pragma:
-                    continue
-                # if two pragmas are based on the same CU, the first appearing contains the second, if their source code lines overlap
-                if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
-                    if pragma.start_line < other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                        # pragma contains other_pragma
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
-                else:
-                    # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
-                    if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]), pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
-                        # todo maybe remove dead code
-                        # ensure, that other_pragma lies within the boundary of pragma
-                        #if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                        #    self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+
+        # remove invalid SEQUENTIAL edges
+        to_be_removed = []
+        for source, target in [edge for edge in self.graph.edges if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]:
+            # let source be CONTAINED in parent
+            # remove edge, if target is a successor of parent
+            source_in_contains_edges = [edge for edge in self.graph.in_edges(source) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for parent, _ in source_in_contains_edges:
+                parent_out_seq_edges = [edge for edge in self.graph.out_edges(parent) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                if target in [edge[1] for edge in parent_out_seq_edges]:
+                    to_be_removed.append((source, target))
+        # remove duplicates
+        to_be_removed = list(set(to_be_removed))
+        for source, target in to_be_removed:
+            self.graph.remove_edge(source, target)
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:

@@ -50,7 +50,7 @@ class OmpPragma(object):
             return PragmaType.BARRIER
         if self.pragma.startswith("taskwait"):
             return PragmaType.TASKWAIT
-        if self.pragma.startswith("task "):
+        if self.pragma.startswith("task"):
             return PragmaType.TASK
         if self.pragma.startswith("for"):
             return PragmaType.FOR

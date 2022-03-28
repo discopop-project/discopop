@@ -13,14 +13,24 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma, task_gra
     # include parallel, parallel for and single pragmas
     if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK]:
         pragma_target_regions: List[Tuple[int, int, Optional[List[str]]]] = [(pragma.start_line, pragma.end_line, None)]
-        # add body of called functions to pragma_target_regions
+        # add body of called functions to pragma_target_regions, if pragma not contained in called function (recursive call)
         outgoing_calls_edges = [edge for edge in task_graph.graph.out_edges(task_graph_node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.CALLS]
         for _, target in outgoing_calls_edges:
+            target_outgoing_contains_edges = [edge for edge in task_graph.graph.out_edges(target) if
+                                              task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            # check if pragma is contained in called function and skip it if necessary
+            skip_current_target = False
+            for _, target_contains in target_outgoing_contains_edges:
+                if pragma == task_graph.graph.nodes[target_contains]["data"].pragma:
+                    skip_current_target = True
+                    break
+            if skip_current_target:
+                continue
+
             called_function_body_start = task_graph.graph.nodes[target]["data"].start_line
             called_function_body_end = task_graph.graph.nodes[target]["data"].end_line
             # get shared variables used in contained pragmas
             used_shared_variables = []
-            target_outgoing_contains_edges = [edge for edge in task_graph.graph.out_edges(target) if task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
             for _, inner_target in target_outgoing_contains_edges:
                 inner_target_pragma = task_graph.graph.nodes[inner_target]["data"].pragma
                 if inner_target_pragma is not None:
