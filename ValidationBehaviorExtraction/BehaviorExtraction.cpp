@@ -611,9 +611,22 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         // check if BB is inside scope
         list<unsigned int> bb_in_sections;
         for(auto section : sections){
+            //errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
+            //errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
+            // check if graphNode inside section or section inside graphNode
             if(graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first <= section.endLine){
+                // graphNode in section
                 // errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
                 // errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
+                bb_in_sections.push_back(section.sectionId);
+            }
+            else if(section.startLine >= graphNode.startLocation.first && section.endLine <= graphNode.endLocation.first){
+                // section in graphNode
+                bb_in_sections.push_back(section.sectionId);
+            }
+            else if ((graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first > section.endLine && section.endLine >= graphNode.startLocation.first)
+            || graphNode.startLocation.first <= section.startLine && graphNode.endLocation.first <= section.endLine && section.startLine <= graphNode.endLocation.first){
+                // partial overlap
                 bb_in_sections.push_back(section.sectionId);
             }
         }
@@ -648,10 +661,11 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         }
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
-            // errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
+            //errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
             // only report operation, if it is inside of a relevant section
             string svaNameWithoutIndices = sva.name.substr(0, sva.name.find("["));
             for(auto section : sections){
+                // errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
                 // check for presence for each entry in section.varNames
                 for(auto varName : section.varNames){
                     if(svaNameWithoutIndices.compare(varName) == 0){

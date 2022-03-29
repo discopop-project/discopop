@@ -172,7 +172,6 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_function_contains_edges()
     # remove all but the best fitting CALLS edges for each function call in the source code
     task_graph.remove_incorrect_function_contains_edges()
-    task_graph.plot_graph()
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
@@ -189,36 +188,59 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     task_graph.insert_implicit_barriers()
 
+    print("PRE REDIR")
+    #task_graph.plot_graph()
+    # redirect successor edges of TASKS to next BARRIER or TASKWAIT
+    task_graph.redirect_tasks_successors()
+    print("POST REDIR")
+    #task_graph.plot_graph()
+
+
+
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
     task_graph.insert_behavior_storage_nodes()
-    task_graph.plot_graph()
+    print("POST INSERT BEHAVIOR STORAGE NODES")
+    #task_graph.plot_graph()
     # remove CalledFunctionNodes
     task_graph.remove_called_function_nodes()
     # remove redundant CONTAINS edges
     task_graph.remove_redundant_edges([EdgeType.CONTAINS])
-    # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-    task_graph.redirect_tasks_successors()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     # task_graph.add_virtual_sequential_edges()
     # skip successive TASKWAIT node, if no prior TASK node exists
     task_graph.skip_taskwait_if_no_prior_task_exists()
-    #task_graph.plot_graph()
     task_graph.add_fork_and_join_nodes()
+    print("Added fork / join")
+    #task_graph.plot_graph()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
     #task_graph.plot_graph()
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
+    # add join nodes at path merge points to reduce complexity
+    # task_graph.add_join_nodes_before_path_merge()
     # remove single nodes from graph and replace with contained nodes
+    print("PRE REPLACE")
+    #task_graph.plot_graph()
     task_graph.replace_pragma_single_nodes()
+    print("POST REPLACE")
+    #task_graph.plot_graph()
+    # remove join nodes with only one incoming SEQUENTIAL edge
+    print("PRE REMOVAL SINGULAR JOIN")
+    task_graph.plot_graph()
+    task_graph.remove_single_incoming_join_node()
+    print("POST REMOVAL SINGULAR JOIN")
+    task_graph.plot_graph()
+
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
     # todo remove / ignore irrelevant join nodes
     # todo enable nested fork nodes
 
 
+    print("PRE COMPUTATION")
     #task_graph.plot_graph()
 
     # trigger result computation
@@ -226,7 +248,7 @@ def __main_start_execution(run_configuration: Configuration):
     # add identified data races to graph nodes for plotting
     task_graph.add_data_races_to_graph(computed_result)
 
-    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()

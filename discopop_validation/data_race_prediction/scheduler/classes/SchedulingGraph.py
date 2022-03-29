@@ -43,6 +43,7 @@ class SchedulingGraph(object):
         self.thread_ids = []
         self.__update_contained_thread_ids()
 
+
     def __update_contained_thread_ids(self):
         for node_in in self.graph.nodes:
             schedule_element = self.graph.nodes[node_in]["data"]
