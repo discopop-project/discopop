@@ -64,7 +64,12 @@ class TaskGraphNode(object):
             # if no children exist, print current state
             # todo handle and store results for further use
             return result_obj
+        elif len(successors) > 1 and self.get_label() == "Fork":
+            # fork nodes are the only ones allowed to have multiple sequential children
+            # todo handle and store results for further use
+            return result_obj
         else:
+            print("NODE: ", self.get_label())
             raise ValueError("Invalid number of successors: " +  str(len(successors)) + " at node_id: " + str(self.node_id))
 
 

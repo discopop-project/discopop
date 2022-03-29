@@ -581,7 +581,7 @@ class TaskGraph(object):
                 self.graph.add_node(new_node_id, data=behavior_storage_node)
                 bhv_storage_node_to_parent[new_node_id] = node
                 # old version:
-                # create_edges.append((node, new_node_id, EdgeType.CONTAINS))
+                self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                 if region_start is None or region_end is None:
                     self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                     continue
@@ -590,17 +590,23 @@ class TaskGraph(object):
                 if model.get_start_line() >= region_start and model.get_end_line() <= region_end:
                     print("MODEL IN REGION")
                     # model is contained in the original pragma region of node
-                    # insert behavior before successor
-                    out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                    for _, target in out_seq_edges:
-                        # todo fill edge_replacements
-                        #modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
-                        #modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
-                        #modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
+                    # insert behavior after each path
+                    exit_points = get_contained_exit_points(self, node)
+                    exit_points = [point for point in exit_points if point != new_node_id]
+                    print("EXIT POINTS: ", exit_points)
+                    for point in exit_points:
+                        self.graph.add_edge(point, new_node_id, type=EdgeType.SEQUENTIAL)
 
-                        self.graph.remove_edge(node, target)
-                        self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
-                        self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
+                    #out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    #for _, target in out_seq_edges:
+                    #    # todo fill edge_replacements
+                    #    #modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
+                    #    #modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
+                    #    #modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
+                    #
+                    #    self.graph.remove_edge(node, target)
+                    #    self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+                    #    self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
 
                 else:
                     print("MODEL FROM FUNCTION")
@@ -763,6 +769,31 @@ class TaskGraph(object):
                                                      self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                         if len(outgoing_sequential_edges) == 0:
                             self.graph.add_edge(child, join_node_id, type=EdgeType.SEQUENTIAL)
+
+    def add_join_nodes_before_path_merge(self):
+        node_ids = copy.deepcopy(self.graph.nodes)
+        for node in node_ids:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(in_seq_edges) > 1:
+                join_node_id = self.__add_join_node()
+                # add SEQUENTIAL edge from join node to node
+                self.graph.add_edge(join_node_id, node, type=EdgeType.SEQUENTIAL)
+                # redirect incoming sequential edges to join node
+                for source, _ in in_seq_edges:
+                    self.graph.remove_edge(source, node)
+                    self.graph.add_edge(source, join_node_id, type=EdgeType.SEQUENTIAL)
+
+
+            #if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+            #    join_node_id = self.__add_join_node()
+            #    # add SEQUENTIAL edge from join node to barrier node
+            #    self.graph.add_edge(join_node_id, node, type=EdgeType.SEQUENTIAL)
+#
+#                incoming_seq_edge = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != join_node_id]
+#                # redirect incoming edges
+#                for edge in incoming_seq_edge:
+#                    self.graph.add_edge(edge[0], join_node_id, type=EdgeType.SEQUENTIAL)
+#                    self.graph.remove_edge(edge[0], node)
 
     def add_join_nodes_before_barriers(self):
         node_ids = copy.deepcopy(self.graph.nodes)
