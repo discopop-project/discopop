@@ -195,7 +195,7 @@ def __main_start_execution(run_configuration: Configuration):
     # insert TaskGraphNodes to store behavior models
     task_graph.insert_behavior_storage_nodes()
     print("POST INSERT BEHAVIOR STORAGE NODES")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # remove CalledFunctionNodes
     task_graph.remove_called_function_nodes()
     # remove redundant CONTAINS edges
@@ -206,20 +206,20 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.skip_taskwait_if_no_prior_task_exists()
     task_graph.add_fork_and_join_nodes()
     print("Added fork / join")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
     #task_graph.plot_graph()
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
     # add join nodes at path merge points to reduce complexity
-    task_graph.add_join_nodes_before_path_merge()
+    # task_graph.add_join_nodes_before_path_merge()
     # remove single nodes from graph and replace with contained nodes
     print("PRE REPLACE")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     task_graph.replace_pragma_single_nodes()
     print("POST REPLACE")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
     # todo remove / ignore irrelevant join nodes
@@ -227,14 +227,14 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
 
     # trigger result computation
     computed_result = task_graph.compute_results()
     # add identified data races to graph nodes for plotting
     task_graph.add_data_races_to_graph(computed_result)
 
-    #task_graph.plot_graph(mark_data_races=True)
+    task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
 
     time_end_validation = time.time()

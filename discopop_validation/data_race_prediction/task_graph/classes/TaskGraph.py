@@ -597,16 +597,14 @@ class TaskGraph(object):
                     for point in exit_points:
                         self.graph.add_edge(point, new_node_id, type=EdgeType.SEQUENTIAL)
 
-                    #out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                    #for _, target in out_seq_edges:
-                    #    # todo fill edge_replacements
-                    #    #modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
-                    #    #modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
-                    #    #modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
-                    #
-                    #    self.graph.remove_edge(node, target)
-                    #    self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
-                    #    self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
+                    # if no exit points have been found, insert the behavior node right after node
+                    if len(exit_points) == 0:
+                        print("--> INSERT AS SEQUENTIAL")
+                        out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                        for _, target in out_seq_edges:
+                            self.graph.remove_edge(node, target)
+                            self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+                            self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
 
                 else:
                     print("MODEL FROM FUNCTION")
@@ -671,7 +669,6 @@ class TaskGraph(object):
                 self.graph.add_node(node_id, data=graph_node_data)
             if mode == "remove":
                 self.graph.remove_node(node_id)
-        self.plot_graph()
         # create identified edges
         for mode, source, target, edge_type in modify_edges:
             if mode == "add":
@@ -679,8 +676,6 @@ class TaskGraph(object):
             if mode == "remove":
                 self.graph.remove_edge(source, target)
 
-        print("INCLUDED IDENTIFIED NODES AND EDGES")
-        self.plot_graph()
 
 
     def add_virtual_sequential_edges(self):
