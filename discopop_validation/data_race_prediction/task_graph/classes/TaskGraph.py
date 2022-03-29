@@ -306,8 +306,6 @@ class TaskGraph(object):
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
                                 self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
 
-        print("PRE REMOVING: ")
-        self.plot_graph()
 
         # remove all but the shortest outgoing sequential edges
         to_be_removed = []
@@ -319,14 +317,10 @@ class TaskGraph(object):
             for source, target in out_seq_edges:
                 length = self.graph.nodes[target]["data"].pragma.start_line - self.graph.nodes[source]["data"].pragma.end_line
                 edge_lengths.append((source, target, length))
-            print("EDGES: ", edge_lengths)
             shortest_edge = min(edge_lengths, key=lambda x: x[2])
-            print("SHORTEST: ", shortest_edge)
             to_be_removed = [(elem[0], elem[1]) for elem in edge_lengths if elem != shortest_edge]
-            print("TO_BE_REMOVED: ", to_be_removed)
             for source, target in to_be_removed:
                 self.graph.remove_edge(source, target)
-                print("REMOVED EDGE: ", source, target)
 
 
         # Fallback: add edge from root node to current node if no predecessor exists
@@ -534,139 +528,148 @@ class TaskGraph(object):
                 self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         pass
 
+    def __get_insert_location(self, root, start_line):
+        def __get_start_line(node_id):
+            if self.graph.nodes[node_id]["data"].pragma is None:
+                return self.graph.nodes[node_id]["data"].behavior_models[0].get_start_line()
+            else:
+                return self.graph.nodes[node_id]["data"].pragma.start_line
+
+        print("GET INSERT LOCATION: ", root, start_line)
+        # search on path
+        last_element = None
+        queue = [root]
+        while True:
+            print("QUEUE: ", queue)
+            current = queue.pop(0)
+            if start_line < __get_start_line(current):
+                return "before", current
+            current_out_seq_edge_targets = [edge[1] for edge in self.graph.out_edges(current) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(current_out_seq_edge_targets) == 0:
+                return "after", current
+            queue += current_out_seq_edge_targets
+
+
+
+
+
+        pass
+
     def insert_behavior_storage_nodes(self):
         """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
-        print("PRE INSERT BEHAVIOR STORAGE NODES")
-        self.plot_graph()
+        modify_nodes: List[Tuple[str, int, TaskGraphNode]] = []
+        modify_edges: List[Tuple[str, int, int, EdgeType]] = []
+        edge_replacements = dict()
 
-        create_nodes: List[Tuple[int, TaskGraphNode]] = []
-        create_edges: List[Tuple[int, int, EdgeType]] = []
         bhv_storage_node_to_parent: Dict[int, int] = dict()
         for node in self.graph.nodes:
+            region_start = None
+            region_end = None
+            if self.graph.nodes[node]["data"].pragma is not None:
+                region_start = self.graph.nodes[node]["data"].pragma.start_line
+                region_end = self.graph.nodes[node]["data"].pragma.end_line
+            print("NODE: ", node)
+            print("REG START: ", region_start)
+            print("REG END: ", region_end)
+
             # create contained BehaviorStorageNodes
             for model in self.graph.nodes[node]["data"].behavior_models:
                 new_node_id = self.__get_new_node_id()
                 behavior_storage_node = TaskGraphNode(new_node_id)
                 behavior_storage_node.behavior_models.append(model)
-                create_nodes.append((new_node_id, behavior_storage_node))
-                create_edges.append((node, new_node_id, EdgeType.CONTAINS))
+                modify_nodes.append(("add", new_node_id, behavior_storage_node))
                 bhv_storage_node_to_parent[new_node_id] = node
+                # old version:
+                # create_edges.append((node, new_node_id, EdgeType.CONTAINS))
+                if region_start is None or region_end is None:
+                    modify_edges.append(("add", node, new_node_id, EdgeType.CONTAINS))
+                    continue
+
+                # separate treatment of behavior nodes stemming from called functions vs nodes from the original scope
+                if model.get_start_line() >= region_start and model.get_end_line() <= region_end:
+                    print("MODEL IN REGION")
+                    # model is contained in the original pragma region of node
+                    # insert behavior before successor
+                    out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    for _, target in out_seq_edges:
+                        # todo fill edge_replacements
+                        modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
+                        modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
+                        modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
+
+                else:
+                    print("MODEL FROM FUNCTION")
+                    # model originated from the body of a called function
+                    # find optimal positioning for new node based on minimal location differences
+                    out_calls_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CALLS]
+                    for _, called_function_node_id in out_calls_edges:
+                        called_function_node = self.graph.nodes[called_function_node_id]["data"]
+                        if model.get_start_line() >= called_function_node.start_line and model.get_end_line() <= called_function_node.end_line:
+                            print("MODEL IN FUNCTION")
+                            # model stems from within the current function
+                            # get a list of all nodes which are contained in this function plus their respective start lines
+                            print("CALLED FUNCTION: ", called_function_node_id)
+                            function_out_contained_edges = [edge for edge in self.graph.out_edges(called_function_node_id) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                            print("OUT: ", function_out_contained_edges)
+                            contained_nodes = []
+                            for _, contained_node in function_out_contained_edges:
+                                if self.graph.nodes[contained_node]["data"].pragma is None:
+                                    continue
+                                start_line = self.graph.nodes[contained_node]["data"].pragma.start_line
+                                contained_nodes.append((contained_node, start_line))
+                            print("CONTAINED: ", contained_nodes)
+                            # select insert position on each path / sequence
+                            insert_locations = []
+                            for sequence_entry in get_sequence_entry_points(self, node):
+                                insert_locations.append(self.__get_insert_location(sequence_entry, model.get_start_line()))
+                            # remove duplicated entries, possible in case of multiple merging sequences
+                            insert_locations = list(set(insert_locations))
+                            print("LOCATIONS: ", insert_locations)
+                            # insert edges according to the identified locations
+                            for mode, location in insert_locations:
+                                if mode == "before":
+                                    in_seq_edges = [edge for edge in self.graph.in_edges(location) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                                    for source, _ in in_seq_edges:
+                                        print("SOURCE: ", source)
+                                        # todo fill edge_replacements
+                                        modify_edges.append(("remove", source, location, EdgeType.SEQUENTIAL))
+                                        modify_edges.append(("add", source, new_node_id, EdgeType.SEQUENTIAL))
+                                        modify_edges.append(("add", new_node_id, location, EdgeType.SEQUENTIAL))
+
+
+
+
+
+
+
+        print("nodes: ")
+        for mode, id, _ in modify_nodes:
+            print("->", mode, id)
+
+        print("edges: ")
+        for mode, source, target, _ in modify_edges:
+            print("->", mode, source, target)
 
         # create identified nodes
-        for node_id, graph_node_data in create_nodes:
-            self.graph.add_node(node_id, data=graph_node_data)
+        for mode, node_id, graph_node_data in modify_nodes:
+            if mode == "add":
+                self.graph.add_node(node_id, data=graph_node_data)
+            if mode == "remove":
+                self.graph.remove_node(node_id)
+        self.plot_graph()
         # create identified edges
-        for source, target, edge_type in create_edges:
-            self.graph.add_edge(source, target, type=edge_type)
+        for mode, source, target, edge_type in modify_edges:
+            if mode == "add":
+                self.graph.add_edge(source, target, type=edge_type)
+            if mode == "remove":
+                self.graph.remove_edge(source, target)
 
         print("INCLUDED IDENTIFIED NODES AND EDGES")
         self.plot_graph()
 
-        # connect created behavior storage nodes
-        for bhv_storage_node, _ in create_nodes:
-            # check if bhv_storage_node precedes or succedes contained sequence-start or sequences-end nodes
-            buffer = copy.deepcopy(self.graph.out_edges(bhv_storage_node_to_parent[bhv_storage_node]))
-            removed_edges_buffer = []
-            for parent, target in buffer:
-                print("PAR: ", parent, " TAR: ", target)
-                print("REM: ", removed_edges_buffer)
-                if (parent, target) in removed_edges_buffer:
-                    print("\tSKIP")
-                    continue
+        import sys
+        sys.exit(0)
 
-                if self.graph.edges[(parent, target)]["type"] != EdgeType.CONTAINS:
-                    continue
-                # if parent and target are of type TASK, skip it as no sequential relation can be assumed
-                if type(self.graph.nodes[parent]["data"]) == PragmaTaskNode and type(self.graph.nodes[target]["data"]) == PragmaTaskNode:
-                    print("BOTH ARE TASK, SKIP")
-                    continue
-                print("->HERE")
-                # get amount of incoming and outgoing SEQUENTIAL edges of target
-                incoming = 0
-                outgoing = 0
-                for source, inner_target in self.graph.in_edges(target):
-                    if self.graph.edges[(source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
-                        incoming += 1
-                for source, inner_target in self.graph.out_edges(target):
-                    if self.graph.edges[(source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
-                        outgoing += 1
-
-                # if target has no incoming SEQUENTIAL edge, check if bhv_storage_node is a predecessor
-                if incoming == 0:
-                    if self.graph.nodes[target]["data"].pragma is None:
-                        pass
-                    elif self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_file_id() == self.graph.nodes[target]["data"].pragma.file_id and \
-                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[target]["data"].pragma.start_line and \
-                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[target]["data"].pragma.start_line:
-                        # bhv_storage_node is a predecessor of target
-                        self.graph.add_edge(bhv_storage_node, target, type=EdgeType.SEQUENTIAL)
-                        print("ADDED 1: ", bhv_storage_node, target)
-                        continue
-
-                # if target has no outgoing SEQUENTIAL edge, check if bhv_storage_node is a successor
-                if outgoing == 0:
-                    if self.graph.nodes[target]["data"].pragma is None:
-                        pass
-                    elif self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_file_id() == self.graph.nodes[target]["data"].pragma.file_id and \
-                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() >= self.graph.nodes[target]["data"].pragma.start_line and \
-                            self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() >= self.graph.nodes[target]["data"].pragma.end_line:
-                        # bhv_storage_node is a successor of target
-                        self.graph.add_edge(target, bhv_storage_node, type=EdgeType.SEQUENTIAL)
-                        print("ADDED 2: ", target, bhv_storage_node)
-                        continue
-                # bhv needs to be inserted into existing sequence
-                if incoming == 0:
-                    if bhv_storage_node == target:
-                        continue
-                    # target is sequence entry. From previous checks it is known, that bhv_storage_node is no predecessor of target
-                    # search along each path for possible location
-                    predecessor_queue = [target]
-                    visited_predecessors = []
-                    while len(predecessor_queue) > 0:
-                        current_predecessor = predecessor_queue.pop(0)
-                        visited_predecessors.append(current_predecessor)
-                        add_edges: List[Tuple[int, int, EdgeType]] = []
-                        remove_edges: List[Tuple[int, int]] = []
-                        for inner_source, inner_target in self.graph.out_edges(current_predecessor):
-                            if self.graph.edges[(inner_source, inner_target)]["type"] != EdgeType.SEQUENTIAL:
-                                continue
-                            # check if inner_target is a successor of bhv_storage_node
-                            # separate treatment of regular and behavior storage nodes required due to missing pragmas
-                            if self.graph.nodes[inner_target]["data"].pragma is None:
-                                if self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[inner_target]["data"].behavior_models[0].get_start_line() and \
-                                self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[inner_target]["data"].behavior_models[0].get_start_line():
-                                    # inner_target is a successor of bhv_storage_node
-                                    # insert bhv_storage_node inbetween current_predecessor and inner_target
-                                    add_edges.append((current_predecessor, bhv_storage_node, EdgeType.SEQUENTIAL))
-                                    add_edges.append((bhv_storage_node, inner_target, EdgeType.SEQUENTIAL))
-                                    # remove edge from current_predecessor to inner_target
-                                    remove_edges.append((current_predecessor, inner_target))
-                                else:
-                                    # inner_target is not a successor of bhv_storage_node
-                                    # add inner_target to predecessor_queue
-                                    if inner_target not in visited_predecessors:
-                                        predecessor_queue.append(inner_target)
-                            else:
-                                if self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_start_line() <= self.graph.nodes[inner_target]["data"].pragma.start_line and \
-                                self.graph.nodes[bhv_storage_node]["data"].behavior_models[0].get_end_line() <= self.graph.nodes[inner_target]["data"].pragma.start_line:
-                                    # inner_target is a successor of bhv_storage_node
-                                    # insert bhv_storage_node inbetween current_predecessor and inner_target
-                                    add_edges.append((current_predecessor, bhv_storage_node, EdgeType.SEQUENTIAL))
-                                    add_edges.append((bhv_storage_node, inner_target, EdgeType.SEQUENTIAL))
-                                    # remove edge from current_predecessor to inner_target
-                                    remove_edges.append((current_predecessor, inner_target))
-                                else:
-                                    # inner_target is not a successor of bhv_storage_node
-                                    # add inner_target to predecessor_queue
-                                    if inner_target not in visited_predecessors:
-                                        predecessor_queue.append(inner_target)
-                        for s, t in remove_edges:
-                            self.graph.remove_edge(s, t)
-                            print("REMOVED: ", s, t)
-                            removed_edges_buffer.append((s, t))
-                        for s, t, ty in add_edges:
-                            self.graph.add_edge(s, t, type=ty)
-                            print("ADDED 3: ", s, t)
 
     def add_virtual_sequential_edges(self):
         """replace a sequential edge with a virtual sequential edge, if the target is a Taskwait node."""

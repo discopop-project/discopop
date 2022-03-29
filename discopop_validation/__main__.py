@@ -172,7 +172,6 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.insert_function_contains_edges()
     # remove all but the best fitting CALLS edges for each function call in the source code
     task_graph.remove_incorrect_function_contains_edges()
-    task_graph.plot_graph()
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
@@ -189,23 +188,25 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     task_graph.insert_implicit_barriers()
 
+    # redirect successor edges of TASKS to next BARRIER or TASKWAIT
+    task_graph.redirect_tasks_successors()
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
     task_graph.insert_behavior_storage_nodes()
+    print("POST INSERT BEHAVIOR STORAGE NODES")
     task_graph.plot_graph()
     # remove CalledFunctionNodes
     task_graph.remove_called_function_nodes()
     # remove redundant CONTAINS edges
     task_graph.remove_redundant_edges([EdgeType.CONTAINS])
-    # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-    task_graph.redirect_tasks_successors()
     # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
     # task_graph.add_virtual_sequential_edges()
     # skip successive TASKWAIT node, if no prior TASK node exists
     task_graph.skip_taskwait_if_no_prior_task_exists()
-    #task_graph.plot_graph()
     task_graph.add_fork_and_join_nodes()
+    print("Added fork / join")
+    task_graph.plot_graph()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
     #task_graph.plot_graph()
