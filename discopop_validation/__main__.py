@@ -213,14 +213,19 @@ def __main_start_execution(run_configuration: Configuration):
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
     # remove single nodes from graph and replace with contained nodes
+    print("PRE REPLACE")
+    task_graph.plot_graph()
     task_graph.replace_pragma_single_nodes()
+    print("POST REPLACE")
+    task_graph.plot_graph()
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
     # todo remove / ignore irrelevant join nodes
     # todo enable nested fork nodes
 
 
-    #task_graph.plot_graph()
+    print("PRE COMPUTATION")
+    task_graph.plot_graph()
 
     # trigger result computation
     computed_result = task_graph.compute_results()

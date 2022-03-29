@@ -562,7 +562,8 @@ class TaskGraph(object):
         edge_replacements = dict()
 
         bhv_storage_node_to_parent: Dict[int, int] = dict()
-        for node in self.graph.nodes:
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
             region_start = None
             region_end = None
             if self.graph.nodes[node]["data"].pragma is not None:
@@ -577,12 +578,12 @@ class TaskGraph(object):
                 new_node_id = self.__get_new_node_id()
                 behavior_storage_node = TaskGraphNode(new_node_id)
                 behavior_storage_node.behavior_models.append(model)
-                modify_nodes.append(("add", new_node_id, behavior_storage_node))
+                self.graph.add_node(new_node_id, data=behavior_storage_node)
                 bhv_storage_node_to_parent[new_node_id] = node
                 # old version:
                 # create_edges.append((node, new_node_id, EdgeType.CONTAINS))
                 if region_start is None or region_end is None:
-                    modify_edges.append(("add", node, new_node_id, EdgeType.CONTAINS))
+                    self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                     continue
 
                 # separate treatment of behavior nodes stemming from called functions vs nodes from the original scope
@@ -593,9 +594,13 @@ class TaskGraph(object):
                     out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                     for _, target in out_seq_edges:
                         # todo fill edge_replacements
-                        modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
-                        modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
-                        modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
+                        #modify_edges.append(("remove", node, target, EdgeType.SEQUENTIAL))
+                        #modify_edges.append(("add", node, new_node_id, EdgeType.SEQUENTIAL))
+                        #modify_edges.append(("add", new_node_id, target, EdgeType.SEQUENTIAL))
+
+                        self.graph.remove_edge(node, target)
+                        self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+                        self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
 
                 else:
                     print("MODEL FROM FUNCTION")
@@ -632,9 +637,13 @@ class TaskGraph(object):
                                     for source, _ in in_seq_edges:
                                         print("SOURCE: ", source)
                                         # todo fill edge_replacements
-                                        modify_edges.append(("remove", source, location, EdgeType.SEQUENTIAL))
-                                        modify_edges.append(("add", source, new_node_id, EdgeType.SEQUENTIAL))
-                                        modify_edges.append(("add", new_node_id, location, EdgeType.SEQUENTIAL))
+                                        #modify_edges.append(("remove", source, location, EdgeType.SEQUENTIAL))
+                                        #modify_edges.append(("add", source, new_node_id, EdgeType.SEQUENTIAL))
+                                        #modify_edges.append(("add", new_node_id, location, EdgeType.SEQUENTIAL))
+
+                                        self.graph.remove_edge(source, location)
+                                        self.graph.add_edge(source, new_node_id, type=EdgeType.SEQUENTIAL)
+                                        self.graph.add_edge(new_node_id, location, type=EdgeType.SEQUENTIAL)
 
 
 
@@ -666,9 +675,6 @@ class TaskGraph(object):
 
         print("INCLUDED IDENTIFIED NODES AND EDGES")
         self.plot_graph()
-
-        import sys
-        sys.exit(0)
 
 
     def add_virtual_sequential_edges(self):
@@ -798,6 +804,11 @@ class TaskGraph(object):
                 for exit in sequence_exit_points:
                     for edge in out_seq_edges:
                         self.graph.add_edge(exit, edge[1], type=EdgeType.SEQUENTIAL)
+                # redirect incoming to outgoing sequential edges
+                for source, _ in in_seq_edges:
+                    for _, target in out_seq_edges:
+                        print("REDIR: ", source, target)
+                        self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
 
