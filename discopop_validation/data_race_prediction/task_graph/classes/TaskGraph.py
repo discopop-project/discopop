@@ -712,7 +712,13 @@ class TaskGraph(object):
             while len(queue) > 0:
                 current = queue.pop()
                 visited.append(current)
-                result = __get_closest_successor_barrier_or_taskwait(current)
+                # Do not allow other Task pragmas other than the original one as a potential source for barriers or taskwaits
+                if type(self.graph.nodes[current]["data"]) == PragmaTaskNode and current != node_id:
+                    # skip task node as parent
+                    print("SKIPPED OTHER TASK NODE")
+                    result = None
+                else:
+                    result = __get_closest_successor_barrier_or_taskwait(current)
                 if result is not None:
                     return result
                 for edge in self.graph.in_edges(current):
@@ -726,6 +732,9 @@ class TaskGraph(object):
                 if next_barrier is None:
                     # no barrier found in successors, search in parent node
                     next_barrier = __get_closest_parent_barrier_or_taskwait(node)
+                if next_barrier is None:
+                    # still no barrier found, skip
+                    continue
 
                 out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 in_seq_edges = [edge for edge in self.graph.in_edges(node) if
@@ -739,6 +748,35 @@ class TaskGraph(object):
                 for edge in out_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
                 self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+
+    def remove_single_incoming_join_node(self):
+        """Remove a join node with only a single incoming SEQUENTIAL edge, if no path merging occured prior to it"""
+        def path_merge_occured_prior(root):
+            print("SEARCH MERGE: ", root)
+            tmp_in_seq_edges = [edge for edge in self.graph.in_edges(root) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            print("TMP: ", tmp_in_seq_edges)
+            if len(tmp_in_seq_edges) > 1:
+                return True
+            if len(tmp_in_seq_edges) == 0:
+                return False
+            predecessor = tmp_in_seq_edges[0][0]
+            return path_merge_occured_prior(predecessor)
+
+
+        to_be_removed = []
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == JoinNode:
+                in_seq_edge = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                if len(in_seq_edge) < 2 and not path_merge_occured_prior(node):
+                    to_be_removed.append(node)
+        for node in to_be_removed:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            for source, _ in in_seq_edges:
+                for _, target in out_seq_edges:
+                    self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+            self.graph.remove_node(node)
+
 
 
     def add_fork_and_join_nodes(self):

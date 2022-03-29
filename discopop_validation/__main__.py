@@ -188,8 +188,15 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
     task_graph.insert_implicit_barriers()
 
+    print("PRE REDIR")
+    #task_graph.plot_graph()
     # redirect successor edges of TASKS to next BARRIER or TASKWAIT
     task_graph.redirect_tasks_successors()
+    print("POST REDIR")
+    #task_graph.plot_graph()
+
+
+
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
@@ -220,6 +227,13 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.replace_pragma_single_nodes()
     print("POST REPLACE")
     #task_graph.plot_graph()
+    # remove join nodes with only one incoming SEQUENTIAL edge
+    print("PRE REMOVAL SINGULAR JOIN")
+    task_graph.plot_graph()
+    task_graph.remove_single_incoming_join_node()
+    print("POST REMOVAL SINGULAR JOIN")
+    task_graph.plot_graph()
+
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
     # todo remove / ignore irrelevant join nodes

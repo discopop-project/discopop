@@ -20,7 +20,7 @@ Data Race Pairs, sum@47:7:W vs. sum@47:7:W
 int main(){
 
   int a[4];
-  int psum[2];
+  int psum0, psum1;
   int sum;
 
   #pragma omp parallel num_threads(2)
@@ -38,13 +38,13 @@ int main(){
       {
        #pragma omp task
        {
-         psum[1] = a[2] + a[3];
+         psum1 = a[2] + a[3];
        }
-        psum[0] = a[0] + a[1];
+        psum0 = a[0] + a[1];
       }
 
       #pragma omp taskwait
-      sum = psum[1] + psum[0];
+      sum = psum1 + psum0;
     }
   }
 
