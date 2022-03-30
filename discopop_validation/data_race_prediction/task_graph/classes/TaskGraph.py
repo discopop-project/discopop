@@ -619,6 +619,9 @@ class TaskGraph(object):
                                 insert_locations.append(self.__get_insert_location(sequence_entry, model.get_start_line()))
                             # remove duplicated entries, possible in case of multiple merging sequences
                             insert_locations = list(set(insert_locations))
+                            # remove entries which are in relation to the new node itself
+                            insert_locations = [(mode, location) for mode, location in insert_locations if location != new_node_id]
+
                             # insert edges according to the identified locations
                             for mode, location in insert_locations:
                                 if mode == "before":
@@ -626,7 +629,14 @@ class TaskGraph(object):
                                     for source, _ in in_seq_edges:
                                         self.graph.remove_edge(source, location)
                                         self.graph.add_edge(source, new_node_id, type=EdgeType.SEQUENTIAL)
-                                        self.graph.add_edge(new_node_id, location, type=EdgeType.SEQUENTIAL)
+                                    self.graph.add_edge(new_node_id, location, type=EdgeType.SEQUENTIAL)
+                                if mode == "after":
+                                    out_seq_edges = [edge for edge in self.graph.out_edges(location) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                                    for _, target in out_seq_edges:
+                                        self.graph.remove_edge(location, target)
+                                        self.graph.add_edge(new_node_id, target)
+                                    self.graph.add_edge(location, new_node_id, type=EdgeType.SEQUENTIAL)
+
 
 
 
