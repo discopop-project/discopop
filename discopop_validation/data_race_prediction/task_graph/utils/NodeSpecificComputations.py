@@ -131,7 +131,6 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
     scheduling_graph = None
     for path in paths:
-        print("PATH: ", path)
         path_scheduling_graph = None
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
