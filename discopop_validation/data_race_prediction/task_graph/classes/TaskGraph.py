@@ -933,6 +933,16 @@ class TaskGraph(object):
         for node in to_be_removed:
             self.graph.remove_node(node)
 
+    def is_successor(self, root_node, target_node):
+        if root_node == target_node:
+            return True
+        out_seq_edges = [edge for edge in self.graph.out_edges(root_node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        result = False
+        for _, successor in out_seq_edges:
+            result = result or self.is_successor(successor, target_node)
+        return result
+
+
     def add_depends_edges(self):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
@@ -964,9 +974,16 @@ class TaskGraph(object):
                 other_node_depend_in_entries = [var for mode, var in [entry.split(":") for entry in other_node_depend_entries] if mode == "in"]
                 other_node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in other_node_depend_entries] if mode == "out"]
                 # check for matching entries
+                # 1. check for out->in dependency
                 for node_out in node_depend_out_entries:
                     if node_out in other_node_depend_in_entries:
                         self.graph.add_edge(other_node, node, type=EdgeType.DEPENDS)
+                # 2. check for out->out dependency (occurs, if a SEQUENTIAL path between both TASKS exists
+                for node_out in node_depend_out_entries:
+                    if node_out in other_node_depend_out_entries:
+                        # if SEQUENTIAL path from other_node to node exists, create a DEPENDS edge
+                        if self.is_successor(other_node, node):
+                            self.graph.add_edge(node, other_node, type=EdgeType.DEPENDS)
 
 
     def replace_depends_with_sequential_edges(self):
