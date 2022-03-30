@@ -643,20 +643,21 @@ class TaskGraph(object):
                     self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
         pass
 
+    def __get_closest_successor_barrier_or_taskwait(self, node_id):
+        queue = [node_id]
+        visited = []
+        while len(queue) > 0:
+            current = queue.pop()
+            visited.append(current)
+            if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
+                return current
+            # add successors of current to queue
+            successors = [edge[1] for edge in self.graph.out_edges(current) if
+                          self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            queue += [s for s in successors if s not in visited]
+        return None
+
     def redirect_tasks_successors(self):
-        def __get_closest_successor_barrier_or_taskwait(node_id):
-            queue = [node_id]
-            visited = []
-            while len(queue) > 0:
-                current = queue.pop()
-                visited.append(current)
-                if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
-                    return current
-                # add successors of current to queue
-                successors = [edge[1] for edge in self.graph.out_edges(current) if
-                              self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                queue += [s for s in successors if s not in visited]
-            return None
 
         def __get_closest_parent_barrier_or_taskwait(node_id):
             queue = [node_id]
@@ -669,7 +670,7 @@ class TaskGraph(object):
                     # skip task node as parent
                     result = None
                 else:
-                    result = __get_closest_successor_barrier_or_taskwait(current)
+                    result = self.__get_closest_successor_barrier_or_taskwait(current)
                 if result is not None:
                     return result
                 for edge in self.graph.in_edges(current):
@@ -679,7 +680,7 @@ class TaskGraph(object):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
                 # find next BARRIER or TASKWAIT
-                next_barrier = __get_closest_successor_barrier_or_taskwait(node)
+                next_barrier = self.__get_closest_successor_barrier_or_taskwait(node)
                 if next_barrier is None:
                     # no barrier found in successors, search in parent node
                     next_barrier = __get_closest_parent_barrier_or_taskwait(node)
@@ -931,6 +932,42 @@ class TaskGraph(object):
                 to_be_removed.append(node)
         for node in to_be_removed:
             self.graph.remove_node(node)
+
+    def add_depends_edges(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
+                continue
+            # check if node has dependencies
+            node_depend_entries = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("depend")
+            if len(node_depend_entries) == 0:
+                # no depends entries exist, skip current node
+                continue
+            node_depend_in_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if mode == "in"]
+            node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if mode == "out"]
+            # search counterpart
+            for other_node in self.graph.nodes:
+                if node == other_node:
+                    continue
+                if type(self.graph.nodes[other_node]["data"]) != PragmaTaskNode:
+                    continue
+                other_node_depend_entries = self.graph.nodes[other_node]["data"].pragma.get_variables_listed_as("depend")
+                if len(other_node_depend_entries) == 0:
+                    # no depend entries exist, skip this node
+                    continue
+
+                # node and other_node are different and both of type TASK with non-empty depend clauses
+                # check if both share a common successive barrier / taskwait
+                if self.__get_closest_successor_barrier_or_taskwait(node) != self.__get_closest_successor_barrier_or_taskwait(other_node):
+                    continue
+                # node and other_node share a common successive barrier
+                # check if depends relation exists from node to other_node
+                other_node_depend_in_entries = [var for mode, var in [entry.split(":") for entry in other_node_depend_entries] if mode == "in"]
+                other_node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in other_node_depend_entries] if mode == "out"]
+                # check for matching entries
+                for node_out in node_depend_out_entries:
+                    if node_out in other_node_depend_in_entries:
+                        self.graph.add_edge(node, other_node, type=EdgeType.DEPENDS)
+
 
 
 

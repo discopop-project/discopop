@@ -186,6 +186,16 @@ def __main_start_execution(run_configuration: Configuration):
     # redirect successor edges of TASKS to next BARRIER or TASKWAIT
     task_graph.redirect_tasks_successors()
 
+    # add depends edges between interdependent TASK nodes
+    print("PRE DEPENDS EDGES")
+    task_graph.plot_graph()
+    task_graph.add_depends_edges()
+    print("POST DEPENDS EDGES")
+    task_graph.plot_graph()
+
+    import sys
+    sys.exit(0)
+
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
     # insert TaskGraphNodes to store behavior models
@@ -198,6 +208,7 @@ def __main_start_execution(run_configuration: Configuration):
     # task_graph.add_virtual_sequential_edges()
     # skip successive TASKWAIT node, if no prior TASK node exists
     task_graph.skip_taskwait_if_no_prior_task_exists()
+
     task_graph.add_fork_and_join_nodes()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
