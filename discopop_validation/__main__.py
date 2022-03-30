@@ -183,18 +183,13 @@ def __main_start_execution(run_configuration: Configuration):
     # create implicit barriers
     task_graph.insert_implicit_barriers()
 
+    # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED!
     # redirect successor edges of TASKS to next BARRIER or TASKWAIT
     task_graph.redirect_tasks_successors()
-
     # add depends edges between interdependent TASK nodes
-    print("PRE DEPENDS EDGES")
-    task_graph.plot_graph()
     task_graph.add_depends_edges()
-    print("POST DEPENDS EDGES")
-    task_graph.plot_graph()
-
-    import sys
-    sys.exit(0)
+    # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
+    task_graph.replace_depends_with_sequential_edges()
 
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
