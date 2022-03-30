@@ -58,7 +58,7 @@ int main()
   {
 #pragma omp task depend (out:i)
     {
-      sleep(3);
+      // sleep(3);  ## TODO NOT SUPPORTED BY BEHAVIOR EXTRACTION
       i = 1;    
     }
 #pragma omp task depend (in:i)

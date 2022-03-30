@@ -987,6 +987,7 @@ class TaskGraph(object):
 
 
     def replace_depends_with_sequential_edges(self):
+        add_edge_buffer = []
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
                 continue
@@ -997,12 +998,17 @@ class TaskGraph(object):
                 # insert node inbetween target and it's immediate successor (BARRIER or TASKWAIT, which is a successor of node aswell)
                 target_out_seq_edges = [edge for edge in self.graph.out_edges(target) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 for _, tmp_target in target_out_seq_edges:
-                    # remove edge between target and successive barrier
+                    # remove outgoing sequential edges (Edge to successive TASKWAIT or BARRIER
                     self.graph.remove_edge(target, tmp_target)
-                    # remove depends edge between node and target
-                    self.graph.remove_edge(node, target)
-                    # add SEQUENTIAL edge between target and node
-                    self.graph.add_edge(target, node, type=EdgeType.SEQUENTIAL)
+                # add a SEQUENTIAL edge to node
+                # don't add immediately, to prevent removal in next loop iteration
+                add_edge_buffer.append((target, node))
+                # remove depends edge
+                self.graph.remove_edge(node, target)
+
+        add_edge_buffer = list(set(add_edge_buffer))
+        for source, target in add_edge_buffer:
+            self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
 
 
 
