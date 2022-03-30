@@ -535,12 +535,10 @@ class TaskGraph(object):
             else:
                 return self.graph.nodes[node_id]["data"].pragma.start_line
 
-        print("GET INSERT LOCATION: ", root, start_line)
         # search on path
         last_element = None
         queue = [root]
         while True:
-            print("QUEUE: ", queue)
             current = queue.pop(0)
             if start_line < __get_start_line(current):
                 return "before", current
@@ -569,9 +567,6 @@ class TaskGraph(object):
             if self.graph.nodes[node]["data"].pragma is not None:
                 region_start = self.graph.nodes[node]["data"].pragma.start_line
                 region_end = self.graph.nodes[node]["data"].pragma.end_line
-            print("NODE: ", node)
-            print("REG START: ", region_start)
-            print("REG END: ", region_end)
 
             # create contained BehaviorStorageNodes
             for model in self.graph.nodes[node]["data"].behavior_models:
@@ -588,93 +583,50 @@ class TaskGraph(object):
 
                 # separate treatment of behavior nodes stemming from called functions vs nodes from the original scope
                 if model.get_start_line() >= region_start and model.get_end_line() <= region_end:
-                    print("MODEL IN REGION")
                     # model is contained in the original pragma region of node
                     # insert behavior after each path
                     exit_points = get_contained_exit_points(self, node)
                     exit_points = [point for point in exit_points if point != new_node_id]
-                    print("EXIT POINTS: ", exit_points)
                     for point in exit_points:
                         self.graph.add_edge(point, new_node_id, type=EdgeType.SEQUENTIAL)
 
                     # if no exit points have been found, insert the behavior node right after node
                     if len(exit_points) == 0:
-                        print("--> INSERT AS SEQUENTIAL")
                         out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                         for _, target in out_seq_edges:
                             self.graph.remove_edge(node, target)
                             self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
                             self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
-
                 else:
-                    print("MODEL FROM FUNCTION")
                     # model originated from the body of a called function
                     # find optimal positioning for new node based on minimal location differences
                     out_calls_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CALLS]
                     for _, called_function_node_id in out_calls_edges:
                         called_function_node = self.graph.nodes[called_function_node_id]["data"]
                         if model.get_start_line() >= called_function_node.start_line and model.get_end_line() <= called_function_node.end_line:
-                            print("MODEL IN FUNCTION")
                             # model stems from within the current function
                             # get a list of all nodes which are contained in this function plus their respective start lines
-                            print("CALLED FUNCTION: ", called_function_node_id)
                             function_out_contained_edges = [edge for edge in self.graph.out_edges(called_function_node_id) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
-                            print("OUT: ", function_out_contained_edges)
                             contained_nodes = []
                             for _, contained_node in function_out_contained_edges:
                                 if self.graph.nodes[contained_node]["data"].pragma is None:
                                     continue
                                 start_line = self.graph.nodes[contained_node]["data"].pragma.start_line
                                 contained_nodes.append((contained_node, start_line))
-                            print("CONTAINED: ", contained_nodes)
                             # select insert position on each path / sequence
                             insert_locations = []
                             for sequence_entry in get_sequence_entry_points(self, node):
                                 insert_locations.append(self.__get_insert_location(sequence_entry, model.get_start_line()))
                             # remove duplicated entries, possible in case of multiple merging sequences
                             insert_locations = list(set(insert_locations))
-                            print("LOCATIONS: ", insert_locations)
                             # insert edges according to the identified locations
                             for mode, location in insert_locations:
                                 if mode == "before":
                                     in_seq_edges = [edge for edge in self.graph.in_edges(location) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                                     for source, _ in in_seq_edges:
-                                        print("SOURCE: ", source)
-                                        # todo fill edge_replacements
-                                        #modify_edges.append(("remove", source, location, EdgeType.SEQUENTIAL))
-                                        #modify_edges.append(("add", source, new_node_id, EdgeType.SEQUENTIAL))
-                                        #modify_edges.append(("add", new_node_id, location, EdgeType.SEQUENTIAL))
-
                                         self.graph.remove_edge(source, location)
                                         self.graph.add_edge(source, new_node_id, type=EdgeType.SEQUENTIAL)
                                         self.graph.add_edge(new_node_id, location, type=EdgeType.SEQUENTIAL)
-
-
-
-
-
-
-
-        print("nodes: ")
-        for mode, id, _ in modify_nodes:
-            print("->", mode, id)
-
-        print("edges: ")
-        for mode, source, target, _ in modify_edges:
-            print("->", mode, source, target)
-
-        # create identified nodes
-        for mode, node_id, graph_node_data in modify_nodes:
-            if mode == "add":
-                self.graph.add_node(node_id, data=graph_node_data)
-            if mode == "remove":
-                self.graph.remove_node(node_id)
-        # create identified edges
-        for mode, source, target, edge_type in modify_edges:
-            if mode == "add":
-                self.graph.add_edge(source, target, type=edge_type)
-            if mode == "remove":
-                self.graph.remove_edge(source, target)
 
 
 
@@ -715,7 +667,6 @@ class TaskGraph(object):
                 # Do not allow other Task pragmas other than the original one as a potential source for barriers or taskwaits
                 if type(self.graph.nodes[current]["data"]) == PragmaTaskNode and current != node_id:
                     # skip task node as parent
-                    print("SKIPPED OTHER TASK NODE")
                     result = None
                 else:
                     result = __get_closest_successor_barrier_or_taskwait(current)
@@ -752,9 +703,7 @@ class TaskGraph(object):
     def remove_single_incoming_join_node(self):
         """Remove a join node with only a single incoming SEQUENTIAL edge, if no path merging occured prior to it"""
         def path_merge_occured_prior(root):
-            print("SEARCH MERGE: ", root)
             tmp_in_seq_edges = [edge for edge in self.graph.in_edges(root) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-            print("TMP: ", tmp_in_seq_edges)
             if len(tmp_in_seq_edges) > 1:
                 return True
             if len(tmp_in_seq_edges) == 0:
@@ -871,7 +820,6 @@ class TaskGraph(object):
                 # redirect incoming to outgoing sequential edges
                 for source, _ in in_seq_edges:
                     for _, target in out_seq_edges:
-                        print("REDIR: ", source, target)
                         self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
