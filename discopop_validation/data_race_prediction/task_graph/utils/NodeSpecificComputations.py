@@ -120,10 +120,10 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             paths.append(current_path)
             continue
         # add new queue entry for each successor
+        current_path.append(current_node)
         for _, target in out_seq_edges:
-            current_path.append(current_node)
             if (current_path, target) not in visited:
-                path_queue.append((current_path, target))
+                path_queue.append((copy.deepcopy(current_path), target))
 
     # connect FORK to JOIN node with SEQUENTIAL edge
     if successive_join_node is not None:
