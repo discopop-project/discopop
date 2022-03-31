@@ -1021,6 +1021,24 @@ class TaskGraph(object):
         for source, target in add_edge_buffer:
             self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
 
+    def add_fork_nodes_at_path_splits(self):
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == ForkNode:
+                # exclude already existing FORK nodes from analysis
+                continue
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(out_seq_edges) < 2:
+                # no problem, skip
+                continue
+            # insert fork node after node
+            new_node_id = self.__add_fork_node()
+            for _, target in out_seq_edges:
+                self.graph.remove_edge(node, target)
+                self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
+            self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+
+
     def add_belongs_to_edges(self):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == JoinNode:
@@ -1042,4 +1060,5 @@ class TaskGraph(object):
                         queue.append(source)
 
 
+            # insert fork node after node
 
