@@ -232,7 +232,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
 
     # trigger result computation
     computed_result = task_graph.compute_results()
