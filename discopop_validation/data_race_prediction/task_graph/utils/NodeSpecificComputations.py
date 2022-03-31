@@ -134,7 +134,10 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         path_scheduling_graph = None
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
-            behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
+            if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
+                behavior_models = task_graph.graph.nodes[elem]["data"].get_behavior_models_from_fork_node(task_graph)
+            else:
+                behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
             for model in behavior_models:
                 model.use_fingerprint(result_obj.get_current_fingerprint())
 

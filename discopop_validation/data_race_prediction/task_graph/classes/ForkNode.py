@@ -32,3 +32,44 @@ class ForkNode(TaskGraphNode):
             if len(self.data_races) > 0:
                 color = "red"
         return color
+
+    def get_behavior_models_from_fork_node(self, task_graph):
+        """Collects and returns a behavior model representation of the current Fork node, repsectively it's successive nodes."""
+        # collect belonging join nodes
+        belonging_join_nodes = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+        print("NODEID: ", self.node_id)
+        print("BELONGING: ", belonging_join_nodes)
+
+        out_seq_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+
+        # collect successor paths to join nodes
+        paths = []
+        path_queue = []
+        visited = []
+        for _, successor in out_seq_edges:
+            path_queue.append(([], successor))
+        while len(path_queue) > 0:
+            current_path, current_node = path_queue.pop()
+            visited.append((current_path, current_node))
+            if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
+                paths.append(current_path)
+                continue
+
+            out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+                             task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+            # check if end of path reached
+            if len(out_seq_edges) == 0:
+                # end of path found, append current_node to current_path
+                # append current_path to paths
+                current_path.append(current_node)
+                paths.append(current_path)
+                continue
+            # add new queue entry for each successor
+            current_path.append(current_node)
+            for _, target in out_seq_edges:
+                if (current_path, target) not in visited:
+                    path_queue.append((copy.deepcopy(current_path), target))
+
+        print("PATHS: ", paths)
+
+        pass
