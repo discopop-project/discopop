@@ -55,7 +55,8 @@ class TaskGraph(object):
                           EdgeType.CONTAINS: "orange",
                           EdgeType.DEPENDS: "green",
                           EdgeType.DATA_RACE: "red",
-                          EdgeType.CALLS: "violet"}
+                          EdgeType.CALLS: "violet",
+                          EdgeType.BELONGS_TO: "yellow"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
@@ -1019,6 +1020,26 @@ class TaskGraph(object):
         add_edge_buffer = list(set(add_edge_buffer))
         for source, target in add_edge_buffer:
             self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+
+    def add_belongs_to_edges(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == JoinNode:
+                # search incoming SEQUENTIAL paths upwards for closest FORK nodes
+                predecessors = [edge[0] for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                queue = predecessors
+                while len(queue) > 0:
+                    print("QUEUE: ", queue)
+                    current = queue.pop()
+                    if type(self.graph.nodes[current]["data"]) == ForkNode:
+                        self.graph.add_edge(current, node, type=EdgeType.BELONGS_TO)
+                        print("ADD EDGE: ", current)
+                    if type(self.graph.nodes[current]["data"]) == JoinNode:
+                        continue
+                    # add predecessors to queue
+                    in_seq_edges = [edge for edge in self.graph.in_edges(current) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    for source, _ in in_seq_edges:
+                        queue.append(source)
 
 
 

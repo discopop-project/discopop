@@ -224,6 +224,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.replace_pragma_single_nodes()
     # remove join nodes with only one incoming SEQUENTIAL edge
     task_graph.remove_single_incoming_join_node()
+    # add BELONGS_TO edges between Fork and Join nodes
+    task_graph.add_belongs_to_edges()
 
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
