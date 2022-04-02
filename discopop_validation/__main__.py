@@ -219,6 +219,7 @@ def __main_start_execution(run_configuration: Configuration):
     print("PRE SINGLE")
     task_graph.plot_graph()
     task_graph.replace_pragma_single_nodes()
+    task_graph.replace_pragma_for_nodes()
     # remove join nodes with only one incoming SEQUENTIAL edge
     task_graph.remove_single_incoming_join_node()
     # add BELONGS_TO edges between Fork and Join nodes

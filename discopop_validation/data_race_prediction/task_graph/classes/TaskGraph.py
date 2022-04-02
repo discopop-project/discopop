@@ -1074,3 +1074,30 @@ class TaskGraph(object):
             if type(self.graph.nodes[node]["data"]) != TaskGraphNode:
                 # remove behavior models from all but behavior storage nodes
                 self.graph.nodes[node]["data"].behavior_models = []
+
+    def replace_pragma_for_nodes(self):
+        remove_nodes = []
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == PragmaForNode:
+                remove_nodes.append(node)
+                # replace node with contained sequences
+                in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                sequence_entry_points = get_sequence_entry_points(self, node)
+                # redirect incoming edges
+                for entry in sequence_entry_points:
+                    for edge in in_seq_edges:
+                        self.graph.add_edge(edge[0], entry, type=EdgeType.SEQUENTIAL)
+                # redirect outgoing edges
+                sequence_exit_points = get_contained_exit_points(self, node)
+                for exit in sequence_exit_points:
+                    for edge in out_seq_edges:
+                        self.graph.add_edge(exit, edge[1], type=EdgeType.SEQUENTIAL)
+                # redirect incoming to outgoing sequential edges
+                for source, _ in in_seq_edges:
+                    for _, target in out_seq_edges:
+                        self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+        for node in remove_nodes:
+            self.graph.remove_node(node)
