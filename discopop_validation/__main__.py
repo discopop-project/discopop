@@ -185,19 +185,11 @@ def __main_start_execution(run_configuration: Configuration):
 
     # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
     # add depends edges between interdependent TASK nodes
-    print("PRE DEPEND")
-    #task_graph.plot_graph()
     task_graph.add_depends_edges()
-    print("POST DEPEND")
-    task_graph.plot_graph()
     # redirect successor edges of TASKS to next BARRIER or TASKWAIT
     task_graph.redirect_tasks_successors()
-    print("POST REDIR")
-    task_graph.plot_graph()
     # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
     task_graph.replace_depends_with_sequential_edges()
-    print("POST REPLACE")
-    task_graph.plot_graph()
 
     # extract and insert behavior models for pragmas
     task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
