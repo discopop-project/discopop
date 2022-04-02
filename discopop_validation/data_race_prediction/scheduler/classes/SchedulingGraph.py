@@ -107,6 +107,10 @@ class SchedulingGraph(object):
         """add edges between leaf nodes of this and root node of other_graph."""
         if other_graph is None:
             return self
+        # remove Emtpy nodes from both graphs
+        self.remove_none_nodes()
+        other_graph.remove_none_nodes()
+
         # new dimensions are the component-wise maximum of both
         new_dimensions = []
         while len(self.dimensions) > 0 and len(other_graph.dimensions) > 0:
@@ -138,6 +142,9 @@ class SchedulingGraph(object):
     def parallel_compose(self, other_graph):
         if other_graph is None:
             return self
+        # remove Emtpy nodes from both graphs
+        self.remove_none_nodes()
+        other_graph.remove_none_nodes()
 
         new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
@@ -230,3 +237,42 @@ class SchedulingGraph(object):
             if node_id == self.root_node_identifier:
                 self.root_node_identifier = mapping[node_id]
             self.graph = nx.relabel_nodes(self.graph, mapping, copy=False)
+
+    def debug_check_for_cycles(self):
+        try:
+            cycles = nx.find_cycle(self.graph)
+            print("CYLCES: ", cycles)
+        except:
+            print("NO CYCLE FOUND")
+
+    def remove_none_nodes(self):
+        to_be_removed = []
+        for node in self.graph.nodes:
+            if self.graph.nodes[node]["data"] is None:
+                # do not remove root node
+                if node != self.get_root_node_identifier():
+                    to_be_removed.append(node)
+
+        for node in to_be_removed:
+            # redirect incoming edges to successors
+            in_edges = [edge for edge in self.graph.in_edges(node)]
+            out_edges = [edge for edge in self.graph.out_edges(node)]
+            edges_to_be_removed = in_edges + out_edges
+            # remove duplicates
+            edges_to_be_removed = list(set(edges_to_be_removed))
+            # remove all edges
+            for s, t in edges_to_be_removed:
+                self.graph.remove_edge(s, t)
+            # remove node
+            self.graph.remove_node(node)
+
+            # reconnect predecessors and successors
+            for predecessor, _ in in_edges:
+                for _, successor in out_edges:
+                    if predecessor == node or successor == node:
+                        # ignore faulty edges (originated from cyclic edges)
+                        continue
+                    else:
+                        self.graph.add_edge(predecessor, successor)
+
+
