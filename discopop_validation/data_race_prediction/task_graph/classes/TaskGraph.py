@@ -581,6 +581,12 @@ class TaskGraph(object):
                     self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                     continue
 
+                # new node is also contained in parent of node
+                # mainly required to allow effects of SINGLE pragmas
+                node_in_contained_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                for source, _ in node_in_contained_edges:
+                    self.graph.add_edge(source, new_node_id, type=EdgeType.CONTAINS)
+
                 # separate treatment of behavior nodes stemming from called functions vs nodes from the original scope
                 if model.get_start_line() >= region_start and model.get_end_line() <= region_end:
                     # model is contained in the original pragma region of node
