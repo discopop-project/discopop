@@ -217,6 +217,9 @@ def __main_start_execution(run_configuration: Configuration):
     # remove join nodes with only one incoming SEQUENTIAL edge
     task_graph.remove_single_incoming_join_node()
 
+    # remove behavior models from all but BehaviorStorageNodes
+    task_graph.remove_behavior_models_from_nodes()
+
     # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
     # todo remove / ignore irrelevant join nodes

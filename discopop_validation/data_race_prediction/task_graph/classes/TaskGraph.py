@@ -1020,5 +1020,8 @@ class TaskGraph(object):
         for source, target in add_edge_buffer:
             self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
 
-
-
+    def remove_behavior_models_from_nodes(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) != TaskGraphNode:
+                # remove behavior models from all but behavior storage nodes
+                self.graph.nodes[node]["data"].behavior_models = []

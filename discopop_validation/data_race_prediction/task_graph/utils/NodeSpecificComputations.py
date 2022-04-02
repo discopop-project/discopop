@@ -135,6 +135,9 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
             behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
+            if len(behavior_models) == 0:
+                continue
+
             for model in behavior_models:
                 model.use_fingerprint(result_obj.get_current_fingerprint())
 
