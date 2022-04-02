@@ -215,10 +215,9 @@ def __main_start_execution(run_configuration: Configuration):
     # task_graph.add_join_nodes_before_path_merge()
     # add fork nodes at path splits which are not caused by other FORK nodes
     task_graph.add_fork_nodes_at_path_splits()
-    # remove single nodes from graph and replace with contained nodes
-    print("PRE SINGLE")
-    task_graph.plot_graph()
+    # remove SINGLE nodes from graph and replace with contained nodes
     task_graph.replace_pragma_single_nodes()
+    # remove FOR nodes from graph and replace with contained nodes
     task_graph.replace_pragma_for_nodes()
     # remove join nodes with only one incoming SEQUENTIAL edge
     task_graph.remove_single_incoming_join_node()
