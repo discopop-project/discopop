@@ -230,3 +230,12 @@ class SchedulingGraph(object):
             if node_id == self.root_node_identifier:
                 self.root_node_identifier = mapping[node_id]
             self.graph = nx.relabel_nodes(self.graph, mapping, copy=False)
+
+    def debug_check_for_cycles(self):
+        try:
+            cycles = nx.find_cycle(self.graph)
+            print("CYLCES: ", cycles)
+            self.plot_graph()
+        except:
+            print("NO CYCLE FOUND")
+
