@@ -9,3 +9,4 @@ class EdgeType(Enum):
     DEPENDS = "depends"
     DATA_RACE = "data_race"
     CALLS = "calls"
+    BELONGS_TO = "belongs_to"

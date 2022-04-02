@@ -110,47 +110,80 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             paths.append(current_path)
             continue
 
-        out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
-                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
-        # check if end of path reached
-        if len(out_seq_edges) == 0:
-            # end of path found, append current_node to current_path
-            # append current_path to paths
+        if task_graph.graph.nodes[current_node]["data"].get_label() == "Fork":
+            print("ENCOUNTERED FORK NODE: ", current_node)
             current_path.append(current_node)
-            paths.append(current_path)
-            continue
-        # add new queue entry for each successor
-        current_path.append(current_node)
-        for _, target in out_seq_edges:
-            if (current_path, target) not in visited:
-                path_queue.append((copy.deepcopy(current_path), target))
+            out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(current_node) if task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+            for _, related_join_node in out_belongs_to_edges:
+                print("ADD SUCCESSORS OF RELATED JOIN: ", related_join_node, "TO QUEUE")
+                join_out_seq_edges = [edge for edge in task_graph.graph.out_edges(related_join_node) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                for _, successor in join_out_seq_edges:
+                    print("--> SUCC: ", successor)
+                    path_queue.append((copy.deepcopy(current_path), successor))
+        else:
+            # current_node is a regular node type (not FORK)
+
+            out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+                             task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+            # check if end of path reached
+            if len(out_seq_edges) == 0:
+                # end of path found, append current_node to current_path
+                # append current_path to paths
+                current_path.append(current_node)
+                paths.append(current_path)
+                continue
+            # add new queue entry for each successor
+            current_path.append(current_node)
+            for _, target in out_seq_edges:
+                if (current_path, target) not in visited:
+                    path_queue.append((copy.deepcopy(current_path), target))
 
     # connect FORK to JOIN node with SEQUENTIAL edge
     if successive_join_node is not None:
         task_graph.graph.add_edge(node_obj.node_id, successive_join_node, type=EdgeType.SEQUENTIAL)
 
     scheduling_graph = None
+    print("PATHS: ", paths)
     for path in paths:
         path_scheduling_graph = None
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
-            behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
-            if len(behavior_models) == 0:
-                continue
+            if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
+                elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(task_graph, result_obj)
+                print("CHECK fork ELEM_SCHEDULING_GRAPH")
+                elem_scheduling_graph.debug_check_for_cycles()
+            else:
+                behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
+                if len(behavior_models) == 0:
+                    continue
 
-            for model in behavior_models:
-                model.use_fingerprint(result_obj.get_current_fingerprint())
+                for model in behavior_models:
+                    model.use_fingerprint(result_obj.get_current_fingerprint())
 
-            behavior_models = prepare_for_simulation(behavior_models)
-            elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
+                behavior_models = prepare_for_simulation(behavior_models)
+                elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
+                print("CHECK new ELEM_SCHEDULING_GRAPH")
+                elem_scheduling_graph.debug_check_for_cycles()
             if path_scheduling_graph is None:
+                print("IF")
                 path_scheduling_graph = elem_scheduling_graph
             else:
+                print("ELSE")
+                print("CHECK PATH_SCHEDULING_GRAPH 2")
+                path_scheduling_graph.debug_check_for_cycles()
+                print("CHECK ELEM SCHEDULING GRAPH 2")
+                elem_scheduling_graph.debug_check_for_cycles()
                 path_scheduling_graph = path_scheduling_graph.sequential_compose(elem_scheduling_graph)
+                print("CHECK PATH_SCHEDULING_GRAPH 3")
+                path_scheduling_graph.debug_check_for_cycles()
 
         if scheduling_graph is None:
             scheduling_graph = path_scheduling_graph
         else:
+            print("CHECK SCHEDULING GRAPH")
+            scheduling_graph.debug_check_for_cycles()
+            print("CHECK PATH_SCHEDULING_GRAPH")
+            path_scheduling_graph.debug_check_for_cycles()
             scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
 
     # create new clocks if necessary

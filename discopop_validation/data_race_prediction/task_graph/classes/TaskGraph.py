@@ -55,7 +55,8 @@ class TaskGraph(object):
                           EdgeType.CONTAINS: "orange",
                           EdgeType.DEPENDS: "green",
                           EdgeType.DATA_RACE: "red",
-                          EdgeType.CALLS: "violet"}
+                          EdgeType.CALLS: "violet",
+                          EdgeType.BELONGS_TO: "yellow"}
         edge_colors = [edge_color_map[self.graph[source][dest]['type']] for source,dest in self.graph.edges]
         nx.draw(self.graph, pos, with_labels=False, arrows=True, font_weight='bold', node_color=colors, edge_color=edge_colors)
         labels = {}
@@ -1025,6 +1026,48 @@ class TaskGraph(object):
         add_edge_buffer = list(set(add_edge_buffer))
         for source, target in add_edge_buffer:
             self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+
+    def add_fork_nodes_at_path_splits(self):
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == ForkNode:
+                # exclude already existing FORK nodes from analysis
+                continue
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(out_seq_edges) < 2:
+                # no problem, skip
+                continue
+            # insert fork node after node
+            new_node_id = self.__add_fork_node()
+            for _, target in out_seq_edges:
+                self.graph.remove_edge(node, target)
+                self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
+            self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+
+
+    def add_belongs_to_edges(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == JoinNode:
+                # search incoming SEQUENTIAL paths upwards for closest FORK nodes
+                predecessors = [edge[0] for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                queue = predecessors
+                while len(queue) > 0:
+                    print("QUEUE: ", queue)
+                    current = queue.pop()
+                    if type(self.graph.nodes[current]["data"]) == ForkNode:
+                        self.graph.add_edge(current, node, type=EdgeType.BELONGS_TO)
+                        print("ADD EDGE: ", current)
+                    if type(self.graph.nodes[current]["data"]) == JoinNode:
+                        continue
+                    # add predecessors to queue
+                    in_seq_edges = [edge for edge in self.graph.in_edges(current) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    for source, _ in in_seq_edges:
+                        queue.append(source)
+
+
+            # insert fork node after node
+
 
     def remove_behavior_models_from_nodes(self):
         for node in self.graph.nodes:
