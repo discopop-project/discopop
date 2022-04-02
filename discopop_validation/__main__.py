@@ -211,7 +211,8 @@ def __main_start_execution(run_configuration: Configuration):
     # add join nodes prior to Barriers and Taskwait nodes
     task_graph.add_join_nodes_before_barriers()
     # add join nodes at path merge points to reduce complexity
-    task_graph.add_join_nodes_before_path_merge()
+    # NOT VALID
+    # task_graph.add_join_nodes_before_path_merge()
     # add fork nodes at path splits which are not caused by other FORK nodes
     task_graph.add_fork_nodes_at_path_splits()
     # remove single nodes from graph and replace with contained nodes
