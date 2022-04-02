@@ -213,6 +213,7 @@ def __main_start_execution(run_configuration: Configuration):
     # add join nodes at path merge points to reduce complexity
     #task_graph.add_join_nodes_before_path_merge()
     # remove single nodes from graph and replace with contained nodes
+    print("PRE SINGLE")
     task_graph.plot_graph()
     task_graph.replace_pragma_single_nodes()
     # remove join nodes with only one incoming SEQUENTIAL edge
