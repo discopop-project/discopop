@@ -33,12 +33,13 @@ import sys
 import cProfile
 import time
 import json
-from typing import List
+from typing import List, Dict
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
 from discopop_explorer import PETGraphX
+from discopop_explorer.utils import classify_loop_variables, classify_task_vars
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.core import old_validate_omp_pragma
@@ -144,6 +145,41 @@ def main():
         __main_start_execution(run_configuration)
 
 
+def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
+    pragma_to_cuid: Dict[OmpPragma, str] = dict()
+    for pragma in omp_pragmas:
+        cu_id = task_graph.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
+                                                              pragma.end_line)
+        pragma_to_cuid[pragma] = cu_id
+
+    print("####################################")
+    print("PRAGMAS BEFORE ADDING FROM PET GRAPH")
+    for pragma in omp_pragmas:
+        print(pragma)
+    print("####################################")
+
+    for pragma in omp_pragmas:
+        cu_id = pragma_to_cuid[pragma]
+        if pet.node_at(cu_id).type == 2:
+            # node is loop type
+            fpriv, priv, lpriv, shared, red = classify_loop_variables(pet, pet.node_at(cu_id))
+            for var in shared:
+                if var.name not in pragma.get_variables_listed_as("shared"):
+                    pragma.add_to_shared(var.name)
+        elif pragma.get_type() == PragmaType.TASK:
+            fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(pet, pet.node_at(cu_id), "", [], [])
+            for var in shared:
+                if var.name not in pragma.get_variables_listed_as("shared"):
+                    pragma.add_to_shared(var.name)
+
+    print("PRAGMAS AFTER ADDING FROM PET GRAPH")
+    for pragma in omp_pragmas:
+        print(pragma)
+    print("###################################")
+
+    return omp_pragmas
+
+
 def __main_start_execution(run_configuration: Configuration):
     if run_configuration.arguments["--profiling"] == "true":
         profile = cProfile.Profile()
@@ -154,15 +190,18 @@ def __main_start_execution(run_configuration: Configuration):
     time_start_ps = time.time()
     pet: PETGraphX = get_pet_graph(run_configuration)
 
+    # construct task graph
+    task_graph = TaskGraph()
+
     omp_pragmas = __get_omp_pragmas(run_configuration)
+
+    # extract data sharing clauses for pragmas from pet graph
+    omp_pragmas = __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas)
 
     omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
 
     time_end_ps = time.time()
 
-
-    # construct task graph
-    task_graph = TaskGraph()
     for pragma in omp_pragmas:
         task_graph.add_pragma_node(pragma)
     # insert nodes for called functions

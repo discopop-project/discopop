@@ -40,7 +40,7 @@ class OmpPragma(object):
         return self
 
     def get_type(self):
-        if self.pragma.startswith("parallel for "):
+        if self.pragma.startswith("parallel for"):
             return PragmaType.PARALLEL_FOR
         if self.pragma.startswith("parallel"):
             return PragmaType.PARALLEL
@@ -91,9 +91,9 @@ class OmpPragma(object):
             if not reduction_var in original_shared_vars:
                 vars_to_add.append(reduction_var)
         for var in vars_to_add:
-            self.__add_to_shared(var)
+            self.add_to_shared(var)
 
-    def __add_to_shared(self, var_name: str):
+    def add_to_shared(self, var_name: str):
         if " shared(" in self.pragma:
             split_pragma = self.pragma.split(" shared(")
             self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]

@@ -138,8 +138,8 @@ class TaskGraph(object):
         # copied from add_edges
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
-            cu_id = self.__get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
-                                                                  pragma.end_line)
+            cu_id = self.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
+                                                                pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
         cuid_to_node_id_map = dict()
@@ -257,7 +257,7 @@ class TaskGraph(object):
         """extract dependencies between omp pragmas from the PET Graph and create edges in the TaskGraph accordingly."""
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
-            cu_id = self.__get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
+            cu_id = self.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
         # add contains edges
@@ -329,7 +329,7 @@ class TaskGraph(object):
             if len(self.graph.in_edges(node)) == 0 and node != 0:
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
-    def __get_pet_node_id_from_source_code_lines(self, pet: PETGraphX, file_id: int, start_line: int, end_line: int):
+    def get_pet_node_id_from_source_code_lines(self, pet: PETGraphX, file_id: int, start_line: int, end_line: int):
         """Returns the ID of the pet-graph node which contains the given pragma"""
         potential_nodes = []
         for pet_node in pet.g.nodes:
