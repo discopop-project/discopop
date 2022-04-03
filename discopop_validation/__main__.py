@@ -171,6 +171,40 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
             for var in shared:
                 if var.name not in pragma.get_variables_listed_as("shared"):
                     pragma.add_to_shared(var.name)
+        elif pragma.get_type() == PragmaType.PARALLEL:
+            # variables, which are declared outside the parallel region are shared
+            # get a list of known variables and their definition lines from children nodes
+            known_variables = []
+            queue = [pet.node_at(cu_id)]
+            visited = []
+            while len(queue) > 0:
+                current = queue.pop(0)
+                visited.append(current)
+                for local_var in current.local_vars:
+                    known_variables.append((local_var.name, local_var.defLine))
+                for global_var in current.global_vars:
+                    known_variables.append((global_var.name, global_var.defLine))
+                known_variables = list(set(known_variables))
+                for child in pet.direct_children(current):
+                    if child not in visited:
+                        queue.append(child)
+            # mark those variables which are defined outside the parallel region as shared
+            shared_defined_outside = []
+            for name, raw_def_line in known_variables:
+                if ":" not in raw_def_line:
+                    continue
+                split_raw_def_line = raw_def_line.split(":")
+                def_line_file_id = int(split_raw_def_line[0])
+                def_line = int(split_raw_def_line[1])
+                if def_line_file_id == pragma.file_id:
+                    if not pragma.start_line <= def_line <= pragma.end_line:
+                        shared_defined_outside.append(name)
+            # add outside-defined variables to list of shared variables
+            for var_name in shared_defined_outside:
+                if var_name not in pragma.get_variables_listed_as("shared"):
+                    pragma.add_to_shared(var_name)
+
+
 
     print("PRAGMAS AFTER ADDING FROM PET GRAPH")
     for pragma in omp_pragmas:
@@ -197,6 +231,9 @@ def __main_start_execution(run_configuration: Configuration):
 
     # extract data sharing clauses for pragmas from pet graph
     omp_pragmas = __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas)
+
+    import sys
+    sys.exit(0)
 
     omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
 
