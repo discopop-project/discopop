@@ -63,7 +63,11 @@ def main():
         sorted_keys.sort()
         for benchmark_number in sorted_keys:
             is_supported_by_tool, correct_data_races_identified, some_correct_data_races_identified, additional_data_races_identified = evaluation_results[benchmark_number]
-            f.write(str(benchmark_number)+";")
+            corrected_benchmark_number = str(benchmark_number)
+            while len(corrected_benchmark_number) < 3:
+                corrected_benchmark_number = "0" + corrected_benchmark_number
+
+            f.write(str(corrected_benchmark_number)+";")
             f.write(str(is_supported_by_tool)+";")
             f.write(str(correct_data_races_identified)+";")
             f.write(str(some_correct_data_races_identified)+";")
