@@ -323,11 +323,16 @@ def __main_start_execution(run_configuration: Configuration):
             os.remove(run_configuration.data_race_ouput_path)
         buffer = []
         with open(run_configuration.data_race_ouput_path, "w+") as f:
-            f.write("fileID;line;column\n")
+            # f.write("fileID;line;column\n")
             for dr in computed_result.data_races:
-                if dr.get_location_str() not in buffer:
-                    f.write(dr.get_location_str() + "\n")
-                    buffer.append(dr.get_location_str())
+                split_dr_info = dr.get_location_str().split(";")
+                dr_line = split_dr_info[1]
+                if dr_line not in buffer:
+                    f.write(dr_line + "\n")
+                    buffer.append(dr_line)
+                #if dr.get_location_str() not in buffer:
+                #    f.write(dr.get_location_str() + "\n")
+                #    buffer.append(dr.get_location_str())
 
     time_end_validation = time.time()
     time_end_execution = time.time()
