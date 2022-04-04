@@ -232,9 +232,6 @@ def __main_start_execution(run_configuration: Configuration):
     # extract data sharing clauses for pragmas from pet graph
     omp_pragmas = __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas)
 
-    import sys
-    sys.exit(0)
-
     omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
 
     time_end_ps = time.time()
@@ -319,6 +316,18 @@ def __main_start_execution(run_configuration: Configuration):
 
     task_graph.plot_graph(mark_data_races=True)
     #task_graph.plot_graph(mark_data_races=False)
+
+    # output found data races to file if requested
+    if run_configuration.data_race_ouput_path != "None":
+        if os.path.exists(run_configuration.data_race_ouput_path):
+            os.remove(run_configuration.data_race_ouput_path)
+        buffer = []
+        with open(run_configuration.data_race_ouput_path, "w+") as f:
+            f.write("fileID;line;column\n")
+            for dr in computed_result.data_races:
+                if dr.get_location_str() not in buffer:
+                    f.write(dr.get_location_str() + "\n")
+                    buffer.append(dr.get_location_str())
 
     time_end_validation = time.time()
     time_end_execution = time.time()
