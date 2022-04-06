@@ -46,6 +46,9 @@ def main():
         some_correct_data_races_identified = 0
         if len([dr for dr in identified_data_races if dr in target_data_races]) > 0:
             some_correct_data_races_identified = 1
+        # correct some_corrected_data_races_identified in case that target_data_races is empty
+        if some_correct_data_races_identified == 0 and correct_data_races_identified == 1:
+            some_correct_data_races_identified = 1
 
         additional_data_races_identified = 0
         if len([dr for dr in identified_data_races if dr not in target_data_races]) > 0:

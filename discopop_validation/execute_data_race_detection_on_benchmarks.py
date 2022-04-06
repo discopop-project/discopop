@@ -19,7 +19,11 @@ def main():
     print("BENCHMARKS: ", benchmark_numbers)
     # execute data race detection on collected benchmarks
     for benchmark_number in benchmark_numbers:
-        subprocess.call(["sh", "./run_drb.sh", benchmark_number])
+        try:
+            subprocess.call(["sh", "./run_drb.sh", benchmark_number], timeout=60)
+        except subprocess.TimeoutExpired:
+            print("TIMEOUT EXPIRED")
+            continue
 
 
 if __name__ == "__main__":
