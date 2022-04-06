@@ -110,6 +110,9 @@ class SchedulingGraph(object):
         # remove Emtpy nodes from both graphs
         self.remove_none_nodes()
         other_graph.remove_none_nodes()
+        # remove useless, cyclic edges if present
+        self.__remove_edges_from_to_source_node()
+        other_graph.__remove_edges_from_to_source_node()
 
         # new dimensions are the component-wise maximum of both
         new_dimensions = []
@@ -145,6 +148,10 @@ class SchedulingGraph(object):
         # remove Emtpy nodes from both graphs
         self.remove_none_nodes()
         other_graph.remove_none_nodes()
+        # remove useless, cyclic edges if present
+        self.__remove_edges_from_to_source_node()
+        other_graph.__remove_edges_from_to_source_node()
+
 
         new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
@@ -275,4 +282,10 @@ class SchedulingGraph(object):
                     else:
                         self.graph.add_edge(predecessor, successor)
 
-
+    def __remove_edges_from_to_source_node(self):
+        to_be_removed = []
+        for edge in self.graph.edges:
+            if edge[0] == edge[1]:
+                to_be_removed.append(edge)
+        for source, target in to_be_removed:
+            self.graph.remove_edge(source, target)
