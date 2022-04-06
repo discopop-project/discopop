@@ -186,28 +186,29 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             path_scheduling_graph.debug_check_for_cycles()
             scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
 
-    # create new clocks if necessary
-    for idx, state in enumerate(result_obj.states):
-        ## create new thread clocks for state if necessary
-        #if state.thread_count < scheduling_graph.thread_count:
-        #    stc_buffer = state.thread_count
-        #    state.fill_to_thread_count(scheduling_graph.thread_count)
+    if scheduling_graph is not None:
+        # create new clocks if necessary
+        for idx, state in enumerate(result_obj.states):
+            ## create new thread clocks for state if necessary
+            #if state.thread_count < scheduling_graph.thread_count:
+            #    stc_buffer = state.thread_count
+            #    state.fill_to_thread_count(scheduling_graph.thread_count)
 
-        # create new thread clocks for state if necessary
-        # check if all necessary thread_ids are contained in state
-        for thread_id in scheduling_graph.thread_ids:
-            if thread_id not in state.thread_clocks:
-                # create new entry for thread_id in state
-                state.create_new_entries(thread_id)
+            # create new thread clocks for state if necessary
+            # check if all necessary thread_ids are contained in state
+            for thread_id in scheduling_graph.thread_ids:
+                if thread_id not in state.thread_clocks:
+                    # create new entry for thread_id in state
+                    state.create_new_entries(thread_id)
 
-    # enter parallel
-    for idx, state in enumerate(result_obj.states):
-        # Enter parallel section
-        enter_parallel_sched_elem = ScheduleElement(0)
-        affected_thread_ids = [tid for tid in state.thread_id_to_clock_position_dict.keys() if tid != 0]
-        enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
-                                             affected_thread_ids=affected_thread_ids)
-        result_obj.states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
+        # enter parallel
+        for idx, state in enumerate(result_obj.states):
+            # Enter parallel section
+            enter_parallel_sched_elem = ScheduleElement(0)
+            affected_thread_ids = [tid for tid in state.thread_id_to_clock_position_dict.keys() if tid != 0]
+            enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
+                                                 affected_thread_ids=affected_thread_ids)
+            result_obj.states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
 
     result_obj.update(scheduling_graph)
     return result_obj
