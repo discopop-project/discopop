@@ -38,7 +38,7 @@ from typing import List, Dict
 from docopt import docopt
 from schema import SchemaError, Schema, Use
 
-from discopop_explorer import PETGraphX
+from discopop_explorer import PETGraphX, NodeType
 from discopop_explorer.utils import classify_loop_variables, classify_task_vars
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
@@ -199,10 +199,27 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
                 if def_line_file_id == pragma.file_id:
                     if not pragma.start_line <= def_line <= pragma.end_line:
                         shared_defined_outside.append(name)
+
+            # todo maybe remove, reason it is included: save drastic amounts of computation time
+            # remove variable from shared_defined_outside, if it's a loop index
+            loop_indices_to_remove = []
+            loops_start_lines = []
+            for v in pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.LOOP):
+                loops_start_lines.append(v.start_position())
+            for child in pet.direct_children(pet.node_at(pragma_to_cuid[pragma])):
+                for var_name in shared_defined_outside:
+                    if var_name in loop_indices_to_remove:
+                        continue
+                    if pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.CU)):
+                        loop_indices_to_remove.append(var_name)
+            shared_defined_outside = [var for var in shared_defined_outside if var not in loop_indices_to_remove]
+
             # add outside-defined variables to list of shared variables
             for var_name in shared_defined_outside:
                 if var_name not in pragma.get_variables_listed_as("shared"):
-                    pragma.add_to_shared(var_name)
+                    # check if var_name already use in another clause
+                    if var_name not in pragma.get_known_variables():
+                        pragma.add_to_shared(var_name)
 
 
 
