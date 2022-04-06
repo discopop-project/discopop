@@ -1101,3 +1101,25 @@ class TaskGraph(object):
                         self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
+
+    def pass_shared_clauses_to_childnodes(self):
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for node in self.graph.nodes:
+                if self.graph.nodes[node]["data"].pragma is None:
+                    continue
+                shared_vars = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("shared")
+                print("SHARED: ", shared_vars)
+                # check if shared variables contained in child node
+                out_contains_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                for _, child in out_contains_edges:
+                    if self.graph.nodes[child]["data"].pragma is None:
+                        continue
+                    known_variables = self.graph.nodes[child]["data"].pragma.get_known_variables()
+                    missing_shared_variables = [var for var in shared_vars if var not in known_variables]
+                    if len(missing_shared_variables) > 0:
+                        modification_found = True
+                    for var in missing_shared_variables:
+                        self.graph.nodes[child]["data"].pragma.add_to_shared(var)
+

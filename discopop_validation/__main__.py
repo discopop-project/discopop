@@ -229,10 +229,11 @@ def __main_start_execution(run_configuration: Configuration):
 
     omp_pragmas = __get_omp_pragmas(run_configuration)
 
+    omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
+
     # extract data sharing clauses for pragmas from pet graph
     omp_pragmas = __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas)
 
-    omp_pragmas = __preprocess_omp_pragmas(omp_pragmas)
 
     time_end_ps = time.time()
 
@@ -247,6 +248,8 @@ def __main_start_execution(run_configuration: Configuration):
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
+    # pass shared clauses to child nodes
+    task_graph.pass_shared_clauses_to_childnodes()
     # remove redundant successor edges
     task_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
     # move successor edges if source is contained in a different pragma
