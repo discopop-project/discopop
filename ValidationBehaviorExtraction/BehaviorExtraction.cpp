@@ -112,7 +112,7 @@ namespace
         BehaviorExtraction() : FunctionPass(ID) {}
         bool doInitialization(Module &M);
         list<relevantSection> sections;
-        pair<int, int> getClosestCodeLocation(Instruction* inst);
+        pair<int, int> getClosestCodeLocation(Instruction* inst, unsigned int fallback_line, unsigned int fallback_column);
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion);
@@ -138,13 +138,13 @@ unsigned int BehaviorExtraction::getNextFreeBBId(){
 }
 
 
-pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
-    pair<int, int> returnLocation(-1, -1);
+pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst, unsigned int fallback_line, unsigned int fallback_column){
+    pair<unsigned int, unsigned int> returnLocation(fallback_line, fallback_column);
     if(inst){
         Instruction* curInst = inst;
         while(curInst){
             if(curInst->hasMetadata()){
-                returnLocation = pair<int, int>(curInst->getDebugLoc().getLine(), curInst->getDebugLoc().getCol());
+                returnLocation = pair<unsigned int, unsigned int>(curInst->getDebugLoc().getLine(), curInst->getDebugLoc().getCol());
                 return returnLocation;
             }
             curInst = curInst->getNextNode();
@@ -348,7 +348,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                     sharedVarAccess access;
                     access.name = determineVarName(ci->getNextNode(), false);
                     access.mode = "w";
-                    access.codeLocation = getClosestCodeLocation(ci);
+                    access.codeLocation = getClosestCodeLocation(ci, 0, 0);
                     access.originLocation = access.codeLocation;
                     access.parentInstruction = &inst;
                     resultList.push_back(access);
@@ -371,7 +371,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                         sharedVarAccess access;
                         access.name = determineVarName(ci->getNextNode(), false);
                         access.mode = "r";
-                        access.codeLocation = getClosestCodeLocation(ci);
+                        access.codeLocation = getClosestCodeLocation(ci, 0, 0);
                         access.originLocation = access.codeLocation;
                         access.parentInstruction = &inst;
                         resultList.push_back(access);
@@ -423,7 +423,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                                     // errs() << "\t\t\tmode: " << sva.mode << "\n";
                                     sva.name = argName;
                                     // overwrite code location with location of function call
-                                    sva.codeLocation = getClosestCodeLocation(ci);
+                                    sva.codeLocation = getClosestCodeLocation(ci, 0, 0);
                                     resultList.push_back(sva);
                                 }
                             }
@@ -606,8 +606,8 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
         graphNode.bb = &BB;
         graphNode.varAccesses = getSharedVarAccesses(BB, F);
-        graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))));
-        graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))));
+        graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))), 0, 0);
+        graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))), graphNode.startLocation.first, graphNode.startLocation.second);
         // check if BB is inside scope
         list<unsigned int> bb_in_sections;
         for(auto section : sections){
