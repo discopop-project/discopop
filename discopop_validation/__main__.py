@@ -191,14 +191,19 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
             # mark those variables which are defined outside the parallel region as shared
             shared_defined_outside = []
             for name, raw_def_line in known_variables:
-                if ":" not in raw_def_line:
+                if raw_def_line == "LineNotFound":
                     continue
-                split_raw_def_line = raw_def_line.split(":")
-                def_line_file_id = int(split_raw_def_line[0])
-                def_line = int(split_raw_def_line[1])
-                if def_line_file_id == pragma.file_id:
-                    if not pragma.start_line <= def_line <= pragma.end_line:
-                        shared_defined_outside.append(name)
+                if ":" in raw_def_line:
+                    split_raw_def_line = raw_def_line.split(":")
+                    def_line_file_id = int(split_raw_def_line[0])
+                    def_line = int(split_raw_def_line[1])
+                    if def_line_file_id == pragma.file_id:
+                        if not pragma.start_line <= def_line <= pragma.end_line:
+                            shared_defined_outside.append(name)
+                elif raw_def_line == "GlobalVar":
+                    shared_defined_outside.append(name)
+                else:
+                    raise ValueError("Unhandled definition line: ", raw_def_line)
 
             # todo maybe remove, reason it is included: save drastic amounts of computation time
             # remove variable from shared_defined_outside, if it's a loop index
