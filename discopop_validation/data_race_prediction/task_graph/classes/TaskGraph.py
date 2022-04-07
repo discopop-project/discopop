@@ -1,6 +1,4 @@
-import warnings
-
-from typing import List, Optional, Dict, Tuple
+from typing import List, Dict, Tuple
 import copy
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -8,6 +6,7 @@ from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
+from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.task_graph.classes.CalledFunctionNode import CalledFunctionNode
@@ -138,8 +137,8 @@ class TaskGraph(object):
         # copied from add_edges
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
-            cu_id = self.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
-                                                                pragma.end_line)
+            cu_id = get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
+                                                           pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
         cuid_to_node_id_map = dict()
@@ -240,12 +239,9 @@ class TaskGraph(object):
                         self.graph.remove_edge(source, target)
 
 
-    def compute_results(self):
+    def compute_results(self) -> ResultObject:
         # trigger result computation for root node
-        computed_result = self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
-        # display detected data races
-        for data_race in computed_result.data_races:
-            print(data_race)
+        computed_result: ResultObject = self.graph.nodes[0]["data"].compute_result(self, ResultObject(), [0])
         return computed_result
 
 
@@ -257,7 +253,7 @@ class TaskGraph(object):
         """extract dependencies between omp pragmas from the PET Graph and create edges in the TaskGraph accordingly."""
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
         for pragma in omp_pragmas:
-            cu_id = self.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
+            cu_id = get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
         # add contains edges
@@ -328,24 +324,6 @@ class TaskGraph(object):
         for node in self.graph.nodes:
             if len(self.graph.in_edges(node)) == 0 and node != 0:
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
-
-    def get_pet_node_id_from_source_code_lines(self, pet: PETGraphX, file_id: int, start_line: int, end_line: int):
-        """Returns the ID of the pet-graph node which contains the given pragma"""
-        potential_nodes = []
-        for pet_node in pet.g.nodes:
-            if file_id == pet.g.nodes[pet_node]["data"].file_id and \
-                start_line >= pet.g.nodes[pet_node]["data"].start_line and \
-                end_line <= pet.g.nodes[pet_node]["data"].end_line:
-                potential_nodes.append(pet_node)
-        if len(potential_nodes) == 0:
-            raise ValueError("No valid CUID found for: ", str(file_id) + ":"+ str(start_line)+"-"+str(end_line))
-        # find narrowest matching node
-        narrowest_node_buffer = potential_nodes[0]
-        for pet_node in potential_nodes:
-            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
-                pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
-                narrowest_node_buffer = pet_node
-        return narrowest_node_buffer
 
     def remove_redundant_edges(self, edge_types: List[EdgeType]):
 

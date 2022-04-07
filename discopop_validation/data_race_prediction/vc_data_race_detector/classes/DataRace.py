@@ -1,5 +1,7 @@
 from typing import List, Tuple, Optional
 
+from discopop_explorer import PETGraphX
+from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from termcolor import colored
@@ -73,12 +75,14 @@ class DataRace(object):
         indices = list(set(indices))
         return indices
 
-    def get_cu_id(self) -> str:
+    def get_cu_id(self, pet: PETGraphX) -> str:
         """returns the cu_id which is stored in the schedule element's operations."""
         for _, _, _, operation in self.schedule_element.updates:
-            raise ValueError("TODO: Determine CUID from file_id and line + column")
-            if operation.cu_id != "":
-                return operation.cu_id
+            if operation.pet_cu_id != "":
+                return operation.pet_cu_id
+            else:
+                operation.pet_cu_id = get_pet_node_id_from_source_code_lines(pet, int(operation.file_id), int(operation.line), int(operation.line))
+                return operation.pet_cu_id
         return "UNDEF"
 
     def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:

@@ -9,6 +9,7 @@ class Operation:
     target_indices: List[str]
     line: int
     col: int
+    pet_cu_id: str
     # origin line and col will only be different from line / col if Operation occured inside a called function
     origin_line: int
     origin_col: int
@@ -28,6 +29,7 @@ class Operation:
         self.suggestion_type = suggestion_type
         self.file_id = file_id
         self.modifiers = []
+        self.pet_cu_id = ""
 
     def __str__(self):
         if self.mode.startswith("c"):

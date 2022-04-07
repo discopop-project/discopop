@@ -42,11 +42,12 @@ from discopop_explorer import PETGraphX, NodeType
 from discopop_explorer.utils import classify_loop_variables, classify_task_vars
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
-from discopop_validation.data_race_prediction.core import old_validate_omp_pragma
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
+from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.discopop_suggestion_interpreter.core import get_omp_pragmas_from_dp_suggestions
 from .interfaces.discopop_explorer import get_pet_graph
 from pycallgraph2 import PyCallGraph
@@ -148,8 +149,8 @@ def main():
 def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
     pragma_to_cuid: Dict[OmpPragma, str] = dict()
     for pragma in omp_pragmas:
-        cu_id = task_graph.get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
-                                                              pragma.end_line)
+        cu_id = get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
+                                                       pragma.end_line)
         pragma_to_cuid[pragma] = cu_id
 
     print("####################################")
@@ -335,7 +336,11 @@ def __main_start_execution(run_configuration: Configuration):
     #task_graph.plot_graph()
 
     # trigger result computation
-    computed_result = task_graph.compute_results()
+    computed_result: ResultObject = task_graph.compute_results()
+    # apply exception rules to detected data races
+    computed_result.apply_exception_rules_to_data_races(pet)
+    # print detected data races
+    computed_result.print_data_races()
     # add identified data races to graph nodes for plotting
     task_graph.add_data_races_to_graph(computed_result)
 
@@ -518,3 +523,5 @@ def __old_main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_fi
 
 if __name__ == "__main__":
     main()
+
+

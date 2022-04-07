@@ -11,6 +11,8 @@ import string
 
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
+from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.application import \
+    apply_exception_rules
 
 
 class ResultObject(object):
@@ -95,3 +97,11 @@ class ResultObject(object):
             if not is_known:
                 successful_states_wo_duplicates.append(state)
         self.states = successful_states_wo_duplicates
+
+    def print_data_races(self):
+        # display detected data races
+        for data_race in self.data_races:
+            print(data_race)
+
+    def apply_exception_rules_to_data_races(self, pet):
+        self.data_races = apply_exception_rules(self.data_races, pet)
