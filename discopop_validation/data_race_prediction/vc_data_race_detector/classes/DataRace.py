@@ -89,3 +89,22 @@ class DataRace(object):
         """returns the stored information as a tuple.
         Used for duplicate filtering."""
         return self.schedule_element, self.previous_accesses
+
+    def get_relevant_previous_access_lines(self):
+        lines = []
+        if self.var_name is None:
+            for access in self.previous_accesses:
+                lines += access.get_operation_lines()
+        else:
+            # filter reported accesses
+            for access in self.previous_accesses:
+                # check if access is relevant considering self.var_name
+                is_relevant = False
+                for (var_name, update_type, _, operation) in access.updates:
+                    if operation.get_target_name_without_fingerprint() == self.get_var_name_without_fingerprint():
+                        is_relevant = True
+                        break
+                if is_relevant:
+                    lines += access.get_operation_lines()
+        lines = list(set(lines))
+        return lines

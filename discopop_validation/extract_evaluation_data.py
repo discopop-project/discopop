@@ -49,7 +49,7 @@ def main():
 
         # check for evaluation values
         correct_data_races_identified = 0
-        if target_data_races == identified_data_races:
+        if set(target_data_races) == set(identified_data_races):
             correct_data_races_identified = 1
 
         some_correct_data_races_identified = 0
