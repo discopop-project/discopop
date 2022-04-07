@@ -30,6 +30,15 @@ def main():
                     line = line.replace("\n", "")
                     target_data_races.append(line)
 
+        benchmark_contains_data_races = len(target_data_races)
+
+        data_races_in_arrays = 0
+        if os.path.exists(os.path.join(benchmark_path, "target_variable_names.txt")):
+            with open(os.path.join(benchmark_path, "target_variable_names.txt")) as f:
+                for line in f.readlines():
+                    if "[" in line and "]" in line:
+                        data_races_in_arrays = 1
+
         # read identified data races
         identified_data_races = []
         if os.path.exists(os.path.join(benchmark_path, "data_races.txt")):
@@ -54,24 +63,26 @@ def main():
         if len([dr for dr in identified_data_races if dr not in target_data_races]) > 0:
             additional_data_races_identified = 1
 
-        evaluation_results[benchmark_number] = (is_supported_by_tool, correct_data_races_identified,
+        evaluation_results[benchmark_number] = (is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified,
                                                 some_correct_data_races_identified, additional_data_races_identified)
 
     print(evaluation_results)
 
     # write evaluation results to evaluation_results.csv
     with open("evaluation_results.csv", "w+") as f:
-        f.write("Benchmark;Is supported by our tool;Correct data races identified;Some correct data races identified;Additional data races reported\n")
+        f.write("Benchmark;Is supported by our tool;Benchmark contains data races;Data races on array type;Correct data races identified;Some correct data races identified;Additional data races reported\n")
         sorted_keys = list(evaluation_results.keys())
         sorted_keys.sort()
         for benchmark_number in sorted_keys:
-            is_supported_by_tool, correct_data_races_identified, some_correct_data_races_identified, additional_data_races_identified = evaluation_results[benchmark_number]
+            is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified, some_correct_data_races_identified, additional_data_races_identified = evaluation_results[benchmark_number]
             corrected_benchmark_number = str(benchmark_number)
             while len(corrected_benchmark_number) < 3:
                 corrected_benchmark_number = "0" + corrected_benchmark_number
 
             f.write(str(corrected_benchmark_number)+";")
             f.write(str(is_supported_by_tool)+";")
+            f.write(str(benchmark_contains_data_races)+";")
+            f.write(str(data_races_in_arrays) + ";")
             f.write(str(correct_data_races_identified)+";")
             f.write(str(some_correct_data_races_identified)+";")
             f.write(str(additional_data_races_identified)+";"+"\n")

@@ -17,6 +17,7 @@ def main():
 
                 # extract lines from target_data_races
                 tdr_lines = []
+                var_names = []
                 for tdr_pair in target_data_races:
                     tdr_pair = tdr_pair.replace(" ", "")
                     split_tdr = tdr_pair.split("vs.")
@@ -28,6 +29,7 @@ def main():
                         column = location_and_mode[1]
                         mode = location_and_mode[2]
                         tdr_lines.append(line)
+                        var_names.append(var)
                 tdr_lines = list(set(tdr_lines))
 
                 # output data races to target_data_races.txt
@@ -38,6 +40,13 @@ def main():
                         for line_number in tdr_lines:
                             print("\t", line_number)
                             f.write(line_number + "\n")
+
+                # output variable names to target_variable_names.txt
+                output_file = os.path.join(subdir, "target_variable_names.txt")
+                if len(var_names) > 0:
+                    with open(output_file, "w+") as f:
+                        for var_name in var_names:
+                            f.write(var_name + "\n")
 
 
 if __name__ == "__main__":
