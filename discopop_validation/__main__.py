@@ -318,10 +318,14 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.replace_pragma_single_nodes()
     # remove FOR nodes from graph and replace with contained nodes
     task_graph.replace_pragma_for_nodes()
-    # remove join nodes with only one incoming SEQUENTIAL edge
+    # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
     task_graph.remove_single_incoming_join_node()
     # add BELONGS_TO edges between Fork and Join nodes
     task_graph.add_belongs_to_edges()
+    # add contains edges from fork nodes to contained behavior storage nodes
+    # todo
+    # add fork and join nodes around behavior storage node if it's not contained in a fork section
+    # todo
 
     # remove behavior models from all but BehaviorStorageNodes
     task_graph.remove_behavior_models_from_nodes()
@@ -333,7 +337,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
 
     # trigger result computation
     computed_result: ResultObject = task_graph.compute_results()
