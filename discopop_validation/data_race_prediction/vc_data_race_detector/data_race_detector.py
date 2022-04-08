@@ -52,15 +52,8 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
 def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
-    print()
-    print("state pre: ")
-    print(state)
-    print(state.thread_id_to_clock_position_dict)
-    print("SCHEDELEM: ", schedule_element)
     for update in schedule_element.updates:
         state = __perform_update(state, schedule_element.thread_id, update)
-    print("state post: ")
-    print(state)
     return __check_state(state, schedule_element, previous_writes)
 
 
@@ -82,9 +75,6 @@ def __check_state(state: State, schedule_element: ScheduleElement, previous_writ
             data_race = DataRace(schedule_element, previous_writes, state, var_name=var)
             return data_race
     for var in written_variables:
-        print("CHECK VAR: ", var, " : ", not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id]))
-        print("CHECK RES: ", (not compare_vc(state.var_read_clocks[var], state.thread_clocks[schedule_element.thread_id])) or \
-                (not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id])))
         if (not compare_vc(state.var_read_clocks[var], state.thread_clocks[schedule_element.thread_id])) or \
                 (not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id])):
             data_race = DataRace(schedule_element, previous_writes, state, var_name=var)
@@ -105,13 +95,9 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
         if state.var_read_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
             state.var_read_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
     elif update_type is UpdateType.WRITE:
-        print("HERE")
-        print("TCI: ", thread_clock_index)
         # update variable write clock
         if state.var_write_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
             state.var_write_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
-        else:
-            print("ELSE")
     elif update_type is UpdateType.ENTERPARALLEL:
         for tid in affected_thread_ids:
 

@@ -200,7 +200,6 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
                 if thread_id not in state.thread_clocks:
                     # create new entry for thread_id in state
                     state.create_new_entries(thread_id)
-                    print("CREATED ENTRY: ", thread_id)
 
         # enter parallel
         for idx, state in enumerate(result_obj.states):

@@ -245,8 +245,6 @@ class SchedulingGraph(object):
 
         composed_graph.fix_node_ids()
         composed_graph.__update_contained_thread_ids()
-        print("CTID: ", composed_graph.thread_ids)
-        #composed_graph.plot_graph()
 
         return composed_graph
 
