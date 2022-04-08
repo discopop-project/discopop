@@ -256,9 +256,15 @@ class SchedulingGraph(object):
         to_be_removed = []
         for node in self.graph.nodes:
             if self.graph.nodes[node]["data"] is None:
-                # do not remove root node
+                # remove non-root node
                 if node != self.get_root_node_identifier():
                     to_be_removed.append(node)
+                # remove root node, if only one successor exists
+                if node == self.get_root_node_identifier() and len(self.graph.out_edges(node)) == 1:
+                    # add node to to_be_removed
+                    to_be_removed.append(node)
+                    # set successor as new root
+                    self.root_node_identifier = list(self.graph.out_edges(node))[0][1]
 
         for node in to_be_removed:
             # redirect incoming edges to successors
