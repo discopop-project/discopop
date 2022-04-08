@@ -12,6 +12,9 @@ def apply_exception_rules(unfiltered_data_races: List[DataRace], pet) -> List[Da
         dr_is_valid = False
         if str(data_race.get_parent_suggestion_type()) == str(PragmaType.FOR):
             dr_is_valid = __check_pragma_for_exception_rules(data_race, pet)
+        else:
+            # if no specific exception rules exist, data race shall be regarded as valid
+            dr_is_valid = True
 
         if dr_is_valid:
             filtered_data_races.append(data_race)
