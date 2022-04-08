@@ -179,40 +179,61 @@ class SchedulingGraph(object):
         composed_graph = SchedulingGraph(new_dimensions, [])
         composed_graph.thread_count = self.thread_count + other_graph.thread_count
 
-        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id):
-            # step on first graph
-            # construct new node id
-            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, first_graph_node[2])
-            # create ScheduleElement in target_graph
-            target_graph.graph.add_node(new_node_id, data=first_graph.graph.nodes[first_graph_node]["data"])
-            # connect previous node with newly created node
-            target_graph.graph.add_edge(previous_node_id, new_node_id)
-            # enter recursion
-            for source, target in first_graph.graph.out_edges(first_graph_node):
-                if first_graph.graph.nodes[first_graph_node]["data"] is None:
-                    tmp_previous_thread_id = -1
+        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id, first_graph_last_step=False, second_graph_last_step=False):
+            if not first_graph_last_step:
+                # step on first graph
+                # construct new node id
+                new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, first_graph_node[2])
+                # create ScheduleElement in target_graph
+                target_graph.graph.add_node(new_node_id, data=first_graph.graph.nodes[first_graph_node]["data"])
+                # connect previous node with newly created node
+                target_graph.graph.add_edge(previous_node_id, new_node_id)
+                # enter recursion
+                if len(first_graph.graph.out_edges(first_graph_node)) > 0:
+                    for source, target in first_graph.graph.out_edges(first_graph_node):
+                        if first_graph.graph.nodes[first_graph_node]["data"] is None:
+                            tmp_previous_thread_id = -1
+                        else:
+                            tmp_previous_thread_id = first_graph.graph.nodes[first_graph_node]["data"].thread_id
+                        __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                   target, second_graph_node,
+                                                   new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
                 else:
-                    tmp_previous_thread_id = first_graph.graph.nodes[first_graph_node]["data"].thread_id
-                __construct_composed_graph(target_graph, first_graph, second_graph,
-                                           target, second_graph_node,
-                                           new_node_id, tmp_previous_thread_id)
+                    if first_graph.graph.nodes[first_graph_node]["data"] is None:
+                        tmp_previous_thread_id = -1
+                    else:
+                        tmp_previous_thread_id = first_graph.graph.nodes[first_graph_node]["data"].thread_id
+                    __construct_composed_graph(target_graph, first_graph, second_graph,
+                                               first_graph_node, second_graph_node,
+                                               new_node_id, tmp_previous_thread_id, first_graph_last_step=True, second_graph_last_step=second_graph_last_step)
 
-            # step on second graph
-            # construct new node id
-            new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, second_graph_node[2])
-            # create ScheduleElement in target_graph
-            target_graph.graph.add_node(new_node_id, data=second_graph.graph.nodes[second_graph_node]["data"])
-            # connect previous node with newly created node
-            target_graph.graph.add_edge(previous_node_id, new_node_id)
-            # enter recursion
-            for source, target in second_graph.graph.out_edges(second_graph_node):
-                if second_graph.graph.nodes[second_graph_node]["data"] is None:
-                    tmp_previous_thread_id = -1
+
+            if not second_graph_last_step:
+                # step on second graph
+                # construct new node id
+                new_node_id = ((first_graph_node[0], second_graph_node[0]), previous_thread_id, second_graph_node[2])
+                # create ScheduleElement in target_graph
+                target_graph.graph.add_node(new_node_id, data=second_graph.graph.nodes[second_graph_node]["data"])
+                # connect previous node with newly created node
+                target_graph.graph.add_edge(previous_node_id, new_node_id)
+                # enter recursion
+                if len(second_graph.graph.out_edges(second_graph_node)) > 0:
+                    for source, target in second_graph.graph.out_edges(second_graph_node):
+                        if second_graph.graph.nodes[second_graph_node]["data"] is None:
+                            tmp_previous_thread_id = -1
+                        else:
+                            tmp_previous_thread_id = second_graph.graph.nodes[second_graph_node]["data"].thread_id
+                        __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                   first_graph_node, target,
+                                                   new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
                 else:
-                    tmp_previous_thread_id = second_graph.graph.nodes[second_graph_node]["data"].thread_id
-                __construct_composed_graph(target_graph, first_graph, second_graph,
-                                           first_graph_node, target,
-                                           new_node_id, tmp_previous_thread_id)
+                    if second_graph.graph.nodes[second_graph_node]["data"] is None:
+                        tmp_previous_thread_id = -1
+                    else:
+                        tmp_previous_thread_id = second_graph.graph.nodes[second_graph_node]["data"].thread_id
+                    __construct_composed_graph(target_graph, first_graph, second_graph,
+                                               first_graph_node, second_graph_node,
+                                               new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=True)
 
             return target_graph
 
@@ -256,9 +277,15 @@ class SchedulingGraph(object):
         to_be_removed = []
         for node in self.graph.nodes:
             if self.graph.nodes[node]["data"] is None:
-                # do not remove root node
+                # remove non-root node
                 if node != self.get_root_node_identifier():
                     to_be_removed.append(node)
+                # remove root node, if only one successor exists
+                if node == self.get_root_node_identifier() and len(self.graph.out_edges(node)) == 1:
+                    # add node to to_be_removed
+                    to_be_removed.append(node)
+                    # set successor as new root
+                    self.root_node_identifier = list(self.graph.out_edges(node))[0][1]
 
         for node in to_be_removed:
             # redirect incoming edges to successors

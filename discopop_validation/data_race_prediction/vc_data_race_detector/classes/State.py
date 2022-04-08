@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from .VectorClock import VectorClock, get_updated_vc
+from .VectorClock import VectorClock, get_updated_vc, increase
 
 
 class State(object):
@@ -55,6 +55,7 @@ class State(object):
         self.thread_id_to_clock_position_dict[thread_id] = self.thread_count
         self.thread_count += 1
         self.thread_clocks[thread_id] = VectorClock(self.thread_count)
+        increase(self.thread_clocks[thread_id], self.thread_id_to_clock_position_dict[thread_id])
 
     def __str__(self):
         return "Thread clocks: " + " ".join([str(key)+":"+str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
