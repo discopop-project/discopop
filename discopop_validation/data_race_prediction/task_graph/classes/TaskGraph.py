@@ -717,6 +717,14 @@ class TaskGraph(object):
         for node in to_be_removed:
             in_seq_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
             out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            # if a barrier or taskwait node is a successor, do not remove the join
+            skip_node = False
+            for _, successor in out_seq_edges:
+                if type(self.graph.nodes[successor]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+                    skip_node = True
+            if skip_node:
+                continue
+
             for source, _ in in_seq_edges:
                 for _, target in out_seq_edges:
                     self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
