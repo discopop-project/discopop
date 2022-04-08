@@ -68,7 +68,7 @@ class OmpPragma(object):
     def get_variables_listed_as(self, type: str) -> List[str]:
         """possible types: firstprivate, private, shared, reduction"""
         listed_vars: List[str] = []
-        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
+        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
         for found_str in found_strings:
             # separate treatment of reduction clauses required, since operations and ':' need to be removed
             if type == "reduction":
