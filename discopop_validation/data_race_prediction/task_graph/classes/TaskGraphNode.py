@@ -24,6 +24,7 @@ class TaskGraphNode(object):
     behavior_models: List[BehaviorModel]
     seen_in_result_computation: bool
     data_races: List[DataRace]
+    covered_by_fork_node: bool
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
@@ -31,6 +32,7 @@ class TaskGraphNode(object):
         self.behavior_models = []
         self.seen_in_result_computation = False
         self.data_races = []
+        self.covered_by_fork_node = False
 
     def get_label(self):
         if self.node_id == 0:

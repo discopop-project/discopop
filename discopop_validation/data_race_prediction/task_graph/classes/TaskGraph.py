@@ -552,6 +552,10 @@ class TaskGraph(object):
                 new_node_id = self.__get_new_node_id()
                 behavior_storage_node = TaskGraphNode(new_node_id)
                 behavior_storage_node.behavior_models.append(model)
+                # set thread count to 1 if parent is PragmaSingleNode
+                if type(self.graph.nodes[node]["data"]) == PragmaSingleNode:
+                    behavior_storage_node.set_simulation_thread_count(1)
+
                 self.graph.add_node(new_node_id, data=behavior_storage_node)
                 bhv_storage_node_to_parent[new_node_id] = node
                 # old version:
@@ -1110,3 +1114,85 @@ class TaskGraph(object):
                     for var in missing_shared_variables:
                         self.graph.nodes[child]["data"].pragma.add_to_shared(var)
 
+    def mark_behavior_storage_nodes_covered_by_fork_nodes(self):
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) != ForkNode:
+                continue
+            out_sequential_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+
+            paths = []
+            path_queue = []
+            visited = []
+            successive_join_node = None
+            for _, successor in out_sequential_edges:
+                path_queue.append(([], successor))
+            while len(path_queue) > 0:
+                current_path, current_node = path_queue.pop()
+                visited.append((current_path, current_node))
+                if self.graph.nodes[current_node]["data"].get_label() == "Join":
+                    if successive_join_node is None:
+                        successive_join_node = current_node
+                    paths.append(current_path)
+                    continue
+
+                if self.graph.nodes[current_node]["data"].get_label() == "Fork":
+                    current_path.append(current_node)
+                    out_belongs_to_edges = [edge for edge in self.graph.out_edges(current_node) if
+                                            self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+                    for _, related_join_node in out_belongs_to_edges:
+                        join_out_seq_edges = [edge for edge in self.graph.out_edges(related_join_node) if
+                                              self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                        for _, successor in join_out_seq_edges:
+                            path_queue.append((copy.deepcopy(current_path), successor))
+                else:
+                    # current_node is a regular node type (not FORK)
+
+                    out_seq_edges = [edge for edge in self.graph.out_edges(current_node) if
+                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+                    # check if end of path reached
+                    if len(out_seq_edges) == 0:
+                        # end of path found, append current_node to current_path
+                        # append current_path to paths
+                        current_path.append(current_node)
+                        paths.append(current_path)
+                        continue
+                    # add new queue entry for each successor
+                    current_path.append(current_node)
+                    for _, target in out_seq_edges:
+                        if (current_path, target) not in visited:
+                            path_queue.append((copy.deepcopy(current_path), target))
+            # create contains edges from fork node to contained behavior storage nodes
+            for path in paths:
+                for elem in path:
+                    if type(self.graph.nodes[elem]["data"]) == TaskGraphNode:
+                        self.graph.nodes[elem]["data"].covered_by_fork_node = True
+
+    def add_fork_and_join_around_behavior_storage_nodes(self):
+        """add fork and join nodes around behavior storage nodes which are not already covered by a fork section"""
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == TaskGraphNode:
+                # skip root node
+                if node == 0:
+                    continue
+                if not self.graph.nodes[node]["data"].covered_by_fork_node:
+                    in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                                    self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                    self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    # add fork node prior to node
+                    fork_node_id = self.__add_fork_node()
+                    for source, _ in in_seq_edges:
+                        self.graph.remove_edge(source, node)
+                        self.graph.add_edge(source, fork_node_id, type=EdgeType.SEQUENTIAL)
+                    self.graph.add_edge(fork_node_id, node, type=EdgeType.SEQUENTIAL)
+
+                    # add join node after node
+                    join_node_id = self.__add_join_node()
+                    for _, target in out_seq_edges:
+                        self.graph.remove_edge(node, target)
+                        self.graph.add_edge(join_node_id, target, type=EdgeType.SEQUENTIAL)
+                    self.graph.add_edge(node, join_node_id, type=EdgeType.SEQUENTIAL)
+
+                    # add belongs_to edge between fork and join node
+                    self.graph.add_edge(fork_node_id, join_node_id, type=EdgeType.BELONGS_TO)

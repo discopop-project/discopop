@@ -322,10 +322,10 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.remove_single_incoming_join_node()
     # add BELONGS_TO edges between Fork and Join nodes
     task_graph.add_belongs_to_edges()
-    # add contains edges from fork nodes to contained behavior storage nodes
-    # todo
+    # mark behavior storage nodes which are already covered by fork nodes
+    task_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
     # add fork and join nodes around behavior storage node if it's not contained in a fork section
-    # todo
+    task_graph.add_fork_and_join_around_behavior_storage_nodes()
 
     # remove behavior models from all but BehaviorStorageNodes
     task_graph.remove_behavior_models_from_nodes()
