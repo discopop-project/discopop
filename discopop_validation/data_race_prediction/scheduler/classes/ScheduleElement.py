@@ -37,6 +37,13 @@ class ScheduleElement:
         lines = list(set(lines))
         return lines
 
+    def get_file_ids(self):
+        ids = []
+        for (_, _, _, operation) in self.updates:
+            ids.append(int(operation.file_id))
+        ids = list(set(ids))
+        return ids
+
     def contains_write(self) -> bool:
         for _, update_type, _, _ in self.updates:
             if update_type == UpdateType.WRITE:

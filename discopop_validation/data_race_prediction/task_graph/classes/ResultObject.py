@@ -103,5 +103,5 @@ class ResultObject(object):
         for data_race in self.data_races:
             print(data_race)
 
-    def apply_exception_rules_to_data_races(self, pet):
-        self.data_races = apply_exception_rules(self.data_races, pet)
+    def apply_exception_rules_to_data_races(self, pet, task_graph):
+        self.data_races = apply_exception_rules(self.data_races, pet, task_graph)

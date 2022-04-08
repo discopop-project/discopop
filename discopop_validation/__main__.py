@@ -338,7 +338,7 @@ def __main_start_execution(run_configuration: Configuration):
     # trigger result computation
     computed_result: ResultObject = task_graph.compute_results()
     # apply exception rules to detected data races
-    computed_result.apply_exception_rules_to_data_races(pet)
+    computed_result.apply_exception_rules_to_data_races(pet, task_graph)
     # print detected data races
     computed_result.print_data_races()
     # add identified data races to graph nodes for plotting
