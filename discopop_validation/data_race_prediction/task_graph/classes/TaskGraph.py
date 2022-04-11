@@ -510,7 +510,10 @@ class TaskGraph(object):
     def __get_insert_location(self, root, start_line):
         def __get_start_line(node_id):
             if self.graph.nodes[node_id]["data"].pragma is None:
-                return self.graph.nodes[node_id]["data"].behavior_models[0].get_start_line()
+                if len(self.graph.nodes[node_id]["data"].behavior_models) == 0:
+                    return 0
+                else:
+                    return self.graph.nodes[node_id]["data"].behavior_models[0].get_start_line()
             else:
                 return self.graph.nodes[node_id]["data"].pragma.start_line
 
