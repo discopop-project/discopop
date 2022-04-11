@@ -1041,24 +1041,68 @@ class TaskGraph(object):
 
     def add_belongs_to_edges(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) == JoinNode:
-                # search incoming SEQUENTIAL paths upwards for closest FORK nodes
-                predecessors = [edge[0] for edge in self.graph.in_edges(node) if
-                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                queue = predecessors
-                while len(queue) > 0:
-                    current = queue.pop()
-                    if type(self.graph.nodes[current]["data"]) == ForkNode:
-                        self.graph.add_edge(current, node, type=EdgeType.BELONGS_TO)
-                    if type(self.graph.nodes[current]["data"]) == JoinNode:
+            if type(self.graph.nodes[node]["data"]) == ForkNode:
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                # create list of SEQUENTIAL paths
+                paths = []
+                path_queue = []
+                visited = []
+                for _, successor in out_seq_edges:
+                    path_queue.append(([], successor))
+                while len(path_queue) > 0:
+                    current_path, current_node = path_queue.pop()
+                    visited.append((current_path, current_node))
+
+                    current_out_seq_edges = [edge for edge in self.graph.out_edges(current_node) if
+                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] !=
+                                     edge[1]]
+                    # check if end of path reached
+                    if len(current_out_seq_edges) == 0:
+                        # end of path found, append current_node to current_path
+                        # append current_path to paths
+                        current_path.append(current_node)
+                        paths.append(current_path)
                         continue
-                    # add predecessors to queue
-                    in_seq_edges = [edge for edge in self.graph.in_edges(current) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                    for source, _ in in_seq_edges:
-                        queue.append(source)
+                    # add new queue entry for each successor
+                    current_path.append(current_node)
+                    for _, target in current_out_seq_edges:
+                        if (current_path, target) not in visited:
+                            path_queue.append((copy.deepcopy(current_path), target))
+
+                contained_in_all_paths = None
+                for path in paths:
+                    if contained_in_all_paths is None:
+                        contained_in_all_paths = set(path)
+                    else:
+                        contained_in_all_paths = contained_in_all_paths.intersection(set(path))
+                contained_in_all_paths = list(contained_in_all_paths)
+
+                # find JOIN node
+                contained_in_all_paths = sorted(contained_in_all_paths, reverse=True)
+                for elem in contained_in_all_paths:
+                    if type(self.graph.nodes[elem]["data"]) == JoinNode:
+                        # found the outer most JOIN node
+                        self.graph.add_edge(node, elem, type=EdgeType.BELONGS_TO)
+                        break
 
 
-            # insert fork node after node
+
+            #if type(self.graph.nodes[node]["data"]) == JoinNode:
+            #    # search incoming SEQUENTIAL paths upwards for closest FORK nodes
+            #    predecessors = [edge[0] for edge in self.graph.in_edges(node) if
+            #                    self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            #    queue = predecessors
+            #    while len(queue) > 0:
+            #        current = queue.pop()
+            #        if type(self.graph.nodes[current]["data"]) == ForkNode:
+            #            self.graph.add_edge(current, node, type=EdgeType.BELONGS_TO)
+            #        if type(self.graph.nodes[current]["data"]) == JoinNode:
+            #            continue
+            #        # add predecessors to queue
+            #        in_seq_edges = [edge for edge in self.graph.in_edges(current) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            #        for source, _ in in_seq_edges:
+            #            queue.append(source)
 
 
     def remove_behavior_models_from_nodes(self):
@@ -1198,3 +1242,13 @@ class TaskGraph(object):
 
                     # add belongs_to edge between fork and join node
                     self.graph.add_edge(fork_node_id, join_node_id, type=EdgeType.BELONGS_TO)
+
+    def remove_edges_between_fork_and_join(self):
+        to_be_removed = []
+        for edge in self.graph.edges:
+            source, target = edge
+            if type(self.graph.nodes[source]["data"]) == ForkNode:
+                if type(self.graph.nodes[target]["data"]) == JoinNode:
+                    to_be_removed.append(edge)
+        for s, t in to_be_removed:
+            self.graph.remove_edge(s, t)
