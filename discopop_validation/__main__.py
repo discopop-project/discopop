@@ -320,6 +320,8 @@ def __main_start_execution(run_configuration: Configuration):
     task_graph.replace_pragma_for_nodes()
     # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
     task_graph.remove_single_incoming_join_node()
+    # remove sequential edges between Fork and Join nodes
+    task_graph.remove_edges_between_fork_and_join()
     # add BELONGS_TO edges between Fork and Join nodes
     task_graph.add_belongs_to_edges()
     # mark behavior storage nodes which are already covered by fork nodes
@@ -337,7 +339,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    task_graph.plot_graph()
+    # task_graph.plot_graph()
 
     # trigger result computation
     computed_result: ResultObject = task_graph.compute_results()

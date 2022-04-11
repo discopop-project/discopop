@@ -93,6 +93,8 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
     out_contained_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
                            task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+    out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
+                           task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
     # construct paths to next join node in a BFS manner
     paths = []
     path_queue = []
@@ -105,10 +107,12 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         current_path, current_node = path_queue.pop()
         visited.append((current_path, current_node))
         if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
-            if successive_join_node is None:
-                successive_join_node = current_node
-            paths.append(current_path)
-            continue
+            # only consider join nodes which belong to the fork node
+            if current_node in [target for _, target in out_belongs_to_edges]:
+                if successive_join_node is None:
+                    successive_join_node = current_node
+                paths.append(current_path)
+                continue
 
         if task_graph.graph.nodes[current_node]["data"].get_label() == "Fork":
             print("ENCOUNTERED FORK NODE: ", current_node)
