@@ -24,13 +24,14 @@ def get_data_races_and_successful_states(scheduling_graph: SchedulingGraph, dime
     successful_states: List[State] = []
     for state in initial_states:
         data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, scheduling_graph.root_node_identifier,
-                                                     copy.deepcopy(state), [], 0, graph_depth)
+                                                     copy.deepcopy(state), [], 0, graph_depth, [])
         data_races += [elem for elem in data_races_buffer if not elem in data_races]
         successful_states += [elem for elem in successful_states_buffer if not elem in successful_states]
     return data_races, successful_states
 
 
-def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_accesses: List[ScheduleElement], level, graph_depth) -> Tuple[List[DataRace], List[State]]:
+def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: State, previous_accesses: List[ScheduleElement], level, graph_depth, visited) -> Tuple[List[DataRace], List[State]]:
+    visited.append(node_identifier)
     global futures_cutoff_level
     node_schedule_element: ScheduleElement = scheduling_graph.graph.nodes[node_identifier]["data"]
     if node_schedule_element is not None:
@@ -47,12 +48,16 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
 
     # no multithreading
     for source, target in scheduling_graph.graph.out_edges(node_identifier):
-
         state_copy = copy.deepcopy(state)
         previous_accesses_copy = copy.copy(previous_accesses)
         if node_schedule_element is not None:
             previous_accesses_copy.append(node_schedule_element)
-        data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, target, state_copy, previous_accesses_copy, level + 1, graph_depth)
+        if target not in visited:
+            visited_copy = copy.deepcopy(visited)
+            data_races_buffer, successful_states_buffer = __check_node(scheduling_graph, target, state_copy, previous_accesses_copy, level + 1, graph_depth, visited_copy)
+        else:
+            data_races_buffer = []
+            successful_states_buffer = []
         data_races += data_races_buffer
         successful_states += successful_states_buffer
     # check for successful states
