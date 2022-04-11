@@ -1043,11 +1043,9 @@ class TaskGraph(object):
                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 queue = predecessors
                 while len(queue) > 0:
-                    print("QUEUE: ", queue)
                     current = queue.pop()
                     if type(self.graph.nodes[current]["data"]) == ForkNode:
                         self.graph.add_edge(current, node, type=EdgeType.BELONGS_TO)
-                        print("ADD EDGE: ", current)
                     if type(self.graph.nodes[current]["data"]) == JoinNode:
                         continue
                     # add predecessors to queue
