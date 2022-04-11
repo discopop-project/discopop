@@ -446,6 +446,9 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
 list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex, Function &F, bool currentlyInsideRecursion)
 {
     list<sharedVarAccess> accesses;
+    if (argIndex > calledFunction->arg_size()) {
+        return accesses;
+    }
     // get argument
     string argName = std::next(calledFunction->arg_begin(), argIndex)->getName().str();
     string argPtrName = argName + ".addr";
