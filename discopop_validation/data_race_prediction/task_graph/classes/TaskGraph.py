@@ -1014,8 +1014,12 @@ class TaskGraph(object):
                 self.graph.remove_edge(node, target)
 
         add_edge_buffer = list(set(add_edge_buffer))
+        # add TASKWAIT after node to represent the semantics of DEPEND
+        taskwait_node = self.__add_taskwait_pragma(None)
         for source, target in add_edge_buffer:
-            self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+            self.graph.add_edge(source, taskwait_node, type=EdgeType.SEQUENTIAL)
+            self.graph.add_edge(taskwait_node, target, type=EdgeType.SEQUENTIAL)
+
 
     def add_fork_nodes_at_path_splits(self):
         buffer = copy.deepcopy(self.graph.nodes)
