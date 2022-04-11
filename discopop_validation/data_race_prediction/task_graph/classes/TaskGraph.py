@@ -959,8 +959,16 @@ class TaskGraph(object):
             if len(node_depend_entries) == 0:
                 # no depends entries exist, skip current node
                 continue
-            node_depend_in_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if mode == "in"]
-            node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if mode == "out"]
+            node_depend_in_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if
+                                      mode == "in"]
+            node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if
+                                       mode == "out"]
+            node_depend_inout_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if
+                                       mode == "inout"]
+
+            node_depend_out_entries += node_depend_inout_entries
+            node_depend_in_entries += node_depend_inout_entries
+
             # search counterpart
             for other_node in self.graph.nodes:
                 if node == other_node:
