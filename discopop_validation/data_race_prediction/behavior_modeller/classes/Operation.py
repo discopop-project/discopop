@@ -19,7 +19,7 @@ class Operation:
 
     def __init__(self, suggestion_type, file_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
         self.mode = mode
-        self.target_name = target_name + "".join(["["+idx+"]" for idx in target_indices])
+        self.target_name = target_name
         self.target_indices = target_indices
         self.line = line
         self.col = col
