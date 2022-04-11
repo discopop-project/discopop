@@ -167,11 +167,11 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
             for var in shared:
                 if var.name not in pragma.get_variables_listed_as("shared"):
                     pragma.add_to_shared(var.name)
-        elif pragma.get_type() == PragmaType.TASK:
-            fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(pet, pet.node_at(cu_id), "", [], [])
-            for var in shared:
-                if var.name not in pragma.get_variables_listed_as("shared"):
-                    pragma.add_to_shared(var.name)
+        #elif pragma.get_type() == PragmaType.TASK:
+        #    fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(pet, pet.node_at(cu_id), "", [], [])
+        #    for var in shared:
+        #        if var.name not in pragma.get_variables_listed_as("shared"):
+        #            pragma.add_to_shared(var.name)
         elif pragma.get_type() == PragmaType.PARALLEL:
             # variables, which are declared outside the parallel region are shared
             # get a list of known variables and their definition lines from children nodes
