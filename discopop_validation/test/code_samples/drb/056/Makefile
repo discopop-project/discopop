@@ -1,10 +1,12 @@
 all: combine
 
-combine: simple
-	gcc -o out simple.o
-
-simple:
+combine: simple.o utilities/polybench.o
+	gcc -o out simple.o utilities/polybench.o
+simple.o:
 	gcc -c simple.c
+utilities/polybench.o:
+	gcc -c utilities/polybench.c
+
 
 clean:
 	rm -f *.o
