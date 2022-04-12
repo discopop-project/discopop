@@ -1237,12 +1237,19 @@ class TaskGraph(object):
                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                     out_seq_edges = [edge for edge in self.graph.out_edges(node) if
                                     self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                    in_contains_edges = [edge for edge in self.graph.in_edges(node) if
+                                    self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
                     # add fork node prior to node
                     fork_node_id = self.__add_fork_node()
                     for source, _ in in_seq_edges:
                         self.graph.remove_edge(source, node)
                         self.graph.add_edge(source, fork_node_id, type=EdgeType.SEQUENTIAL)
                     self.graph.add_edge(fork_node_id, node, type=EdgeType.SEQUENTIAL)
+
+                    # let fork be contained in parents of node
+                    for source, _, in in_contains_edges:
+                        self.graph.add_edge(source, fork_node_id, type=EdgeType.CONTAINS)
+
 
                     # add join node after node
                     join_node_id = self.__add_join_node()
