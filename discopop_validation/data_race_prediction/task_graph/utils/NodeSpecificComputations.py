@@ -239,7 +239,10 @@ def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # entering a parallel region creates a new scope
     result_obj.push_new_fingerprint()
     # parallel node has exactly one entry point (Fork node)
-    entry_point = get_sequence_entry_points(task_graph, node_obj.node_id)[0]
+    entry_points = get_sequence_entry_points(task_graph, node_obj.node_id)
+    if len(entry_points) < 1:
+        return result_obj
+    entry_point = entry_points[0]
     calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
     # exiting a parallel region closes the current scope
     calculated_result.pop_fingerprint()
