@@ -1100,6 +1100,8 @@ class TaskGraph(object):
                         contained_in_all_paths = set(path)
                     else:
                         contained_in_all_paths = contained_in_all_paths.intersection(set(path))
+                if contained_in_all_paths is None:
+                    continue
                 contained_in_all_paths = list(contained_in_all_paths)
 
                 # find JOIN node

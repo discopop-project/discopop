@@ -96,5 +96,4 @@ class ForkNode(TaskGraphNode):
                 scheduling_graph = path_scheduling_graph
             else:
                 scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
-        scheduling_graph.plot_graph()
         return scheduling_graph

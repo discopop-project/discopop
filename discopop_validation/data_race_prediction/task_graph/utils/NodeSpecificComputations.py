@@ -74,6 +74,8 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         # Exit parallel section
         exit_parallel_sched_elem = ScheduleElement(0)
         affected_thread_ids = [tid for tid in state.thread_id_to_clock_position_dict.keys() if tid != 0]
+        if len(affected_thread_ids) == 0:
+            continue
         exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL,
                                              affected_thread_ids=affected_thread_ids)
         result_obj.states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
