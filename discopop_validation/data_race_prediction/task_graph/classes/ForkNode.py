@@ -36,10 +36,9 @@ class ForkNode(TaskGraphNode):
 
     def get_scheduling_graph_from_fork_node(self, task_graph, result_obj):
         """Creates and returns a scheduling graph representation of the current Fork node, repsectively it's successive nodes."""
-        # collect belonging join nodes
-        belonging_join_nodes = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
-
         out_seq_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if
+                                task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
 
         # collect successor paths to join nodes
         paths = []
@@ -51,8 +50,12 @@ class ForkNode(TaskGraphNode):
             current_path, current_node = path_queue.pop()
             visited.append((current_path, current_node))
             if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
-                paths.append(current_path)
-                continue
+                #paths.append(current_path)
+                #continue
+                # only consider join nodes which belong to the fork node
+                if current_node in [target for _, target in out_belongs_to_edges]:
+                    paths.append(current_path)
+                    continue
 
             out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
                              task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
@@ -93,5 +96,5 @@ class ForkNode(TaskGraphNode):
                 scheduling_graph = path_scheduling_graph
             else:
                 scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
-        
+        scheduling_graph.plot_graph()
         return scheduling_graph
