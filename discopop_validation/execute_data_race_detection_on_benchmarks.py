@@ -13,6 +13,9 @@ def main():
         if "run_dp_maker.sh" in files:
             current_benchmark_number = os.path.basename(subdir)
             benchmark_numbers.append(current_benchmark_number)
+            if os.path.exists(os.path.join(os.path.join(original_dir, subdir), "data_races.txt")):
+                # remove old identified data races
+                os.remove(os.path.join(os.path.join(original_dir, subdir), "data_races.txt"))
         # change back to original dir
         os.chdir(original_dir)
 
