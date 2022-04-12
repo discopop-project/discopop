@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import copy
 import networkx as nx  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -256,6 +256,14 @@ class TaskGraph(object):
             cu_id = get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line, pragma.end_line)
             pragma_to_cuid[pragma] = cu_id
 
+        pragma_to_parent_function_dict: Dict[OmpPragma, Optional[int]] = dict()
+        for pragma in omp_pragmas:
+            pragma_to_parent_function_dict[pragma] = None
+            in_contains_edges = [edge for edge in self.graph.in_edges(self.pragma_to_node_id[pragma]) if
+                                 self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for parent_function, _ in in_contains_edges:
+                pragma_to_parent_function_dict[pragma] = parent_function
+
         # add contains edges
         for pragma in omp_pragmas:
             for other_pragma in omp_pragmas:
@@ -265,8 +273,10 @@ class TaskGraph(object):
                 if pragma_to_cuid[pragma] == pragma_to_cuid[other_pragma]:
                     if pragma.start_line < other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
                         # pragma contains other_pragma
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
-                                            type=EdgeType.CONTAINS)
+                        # only create edge, if both share a common parent
+                        if pragma_to_parent_function_dict[pragma] == pragma_to_parent_function_dict[other_pragma]:
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
+                                                type=EdgeType.CONTAINS)
                 else:
                     # if cuid's are different, a contains edge shall exist if a CHILD-path from pragma to other_pragma exists
                     if check_reachability(pet, pet.node_at(pragma_to_cuid[other_pragma]),
@@ -291,7 +301,9 @@ class TaskGraph(object):
                     # pragma is a successor of other_pragma
                     # this check prevents cycles due to same CU Node
                     if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
-                        self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
+                        # only create edge, if both share a common parent
+                        if pragma_to_parent_function_dict[pragma] == pragma_to_parent_function_dict[other_pragma]:
+                            self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
                 else:
                     # if not, check if both pragmas share a common parent and check if pragma succeeds other_pragma
                     pragma_parents = [source for source, target, data in pet.in_edges(pragma_to_cuid[pragma], PETEdgeType.CHILD)] + [pragma_to_cuid[pragma]]
@@ -301,8 +313,9 @@ class TaskGraph(object):
                             # pragma and other pragma share a common parent
                             # check if other_pragma is a successor of pragma
                             if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
-                                self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
-
+                                # only create edge, if both share a common parent
+                                if pragma_to_parent_function_dict[pragma] == pragma_to_parent_function_dict[other_pragma]:
+                                    self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
 
         # remove all but the shortest outgoing sequential edges
         to_be_removed = []
