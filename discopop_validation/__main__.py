@@ -303,7 +303,7 @@ def __main_start_execution(run_configuration: Configuration):
     # skip successive TASKWAIT node, if no prior TASK node exists
     task_graph.skip_taskwait_if_no_prior_task_exists()
 
-    #task_graph.add_fork_and_join_nodes()
+    task_graph.add_fork_and_join_nodes()
     # remove TASKWAIT nodes without prior TASK node
     task_graph.remove_taskwait_without_prior_task()
     #task_graph.plot_graph()
@@ -339,7 +339,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    #task_graph.plot_graph()
+    task_graph.plot_graph()
 
     # trigger result computation
     computed_result: ResultObject = task_graph.compute_results()

@@ -93,7 +93,7 @@ class TaskGraphNode(object):
             print("TCS: ", tcs)
         behavior_models: List[BehaviorModel] = []
         for tcs in target_code_sections:
-             behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
+            behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
                                                                                          self.pragma, omp_pragmas)
         # remove empty models
         behavior_models = [model for model in behavior_models if len(model.operations)>0]

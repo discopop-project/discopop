@@ -257,14 +257,13 @@ def __barrier_result_computation(node_obj, task_graph, result_obj, thread_ids):
 
 
 def __single_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    """"""
-    warnings.warn("TODO")
-    pass
+    # at this point in time, SINGLE has no effect on it's own.
+    return result_obj
 
 
 def __task_result_computation(node_obj, task_graph, result_obj, thread_ids):
-    warnings.warn("TODO")
-    pass
+    # at this point in time, TASK has no effect on it's own.
+    return result_obj
 
 
 def __taskwait_result_computation(node_obj, task_graph, result_obj, thread_ids):
