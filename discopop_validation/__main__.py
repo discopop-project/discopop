@@ -225,7 +225,8 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
                 if var_name not in pragma.get_variables_listed_as("shared"):
                     # check if var_name already use in another clause
                     if var_name not in pragma.get_known_variables():
-                        pragma.add_to_shared(var_name)
+                        if var_name is not None:
+                            pragma.add_to_shared(var_name)
 
 
 
