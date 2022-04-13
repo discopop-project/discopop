@@ -161,7 +161,7 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
 
     for pragma in omp_pragmas:
         cu_id = pragma_to_cuid[pragma]
-        if pet.node_at(cu_id).type == 2:
+        if pet.node_at(cu_id).type == 2 and pragma.get_type() != PragmaType.PARALLEL:
             # node is loop type
             fpriv, priv, lpriv, shared, red = classify_loop_variables(pet, pet.node_at(cu_id))
             for var in shared:
@@ -229,7 +229,6 @@ def __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas):
                             pragma.add_to_shared(var_name)
 
 
-
     print("PRAGMAS AFTER ADDING FROM PET GRAPH")
     for pragma in omp_pragmas:
         print(pragma)
@@ -258,7 +257,6 @@ def __main_start_execution(run_configuration: Configuration):
     # extract data sharing clauses for pragmas from pet graph
     omp_pragmas = __extract_data_sharing_clauses_from_pet(pet, task_graph, omp_pragmas)
 
-
     time_end_ps = time.time()
 
     for pragma in omp_pragmas:
@@ -272,9 +270,9 @@ def __main_start_execution(run_configuration: Configuration):
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
-    #task_graph.plot_graph()
     # pass shared clauses to child nodes
     task_graph.pass_shared_clauses_to_childnodes()
+
     # remove redundant successor edges
     task_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
     # move successor edges if source is contained in a different pragma
