@@ -271,6 +271,7 @@ def __main_start_execution(run_configuration: Configuration):
 
     # insert edges into the graph
     task_graph.add_edges(pet, omp_pragmas)
+    #task_graph.plot_graph()
     # pass shared clauses to child nodes
     task_graph.pass_shared_clauses_to_childnodes()
     # remove redundant successor edges
@@ -339,7 +340,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     print("PRE COMPUTATION")
-    task_graph.plot_graph()
+    #task_graph.plot_graph()
 
     # trigger result computation
     computed_result: ResultObject = task_graph.compute_results()

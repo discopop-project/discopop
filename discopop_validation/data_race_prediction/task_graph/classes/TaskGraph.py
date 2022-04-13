@@ -300,7 +300,7 @@ class TaskGraph(object):
                     # check if CUIDs are different
                     # pragma is a successor of other_pragma
                     # this check prevents cycles due to same CU Node
-                    if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
+                    if other_pragma.start_line <= pragma.start_line and other_pragma.end_line < pragma.start_line:
                         # only create edge, if both share a common parent
                         if pragma_to_parent_function_dict[pragma] == pragma_to_parent_function_dict[other_pragma]:
                             self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
@@ -312,7 +312,7 @@ class TaskGraph(object):
                         if pet.node_at(pragma_to_cuid[other_pragma]) in pet.direct_children(pet.node_at(parent)) + [pet.node_at(parent)]:
                             # pragma and other pragma share a common parent
                             # check if other_pragma is a successor of pragma
-                            if other_pragma.start_line <= pragma.start_line and other_pragma.end_line <= pragma.start_line:
+                            if other_pragma.start_line <= pragma.start_line and other_pragma.end_line < pragma.start_line:
                                 # only create edge, if both share a common parent
                                 if pragma_to_parent_function_dict[pragma] == pragma_to_parent_function_dict[other_pragma]:
                                     self.graph.add_edge(self.pragma_to_node_id[other_pragma], self.pragma_to_node_id[pragma], type=EdgeType.SEQUENTIAL)
@@ -841,10 +841,12 @@ class TaskGraph(object):
                 for exit in sequence_exit_points:
                     for edge in out_seq_edges:
                         self.graph.add_edge(exit, edge[1], type=EdgeType.SEQUENTIAL)
-                # redirect incoming to outgoing sequential edges
-                for source, _ in in_seq_edges:
-                    for _, target in out_seq_edges:
-                        self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+                # if no sequence entry points exist, connect incoming with outgoing edges
+                if len(sequence_exit_points) == 0:
+                    # redirect incoming to outgoing sequential edges
+                    for source, _ in in_seq_edges:
+                        for _, target in out_seq_edges:
+                            self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
 
