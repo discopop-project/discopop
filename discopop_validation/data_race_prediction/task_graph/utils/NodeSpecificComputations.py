@@ -156,8 +156,6 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
             if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
                 elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(task_graph, result_obj)
-                print("CHECK fork ELEM_SCHEDULING_GRAPH")
-                elem_scheduling_graph.debug_check_for_cycles()
             else:
                 behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
                 if len(behavior_models) == 0:
@@ -168,28 +166,14 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
 
                 behavior_models = prepare_for_simulation(behavior_models)
                 elem_scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
-                print("CHECK new ELEM_SCHEDULING_GRAPH")
-                elem_scheduling_graph.debug_check_for_cycles()
             if path_scheduling_graph is None:
-                print("IF")
                 path_scheduling_graph = elem_scheduling_graph
             else:
-                print("ELSE")
-                print("CHECK PATH_SCHEDULING_GRAPH 2")
-                path_scheduling_graph.debug_check_for_cycles()
-                print("CHECK ELEM SCHEDULING GRAPH 2")
-                elem_scheduling_graph.debug_check_for_cycles()
                 path_scheduling_graph = path_scheduling_graph.sequential_compose(elem_scheduling_graph)
-                print("CHECK PATH_SCHEDULING_GRAPH 3")
-                path_scheduling_graph.debug_check_for_cycles()
 
         if scheduling_graph is None:
             scheduling_graph = path_scheduling_graph
         else:
-            print("CHECK SCHEDULING GRAPH")
-            scheduling_graph.debug_check_for_cycles()
-            print("CHECK PATH_SCHEDULING_GRAPH")
-            path_scheduling_graph.debug_check_for_cycles()
             scheduling_graph = scheduling_graph.parallel_compose(path_scheduling_graph)
 
     if scheduling_graph is not None:
