@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     }
     #pragma omp section
       incr_b(p);
-  }53
+  }
 
   omp_destroy_nest_lock(&p->lck);
 
