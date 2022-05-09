@@ -1,0 +1,5 @@
+WAW in function: fib, line: 7:26, variable: n.addr
+WAW in function: fib, line: 7:29, variable: retval
+WAW in function: fib, line: 7:31, variable: x
+WAW in function: fib, line: 7:32, variable: y
+WAW in function: fib, line: 7:34, variable: retval

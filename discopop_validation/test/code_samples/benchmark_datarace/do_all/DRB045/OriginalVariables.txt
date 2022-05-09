@@ -1,3 +1,0 @@
-ARRAY, a
-a
-i

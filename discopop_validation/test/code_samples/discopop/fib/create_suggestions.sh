@@ -1,10 +1,10 @@
 HOME_DIR=$PWD
 # change to discopop directory
-cd ../../../../../..
+cd ../../../../..
 DP_DIR=$PWD
 echo "DP_DIR: $DP_DIR"
 
-python -m discopop_explorer --path=$HOME_DIR --dep-file=out_dep.txt --dp-build-path=/home/lukas/git/discopop/build --json=$HOME_DIR/original_suggestions.json
+#python -m discopop_explorer --path=$HOME_DIR --dep-file=out_dep.txt --dp-build-path=/home/lukas/git/discopop/build --json=$HOME_DIR/original_suggestions.json --task-pattern
 
 # generate Data_CUInst.txt
 python -m discopop_explorer \
@@ -17,11 +17,11 @@ DIR_PRE=$PWD
 cd $HOME_DIR
 echo $PWD
 clang++ -S -emit-llvm -c -std=c++11 -g $DP_DIR/CUInstantiation/RT/CUInstantiation_iFunctions.cpp -o iFunctions_CUInst.ll
-#clang++ -g -O0 -emit-llvm -fno-discard-value-names -c fib.c -o tmp_target_app.ll
-opt-8 -S -load=/home/lukas/git/discopop/build/libi/LLVMCUInstantiation.so -CUInstantiation -input=Data_CUInst.txt out_dp_inst.ll -fm-path=FileMapping.txt -o tmp_target_app_instrumented.ll
-clang++ tmp_target_app_instrumented.ll iFunctions_CUInst.ll -o fib_cui -L/home/lukas/git/discopop/build/rtlib -lDiscoPoP_RT -lpthread -o fib_cui
+clang++ -g -O0 -emit-llvm -fno-discard-value-names -c simple.c -o tmp_target_app.ll
+opt-8 -S -load=/home/lukas/git/discopop/build/libi/LLVMCUInstantiation.so -CUInstantiation -input=Data_CUInst.txt tmp_target_app.ll -fm-path=FileMapping.txt -o tmp_target_app_instrumented.ll
+clang++ tmp_target_app_instrumented.ll iFunctions_CUInst.ll -o simple_cui -L/home/lukas/git/discopop/build/rtlib -lDiscoPoP_RT -lpthread -o simple_cui
 rm tmp_target_app.ll tmp_target_app_instrumented.ll iFunctions_CUInst.ll
-./fib_cui
+./simple_cui
 
 cd $DIR_PRE
 
@@ -35,7 +35,7 @@ python -m discopop_explorer \
 --dp-build-path=/home/lukas/git/discopop/build \
 --json=$HOME_DIR/original_suggestions.json \
 --fmap=FileMapping.txt \
---cu-inst-res=fib_cui_CUInstResult.txt \
+--cu-inst-res=simple_cui_CUInstResult.txt \
 --task-pattern
 
 

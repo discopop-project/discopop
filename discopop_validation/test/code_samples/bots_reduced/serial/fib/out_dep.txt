@@ -1,0 +1,56 @@
+START 5:477
+5:281 BGN loop 0
+5:431 END loop
+7:32 BGN func 7:26
+7:31 BGN func 7:26
+2:176 BGN func 2:104
+5:528 BGN func 2:115
+5:515 BGN func 2:78
+7:39 BGN func 7:26
+2:175 BGN func 2:93
+5:514 BGN func 7:37
+5:486 BGN func 5:449
+5:513 BGN func 2:78
+5:279 BGN func 2:86
+5:438 BGN func 5:275
+5:484 BGN func 5:436
+2:82 END func
+2:91 END func
+2:100 END func
+2:109 END func
+2:336 END func
+5:431 END func
+5:440 END func
+5:471 END func
+7:35 END func
+7:41 END func
+5:275 NOM  INIT *|argc.addr INIT *|argv.addr
+7:37 NOM  WAR 5:438|n.addr
+2:95 NOM  INIT *|ncpus
+7:35 NOM  RAW 7:29|retval RAW 7:34|retval
+5:436 NOM  INIT *|argc.addr INIT *|argv.addr
+7:32 NOM  INIT *|y RAW 7:26|n.addr WAR 7:34|y
+2:82 NOM  RAW 5:436|t
+7:29 NOM  INIT *|retval RAW 7:26|n.addr WAR 7:35|retval
+2:99 NOM  RAW 2:93|str.addr RAW 2:95|ncpus
+2:86 NOM  INIT *|str.addr
+5:477 NOM  INIT *|argc.addr INIT *|argv.addr INIT *|retval
+5:515 NOM  INIT *|bots_t_end
+2:90 NOM  RAW 2:86|str.addr
+2:163 NOM  RAW 5:516|bots_time_program
+7:26 NOM  INIT *|n.addr WAR 7:29|n.addr WAR 7:32|n.addr
+2:93 NOM  INIT *|str.addr
+5:278 NOM  RAW 5:275|argv.addr
+7:39 NOM  INIT *|res RAW 7:37|n.addr
+5:281 NOM  INIT *|i RAW 5:275|argc.addr RAW 5:281|i
+5:513 NOM  INIT *|bots_t_start
+5:438 NOM  RAW 5:436|argc.addr RAW 5:436|argv.addr
+5:484 NOM  RAW 5:477|argc.addr RAW 5:477|argv.addr
+2:104 NOM  WAR 2:99|str.addr
+7:34 NOM  INIT *|retval RAW 7:31|x RAW 7:32|y WAR 7:35|retval
+2:171 NOM  RAW 5:516|bots_time_program
+7:40 NOM  RAW 7:37|n.addr RAW 7:39|res
+7:31 NOM  INIT *|x RAW 7:26|n.addr WAR 7:34|x
+2:108 NOM  RAW 2:104|str.addr
+5:516 NOM  INIT *|bots_time_program RAW 5:513|bots_t_start RAW 5:515|bots_t_end
+5:529 END program

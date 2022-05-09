@@ -1,0 +1,2 @@
+fib 7:31, 7:34|RAW|7:31|x,7:34|RAW|7:32|y,7:35|RAW|7:29|retval,7:32|RAW|7:26|n.addr,7:31|RAW|7:26|n.addr,7:29|RAW|7:26|n.addr,7:29|RAW|7:26|n.addr,7:35|RAW|7:34|retval,7:32|WAR|7:34|y,7:31|WAR|7:34|x,
+fib 7:32, 7:34|RAW|7:31|x,7:34|RAW|7:32|y,7:35|RAW|7:29|retval,7:32|RAW|7:26|n.addr,7:31|RAW|7:26|n.addr,7:29|RAW|7:26|n.addr,7:29|RAW|7:26|n.addr,7:35|RAW|7:34|retval,7:32|WAR|7:34|y,7:31|WAR|7:34|x,

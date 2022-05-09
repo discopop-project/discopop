@@ -62,7 +62,7 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
     set_global_llvm_cxxfilt_path(__global_llvm_cxxfilt_path)
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
-                                                                   loop_counter_file, reduction_file))
+                                                                   loop_counter_file, reduction_file, file_mapping))
 
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)

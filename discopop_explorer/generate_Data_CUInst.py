@@ -161,10 +161,10 @@ def get_path(base_path: str, file_name: str) -> str:
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
-def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
+def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping, output_dir):
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
-    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
+    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping))
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_dir)
 

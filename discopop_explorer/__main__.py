@@ -109,7 +109,7 @@ def main():
     if arguments['--generate-data-cu-inst'] != 'None':
         # start generation of Data_CUInst and stop execution afterwards
         from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
-        generate_data_cuinst_wrapper(cu_xml, dep_file, loop_counter_file, reduction_file,
+        generate_data_cuinst_wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping,
                                      arguments['--generate-data-cu-inst'])
         sys.exit(0)
 
