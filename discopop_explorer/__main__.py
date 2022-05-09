@@ -75,6 +75,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
+    # t1 = time.time()
     arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:
@@ -91,18 +92,19 @@ def main():
     file_mapping = get_path(path, 'FileMapping.txt')
     cu_inst_result_file = get_path(path, arguments['--cu-inst-res'])
     if arguments['--dp-build-path'] != 'None':
-        discopop_build_path=arguments['--dp-build-path']
+        discopop_build_path = arguments['--dp-build-path']
     else:
         # set default discopop build path
         discopop_build_path = Path(__file__).resolve().parent.parent
         discopop_build_path = os.path.join(discopop_build_path, "build")
 
-    for file in [cu_xml, dep_file, loop_counter_file, reduction_file]:
+    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
             sys.exit()
 
-    plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
+    plugins = [
+    ] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
     if arguments['--generate-data-cu-inst'] != 'None':
         # start generation of Data_CUInst and stop execution afterwards
@@ -114,8 +116,9 @@ def main():
     start = time.time()
 
     res, pet = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
-                   cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments['--llvm-cxxfilt-path'],
-                   discopop_build_path=discopop_build_path, enable_task_pattern=arguments['--task-pattern'])
+              cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments[
+                  '--llvm-cxxfilt-path'],
+              discopop_build_path=discopop_build_path, enable_task_pattern=arguments['--task-pattern'])
 
     end = time.time()
 

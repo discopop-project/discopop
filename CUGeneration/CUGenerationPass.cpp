@@ -118,6 +118,8 @@ namespace
         int startLine;
         int endLine;
 
+        BasicBlock *BB;
+
         //Only for func type
         string name;
         vector<Variable> argumentsList;
@@ -133,6 +135,7 @@ namespace
         {
             ID = to_string(fileID) + ":" + to_string(CUIDCounter++);
             parentNode = NULL;
+            BB = NULL;
         }
     } Node;
 
@@ -140,6 +143,8 @@ namespace
     {
 
         string BBID; //BasicBlock Id where the CU appears in
+
+        // BasicBlock *BB;
 
         unsigned readDataSize;  // number of bytes read from memory by the cu
         unsigned writeDataSize; // number of bytes written into memory during the cu
@@ -166,6 +171,7 @@ namespace
             readDataSize = 0;
             writeDataSize = 0;
             instructionsCount = 0;
+            // BB = NULL;
         }
 
         void removeCU()
@@ -184,6 +190,9 @@ namespace
         ofstream *outCUs;
         ofstream *outOriginalVariables;
         ofstream *outCUIDCounter;
+
+        // Mohammad 23.12.2020
+        map<string, string> loopStartLines;
 
         //structures to get list of global variables
         Module *ThisModule;
@@ -225,7 +234,7 @@ namespace
         void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI);
         string refineVarName(string varName);
         void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap);
-        void fillStartEndLineNumbers(Node *root);
+        void fillStartEndLineNumbers(Node *root, LoopInfo &LI);
         void findStartEndLineNumbers(Node *root, int &start, int &end);
 
         //Output function
@@ -281,13 +290,15 @@ string CUGeneration::determineVariableDefLine(Instruction *I)
 
     string varName = determineVariableName(&*I);
     varName = refineVarName(varName);
+    string varType = determineVariableType(&*I);
 
     if (programGlobalVariablesSet.count(varName))
     {
         varDefLine = "GlobalVar";
         //TODO: Find definition line of global variables
     }
-
+    
+    // Start from the beginning of a function and look for the variable
     Function *F = I->getFunction();
     for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
     {
@@ -296,21 +307,42 @@ string CUGeneration::determineVariableDefLine(Instruction *I)
         {
             if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
             {
+
                 if (auto *N = dyn_cast<MDNode>(DI->getVariable()))
                 {
                     if (auto *DV = dyn_cast<DILocalVariable>(N))
                     {
-                        if (DV->getName() == varName)
-                        {
-                            varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
-                            break;
+                        if(varType.find("ARRAY") != string::npos || 
+                            varType.find("STRUCT") != string::npos){
+                            if(DV->getName() == varName){
+                                varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                break;
+                            }
+                        }else{
+                            string vn = "----";
+                            AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DI->getAddress());
+                            if (AI) {
+                                for (User *U : AI->users()) {
+                                    if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+                                        vn = determineVariableName(&*SI);
+                                        break;
+                                    } else if(LoadInst *LI = dyn_cast<LoadInst>(U)){
+                                        vn = determineVariableName(&*LI);
+                                        break;
+                                    }
+                                }
+                                if ( vn == varName)
+                                {
+                                    varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-
     return varDefLine;
 }
 
@@ -606,11 +638,19 @@ void CUGeneration::printNode(Node *root, bool isRoot)
 {
     if (root->name.find("llvm"))
     {
+        // if(dputil::decodeLID(root->endLine) == "1:560")
+        // errs() << "=-=-=-=-=-=-=-=-=-=-=-=- " << dputil::decodeLID(root->startLine) << "\n";
+        string start = "";
+        if (root->type == nodeTypes::loop){
+            start = loopStartLines[root->ID];
+        }else{
+            start = dputil::decodeLID(root->startLine);
+        }
         *outCUs << "\t<Node"
                 << " id=\"" << xmlEscape(root->ID) << "\""
                 << " type=\"" << root->type << "\""
                 << " name=\"" << xmlEscape(root->name) << "\""
-                << " startsAtLine = \"" << dputil::decodeLID(root->startLine) << "\""
+                << " startsAtLine = \"" << start << "\""
                 << " endsAtLine = \"" << dputil::decodeLID(root->endLine) << "\""
                 << ">" << endl;
         *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << endl;
@@ -785,7 +825,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             if (loopToNodeMap.find(loop) != loopToNodeMap.end())
             {
                 currentNode = loopToNodeMap[loop];
-                //errs() << "bb->Name: " << bb->getName() << " , " << "node->ID: " << currentNode->ID << "\n";
+                // errs() << "))))) " << dputil::decodeLID(currentNode->startLine) << " " << dputil::decodeLID(currentNode->endLine) << "\n";
             }
             //else, create a new Node for the loop, add it as children of currentNode and add it to the map.
             else
@@ -799,10 +839,10 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 n->type = nodeTypes::loop;
                 n->parentNode = currentNode;
                 currentNode->childrenNodes.push_back(n);
-
+                
                 loopToNodeMap[loop] = n;
                 currentNode = n;
-                //errs() << "--bb->Name: " << bb->getName() << " , " << "node->ID: " << currentNode->ID << "\n";
+                // errs() << "--bb->Name: " << bb->getName() << " , " << "node->ID: " << currentNode->ID << "\n";
             }
         }
         else
@@ -830,6 +870,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             bb->setName(cu->ID);
 
         cu->BBID = bb->getName();
+        cu->BB = *bb; // Mohammad 23.12.2020
         currentNode->childrenNodes.push_back(cu);
         vector<CU *> basicBlockCUVector;
         basicBlockCUVector.push_back(cu);
@@ -924,6 +965,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         cu = new CU;
 
                         cu->BBID = bb->getName();
+                        cu->BB = *bb; // Mohammad 23.12.2020
                         //errs() << "bb->Name: "  << bb->getName() << " , " << "cu->ID: " << cu->ID  << " , " << "node->ID: " << currentNode->ID << "\n";
 
                         currentNode->childrenNodes.push_back(cu);
@@ -1149,12 +1191,27 @@ void CUGeneration::findStartEndLineNumbers(Node *root, int &start, int &end)
     }
 }
 
-void CUGeneration::fillStartEndLineNumbers(Node *root)
+void CUGeneration::fillStartEndLineNumbers(Node *root, LoopInfo &LI)
 {
     if (root->type != nodeTypes::cu)
     {
         int start = -1, end = -1;
 
+        if (root->type == nodeTypes::loop)
+        {
+            for (auto i : root->childrenNodes)
+            {
+                if (i->type == nodeTypes::cu)
+                {
+                    Loop *loop = LI.getLoopFor(i->BB);
+                    DebugLoc dl = loop->getStartLoc();
+                    int32_t lid = 0;
+                    lid = (fileID << LIDSIZE) + dl->getLine();
+                    loopStartLines[root->ID] = dputil::decodeLID(lid);
+                    break;
+                }
+            }
+        }
         findStartEndLineNumbers(root, start, end);
 
         root->startLine = start;
@@ -1163,7 +1220,7 @@ void CUGeneration::fillStartEndLineNumbers(Node *root)
 
     for (auto i : root->childrenNodes)
     {
-        fillStartEndLineNumbers(i);
+        fillStartEndLineNumbers(i, LI);
     }
 }
 
@@ -1324,7 +1381,7 @@ bool CUGeneration::runOnFunction(Function &F)
 
     fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
-    fillStartEndLineNumbers(root);
+    fillStartEndLineNumbers(root, LI);
 
     secureStream();
 

@@ -13,6 +13,7 @@ from .pattern_detection import DetectionResult
 from .pattern_detectors.PatternInfo import PatternInfo
 from .pattern_detectors.pipeline_detector import PipelineStage
 from .variable import Variable
+from .pattern_detectors.task_parallelism.classes import TPIType
 
 
 def filter_members(d: dict) -> dict:
@@ -52,6 +53,8 @@ class PatternInfoSerializer(JSONEncoder):
             return filter_members(o.__dict__)
         if isinstance(o, CUNode):
             return o.id
+        if isinstance(o, TPIType):
+            return o.value
 
         # Let the base class default method raise the TypeError
         return JSONEncoder.default(self, o)

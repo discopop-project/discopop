@@ -1,0 +1,23 @@
+{
+     // Use IntelliSense to learn about possible attributes.
+     // Hover to view descriptions of existing attributes.
+     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+     "version": "0.2.0",
+     "configurations": [
+          {
+               "name": "Python: Module",
+               "type": "python",
+               "request": "launch",
+               // "program": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/discopop_explorer",
+               "module": "discopop_explorer",
+               "console": "integratedTerminal",
+               "cwd": "/media/backuphd/norouzi/discopop/discopop-profiler/discopop/",
+               "args": [
+                    // "--path=/media/backuphd/norouzi/benchmarks/lulesh/LULESH_dp/build1/"
+                    "--path=/media/backuphd/norouzi/benchmarks/hybrid/lulesh/LULESH_dp/discopop/"
+                    // "--path=/media/backuphd/norouzi/benchmarks/hybrid/polybench-gpu/data/input/2mm/MINI_DATASET"
+                    // "--path=/media/backuphd/norouzi/benchmarks/hybrid/test27/discopop"
+               ]
+          }
+     ]
+}

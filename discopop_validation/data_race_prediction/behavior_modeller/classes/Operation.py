@@ -9,6 +9,7 @@ class Operation:
     target_indices: List[str]
     line: int
     col: int
+    pet_cu_id: str
     # origin line and col will only be different from line / col if Operation occured inside a called function
     origin_line: int
     origin_col: int
@@ -28,6 +29,7 @@ class Operation:
         self.suggestion_type = suggestion_type
         self.file_id = file_id
         self.modifiers = []
+        self.pet_cu_id = ""
 
     def __str__(self):
         if self.mode.startswith("c"):
@@ -40,7 +42,7 @@ class Operation:
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         if len(self.modifiers) > 0:
-            return_str += " Modifiers: " + " ".join([str(m[0]) for m in self.modifiers])
+            return_str += " Modifiers: " + " ".join([str(m[0])+"-"+m[1] for m in self.modifiers])
         return return_str
 
     def __eq__(self, other):
@@ -49,6 +51,10 @@ class Operation:
                self.target_indices == other.target_indices and \
                self.file_id == other.file_id and \
                self.line == other.line
+
+    def get_target_name_without_fingerprint(self):
+        # fingerprint length of 8 characters assumed
+        return self.target_name[:-9]
 
     def get_location_str(self):
         """used to output found data races if requested.

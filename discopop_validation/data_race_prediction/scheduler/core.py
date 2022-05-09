@@ -56,7 +56,7 @@ def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int,
 def create_scheduling_graph_from_behavior_models(behavior_models: List[BehaviorModel]) -> Tuple[SchedulingGraph, List[int]]:
     """creates a scheduling graph based on the given combination of BehaviorModels"""
     if len(behavior_models) == 0:
-        return SchedulingGraph([], behavior_models)
+        return SchedulingGraph([], behavior_models), []
     # create conversion of BehaviorModel's operations to ScheduleElements
     for thread_id, behavior_model in enumerate(behavior_models):
         behavior_model.schedule_elements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_id)

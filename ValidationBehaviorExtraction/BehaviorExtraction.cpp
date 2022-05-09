@@ -112,7 +112,7 @@ namespace
         BehaviorExtraction() : FunctionPass(ID) {}
         bool doInitialization(Module &M);
         list<relevantSection> sections;
-        pair<int, int> getClosestCodeLocation(Instruction* inst);
+        pair<int, int> getClosestCodeLocation(Instruction* inst, unsigned int fallback_line, unsigned int fallback_column);
         map<BasicBlock*, BBGraphNode> bbToGraphNodeMap;
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion);
@@ -138,13 +138,13 @@ unsigned int BehaviorExtraction::getNextFreeBBId(){
 }
 
 
-pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst){
-    pair<int, int> returnLocation(-1, -1);
+pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst, unsigned int fallback_line, unsigned int fallback_column){
+    pair<unsigned int, unsigned int> returnLocation(fallback_line, fallback_column);
     if(inst){
         Instruction* curInst = inst;
         while(curInst){
             if(curInst->hasMetadata()){
-                returnLocation = pair<int, int>(curInst->getDebugLoc().getLine(), curInst->getDebugLoc().getCol());
+                returnLocation = pair<unsigned int, unsigned int>(curInst->getDebugLoc().getLine(), curInst->getDebugLoc().getCol());
                 return returnLocation;
             }
             curInst = curInst->getNextNode();
@@ -348,7 +348,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                     sharedVarAccess access;
                     access.name = determineVarName(ci->getNextNode(), false);
                     access.mode = "w";
-                    access.codeLocation = getClosestCodeLocation(ci);
+                    access.codeLocation = getClosestCodeLocation(ci, 0, 0);
                     access.originLocation = access.codeLocation;
                     access.parentInstruction = &inst;
                     resultList.push_back(access);
@@ -371,7 +371,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                         sharedVarAccess access;
                         access.name = determineVarName(ci->getNextNode(), false);
                         access.mode = "r";
-                        access.codeLocation = getClosestCodeLocation(ci);
+                        access.codeLocation = getClosestCodeLocation(ci, 0, 0);
                         access.originLocation = access.codeLocation;
                         access.parentInstruction = &inst;
                         resultList.push_back(access);
@@ -423,7 +423,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                                     // errs() << "\t\t\tmode: " << sva.mode << "\n";
                                     sva.name = argName;
                                     // overwrite code location with location of function call
-                                    sva.codeLocation = getClosestCodeLocation(ci);
+                                    sva.codeLocation = getClosestCodeLocation(ci, 0, 0);
                                     resultList.push_back(sva);
                                 }
                             }
@@ -446,6 +446,9 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
 list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex, Function &F, bool currentlyInsideRecursion)
 {
     list<sharedVarAccess> accesses;
+    if (argIndex > calledFunction->arg_size()) {
+        return accesses;
+    }
     // get argument
     string argName = std::next(calledFunction->arg_begin(), argIndex)->getName().str();
     string argPtrName = argName + ".addr";
@@ -599,7 +602,6 @@ bool BehaviorExtraction::runOnFunction(Function &F)
     outputFile << "function;" << F.getName().str() << "\n";
     outputFile << "fileName;" << parentFileName << "\n";
     outputFile.close();
-
     // get shared var accesses
     for(auto &BB : F.getBasicBlockList()){
         ofstream tmpOutputFile(ClOutputFile, std::ios_base::app);
@@ -607,19 +609,41 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         BBGraphNode graphNode = bbToGraphNodeMap.at(&BB);
         graphNode.bb = &BB;
         graphNode.varAccesses = getSharedVarAccesses(BB, F);
-        graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))));
-        graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))));
+        graphNode.startLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetFirstInstruction(wrap(&BB)))), 0, 0);
+        graphNode.endLocation = getClosestCodeLocation(cast<Instruction>(unwrap(LLVMGetLastInstruction(wrap(&BB)))), graphNode.startLocation.first, graphNode.startLocation.second);
         // check if BB is inside scope
         list<unsigned int> bb_in_sections;
         for(auto section : sections){
+            //errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
+            //errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
+            // check if graphNode inside section or section inside graphNode
             if(graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first <= section.endLine){
+                // graphNode in section
                 // errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
                 // errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
                 bb_in_sections.push_back(section.sectionId);
             }
+            else if(section.startLine >= graphNode.startLocation.first && section.endLine <= graphNode.endLocation.first){
+                // section in graphNode
+                bb_in_sections.push_back(section.sectionId);
+            }
+            else if ((graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first > section.endLine && section.endLine >= graphNode.startLocation.first)
+            || graphNode.startLocation.first <= section.startLine && graphNode.endLocation.first <= section.endLine && section.startLine <= graphNode.endLocation.first){
+                // partial overlap
+                bb_in_sections.push_back(section.sectionId);
+            }
         }
+        // if no BBs inside scope have been found, check if scope is inside BB
         if(bb_in_sections.size() == 0){
+            for(auto section : sections){
+                if(graphNode.startLocation.first <= section.startLine && graphNode.endLocation.first >= section.endLine){
+                    bb_in_sections.push_back(section.sectionId);
+                }
+            }
+
+            if(bb_in_sections.size() == 0){
             continue;
+            }
         }
         tmpOutputFile << "bbIndex;" << graphNode.bbIndex << "\n";
         tmpOutputFile << "bbName;" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
@@ -640,10 +664,11 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         }
         // add var accesses and function calls to output file
         for(auto sva : graphNode.varAccesses){
-            // errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
+            //errs() << "SVA: " << sva.codeLocation.first << ":" << sva.codeLocation.second << "; " << sva.originLocation.first << ":" << sva.originLocation.second << "; " << sva.mode << "; " << sva.name << ";\n";
             // only report operation, if it is inside of a relevant section
             string svaNameWithoutIndices = sva.name.substr(0, sva.name.find("["));
             for(auto section : sections){
+                // errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
                 // check for presence for each entry in section.varNames
                 for(auto varName : section.varNames){
                     if(svaNameWithoutIndices.compare(varName) == 0){

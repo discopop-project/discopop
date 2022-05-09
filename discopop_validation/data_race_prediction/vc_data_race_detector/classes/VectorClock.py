@@ -22,6 +22,10 @@ class VectorClock(object):
             return True
         return False
 
+    def add_clock(self):
+        self.clocks.append(0)
+        self.length += 1
+
 
 def get_updated_vc(vc_1: VectorClock, vc_2: VectorClock) -> VectorClock:
     """calculate and return the updated vector clock on the basis of vc_1 and vc_2.

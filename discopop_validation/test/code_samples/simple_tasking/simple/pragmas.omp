@@ -1,0 +1,5 @@
+1;22;45;parallel shared(result, i, j)
+1;24;44;single shared(result, i, j)
+1;26;30;task shared(result, i, j)
+1;32;35;task shared(result, i, j)
+1;36;36;taskwait

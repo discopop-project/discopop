@@ -5,6 +5,13 @@ from typing import List
 
 class PragmaType(IntEnum):
     PARALLEL_FOR = 1
+    PARALLEL = 2
+    SINGLE = 3
+    BARRIER = 4
+    TASK = 5
+    TASKWAIT = 6
+    FOR = 7
+
 
 
 class OmpPragma(object):
@@ -33,14 +40,35 @@ class OmpPragma(object):
         return self
 
     def get_type(self):
-        if self.pragma.startswith("parallel for "):
+        if self.pragma.startswith("parallel for"):
             return PragmaType.PARALLEL_FOR
+        if self.pragma.startswith("parallel"):
+            return PragmaType.PARALLEL
+        if self.pragma.startswith("single"):
+            return PragmaType.SINGLE
+        if self.pragma.startswith("barrier"):
+            return PragmaType.BARRIER
+        if self.pragma.startswith("taskwait"):
+            return PragmaType.TASKWAIT
+        if self.pragma.startswith("task"):
+            return PragmaType.TASK
+        if self.pragma.startswith("for"):
+            return PragmaType.FOR
         raise ValueError("Unsupported pragma-type:", self.pragma)
+
+    def get_known_variables(self) -> List[str]:
+        known_vars: List[str] = []
+        known_vars += self.get_variables_listed_as("firstprivate")
+        known_vars += self.get_variables_listed_as("private")
+        known_vars += self.get_variables_listed_as("lastprivate")
+        known_vars += self.get_variables_listed_as("shared")
+        known_vars = list(set(known_vars))
+        return known_vars
 
     def get_variables_listed_as(self, type: str) -> List[str]:
         """possible types: firstprivate, private, shared, reduction"""
         listed_vars: List[str] = []
-        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\([\w\s\,\:\+\-\*\&\|\^]*\)', self.pragma)]
+        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
         for found_str in found_strings:
             # separate treatment of reduction clauses required, since operations and ':' need to be removed
             if type == "reduction":
@@ -72,9 +100,12 @@ class OmpPragma(object):
             if not reduction_var in original_shared_vars:
                 vars_to_add.append(reduction_var)
         for var in vars_to_add:
-            self.__add_to_shared(var)
+            self.add_to_shared(var)
 
-    def __add_to_shared(self, var_name: str):
-        split_pragma = self.pragma.split(" shared(")
-        self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
+    def add_to_shared(self, var_name: str):
+        if " shared(" in self.pragma:
+            split_pragma = self.pragma.split(" shared(")
+            self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
+        else:
+            self.pragma += " shared(" + var_name + ")"
 

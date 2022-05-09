@@ -42,11 +42,11 @@ class Task(object):
 
 
 class TPIType(Enum):
-    DUMMY = 0
-    TASK = 1
-    TASKWAIT = 2
-    TASKLOOP = 3
-    PARALLELREGION = 4
+    DUMMY = "DUMMY"
+    TASK = "TASK"
+    TASKWAIT = "TASKWAIT"
+    TASKLOOP = "TASKLOOP"
+    PARALLELREGION = "PARALLELREGION"
 
 
 class TaskParallelismInfo(PatternInfo):

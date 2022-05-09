@@ -8,84 +8,131 @@ from discopop_validation.data_race_prediction.behavior_modeller.core import extr
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.target_code_sections.extraction import \
     identify_target_sections_from_pragma
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNodeResult import TaskGraphNodeResult
+from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 import copy
+
+from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import \
+    perform_node_specific_result_computation
+
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
+
 
 class TaskGraphNode(object):
     node_id: int
-    result: TaskGraphNodeResult
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
+    seen_in_result_computation: bool
+    data_races: List[DataRace]
+    covered_by_fork_node: bool
 
-    def __init__(self, node_id):
+    def __init__(self, node_id, pragma=None):
         self.node_id = node_id
-        self.result = None
-        self.pragma = None
+        self.pragma = pragma
         self.behavior_models = []
-
+        self.seen_in_result_computation = False
+        self.data_races = []
+        self.covered_by_fork_node = False
 
     def get_label(self):
-        return "TGN"
+        if self.node_id == 0:
+            return "ROOT"
+        label = str(self.node_id) +" " +  "Bhv\n"
+        if len(self.behavior_models) == 0:
+            return label
+        label += str(self.behavior_models[0].get_file_id()) + ":" + str(self.behavior_models[0].get_start_line()) + "-" + str(self.behavior_models[0].get_end_line())
+        return label
 
     def get_color(self, mark_data_races: bool):
         color = "green"
         if mark_data_races:
-            if len(self.result.data_races) > 0:
+            if len(self.data_races) > 0:
                 color = "red"
         return color
 
-    def compute_result(self, task_graph):
-        predecessor_edges = list(task_graph.graph.in_edges(self.node_id))
-        #if single predecessor exists, relay result of previous node
-        if len(predecessor_edges) == 1:
-            predecessor, _ = predecessor_edges[0]
-            self.result = copy.deepcopy(task_graph.graph.nodes[predecessor]["data"].result)
-        #if multiple predecessors exist, relay combination of results of previous nodes
-        elif len(predecessor_edges) > 1:
-            self.result = TaskGraphNodeResult()
-            for pred, _ in predecessor_edges:
-                self.result.combine(task_graph.graph.nodes[pred]["data"].result)
-        #if no predecessor exists, create empty TaskGraphNodeResult
+    def compute_result(self, task_graph, result_obj, thread_ids: List[int]):
+        """compute_result is used to calculate the result following a path consisting of SEQUENTIAL edges.
+        """
+        # modify result obj according to current node
+        if not self.seen_in_result_computation:
+            result_obj = perform_node_specific_result_computation(self, task_graph, result_obj, thread_ids)
+
+        # pass result obj to successive nodes
+        successors = [edge[1] for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL if edge[0] != edge[1]]
+        if len(successors) == 1:
+            result_obj = task_graph.graph.nodes[successors[0]]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+            return result_obj
+        elif len(successors) == 0:
+            # if no children exist, print current state
+            # todo handle and store results for further use
+            return result_obj
+        elif len(successors) > 1 and self.get_label() == "Fork":
+            # fork nodes are the only ones allowed to have multiple sequential children
+            # todo handle and store results for further use
+            return result_obj
         else:
-            self.result = TaskGraphNodeResult()
+            print("NODE: ", self.get_label())
+            raise ValueError("Invalid number of successors: " +  str(len(successors)) + " at node_id: " + str(self.node_id))
 
-        # check if new fingerprints (for scoping) need to be generated
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
-                self.result.push_new_fingerprint()
-        # modify behavior models to represent current fingerprint
+
+    def set_simulation_thread_count(self, new_thread_count: int):
+        # todo: note: may be required to execute recursively on contained nodes aswell
         for model in self.behavior_models:
-            model.use_fingerprint(self.result.get_current_fingerprint())
+            model.simulation_thread_count = new_thread_count
 
-        # perform node-specific computation
-        self.__node_specific_result_computation()
 
-        # check if fingerprints need to be removed from the stack
-        if self.pragma is not None:
-            if self.pragma.get_type() == PragmaType.PARALLEL_FOR:
-                self.result.pop_fingerprint()
 
-        # trigger result computation for each successor node
-        for _, successor in task_graph.graph.out_edges(self.node_id):
-            task_graph.graph.nodes[successor]["data"].compute_result(task_graph)
 
-    def __node_specific_result_computation(self):
-        # This generic node does not perform any specific computations.
-        # needs to be implemented in each node class
-        return
-
-    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, task_graph, omp_pragmas: List[OmpPragma]):
         if self.pragma is None:
             return
         self.pragma.apply_preprocessing()
-        target_code_sections = identify_target_sections_from_pragma(self.pragma)
+        print("Pragma: ", self.pragma)
+        target_code_sections = identify_target_sections_from_pragma(task_graph, self.pragma, self.node_id)
         for tcs in target_code_sections:
-            behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs,
+            print("TCS: ", tcs)
+        behavior_models: List[BehaviorModel] = []
+        for tcs in target_code_sections:
+            behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
                                                                                          self.pragma, omp_pragmas)
-            if run_configuration.verbose_mode:
-                for model in behavior_models:
-                    print("Behavior Model (NodeID: ", self.node_id, "):")
-                    for op in model.operations:
-                        print("\t", op)
-            # prepare extracted behavior models for simulation
-            self.behavior_models = prepare_for_simulation(behavior_models)
+        # remove empty models
+        behavior_models = [model for model in behavior_models if len(model.operations)>0]
+
+        if run_configuration.verbose_mode:
+            for model in behavior_models:
+                print("Behavior Model (NodeID: ", self.node_id, "):")
+                for op in model.operations:
+                    print("\t", op)
+        self.behavior_models = behavior_models
+
+    def get_behavior_models(self, task_graph, result_obj):
+        """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
+        Should be overwritten by each node type."""
+        # set behavior_models.simulation_thread_count according to current request
+        for model in self.behavior_models:
+            model.simulation_thread_count = result_obj.get_current_thread_count()
+        # if more than one incoming sequential edge exists, issue a JOINNODE command
+        counter = 0
+        for edge in task_graph.graph.in_edges(self.node_id):
+            if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL:
+                counter += 1
+        if counter > 1:
+            result = ["SEQ", "JOINNODE", ["PAR", self.behavior_models]]
+        else:
+            result = ["SEQ", ["PAR", self.behavior_models]]
+        # add sucesseors to the result
+        out_edges = task_graph.graph.out_edges(self.node_id)
+        relevant_edges = [edge for edge in out_edges if edge[0] != edge[1]]
+        if len(relevant_edges) > 0:
+            # add targets of relevant edges to parallel section
+            parallel_section = ["PAR"]
+            if len(relevant_edges) > 1:
+                # todo replace with marker to create new scheduling graph
+                parallel_section.append("TASKWAIT")
+            for edge in relevant_edges:
+                print("Adding: ", task_graph.graph.nodes[edge[1]]["data"].get_behavior_models(task_graph, result_obj))
+
+                parallel_section.append(task_graph.graph.nodes[edge[1]]["data"].get_behavior_models(task_graph, result_obj))
+            result.append(parallel_section)
+
+        return result
