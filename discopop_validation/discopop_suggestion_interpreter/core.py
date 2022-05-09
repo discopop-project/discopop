@@ -3,6 +3,7 @@ import warnings
 from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.discopop_suggestion_interpreter.do_all.core import interpret_do_all_suggestion
 from discopop_validation.discopop_suggestion_interpreter.reduction.core import interpret_reduction_suggestion
+from discopop_validation.discopop_suggestion_interpreter.task.core import interpret_task_suggestion
 
 
 def get_omp_pragmas_from_dp_suggestions(dp_suggestions) -> List[OmpPragma]:
@@ -16,6 +17,11 @@ def get_omp_pragmas_from_dp_suggestions(dp_suggestions) -> List[OmpPragma]:
             for reduction_suggestion in dp_suggestions[suggestion_type]:
                 # construct omp pragma from reduction suggestion
                 omp_pragmas.append(interpret_reduction_suggestion(reduction_suggestion))
+        elif suggestion_type == "task":
+            for task_suggestion in dp_suggestions[suggestion_type]:
+                # construct omp pragma from task suggestion
+                omp_pragmas.append(interpret_task_suggestion(task_suggestion))
+
         else:
             warnings.warn("Unsupported DiscoPoP suggestion type: \"" + suggestion_type +  "\". IGNORED -> TODO")
         # todo pipeline suggestions

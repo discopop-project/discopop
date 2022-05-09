@@ -56,7 +56,7 @@ echo ""
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_tasking/simple --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --omp-pragmas-file=pragmas.omp #--json=original_suggestions.json --validation-time-limit=3
 
 # DRB106
-python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/drb/106 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --omp-pragmas-file=pragmas.omp #--json=original_suggestions.json --validation-time-limit=3
+#python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/drb/106 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --omp-pragmas-file=pragmas.omp #--json=original_suggestions.json --validation-time-limit=3
 
 # DRB117
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_tasking/117 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --omp-pragmas-file=pragmas.omp #--json=original_suggestions.json --validation-time-limit=3
@@ -78,3 +78,6 @@ python -m discopop_validation --path=${PWD}/discopop_validation/test/code_sample
 
 # DRB131
 #python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/simple_tasking/131 --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --omp-pragmas-file=pragmas.omp #--json=original_suggestions.json --validation-time-limit=3
+
+# BOTS_REDUCED FIB
+python -m discopop_validation --path=${PWD}/discopop_validation/test/code_samples/bots_reduced/serial/fib --dep-file=out_dep.txt --ll-file=out_dp_inst.ll --verbose=true --dp-build-path=/home/lukas/git/discopop/build/ --thread-count=7  --json=original_suggestions.json

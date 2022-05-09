@@ -1,0 +1,233 @@
+START 5:477
+10:240 BGN loop 1
+10:254 END loop
+10:223 BGN loop 3606
+10:235 END loop
+10:165 BGN loop 10
+10:171 END loop
+10:125 BGN loop 2
+10:146 END loop
+10:167 BGN loop 3
+10:169 END loop
+10:128 BGN loop 1
+10:131 END loop
+10:180 BGN loop 0
+10:186 END loop
+10:394 BGN loop 32513
+10:399 END loop
+10:278 BGN loop 12
+10:286 END loop
+10:408 BGN loop 32513
+10:411 END loop
+5:281 BGN loop 1
+5:431 END loop
+5:515 BGN func 2:78
+5:279 BGN func 2:86
+5:514 BGN func 10:457
+5:485 BGN func 10:416
+10:345 BGN func 10:292
+10:458 BGN func 10:350
+5:486 BGN func 5:449
+10:452 BGN func 10:389
+10:395 BGN func 10:74
+10:336 BGN func 10:270
+10:376 BGN func 10:350
+10:405 BGN func 10:78
+5:513 BGN func 2:78
+5:484 BGN func 5:436
+10:112 BGN func 10:83
+10:344 BGN func 10:292
+5:438 BGN func 5:275
+10:182 BGN func 10:176
+10:451 BGN func 10:401
+10:364 BGN func 10:176
+10:181 BGN func 10:115
+10:122 BGN func 10:110
+10:384 BGN func 10:292
+10:325 BGN func 10:189
+10:186 BGN func 10:160
+10:377 BGN func 10:350
+2:175 BGN func 2:93
+10:378 BGN func 10:350
+2:176 BGN func 2:104
+10:379 BGN func 10:350
+10:381 BGN func 10:292
+5:528 BGN func 2:115
+10:382 BGN func 10:292
+2:82 END func
+2:91 END func
+2:100 END func
+2:109 END func
+2:336 END func
+5:431 END func
+5:440 END func
+5:471 END func
+10:75 END func
+10:81 END func
+10:104 END func
+10:112 END func
+10:150 END func
+10:171 END func
+10:187 END func
+10:260 END func
+10:290 END func
+10:348 END func
+10:385 END func
+10:399 END func
+10:411 END func
+10:453 END func
+10:460 END func
+10:384 NOM  RAW 10:350|size.addr RAW 10:367|A RAW 10:368|tmpA RAW 10:372|tmpC
+10:226 NOM  RAW 10:189|high1.addr RAW 10:225|low1.addr
+5:484 NOM  RAW 5:477|argc.addr RAW 5:477|argv.addr
+10:286 NOM  RAW 10:224|low.addr RAW 10:229|low.addr RAW 10:270|val.addr RAW 10:283|low.addr
+10:283 NOM  RAW 10:279|mid WAR 10:279|low.addr
+5:477 NOM  INIT *|argc.addr INIT *|argv.addr INIT *|retval
+10:279 NOM  RAW 10:270|high.addr RAW 10:270|low.addr RAW 10:281|high.addr RAW 10:283|low.addr WAR 10:256|mid WAR 10:258|mid WAR 10:281|mid WAR 10:283|mid WAR 10:325|mid WAR 10:344|mid WAR 10:345|mid
+10:336 NOM  INIT *|split2 RAW 10:224|split1 RAW 10:229|split1 RAW 10:292|high2.addr RAW 10:292|low2.addr RAW 10:316|low2.addr RAW 10:317|high2.addr RAW 10:335|split1 WAR 10:240|split2 WAR 10:325|split2 WAR 10:344|split2 WAR 10:345|split2 WAR 10:382|split2
+10:335 NOM  INIT *|split1 RAW 10:292|high1.addr RAW 10:292|low1.addr RAW 10:316|low1.addr RAW 10:317|high1.addr WAR 10:241|split1 WAR 10:325|split1 WAR 10:345|split1 WAR 10:381|split1
+10:78 NOM  INIT *|seed.addr
+5:515 NOM  INIT *|bots_t_end
+10:256 NOM  RAW 10:189|high2.addr RAW 10:230|low2.addr RAW 10:241|lowdest.addr RAW 10:248|low2.addr
+10:238 NOM  RAW 10:168|low2.addr RAW 10:169|low2.addr RAW 10:224|low2.addr RAW 10:229|low2.addr RAW 10:230|low2.addr RAW 10:247|low2.addr WAR 10:223|a2 WAW 10:230|a2
+10:230 NOM  RAW 10:134|low2.addr RAW 10:135|low2.addr RAW 10:168|low2.addr RAW 10:169|low2.addr RAW 10:189|low2.addr RAW 10:224|low2.addr RAW 10:229|low2.addr RAW 10:230|low2.addr RAW 10:241|low2.addr RAW 10:247|low2.addr RAW 10:343|low2.addr WAR 10:229|a2 WAR 10:230|low2.addr
+5:450 NOM  RAW 5:349|bots_arg_size
+10:224 NOM  INIT *|lowdest.addr RAW 10:189|lowdest.addr RAW 10:220|a1 RAW 10:224|lowdest.addr RAW 10:225|a1 RAW 10:229|lowdest.addr WAR 10:220|lowdest.addr WAR 10:221|lowdest.addr WAR 10:224|lowdest.addr WAR 10:225|lowdest.addr WAR 10:230|lowdest.addr WAR 10:237|lowdest.addr WAR 10:238|lowdest.addr WAR 10:245|lowdest.addr WAR 10:251|lowdest.addr WAR 10:280|lowdest.addr WAR 10:343|lowdest.addr WAW 10:168|lowdest.addr WAW 10:224|lowdest.addr WAW 10:229|lowdest.addr
+10:221 NOM  RAW 10:169|low2.addr RAW 10:189|low2.addr RAW 10:224|low2.addr RAW 10:229|low2.addr WAR 10:104|a2 WAR 10:169|a2 WAR 10:183|a2 WAR 10:240|a2 WAR 10:247|a2 WAR 10:249|a2 WAR 10:87|a2
+10:219 NOM  RAW 10:189|high1.addr RAW 10:189|high2.addr RAW 10:189|low1.addr RAW 10:189|low2.addr
+10:255 NOM  RAW 10:189|high1.addr RAW 10:225|low1.addr RAW 10:242|low1.addr
+10:125 NOM  INIT *|h RAW 10:120|curr_high RAW 10:122|pivot RAW 10:126|curr_high RAW 10:134|curr_high RAW 10:135|curr_high RAW 10:397|curr_high WAR 10:135|h WAR 10:169|h WAW 10:125|h
+10:289 NOM  INIT *|retval RAW 10:283|low.addr WAR 10:255|retval WAR 10:258|retval WAR 10:325|retval WAR 10:344|retval
+2:90 NOM  RAW 2:86|str.addr
+10:319 NOM  RAW 10:292|high2.addr RAW 10:292|low2.addr RAW 10:316|low2.addr RAW 10:317|high2.addr
+10:369 NOM  INIT *|B RAW 10:359|quarter RAW 10:367|A WAR 10:381|B
+10:370 NOM  INIT *|tmpB RAW 10:359|quarter RAW 10:368|tmpA WAR 10:377|tmpB
+10:147 NOM  INIT *|retval RAW 10:126|curr_high RAW 10:134|curr_high WAR 10:165|retval WAR 10:167|retval WAR 10:186|retval
+10:371 NOM  INIT *|C RAW 10:359|quarter RAW 10:369|B WAR 10:382|C
+2:93 NOM  INIT *|str.addr
+10:95 NOM  RAW 10:83|b.addr RAW 10:83|c.addr
+10:280 NOM  RAW 10:224|mid RAW 10:229|mid RAW 10:270|val.addr RAW 10:279|mid
+5:281 NOM  INIT *|i RAW 5:275|argc.addr RAW 5:281|i RAW 5:347|i WAR 5:281|i
+10:416 NOM  RAW 5:349|bots_arg_size
+10:183 NOM  RAW 10:181|p WAR 10:182|low.addr
+10:110 NOM  INIT *|high.addr INIT *|low.addr WAR 10:112|high.addr WAR 10:112|low.addr WAR 10:86|high.addr WAR 10:86|low.addr WAR 10:87|low.addr WAR 10:89|high.addr WAR 10:90|high.addr WAR 10:95|high.addr WAR 10:95|low.addr WAR 10:96|low.addr WAR 10:98|high.addr WAR 10:99|high.addr
+10:343 NOM  RAW 10:224|split1 RAW 10:229|split1 RAW 10:292|lowdest.addr RAW 10:335|split1 RAW 10:337|lowsize WAR 10:225|lowdest.addr WAR 10:230|lowdest.addr
+10:89 NOM  RAW 10:83|a.addr RAW 10:83|c.addr
+10:396 NOM  RAW 10:395|j RAW 5:349|bots_arg_size WAR 10:396|j
+10:242 NOM  RAW 10:225|low1.addr RAW 10:242|low1.addr WAR 10:242|low1.addr
+5:275 NOM  INIT *|argc.addr INIT *|argv.addr
+10:99 NOM  INIT *|retval RAW 10:83|c.addr WAR 10:104|retval
+5:438 NOM  RAW 5:436|argc.addr RAW 5:436|argv.addr
+10:258 NOM  RAW 10:189|high1.addr RAW 10:225|low1.addr RAW 10:242|low1.addr RAW 10:247|lowdest.addr
+10:449 NOM  INIT *|tmp RAW 5:349|bots_arg_size
+2:163 NOM  RAW 5:516|bots_time_program
+10:278 NOM  RAW 10:270|high.addr RAW 10:270|low.addr RAW 10:281|high.addr RAW 10:283|low.addr
+10:104 NOM  RAW 10:101|retval RAW 10:87|retval RAW 10:90|retval RAW 10:92|retval RAW 10:96|retval RAW 10:99|retval
+2:86 NOM  INIT *|str.addr
+10:98 NOM  RAW 10:83|a.addr RAW 10:83|c.addr
+10:92 NOM  RAW 10:83|a.addr WAR 10:104|retval WAR 10:240|retval
+5:436 NOM  INIT *|argc.addr INIT *|argv.addr
+10:101 NOM  INIT *|retval RAW 10:83|a.addr WAR 10:104|retval WAR 10:247|retval
+10:241 NOM  INIT *|lowdest.addr RAW 10:224|lowdest.addr RAW 10:229|lowdest.addr RAW 10:237|a1 RAW 10:241|lowdest.addr RAW 10:245|a1 RAW 10:247|lowdest.addr WAR 10:225|lowdest.addr WAR 10:230|lowdest.addr WAR 10:237|lowdest.addr WAR 10:241|lowdest.addr WAR 10:251|lowdest.addr WAW 10:168|lowdest.addr
+10:220 NOM  INIT *|a1 RAW 10:135|low1.addr RAW 10:169|low1.addr RAW 10:189|low1.addr RAW 10:224|low1.addr RAW 10:229|low1.addr WAR 10:165|a1 WAR 10:186|a1 WAR 10:240|a1 WAR 10:241|a1 WAR 10:258|a1 WAR 10:85|a1
+5:278 NOM  RAW 5:275|argv.addr
+10:248 NOM  RAW 10:230|low2.addr RAW 10:248|low2.addr WAR 10:248|low2.addr
+10:247 NOM  INIT *|lowdest.addr RAW 10:224|lowdest.addr RAW 10:229|lowdest.addr RAW 10:238|a2 RAW 10:241|lowdest.addr RAW 10:247|lowdest.addr RAW 10:251|a2 WAR 10:225|lowdest.addr WAR 10:230|lowdest.addr WAR 10:247|lowdest.addr WAR 10:251|lowdest.addr WAW 10:224|lowdest.addr WAW 10:247|lowdest.addr
+10:120 NOM  INIT *|curr_high RAW 10:115|high.addr WAR 10:147|curr_high
+5:348 NOM  RAW 5:275|argc.addr RAW 5:347|i
+10:129 NOM  RAW 10:119|curr_low RAW 10:129|curr_low RAW 10:135|curr_low WAR 10:129|curr_low
+10:345 NOM  RAW 10:292|high1.addr RAW 10:292|high2.addr RAW 10:292|lowdest.addr RAW 10:317|high1.addr RAW 10:317|high2.addr RAW 10:335|split1 RAW 10:336|split2 RAW 10:337|lowsize
+10:372 NOM  INIT *|tmpC RAW 10:359|quarter RAW 10:370|tmpB WAR 10:384|tmpC
+10:150 NOM  RAW 10:147|retval
+10:75 NOM  RAW 10:74|rand_nxt
+10:182 NOM  RAW 10:176|low.addr RAW 10:181|p RAW 10:183|low.addr
+10:83 NOM  INIT *|a.addr INIT *|b.addr INIT *|c.addr WAR 10:101|a.addr WAR 10:112|b.addr WAR 10:112|c.addr WAR 10:85|a.addr WAR 10:86|b.addr WAR 10:86|c.addr WAR 10:87|b.addr WAR 10:89|a.addr WAR 10:89|c.addr WAR 10:90|c.addr WAR 10:92|a.addr WAR 10:95|b.addr WAR 10:95|c.addr WAR 10:96|b.addr WAR 10:98|a.addr WAR 10:98|c.addr WAR 10:99|c.addr
+10:169 NOM  RAW 10:166|a RAW 10:167|p WAR 10:166|p WAR 10:167|p
+10:337 NOM  INIT *|lowsize RAW 10:292|low1.addr RAW 10:292|low2.addr RAW 10:316|low1.addr RAW 10:316|low2.addr RAW 10:335|split1 RAW 10:336|split2 WAR 10:249|lowsize WAR 10:325|lowsize WAR 10:345|lowsize WAR 10:382|lowsize
+10:409 NOM  INIT *|array RAW 10:408|i RAW 10:448|array
+10:176 NOM  INIT *|high.addr INIT *|low.addr WAR 10:122|high.addr WAR 10:150|low.addr WAR 10:186|high.addr WAR 10:186|low.addr WAR 10:240|high.addr WAR 10:241|high.addr WAR 10:325|low.addr
+10:315 NOM  RAW 10:292|high1.addr RAW 10:292|high2.addr RAW 10:292|low1.addr RAW 10:292|low2.addr
+10:231 NOM  RAW 10:189|high2.addr RAW 10:230|low2.addr
+10:180 NOM  RAW 10:176|high.addr RAW 10:176|low.addr RAW 10:183|low.addr
+5:349 NOM  INIT *|bots_arg_size RAW 5:275|argv.addr RAW 5:347|i
+2:82 NOM  RAW 5:436|t
+10:251 NOM  RAW 10:168|low2.addr RAW 10:169|low2.addr RAW 10:224|low2.addr RAW 10:229|low2.addr RAW 10:241|low2.addr RAW 10:247|low2.addr RAW 10:248|low2.addr WAR 10:247|a2
+10:430 NOM  RAW 5:349|bots_arg_size
+10:90 NOM  RAW 10:83|c.addr WAR 10:104|retval WAR 10:247|retval
+10:408 NOM  INIT *|i RAW 10:408|i RAW 5:349|bots_arg_size WAR 10:408|i
+10:112 NOM  RAW 10:110|high.addr RAW 10:110|low.addr RAW 10:134|high.addr RAW 10:134|low.addr RAW 10:135|high.addr RAW 10:135|low.addr RAW 10:397|high.addr RAW 10:397|low.addr
+10:237 NOM  RAW 10:168|low1.addr RAW 10:169|low1.addr RAW 10:224|low1.addr RAW 10:225|low1.addr RAW 10:229|low1.addr RAW 10:247|low1.addr WAR 10:223|a1 WAW 10:225|a1
+5:516 NOM  INIT *|bots_time_program RAW 5:513|bots_t_start RAW 5:515|bots_t_end
+10:364 NOM  RAW 10:350|low.addr RAW 10:350|size.addr
+10:86 NOM  RAW 10:83|b.addr RAW 10:83|c.addr
+10:80 NOM  INIT *|rand_nxt RAW 10:78|seed.addr
+10:229 NOM  INIT *|lowdest.addr RAW 10:189|lowdest.addr RAW 10:221|a2 RAW 10:224|lowdest.addr RAW 10:229|lowdest.addr RAW 10:230|a2 WAR 10:220|lowdest.addr WAR 10:221|lowdest.addr WAR 10:225|lowdest.addr WAR 10:229|lowdest.addr WAR 10:230|lowdest.addr WAR 10:237|lowdest.addr WAR 10:238|lowdest.addr WAR 10:245|lowdest.addr WAR 10:251|lowdest.addr WAR 10:280|lowdest.addr WAR 10:286|lowdest.addr WAR 10:343|lowdest.addr WAW 10:168|lowdest.addr WAW 10:224|lowdest.addr WAW 10:229|lowdest.addr
+10:245 NOM  RAW 10:224|low1.addr RAW 10:229|low1.addr RAW 10:242|low1.addr WAR 10:241|a1
+10:374 NOM  INIT *|tmpD RAW 10:359|quarter RAW 10:372|tmpC WAR 10:379|tmpD
+10:434 NOM  RAW 5:349|bots_arg_size
+10:119 NOM  INIT *|curr_low RAW 10:115|low.addr WAR 10:131|curr_low
+10:85 NOM  RAW 10:83|a.addr RAW 10:83|b.addr
+10:126 NOM  RAW 10:120|curr_high RAW 10:126|curr_high RAW 10:134|curr_high WAR 10:126|curr_high
+10:131 NOM  RAW 10:119|curr_low RAW 10:120|curr_high RAW 10:126|curr_high RAW 10:129|curr_low RAW 10:134|curr_high RAW 10:135|curr_low
+10:225 NOM  RAW 10:134|low1.addr RAW 10:135|low1.addr RAW 10:168|low1.addr RAW 10:169|low1.addr RAW 10:189|low1.addr RAW 10:224|low1.addr RAW 10:225|low1.addr RAW 10:229|low1.addr RAW 10:241|low1.addr RAW 10:247|low1.addr RAW 10:343|low1.addr RAW 10:397|low1.addr WAR 10:224|a1 WAR 10:225|low1.addr
+10:249 NOM  RAW 10:189|high2.addr RAW 10:248|low2.addr
+10:290 NOM  RAW 10:289|retval
+10:367 NOM  INIT *|A RAW 10:350|low.addr WAR 10:384|A
+10:240 NOM  RAW 10:237|a1 RAW 10:238|a2 RAW 10:245|a1 RAW 10:251|a2
+10:236 NOM  RAW 10:189|high1.addr RAW 10:189|high2.addr RAW 10:225|low1.addr RAW 10:230|low2.addr
+10:181 NOM  INIT *|p RAW 10:176|high.addr RAW 10:176|low.addr RAW 10:183|low.addr WAR 10:146|p WAR 10:183|p WAR 10:240|p WAR 10:247|p
+2:99 NOM  RAW 2:93|str.addr RAW 2:95|ncpus
+10:368 NOM  INIT *|tmpA RAW 10:350|tmp.addr WAR 10:384|tmpA
+10:74 NOM  RAW 10:74|rand_nxt RAW 10:80|rand_nxt WAR 10:74|rand_nxt
+10:146 NOM  RAW 10:115|high.addr RAW 10:126|curr_high RAW 10:134|curr_high
+10:160 NOM  INIT *|high.addr INIT *|low.addr WAR 10:165|high.addr WAR 10:165|low.addr WAR 10:167|low.addr WAR 10:186|high.addr WAR 10:186|low.addr
+10:344 NOM  RAW 10:292|low1.addr RAW 10:292|low2.addr RAW 10:292|lowdest.addr RAW 10:316|low1.addr RAW 10:316|low2.addr RAW 10:335|split1 RAW 10:336|split2
+10:381 NOM  RAW 10:359|quarter RAW 10:367|A RAW 10:368|tmpA RAW 10:369|B
+10:87 NOM  INIT *|retval RAW 10:83|b.addr WAR 10:104|retval
+10:135 NOM  RAW 10:119|curr_low RAW 10:125|h RAW 10:129|curr_low RAW 10:135|curr_low WAR 10:128|curr_low WAR 10:135|curr_low
+5:346 NOM  INIT *|argv.addr RAW 5:275|argv.addr RAW 5:281|i
+10:362 NOM  RAW 10:350|size.addr
+10:379 NOM  RAW 10:350|size.addr RAW 10:359|quarter RAW 10:373|D RAW 10:374|tmpD
+10:134 NOM  RAW 10:120|curr_high RAW 10:126|curr_high RAW 10:128|l RAW 10:134|curr_high WAR 10:125|curr_high WAR 10:134|curr_high
+10:243 NOM  RAW 10:189|high1.addr RAW 10:242|low1.addr
+10:448 NOM  INIT *|array RAW 5:349|bots_arg_size
+10:317 NOM  INIT *|tmp5 RAW 10:292|high1.addr RAW 10:292|high2.addr RAW 10:317|tmp5 WAR 10:240|tmp5 WAR 10:317|high1.addr WAR 10:317|high2.addr WAR 10:317|tmp5 WAR 10:345|tmp5 WAR 10:377|tmp5
+10:395 NOM  INIT *|j WAR 10:397|j
+10:281 NOM  RAW 10:279|mid WAR 10:279|high.addr
+2:95 NOM  INIT *|ncpus
+10:458 NOM  RAW 10:448|array RAW 10:449|tmp RAW 5:349|bots_arg_size
+10:270 NOM  INIT *|high.addr INIT *|low.addr INIT *|val.addr WAR 10:249|high.addr WAR 10:249|low.addr WAR 10:255|val.addr WAR 10:256|high.addr WAR 10:256|low.addr WAR 10:258|val.addr WAR 10:325|high.addr WAR 10:325|low.addr WAR 10:325|val.addr WAR 10:344|low.addr WAR 10:345|high.addr WAR 10:345|val.addr
+10:350 NOM  INIT *|low.addr INIT *|size.addr INIT *|tmp.addr WAR 10:344|low.addr WAR 10:344|size.addr WAR 10:345|tmp.addr WAR 10:364|low.addr WAR 10:364|size.addr WAR 10:368|tmp.addr WAR 10:382|low.addr WAR 10:384|size.addr WAW 10:350|tmp.addr
+10:324 NOM  RAW 10:292|high2.addr RAW 10:292|low2.addr RAW 10:316|low2.addr RAW 10:317|high2.addr
+5:285 NOM  RAW 5:275|argv.addr RAW 5:281|i
+10:382 NOM  RAW 10:350|low.addr RAW 10:350|size.addr RAW 10:359|quarter RAW 10:371|C RAW 10:372|tmpC RAW 10:373|D
+10:96 NOM  INIT *|retval RAW 10:83|b.addr WAR 10:104|retval
+10:394 NOM  RAW 10:394|i RAW 5:349|bots_arg_size WAR 10:394|i WAR 10:408|i
+10:223 NOM  RAW 10:220|a1 RAW 10:221|a2 RAW 10:225|a1 RAW 10:230|a2
+5:347 NOM  RAW 5:281|i WAR 5:347|i
+2:104 NOM  WAR 2:99|str.addr
+10:359 NOM  INIT *|quarter RAW 10:350|size.addr WAR 10:345|quarter WAR 10:382|quarter WAW 10:359|quarter
+10:397 NOM  INIT *|tmp RAW 10:394|i RAW 10:396|j RAW 10:397|array RAW 10:397|tmp RAW 10:409|array RAW 10:448|array WAR 10:397|array WAR 10:397|tmp
+10:128 NOM  INIT *|l RAW 10:119|curr_low RAW 10:122|pivot RAW 10:129|curr_low RAW 10:134|curr_low RAW 10:135|curr_low RAW 10:397|curr_low WAR 10:134|l WAR 10:168|l WAW 10:128|l WAW 10:167|l
+2:108 NOM  RAW 2:104|str.addr
+10:457 NOM  RAW 5:349|bots_arg_size
+10:376 NOM  RAW 10:359|quarter RAW 10:367|A RAW 10:368|tmpA
+10:378 NOM  RAW 10:359|quarter RAW 10:371|C RAW 10:372|tmpC
+10:186 NOM  RAW 10:176|high.addr RAW 10:176|low.addr RAW 10:183|low.addr
+5:283 NOM  RAW 5:275|argv.addr RAW 5:281|i
+10:165 NOM  INIT *|q RAW 10:160|high.addr RAW 10:160|low.addr RAW 10:165|q WAR 10:128|q WAR 10:165|q
+10:292 NOM  INIT *|lowdest.addr WAR 10:278|high2.addr WAR 10:281|lowdest.addr WAR 10:283|lowdest.addr WAR 10:286|high1.addr WAR 10:289|low2.addr WAR 10:290|low1.addr WAR 10:325|high1.addr WAR 10:325|high2.addr WAR 10:325|low1.addr WAR 10:325|low2.addr WAR 10:325|lowdest.addr WAR 10:344|low1.addr WAR 10:344|low2.addr WAR 10:345|high1.addr WAR 10:345|high2.addr WAR 10:345|lowdest.addr WAR 10:364|low1.addr WAR 10:364|low2.addr WAR 10:368|high1.addr WAR 10:382|high2.addr WAR 10:382|low1.addr WAR 10:384|low2.addr WAR 10:384|lowdest.addr WAW 10:350|high1.addr WAW 10:359|high2.addr
+10:166 NOM  INIT *|a RAW 10:134|q RAW 10:135|q RAW 10:165|q RAW 10:397|q WAR 10:169|a WAW 10:125|a
+10:167 NOM  INIT *|b INIT *|p RAW 10:134|p RAW 10:135|p RAW 10:160|low.addr RAW 10:165|q RAW 10:166|a RAW 10:167|p RAW 10:168|p RAW 10:169|p RAW 10:397|p WAR 10:146|p WAR 10:167|p WAR 10:168|b WAR 10:169|p WAR 10:183|p WAW 10:128|b WAW 10:167|b
+10:325 NOM  RAW 10:292|high1.addr RAW 10:292|high2.addr RAW 10:292|low1.addr RAW 10:292|low2.addr RAW 10:292|lowdest.addr RAW 10:316|low1.addr RAW 10:316|low2.addr RAW 10:317|high1.addr RAW 10:317|high2.addr
+2:171 NOM  RAW 5:516|bots_time_program
+10:189 NOM  INIT *|high1.addr INIT *|high2.addr INIT *|low1.addr INIT *|low2.addr INIT *|lowdest.addr WAR 10:104|lowdest.addr WAR 10:131|low2.addr WAR 10:147|high2.addr WAR 10:165|high2.addr WAR 10:167|low2.addr WAR 10:169|low1.addr WAR 10:169|lowdest.addr WAR 10:186|lowdest.addr WAR 10:249|high2.addr WAR 10:249|low2.addr WAR 10:255|high1.addr WAR 10:255|low1.addr WAR 10:256|high2.addr WAR 10:256|low2.addr WAR 10:256|lowdest.addr WAR 10:258|high1.addr WAR 10:258|low1.addr WAR 10:258|lowdest.addr WAR 10:325|high1.addr WAR 10:325|high2.addr WAR 10:325|low1.addr WAR 10:325|low2.addr WAR 10:325|lowdest.addr WAR 10:95|low1.addr WAR 10:99|high1.addr WAW 10:167|high1.addr
+10:425 NOM  RAW 5:349|bots_arg_size
+10:122 NOM  INIT *|pivot RAW 10:115|high.addr RAW 10:115|low.addr WAR 10:128|pivot WAR 10:165|pivot
+10:168 NOM  RAW 10:167|b RAW 10:167|p WAR 10:166|p WAR 10:167|p
+10:377 NOM  RAW 10:359|quarter RAW 10:369|B RAW 10:370|tmpB
+10:115 NOM  INIT *|high.addr INIT *|low.addr WAR 10:146|high.addr WAR 10:165|low.addr WAR 10:169|high.addr WAR 10:183|high.addr WAR 10:186|low.addr
+5:513 NOM  INIT *|bots_t_start
+10:373 NOM  INIT *|D RAW 10:359|quarter RAW 10:371|C WAR 10:382|D
+10:316 NOM  INIT *|tmp RAW 10:292|low1.addr RAW 10:292|low2.addr RAW 10:316|tmp WAR 10:258|tmp WAR 10:316|low1.addr WAR 10:316|low2.addr WAR 10:316|tmp WAR 10:325|tmp WAR 10:345|tmp WAR 10:384|tmp
+5:529 END program
