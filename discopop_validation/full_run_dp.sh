@@ -1,0 +1,5 @@
+python execute_discopop_on_dp_benchmarks.py
+python execute_create_suggestions_on_dp_benchmarks.py
+python execute_data_race_detection_on_dp_benchmarks.py
+python extract_evaluation_data_dp.py
+xdg-open evaluation_results_dp.csv
