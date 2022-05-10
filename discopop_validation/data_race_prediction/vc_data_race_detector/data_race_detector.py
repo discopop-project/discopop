@@ -68,8 +68,8 @@ def __check_state(state: State, schedule_element: ScheduleElement, previous_writ
             read_variables.append(update_var)
         if update_type is UpdateType.WRITE:
             written_variables.append(update_var)
-    read_variables = list(set(read_variables))
-    written_variables = list(set(written_variables))
+    read_variables = list(dict.fromkeys(read_variables))
+    written_variables = list(dict.fromkeys(written_variables))
     for var in read_variables:
         if not compare_vc(state.var_write_clocks[var], state.thread_clocks[schedule_element.thread_id]):
             data_race = DataRace(schedule_element, previous_writes, state, var_name=var)

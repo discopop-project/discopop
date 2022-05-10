@@ -20,8 +20,8 @@ class Schedule(object):
         self.elements.append(element)
         if element.thread_id >= self.thread_count:
             self.thread_count = element.thread_id + 1
-        self.lock_names = list(set(self.lock_names + element.lock_names))
-        self.var_names = list(set(self.var_names + element.var_names))
+        self.lock_names = list(dict.fromkeys(self.lock_names + element.lock_names))
+        self.var_names = list(dict.fromkeys(self.var_names + element.var_names))
 
     def __str__(self):
         return_string = "Schedule:\n"

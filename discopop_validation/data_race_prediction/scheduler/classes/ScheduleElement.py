@@ -34,14 +34,14 @@ class ScheduleElement:
         lines = []
         for (_, _, _, operation) in self.updates:
             lines.append(operation.line)
-        lines = list(set(lines))
+        lines = list(dict.fromkeys(lines))
         return lines
 
     def get_file_ids(self):
         ids = []
         for (_, _, _, operation) in self.updates:
             ids.append(int(operation.file_id))
-        ids = list(set(ids))
+        ids = list(dict.fromkeys(ids))
         return ids
 
     def contains_write(self) -> bool:

@@ -36,9 +36,9 @@ class SchedulingGraph(object):
             for behavior_model in behavior_models:
                 for schedule_element in behavior_model.schedule_elements:
                     self.lock_names += schedule_element.lock_names
-                    self.lock_names = list(set(self.lock_names))
+                    self.lock_names = list(dict.fromkeys(self.lock_names))
                     self.var_names += schedule_element.var_names
-                    self.var_names = list(set(self.var_names))
+                    self.var_names = list(dict.fromkeys(self.var_names))
         # get contained thread id's
         self.thread_ids = []
         self.__update_contained_thread_ids()
@@ -293,7 +293,7 @@ class SchedulingGraph(object):
             out_edges = [edge for edge in self.graph.out_edges(node)]
             edges_to_be_removed = in_edges + out_edges
             # remove duplicates
-            edges_to_be_removed = list(set(edges_to_be_removed))
+            edges_to_be_removed = list(dict.fromkeys(edges_to_be_removed))
             # remove all edges
             for s, t in edges_to_be_removed:
                 self.graph.remove_edge(s, t)

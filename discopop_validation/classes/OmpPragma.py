@@ -62,7 +62,7 @@ class OmpPragma(object):
         known_vars += self.get_variables_listed_as("private")
         known_vars += self.get_variables_listed_as("lastprivate")
         known_vars += self.get_variables_listed_as("shared")
-        known_vars = list(set(known_vars))
+        known_vars = list(dict.fromkeys(known_vars))
         return known_vars
 
     def get_variables_listed_as(self, type: str) -> List[str]:

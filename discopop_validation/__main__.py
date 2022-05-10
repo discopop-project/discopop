@@ -187,7 +187,7 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                         known_variables.append((local_var.name, local_var.defLine))
                     for global_var in current.global_vars:
                         known_variables.append((global_var.name, global_var.defLine))
-                    known_variables = list(set(known_variables))
+                    known_variables = list(dict.fromkeys(known_variables))
                     for child in pet.direct_children(current):
                         if child not in visited:
                             queue.append(child)

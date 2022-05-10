@@ -49,7 +49,7 @@ def __for_exception_rule_2(data_race: DataRace, pet, task_graph) -> bool:
                 for dr_line in dr_lines:
                     if dr_line >= pragma.start_line and dr_line <= pragma.end_line:
                         parent_pragmas.append(pragma)
-        parent_pragmas = list(set(parent_pragmas))
+        parent_pragmas = list(dict.fromkeys(parent_pragmas))
 
         for ct, index in enumerate(data_race.get_used_indices()):
             # ignore first index
