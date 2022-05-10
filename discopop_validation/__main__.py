@@ -398,7 +398,8 @@ def __preprocess_omp_pragmas(omp_pragmas: List[OmpPragma]):
         if omp_pragma.get_type() == PragmaType.PARALLEL_FOR:
             parallel_pragma = OmpPragma()
             parallel_pragma.file_id = omp_pragma.file_id
-            parallel_pragma.start_line = omp_pragma.start_line-1
+            parallel_pragma.start_line = omp_pragma.start_line
+            omp_pragma.start_line = omp_pragma.start_line + 1
             parallel_pragma.end_line = omp_pragma.end_line
             first_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("first_private")])
             privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("private")])
