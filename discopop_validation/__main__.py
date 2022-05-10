@@ -374,14 +374,14 @@ def __main_start_execution(run_configuration: Configuration):
                     split_dr_info = dr.get_location_str().split(";")
                     dr_line = split_dr_info[1]
                     if dr_line not in buffer:
-                        f.write(dr_line + "\n")
+                        f.write(dr_line + " " + dr.var_name + "\n")
                         buffer.append(dr_line)
                     # write line of previous action to file aswell
                     last_access_lines = dr.get_relevant_previous_access_lines()
                     for line in last_access_lines:
                         line = str(line)
                         if line not in buffer:
-                            f.write(line + "\n")
+                            f.write(line + " " + dr.var_name + "\n")
                             buffer.append(line)
 
 

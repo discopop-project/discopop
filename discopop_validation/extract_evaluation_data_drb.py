@@ -45,6 +45,8 @@ def main():
             with open(os.path.join(benchmark_path, "data_races.txt"), "r") as f:
                 for line in f.readlines():
                     line = line.replace("\n", "")
+                    if " " in line:
+                        line = line.split(" ")[0]  # ignore variable name
                     identified_data_races.append(line)
 
         # check for evaluation values
@@ -69,7 +71,7 @@ def main():
     print(evaluation_results)
 
     # write evaluation results to evaluation_results.csv
-    with open("evaluation_results.csv", "w+") as f:
+    with open("evaluation_results_drb.csv", "w+") as f:
         f.write("Benchmark;Is supported by our tool;Benchmark contains data races;Data races on array type;Correct data races identified;Some correct data races identified;Additional data races reported\n")
         sorted_keys = list(evaluation_results.keys())
         sorted_keys.sort()
