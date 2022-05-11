@@ -707,18 +707,38 @@ class TaskGraph(object):
                     # still no barrier found, skip
                     continue
 
-                out_seq_edges = [edge for edge in self.graph.out_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 in_seq_edges = [edge for edge in self.graph.in_edges(node) if
                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                # check if dependencies to other tasks exist
+                to_be_removed = []
+                for s,t in out_seq_edges:
+                    if (t,s) in self.graph.edges:
+                        if self.graph.edges[(t,s)]["type"] == EdgeType.DEPENDS:
+                            to_be_removed.append((s,t))
+                out_seq_edges = [e for e in out_seq_edges if e not in to_be_removed]
+
+                to_be_removed = []
+                for s, t in in_seq_edges:
+                    if (t, s) in self.graph.edges:
+                        if self.graph.edges[(t, s)]["type"] == EdgeType.DEPENDS:
+                            to_be_removed.append((s, t))
+                in_seq_edges = [e for e in in_seq_edges if e not in to_be_removed]
+
+                modification_found = False
                 # redirect incoming SEQUENTIAL edges to Successors
                 for edge in in_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
                     for out_edge in out_seq_edges:
                         self.graph.add_edge(edge[0], out_edge[1], type=EdgeType.SEQUENTIAL)
+                        modification_found = True
                 # redirect outgoing SEQUENTIAL edge to barrier
                 for edge in out_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
-                self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+                    modification_found = True
+                if modification_found:
+                    self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
 
     def remove_single_incoming_join_node(self):
         """Remove a join node with only a single incoming SEQUENTIAL edge, if no path merging occured prior to it"""
@@ -1095,6 +1115,9 @@ class TaskGraph(object):
                         paths.append(current_path)
                         continue
                     # add new queue entry for each successor
+                    if current_node in current_path:
+                        # cycle detected, break
+                        continue
                     current_path.append(current_node)
                     for _, target in current_out_seq_edges:
                         if (current_path, target) not in visited:

@@ -1,14 +1,19 @@
 int main()
 {
-    int x = 0, y = 0;
+    int x0=0;
+    int y0=0;
     #pragma omp parallel
     {
         #pragma omp single
         {
             #pragma omp task
-            x = x + 1;
+            {
+                x0 = 1;
+            }
             #pragma omp task
-            y = y + 1;
+            {
+                y0 = 1;
+            }
         }
     }
 }
