@@ -248,6 +248,9 @@ def __main_start_execution(run_configuration: Configuration):
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
     time_start_ps = time.time()
+    time_total_task_graph = 0
+    time_bhv_extraction_total = 0
+    time_data_race_computation_total = 0
     pet: PETGraphX = get_pet_graph(run_configuration)
 
 
@@ -259,8 +262,6 @@ def __main_start_execution(run_configuration: Configuration):
     omp_pragma_list = __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list)
 
     time_end_ps = time.time()
-    print("OMP PRAGMAS")
-    print(omp_pragma_list)
     data_race_txt_written = False
     if run_configuration.data_race_ouput_path != "None":
         if os.path.exists(run_configuration.data_race_ouput_path):
@@ -268,6 +269,7 @@ def __main_start_execution(run_configuration: Configuration):
 
     for omp_pragmas in omp_pragma_list:
         # construct task graph
+        time_task_graph_start = time.time()
         task_graph = TaskGraph()
 
         for pragma in omp_pragmas:
@@ -280,11 +282,6 @@ def __main_start_execution(run_configuration: Configuration):
         task_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
-        print("OMP PRAGMAS: ")
-        for p in omp_pragmas:
-            print(p)
-            print(p.pragma)
-
         task_graph.add_edges(pet, omp_pragmas)
         # pass shared clauses to child nodes
         task_graph.pass_shared_clauses_to_childnodes()
@@ -305,9 +302,10 @@ def __main_start_execution(run_configuration: Configuration):
         task_graph.redirect_tasks_successors()
         # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
         task_graph.replace_depends_with_sequential_edges()
-
         # extract and insert behavior models for pragmas
+        time_bhv_extraction_start = time.time()
         task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+        time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
         task_graph.insert_behavior_storage_nodes()
         # remove CalledFunctionNodes
@@ -353,14 +351,20 @@ def __main_start_execution(run_configuration: Configuration):
         # todo remove / ignore irrelevant join nodes
         # todo enable nested fork nodes
 
+        time_task_graph_end = time.time()
+        time_total_task_graph += time_task_graph_end - time_task_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
+        time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
         #task_graph.plot_graph()
 
+        time_data_race_computation_start = time.time()
         # trigger result computation
         computed_result: ResultObject = task_graph.compute_results()
         # apply exception rules to detected data races
         computed_result.apply_exception_rules_to_data_races(pet, task_graph)
+        time_data_race_computation_end = time.time()
+        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
         # print detected data races
         computed_result.print_data_races()
         # add identified data races to graph nodes for plotting
@@ -426,9 +430,9 @@ def __main_start_execution(run_configuration: Configuration):
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
     print("--- Get parallelization suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Validating suggestions: %s seconds ---" % (time_end_validation - time_end_ps))
-    #print("--- Create schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
-    #print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
+    print("--- Create Task graph: %s seconds ---" % (time_total_task_graph))
+    print("--- Behavior Extraction: %s seconds ---" % (time_bhv_extraction_total))
+    print("--- Calculate Data races: %s seconds ---" % (time_data_race_computation_total))
     print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
 
 
