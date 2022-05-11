@@ -179,7 +179,13 @@ class SchedulingGraph(object):
         composed_graph = SchedulingGraph(new_dimensions, [])
         composed_graph.thread_count = self.thread_count + other_graph.thread_count
 
-        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id, first_graph_last_step=False, second_graph_last_step=False):
+        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id, visited, first_graph_last_step=False, second_graph_last_step=False):
+            if (first_graph_node, second_graph_node, previous_node_id) in visited:
+                raise ValueError("TEST")
+            visited.append((first_graph_node, second_graph_node, previous_node_id))
+            print("FGN: ", first_graph_node)
+            print("SGN: ", second_graph_node)
+            print()
             if not first_graph_last_step:
                 # step on first graph
                 # construct new node id
@@ -195,17 +201,19 @@ class SchedulingGraph(object):
                             tmp_previous_thread_id = -1
                         else:
                             tmp_previous_thread_id = first_graph.graph.nodes[first_graph_node]["data"].thread_id
-                        __construct_composed_graph(target_graph, first_graph, second_graph,
-                                                   target, second_graph_node,
-                                                   new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
+                        if (target, second_graph_node, new_node_id) not in visited:
+                            __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                       target, second_graph_node,
+                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
                 else:
                     if first_graph.graph.nodes[first_graph_node]["data"] is None:
                         tmp_previous_thread_id = -1
                     else:
                         tmp_previous_thread_id = first_graph.graph.nodes[first_graph_node]["data"].thread_id
-                    __construct_composed_graph(target_graph, first_graph, second_graph,
-                                               first_graph_node, second_graph_node,
-                                               new_node_id, tmp_previous_thread_id, first_graph_last_step=True, second_graph_last_step=second_graph_last_step)
+                    if (first_graph_node, second_graph_node, new_node_id) not in visited:
+                        __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                   first_graph_node, second_graph_node,
+                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=True, second_graph_last_step=second_graph_last_step)
 
 
             if not second_graph_last_step:
@@ -223,17 +231,19 @@ class SchedulingGraph(object):
                             tmp_previous_thread_id = -1
                         else:
                             tmp_previous_thread_id = second_graph.graph.nodes[second_graph_node]["data"].thread_id
-                        __construct_composed_graph(target_graph, first_graph, second_graph,
-                                                   first_graph_node, target,
-                                                   new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
+                        if (first_graph_node, target, new_node_id) not in visited:
+                            __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                       first_graph_node, target,
+                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
                 else:
                     if second_graph.graph.nodes[second_graph_node]["data"] is None:
                         tmp_previous_thread_id = -1
                     else:
                         tmp_previous_thread_id = second_graph.graph.nodes[second_graph_node]["data"].thread_id
-                    __construct_composed_graph(target_graph, first_graph, second_graph,
-                                               first_graph_node, second_graph_node,
-                                               new_node_id, tmp_previous_thread_id, first_graph_last_step=first_graph_last_step, second_graph_last_step=True)
+                    if (first_graph_node, second_graph_node, new_node_id) not in visited:
+                        __construct_composed_graph(target_graph, first_graph, second_graph,
+                                                   first_graph_node, second_graph_node,
+                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=True)
 
             return target_graph
 
@@ -241,7 +251,7 @@ class SchedulingGraph(object):
         composed_graph = __construct_composed_graph(composed_graph, self, other_graph,
                                                     self.get_root_node_identifier(),
                                                     other_graph.get_root_node_identifier(),
-                                                    composed_graph.get_root_node_identifier(), -1)
+                                                    composed_graph.get_root_node_identifier(), -1, [])
 
         composed_graph.fix_node_ids()
         composed_graph.__update_contained_thread_ids()

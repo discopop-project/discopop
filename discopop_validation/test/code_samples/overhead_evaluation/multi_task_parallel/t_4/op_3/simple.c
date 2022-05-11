@@ -10,19 +10,19 @@ int main()
         {
             #pragma omp task depend(out:x0)
             {
-                x0 = 1;
+                x0 = x0 + 1; x1 = 1;
             }
-            #pragma omp task depend(in:x0, out:y0)
+            #pragma omp task depend(inout:x0)
             {
-                y0 = 1;
+                y0 = y0 + 1; y1 = 1;
             }
-            #pragma omp task depend(in:y0, out:z0)
+            #pragma omp task depend(inout:x0)
             {
-                z0 = 1;
+                z0 = z0 + 1; z1 = 1;
             }
-            #pragma omp task depend(in:z0)
+            #pragma omp task depend(in:x0)
             {
-                a0 = 1;
+                a0 = a0 + 1; a1 = 1;
             }
         }
     }
