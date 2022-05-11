@@ -181,11 +181,8 @@ class SchedulingGraph(object):
 
         def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id, visited, first_graph_last_step=False, second_graph_last_step=False):
             if (first_graph_node, second_graph_node, previous_node_id) in visited:
-                raise ValueError("TEST")
+                raise ValueError("ENDLESS RECURSION POSSIBLE! Already visited")
             visited.append((first_graph_node, second_graph_node, previous_node_id))
-            print("FGN: ", first_graph_node)
-            print("SGN: ", second_graph_node)
-            print()
             if not first_graph_last_step:
                 # step on first graph
                 # construct new node id
