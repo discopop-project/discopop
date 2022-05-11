@@ -36,7 +36,7 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma, task_gra
                 if inner_target_pragma is not None:
                     used_shared_variables += inner_target_pragma.get_variables_listed_as("shared")
             # remove duplicates
-            used_shared_variables = list(set(used_shared_variables))
+            used_shared_variables = list(dict.fromkeys(used_shared_variables))
             pragma_target_regions.append((called_function_body_start, called_function_body_end, used_shared_variables))
 
         # split pragma region if outgoing contains-edges exist

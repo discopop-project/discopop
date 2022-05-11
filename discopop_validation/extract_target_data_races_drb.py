@@ -30,7 +30,7 @@ def main():
                         mode = location_and_mode[2]
                         tdr_lines.append(line)
                         var_names.append(var)
-                tdr_lines = list(set(tdr_lines))
+                tdr_lines = list(dict.fromkeys(tdr_lines))
 
                 # output data races to target_data_races.txt
                 output_file = os.path.join(subdir, "target_data_races.txt")

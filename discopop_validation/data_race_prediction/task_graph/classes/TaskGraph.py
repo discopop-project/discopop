@@ -627,7 +627,7 @@ class TaskGraph(object):
                             for sequence_entry in get_sequence_entry_points(self, node):
                                 insert_locations.append(self.__get_insert_location(sequence_entry, model.get_start_line()))
                             # remove duplicated entries, possible in case of multiple merging sequences
-                            insert_locations = list(set(insert_locations))
+                            insert_locations = list(dict.fromkeys(insert_locations))
                             # remove entries which are in relation to the new node itself
                             insert_locations = [(mode, location) for mode, location in insert_locations if location != new_node_id]
 
@@ -1043,7 +1043,7 @@ class TaskGraph(object):
                 # remove depends edge
                 self.graph.remove_edge(node, target)
 
-        add_edge_buffer = list(set(add_edge_buffer))
+        add_edge_buffer = list(dict.fromkeys(add_edge_buffer))
         # add TASKWAIT after node to represent the semantics of DEPEND
         taskwait_node = self.__add_taskwait_pragma(None)
         for source, target in add_edge_buffer:

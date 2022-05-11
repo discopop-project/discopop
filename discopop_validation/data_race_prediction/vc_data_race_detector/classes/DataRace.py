@@ -72,7 +72,7 @@ class DataRace(object):
             if operation is None:
                 continue
             indices += operation.target_indices
-        indices = list(set(indices))
+        indices = list(dict.fromkeys(indices))
         return indices
 
     def get_cu_id(self, pet: PETGraphX) -> str:
@@ -106,5 +106,5 @@ class DataRace(object):
                         break
                 if is_relevant:
                     lines += access.get_operation_lines()
-        lines = list(set(lines))
+        lines = list(dict.fromkeys(lines))
         return lines
