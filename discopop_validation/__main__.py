@@ -259,8 +259,6 @@ def __main_start_execution(run_configuration: Configuration):
     omp_pragma_list = __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list)
 
     time_end_ps = time.time()
-    print("OMP PRAGMAS")
-    print(omp_pragma_list)
     data_race_txt_written = False
     if run_configuration.data_race_ouput_path != "None":
         if os.path.exists(run_configuration.data_race_ouput_path):
@@ -280,11 +278,6 @@ def __main_start_execution(run_configuration: Configuration):
         task_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
-        print("OMP PRAGMAS: ")
-        for p in omp_pragmas:
-            print(p)
-            print(p.pragma)
-
         task_graph.add_edges(pet, omp_pragmas)
         # pass shared clauses to child nodes
         task_graph.pass_shared_clauses_to_childnodes()
