@@ -1,1 +1,2 @@
 pycallgraph2
+termcolor
