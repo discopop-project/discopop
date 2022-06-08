@@ -28,7 +28,7 @@ and the environment variable `DISCOPOP_INSTALL` is set to the path where
 DiscoPoP is installed.
 
 ```
-export DISCOPOP_INSTALL=<PATH_TO_LLVM_BUILD_FOLDER>
+export DISCOPOP_INSTALL=<PATH_TO_DISCOPOP_BUILD_DIRECTORY>
 ``` 
 
 ## Usage
