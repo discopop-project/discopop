@@ -258,73 +258,74 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
-        #task_graph.plot_graph()
+        task_graph.plot_graph()
 
         time_data_race_computation_start = time.time()
-        # trigger result computation
-        computed_result: ResultObject = task_graph.compute_results()
-        # apply exception rules to detected data races
-        computed_result.apply_exception_rules_to_data_races(pet, task_graph)
-        time_data_race_computation_end = time.time()
-        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
-        # print detected data races
-        computed_result.print_data_races()
-        # add identified data races to graph nodes for plotting
-        task_graph.add_data_races_to_graph(computed_result)
-
-        #task_graph.plot_graph(mark_data_races=True)
-        #task_graph.plot_graph(mark_data_races=False)
-
-        # output found data races to file if requested
-        if run_configuration.data_race_ouput_path != "None":
-            buffer = []
-            if data_race_txt_written:
-                with open(run_configuration.data_race_ouput_path, "a+") as f:
-                    # f.write("fileID;line;column\n")
-                    for dr in computed_result.data_races:
-                        # write data race line to file
-                        split_dr_info = dr.get_location_str().split(";")
-                        dr_line = split_dr_info[1]
-                        if dr_line not in buffer:
-                            f.write(dr_line + " " + dr.var_name + "\n")
-                            buffer.append(dr_line)
-                        # write line of previous action to file aswell
-                        last_access_lines = dr.get_relevant_previous_access_lines()
-                        for line in last_access_lines:
-                            line = str(line)
-                            if line not in buffer:
-                                f.write(line + " " + dr.var_name + "\n")
-                                buffer.append(line)
-            else:
-                with open(run_configuration.data_race_ouput_path, "w+") as f:
-                    data_race_txt_written = True
-                    # f.write("fileID;line;column\n")
-                    for dr in computed_result.data_races:
-                        # write data race line to file
-                        split_dr_info = dr.get_location_str().split(";")
-                        dr_line = split_dr_info[1]
-                        if dr_line not in buffer:
-                            f.write(dr_line + " " + dr.var_name + "\n")
-                            buffer.append(dr_line)
-                        # write line of previous action to file aswell
-                        last_access_lines = dr.get_relevant_previous_access_lines()
-                        for line in last_access_lines:
-                            line = str(line)
-                            if line not in buffer:
-                                f.write(line + " " + dr.var_name + "\n")
-                                buffer.append(line)
 
 
-                    #if dr.get_location_str() not in buffer:
-                    #    f.write(dr.get_location_str() + "\n")
-                    #    buffer.append(dr.get_location_str())
+#        # trigger result computation
+#        computed_result: ResultObject = task_graph.compute_results()
+#        # apply exception rules to detected data races
+#        computed_result.apply_exception_rules_to_data_races(pet, task_graph)
+#        time_data_race_computation_end = time.time()
+#        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
+#        # print detected data races
+#        computed_result.print_data_races()
+#        # add identified data races to graph nodes for plotting
+#        task_graph.add_data_races_to_graph(computed_result)
+#
+#        #task_graph.plot_graph(mark_data_races=True)
+#        #task_graph.plot_graph(mark_data_races=False)
+#
+#        # output found data races to file if requested
+#        if run_configuration.data_race_ouput_path != "None":
+#            buffer = []
+#            if data_race_txt_written:
+#                with open(run_configuration.data_race_ouput_path, "a+") as f:
+#                    # f.write("fileID;line;column\n")
+#                    for dr in computed_result.data_races:
+#                        # write data race line to file
+#                        split_dr_info = dr.get_location_str().split(";")
+#                        dr_line = split_dr_info[1]
+#                        if dr_line not in buffer:
+#                            f.write(dr_line + " " + dr.var_name + "\n")
+#                            buffer.append(dr_line)
+#                        # write line of previous action to file aswell
+#                        last_access_lines = dr.get_relevant_previous_access_lines()
+#                        for line in last_access_lines:
+#                            line = str(line)
+#                            if line not in buffer:
+#                                f.write(line + " " + dr.var_name + "\n")
+#                                buffer.append(line)
+#            else:
+#                with open(run_configuration.data_race_ouput_path, "w+") as f:
+#                    data_race_txt_written = True
+#                    # f.write("fileID;line;column\n")
+#                    for dr in computed_result.data_races:
+#                        # write data race line to file
+#                        split_dr_info = dr.get_location_str().split(";")
+#                        dr_line = split_dr_info[1]
+#                        if dr_line not in buffer:
+#                            f.write(dr_line + " " + dr.var_name + "\n")
+#                            buffer.append(dr_line)
+#                        # write line of previous action to file aswell
+#                        last_access_lines = dr.get_relevant_previous_access_lines()
+#                        for line in last_access_lines:
+#                            line = str(line)
+#                            if line not in buffer:
+#                                f.write(line + " " + dr.var_name + "\n")
+#                                buffer.append(line)
+#
+#
+#                    #if dr.get_location_str() not in buffer:
+#                    #    f.write(dr.get_location_str() + "\n")
+#                    #    buffer.append(dr.get_location_str())
 
     # correct tool support value in evaluation by creating data_races.txt file
     if not data_race_txt_written:
         if os.path.exists(run_configuration.data_race_ouput_path):
             os.remove(run_configuration.data_race_ouput_path)
         open(run_configuration.data_race_ouput_path, "w+")
-
 
 
     time_end_validation = time.time()
