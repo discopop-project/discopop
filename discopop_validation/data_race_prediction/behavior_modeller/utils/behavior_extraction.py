@@ -13,7 +13,7 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode i
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
-def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str]],
+def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str, str]],
                                 file_mapping: str, ll_file_path: str, dp_build_path: str)\
         -> BBGraph:
     if os.path.exists("tmp_behavior_extraction"):

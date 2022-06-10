@@ -23,8 +23,8 @@ def __for_exception_rule_1(data_race: DataRace, pet) -> bool:
             parent_loop_node = get_parent_of_type(pet, pet.node_at(data_race.get_cu_id(pet)), NodeType.LOOP, EdgeType.CHILD, True)
             if len(parent_loop_node) != 1:
                 return False
-            parent_loop_node = parent_loop_node[0][0]
-            if is_loop_index(pet, parent_loop_node, index):
+            parent_loop_node_cu = parent_loop_node[0][0]
+            if is_loop_index(pet, parent_loop_node_cu, index):
                 return False
         return True
 
@@ -60,8 +60,8 @@ def __for_exception_rule_2(data_race: DataRace, pet, task_graph) -> bool:
                                                   EdgeType.CHILD, True)
             if len(parent_loop_node) != 1:
                 return False
-            parent_loop_node = parent_loop_node[0][0]
-            if is_loop_index(pet, parent_loop_node, index):
+            parent_loop_node_cu = parent_loop_node[0][0]
+            if is_loop_index(pet, parent_loop_node_cu, index):
                 # check if index is shared in one of the parents
                 for pragma in parent_pragmas:
                     if index in pragma.get_variables_listed_as("shared"):

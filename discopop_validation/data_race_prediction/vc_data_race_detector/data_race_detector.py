@@ -1,30 +1,11 @@
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from .classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union, cast
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.VectorClock import get_updated_vc, increase, compare_vc
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
-
-
-def check_sections(sections_to_schedules_dict: Dict[int, List[Schedule]]) -> List[DataRace]:
-    """executes check_schedule for each Schedule of each section in the given dictionary.
-    Returns an unfiltered list of found DataRaces (may contain duplicates!)."""
-    found_data_races: List[DataRace] = []
-    # execute VC Check
-    for section_id in sections_to_schedules_dict:
-        for schedule in sections_to_schedules_dict[section_id]:
-            data_races = check_schedule(schedule)
-            if len(data_races) != 0:
-                for check_result in data_races:
-                    # check not successful, data race detected
-                    state: State = check_result[0]
-                    schedule_element = check_result[1]
-                    previous_writes = check_result[2]
-                    data_race: DataRace = DataRace(section_id, schedule, schedule_element, previous_writes)
-                    found_data_races.append(data_race)
-    return found_data_races
 
 
 def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[DataRace]:
@@ -44,7 +25,7 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
             if schedule_element.contains_write():
                 previous_writes.append(schedule_element)
         else:
-            data_race = result
+            data_race: DataRace = cast(DataRace, result)
             return [data_race]
     return []
 
@@ -121,7 +102,7 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
     return state
 
 
-def get_filtered_data_race_strings(unfiltered_data_races: List[DataRace]) -> List[DataRace]:
+def get_filtered_data_race_strings(unfiltered_data_races: List[DataRace]) -> List[str]:
     """Takes a unfiltered list of found data races and returns a filtered list of strings.
     The filtering removes duplicates. Entries are duplicates, if another entry with
     the exact same string representation exists.

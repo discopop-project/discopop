@@ -12,46 +12,6 @@ from discopop_validation.data_race_prediction.scheduler.classes.UpdateType impor
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
 
 
-def create_schedules_for_sections(bb_graph: BBGraph, sections_to_path_combinations_dict: Dict[int, List[List[List[BBNode]]]], verbose: bool = False) -> Dict[int, List[Schedule]]:
-    """creates a mapping from sections to list of schedules to be checked based on the extracted behavior."""
-    sections_to_schedules_dict: Dict[int, List[Schedule]] = {}
-    verbose_progress_str = ""
-    for s_idx, section_id in enumerate(sections_to_path_combinations_dict):
-        comb_len = len(sections_to_path_combinations_dict[section_id])
-        for c_idx, combination in enumerate(sections_to_path_combinations_dict[section_id]):
-            if verbose:
-                verbose_progress_str = "\t" + str(s_idx) + "-" + str(c_idx) + " / " + str(s_idx) + "-" + str(comb_len) + "\t" + "(" + str(s_idx) + " / " + str(len(sections_to_path_combinations_dict)) + ")"
-                print(verbose_progress_str, end="\r")
-            if section_id in sections_to_schedules_dict:
-                sections_to_schedules_dict[section_id] += __create_schedules_from_path_combination(bb_graph, section_id, combination)
-            else:
-                sections_to_schedules_dict[section_id] = __create_schedules_from_path_combination(bb_graph, section_id, combination)
-    if verbose:
-        print(verbose_progress_str)
-    return sections_to_schedules_dict
-
-
-def __create_schedules_from_path_combination(bb_graph: BBGraph, section_id: int, path_combination: List[List[BBNode]]) -> List[Schedule]:
-    """creates a list of Schedules based on the given combination of paths"""
-    if len(path_combination) == 0:
-        return []
-    if len(path_combination) == 1:
-        # duplicate element to model schedules for "two threads execute same path"
-        path_combination.append(path_combination[0])
-
-    # convert path combination to schedule element combination
-    schedule_element_combination: List[List[ScheduleElement]] = []
-    for thread_id, elem in enumerate(path_combination):
-        schedule_element_combination.append(__convert_operation_path_to_schedule_element_path(thread_id,
-                                                                                              convert_bb_path_to_operations(
-                                                                                                  bb_graph.bb_path_to_operations_cache,
-                                                                                                  section_id, elem)))
-
-    dimensions = [len(c) for c in schedule_element_combination]
-    scheduling_graph = SchedulingGraph(dimensions, schedule_element_combination)
-    schedules = get_schedules(scheduling_graph.graph, scheduling_graph.root_node_identifier)
-    return schedules
-
 
 def create_scheduling_graph_from_behavior_models(behavior_models: List[BehaviorModel]) -> Tuple[SchedulingGraph, List[int]]:
     """creates a scheduling graph based on the given combination of BehaviorModels"""

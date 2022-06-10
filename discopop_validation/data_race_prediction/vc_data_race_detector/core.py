@@ -1,7 +1,7 @@
 import warnings
 
 import copy
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union, cast
 
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.SchedulingGraph import SchedulingGraph
@@ -40,7 +40,7 @@ def __check_node(scheduling_graph: SchedulingGraph, node_identifier, state: Stat
         if type(result) == State:
             state = result
         else:
-            data_race = result
+            data_race: DataRace = cast(DataRace, result)
             return [data_race], []
 
     data_races = []
@@ -87,7 +87,7 @@ def __old_check_node(scheduling_graph: SchedulingGraph, node_identifier, state: 
         if type(result) == State:
             state = result
         else:
-            data_race = result
+            data_race: DataRace = cast(DataRace, result)
             return [data_race]
 
     data_races = []
