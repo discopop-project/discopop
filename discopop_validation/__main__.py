@@ -34,7 +34,7 @@ import cProfile
 import time
 
 from docopt import docopt
-from schema import SchemaError, Schema, Use
+from schema import SchemaError, Schema, Use  # type: ignore
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
@@ -47,8 +47,8 @@ from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAcce
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
 from .interfaces.discopop_explorer import get_pet_graph
-from pycallgraph2 import PyCallGraph
-from pycallgraph2.output import GraphvizOutput
+from pycallgraph2 import PyCallGraph  # type: ignore
+from pycallgraph2.output import GraphvizOutput  # type: ignore
 from pycallgraph2 import Config
 from pycallgraph2 import GlobbingFilter
 from pycallgraph2 import Grouper
@@ -151,9 +151,9 @@ def __main_start_execution(run_configuration: Configuration):
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
     time_start_ps = time.time()
-    time_total_task_graph = 0
-    time_bhv_extraction_total = 0
-    time_data_race_computation_total = 0
+    time_total_task_graph = 0.0
+    time_bhv_extraction_total = 0.0
+    time_data_race_computation_total = 0.0
     pet: PETGraphX = get_pet_graph(run_configuration)
 
 
