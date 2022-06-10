@@ -22,7 +22,7 @@ class State(object):
         for i in range(thread_count):
             self.thread_clocks[i] = VectorClock(thread_count)
             self.thread_clocks[i].clocks[i] = 1
-            self.thread_id_to_clock_position_dict[i] = [i]
+            self.thread_id_to_clock_position_dict[i] = i
         for l_name in lock_names:
             self.lock_clocks[l_name] = VectorClock(thread_count)
         for v_name in var_names:

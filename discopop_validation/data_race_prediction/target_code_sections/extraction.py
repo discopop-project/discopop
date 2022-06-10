@@ -9,7 +9,7 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma, task_gra
     Output format: [(<section_id>, <file_id>, <start_line>, <end_line>, <var_name>, <suggestion_type>)]
     TODO: For now, only Do-All pattern is reported!
     """
-    interim_result: List[Tuple[str, str, str, str, str]] = []
+    interim_result: List[Tuple[int, int, int, str, PragmaType]] = []
     # include parallel, parallel for and single pragmas
     if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK]:
         pragma_target_regions: List[Tuple[int, int, Optional[List[str]]]] = [(pragma.start_line, pragma.end_line, None)]
@@ -68,7 +68,7 @@ def identify_target_sections_from_pragma(task_graph, pragma: OmpPragma, task_gra
             else:
                 interim_result.append((pragma.file_id, p_start_line, p_end_line,
                                        ",".join(shared_variables) + ",", pragma.get_type()))
-            result: List[Tuple[str, str, str, str, str]] = []
+            result: List[Tuple[str, str, str, str, str, str]] = []
             for idx, r in enumerate(interim_result):
                 result.append((str(idx), str(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4])))
         return result

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, cast
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
@@ -32,7 +32,8 @@ class ScheduleElement:
 
     def get_operation_lines(self) -> List[int]:
         lines = []
-        for (_, _, _, operation) in self.updates:
+        for (_, _, _, operation_potentially_none) in self.updates:
+            operation = cast(Operation, operation_potentially_none)
             lines.append(operation.line)
         lines = list(dict.fromkeys(lines))
         return lines
