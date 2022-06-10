@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Tuple
 
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma
@@ -45,7 +45,7 @@ def __apply_reduction_modification(behavior_model: BehaviorModel, pragma: OmpPra
     # search for reduction operations in behavior_model.operations and
     # mark reduction operations by adding a modifier (read + write if existent)
     pragma_reduction_variables = pragma.get_variables_listed_as("reduction")
-    reduction_operation_id_buffer = dict()
+    reduction_operation_id_buffer: Dict[Tuple[str, str, str], str] = dict()
     for operation in behavior_model.operations:
         if operation.target_name not in pragma_reduction_variables:
             continue
