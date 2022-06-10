@@ -1,3 +1,5 @@
+from typing import Dict, List, Any
+
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType
 from discopop_validation.interfaces.discopop_explorer import check_reachability
@@ -15,7 +17,7 @@ def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_l
         raise ValueError("No valid CUID found for: ", str(file_id) + ":"+ str(start_line)+"-"+str(end_line))
 
     # if two potential nodes have equal lines, select the parent and remove the child cu from the list of potential nodes
-    buffer = dict()
+    buffer: Dict[tuple[int, int], List[Any]] = dict()
     for pet_node in potential_nodes:
         start_line = pet.g.nodes[pet_node]["data"].start_line
         end_line = pet.g.nodes[pet_node]["data"].end_line

@@ -2,7 +2,7 @@ import warnings
 import random
 import string
 
-from typing import Tuple, List
+from typing import Tuple, List, Any
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
@@ -15,7 +15,7 @@ from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
 class SchedulingGraph(object):
     graph: nx.DiGraph
-    root_node_identifier: Tuple[Tuple, int]
+    root_node_identifier: Tuple[Any, int, str]
     lock_names: List[str] = []
     var_names: List[str] = []
     dimensions: List[int]

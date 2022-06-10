@@ -13,7 +13,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Stat
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
 import warnings
 import copy
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 
