@@ -43,6 +43,7 @@ from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
+from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
 from .interfaces.discopop_explorer import get_pet_graph
@@ -258,7 +259,9 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
-        task_graph.plot_graph()
+        #task_graph.plot_graph()
+
+        memory_access_graph = MemoryAccessGraph(task_graph)
 
         time_data_race_computation_start = time.time()
 
