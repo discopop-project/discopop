@@ -36,8 +36,8 @@ class PragmaForNode(TaskGraphNode):
 
     def get_behavior_models(self, task_graph, result_obj) -> List[List[BehaviorModel]]:
         """gather behavior models of sequence-starting contained nodes (should only be 1 in case of a FOR pragma)"""
-        outer_seq_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
-        outer_par_behavior_models: List[List[BehaviorModel]] = ["PAR"]
+        outer_seq_behavior_models: List[List[BehaviorModel]] = ["SEQ"]  # type: ignore
+        outer_par_behavior_models: List[List[BehaviorModel]] = ["PAR"]  # type: ignore
         # gather behavior models of contained nodes
         for source, target in task_graph.graph.out_edges(self.node_id):
             inner_par_behavior_models = ["PAR"]
@@ -52,9 +52,9 @@ class PragmaForNode(TaskGraphNode):
                     inner_par_behavior_models.append(
                         task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
             if len(inner_par_behavior_models) > 1:
-                outer_par_behavior_models.append(inner_par_behavior_models)
+                outer_par_behavior_models.append(inner_par_behavior_models)  # type: ignore
 
-        outer_seq_behavior_models.append(outer_par_behavior_models)
+        outer_seq_behavior_models.append(outer_par_behavior_models)  # type: ignore
         # gather behavior models of successor nodes
         for source, target in task_graph.graph.out_edges(self.node_id):
             if task_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
