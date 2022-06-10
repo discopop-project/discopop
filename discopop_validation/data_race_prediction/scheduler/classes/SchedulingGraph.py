@@ -1,16 +1,13 @@
-import warnings
+import copy
 import random
 import string
 
+import matplotlib.pyplot as plt  # type:ignore
+import networkx as nx  # type:ignore
+from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 from typing import Tuple, List, Any
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
-import networkx as nx  # type:ignore
-import matplotlib.pyplot as plt  # type:ignore
-import copy
-
-from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 
 
 class SchedulingGraph(object):
@@ -19,9 +16,10 @@ class SchedulingGraph(object):
     lock_names: List[str] = []
     var_names: List[str] = []
     dimensions: List[int]
-    thread_count : int
+    thread_count: int
     thread_ids: List[int]
     fingerprint: str
+
     def __init__(self, dim: List[int], behavior_models: List[BehaviorModel]):
         self.dimensions = dim
         self.thread_count = len(dim)
@@ -31,7 +29,8 @@ class SchedulingGraph(object):
         self.root_node_identifier = (tuple(0 for _ in range(len(dim))), -1, self.fingerprint)
         self.graph.add_node((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), data=None)
         if len(behavior_models) > 0:
-            self.__old_add_nodes_rec((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), dim.copy(), behavior_models)
+            self.__old_add_nodes_rec((tuple(0 for _ in range(len(dim))), -1, self.fingerprint), dim.copy(),
+                                     behavior_models)
             # determine lock and var names
             for behavior_model in behavior_models:
                 for schedule_element in behavior_model.schedule_elements:
@@ -43,14 +42,12 @@ class SchedulingGraph(object):
         self.thread_ids = []
         self.__update_contained_thread_ids()
 
-
     def __update_contained_thread_ids(self):
         for node_in in self.graph.nodes:
             schedule_element = self.graph.nodes[node_in]["data"]
             if schedule_element is not None:
                 if schedule_element.thread_id not in self.thread_ids:
                     self.thread_ids.append(schedule_element.thread_id)
-
 
     def plot_graph(self):
         plt.subplot(121)
@@ -61,7 +58,6 @@ class SchedulingGraph(object):
             labels[node] = str(node) + "\n" + str(self.graph.nodes[node]["data"])
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
-
 
     def __old_add_nodes_rec(self, parent_node_identifier, dim, behavior_models: List[BehaviorModel]):
         for i in range(len(dim)):
@@ -84,7 +80,8 @@ class SchedulingGraph(object):
             new_node_identifier = (new_node_id_tuple, last_thread_id, self.fingerprint)
             if new_node_identifier not in self.graph.nodes:
                 # update thread id
-                self.graph.add_node(new_node_identifier, data=behavior_models[i].schedule_elements[new_node_id_tuple[i] - 1])
+                self.graph.add_node(new_node_identifier,
+                                    data=behavior_models[i].schedule_elements[new_node_id_tuple[i] - 1])
 
             # add edge from parent_node_id to new_node_id
             if not (parent_node_identifier, new_node_identifier) in self.graph.edges:
@@ -101,7 +98,6 @@ class SchedulingGraph(object):
 
     def get_root_node_identifier(self):
         return self.root_node_identifier
-
 
     def sequential_compose(self, other_graph):
         """add edges between leaf nodes of this and root node of other_graph."""
@@ -141,7 +137,6 @@ class SchedulingGraph(object):
 
         return self
 
-
     def parallel_compose(self, other_graph):
         if other_graph is None:
             return self
@@ -152,11 +147,9 @@ class SchedulingGraph(object):
         self.__remove_edges_from_to_source_node()
         other_graph.__remove_edges_from_to_source_node()
 
-
         new_dimensions = self.dimensions + other_graph.dimensions
         self.dimensions = new_dimensions
-        thread_id_offset = self.thread_count # added to other_graphs thread ids to prevent conflicts
-
+        thread_id_offset = self.thread_count  # added to other_graphs thread ids to prevent conflicts
 
         # set correct thread id's
         # thread id's of self remain in current state
@@ -172,14 +165,16 @@ class SchedulingGraph(object):
                 previous_thread_id = -1
             else:
                 previous_thread_id = node[1] + thread_id_offset
-            mapping = {node : (node[0], previous_thread_id, node[2])}
+            mapping = {node: (node[0], previous_thread_id, node[2])}
             other_graph.graph = nx.relabel_nodes(other_graph.graph, mapping, copy=False)
 
         # create composed graph
         composed_graph = SchedulingGraph(new_dimensions, [])
         composed_graph.thread_count = self.thread_count + other_graph.thread_count
 
-        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node, previous_node_id, previous_thread_id, visited, first_graph_last_step=False, second_graph_last_step=False):
+        def __construct_composed_graph(target_graph, first_graph, second_graph, first_graph_node, second_graph_node,
+                                       previous_node_id, previous_thread_id, visited, first_graph_last_step=False,
+                                       second_graph_last_step=False):
             if (first_graph_node, second_graph_node, previous_node_id) in visited:
                 raise ValueError("ENDLESS RECURSION POSSIBLE! Already visited")
             visited.append((first_graph_node, second_graph_node, previous_node_id))
@@ -201,7 +196,9 @@ class SchedulingGraph(object):
                         if (target, second_graph_node, new_node_id) not in visited:
                             __construct_composed_graph(target_graph, first_graph, second_graph,
                                                        target, second_graph_node,
-                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
+                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited),
+                                                       first_graph_last_step=first_graph_last_step,
+                                                       second_graph_last_step=second_graph_last_step)
                 else:
                     if first_graph.graph.nodes[first_graph_node]["data"] is None:
                         tmp_previous_thread_id = -1
@@ -210,8 +207,9 @@ class SchedulingGraph(object):
                     if (first_graph_node, second_graph_node, new_node_id) not in visited:
                         __construct_composed_graph(target_graph, first_graph, second_graph,
                                                    first_graph_node, second_graph_node,
-                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=True, second_graph_last_step=second_graph_last_step)
-
+                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited),
+                                                   first_graph_last_step=True,
+                                                   second_graph_last_step=second_graph_last_step)
 
             if not second_graph_last_step:
                 # step on second graph
@@ -231,7 +229,9 @@ class SchedulingGraph(object):
                         if (first_graph_node, target, new_node_id) not in visited:
                             __construct_composed_graph(target_graph, first_graph, second_graph,
                                                        first_graph_node, target,
-                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=second_graph_last_step)
+                                                       new_node_id, tmp_previous_thread_id, copy.deepcopy(visited),
+                                                       first_graph_last_step=first_graph_last_step,
+                                                       second_graph_last_step=second_graph_last_step)
                 else:
                     if second_graph.graph.nodes[second_graph_node]["data"] is None:
                         tmp_previous_thread_id = -1
@@ -240,10 +240,11 @@ class SchedulingGraph(object):
                     if (first_graph_node, second_graph_node, new_node_id) not in visited:
                         __construct_composed_graph(target_graph, first_graph, second_graph,
                                                    first_graph_node, second_graph_node,
-                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited), first_graph_last_step=first_graph_last_step, second_graph_last_step=True)
+                                                   new_node_id, tmp_previous_thread_id, copy.deepcopy(visited),
+                                                   first_graph_last_step=first_graph_last_step,
+                                                   second_graph_last_step=True)
 
             return target_graph
-
 
         composed_graph = __construct_composed_graph(composed_graph, self, other_graph,
                                                     self.get_root_node_identifier(),
@@ -254,7 +255,6 @@ class SchedulingGraph(object):
         composed_graph.__update_contained_thread_ids()
 
         return composed_graph
-
 
     def fix_node_ids(self):
         node_ids = copy.deepcopy(self.graph.nodes)

@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
-from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import OperationModifierType
+from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
+    OperationModifierType
 
 
 class Operation:
@@ -17,7 +18,8 @@ class Operation:
     file_id: str
     modifiers: List[Tuple[OperationModifierType, str]]
 
-    def __init__(self, suggestion_type, file_id, section_id, mode, target_name, line, col, origin_line, origin_col, target_indices = []):
+    def __init__(self, suggestion_type, file_id, section_id, mode, target_name, line, col, origin_line, origin_col,
+                 target_indices=[]):
         self.mode = mode
         self.target_name = target_name
         self.target_indices = target_indices
@@ -38,11 +40,12 @@ class Operation:
             pretty_mode = self.mode
 
         # if operation occurs inside called function, report origin line and col additionally
-        return_str = "" + str(self.file_id) + ";" + str(self.section_id) + ";" + str(self.line) + ":" + str(self.col) + ";" + pretty_mode + "->" + self.target_name
+        return_str = "" + str(self.file_id) + ";" + str(self.section_id) + ";" + str(self.line) + ":" + str(
+            self.col) + ";" + pretty_mode + "->" + self.target_name
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         if len(self.modifiers) > 0:
-            return_str += " Modifiers: " + " ".join([str(m[0])+"-"+m[1] for m in self.modifiers])
+            return_str += " Modifiers: " + " ".join([str(m[0]) + "-" + m[1] for m in self.modifiers])
         return return_str
 
     def __eq__(self, other):

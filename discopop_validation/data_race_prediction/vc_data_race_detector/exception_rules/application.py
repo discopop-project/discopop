@@ -2,7 +2,8 @@ from typing import List
 
 from discopop_validation.classes.OmpPragma import PragmaType
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
-from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.pragma_for import __check_pragma_for_exception_rules
+from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.pragma_for import \
+    __check_pragma_for_exception_rules
 
 
 def apply_exception_rules(unfiltered_data_races: List[DataRace], pet, task_graph) -> List[DataRace]:

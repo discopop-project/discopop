@@ -1,14 +1,16 @@
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
-from .classes.DataRace import DataRace
+from typing import List, Tuple, Optional, Union, cast
+
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
-from typing import Dict, List, Tuple, Optional, Union, cast
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.VectorClock import get_updated_vc, increase, compare_vc
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
 from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.VectorClock import get_updated_vc, increase, \
+    compare_vc
+from .classes.DataRace import DataRace
 
 
-def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> List[DataRace]:
+def check_schedule(schedule: Schedule, initial_state: Optional[State] = None) -> List[DataRace]:
     """check the entire schedule.
     Return None, if no data race has been found.
     Returns (problematic_state, problematic_schedule_element, [previous ScheduleElements which write var])
@@ -30,7 +32,8 @@ def check_schedule(schedule: Schedule, initial_state:Optional[State]=None) -> Li
     return []
 
 
-def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
+def goto_next_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[
+    State, DataRace]:
     """updates state according to the given ScheduleElement.
     Raises ValueError, if a data race has been detected."""
     for update in schedule_element.updates:
@@ -38,7 +41,8 @@ def goto_next_state(state: State, schedule_element: ScheduleElement, previous_wr
     return __check_state(state, schedule_element, previous_writes)
 
 
-def __check_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[State, DataRace]:
+def __check_state(state: State, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement]) -> Union[
+    State, DataRace]:
     """checks the current state for data races.
     Raises ValueError, if a data race has been identified.
     Returns state, if no data race has been identified."""
@@ -63,7 +67,8 @@ def __check_state(state: State, schedule_element: ScheduleElement, previous_writ
     return state
 
 
-def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:
+def __perform_update(state: State, thread_id: int,
+                     update: Tuple[str, UpdateType, List[int], Optional[Operation]]) -> State:
     """Performs single update as contained in ScheduleElement."""
     update_var, update_type, affected_thread_ids, operation = update
     # ensure that state has vector clocks for given variable
@@ -73,22 +78,25 @@ def __perform_update(state: State, thread_id: int, update: Tuple[str, UpdateType
 
     if update_type is UpdateType.READ:
         # update variable read clock
-        if state.var_read_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
-            state.var_read_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
+        if state.var_read_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[
+            thread_clock_index]:
+            state.var_read_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[
+                thread_clock_index]
     elif update_type is UpdateType.WRITE:
         # update variable write clock
-        if state.var_write_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[thread_clock_index]:
-            state.var_write_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[thread_clock_index]
+        if state.var_write_clocks[update_var].clocks[thread_clock_index] < state.thread_clocks[thread_id].clocks[
+            thread_clock_index]:
+            state.var_write_clocks[update_var].clocks[thread_clock_index] = state.thread_clocks[thread_id].clocks[
+                thread_clock_index]
     elif update_type is UpdateType.ENTERPARALLEL:
         for tid in affected_thread_ids:
-
             state.thread_clocks[tid] = get_updated_vc(state.thread_clocks[tid],
                                                       state.thread_clocks[thread_id])
         increase(state.thread_clocks[thread_id], thread_clock_index)
     elif update_type is UpdateType.EXITPARALLEL:
         for tid in affected_thread_ids:
             state.thread_clocks[thread_id] = get_updated_vc(state.thread_clocks[thread_id],
-                                                                     state.thread_clocks[tid])
+                                                            state.thread_clocks[tid])
 
             increase(state.thread_clocks[tid], state.thread_id_to_clock_position_dict[tid])
     elif update_type is UpdateType.LOCK:
@@ -113,5 +121,3 @@ def get_filtered_data_race_strings(unfiltered_data_races: List[DataRace]) -> Lis
         if dr_str not in [fdr_str for fdr_str in filtered_data_race_strings]:
             filtered_data_race_strings.append(dr_str)
     return filtered_data_race_strings
-
-

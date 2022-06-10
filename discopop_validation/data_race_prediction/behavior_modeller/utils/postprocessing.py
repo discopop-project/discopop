@@ -1,7 +1,6 @@
 from typing import List
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
 def apply_post_processing(behavior_models: List[BehaviorModel]) -> List[BehaviorModel]:

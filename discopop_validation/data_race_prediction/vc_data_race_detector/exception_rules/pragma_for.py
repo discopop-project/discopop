@@ -1,7 +1,7 @@
 from discopop_explorer.PETGraphX import EdgeType, NodeType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type
-from discopop_validation.interfaces.discopop_explorer import is_loop_index
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
+from discopop_validation.interfaces.discopop_explorer import is_loop_index
 
 
 def __check_pragma_for_exception_rules(data_race: DataRace, pet, task_graph) -> bool:
@@ -20,7 +20,8 @@ def __for_exception_rule_1(data_race: DataRace, pet) -> bool:
         return True
     else:
         for index in data_race.get_used_indices():
-            parent_loop_node = get_parent_of_type(pet, pet.node_at(data_race.get_cu_id(pet)), NodeType.LOOP, EdgeType.CHILD, True)
+            parent_loop_node = get_parent_of_type(pet, pet.node_at(data_race.get_cu_id(pet)), NodeType.LOOP,
+                                                  EdgeType.CHILD, True)
             if len(parent_loop_node) != 1:
                 return False
             parent_loop_node_cu = parent_loop_node[0][0]

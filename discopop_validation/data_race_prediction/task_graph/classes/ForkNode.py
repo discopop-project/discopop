@@ -1,21 +1,20 @@
-import warnings
+import copy
 
 from typing import Optional, List
 
-from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
-import copy
+from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+
 
 class ForkNode(TaskGraphNode):
-    result : Optional[ResultObject]
+    result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
-    behavior_models : List[BehaviorModel]
+    behavior_models: List[BehaviorModel]
 
     def __init__(self, node_id, pragma=None):
         super().__init__(node_id, pragma)
@@ -36,7 +35,8 @@ class ForkNode(TaskGraphNode):
 
     def get_scheduling_graph_from_fork_node(self, task_graph, result_obj):
         """Creates and returns a scheduling graph representation of the current Fork node, repsectively it's successive nodes."""
-        out_seq_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        out_seq_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if
+                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
         out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if
                                 task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
 
@@ -50,8 +50,8 @@ class ForkNode(TaskGraphNode):
             current_path, current_node = path_queue.pop()
             visited.append((current_path, current_node))
             if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
-                #paths.append(current_path)
-                #continue
+                # paths.append(current_path)
+                # continue
                 # only consider join nodes which belong to the fork node
                 if current_node in [target for _, target in out_belongs_to_edges]:
                     paths.append(current_path)
@@ -72,14 +72,14 @@ class ForkNode(TaskGraphNode):
                 if (current_path, target) not in visited:
                     path_queue.append((copy.deepcopy(current_path), target))
 
-
         scheduling_graph = None
         for path in paths:
             path_scheduling_graph = None
             for elem in path:
                 task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
                 if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
-                    elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(task_graph, result_obj)
+                    elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
+                        task_graph, result_obj)
                 else:
                     behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
                     for model in behavior_models:

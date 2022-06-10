@@ -1,25 +1,18 @@
-import os
 import time
 import concurrent.futures
+import time
 from random import randrange
+
 from typing import List
 
-from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.core import \
     create_scheduling_graph_from_behavior_models, __convert_operation_list_to_schedule_element_list
 from discopop_validation.data_race_prediction.scheduler.utils.schedules import get_schedules
-from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
-from discopop_validation.data_race_prediction.target_code_sections.extraction import \
-    identify_target_sections_from_pragma
-from discopop_validation.data_race_prediction.behavior_modeller.core import extract_postprocessed_behavior_models
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import check_scheduling_graph
-from copy import deepcopy
-
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
 
@@ -27,8 +20,8 @@ def __bound_validation(run_configuration: Configuration, behavior_model_list: Li
     data_races = []
     # convert operations to schedule elements
     for thread_idx, behavior_model in enumerate(behavior_model_list):
-        behavior_model_list[thread_idx].schedule_elements = __convert_operation_list_to_schedule_element_list(behavior_model.operations, thread_idx)
-
+        behavior_model_list[thread_idx].schedule_elements = __convert_operation_list_to_schedule_element_list(
+            behavior_model.operations, thread_idx)
 
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -42,7 +35,8 @@ def __bound_validation(run_configuration: Configuration, behavior_model_list: Li
     return data_races
 
 
-def __build_and_validate_schedules(run_configuration: Configuration, behavior_model_list: List[BehaviorModel]) -> List[DataRace]:
+def __build_and_validate_schedules(run_configuration: Configuration, behavior_model_list: List[BehaviorModel]) -> List[
+    DataRace]:
     data_races: List[DataRace] = []
     time_start = time.time()
     while time.time() - time_start < run_configuration.validation_time_limit:

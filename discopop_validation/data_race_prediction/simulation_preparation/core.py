@@ -1,5 +1,7 @@
-from typing import List
 from copy import deepcopy
+
+from typing import List
+
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType

@@ -1,20 +1,16 @@
-import warnings
-
 from typing import Optional, List
 
-from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
-import copy
+from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+
 
 class PragmaTaskNode(TaskGraphNode):
-    result : Optional[ResultObject]
+    result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
-    behavior_models : List[BehaviorModel]
+    behavior_models: List[BehaviorModel]
 
     def __init__(self, node_id, pragma=None):
         super().__init__(node_id, pragma)
@@ -25,7 +21,7 @@ class PragmaTaskNode(TaskGraphNode):
     def get_label(self):
         if self.pragma is None:
             return "None"
-        label = str(self.node_id) +" " +  "Task\n"
+        label = str(self.node_id) + " " + "Task\n"
         label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
         return label
 
@@ -51,7 +47,8 @@ class PragmaTaskNode(TaskGraphNode):
                         incoming += 1
                 if incoming == 0:
                     # target is the beginning of a new sequence
-                    inner_par_behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                    inner_par_behavior_models.append(
+                        task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
             if len(inner_par_behavior_models) > 1:
                 outer_par_behavior_models.append(inner_par_behavior_models)  # type: ignore
 
@@ -59,5 +56,6 @@ class PragmaTaskNode(TaskGraphNode):
         # gather behavior models of successor nodes
         for source, target in task_graph.graph.out_edges(self.node_id):
             if task_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
-                outer_seq_behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                outer_seq_behavior_models.append(
+                    task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
         return outer_seq_behavior_models

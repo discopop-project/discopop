@@ -1,3 +1,7 @@
+import copy
+import warnings
+
+import networkx as nx  # type: ignore
 from typing import List
 
 from discopop_validation.classes.OmpPragma import PragmaType
@@ -9,12 +13,7 @@ from discopop_validation.data_race_prediction.scheduler.core import create_sched
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
-import warnings
-import copy
-import networkx as nx  # type: ignore
-
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 
 
@@ -55,6 +54,7 @@ def get_sequence_entry_points(task_graph, root_id) -> List[int]:
             entry_points.append(node)
     return entry_points
 
+
 def get_contained_exit_points(task_graph, root_id) -> List[int]:
     """returns nodeIds of exit points of root's contained sequences"""
     exit_points = []
@@ -68,6 +68,7 @@ def get_contained_exit_points(task_graph, root_id) -> List[int]:
             exit_points.append(target)
     return exit_points
 
+
 def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # exit parallel section
     for idx, state in enumerate(result_obj.states):
@@ -77,7 +78,7 @@ def __join_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         if len(affected_thread_ids) == 0:
             continue
         exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL,
-                                             affected_thread_ids=affected_thread_ids)
+                                            affected_thread_ids=affected_thread_ids)
         result_obj.states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
     return result_obj
 
@@ -87,7 +88,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     Replaces outgoing SEQUENTIAL edges with contained edges"""
     # replace outgoing contains with sequential edges, if the target is not a JOIN node
     out_seq_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
-                           task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                     task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
     for edge in out_seq_edges:
         if task_graph.graph.nodes[edge[1]]["data"].get_label() == "Join":
             continue
@@ -96,7 +97,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
     out_contained_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
                            task_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
     out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(node_obj.node_id) if
-                           task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+                            task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
     # construct paths to next join node in a BFS manner
     paths = []
     path_queue = []
@@ -119,10 +120,12 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         if task_graph.graph.nodes[current_node]["data"].get_label() == "Fork":
             print("ENCOUNTERED FORK NODE: ", current_node)
             current_path.append(current_node)
-            out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(current_node) if task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+            out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
+                                    task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
             for _, related_join_node in out_belongs_to_edges:
                 print("ADD SUCCESSORS OF RELATED JOIN: ", related_join_node, "TO QUEUE")
-                join_out_seq_edges = [edge for edge in task_graph.graph.out_edges(related_join_node) if task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                join_out_seq_edges = [edge for edge in task_graph.graph.out_edges(related_join_node) if
+                                      task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 for _, successor in join_out_seq_edges:
                     print("--> SUCC: ", successor)
                     path_queue.append((copy.deepcopy(current_path), successor))
@@ -155,7 +158,8 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         for elem in path:
             task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
             if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
-                elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(task_graph, result_obj)
+                elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
+                    task_graph, result_obj)
             else:
                 behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
                 if len(behavior_models) == 0:
@@ -180,7 +184,7 @@ def __fork_node_result_computation(node_obj, task_graph, result_obj, thread_ids)
         # create new clocks if necessary
         for idx, state in enumerate(result_obj.states):
             ## create new thread clocks for state if necessary
-            #if state.thread_count < scheduling_graph.thread_count:
+            # if state.thread_count < scheduling_graph.thread_count:
             #    stc_buffer = state.thread_count
             #    state.fill_to_thread_count(scheduling_graph.thread_count)
 
@@ -210,7 +214,7 @@ def __behavior_node_result_computation(node_obj, task_graph, result_obj, thread_
     for model in behavior_models:
         model.use_fingerprint(result_obj.get_current_fingerprint())
     # todo include?: prepare behavior models for simulation
-    #behavior_information = prepare_for_simulation([behavior_information])
+    # behavior_information = prepare_for_simulation([behavior_information])
     # create scheduling graph from behavior models
     scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_models)
     # update result_obj
@@ -227,7 +231,9 @@ def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
     if len(entry_points) < 1:
         return result_obj
     entry_point = entry_points[0]
-    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph,
+                                                                                   copy.deepcopy(result_obj),
+                                                                                   thread_ids)
     # exiting a parallel region closes the current scope
     calculated_result.pop_fingerprint()
     return calculated_result
@@ -236,7 +242,9 @@ def __parallel_result_computation(node_obj, task_graph, result_obj, thread_ids):
 def __for_result_computation(node_obj, task_graph, result_obj, thread_ids):
     # FOR has no effect aside from storing behavior information
     entry_point = get_sequence_entry_points(task_graph, node_obj.node_id)[0]
-    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph, copy.deepcopy(result_obj), thread_ids)
+    calculated_result = task_graph.graph.nodes[entry_point]["data"].compute_result(task_graph,
+                                                                                   copy.deepcopy(result_obj),
+                                                                                   thread_ids)
     return calculated_result
 
 
@@ -275,14 +283,14 @@ def __unused_parallel_result_computation(node_obj, task_graph):
             if target_has_incoming_seq_edge:
                 continue
             # target is the beginning of a contained sequence -> collect behavior model
-            behavior_models.append(task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, node_obj.result))
+            behavior_models.append(
+                task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, node_obj.result))
         if len(behavior_models) > 1:
             behavior_model_sequence.append(behavior_models)
 
     # todo recursive unpacking
 
     # todo move closest to computation to avoid double unpacking
-
 
     def __clean_behavior_model_sequence(sequence):
         result_sequence = []
@@ -298,7 +306,6 @@ def __unused_parallel_result_computation(node_obj, task_graph):
 
     # todo: Why is line 30 read before 28 is written? should be suppressed by sequential composition
 
-
     def __unpack_behavior_models_to_successive_scheduling_graphs(behavior_information):
         graph_list: List[SchedulingGraph] = []
         if type(behavior_information) == BehaviorModel:
@@ -306,7 +313,8 @@ def __unused_parallel_result_computation(node_obj, task_graph):
             # modify behavior models to use current fingerprint
             behavior_information.use_fingerprint(node_obj.result.get_current_fingerprint())
             # prepare behavior models for simulation
-            behavior_information = prepare_for_simulation([behavior_information])  # todo use global variables to save states regarding reduction removal etc.
+            behavior_information = prepare_for_simulation(
+                [behavior_information])  # todo use global variables to save states regarding reduction removal etc.
             # create scheduling graph from behavior models
             scheduling_graph, dimensions = create_scheduling_graph_from_behavior_models(behavior_information)
             return [scheduling_graph]
@@ -367,12 +375,10 @@ def __unused_parallel_result_computation(node_obj, task_graph):
 
         raise ValueError("Unknown: ", behavior_information)
 
-
-
     scheduling_graphs = __unpack_behavior_models_to_successive_scheduling_graphs(behavior_model_sequence)
     for idx, graph in enumerate(scheduling_graphs):
         if type(graph) != str and graph is not None:
-            nx.drawing.nx_pydot.write_dot(graph.graph, "/home/lukas/graph"+str(idx)+".dot")
+            nx.drawing.nx_pydot.write_dot(graph.graph, "/home/lukas/graph" + str(idx) + ".dot")
 
     data_races: List[DataRace] = []
     successful_states = []
@@ -382,14 +388,16 @@ def __unused_parallel_result_computation(node_obj, task_graph):
             for idx, state in enumerate(successful_states):
                 enter_parallel_sched_elem = ScheduleElement(0)
                 affected_thread_ids = range(1, state.thread_count)
-                enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL, affected_thread_ids=affected_thread_ids)
+                enter_parallel_sched_elem.add_update("", UpdateType.ENTERPARALLEL,
+                                                     affected_thread_ids=affected_thread_ids)
                 successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
         elif graph == "EXITPARALLEL":
             # modify successful states using a EXITPARALLEL update
             for idx, state in enumerate(successful_states):
                 exit_parallel_sched_elem = ScheduleElement(0)
                 affected_thread_ids = range(1, state.thread_count)
-                exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL, affected_thread_ids=affected_thread_ids)
+                exit_parallel_sched_elem.add_update("", UpdateType.EXITPARALLEL,
+                                                    affected_thread_ids=affected_thread_ids)
                 successful_states[idx] = goto_next_state(state, exit_parallel_sched_elem, [])
         elif graph is None:
             # used as a separator
@@ -408,7 +416,8 @@ def __unused_parallel_result_computation(node_obj, task_graph):
                                                          affected_thread_ids=affected_thread_ids)
                     successful_states[idx] = goto_next_state(state, enter_parallel_sched_elem, [])
 
-            tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions, successful_states)
+            tmp_data_races, successful_states = get_data_races_and_successful_states(graph, graph.dimensions,
+                                                                                     successful_states)
             data_races += tmp_data_races
             # remove duplicates from successful states
             successful_states_wo_duplicates = []
@@ -424,7 +433,7 @@ def __unused_parallel_result_computation(node_obj, task_graph):
             if len(successful_states) == 0:
                 raise ValueError("BLUB")
 
-    #data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
+    # data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions)
 
     # store results
     node_obj.result.data_races = data_races
@@ -433,5 +442,5 @@ def __unused_parallel_result_computation(node_obj, task_graph):
     for dr in node_obj.result.data_races:
         print(dr)
 
-    #for succ_states in node_obj.result.states:
+    # for succ_states in node_obj.result.states:
     #    print(succ_states)

@@ -10,6 +10,7 @@ class ScheduleElement:
     lock_names: List[str] = []
     var_names: List[str] = []
     updates: List[Tuple[str, UpdateType, List[int], Optional[Operation]]] = []
+
     # str represents variable identifier
     # inner List[int] represents affected thread_id´s, used for entry and exit of parallel regions
     # one ScheduleElement can contain multiple updates. example: x=x+y
@@ -21,7 +22,8 @@ class ScheduleElement:
         self.updates = []
 
     def __str__(self):
-        return "Thread:" + str(self.thread_id) + " Operation:" + " ".join([" "+str(operation) for (var_name, update_type, _, operation) in self.updates])
+        return "Thread:" + str(self.thread_id) + " Operation:" + " ".join(
+            [" " + str(operation) for (var_name, update_type, _, operation) in self.updates])
 
     def get_location_str(self):
         """used for outputting data races to file"""
@@ -51,7 +53,8 @@ class ScheduleElement:
                 return True
         return False
 
-    def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None, operation: Optional[Operation] = None):
+    def add_update(self, var_name: str, update_type: UpdateType, affected_thread_ids: Optional[List[int]] = None,
+                   operation: Optional[Operation] = None):
         """Add update of type update_type to var_name to the list of updates of the current ScheduleElement
         raises ValueError, if updateType is ENTERPARALLEL or EXITPARALLEL and affected_thread_ids is not set.
         :param var_name: name of updated variable

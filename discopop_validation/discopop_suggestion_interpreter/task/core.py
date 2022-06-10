@@ -26,6 +26,5 @@ def interpret_task_suggestion(suggestion) -> OmpPragma:
     pragma += "shared(" + shared + ") "
     pragma += "depend(" + shared + ") "
 
-
     # return OmpPragma object
     return OmpPragma().init_with_values(file_id, start_line, end_line, pragma)

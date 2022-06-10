@@ -30,14 +30,16 @@ def insert_critical_sections(bb_graph, parallelization_suggestions):
                 # determine unlock index
                 while insert_idx_unlock > 0 and operation_lines[insert_idx_unlock - 1] > cs_end_line:
                     insert_idx_unlock -= 1
-                unlock_column = bb_node.operations[insert_idx_unlock-1].col + 1
+                unlock_column = bb_node.operations[insert_idx_unlock - 1].col + 1
                 # get random "variable" name to lock
                 import random
                 hash = random.getrandbits(128)
                 hash = "%032x" % hash
                 # insert unlock operation
-                unlock_operation = Operation("critical_section", None, None, "u", hash, cs_end_line, unlock_column, cs_end_line, unlock_column)
+                unlock_operation = Operation("critical_section", None, None, "u", hash, cs_end_line, unlock_column,
+                                             cs_end_line, unlock_column)
                 bb_node.operations.insert(insert_idx_unlock, unlock_operation)
                 # insert lock operation
-                lock_operation = Operation("critical_section", None, None, "l", hash, cs_start_line, unlock_column, cs_start_line, unlock_column)
+                lock_operation = Operation("critical_section", None, None, "l", hash, cs_start_line, unlock_column,
+                                           cs_start_line, unlock_column)
                 bb_node.operations.insert(insert_idx_lock, lock_operation)

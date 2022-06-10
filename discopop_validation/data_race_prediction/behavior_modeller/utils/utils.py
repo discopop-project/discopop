@@ -9,8 +9,9 @@ def get_paths(bb_graph):
     """constructs and returns a list containing a list of all possible paths through the given BBGraph."""
     path_dict: Dict[int, List[List[BBNode]]] = {}
 
-    def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[List[
-        BBNode]]:
+    def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[
+        List[
+            BBNode]]:
         if root_bb_node.id not in bb_graph.graph.nodes:
             return []
         children_paths: List[List[BBNode]] = []
@@ -46,8 +47,9 @@ def old_get_paths_for_sections(bb_graph):
     possible paths for the given section"""
     path_dict: Dict[int, List[List[BBNode]]] = {}
 
-    def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[List[
-        BBNode]]:
+    def __rec_construct_pathlist(root_bb_node: BBNode, entry_point_bb: BBNode, visited_root_bbs: List[BBNode]) -> List[
+        List[
+            BBNode]]:
         if root_bb_node.id not in bb_graph.graph.nodes:
             return []
         children_paths: List[List[BBNode]] = []

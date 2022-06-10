@@ -43,9 +43,9 @@ def __convert_path_to_schedule(path: List[ScheduleElement]) -> Schedule:
 
 def get_schedules(graph, root_node_identifier) -> List[Schedule]:
     paths = __get_paths(graph, root_node_identifier)
-    #for path in paths:
-     #   print()
-      #  print([str(e) for e in path])
+    # for path in paths:
+    #   print()
+    #  print([str(e) for e in path])
     schedules: List[Schedule] = []
     for path in paths:
         schedules.append(__convert_path_to_schedule(path))
