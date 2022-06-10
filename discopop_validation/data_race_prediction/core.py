@@ -23,60 +23,6 @@ from copy import deepcopy
 from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import check_schedule
 
 
-def old_validate_omp_pragma(run_configuration: Configuration, pet: PETGraphX, pragma: OmpPragma, omp_pragmas: List[OmpPragma]):
-    # apply preprocessing to pragma
-    pragma.apply_preprocessing()
-
-    if run_configuration.verbose_mode:
-        print("identify target code sections...")
-    target_code_sections = identify_target_sections_from_pragma(pragma)
-
-    if run_configuration.verbose_mode:
-        print("extract behavior model...")
-    for tcs in target_code_sections:
-        behavior_models: List[BehaviorModel] = extract_postprocessed_behavior_models(run_configuration, pet, tcs, pragma, omp_pragmas)
-        if run_configuration.verbose_mode:
-            for model in behavior_models:
-                print("Behavior Model:")
-                for op in model.operations:
-                    print("\t", op)
-
-        # prepare extracted behavior models for simulation
-        behavior_model_list = prepare_for_simulation(behavior_models)
-
-        if run_configuration.validation_time_limit == "None":
-            # no time limit set, execute full validation
-            data_races = __full_validation(run_configuration, behavior_model_list)
-        else:
-            # time limit set, execute bound validation
-            run_configuration.validation_time_limit = int(run_configuration.validation_time_limit)
-            data_races = __bound_validation(run_configuration, behavior_model_list)
-
-        # remove duplicates from data races
-        data_races_without_duplicates = []
-        data_race_tuple_buffer = []
-        for data_race in data_races:
-            tuple = data_race.get_tuple()
-            if tuple in data_race_tuple_buffer:
-                continue
-            data_race_tuple_buffer.append(tuple)
-            data_races_without_duplicates.append(data_race)
-        for dr in data_races_without_duplicates:
-            print()
-            print(dr)
-        # output found data races to file if requested
-        if run_configuration.data_race_ouput_path != "None":
-            if os.path.exists(run_configuration.data_race_ouput_path):
-                os.remove(run_configuration.data_race_ouput_path)
-            with open(run_configuration.data_race_ouput_path, "w+") as f:
-                f.write("fileID;line;column\n")
-                for dr in data_races_without_duplicates:
-                    f.write(dr.get_location_str() + "\n")
-        print("Found Data Races: ", len(data_races))
-        print("W/O Duplicates: ", len(data_races_without_duplicates))
-
-
-
 def __bound_validation(run_configuration: Configuration, behavior_model_list: List[BehaviorModel]) -> List[DataRace]:
     data_races = []
     # convert operations to schedule elements
