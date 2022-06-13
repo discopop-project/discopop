@@ -40,9 +40,9 @@ from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
@@ -151,7 +151,7 @@ def __main_start_execution(run_configuration: Configuration):
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
     time_start_ps = time.time()
-    time_total_task_graph = 0.0
+    time_total_pc_graph = 0.0
     time_bhv_extraction_total = 0.0
     time_data_race_computation_total = 0.0
     pet: PETGraphX = get_pet_graph(run_configuration)
@@ -171,114 +171,114 @@ def __main_start_execution(run_configuration: Configuration):
             os.remove(run_configuration.data_race_ouput_path)
 
     for omp_pragmas in omp_pragma_list:
-        # construct task graph
-        time_task_graph_start = time.time()
-        task_graph = TaskGraph()
+        # construct parallel construct graph
+        time_pc_graph_start = time.time()
+        pc_graph = PCGraph()
 
         for pragma in omp_pragmas:
-            task_graph.add_pragma_node(pragma)
+            pc_graph.add_pragma_node(pragma)
         # insert nodes for called functions
-        task_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+        pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
         # insert contains edges between function nodes and contained pragma nodes
-        task_graph.insert_function_contains_edges()
+        pc_graph.insert_function_contains_edges()
         # remove all but the best fitting CALLS edges for each function call in the source code
-        task_graph.remove_incorrect_function_contains_edges()
+        pc_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
-        task_graph.add_edges(pet, omp_pragmas)
+        pc_graph.add_edges(pet, omp_pragmas)
         # pass shared clauses to child nodes
-        task_graph.pass_shared_clauses_to_childnodes()
+        pc_graph.pass_shared_clauses_to_childnodes()
 
         # remove redundant successor edges
-        task_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
+        pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
         # move successor edges if source is contained in a different pragma
-        task_graph.move_successor_edges_if_source_is_contained_in_pragma()
+        pc_graph.move_successor_edges_if_source_is_contained_in_pragma()
         # move successor edges if target is contained in a different pragma
-        task_graph.move_successor_edges_if_target_is_contained_in_pragma()
+        pc_graph.move_successor_edges_if_target_is_contained_in_pragma()
         # create implicit barriers
-        task_graph.insert_implicit_barriers()
+        pc_graph.insert_implicit_barriers()
 
         # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
         # add depends edges between interdependent TASK nodes
-        task_graph.add_depends_edges()
+        pc_graph.add_depends_edges()
         # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-        task_graph.redirect_tasks_successors()
+        pc_graph.redirect_tasks_successors()
         # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
-        task_graph.replace_depends_with_sequential_edges()
+        pc_graph.replace_depends_with_sequential_edges()
         # extract and insert behavior models for pragmas
         time_bhv_extraction_start = time.time()
-        task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+        pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
-        task_graph.insert_behavior_storage_nodes()
+        pc_graph.insert_behavior_storage_nodes()
         # remove CalledFunctionNodes
-        task_graph.remove_called_function_nodes()
+        pc_graph.remove_called_function_nodes()
         # remove redundant CONTAINS edges
-        task_graph.remove_redundant_edges([EdgeType.CONTAINS])
+        pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
-        # task_graph.add_virtual_sequential_edges()
+        # parallel_construct_graph.add_virtual_sequential_edges()
         # skip successive TASKWAIT node, if no prior TASK node exists
-        task_graph.skip_taskwait_if_no_prior_task_exists()
+        pc_graph.skip_taskwait_if_no_prior_task_exists()
 
-        task_graph.add_fork_and_join_nodes()
+        pc_graph.add_fork_and_join_nodes()
         # remove TASKWAIT nodes without prior TASK node
-        task_graph.remove_taskwait_without_prior_task()
-        #task_graph.plot_graph()
+        pc_graph.remove_taskwait_without_prior_task()
+        #parallel_construct_graph.plot_graph()
         # add join nodes prior to Barriers and Taskwait nodes
-        task_graph.add_join_nodes_before_barriers()
+        pc_graph.add_join_nodes_before_barriers()
         # add join nodes at path merge points to reduce complexity
         # NOT VALID
-        # task_graph.add_join_nodes_before_path_merge()
+        # parallel_construct_graph.add_join_nodes_before_path_merge()
         # add fork nodes at path splits which are not caused by other FORK nodes
-        task_graph.add_fork_nodes_at_path_splits()
+        pc_graph.add_fork_nodes_at_path_splits()
         # remove SINGLE nodes from graph and replace with contained nodes
-        task_graph.replace_pragma_single_nodes()
+        pc_graph.replace_pragma_single_nodes()
         # remove FOR nodes from graph and replace with contained nodes
-        task_graph.replace_pragma_for_nodes()
+        pc_graph.replace_pragma_for_nodes()
         # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
-        task_graph.remove_single_incoming_join_node()
+        pc_graph.remove_single_incoming_join_node()
         # remove sequential edges between Fork and Join nodes
-        task_graph.remove_edges_between_fork_and_join()
+        pc_graph.remove_edges_between_fork_and_join()
         # add BELONGS_TO edges between Fork and Join nodes
-        task_graph.add_belongs_to_edges()
+        pc_graph.add_belongs_to_edges()
         # mark behavior storage nodes which are already covered by fork nodes
-        task_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
+        pc_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
         # add fork and join nodes around behavior storage node if it's not contained in a fork section
-        task_graph.add_fork_and_join_around_behavior_storage_nodes()
+        pc_graph.add_fork_and_join_around_behavior_storage_nodes()
 
         # remove behavior models from all but BehaviorStorageNodes
-        task_graph.remove_behavior_models_from_nodes()
+        pc_graph.remove_behavior_models_from_nodes()
 
         # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
         # todo remove / ignore irrelevant join nodes
         # todo enable nested fork nodes
 
-        time_task_graph_end = time.time()
-        time_total_task_graph += time_task_graph_end - time_task_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
+        time_pc_graph_end = time.time()
+        time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
-        #task_graph.plot_graph()
+        #parallel_construct_graph.plot_graph()
 
-        memory_access_graph = MemoryAccessGraph(task_graph)
+        memory_access_graph = MemoryAccessGraph(pc_graph)
 
         time_data_race_computation_start = time.time()
 
 
 #        # trigger result computation
-#        computed_result: ResultObject = task_graph.compute_results()
+#        computed_result: ResultObject = parallel_construct_graph.compute_results()
 #        # apply exception rules to detected data races
-#        computed_result.apply_exception_rules_to_data_races(pet, task_graph)
+#        computed_result.apply_exception_rules_to_data_races(pet, parallel_construct_graph)
 #        time_data_race_computation_end = time.time()
 #        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
 #        # print detected data races
 #        computed_result.print_data_races()
 #        # add identified data races to graph nodes for plotting
-#        task_graph.add_data_races_to_graph(computed_result)
+#        parallel_construct_graph.add_data_races_to_graph(computed_result)
 #
-#        #task_graph.plot_graph(mark_data_races=True)
-#        #task_graph.plot_graph(mark_data_races=False)
+#        #parallel_construct_graph.plot_graph(mark_data_races=True)
+#        #parallel_construct_graph.plot_graph(mark_data_races=False)
 #
 #        # output found data races to file if requested
 #        if run_configuration.data_race_ouput_path != "None":
@@ -336,7 +336,7 @@ def __main_start_execution(run_configuration: Configuration):
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
     print("--- Get parallelization suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Create Task graph: %s seconds ---" % (time_total_task_graph))
+    print("--- Create Task graph: %s seconds ---" % (time_total_pc_graph))
     print("--- Behavior Extraction: %s seconds ---" % (time_bhv_extraction_total))
     print("--- Calculate Data races: %s seconds ---" % (time_data_race_computation_total))
     print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))

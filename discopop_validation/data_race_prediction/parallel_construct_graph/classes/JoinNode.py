@@ -2,11 +2,11 @@ from typing import Optional, List
 
 from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 
 
-class PragmaParallelNode(TaskGraphNode):
+class JoinNode(PCGraphNode):
     result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
@@ -18,14 +18,11 @@ class PragmaParallelNode(TaskGraphNode):
         return str(self.node_id)
 
     def get_label(self):
-        if self.pragma is None:
-            return "None"
-        label = str(self.node_id) + " " + "Par\n"
-        label += str(self.pragma.file_id) + ":" + str(self.pragma.start_line) + "-" + str(self.pragma.end_line)
-        return label
+        # must not be modified!
+        return "Join"
 
     def get_color(self, mark_data_races: bool):
-        color = "orange"
+        color = "yellow"
         if mark_data_races:
             if len(self.data_races) > 0:
                 color = "red"

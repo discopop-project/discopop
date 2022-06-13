@@ -2,12 +2,12 @@ from typing import Optional, List
 
 from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 
 
-class PragmaSingleNode(TaskGraphNode):
+class PragmaSingleNode(PCGraphNode):
     result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
@@ -32,7 +32,7 @@ class PragmaSingleNode(TaskGraphNode):
                 color = "red"
         return color
 
-    def get_behavior_models(self, task_graph, result_obj):
+    def get_behavior_models(self, pc_graph, result_obj):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
         updates results thread count entry."""
         result_obj.push_thread_count(1)
@@ -40,27 +40,27 @@ class PragmaSingleNode(TaskGraphNode):
         outer_seq_behavior_models: List[List[BehaviorModel]] = ["SEQ"]
         outer_par_behavior_models: List[List[BehaviorModel]] = ["PAR"]
         # gather behavior models of contained nodes
-        for source, target in task_graph.graph.out_edges(self.node_id):
+        for source, target in pc_graph.graph.out_edges(self.node_id):
             inner_par_behavior_models = ["PAR"]
-            if task_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS:
+            if pc_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS:
                 # check if contained node is at the beginning of a sequence
                 incoming = 0
-                for inner_source, inner_target in task_graph.graph.in_edges(target):
-                    if task_graph.graph.edges[(inner_source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
+                for inner_source, inner_target in pc_graph.graph.in_edges(target):
+                    if pc_graph.graph.edges[(inner_source, inner_target)]["type"] == EdgeType.SEQUENTIAL:
                         incoming += 1
                 if incoming == 0:
                     # target is the beginning of a new sequence
                     inner_par_behavior_models.append(
-                        task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                        pc_graph.graph.nodes[target]["data"].get_behavior_models(pc_graph, result_obj))
             if len(inner_par_behavior_models) > 1:
                 outer_par_behavior_models.append(inner_par_behavior_models)
 
         outer_seq_behavior_models.append(outer_par_behavior_models)
         # gather behavior models of successor nodes
-        for source, target in task_graph.graph.out_edges(self.node_id):
-            if task_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
+        for source, target in pc_graph.graph.out_edges(self.node_id):
+            if pc_graph.graph.edges[(source, target)]["type"] == EdgeType.SEQUENTIAL:
                 outer_seq_behavior_models.append(
-                    task_graph.graph.nodes[target]["data"].get_behavior_models(task_graph, result_obj))
+                    pc_graph.graph.nodes[target]["data"].get_behavior_models(pc_graph, result_obj))
 
         result_obj.pop_thread_count()
         return outer_seq_behavior_models

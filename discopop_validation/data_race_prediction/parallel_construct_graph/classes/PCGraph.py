@@ -9,26 +9,26 @@ from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
-from discopop_validation.data_race_prediction.task_graph.classes.CalledFunctionNode import CalledFunctionNode
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.ForkNode import ForkNode
-from discopop_validation.data_race_prediction.task_graph.classes.JoinNode import JoinNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaForNode import PragmaForNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaSingleNode import PragmaSingleNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaTaskNode import PragmaTaskNode
-from discopop_validation.data_race_prediction.task_graph.classes.PragmaTaskwaitNode import PragmaTaskwaitNode
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
-from discopop_validation.data_race_prediction.task_graph.utils.NodeSpecificComputations import \
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.CalledFunctionNode import CalledFunctionNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.JoinNode import JoinNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaBarrierNode import PragmaBarrierNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaForNode import PragmaForNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaParallelNode import PragmaParallelNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaSingleNode import PragmaSingleNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskNode import PragmaTaskNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import PragmaTaskwaitNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.utils.NodeSpecificComputations import \
     get_sequence_entry_points, \
     get_contained_exit_points
 from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
 
-class TaskGraph(object):
+class PCGraph(object):
     graph: nx.MultiDiGraph
     next_free_node_id: int
     pragma_to_node_id: Dict[OmpPragma, int]
@@ -38,7 +38,7 @@ class TaskGraph(object):
         # add root node, id = (tuple of n zero´s, last executed thread id)
         self.next_free_node_id = 0
         self.pragma_to_node_id = dict()
-        self.graph.add_node(self.__get_new_node_id(), data=TaskGraphNode(0))
+        self.graph.add_node(self.__get_new_node_id(), data=PCGraphNode(0))
 
     def __get_new_node_id(self) -> int:
         buffer = self.next_free_node_id
@@ -66,16 +66,16 @@ class TaskGraph(object):
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 
-    def get_children_of_node(self, node: TaskGraphNode, edge_types: List[EdgeType]) -> List[TaskGraphNode]:
+    def get_children_of_node(self, node: PCGraphNode, edge_types: List[EdgeType]) -> List[PCGraphNode]:
         out_edges = [edge for edge in self.graph.out_edges(node.node_id) if
                     self.graph.edges[edge]["type"] in edge_types]
         children = [self.get_node_from_id(target) for source, target in out_edges]
         return children
 
-    def get_node_from_id(self, node_id) -> TaskGraphNode:
+    def get_node_from_id(self, node_id) -> PCGraphNode:
         return self.graph.nodes[node_id]["data"]
 
-    def get_incoming_edges_of_node(self, node: TaskGraphNode, edge_types: List[EdgeType]) -> List[Tuple[int, int]]:
+    def get_incoming_edges_of_node(self, node: PCGraphNode, edge_types: List[EdgeType]) -> List[Tuple[int, int]]:
         in_edges = [edge for edge in self.graph.in_edges(node.node_id) if self.graph.edges[edge]["type"] in edge_types]
         return in_edges
 
@@ -83,7 +83,7 @@ class TaskGraph(object):
         """adds a new node to the graph with incoming edges from each node specified in parent_node_id_list and
         returns the node_id of the newly created node."""
         new_node_id = self.__get_new_node_id()
-        self.graph.add_node(new_node_id, data=TaskGraphNode(new_node_id))
+        self.graph.add_node(new_node_id, data=PCGraphNode(new_node_id))
         for parent_node_id in parent_node_id_list:
             self.graph.add_edge(parent_node_id, new_node_id)
         return new_node_id
@@ -586,7 +586,7 @@ class TaskGraph(object):
 
     def insert_behavior_storage_nodes(self):
         """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
-        modify_nodes: List[Tuple[str, int, TaskGraphNode]] = []
+        modify_nodes: List[Tuple[str, int, PCGraphNode]] = []
         modify_edges: List[Tuple[str, int, int, EdgeType]] = []
         edge_replacements = dict()
 
@@ -602,7 +602,7 @@ class TaskGraph(object):
             # create contained BehaviorStorageNodes
             for model in self.graph.nodes[node]["data"].behavior_models:
                 new_node_id = self.__get_new_node_id()
-                behavior_storage_node = TaskGraphNode(new_node_id)
+                behavior_storage_node = PCGraphNode(new_node_id)
                 behavior_storage_node.behavior_models.append(model)
                 # set thread count to 1 if parent is PragmaSingleNode
                 if type(self.graph.nodes[node]["data"]) == PragmaSingleNode:
@@ -966,7 +966,7 @@ class TaskGraph(object):
     def add_data_races_to_graph(self, computed_result):
         for node in self.graph.nodes:
             # only consider behavior nodes
-            if type(self.graph.nodes[node]["data"]) != TaskGraphNode:
+            if type(self.graph.nodes[node]["data"]) != PCGraphNode:
                 continue
             node_behavior_models = self.graph.nodes[node]["data"].behavior_models
             if node_behavior_models is None:
@@ -1208,7 +1208,7 @@ class TaskGraph(object):
 
     def remove_behavior_models_from_nodes(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) != TaskGraphNode:
+            if type(self.graph.nodes[node]["data"]) != PCGraphNode:
                 # remove behavior models from all but behavior storage nodes
                 self.graph.nodes[node]["data"].behavior_models = []
 
@@ -1313,14 +1313,14 @@ class TaskGraph(object):
             # create contains edges from fork node to contained behavior storage nodes
             for path in paths:
                 for elem in path:
-                    if type(self.graph.nodes[elem]["data"]) == TaskGraphNode:
+                    if type(self.graph.nodes[elem]["data"]) == PCGraphNode:
                         self.graph.nodes[elem]["data"].covered_by_fork_node = True
 
     def add_fork_and_join_around_behavior_storage_nodes(self):
         """add fork and join nodes around behavior storage nodes which are not already covered by a fork section"""
         buffer = copy.deepcopy(self.graph.nodes)
         for node in buffer:
-            if type(self.graph.nodes[node]["data"]) == TaskGraphNode:
+            if type(self.graph.nodes[node]["data"]) == PCGraphNode:
                 # skip root node
                 if node == 0:
                     continue

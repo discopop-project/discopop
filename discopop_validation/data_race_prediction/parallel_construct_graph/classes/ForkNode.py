@@ -6,12 +6,12 @@ from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
 from discopop_validation.data_race_prediction.simulation_preparation.core import prepare_for_simulation
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 
 
-class ForkNode(TaskGraphNode):
+class ForkNode(PCGraphNode):
     result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
@@ -33,12 +33,12 @@ class ForkNode(TaskGraphNode):
                 color = "red"
         return color
 
-    def get_scheduling_graph_from_fork_node(self, task_graph, result_obj):
+    def get_scheduling_graph_from_fork_node(self, pc_graph, result_obj):
         """Creates and returns a scheduling graph representation of the current Fork node, repsectively it's successive nodes."""
-        out_seq_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if
-                         task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-        out_belongs_to_edges = [edge for edge in task_graph.graph.out_edges(self.node_id) if
-                                task_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+        out_seq_edges = [edge for edge in pc_graph.graph.out_edges(self.node_id) if
+                         pc_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        out_belongs_to_edges = [edge for edge in pc_graph.graph.out_edges(self.node_id) if
+                                pc_graph.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
 
         # collect successor paths to join nodes
         paths = []
@@ -49,7 +49,7 @@ class ForkNode(TaskGraphNode):
         while len(path_queue) > 0:
             current_path, current_node = path_queue.pop()
             visited.append((current_path, current_node))
-            if task_graph.graph.nodes[current_node]["data"].get_label() == "Join":
+            if pc_graph.graph.nodes[current_node]["data"].get_label() == "Join":
                 # paths.append(current_path)
                 # continue
                 # only consider join nodes which belong to the fork node
@@ -57,8 +57,8 @@ class ForkNode(TaskGraphNode):
                     paths.append(current_path)
                     continue
 
-            out_seq_edges = [edge for edge in task_graph.graph.out_edges(current_node) if
-                             task_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
+            out_seq_edges = [edge for edge in pc_graph.graph.out_edges(current_node) if
+                             pc_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and edge[0] != edge[1]]
             # check if end of path reached
             if len(out_seq_edges) == 0:
                 # end of path found, append current_node to current_path
@@ -76,12 +76,12 @@ class ForkNode(TaskGraphNode):
         for path in paths:
             path_scheduling_graph = None
             for elem in path:
-                task_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
-                if task_graph.graph.nodes[elem]["data"].get_label() == "Fork":
-                    elem_scheduling_graph = task_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
-                        task_graph, result_obj)
+                pc_graph.graph.nodes[elem]["data"].seen_in_result_computation = True
+                if pc_graph.graph.nodes[elem]["data"].get_label() == "Fork":
+                    elem_scheduling_graph = pc_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
+                        pc_graph, result_obj)
                 else:
-                    behavior_models = task_graph.graph.nodes[elem]["data"].behavior_models
+                    behavior_models = pc_graph.graph.nodes[elem]["data"].behavior_models
                     for model in behavior_models:
                         model.use_fingerprint(result_obj.get_current_fingerprint())
 

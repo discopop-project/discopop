@@ -1,6 +1,6 @@
 from typing import List
 
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
 
 
@@ -12,8 +12,8 @@ class PUStack(object):
     def __init__(self):
         self.contents = []
 
-    def push(self, parallel_frame_id: int, origin_task_graph_node: TaskGraphNode):
-        parallel_frame = ParallelUnit(parallel_frame_id, origin_task_graph_node)
+    def push(self, parallel_frame_id: int, origin_pc_graph_node: PCGraphNode):
+        parallel_frame = ParallelUnit(parallel_frame_id, origin_pc_graph_node)
         self.contents.append(parallel_frame)
 
     def pop(self) -> ParallelUnit | None:
