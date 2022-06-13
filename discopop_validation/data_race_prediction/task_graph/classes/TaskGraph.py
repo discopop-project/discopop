@@ -66,6 +66,19 @@ class TaskGraph(object):
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()
 
+    def get_children_of_node(self, node: TaskGraphNode, edge_types: List[EdgeType]) -> List[TaskGraphNode]:
+        out_edges = [edge for edge in self.graph.out_edges(node.node_id) if
+                    self.graph.edges[edge]["type"] in edge_types]
+        children = [self.get_node_from_id(target) for source, target in out_edges]
+        return children
+
+    def get_node_from_id(self, node_id) -> TaskGraphNode:
+        return self.graph.nodes[node_id]["data"]
+
+    def get_incoming_edges_of_node(self, node: TaskGraphNode, edge_types: List[EdgeType]) -> List[Tuple[int, int]]:
+        in_edges = [edge for edge in self.graph.in_edges(node.node_id) if self.graph.edges[edge]["type"] in edge_types]
+        return in_edges
+
     def add_generic_child_node(self, parent_node_id_list: List[int], pragma=None) -> int:
         """adds a new node to the graph with incoming edges from each node specified in parent_node_id_list and
         returns the node_id of the newly created node."""
