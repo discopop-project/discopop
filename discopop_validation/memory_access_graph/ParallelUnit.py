@@ -1,5 +1,7 @@
-from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 import random
+
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
+
 
 class ParallelUnit(object):
     identifier: int
@@ -10,7 +12,7 @@ class ParallelUnit(object):
         self.identifier = identifier
         self.origin_pc_graph_node = origin
         # generate random color for the visualization
-        self.visualization_color = "#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
+        self.visualization_color = "#" + ''.join([random.choice('0123456789ABCDEF') for j in range(6)])
         print("\nCOLOR: ", self.visualization_color, " \n")
 
     def __str__(self):
