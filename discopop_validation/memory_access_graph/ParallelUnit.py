@@ -1,7 +1,7 @@
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
 
 
-class ParallelFrame(object):
+class ParallelUnit(object):
     identifier: int
     origin_task_graph_node: TaskGraphNode
 
