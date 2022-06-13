@@ -10,4 +10,4 @@ class ParallelFrame(object):
         self.origin_task_graph_node = origin
 
     def __str__(self):
-        return str(self.identifier)
+        return "(" + str(self.identifier) + ",or" + str(self.origin_task_graph_node.node_id) + ")"

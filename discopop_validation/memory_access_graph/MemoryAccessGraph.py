@@ -8,6 +8,7 @@ from typing import List
 
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.task_graph.classes.ForkNode import ForkNode
+from discopop_validation.data_race_prediction.task_graph.classes.JoinNode import JoinNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
@@ -45,7 +46,7 @@ class MemoryAccessGraph(object):
         task_graph_root_node: TaskGraphNode = task_graph.graph.nodes[0]["data"]  # root node of task_graph
         pf_stack = PFStack()
         print("Current Node: ", task_graph_root_node.node_id)
-        print("PFI Stack: ", pf_stack)
+        print("PF Stack: ", pf_stack)
 
         # traverse task graph in a depth-first manner
         # in doing so, traverse outgoing contains edges before sequential edges to analyze the effects of a node in the
@@ -73,8 +74,6 @@ class MemoryAccessGraph(object):
         children = task_graph.get_children_of_node(task_graph_node, [EdgeType.SEQUENTIAL])
         for child in children:
             self.__visit_node(task_graph, child, pf_stack)
-
-
         print("Leaving: ", task_graph_node.node_id)
 
 
@@ -82,6 +81,8 @@ class MemoryAccessGraph(object):
         # check if pfi stack needs to be modified
         self.__modify_pfi_stack(task_graph, task_graph_node, pf_stack)
 
+        # apply modification of the memory access graph according to the current node
+        #TODO
         pass
 
     def __modify_pfi_stack(self, task_graph: TaskGraph, task_graph_node: TaskGraphNode, pf_stack: PFStack):
@@ -99,11 +100,19 @@ class MemoryAccessGraph(object):
         if type(task_graph_node) in [PragmaParallelNode, ForkNode]:
             pf_stack.push(self.__get_new_parallel_frame_id(), task_graph_node)
 
-
     def __close_last_pfi_entry(self, task_graph: TaskGraph, task_graph_node: TaskGraphNode, pf_stack: PFStack):
         """closes the last entry in the stack if a node of one of the following types is encountered:
             BARRIER
+            JOIN (if incoming belongs_to edge from origin node of the current parallel frame exists)
         """
         if type(task_graph_node) == PragmaBarrierNode:
             print("Popping: ", pf_stack.peek())
             pf_stack.pop()
+        if type(task_graph_node) == JoinNode:
+            # check if belongs_to edge from origin node of parallel frame to the JOIN node exists
+            pf_origin = pf_stack.peek().origin_task_graph_node
+            incoming_belongs_to_edges = task_graph.get_incoming_edges_of_node(task_graph_node, [EdgeType.BELONGS_TO])
+            sources = [source for (source, target) in incoming_belongs_to_edges]
+            if pf_origin.node_id in sources:
+                print("Popping: ", pf_stack.peek())
+                pf_stack.pop()
