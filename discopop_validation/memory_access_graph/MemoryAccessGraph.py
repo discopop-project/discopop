@@ -7,6 +7,7 @@ from networkx.drawing.nx_pydot import to_pydot  # type: ignore
 from typing import List
 
 from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.task_graph.classes.ForkNode import ForkNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaBarrierNode import PragmaBarrierNode
 from discopop_validation.data_race_prediction.task_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
@@ -93,9 +94,10 @@ class MemoryAccessGraph(object):
     def __create_new_pfi_entry(self, task_graph: TaskGraph, task_graph_node: TaskGraphNode, pf_stack: PFStack):
         """"create a new entry if any of the following node types is encountered:
             PARALLEL
+            FORK
         """
-        if type(task_graph_node) == PragmaParallelNode:
-            pf_stack.push(self.__get_new_parallel_frame_id())
+        if type(task_graph_node) in [PragmaParallelNode, ForkNode]:
+            pf_stack.push(self.__get_new_parallel_frame_id(), task_graph_node)
 
 
     def __close_last_pfi_entry(self, task_graph: TaskGraph, task_graph_node: TaskGraphNode, pf_stack: PFStack):
@@ -103,4 +105,5 @@ class MemoryAccessGraph(object):
             BARRIER
         """
         if type(task_graph_node) == PragmaBarrierNode:
+            print("Popping: ", pf_stack.peek())
             pf_stack.pop()
