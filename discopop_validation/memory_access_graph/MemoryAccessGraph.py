@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
-from typing import List
+from typing import List, Tuple
 
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
@@ -13,7 +13,9 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
+from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
 from discopop_validation.memory_access_graph.PUStack import PUStack
+from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
 
 
 class MemoryAccessGraph(object):
@@ -36,7 +38,6 @@ class MemoryAccessGraph(object):
             os.remove(dot_file_path)
 
         dot_g = to_pydot(self.graph)
-        print(dot_g)
         dot_g.write_dot(dot_file_path)
         s = Source.from_file(dot_file_path)
         s.view()
@@ -54,7 +55,7 @@ class MemoryAccessGraph(object):
         self.__visit_node(pc_graph, pc_graph_root_node, pu_stack)
 
         pc_graph.plot_graph()
-        # self.plot_graph()
+        self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack)
@@ -82,8 +83,41 @@ class MemoryAccessGraph(object):
         self.__modify_pu_stack(pc_graph, pc_graph_node, pu_stack)
 
         # apply modification of the memory access graph according to the current node
-        #TODO
-        pass
+        self.__detect_and_include_memory_accesses_to_graph(pc_graph, pc_graph_node, pu_stack)
+
+    def __detect_and_include_memory_accesses_to_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
+        # add memory accesses from PCGraphNodes
+        if type(pc_graph_node) == PCGraphNode:
+            for model_idx, model in enumerate(pc_graph_node.behavior_models):
+                print("Thread_Count: ", model.simulation_thread_count)
+                for thread_idx in range(0, model.simulation_thread_count):
+                    previous_node_id = "" + str(pc_graph_node.node_id) + "-" + str(model_idx) + "-" + str(thread_idx)
+                    for op_idx, op in enumerate(model.operations):
+                        operation_idx = (pc_graph_node.node_id, model_idx, thread_idx, op_idx)
+                        previous_node_id = self.__add_memory_access_to_graph(operation_idx, op.mode, op.target_name,
+                                                                             previous_node_id, pu_stack.peek())
+
+
+    def __add_memory_access_to_graph(self, operation_idx: Tuple[int, int, int, int], access_mode: str, target_name: str,
+                                     previous_node_id: str, parallel_unit: ParallelUnit) -> str:
+        print("Adding: ", operation_idx, "\t", access_mode, "\t", target_name)
+        if not previous_node_id in self.graph.nodes:
+            # add previous node into MemoryAccessGraph (Dummy as source of the edge)
+            self.graph.add_node(previous_node_id)
+
+        if not target_name in self.graph.nodes:
+            # add node vor target_name into MemoryAccessGraph
+            self.graph.add_node(target_name)
+
+        access_metadata = AccessMetaData(access_mode, operation_idx, parallel_unit)
+
+        if access_mode == "r":
+            self.graph.add_edge(previous_node_id, target_name, data=access_metadata, style="dashed", label=access_metadata.get_edge_label(), color=access_metadata.parallel_unit.visualization_color)
+        if access_mode == "w":
+            self.graph.add_edge(previous_node_id, target_name, data=access_metadata, label=access_metadata.get_edge_label(), color=access_metadata.parallel_unit.visualization_color)
+
+        return target_name
+
 
     def __modify_pu_stack(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         # check if new entry has to be created and create a new one if so
