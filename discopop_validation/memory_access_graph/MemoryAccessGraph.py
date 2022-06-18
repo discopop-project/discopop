@@ -1,3 +1,4 @@
+import copy
 import os.path
 
 import matplotlib.pyplot as plt  # type: ignore
@@ -58,7 +59,7 @@ class MemoryAccessGraph(object):
         # correct order
         self.__visit_node(pc_graph, pc_graph_root_node, pu_stack)
 
-        pc_graph.plot_graph()
+        #pc_graph.plot_graph()
         self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
@@ -73,12 +74,12 @@ class MemoryAccessGraph(object):
             # ignore child if it has an incoming sequential edge
             in_sequential_edges = pc_graph.get_incoming_edges_of_node(child, [EdgeType.SEQUENTIAL])
             if len(in_sequential_edges) == 0:
-                self.__visit_node(pc_graph, child, pu_stack)
+                self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack))
 
         # visit children following sequential edges
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.SEQUENTIAL])
         for child in children:
-            self.__visit_node(pc_graph, child, pu_stack)
+            self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack))
         print("Leaving: ", pc_graph_node.node_id)
 
     def __modify_memory_access_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
@@ -103,7 +104,7 @@ class MemoryAccessGraph(object):
 
     def __add_memory_access_to_graph(self, operation_idx: Tuple[int, int, int, int], access_mode: str, target_name: str,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
-        print("Adding: ", operation_idx, "\t", access_mode, "\t", target_name)
+        print("Adding: ", operation_idx, "\t", access_mode, "\t", target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
             self.graph.add_node(previous_node_id)
