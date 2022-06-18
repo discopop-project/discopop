@@ -6,6 +6,8 @@ from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
 from typing import Tuple
 
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
+    BehaviorModelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.JoinNode import JoinNode
@@ -88,8 +90,8 @@ class MemoryAccessGraph(object):
 
     def __detect_and_include_memory_accesses_to_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode,
                                                       pu_stack: PUStack):
-        # add memory accesses from PCGraphNodes
-        if type(pc_graph_node) == PCGraphNode:
+        # add memory accesses from BehaviorModelNodes
+        if type(pc_graph_node) == BehaviorModelNode:
             for model_idx, model in enumerate(pc_graph_node.behavior_models):
                 print("Thread_Count: ", model.simulation_thread_count)
                 for thread_idx in range(0, model.simulation_thread_count):

@@ -34,7 +34,7 @@ class PCGraphNode(object):
     def get_label(self):
         if self.node_id == 0:
             return "ROOT"
-        label = str(self.node_id) + " " + "Bhv\n"
+        label = str(self.node_id) + " " + "PCGN\n"
         if len(self.behavior_models) == 0:
             return label
         label += str(self.behavior_models[0].get_file_id()) + ":" + str(
@@ -130,9 +130,21 @@ class PCGraphNode(object):
                 parallel_section.append("TASKWAIT")
             for edge in relevant_edges:
                 print("Adding: ", pc_graph.graph.nodes[edge[1]]["data"].get_behavior_models(pc_graph, result_obj))
-
                 parallel_section.append(
                     pc_graph.graph.nodes[edge[1]]["data"].get_behavior_models(pc_graph, result_obj))
             result.append(parallel_section)
 
         return result
+
+    def replace_with_BehaviorModelNodes(self, pc_graph):
+        """replaces this PCGraphNode with an equivalent set of BehaviorModelNodes and removes the PCGraphNode
+        afterwards."""
+        for model in self.behavior_models:
+            for idx in range(0, model.simulation_thread_count):
+                # insert and connect BehaviorModelNode
+                pc_graph.insert_behavior_model_node(self, model)
+
+        # delete PCGraphNode
+        pc_graph.graph.remove_node(self.node_id)
+
+

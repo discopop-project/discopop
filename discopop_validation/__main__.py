@@ -259,7 +259,12 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
-        #parallel_construct_graph.plot_graph()
+        #pc_graph.plot_graph()
+
+        # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
+        # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
+        pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
+
 
         memory_access_graph = MemoryAccessGraph(pc_graph)
 

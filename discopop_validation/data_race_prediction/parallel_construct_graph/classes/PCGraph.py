@@ -9,6 +9,9 @@ from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
+    BehaviorModelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.CalledFunctionNode import CalledFunctionNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
@@ -38,9 +41,9 @@ class PCGraph(object):
         # add root node, id = (tuple of n zero´s, last executed thread id)
         self.next_free_node_id = 0
         self.pragma_to_node_id = dict()
-        self.graph.add_node(self.__get_new_node_id(), data=PCGraphNode(0))
+        self.graph.add_node(self.get_new_node_id(), data=PCGraphNode(0))
 
-    def __get_new_node_id(self) -> int:
+    def get_new_node_id(self) -> int:
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
@@ -82,7 +85,7 @@ class PCGraph(object):
     def add_generic_child_node(self, parent_node_id_list: List[int], pragma=None) -> int:
         """adds a new node to the graph with incoming edges from each node specified in parent_node_id_list and
         returns the node_id of the newly created node."""
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PCGraphNode(new_node_id))
         for parent_node_id in parent_node_id_list:
             self.graph.add_edge(parent_node_id, new_node_id)
@@ -109,42 +112,42 @@ class PCGraph(object):
         self.pragma_to_node_id[pragma_obj] = node_id
 
     def __add_single_pragma(self, pragma_obj: OmpPragma):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaSingleNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_for_pragma(self, pragma_obj: OmpPragma):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaForNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_parallel_pragma(self, pragma_obj: OmpPragma):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaParallelNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_task_pragma(self, pragma_obj: OmpPragma):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaTaskNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_taskwait_pragma(self, pragma_obj: OmpPragma):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaTaskwaitNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_barrier_pragma(self, pragma_obj):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaBarrierNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_fork_node(self):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=ForkNode(new_node_id))
         return new_node_id
 
     def __add_join_node(self):
-        new_node_id = self.__get_new_node_id()
+        new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=JoinNode(new_node_id))
         return new_node_id
 
@@ -173,7 +176,7 @@ class PCGraph(object):
                     # create edge and node if not already present
                     if called_function_dict["cuid"] not in cuid_to_node_id_map:
                         called_cu_id = called_function_dict["cuid"]
-                        new_node_id = self.__get_new_node_id()
+                        new_node_id = self.get_new_node_id()
                         cuid_to_node_id_map[called_cu_id] = new_node_id
                         function_name = pet.node_at(called_cu_id).name
                         function_file_id = pet.node_at(called_cu_id).file_id
@@ -528,7 +531,7 @@ class PCGraph(object):
 
         # create barriers
         for new_barrier_source in add_barrier_buffer:
-            barrier_node_id = self.__get_new_node_id()
+            barrier_node_id = self.get_new_node_id()
             self.graph.add_node(barrier_node_id, data=PragmaBarrierNode(barrier_node_id,
                                                                         pragma=OmpPragma().init_with_values(
                                                                             self.graph.nodes[new_barrier_source][
@@ -601,7 +604,7 @@ class PCGraph(object):
 
             # create contained BehaviorStorageNodes
             for model in self.graph.nodes[node]["data"].behavior_models:
-                new_node_id = self.__get_new_node_id()
+                new_node_id = self.get_new_node_id()
                 behavior_storage_node = PCGraphNode(new_node_id)
                 behavior_storage_node.behavior_models.append(model)
                 # set thread count to 1 if parent is PragmaSingleNode
@@ -1361,3 +1364,32 @@ class PCGraph(object):
                     to_be_removed.append(edge)
         for s, t in to_be_removed:
             self.graph.remove_edge(s, t)
+
+
+    def replace_PCGraphNodes_with_BehaviorModelNodes(self):
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == PCGraphNode:
+                # skip root node
+                if node == 0:
+                    continue
+                self.graph.nodes[node]["data"].replace_with_BehaviorModelNodes(self)
+
+    def insert_behavior_model_node(self, parent: PCGraphNode, model: BehaviorModel):
+        # create BehaviorModelNode
+        # model.simulation_thread_count is set to 1 in the course of this method
+        bhv_model = BehaviorModelNode(self, parent, copy.deepcopy(model))
+
+        # create node in PCGraph
+        self.graph.add_node(bhv_model.node_id, data=bhv_model)
+
+        # connect created node with edges
+        in_edges = [edge for edge in self.graph.in_edges(parent.node_id)]
+        out_edges = [edge for edge in self.graph.out_edges(parent.node_id)]
+        for source, target in in_edges:
+            self.graph.add_edge(source, bhv_model.node_id, type=self.graph.edges[(source, target)]["type"])
+        for source, target in out_edges:
+            self.graph.add_edge(bhv_model.node_id, target, type=self.graph.edges[(source, target)]["type"])
+
+
+
