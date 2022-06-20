@@ -267,6 +267,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
         memory_access_graph = MemoryAccessGraph(pc_graph)
+        memory_access_graph.detect_data_races()
 
         time_data_race_computation_start = time.time()
 

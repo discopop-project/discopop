@@ -153,3 +153,34 @@ class MemoryAccessGraph(object):
         """
         if type(pc_graph_node) == PragmaBarrierNode:
             pu_stack.pop()
+
+    def __path_is_predecessor(self, successor_path: List[int], predecessor_path: List[int]) -> bool:
+        raise ValueError("TODO)")
+
+    def detect_data_races(self):
+        """starts the detection of data races for each node of the graph"""
+        print("HELLO FROM DETECT DATA RACES")
+        # start data race detection for each node in the graph
+        for node in self.graph.nodes:
+            print("NODE: ", node)
+            # get the set of incoming access edges for node
+            incoming_accesses = self.graph.in_edges(node, keys=True)
+            # create all possible pairs of incoming edges
+            incoming_edge_pairs = ((i, j) for i in incoming_accesses for j in incoming_accesses if i != j)
+            # check each pair for present data races
+            for edge_1, edge_2 in incoming_edge_pairs:
+                data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2)
+                if data_race_found:
+                    print("DATA RACE FOUND!")
+                else:
+                    print("\t\tno data race.")
+
+
+    def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int]):
+        """checks the given pair of edges for data races.
+        Returns True, if a data race has been found.
+        Else, returns False.
+        """
+        
+        return False
+
