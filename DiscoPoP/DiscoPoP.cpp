@@ -95,7 +95,7 @@ using namespace dputil;
         // Value *getOrInsertVarName(string varName, IRBuilder<> &builder);
         // Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         // Type *pointsToStruct(PointerType *PTy);
-        // Value *determineVarName(Instruction *const I);
+        // Value *determineVariableName(Instruction *const I);
 
         // // Control flow analysis
         // void CFA(Function &F, LoopInfo &LI);
@@ -332,7 +332,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
     for (BasicBlock::iterator instruction = (*bb)->begin();
          instruction != (*bb)->end(); ++instruction) {
       if (isa<StoreInst>(instruction)) {
-        string varName = determineVariableName(&*instruction);
+        string varName = determineVariableName(&*instruction)->getName();
         size_t pos = varName.find("retval");
         if (pos != varName.npos) {
           lid = getLID(&*instruction, fileID);
@@ -349,7 +349,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
 string DiscoPoP::determineVariableDefLine(Instruction *I) {
   string varDefLine{"LineNotFound"};
 
-  string varName = determineVariableName(&*I);
+  string varName = determineVariableName(&*I)->getName();
   // varName = refineVarName(varName);
   varName = (varName.find(".addr") == varName.npos)
                 ? varName
@@ -387,10 +387,10 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
               if (AI) {
                 for (User *U : AI->users()) {
                   if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-                    vn = determineVariableName(&*SI);
+                    vn = determineVariableName(&*SI)->getName();
                     break;
                   } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-                    vn = determineVariableName(&*LI);
+                    vn = determineVariableName(&*LI)->getName();
                     break;
                   }
                 }
@@ -457,7 +457,7 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
         // string varName = refineVarName(determineVariableName(instruction,
         // isGlobalVariable));
         // NOTE: changed 'instruction' to '&*instruction'
-        string varName = determineVariableName(&*instruction, isGlobalVariable);
+        string varName = determineVariableName(&*instruction, isGlobalVariable)->getName();
 
         if (isGlobalVariable) // add it if it is a global variable in the
                               // program
@@ -606,7 +606,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->writeDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction);
+          varName = determineVariableName(&*instruction)->getName();
           varType = determineVariableType(&*instruction);
           // if(globalVariablesSet.count(varName) ||
           // programGlobalVariablesSet.count(varName))
@@ -622,7 +622,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->readDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction);
+          varName = determineVariableName(&*instruction)->getName();
           if (suspiciousVariables.count(varName)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global
@@ -811,7 +811,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
           continue;
         // varName = refineVarName(determineVariableName(instruction));
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-        varName = determineVariableName(&*instruction);
+        varName = determineVariableName(&*instruction)->getName();
         varType = determineVariableType(&*instruction);
         varDefLine = determineVariableDefLine(&*instruction);
 
@@ -1267,7 +1267,8 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy)
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 
-Value *DiscoPoP::determineVarName(Instruction *const I)
+Value *DiscoPoP::determineVariableName(Instruction *const I,
+                        bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/)
 {
     assert(I && "Instruction cannot be NULL \n");
     int index = isa<StoreInst>(I) ? 1 : 0;
@@ -1285,6 +1286,7 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
         // we've found a global variable
         if (isa<GlobalVariable>(*operand))
         {
+            isGlobalVariable = true;
             DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
             if (gv != NULL)
             {
@@ -1324,16 +1326,16 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
             // we've found an array
             if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
-                return determineVarName((Instruction *)ptrOperand);
+                return determineVariableName((Instruction *)ptrOperand, isGlobalVariable);
             }
-            return determineVarName((Instruction *)gep);
+            return determineVariableName((Instruction *)gep, isGlobalVariable);
         }
         return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
-        return determineVarName((Instruction *)(operand));
+        return determineVariableName((Instruction *)(operand), isGlobalVariable);
     }
     // if we cannot determine the name, then return *
     return getOrInsertVarName("*", builder);
@@ -1841,7 +1843,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument)
                      Int64, "", toInstrument);
     args.push_back(memAddr);
 
-    args.push_back(determineVarName(toInstrument));
+    args.push_back(determineVariableName(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
     //Value* loadAddr = args[1];
@@ -1908,7 +1910,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument)
                      Int64, "", toInstrument);
     args.push_back(memAddr);
 
-    args.push_back(determineVarName(toInstrument));
+    args.push_back(determineVariableName(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
     //Value* storeAddr = args[1];

@@ -202,7 +202,8 @@ private:
         Value *getOrInsertVarName(string varName, IRBuilder<> &builder);
         Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         Type *pointsToStruct(PointerType *PTy);
-        Value *determineVarName(Instruction *const I);
+        Value *determineVariableName(Instruction *const I,
+                        bool &isGlobalVariable = defaultIsGlobalVariableValue);
 
         // Control flow analysis
         void CFA(Function &F, LoopInfo &LI);
@@ -264,8 +265,8 @@ public:
 
   // DiscoPoP Functions
   string determineVariableType(Instruction *I);
-  string  determineVariableName(Instruction *I,
-                        bool &isGlobalVariable = defaultIsGlobalVariableValue);
+  // string  determineVariableName(Instruction *I,
+                        // bool &isGlobalVariable = defaultIsGlobalVariableValue);
   // Type *pointsToStruct(PointerType *PTy);
   // string getOrInsertVarName(string varName, IRBuilder<> &builder);
   // string findStructMemberName(MDNode *structNode, unsigned idx,
