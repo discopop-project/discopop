@@ -6,30 +6,32 @@ from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
 
 class PUStack(object):
     """This stack is used to store information on the currently known parallel units during the creation of the
-    MemoryAccessGraph."""
+    MemoryAccessGraph.
+    The stack has to consist of at least one element at all times"""
     contents: List[ParallelUnit]
 
-    def __init__(self):
+    def __init__(self, parallel_frame_id: int, root_pc_graph_node: PCGraphNode):
         self.contents = []
+        self.push(parallel_frame_id, root_pc_graph_node)
 
     def push(self, parallel_frame_id: int, origin_pc_graph_node: PCGraphNode):
         parallel_frame = ParallelUnit(parallel_frame_id, origin_pc_graph_node)
         self.contents.append(parallel_frame)
 
-    def pop(self) -> ParallelUnit | None:
+    def pop(self) -> ParallelUnit:
         """removes and returns the last element of the stack.
-        Returns None if the stack is empty"""
+        """
         if len(self.contents) == 0:
-            return None
+            raise ValueError("PU Stack must not be empty!")
         buffer = self.contents[-1]
         del self.contents[-1]
         return buffer
 
-    def peek(self) -> ParallelUnit | None:
+    def peek(self) -> ParallelUnit:
         """returns the last element of the stack.
-        Returns None if the stack is empty"""
+        """
         if len(self.contents) == 0:
-            return None
+            raise ValueError("PU Stack must not be empty!")
         return self.contents[-1]
 
     def __str__(self) -> str:

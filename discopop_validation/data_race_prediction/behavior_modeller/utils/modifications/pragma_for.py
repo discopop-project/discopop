@@ -45,7 +45,7 @@ def __apply_reduction_modification(behavior_model: BehaviorModel, pragma: OmpPra
             operation_name = split_line[5]
             # save identified reduction operation
             reduction_line_information.append((file_id, reduction_line_number, variable_name))
-    # search for reduction operations in behavior_model.operations and
+    # search for reduction operations in behavior_models.operations and
     # mark reduction operations by adding a modifier (read + write if existent)
     pragma_reduction_variables = pragma.get_variables_listed_as("reduction")
     reduction_operation_id_buffer: Dict[Tuple[str, str, str], str] = dict()
