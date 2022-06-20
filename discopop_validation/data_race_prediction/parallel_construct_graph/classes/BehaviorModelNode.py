@@ -11,7 +11,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Data
 class BehaviorModelNode(PCGraphNode):
     node_id: int
     pragma: Optional[OmpPragma]
-    behavior_models: List[BehaviorModel]
+    behavior_model: BehaviorModel
     seen_in_result_computation: bool
     data_races: List[DataRace]
     covered_by_fork_node: bool
@@ -22,7 +22,7 @@ class BehaviorModelNode(PCGraphNode):
 
         self.node_id = pc_graph.get_new_node_id()
         self.pragma = parent_node.pragma
-        self.behavior_models = [bhv_model]
+        self.behavior_model = bhv_model
         self.seen_in_result_computation = parent_node.seen_in_result_computation
         self.data_races = []
         self.covered_by_fork_node = parent_node.covered_by_fork_node
@@ -33,10 +33,10 @@ class BehaviorModelNode(PCGraphNode):
         if self.node_id == 0:
             return "ROOT"
         label = str(self.node_id) + " " + "Bhv\n"
-        if len(self.behavior_models) == 0:
+        if len(self.behavior_model) == 0:
             return label
-        label += str(self.behavior_models[0].get_file_id()) + ":" + str(
-            self.behavior_models[0].get_start_line()) + "-" + str(self.behavior_models[0].get_end_line())
+        label += str(self.behavior_model[0].get_file_id()) + ":" + str(
+            self.behavior_model[0].get_start_line()) + "-" + str(self.behavior_model[0].get_end_line())
         return label
 
     def get_color(self, mark_data_races: bool):

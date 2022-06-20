@@ -81,7 +81,7 @@ class ForkNode(PCGraphNode):
                     elem_scheduling_graph = pc_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
                         pc_graph, result_obj)
                 else:
-                    behavior_models = pc_graph.graph.nodes[elem]["data"].behavior_models
+                    behavior_models = pc_graph.graph.nodes[elem]["data"].behavior_model
                     for model in behavior_models:
                         model.use_fingerprint(result_obj.get_current_fingerprint())
 

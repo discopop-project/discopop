@@ -161,7 +161,7 @@ def __fork_node_result_computation(node_obj, pc_graph, result_obj, thread_ids):
                 elem_scheduling_graph = pc_graph.graph.nodes[elem]["data"].get_scheduling_graph_from_fork_node(
                     pc_graph, result_obj)
             else:
-                behavior_models = pc_graph.graph.nodes[elem]["data"].behavior_models
+                behavior_models = pc_graph.graph.nodes[elem]["data"].behavior_model
                 if len(behavior_models) == 0:
                     continue
 
@@ -210,7 +210,7 @@ def __fork_node_result_computation(node_obj, pc_graph, result_obj, thread_ids):
 
 def __behavior_node_result_computation(node_obj, pc_graph, result_obj, thread_ids):
     # get scheduling graph
-    behavior_models = node_obj.behavior_models
+    behavior_models = node_obj.behavior_model
     for model in behavior_models:
         model.use_fingerprint(result_obj.get_current_fingerprint())
     # todo include?: prepare behavior models for simulation

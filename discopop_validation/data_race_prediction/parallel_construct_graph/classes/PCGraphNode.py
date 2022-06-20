@@ -18,7 +18,7 @@ from discopop_validation.data_race_prediction.vc_data_race_detector.classes.Data
 class PCGraphNode(object):
     node_id: int
     pragma: Optional[OmpPragma]
-    behavior_models: List[BehaviorModel]
+    behavior_model: List[BehaviorModel]
     seen_in_result_computation: bool
     data_races: List[DataRace]
     covered_by_fork_node: bool
@@ -26,7 +26,7 @@ class PCGraphNode(object):
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
         self.pragma = pragma
-        self.behavior_models = []
+        self.behavior_model = []
         self.seen_in_result_computation = False
         self.data_races = []
         self.covered_by_fork_node = False
@@ -35,10 +35,10 @@ class PCGraphNode(object):
         if self.node_id == 0:
             return "ROOT"
         label = str(self.node_id) + " " + "PCGN\n"
-        if len(self.behavior_models) == 0:
+        if len(self.behavior_model) == 0:
             return label
-        label += str(self.behavior_models[0].get_file_id()) + ":" + str(
-            self.behavior_models[0].get_start_line()) + "-" + str(self.behavior_models[0].get_end_line())
+        label += str(self.behavior_model[0].get_file_id()) + ":" + str(
+            self.behavior_model[0].get_start_line()) + "-" + str(self.behavior_model[0].get_end_line())
         return label
 
     def get_color(self, mark_data_races: bool):
@@ -78,7 +78,7 @@ class PCGraphNode(object):
 
     def set_simulation_thread_count(self, new_thread_count: int):
         # todo: note: may be required to execute recursively on contained nodes aswell
-        for model in self.behavior_models:
+        for model in self.behavior_model:
             model.simulation_thread_count = new_thread_count
 
     def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, pc_graph,
@@ -102,13 +102,13 @@ class PCGraphNode(object):
                 print("Behavior Model (NodeID: ", self.node_id, "):")
                 for op in model.operations:
                     print("\t", op)
-        self.behavior_models = behavior_models
+        self.behavior_model = behavior_models
 
     def get_behavior_models(self, pc_graph, result_obj):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.
         Should be overwritten by each node type."""
-        # set behavior_models.simulation_thread_count according to current request
-        for model in self.behavior_models:
+        # set behavior_model.simulation_thread_count according to current request
+        for model in self.behavior_model:
             model.simulation_thread_count = result_obj.get_current_thread_count()
         # if more than one incoming sequential edge exists, issue a JOINNODE command
         counter = 0
@@ -116,9 +116,9 @@ class PCGraphNode(object):
             if pc_graph.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL:
                 counter += 1
         if counter > 1:
-            result = ["SEQ", "JOINNODE", ["PAR", self.behavior_models]]
+            result = ["SEQ", "JOINNODE", ["PAR", self.behavior_model]]
         else:
-            result = ["SEQ", ["PAR", self.behavior_models]]
+            result = ["SEQ", ["PAR", self.behavior_model]]
         # add sucesseors to the result
         out_edges = pc_graph.graph.out_edges(self.node_id)
         relevant_edges = [edge for edge in out_edges if edge[0] != edge[1]]
@@ -139,7 +139,7 @@ class PCGraphNode(object):
     def replace_with_BehaviorModelNodes(self, pc_graph):
         """replaces this PCGraphNode with an equivalent set of BehaviorModelNodes and removes the PCGraphNode
         afterwards."""
-        for model in self.behavior_models:
+        for model in self.behavior_model:
             for idx in range(0, model.simulation_thread_count):
                 # insert and connect BehaviorModelNode
                 pc_graph.insert_behavior_model_node(self, model)
