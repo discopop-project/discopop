@@ -7,6 +7,7 @@ from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
 from typing import Tuple, List, cast, Optional
 
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
@@ -106,32 +107,32 @@ class MemoryAccessGraph(object):
             previous_node_id = str(bhv_node.node_id)
             for op_idx, op in enumerate(model.operations):
                 operation_path_id = current_path + [op_idx]
-                previous_node_id = self.__add_memory_access_to_graph(operation_path_id, op.mode, op.target_name,
+                previous_node_id = self.__add_memory_access_to_graph(operation_path_id, op,
                                                                      previous_node_id, pu_stack.peek())
 
-    def __add_memory_access_to_graph(self, operation_path_id: List[int], access_mode: str, target_name: str,
+    def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
-        print("Adding: ", operation_path_id, "\t", access_mode, "\t", target_name, "\t", parallel_unit)
+        print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
             self.graph.add_node(previous_node_id)
 
-        if not target_name in self.graph.nodes:
+        if not operation.target_name in self.graph.nodes:
             # add node vor target_name into MemoryAccessGraph
-            self.graph.add_node(target_name)
+            self.graph.add_node(operation.target_name)
 
-        access_metadata = AccessMetaData(access_mode, operation_path_id, parallel_unit)
+        access_metadata = AccessMetaData(operation, operation.mode, operation_path_id, parallel_unit)
 
-        if access_mode == "r":
-            self.graph.add_edge(previous_node_id, target_name, data=access_metadata, style="dashed",
+        if operation.mode == "r":
+            self.graph.add_edge(previous_node_id, operation.target_name, data=access_metadata, style="dashed",
                                 label=access_metadata.get_edge_label(),
                                 color=access_metadata.parallel_unit.visualization_color)
-        if access_mode == "w":
-            self.graph.add_edge(previous_node_id, target_name, data=access_metadata,
+        if operation.mode == "w":
+            self.graph.add_edge(previous_node_id, operation.target_name, data=access_metadata,
                                 label=access_metadata.get_edge_label(),
                                 color=access_metadata.parallel_unit.visualization_color)
 
-        return target_name
+        return operation.target_name
 
     def __modify_pu_stack(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         # check if new entry has to be created and create a new one if so
@@ -154,8 +155,41 @@ class MemoryAccessGraph(object):
         if type(pc_graph_node) == PragmaBarrierNode:
             pu_stack.pop()
 
-    def __path_is_predecessor(self, successor_path: List[int], predecessor_path: List[int]) -> bool:
-        raise ValueError("TODO)")
+    def __predecessor_relation_exists(self, path_1: List[int], path_2: List[int]) -> bool:
+        """checks whether a predecessor relation between path_1 and path_2 exists.
+        The check considers both orderings.
+        Returns True, if a predecessor relation exists.
+        Returns False, otherwise."""
+        print("PATH 1: ", path_1)
+        print("PATH 2: ", path_2)
+
+        def check_precedence(inner_path_1: List[int], inner_path_2: List[int]) -> bool:
+            print("\tINNER PATH 1: ", inner_path_1)
+            print("\tINNER PATH 2: ", inner_path_2)
+            for idx, elem in enumerate(inner_path_1):
+                if idx == len(inner_path_1) -1 :
+                    # last element of the list
+                    # the last element of the list is the only one which may not be matching -> no check required
+                    return True
+                else:
+                    # regular list element
+
+                    # check if element with index idx exists in inner_path_2.
+                    # If not, inner_path_2 is a predecessor of inner_path_1
+                    if idx > len(inner_path_2):
+                        print("Inner_path_2 is shorter predecessor of inner_path_1")
+                        return True
+
+                    # check if elements at index idx in both lists are equivalent
+                    if inner_path_1[idx] != inner_path_2[idx]:
+                        print("idx: ", idx, "  ", inner_path_1[idx], "!=", inner_path_2[idx])
+                        return False
+
+        # consider both potential precedence relations
+        if check_precedence(path_1, path_2) or check_precedence(path_2, path_1):
+            return True
+        return False
+
 
     def detect_data_races(self):
         """starts the detection of data races for each node of the graph"""
@@ -171,9 +205,13 @@ class MemoryAccessGraph(object):
             for edge_1, edge_2 in incoming_edge_pairs:
                 data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2)
                 if data_race_found:
+                    op_1: Operation = self.graph.edges[edge_1]["data"].operation
+                    op_2: Operation = self.graph.edges[edge_2]["data"].operation
                     print("DATA RACE FOUND!")
-                else:
-                    print("\t\tno data race.")
+                    print("\t", op_1)
+                    print("\t", op_2)
+                    print()
+                    # todo do anything useful with identified data races
 
 
     def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int]):
@@ -181,6 +219,25 @@ class MemoryAccessGraph(object):
         Returns True, if a data race has been found.
         Else, returns False.
         """
-        
-        return False
+        # retrieve AccessMetaData objects of edges
+        amd_1: AccessMetaData = self.graph.edges[edge_1]["data"]
+        amd_2: AccessMetaData = self.graph.edges[edge_2]["data"]
+
+        # requirement 1: both accesses happen within the same parallel unit
+        if amd_1.parallel_unit != amd_2.parallel_unit:
+            print("AMD1 PU: ", amd_1.parallel_unit)
+            print("AMD2 PU: ", amd_2.parallel_unit)
+            return False
+
+        # requirement 2: at least of the accesses must be a write
+        if (not amd_1.access_mode == "w") and (not amd_2.access_mode == "w"):
+            return False
+
+        # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
+        if self.__predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
+            print("PREDECESSOR RELATION EXISTS")
+            return False
+
+
+        return True
 

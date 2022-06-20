@@ -17,3 +17,8 @@ class ParallelUnit(object):
 
     def __str__(self):
         return "(" + str(self.identifier) + ",or" + str(self.origin_pc_graph_node.node_id) + ")"
+
+    def __eq__(self, other):
+        if str(self) != str(other):
+            return False
+        return True
