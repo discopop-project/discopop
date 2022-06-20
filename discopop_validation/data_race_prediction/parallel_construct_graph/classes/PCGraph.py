@@ -379,13 +379,13 @@ class PCGraph(object):
 
         def __get_start_line(stl_target):
             if self.graph.nodes[stl_target]["data"].pragma is None:
-                return self.graph.nodes[stl_target]["data"].behavior_model[0].get_start_line()
+                return self.graph.nodes[stl_target]["data"].behavior_models[0].get_start_line()
             else:
                 return self.graph.nodes[stl_target]["data"].pragma.start_line
 
         def __get_end_line(stl_target):
             if self.graph.nodes[stl_target]["data"].pragma is None:
-                return self.graph.nodes[stl_target]["data"].behavior_model[0].get_end_line()
+                return self.graph.nodes[stl_target]["data"].behavior_models[0].get_end_line()
             else:
                 return self.graph.nodes[stl_target]["data"].pragma.end_line
 
@@ -565,10 +565,10 @@ class PCGraph(object):
     def __get_insert_location(self, root, start_line):
         def __get_start_line(node_id):
             if self.graph.nodes[node_id]["data"].pragma is None:
-                if len(self.graph.nodes[node_id]["data"].behavior_model) == 0:
+                if len(self.graph.nodes[node_id]["data"].behavior_models) == 0:
                     return 0
                 else:
-                    return self.graph.nodes[node_id]["data"].behavior_model[0].get_start_line()
+                    return self.graph.nodes[node_id]["data"].behavior_models[0].get_start_line()
             else:
                 return self.graph.nodes[node_id]["data"].pragma.start_line
 
@@ -603,10 +603,10 @@ class PCGraph(object):
                 region_end = self.graph.nodes[node]["data"].pragma.end_line
 
             # create contained BehaviorStorageNodes
-            for model in self.graph.nodes[node]["data"].behavior_model:
+            for model in self.graph.nodes[node]["data"].behavior_models:
                 new_node_id = self.get_new_node_id()
                 behavior_storage_node = PCGraphNode(new_node_id)
-                behavior_storage_node.behavior_model.append(model)
+                behavior_storage_node.behavior_models.append(model)
                 # set thread count to 1 if parent is PragmaSingleNode
                 if type(self.graph.nodes[node]["data"]) == PragmaSingleNode:
                     behavior_storage_node.set_simulation_thread_count(1)
@@ -971,7 +971,7 @@ class PCGraph(object):
             # only consider behavior nodes
             if type(self.graph.nodes[node]["data"]) != PCGraphNode:
                 continue
-            node_behavior_models = self.graph.nodes[node]["data"].behavior_model
+            node_behavior_models = self.graph.nodes[node]["data"].behavior_models
             if node_behavior_models is None:
                 continue
             node_operations = []
@@ -1002,7 +1002,7 @@ class PCGraph(object):
                             continue
                         # find node which contains last_access_operation
                         for inner_node in self.graph.nodes:
-                            inner_node_behavior_models = self.graph.nodes[inner_node]["data"].behavior_model
+                            inner_node_behavior_models = self.graph.nodes[inner_node]["data"].behavior_models
                             if inner_node_behavior_models is None:
                                 continue
                             inner_node_operations = []
@@ -1213,7 +1213,7 @@ class PCGraph(object):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) != PCGraphNode:
                 # remove behavior models from all but behavior storage nodes
-                self.graph.nodes[node]["data"].behavior_model = []
+                self.graph.nodes[node]["data"].behavior_models = []
 
     def replace_pragma_for_nodes(self):
         remove_nodes = []

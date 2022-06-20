@@ -101,7 +101,7 @@ class MemoryAccessGraph(object):
         # add memory accesses from BehaviorModelNodes
         if type(raw_pc_graph_node) == BehaviorModelNode:
             bhv_node = cast(BehaviorModelNode, raw_pc_graph_node)
-            model = bhv_node.behavior_model
+            model = bhv_node.single_behavior_model
             print("Thread_Count: ", model.simulation_thread_count)
             previous_node_id = str(bhv_node.node_id)
             for op_idx, op in enumerate(model.operations):
@@ -110,7 +110,7 @@ class MemoryAccessGraph(object):
                                                                      previous_node_id, pu_stack.peek())
 
     def __add_memory_access_to_graph(self, operation_path_id: List[int], access_mode: str, target_name: str,
-                                     previous_node_id: str, parallel_unit: Optional[ParallelUnit]) -> str:
+                                     previous_node_id: str, parallel_unit: ParallelUnit) -> str:
         print("Adding: ", operation_path_id, "\t", access_mode, "\t", target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
