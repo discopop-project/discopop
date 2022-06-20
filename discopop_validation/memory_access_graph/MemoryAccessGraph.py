@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
-from typing import Tuple, List, cast
+from typing import Tuple, List, cast, Optional
 
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
@@ -50,7 +50,8 @@ class MemoryAccessGraph(object):
 
     def __construct_from_pc_graph(self, pc_graph: PCGraph):
         pc_graph_root_node: PCGraphNode = pc_graph.graph.nodes[0]["data"]  # root node of parallel_construct_graph
-        pu_stack = PUStack()
+        # create and initialize pu_stack
+        pu_stack = PUStack(self.__get_new_parallel_frame_id(), pc_graph_root_node)
         current_path: List[int] = [0]
         print("Current Node: ", pc_graph_root_node.node_id)
         print("PU Stack: ", pu_stack)
@@ -109,7 +110,7 @@ class MemoryAccessGraph(object):
                                                                      previous_node_id, pu_stack.peek())
 
     def __add_memory_access_to_graph(self, operation_path_id: List[int], access_mode: str, target_name: str,
-                                     previous_node_id: str, parallel_unit: ParallelUnit) -> str:
+                                     previous_node_id: str, parallel_unit: Optional[ParallelUnit]) -> str:
         print("Adding: ", operation_path_id, "\t", access_mode, "\t", target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
