@@ -11,49 +11,54 @@
 
 #define DEBUG_TYPE "dpop"
 //#define SKIP_DUP_INSTR 1
+// #define DEBUG_TYPE "dp-omissions"
 
-#include "llvm/Transforms/Instrumentation.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/LegacyPassManager.h"
+// STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
+// STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
 
-#include "DPUtils.h"
+// #include "llvm/Transforms/Instrumentation.h"
+// #include "llvm/ADT/Statistic.h"
+// #include "llvm/ADT/StringRef.h"
+// #include "llvm/ADT/SmallVector.h"
+// #include "llvm/ADT/APInt.h"
+// #include "llvm/IR/GlobalVariable.h"
+// #include "llvm/IR/Function.h"
+// #include "llvm/IR/Module.h"
+// #include "llvm/IR/Value.h"
+// #include "llvm/IR/Type.h"
+// #include "llvm/IR/IntrinsicInst.h"
+// #include "llvm/IR/Metadata.h"
+// #include "llvm/IR/IRBuilder.h"
+// #include "llvm/IR/CFG.h"
+// #include "llvm/IR/Dominators.h"
+// #include "llvm/IR/DebugInfo.h"
+// #include "llvm/IR/DebugInfoMetadata.h"
+// #include "llvm/Analysis/LoopInfo.h"
+// #include "llvm/Support/Debug.h"
+// #include "llvm/Support/CommandLine.h"
+// #include "llvm/Support/raw_ostream.h"
+// #include "llvm/Pass.h"
+// #include "llvm/PassAnalysisSupport.h"
+// #include "llvm/PassSupport.h"
+// #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+// #include "llvm/PassRegistry.h"
+// #include "llvm/IR/PassManager.h"
+// #include "llvm/IR/LegacyPassManager.h"
+
+// #include "DPUtils.h"
 #include "discopop.h"
+// #include "DPInstrumentationOmission.h"
 
-#include <set>
-#include <map>
-#include <cstdlib>
-
-#include <algorithm>
-#include <iomanip>
-#include <string.h>
-#include <utility>
+// #include <set>
+// #include <map>
+// #include <cstdlib>
+// #include <algorithm>
+// #include <iomanip>
+// #include <string.h>
+// #include <utility>
 
 #define DP_DEBUG false
+#define DP_hybrid_DEBUG false
 
 using namespace llvm;
 using namespace std;
@@ -240,6 +245,7 @@ bool DiscoPoP::doInitialization(Module &M)
     }
 
 // CUGeneration
+{
 CUIDCounter = 0;
   defaultIsGlobalVariableValue = false;
   ThisModule = &M;
@@ -256,8 +262,11 @@ CUIDCounter = 0;
       // originalVariablesSet.insert(glo);
     }
   }
+}
 // CUGeneration end
 
+// DPInstrumentation
+{
     // Export M to the outside
     ThisModule = &M;
     ThisModuleContext = &(M.getContext());
@@ -290,16 +299,67 @@ CUIDCounter = 0;
     {
         loopID = -1;
     }
+}
+  // DPInstrumentation end
+
+  // DPInstrumentationOmission
+{
+  int bbDepCount = 0;
+
+  ReportBB = cast<Function>(M.getOrInsertFunction(
+      "__dp_report_bb", 
+      Void,
+      Int32
+    )
+  );
+  ReportBBPair = cast<Function>(
+    M.getOrInsertFunction(
+      "__dp_report_bb_pair", 
+      Void,
+      Int32, 
+      Int32
+    )
+  );
+  VNF = new dputil::VariableNameFinder(M);
+}
+  // DPInstrumentationOmission end
     return true;
 }
 
 bool DiscoPoP::doFinalization(Module &M) {
+  
+  //CUGeneration
+
   // write the current count of CUs to a file to avoid duplicate CUs.
   if (outCUIDCounter && outCUIDCounter->is_open()) {
     *outCUIDCounter << CUIDCounter;
     outCUIDCounter->flush();
     outCUIDCounter->close();
   }
+  // CUGeneration end
+
+  // DPInstrumentationOmission
+  for(Function &F: M){
+  if(!F.hasName() || F.getName() != "main") continue;
+    for(BasicBlock &BB : F){
+      for(Instruction &I: BB){
+        if(CallInst* call_inst = dyn_cast<CallInst>(&I)){
+          if(Function *Fun = call_inst->getCalledFunction()){
+            if(Fun->getName() == "__dp_finalize"){
+              IRBuilder<> builder(call_inst);
+              Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
+              CallInst::Create(
+                cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr)),
+                V, "", call_inst
+              );
+            }
+          }
+        }
+      }
+    }
+}
+  // DPInstrumentationOmission end
+
   return true;
 }
 
@@ -314,6 +374,7 @@ DiscoPoP::~DiscoPoP()
 
 void DiscoPoP::getAnalysisUsage(AnalysisUsage &AU) const
 {
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequiredTransitive<RegionInfoPass>();
   // NOTE: changed 'LoopInfo' to 'LoopInfoWrapperPass'
     AU.addRequired<LoopInfoWrapperPass>();
@@ -1053,6 +1114,13 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI)
 }
 
 // pass get invoked here
+bool DiscoPoP::runOnModule(Module &M) {
+  // LoopInfo& LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  for(Function &F: M){
+    runOnFunction(F);
+  }
+}
+
 bool DiscoPoP::runOnFunction(Function &F)
 {
     if (DP_DEBUG)
@@ -1099,7 +1167,7 @@ bool DiscoPoP::runOnFunction(Function &F)
         return false;
 
     // CUGeneration
-
+{
       /********************* Initialize root values ***************************/
   Node *root = new Node;
   root->name = F.getName();
@@ -1133,10 +1201,10 @@ bool DiscoPoP::runOnFunction(Function &F)
   // errs()<< "000---\n";
   // NOTE: changed the pass name for loopinfo -- LoopInfo &LI =
   // getAnalysis<LoopInfo>();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
 
   // get the top level region
-  RIpass = &getAnalysis<RegionInfoPass>();
+  RIpass = &getAnalysis<RegionInfoPass>(F);
   RI = &(RIpass->getRegionInfo());
   Region *TopRegion = RI->getTopLevelRegion();
 
@@ -1159,13 +1227,15 @@ bool DiscoPoP::runOnFunction(Function &F)
   for (auto i : CUVector) {
     delete (i);
   }
-
+}
     // CUGeneration end
 
+    // DPInstrumentation
+{   
     // Check loop parallelism?
     if (ClCheckLoopPar)
     {
-        LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+        LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
         CFA(F, LI);
     }
 
@@ -1186,6 +1256,250 @@ bool DiscoPoP::runOnFunction(Function &F)
     {
         errs() << "pass DiscoPoP: finished function\n";
     }
+}
+    // DPInstrumentation end
+
+    // DPInstrumentationOmission
+    // int bbDepCount = 0; moved to doInitialization
+  // string bbDepString;
+{
+    if(F.getInstructionCount() == 0) return false;
+    if(DP_hybrid_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
+
+    DebugLoc dl;
+    Value *V;
+    
+    set<Instruction*> omittableInstructions;
+    
+    set<Value*> staticallyPredictableValues;
+    // Get local values (variables)
+    for (Instruction& I: F.getEntryBlock()) {
+      if (AllocaInst* AI = dyn_cast<AllocaInst>(&I)) {
+        staticallyPredictableValues.insert(AI);
+      }
+    }
+    for (BasicBlock& BB: F){ for(Instruction& I: BB){
+      // Remove from staticallyPredictableValues those which are passed to other functions (by ref/ptr)
+      if(CallInst* call_inst = dyn_cast<CallInst>(&I)){
+        if(Function *Fun = call_inst->getCalledFunction()){
+          if(Fun->getName() == "__dp_write" || Fun->getName() == "__dp_read" || Fun->getName() == "__dp_alloca"){
+            ++totalInstrumentations;
+          }
+          // if(DP_hybrid_DEBUG) errs() << " ----5 " << Fun->getName() << " " << call_inst->getNumOperands() << "\n";
+          // if(dl = call_inst->getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
+          for(uint i = 0; i < call_inst->getNumOperands() - 1; ++i){
+            V = call_inst->getArgOperand(i);
+            std::set<Value*>::iterator it = staticallyPredictableValues.find(V);
+            if(it != staticallyPredictableValues.end()){
+              staticallyPredictableValues.erase(V);
+              if(DP_hybrid_DEBUG) errs() << VNF->getVarName(V) << "\n";
+            }
+            // for(Value *w: staticallyPredictableValues){
+              // for (auto w = staticallyPredictableValues.begin(); w != staticallyPredictableValues.end(); ) {
+              // if(w == V){
+                // w = staticallyPredictableValues.erase(w);
+                // if(DP_hybrid_DEBUG) errs() << VNF->getVarName(V) << "\n";
+              // }
+            // }
+          }
+        }
+      }
+      // Remove values from locals if dereferenced
+      if(isa<StoreInst>(I)){
+        V = I.getOperand(0);
+        for(Value *w: staticallyPredictableValues){
+          if(w == V){
+            staticallyPredictableValues.erase(V);
+          }
+        }
+      }
+    }}
+
+    if(DP_hybrid_DEBUG){
+      errs() << "--- Local Values ---\n";
+      for(auto V: staticallyPredictableValues){
+        errs() << VNF->getVarName(V) << "\n";
+      }
+    }
+
+    // Perform the SPA dependence analysis
+    int32_t fid;
+    determineFileID(F, fid);
+    map<BasicBlock*, set<string>> conditionalBBDepMap;
+    map<BasicBlock*, map<BasicBlock*, set<string>>> conditionalBBPairDepMap;
+
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    InstructionCFG CFG(VNF, F);
+    InstructionDG DG(VNF, &CFG, fid);
+
+    for(auto edge : DG.getEdges()){
+      Instruction* Src = edge->getSrc()->getItem();
+      Instruction* Dst = edge->getDst()->getItem();
+
+      V = Src->getOperand(isa<StoreInst>(Src) ? 1 : 0);
+      if(isa<AllocaInst>(Dst)) V = dyn_cast<Value>(Dst);
+
+      if(staticallyPredictableValues.find(V) == staticallyPredictableValues.end()) continue;
+      
+      if(Src != Dst && DT.dominates(Dst, Src)){
+        if(!conditionalBBDepMap.count(Src->getParent())){
+          set<string> tmp;
+          conditionalBBDepMap[Src->getParent()] = tmp;
+        }
+        conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge));
+      }
+      else{
+        if(!conditionalBBPairDepMap.count(Dst->getParent())){
+          map<BasicBlock*, set<string>> tmp;
+          conditionalBBPairDepMap[Dst->getParent()] = tmp;
+        }
+        if(!conditionalBBPairDepMap[Dst->getParent()].count(Src->getParent())){
+          set<string> tmp;
+          conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
+        }
+        conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(DG.edgeToDPDep(edge));
+      }
+      omittableInstructions.insert(Src);
+      omittableInstructions.insert(Dst);
+    }
+
+    // Omit SPA instructions with no dependences
+    for(auto node: DG.getInstructionNodes()){
+      if(!isa<StoreInst>(node->getItem()) && !!isa<LoadInst>(node->getItem())) continue;
+      V = node->getItem()->getOperand(isa<StoreInst>(node->getItem()) ? 1 : 0);
+      if(!DG.getInEdges(node).size() && !DG.getOutEdges(node).size() && staticallyPredictableValues.find(V) != staticallyPredictableValues.end())
+        omittableInstructions.insert(node->getItem());
+    }
+
+    // Add observation of execution of single basic blocks
+    for(auto pair : conditionalBBDepMap){
+      // Insert call to reportbb
+      Instruction* insertionPoint = pair.first->getTerminator();
+      if(isa<ReturnInst>(pair.first->getTerminator())){
+        insertionPoint = insertionPoint->getPrevNonDebugInstruction();
+      }
+      auto CI = CallInst::Create(
+        ReportBB, 
+        ConstantInt::get(Int32, bbDepCount),
+        "",
+        insertionPoint
+      );
+      
+      // ---- Insert deps into string ----
+      if(bbDepCount) bbDepString += "/";
+      bool first = true;
+      bbDepString += to_string(bbDepCount) + "=";
+      for(auto dep: pair.second){
+        if(!first) bbDepString += ",";
+        bbDepString += dep;
+        first=false;
+      }
+      // ---------------------------------
+      ++bbDepCount;
+    }
+
+    // Add observation of in-order execution of pairs of basic blocks
+    for(auto pair1 : conditionalBBPairDepMap){
+      // Alloca and init semaphore var for BB
+      auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNonDebugInstruction());
+      new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNonDebugInstruction());
+
+      for(auto pair2: pair1.second){
+        // Insert check for semaphore
+        Instruction* insertionPoint = pair2.first->getTerminator();
+        if(isa<ReturnInst>(pair2.first->getTerminator()))
+          insertionPoint = insertionPoint->getPrevNonDebugInstruction();
+      
+        auto LI = new LoadInst(AI, Twine(""), false, insertionPoint);
+        ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, bbDepCount)});
+        CallInst::Create(
+          ReportBBPair,
+          arguments,
+          "",
+          insertionPoint
+        );
+
+        // ---- Insert deps into string ----
+        if(bbDepCount) bbDepString += "/";
+        bbDepString += to_string(bbDepCount);
+        bbDepString += "=";
+        bool first = true;
+        for(auto dep: pair2.second){
+          if(!first) bbDepString += ",";
+          bbDepString += dep;
+          first=false;
+        }
+        // ----------------------------------
+        ++bbDepCount;
+      }
+      // Insert semaphore update to true
+      new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator());
+    }
+
+    if(DumpToDot){
+      CFG.dumpToDot(fileName + "_" + string(F.getName()) + ".CFG.dot");
+      DG.dumpToDot(fileName + "_" + string(F.getName()) + ".DG.dot");
+    }
+    
+    if(DP_hybrid_DEBUG){
+      errs() << "--- Conditional BB Dependences:\n";
+      for(auto pair : conditionalBBDepMap){
+        errs() << pair.first->getName() << ":\n";
+        for(auto s: pair.second){
+          errs() << "\t" << s << "\n";
+        }
+      }
+
+      errs() << "--- Conditional BB-Pair Dependences:\n";
+      for(auto pair1 : conditionalBBPairDepMap){
+        for(auto pair2: pair1.second){
+          errs() << pair1.first->getName() << "-";
+          errs() << pair2.first->getName() << ":\n";
+          for(auto s: pair2.second)
+            errs() << "\t" << s << "\n";
+        }
+      }
+    }
+  
+    if(DP_hybrid_DEBUG){
+      errs() << "--- Program Instructions:\n";
+      for (BasicBlock& BB: F){ for(Instruction& I: BB){
+        if(!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) continue;
+        errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
+        if(dl = I.getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
+        else errs() << F.getSubprogram()->getLine() << ",*";
+        errs() << " | ";
+        V = I.getOperand(isa<StoreInst>(I) ? 1 : 0);
+        if(isa<AllocaInst>(I)) V = dyn_cast<Value>(&I);
+        errs() << VNF->getVarName(V);
+        
+        if(omittableInstructions.find(&I) != omittableInstructions.end())
+          errs() << " | OMITTED";
+          
+        errs() << "\n";
+      }}
+    }
+    
+    // Remove omittable instructions from profiling
+    Instruction* DP_Instrumentation;
+    for(Instruction* I : omittableInstructions){
+      if(isa<AllocaInst>(I)) DP_Instrumentation = I->getNextNode()->getNextNode();
+      else DP_Instrumentation = I->getPrevNode();
+      
+      if(!DP_Instrumentation) continue;
+      if(CallInst* call_inst = dyn_cast<CallInst>(DP_Instrumentation)){
+        if(Function* Fun = call_inst->getCalledFunction()){
+          string fn = Fun->getName();
+          if(fn == "__dp_write" || fn == "__dp_read" || fn == "__dp_alloca"){
+            DP_Instrumentation->eraseFromParent();
+            ++removedInstrumentations;
+          }
+        }
+      }
+    }
+    if(DP_hybrid_DEBUG) errs() << "Done with function " << F.getName() << ":\n";
+}
+    // DPInstrumentationOmission end
     return true;
 }
 

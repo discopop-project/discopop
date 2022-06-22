@@ -34,10 +34,16 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
-
+#include "llvm/IR/InstIterator.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 
 #include "DPUtils.h"
+#include "InstructionDG.h"
 
+#include <cstdlib>
 #include <algorithm>
 #include <iomanip>
 #include <map>
@@ -55,8 +61,15 @@ using namespace dputil;
 static cl::opt<bool> ClCheckLoopPar("dp-loop-par", cl::init(true),
                                     cl::desc("Check loop parallelism"), cl::Hidden);
 
+static cl::opt<bool> DumpToDot(
+  "dp-omissions-dump-dot", cl::init(false),
+  cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden
+);
+
 namespace {
 
+STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
+STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
 
 // CUGeneration
 
@@ -164,7 +177,7 @@ typedef struct CU_struct : Node_struct {
 
 // DPInstrumentation end
 
-class DiscoPoP : public FunctionPass {
+class DiscoPoP : public ModulePass {
 private:
 
 // CUGeneration
@@ -248,11 +261,21 @@ private:
         map<string, MDNode *> Structs;
 // DPInstrumentation end
 
+// DPInstrumentationOmission
+        int bbDepCount;
+        string bbDepString;
+        string fileName;
+        int32_t fid;
+        Function *ReportBB, *ReportBBPair;
+        dputil::VariableNameFinder *VNF;
+// DPInstrumentationOmission end
+
 public:
-  DiscoPoP() : FunctionPass(ID), uniqueNum(1) {};
+  DiscoPoP() : ModulePass(ID), uniqueNum(1) {};
   ~DiscoPoP();
 
   StringRef getPassName() const;
+  bool runOnModule(Module &M);
   bool runOnFunction(Function &F);
   void runOnBasicBlock(BasicBlock &BB);
   bool doInitialization(Module &M);
@@ -335,6 +358,7 @@ static RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential paralle
 
 static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM)
 {
+    // PM.add(new DominatorTreeWrapperPass());
     PM.add(new LoopInfoWrapperPass());
     PM.add(new DiscoPoP());
 }
@@ -342,12 +366,13 @@ static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase 
 static RegisterStandardPasses DiscoPoPLoader_Ox(PassManagerBuilder::EP_OptimizerLast, loadPass);
 static RegisterStandardPasses DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
 
-FunctionPass *createDiscoPoPPass()
+ModulePass *createDiscoPoPPass()
 {
     if (DP_DEBUG)
     {
         errs() << "create DiscoPoP \n";
     }
+    // initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     return new DiscoPoP();
 }
