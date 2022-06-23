@@ -64,7 +64,7 @@ class MemoryAccessGraph(object):
         self.__visit_node(pc_graph, pc_graph_root_node, pu_stack, current_path)
 
         #pc_graph.plot_graph()
-        self.plot_graph()
+        #self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
         print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
