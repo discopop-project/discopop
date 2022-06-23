@@ -54,9 +54,6 @@ class MemoryAccessGraph(object):
         # create and initialize pu_stack
         pu_stack = PUStack(self.__get_new_parallel_frame_id(), pc_graph_root_node)
         current_path: List[int] = [0]
-        print("Current Node: ", pc_graph_root_node.node_id)
-        print("PU Stack: ", pu_stack)
-        print("Current path: ", current_path)
 
         # traverse task graph in a depth-first manner
         # in doing so, traverse outgoing contains edges before sequential edges to analyze the effects of a node in the
@@ -88,7 +85,6 @@ class MemoryAccessGraph(object):
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.SEQUENTIAL])
         for child_idx, child in enumerate(children):
             self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(incremented_path + [child_idx]))
-        print("Leaving: ", pc_graph_node.node_id)
 
     def __modify_memory_access_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
         # check if pu stack needs to be modified
@@ -103,7 +99,6 @@ class MemoryAccessGraph(object):
         if type(raw_pc_graph_node) == BehaviorModelNode:
             bhv_node = cast(BehaviorModelNode, raw_pc_graph_node)
             model = bhv_node.single_behavior_model
-            print("Thread_Count: ", model.simulation_thread_count)
             previous_node_id = str(bhv_node.node_id)
             for op_idx, op in enumerate(model.operations):
                 operation_path_id = current_path + [op_idx]
@@ -169,12 +164,8 @@ class MemoryAccessGraph(object):
         The check considers both orderings.
         Returns True, if a predecessor relation exists.
         Returns False, otherwise."""
-        print("PATH 1: ", path_1)
-        print("PATH 2: ", path_2)
 
         def check_precedence(inner_path_1: List[int], inner_path_2: List[int]) -> bool:
-            print("\tINNER PATH 1: ", inner_path_1)
-            print("\tINNER PATH 2: ", inner_path_2)
             for idx, elem in enumerate(inner_path_1):
                 if idx == len(inner_path_1) -1 :
                     # last element of the list
@@ -186,12 +177,10 @@ class MemoryAccessGraph(object):
                     # check if element with index idx exists in inner_path_2.
                     # If not, inner_path_2 is a predecessor of inner_path_1
                     if idx > len(inner_path_2):
-                        print("Inner_path_2 is shorter predecessor of inner_path_1")
                         return True
 
                     # check if elements at index idx in both lists are equivalent
                     if inner_path_1[idx] != inner_path_2[idx]:
-                        print("idx: ", idx, "  ", inner_path_1[idx], "!=", inner_path_2[idx])
                         return False
 
         # consider both potential precedence relations
@@ -202,7 +191,9 @@ class MemoryAccessGraph(object):
 
     def detect_data_races(self):
         """starts the detection of data races for each node of the graph"""
-        print("HELLO FROM DETECT DATA RACES")
+        print("#########")
+        print("Detecting data races...")
+        print("#########")
         # start data race detection for each node in the graph
         for node in self.graph.nodes:
             print("NODE: ", node)
@@ -216,9 +207,9 @@ class MemoryAccessGraph(object):
                 if data_race_found:
                     op_1: Operation = self.graph.edges[edge_1]["data"].operation
                     op_2: Operation = self.graph.edges[edge_2]["data"].operation
-                    print("DATA RACE FOUND!")
-                    print("\t", op_1)
-                    print("\t", op_2)
+                    print("\tDATA RACE FOUND!")
+                    print("\t\t", op_1)
+                    print("\t\t", op_2)
                     print()
                     # todo do anything useful with identified data races
 
@@ -234,8 +225,6 @@ class MemoryAccessGraph(object):
 
         # requirement 1: both accesses happen within the same parallel unit
         if amd_1.parallel_unit != amd_2.parallel_unit:
-            print("AMD1 PU: ", amd_1.parallel_unit)
-            print("AMD2 PU: ", amd_2.parallel_unit)
             return False
 
         # requirement 2: at least of the accesses must be a write
@@ -244,9 +233,8 @@ class MemoryAccessGraph(object):
 
         # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
         if self.__predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
-            print("PREDECESSOR RELATION EXISTS")
+            # predecessor relation exists
             return False
-
 
         return True
 

@@ -27,8 +27,6 @@ class BehaviorModelNode(PCGraphNode):
         self.data_races = []
         self.covered_by_fork_node = parent_node.covered_by_fork_node
 
-        print("NEW NODE ID: ", self.node_id)
-
     def get_label(self):
         if self.node_id == 0:
             return "ROOT"
