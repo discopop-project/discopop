@@ -265,18 +265,21 @@ def __main_start_execution(run_configuration: Configuration):
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
         pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
+        time_data_race_computation_start = time.time()
 
         memory_access_graph = MemoryAccessGraph(pc_graph)
         memory_access_graph.detect_data_races(pc_graph)
 
-        time_data_race_computation_start = time.time()
+        time_data_race_computation_end = time.time()
+        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
+
 
 
 #        # trigger result computation
 #        computed_result: ResultObject = parallel_construct_graph.compute_results()
 #        # apply exception rules to detected data races
 #        computed_result.apply_exception_rules_to_data_races(pet, parallel_construct_graph)
-#        time_data_race_computation_end = time.time()
+    #        time_data_race_computation_end = time.time()
 #        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
 #        # print detected data races
 #        computed_result.print_data_races()
