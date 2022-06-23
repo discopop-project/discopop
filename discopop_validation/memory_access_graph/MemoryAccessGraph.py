@@ -19,6 +19,8 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
     PragmaBarrierNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaParallelNode import \
     PragmaParallelNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import \
+    PragmaTaskwaitNode
 from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
 from discopop_validation.memory_access_graph.PUStack import PUStack
 from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
@@ -102,10 +104,10 @@ class MemoryAccessGraph(object):
             previous_node_id = str(bhv_node.node_id)
             for op_idx, op in enumerate(model.operations):
                 operation_path_id = current_path + [op_idx]
-                previous_node_id = self.__add_memory_access_to_graph(operation_path_id, op,
+                previous_node_id = self.__add_memory_access_to_graph(operation_path_id, op, bhv_node,
                                                                      previous_node_id, pu_stack.peek())
 
-    def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation,
+    def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation, bhv_node: BehaviorModelNode,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
         print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
@@ -116,7 +118,7 @@ class MemoryAccessGraph(object):
             # add node vor target_name into MemoryAccessGraph
             self.graph.add_node(operation.target_name)
 
-        access_metadata = AccessMetaData(operation, operation.mode, operation_path_id, parallel_unit)
+        access_metadata = AccessMetaData(operation, operation.mode, operation_path_id, bhv_node, parallel_unit)
 
         if operation.mode == "r":
             self.graph.add_edge(previous_node_id, operation.target_name, data=access_metadata, style="dashed",
@@ -147,19 +149,31 @@ class MemoryAccessGraph(object):
     def __close_last_pu_entry(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         """closes the last entry in the stack if a node of one of the following types is encountered:
             BARRIER
-            JOIN (if incoming belongs_to edge from origin node of the current parallel frame exists)
+            JOIN (closes all pu entries up until the one which has been created by the FORK node which belongs to it
         """
         if type(pc_graph_node) == PragmaBarrierNode:
             pu_stack.pop()
         if type(pc_graph_node) == JoinNode:
-            # check if belongs_to edge from origin node of parallel frame to the JOIN node exists
-            pu_origin = pu_stack.peek().origin_pc_graph_node
             incoming_belongs_to_edges = pc_graph.get_incoming_edges_of_node(pc_graph_node, [EdgeType.BELONGS_TO])
-            sources = [source for (source, target) in incoming_belongs_to_edges]
-            if pu_origin.node_id in sources:
-                pu_stack.pop()
+            # ignore JOIN without belonging fork
+            if len(incoming_belongs_to_edges) > 0:
+                sources = [source for (source, target) in incoming_belongs_to_edges]
+                while len(pu_stack.contents) > 1:
+                    # check if belongs_to edge from origin node of parallel frame to the JOIN node exists
+                    pu_origin = pu_stack.peek().origin_pc_graph_node
 
-    def __predecessor_relation_exists(self, path_1: List[int], path_2: List[int]) -> bool:
+                    if pu_origin.node_id in sources:
+                        # pu_stack entry of related FORK node found. stop iteration
+                        pu_stack.pop()
+                        print("POP END")
+                        break
+                    else:
+                        # restart search
+                        pu_stack.pop()
+                        print("POP")
+
+
+    def __path_predecessor_relation_exists(self, path_1: List[int], path_2: List[int]) -> bool:
         """checks whether a predecessor relation between path_1 and path_2 exists.
         The check considers both orderings.
         Returns True, if a predecessor relation exists.
@@ -189,7 +203,7 @@ class MemoryAccessGraph(object):
         return False
 
 
-    def detect_data_races(self):
+    def detect_data_races(self, pc_graph: PCGraph):
         """starts the detection of data races for each node of the graph"""
         print("#########")
         print("Detecting data races...")
@@ -203,18 +217,37 @@ class MemoryAccessGraph(object):
             incoming_edge_pairs = ((i, j) for i in incoming_accesses for j in incoming_accesses if i != j)
             # check each pair for present data races
             for edge_1, edge_2 in incoming_edge_pairs:
-                data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2)
+                data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2, pc_graph)
                 if data_race_found:
                     op_1: Operation = self.graph.edges[edge_1]["data"].operation
                     op_2: Operation = self.graph.edges[edge_2]["data"].operation
                     print("\tDATA RACE FOUND!")
                     print("\t\t", op_1)
+                    print("\t\t\t", self.graph.edges[edge_1]["data"].operation_path_id)
                     print("\t\t", op_2)
+                    print("\t\t\t", self.graph.edges[edge_2]["data"].operation_path_id)
                     print()
                     # todo do anything useful with identified data races
 
 
-    def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int]):
+    def __pcgraph_predecessor_relation(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pc_graph: PCGraph):
+        """Check if a Taskwait or Barrier is encountered on the path from amd_1.origin_bhv_node
+        to amd_2.origin_bhv_node or vice versa.
+        Returns True, if a Taskwait or Barrier lies between both origin_bhv_nodes.
+        Reutrns False, else
+        """
+        # check both directions
+        result = False
+        result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
+                                                                                      amd_2.origin_bhv_node.node_id)
+
+        result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
+                                                                                      amd_1.origin_bhv_node.node_id)
+        return result
+
+
+
+    def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph):
         """checks the given pair of edges for data races.
         Returns True, if a data race has been found.
         Else, returns False.
@@ -232,8 +265,13 @@ class MemoryAccessGraph(object):
             return False
 
         # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
-        if self.__predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
+        if self.__path_predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
             # predecessor relation exists
+            return False
+
+        # requirement 4: check for PCGraph predecessor relations
+        if self.__pcgraph_predecessor_relation(amd_1, amd_2, pc_graph):
+            print("ASDF")
             return False
 
         return True

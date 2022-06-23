@@ -1038,6 +1038,20 @@ class PCGraph(object):
             result = result or self.is_successor(successor, target_node)
         return result
 
+    def is_successor_with_encountered_barrier_or_taskwait(self, root_node, target_node, encountered_barrier=False):
+        if type(self.graph.nodes[root_node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+            encountered_barrier = True
+
+        if root_node == target_node:
+            return True and encountered_barrier
+        out_seq_edges = [edge for edge in self.graph.out_edges(root_node) if
+                         self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+        result = False
+        for _, successor in out_seq_edges:
+            result = result or self.is_successor_with_encountered_barrier_or_taskwait(successor, target_node,
+                                                                                      encountered_barrier=encountered_barrier)
+        return result
+
     def add_depends_edges(self):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
