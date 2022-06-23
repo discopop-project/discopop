@@ -246,7 +246,6 @@ class MemoryAccessGraph(object):
         return result
 
 
-
     def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph):
         """checks the given pair of edges for data races.
         Returns True, if a data race has been found.
@@ -257,6 +256,7 @@ class MemoryAccessGraph(object):
         amd_2: AccessMetaData = self.graph.edges[edge_2]["data"]
 
         # requirement 1: both accesses happen within the same parallel unit
+        # todo might require: both accesses happen within nested parallel units
         if amd_1.parallel_unit != amd_2.parallel_unit:
             return False
 
