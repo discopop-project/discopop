@@ -32,6 +32,7 @@ import os
 import sys
 import cProfile
 import time
+from typing import List
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use  # type: ignore
@@ -43,6 +44,7 @@ from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
+from discopop_validation.memory_access_graph import MAGDataRace
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
@@ -268,7 +270,7 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         memory_access_graph = MemoryAccessGraph(pc_graph)
-        memory_access_graph.detect_data_races(pc_graph)
+        data_races: List[MAGDataRace] = memory_access_graph.detect_data_races(pc_graph)
 
         time_data_race_computation_end = time.time()
         time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
@@ -290,48 +292,38 @@ def __main_start_execution(run_configuration: Configuration):
 #        #parallel_construct_graph.plot_graph(mark_data_races=False)
 #
 #        # output found data races to file if requested
-#        if run_configuration.data_race_ouput_path != "None":
-#            buffer = []
-#            if data_race_txt_written:
-#                with open(run_configuration.data_race_ouput_path, "a+") as f:
-#                    # f.write("fileID;line;column\n")
-#                    for dr in computed_result.data_races:
-#                        # write data race line to file
-#                        split_dr_info = dr.get_location_str().split(";")
-#                        dr_line = split_dr_info[1]
-#                        if dr_line not in buffer:
-#                            f.write(dr_line + " " + dr.var_name + "\n")
-#                            buffer.append(dr_line)
-#                        # write line of previous action to file aswell
-#                        last_access_lines = dr.get_relevant_previous_access_lines()
-#                        for line in last_access_lines:
-#                            line = str(line)
-#                            if line not in buffer:
-#                                f.write(line + " " + dr.var_name + "\n")
-#                                buffer.append(line)
-#            else:
-#                with open(run_configuration.data_race_ouput_path, "w+") as f:
-#                    data_race_txt_written = True
-#                    # f.write("fileID;line;column\n")
-#                    for dr in computed_result.data_races:
-#                        # write data race line to file
-#                        split_dr_info = dr.get_location_str().split(";")
-#                        dr_line = split_dr_info[1]
-#                        if dr_line not in buffer:
-#                            f.write(dr_line + " " + dr.var_name + "\n")
-#                            buffer.append(dr_line)
-#                        # write line of previous action to file aswell
-#                        last_access_lines = dr.get_relevant_previous_access_lines()
-#                        for line in last_access_lines:
-#                            line = str(line)
-#                            if line not in buffer:
-#                                f.write(line + " " + dr.var_name + "\n")
-#                                buffer.append(line)
-#
-#
-#                    #if dr.get_location_str() not in buffer:
-#                    #    f.write(dr.get_location_str() + "\n")
-#                    #    buffer.append(dr.get_location_str())
+        if run_configuration.data_race_ouput_path != "None":
+            buffer = []
+            if data_race_txt_written:
+                with open(run_configuration.data_race_ouput_path, "a+") as f:
+                    # f.write("fileID;line;column\n")
+                    for dr in data_races:
+                    #for dr in computed_result.data_races:
+                        # write line of first operation to file
+                        dr_line_1 = str(dr.operation_1.line)
+                        if dr_line_1 not in buffer:
+                            f.write(dr_line_1 + " " + dr.operation_1.target_name + "\n")
+                            buffer.append(dr_line_1)
+                        # write line of second operation to file
+                        dr_line_2 = str(dr.operation_2.line)
+                        if dr_line_2 not in buffer:
+                            f.write(dr_line_2 + " " + dr.operation_2.target_name + "\n")
+                            buffer.append(dr_line_2)
+            else:
+                with open(run_configuration.data_race_ouput_path, "w+") as f:
+                    data_race_txt_written = True
+                    # f.write("fileID;line;column\n")
+                    for dr in data_races:
+                        # write data race line to file
+                        dr_line_1 = str(dr.operation_1.line)
+                        if dr_line_1 not in buffer:
+                            f.write(dr_line_1 + " " + dr.operation_1.target_name + "\n")
+                            buffer.append(dr_line_1)
+                        # write line of second operation to file
+                        dr_line_2 = str(dr.operation_2.line)
+                        if dr_line_2 not in buffer:
+                            f.write(dr_line_2 + " " + dr.operation_2.target_name + "\n")
+                            buffer.append(dr_line_2)
 
     # correct tool support value in evaluation by creating data_races.txt file
     if not data_race_txt_written:
