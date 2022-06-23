@@ -144,16 +144,25 @@ class MemoryAccessGraph(object):
     def __create_new_pu_entry(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         """"create a new entry if any of the following node types is encountered:
             PARALLEL
+            FORK
         """
-        if type(pc_graph_node) in [PragmaParallelNode]:
+        if type(pc_graph_node) in [PragmaParallelNode, ForkNode]:
             pu_stack.push(self.__get_new_parallel_frame_id(), pc_graph_node)
 
     def __close_last_pu_entry(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         """closes the last entry in the stack if a node of one of the following types is encountered:
             BARRIER
+            JOIN (if incoming belongs_to edge from origin node of the current parallel frame exists)
         """
         if type(pc_graph_node) == PragmaBarrierNode:
             pu_stack.pop()
+        if type(pc_graph_node) == JoinNode:
+            # check if belongs_to edge from origin node of parallel frame to the JOIN node exists
+            pu_origin = pu_stack.peek().origin_pc_graph_node
+            incoming_belongs_to_edges = pc_graph.get_incoming_edges_of_node(pc_graph_node, [EdgeType.BELONGS_TO])
+            sources = [source for (source, target) in incoming_belongs_to_edges]
+            if pu_origin.node_id in sources:
+                pu_stack.pop()
 
     def __predecessor_relation_exists(self, path_1: List[int], path_2: List[int]) -> bool:
         """checks whether a predecessor relation between path_1 and path_2 exists.
