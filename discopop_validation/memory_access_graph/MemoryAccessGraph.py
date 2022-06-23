@@ -22,6 +22,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import \
     PragmaTaskwaitNode
 from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
+from discopop_validation.memory_access_graph.MAGDataRace import MAGDataRace
 from discopop_validation.memory_access_graph.PUStack import PUStack
 from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
 
@@ -208,6 +209,7 @@ class MemoryAccessGraph(object):
         print("#########")
         print("Detecting data races...")
         print("#########")
+        data_races: List[MAGDataRace] = []
         # start data race detection for each node in the graph
         for node in self.graph.nodes:
             print("NODE: ", node)
@@ -228,6 +230,9 @@ class MemoryAccessGraph(object):
                     print("\t\t\t", self.graph.edges[edge_2]["data"].operation_path_id)
                     print()
                     # todo do anything useful with identified data races
+                    data_race_object = MAGDataRace(node, op_1, op_2)
+                    data_races.append(data_race_object)
+        return data_races
 
 
     def __pcgraph_predecessor_relation(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pc_graph: PCGraph):
