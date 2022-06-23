@@ -33,10 +33,8 @@ class BehaviorModelNode(PCGraphNode):
         if self.node_id == 0:
             return "ROOT"
         label = str(self.node_id) + " " + "Bhv\n"
-        if len(self.behavior_model) == 0:
-            return label
         label += str(self.single_behavior_model.get_file_id()) + ":" + str(
-            self.single_behavior_model.get_start_line()) + "-" + str(self.behavior_model.get_end_line())
+            self.single_behavior_model.get_start_line()) + "-" + str(self.single_behavior_model.get_end_line())
         return label
 
     def get_color(self, mark_data_races: bool):
