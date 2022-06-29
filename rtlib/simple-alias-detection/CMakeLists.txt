@@ -1,6 +1,6 @@
 message(STATUS "Found LLVM/Clang version " ${LLVM_VERSION})
-if(NOT ${LLVM_VERSION} VERSION_EQUAL 8)
-  message(WARNING "Make sure to use Clang 8")
+if(NOT ${LLVM_VERSION} VERSION_EQUAL 14)
+  message(WARNING "Make sure to use Clang 14")
 endif()
 
 find_package(Clang)

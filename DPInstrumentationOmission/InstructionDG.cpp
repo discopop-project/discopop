@@ -111,14 +111,14 @@ void InstructionDG::dumpToDot(const string targetPath)
 			label += ", ";
 			label += to_string(dl.getCol());
 		}else if(isa<StoreInst>(instr)){
-			label += instr->getFunction()->getSubprogram()->getLine() + "\n";
+			label += std::to_string(instr->getFunction()->getSubprogram()->getLine()) + "\n";
 		}
 		label += "\"";
 		if(highlightedNodes.find(instr) != highlightedNodes.end()){
 			label += ",fillcolor=cyan,style=filled";
 		}
 
-		printNode:
+		// printNode:
 		dotStream << "\t\"" << getNodeIndex(node) 
 			<< "\" [" << label << "];\n"
 		;

@@ -69,7 +69,7 @@ namespace __dp
 
     struct compDep
     {
-        bool operator()(const Dep &a, const Dep &b)
+        bool operator()(const Dep &a, const Dep &b) const
         {
             if (a.type < b.type)
             {
