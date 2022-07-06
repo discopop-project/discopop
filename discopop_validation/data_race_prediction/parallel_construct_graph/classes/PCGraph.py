@@ -779,6 +779,10 @@ class PCGraph(object):
                 for edge in out_seq_edges:
                     self.graph.remove_edge(edge[0], edge[1])
                     modification_found = True
+                # if no outgoing sequential edge existed, create edge to barrier
+                if len(out_seq_edges) == 0:
+                    modification_found = True
+
                 if modification_found:
                     self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
 
