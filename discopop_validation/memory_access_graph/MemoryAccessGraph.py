@@ -321,19 +321,21 @@ class MemoryAccessGraph(object):
         dependencies += [dep for dep in dependencies_2_1 if dep not in dependencies]
         print("Identified dependencies:")
         for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype)
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
 
         # ignore INIT type dependencies
         print("After ignoring INIT Dependencies:")
         dependencies = [dep for dep in dependencies if dep[2].dtype != DepType.INIT]
         for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype)
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
 
         # filter dependencies for variables used in amd_1 and amd_2
         dependencies = [dep for dep in dependencies if dep[2].var_name in [amd_1.operation.target_name, amd_2.operation.target_name]]
         print("After filtering for variable name:")
         for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype)
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
+
+        self.__debug(pet)
 
         # if the set of dependencies is not empty, a real dependency exists and thus a potential data race
         if len(dependencies) > 0:
@@ -343,3 +345,9 @@ class MemoryAccessGraph(object):
 
         print("############\n")
         return False
+
+    def __debug(self, pet: PETGraphX):
+        for edge in pet.g.edges:
+            dep_object = pet.g.edges[edge]["data"]
+            print("edge_data: ", dep_object)
+
