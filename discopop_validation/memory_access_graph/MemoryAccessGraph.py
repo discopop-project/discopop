@@ -8,6 +8,7 @@ from networkx.drawing.nx_pydot import to_pydot  # type: ignore
 from typing import Tuple, List, cast, Optional
 
 from discopop_explorer import PETGraphX
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
@@ -283,13 +284,13 @@ class MemoryAccessGraph(object):
             return False
 
         # requirement 5: check if the identified data race is backed up by a dependency edge in the PET Graph
-        if self.__check_requirement_5(amd_1, amd_2, pet):
+        if not self.__pet_dependency_edge_exists(amd_1, amd_2, pet):
             return False
 
         return True
 
 
-    def __check_requirement_5(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):
+    def __pet_dependency_edge_exists(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):
         """
         Checks if the supposed data race is backed up by a corresponding dependency edge in the PET graph.
         """
@@ -298,8 +299,47 @@ class MemoryAccessGraph(object):
         print("############")
         pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
                                                                    amd_1.operation.line, amd_1.operation.line)
+        pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
+                                                                   amd_2.operation.line, amd_2.operation.line)
         print("PET NODE id: amd_1: ", pet_node_id_amd_1)
+        print("PET NODE id: amd_2: ", pet_node_id_amd_2)
+
+        print("Dependencies between nodes: ")
+        out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
+        # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
+        dependencies_1_2 = [dep for dep in out_dependencies_node_1 if dep[0] == pet_node_id_amd_1 and dep[1] == pet_node_id_amd_2]
+        print(pet_node_id_amd_1, " -> ", pet_node_id_amd_2, ":  ", dependencies_1_2)
+
+        out_dependencies_node_2 = pet.out_edges(pet_node_id_amd_2, PETEdgeType.DATA)
+        # filter dependencies, only conserve dependencies from pet_node_id_amd_2 to pet_node_id_amd_1
+        dependencies_2_1 = [dep for dep in out_dependencies_node_2 if
+                            dep[0] == pet_node_id_amd_2 and dep[1] == pet_node_id_amd_1]
+        print(pet_node_id_amd_2, " -> ", pet_node_id_amd_1, ":  ", dependencies_2_1)
+
+        # combine sets of dependencies
+        dependencies = dependencies_1_2
+        dependencies += [dep for dep in dependencies_2_1 if dep not in dependencies]
+        print("Identified dependencies:")
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype)
+
+        # ignore INIT type dependencies
+        print("After ignoring INIT Dependencies:")
+        dependencies = [dep for dep in dependencies if dep[2].dtype != DepType.INIT]
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype)
+
+        # filter dependencies for variables used in amd_1 and amd_2
+        dependencies = [dep for dep in dependencies if dep[2].var_name in [amd_1.operation.target_name, amd_2.operation.target_name]]
+        print("After filtering for variable name:")
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype)
+
+        # if the set of dependencies is not empty, a real dependency exists and thus a potential data race
+        if len(dependencies) > 0:
+            print("==> potential data race backed up by dependency edge")
+            print("############\n")
+            return True
 
         print("############\n")
-
         return False
