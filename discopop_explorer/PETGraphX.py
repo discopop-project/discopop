@@ -512,7 +512,7 @@ class PETGraphX(object):
         dep_set = set()
         loops_start_lines = []
         undefinedVarsInLoop = []
-        firstWrittenVarsInLoop = set()
+        firstWrittenVarsInLoop: Set[Variable] = set()
 
         loop_node_ids = [n.id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
@@ -571,12 +571,14 @@ class PETGraphX(object):
         parent_func_source = self.get_parent_function(self.node_at(t))
 
         res = False
+        d_var_name_str = cast(str, str(d.var_name))
 
-        if(self.is_global(cast(str, d.var_name), sub) and
+        if(self.is_global(d_var_name_str, sub) and
             not (self.is_passed_by_reference(d, parent_func_sink) and
                  self.is_passed_by_reference(d, parent_func_source))):
             return res
-        return True
+        return not res
+
 
     def is_global(self, var: str, tree: List[CUNode]) -> bool:
         """Checks if variable is global
@@ -655,7 +657,7 @@ class PETGraphX(object):
                 return not (x.type.endswith('**') or x.type.startswith('ARRAY' or x.type.startswith('[')))
             else:
                 return False
-        return False
+        raise ValueError("allVars must not be empty.")
 
     def __get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
         """Gets all variables in nodes
@@ -674,7 +676,7 @@ class PETGraphX(object):
     def get_undefined_variables_inside_loop(self, root_loop: CUNode) -> List[Variable]:
 
         sub = self.subtree_of_type(root_loop, NodeType.CU)
-        vars = self.__get_variables(sub)
+        vars = list(self.__get_variables(sub))
         dummyVariables = []
         definedVarsInLoop = []
         definedVarsInCalledFunctions = []
