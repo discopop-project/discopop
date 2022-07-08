@@ -63,7 +63,8 @@ jobs:
           echo $PATH
       - name: "Clang executable TEST"
         run: |
-          clang++ --version
+          /usr/bin/clang++ --version
+          /usr/bin/clang++-14 --version
       - name: "Run DiscoPoP Profiler on test/ Targets"
         run: |
           chmod +x .github/workflows/discopop_profiler/test.sh
