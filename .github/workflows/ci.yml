@@ -31,7 +31,7 @@ jobs:
       - name: "Run tests"
         run: python -m unittest -v
       - name: "Run MyPy Type Checker"
-        run: python -m mypy --warn-unused-ignores -p discopop_explorer -p discopop_profiler
+        run: python -m mypy -p discopop_explorer -p discopop_profiler
       - name: "Check formatting of discopop_profiler"
         run: python -m black -l 100 --check discopop_profiler
 
@@ -56,4 +56,6 @@ jobs:
         with:
           python-version: 3.6
       - name: "Run DiscoPoP Profiler on test/ Targets"
-        run: .github/workflows/discopop_profiler/test.sh
+        run: |
+          chmod +x .github/workflows/discopop_profiler/test.sh
+          .github/workflows/discopop_profiler/test.sh
