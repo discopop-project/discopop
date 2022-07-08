@@ -1,16 +1,16 @@
 from discopop_explorer.PETGraphX import EdgeType, NodeType
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type
-from discopop_validation.interfaces.discopop_explorer import is_loop_index
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
+from discopop_validation.interfaces.discopop_explorer import is_loop_index
 
 
-def __check_pragma_for_exception_rules(data_race: DataRace, pet, task_graph) -> bool:
+def __check_pragma_for_exception_rules(data_race: DataRace, pet, pc_graph) -> bool:
     """Checks if the given data race is valid according to the parallel_for exception rules.
     Returns True, if the data race is valid and should be kept.
     Returns False, if the data race is invalid and should be removed."""
     is_valid = True
     is_valid = is_valid and __for_exception_rule_1(data_race, pet)
-    is_valid = is_valid and __for_exception_rule_2(data_race, pet, task_graph)
+    is_valid = is_valid and __for_exception_rule_2(data_race, pet, pc_graph)
     return is_valid
 
 
@@ -20,16 +20,17 @@ def __for_exception_rule_1(data_race: DataRace, pet) -> bool:
         return True
     else:
         for index in data_race.get_used_indices():
-            parent_loop_node = get_parent_of_type(pet, pet.node_at(data_race.get_cu_id(pet)), NodeType.LOOP, EdgeType.CHILD, True)
+            parent_loop_node = get_parent_of_type(pet, pet.node_at(data_race.get_cu_id(pet)), NodeType.LOOP,
+                                                  EdgeType.CHILD, True)
             if len(parent_loop_node) != 1:
                 return False
-            parent_loop_node = parent_loop_node[0][0]
-            if is_loop_index(pet, parent_loop_node, index):
+            parent_loop_node_cu = parent_loop_node[0][0]
+            if is_loop_index(pet, parent_loop_node_cu, index):
                 return False
         return True
 
 
-def __for_exception_rule_2(data_race: DataRace, pet, task_graph) -> bool:
+def __for_exception_rule_2(data_race: DataRace, pet, pc_graph) -> bool:
     """exception 1: If multiple loop indices are used and no inner index is shared, the data race can be removed.
     shared: either explicitly mentioned as shared, or not mentioned as private / firstprivate"""
     if len(data_race.get_used_indices()) <= 1:
@@ -41,8 +42,8 @@ def __for_exception_rule_2(data_race: DataRace, pet, task_graph) -> bool:
 
         # get pragmas containing the current data race
         parent_pragmas = []
-        for node in task_graph.graph.nodes:
-            pragma = task_graph.graph.nodes[node]["data"].pragma
+        for node in pc_graph.graph.nodes:
+            pragma = pc_graph.graph.nodes[node]["data"].pragma
             if pragma is None:
                 continue
             if pragma.file_id in dr_file_ids:
@@ -60,8 +61,8 @@ def __for_exception_rule_2(data_race: DataRace, pet, task_graph) -> bool:
                                                   EdgeType.CHILD, True)
             if len(parent_loop_node) != 1:
                 return False
-            parent_loop_node = parent_loop_node[0][0]
-            if is_loop_index(pet, parent_loop_node, index):
+            parent_loop_node_cu = parent_loop_node[0][0]
+            if is_loop_index(pet, parent_loop_node_cu, index):
                 # check if index is shared in one of the parents
                 for pragma in parent_pragmas:
                     if index in pragma.get_variables_listed_as("shared"):

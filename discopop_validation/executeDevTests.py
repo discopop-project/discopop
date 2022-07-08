@@ -13,7 +13,7 @@ os.system("coverage report -m --omit=executeDevTests.py")
 
 # execute mypy type check
 print(colored("\n====== EXECUTE MYPY TYPE CHECK ======", "blue"))
-os.system("python -m mypy .")
+os.system("./run_mypy.sh")
 
 # execute radon code metric checks
 print(colored("\n====== EXECUTE RADON CYCLOMATIC COMPLEXITY ======", "blue"))

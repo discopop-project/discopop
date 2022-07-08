@@ -1,27 +1,21 @@
-import warnings
-
 from typing import Optional, List
 
-from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
+from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
-from discopop_validation.data_race_prediction.scheduler.core import create_scheduling_graph_from_behavior_models
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraphNode import TaskGraphNode
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
-import copy
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 
-class CalledFunctionNode(TaskGraphNode):
-    result : Optional[ResultObject]
+
+class CalledFunctionNode(PCGraphNode):
+    result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
-    behavior_models : List[BehaviorModel]
-    name : Optional[str]
-    file_id : Optional[int]
-    start_line : Optional[int]
+    behavior_models: List[BehaviorModel]
+    name: Optional[str]
+    file_id: Optional[int]
+    start_line: Optional[int]
     end_line: Optional[int]
 
-
-    def __init__(self, node_id, pragma=None, name=None, file_id=None, start_line=None, end_line=None ):
+    def __init__(self, node_id, pragma=None, name=None, file_id=None, start_line=None, end_line=None):
         super().__init__(node_id, pragma)
         self.name = name
         self.file_id = file_id

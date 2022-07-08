@@ -8,9 +8,9 @@
 
 from enum import IntEnum, Enum
 from platform import node
-from typing import Dict, List, Tuple, Set, Optional
+from typing import Dict, List, Tuple, Set, Optional, cast
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 
@@ -273,6 +273,8 @@ class PETGraphX(object):
         # t6 = time.time()
         # print(f"try: {t6-t5}")
         for dep in dependencies_list:
+            print("\nDEP: ", dep.var_name)
+            print(readlineToCUIdMap)
             if dep.type == 'INIT':
                 sink = readlineToCUIdMap[dep.sink]
                 for s in sink:
@@ -281,7 +283,8 @@ class PETGraphX(object):
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
-
+            print("SINKS: ", sink_cu_ids)
+            print("SOURCES: ", source_cu_ids)
             for sink_cu_id in sink_cu_ids:
                 for source_cu_id in source_cu_ids:
 
@@ -509,7 +512,7 @@ class PETGraphX(object):
         dep_set = set()
         loops_start_lines = []
         undefinedVarsInLoop = []
-        firstWrittenVarsInLoop = []
+        firstWrittenVarsInLoop = set()
 
         loop_node_ids = [n.id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
@@ -569,10 +572,11 @@ class PETGraphX(object):
 
         res = False
 
-        if(self.is_global(d.var_name, sub) and
+        if(self.is_global(cast(str, d.var_name), sub) and
             not (self.is_passed_by_reference(d, parent_func_sink) and
                  self.is_passed_by_reference(d, parent_func_source))):
             return res
+        return True
 
     def is_global(self, var: str, tree: List[CUNode]) -> bool:
         """Checks if variable is global
@@ -601,7 +605,7 @@ class PETGraphX(object):
 
         return res
 
-    def get_first_written_vars_in_loop(self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode) -> Set[str]:
+    def get_first_written_vars_in_loop(self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode) -> Set[Variable]:
         loop_node_ids = [n.id for n in self.subtree_of_type(
             root_loop, NodeType.CU)]
         fwVars = set()
@@ -651,6 +655,7 @@ class PETGraphX(object):
                 return not (x.type.endswith('**') or x.type.startswith('ARRAY' or x.type.startswith('[')))
             else:
                 return False
+        return False
 
     def __get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
         """Gets all variables in nodes
@@ -679,24 +684,24 @@ class PETGraphX(object):
             if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
                 dummyVariables.append(var)
 
-        vars = list(set(vars) ^ set(dummyVariables))
+        vars_list = list(set(vars) ^ set(dummyVariables))
         # Exclude variables which are defined inside the loop
-        for var in vars:
+        for var in vars_list:
             if var.defLine >= root_loop.start_position() and var.defLine <= root_loop.end_position():
                 definedVarsInLoop.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInLoop))
+        vars_list = list(set(vars) ^ set(definedVarsInLoop))
 
         # Also, exclude variables which are defined inside
         # functions that are called within the loop
-        for var in vars:
+        for var in vars_list:
             for s in sub:
                 if var.defLine >= s.start_position() and var.defLine <= s.end_position():
                     definedVarsInCalledFunctions.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInCalledFunctions))
+        vars_list = list(set(vars) ^ set(definedVarsInCalledFunctions))
 
-        return vars
+        return vars_list
 
     def is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
         """Checks whether a variable is first written inside the current node

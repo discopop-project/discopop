@@ -32,26 +32,25 @@ import os
 import sys
 import cProfile
 import time
-import json
-from typing import List, Dict
+from typing import List
 
 from docopt import docopt
-from schema import SchemaError, Schema, Use
+from schema import SchemaError, Schema, Use  # type: ignore
 
-from discopop_explorer import PETGraphX, NodeType
-from discopop_explorer.utils import classify_loop_variables, classify_task_vars
+from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
-from discopop_validation.data_race_prediction.task_graph.classes.EdgeType import EdgeType
-from discopop_validation.data_race_prediction.task_graph.classes.ResultObject import ResultObject
-from discopop_validation.data_race_prediction.task_graph.classes.TaskGraph import TaskGraph
-from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
-from discopop_validation.discopop_suggestion_interpreter.core import get_omp_pragmas_from_dp_suggestions
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
+from discopop_validation.memory_access_graph import MAGDataRace
+from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
+from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
+    __get_omp_pragmas
 from .interfaces.discopop_explorer import get_pet_graph
-from pycallgraph2 import PyCallGraph
-from pycallgraph2.output import GraphvizOutput
+from pycallgraph2 import PyCallGraph  # type: ignore
+from pycallgraph2.output import GraphvizOutput  # type: ignore
 from pycallgraph2 import Config
 from pycallgraph2 import GlobbingFilter
 from pycallgraph2 import Grouper
@@ -146,100 +145,6 @@ def main():
         __main_start_execution(run_configuration)
 
 
-def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
-    result_list = []
-    for omp_pragmas in omp_pragma_list:
-        pragma_to_cuid: Dict[OmpPragma, str] = dict()
-        for pragma in omp_pragmas:
-            cu_id = get_pet_node_id_from_source_code_lines(pet, pragma.file_id, pragma.start_line,
-                                                           pragma.end_line)
-            pragma_to_cuid[pragma] = cu_id
-
-        print("####################################")
-        print("PRAGMAS BEFORE ADDING FROM PET GRAPH")
-        for pragma in omp_pragmas:
-            print(pragma)
-        print("####################################")
-
-        for pragma in omp_pragmas:
-            cu_id = pragma_to_cuid[pragma]
-            if pet.node_at(cu_id).type == 2 and pragma.get_type() != PragmaType.PARALLEL:
-                # node is loop type
-                fpriv, priv, lpriv, shared, red = classify_loop_variables(pet, pet.node_at(cu_id))
-                for var in shared:
-                    if var.name not in pragma.get_variables_listed_as("shared"):
-                        pragma.add_to_shared(var.name)
-            #elif pragma.get_type() == PragmaType.TASK:
-            #    fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(pet, pet.node_at(cu_id), "", [], [])
-            #    for var in shared:
-            #        if var.name not in pragma.get_variables_listed_as("shared"):
-            #            pragma.add_to_shared(var.name)
-            elif pragma.get_type() == PragmaType.PARALLEL:
-                # variables, which are declared outside the parallel region are shared
-                # get a list of known variables and their definition lines from children nodes
-                known_variables = []
-                queue = [pet.node_at(cu_id)]
-                visited = []
-                while len(queue) > 0:
-                    current = queue.pop(0)
-                    visited.append(current)
-                    for local_var in current.local_vars:
-                        known_variables.append((local_var.name, local_var.defLine))
-                    for global_var in current.global_vars:
-                        known_variables.append((global_var.name, global_var.defLine))
-                    known_variables = list(dict.fromkeys(known_variables))
-                    for child in pet.direct_children(current):
-                        if child not in visited:
-                            queue.append(child)
-                # mark those variables which are defined outside the parallel region as shared
-                shared_defined_outside = []
-                for name, raw_def_line in known_variables:
-                    if raw_def_line == "LineNotFound":
-                        continue
-                    if ":" in raw_def_line:
-                        split_raw_def_line = raw_def_line.split(":")
-                        def_line_file_id = int(split_raw_def_line[0])
-                        def_line = int(split_raw_def_line[1])
-                        if def_line_file_id == pragma.file_id:
-                            if not pragma.start_line <= def_line <= pragma.end_line:
-                                shared_defined_outside.append(name)
-                    elif raw_def_line == "GlobalVar":
-                        shared_defined_outside.append(name)
-                    else:
-                        raise ValueError("Unhandled definition line: ", raw_def_line)
-
-                # todo maybe remove, reason it is included: save drastic amounts of computation time
-                # remove variable from shared_defined_outside, if it's a loop index
-                loop_indices_to_remove = []
-                loops_start_lines = []
-                for v in pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.LOOP):
-                    loops_start_lines.append(v.start_position())
-                for child in pet.direct_children(pet.node_at(pragma_to_cuid[pragma])):
-                    for var_name in shared_defined_outside:
-                        if var_name in loop_indices_to_remove:
-                            continue
-                        if pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.CU)):
-                            loop_indices_to_remove.append(var_name)
-                shared_defined_outside = [var for var in shared_defined_outside if var not in loop_indices_to_remove]
-
-                # add outside-defined variables to list of shared variables
-                for var_name in shared_defined_outside:
-                    if var_name not in pragma.get_variables_listed_as("shared"):
-                        # check if var_name already use in another clause
-                        if var_name not in pragma.get_known_variables():
-                            if var_name is not None:
-                                pragma.add_to_shared(var_name)
-
-
-        print("PRAGMAS AFTER ADDING FROM PET GRAPH")
-        for pragma in omp_pragmas:
-            print(pragma)
-        print("###################################")
-
-        result_list.append(omp_pragmas)
-    return result_list
-
-
 def __main_start_execution(run_configuration: Configuration):
     if run_configuration.arguments["--profiling"] == "true":
         profile = cProfile.Profile()
@@ -248,10 +153,11 @@ def __main_start_execution(run_configuration: Configuration):
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
     time_start_ps = time.time()
-    time_total_task_graph = 0
-    time_bhv_extraction_total = 0
-    time_data_race_computation_total = 0
+    time_total_pc_graph = 0.0
+    time_bhv_extraction_total = 0.0
+    time_data_race_computation_total = 0.0
     pet: PETGraphX = get_pet_graph(run_configuration)
+    pet.show()
 
 
     omp_pragma_list = __get_omp_pragmas(run_configuration)
@@ -268,154 +174,157 @@ def __main_start_execution(run_configuration: Configuration):
             os.remove(run_configuration.data_race_ouput_path)
 
     for omp_pragmas in omp_pragma_list:
-        # construct task graph
-        time_task_graph_start = time.time()
-        task_graph = TaskGraph()
+        # construct parallel construct graph
+        time_pc_graph_start = time.time()
+        pc_graph = PCGraph()
 
         for pragma in omp_pragmas:
-            task_graph.add_pragma_node(pragma)
+            pc_graph.add_pragma_node(pragma)
         # insert nodes for called functions
-        task_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+        pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
         # insert contains edges between function nodes and contained pragma nodes
-        task_graph.insert_function_contains_edges()
+        pc_graph.insert_function_contains_edges()
         # remove all but the best fitting CALLS edges for each function call in the source code
-        task_graph.remove_incorrect_function_contains_edges()
+        pc_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
-        task_graph.add_edges(pet, omp_pragmas)
+        pc_graph.add_edges(pet, omp_pragmas)
         # pass shared clauses to child nodes
-        task_graph.pass_shared_clauses_to_childnodes()
+        pc_graph.pass_shared_clauses_to_childnodes()
 
         # remove redundant successor edges
-        task_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
+        pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
         # move successor edges if source is contained in a different pragma
-        task_graph.move_successor_edges_if_source_is_contained_in_pragma()
+        pc_graph.move_successor_edges_if_source_is_contained_in_pragma()
         # move successor edges if target is contained in a different pragma
-        task_graph.move_successor_edges_if_target_is_contained_in_pragma()
+        pc_graph.move_successor_edges_if_target_is_contained_in_pragma()
         # create implicit barriers
-        task_graph.insert_implicit_barriers()
+        pc_graph.insert_implicit_barriers()
 
         # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
         # add depends edges between interdependent TASK nodes
-        task_graph.add_depends_edges()
+        pc_graph.add_depends_edges()
         # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-        task_graph.redirect_tasks_successors()
+        pc_graph.redirect_tasks_successors()
         # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
-        task_graph.replace_depends_with_sequential_edges()
+        pc_graph.replace_depends_with_sequential_edges()
         # extract and insert behavior models for pragmas
         time_bhv_extraction_start = time.time()
-        task_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+        pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
-        task_graph.insert_behavior_storage_nodes()
+        pc_graph.insert_behavior_storage_nodes()
         # remove CalledFunctionNodes
-        task_graph.remove_called_function_nodes()
+        pc_graph.remove_called_function_nodes()
         # remove redundant CONTAINS edges
-        task_graph.remove_redundant_edges([EdgeType.CONTAINS])
+        pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
-        # task_graph.add_virtual_sequential_edges()
+        # parallel_construct_graph.add_virtual_sequential_edges()
         # skip successive TASKWAIT node, if no prior TASK node exists
-        task_graph.skip_taskwait_if_no_prior_task_exists()
+        pc_graph.skip_taskwait_if_no_prior_task_exists()
 
-        task_graph.add_fork_and_join_nodes()
+        pc_graph.add_fork_and_join_nodes()
         # remove TASKWAIT nodes without prior TASK node
-        task_graph.remove_taskwait_without_prior_task()
-        #task_graph.plot_graph()
+        pc_graph.remove_taskwait_without_prior_task()
+        #parallel_construct_graph.plot_graph()
         # add join nodes prior to Barriers and Taskwait nodes
-        task_graph.add_join_nodes_before_barriers()
+        pc_graph.add_join_nodes_before_barriers()
         # add join nodes at path merge points to reduce complexity
         # NOT VALID
-        # task_graph.add_join_nodes_before_path_merge()
+        # parallel_construct_graph.add_join_nodes_before_path_merge()
         # add fork nodes at path splits which are not caused by other FORK nodes
-        task_graph.add_fork_nodes_at_path_splits()
+        pc_graph.add_fork_nodes_at_path_splits()
         # remove SINGLE nodes from graph and replace with contained nodes
-        task_graph.replace_pragma_single_nodes()
+        pc_graph.replace_pragma_single_nodes()
         # remove FOR nodes from graph and replace with contained nodes
-        task_graph.replace_pragma_for_nodes()
+        pc_graph.replace_pragma_for_nodes()
         # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
-        task_graph.remove_single_incoming_join_node()
+        pc_graph.remove_single_incoming_join_node()
         # remove sequential edges between Fork and Join nodes
-        task_graph.remove_edges_between_fork_and_join()
+        pc_graph.remove_edges_between_fork_and_join()
         # add BELONGS_TO edges between Fork and Join nodes
-        task_graph.add_belongs_to_edges()
+        pc_graph.add_belongs_to_edges()
         # mark behavior storage nodes which are already covered by fork nodes
-        task_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
+        pc_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
         # add fork and join nodes around behavior storage node if it's not contained in a fork section
-        task_graph.add_fork_and_join_around_behavior_storage_nodes()
+        pc_graph.add_fork_and_join_around_behavior_storage_nodes()
 
         # remove behavior models from all but BehaviorStorageNodes
-        task_graph.remove_behavior_models_from_nodes()
+        pc_graph.remove_behavior_models_from_nodes()
 
         # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
         # todo remove / ignore irrelevant join nodes
         # todo enable nested fork nodes
 
-        time_task_graph_end = time.time()
-        time_total_task_graph += time_task_graph_end - time_task_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
+        time_pc_graph_end = time.time()
+        time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
         print("PRE COMPUTATION")
-        #task_graph.plot_graph()
+        #pc_graph.plot_graph()
+
+        # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
+        # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
+        pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
         time_data_race_computation_start = time.time()
-        # trigger result computation
-        computed_result: ResultObject = task_graph.compute_results()
-        # apply exception rules to detected data races
-        computed_result.apply_exception_rules_to_data_races(pet, task_graph)
+
+        memory_access_graph = MemoryAccessGraph(pc_graph)
+        data_races: List[MAGDataRace] = memory_access_graph.detect_data_races(pc_graph, pet)
+
         time_data_race_computation_end = time.time()
         time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
-        # print detected data races
-        computed_result.print_data_races()
-        # add identified data races to graph nodes for plotting
-        task_graph.add_data_races_to_graph(computed_result)
 
-        #task_graph.plot_graph(mark_data_races=True)
-        #task_graph.plot_graph(mark_data_races=False)
 
-        # output found data races to file if requested
+
+#        # trigger result computation
+#        computed_result: ResultObject = parallel_construct_graph.compute_results()
+#        # apply exception rules to detected data races
+#        computed_result.apply_exception_rules_to_data_races(pet, parallel_construct_graph)
+    #        time_data_race_computation_end = time.time()
+#        time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
+#        # print detected data races
+#        computed_result.print_data_races()
+#        # add identified data races to graph nodes for plotting
+#        parallel_construct_graph.add_data_races_to_graph(computed_result)
+#
+#        #parallel_construct_graph.plot_graph(mark_data_races=True)
+#        #parallel_construct_graph.plot_graph(mark_data_races=False)
+#
+#        # output found data races to file if requested
         if run_configuration.data_race_ouput_path != "None":
             buffer = []
             if data_race_txt_written:
                 with open(run_configuration.data_race_ouput_path, "a+") as f:
                     # f.write("fileID;line;column\n")
-                    for dr in computed_result.data_races:
-                        # write data race line to file
-                        split_dr_info = dr.get_location_str().split(";")
-                        dr_line = split_dr_info[1]
-                        if dr_line not in buffer:
-                            f.write(dr_line + " " + dr.var_name + "\n")
-                            buffer.append(dr_line)
-                        # write line of previous action to file aswell
-                        last_access_lines = dr.get_relevant_previous_access_lines()
-                        for line in last_access_lines:
-                            line = str(line)
-                            if line not in buffer:
-                                f.write(line + " " + dr.var_name + "\n")
-                                buffer.append(line)
+                    for dr in data_races:
+                    #for dr in computed_result.data_races:
+                        # write line of first operation to file
+                        dr_line_1 = str(dr.operation_1.line)
+                        if dr_line_1 not in buffer:
+                            f.write(dr_line_1 + " " + dr.operation_1.target_name + "\n")
+                            buffer.append(dr_line_1)
+                        # write line of second operation to file
+                        dr_line_2 = str(dr.operation_2.line)
+                        if dr_line_2 not in buffer:
+                            f.write(dr_line_2 + " " + dr.operation_2.target_name + "\n")
+                            buffer.append(dr_line_2)
             else:
                 with open(run_configuration.data_race_ouput_path, "w+") as f:
                     data_race_txt_written = True
                     # f.write("fileID;line;column\n")
-                    for dr in computed_result.data_races:
+                    for dr in data_races:
                         # write data race line to file
-                        split_dr_info = dr.get_location_str().split(";")
-                        dr_line = split_dr_info[1]
-                        if dr_line not in buffer:
-                            f.write(dr_line + " " + dr.var_name + "\n")
-                            buffer.append(dr_line)
-                        # write line of previous action to file aswell
-                        last_access_lines = dr.get_relevant_previous_access_lines()
-                        for line in last_access_lines:
-                            line = str(line)
-                            if line not in buffer:
-                                f.write(line + " " + dr.var_name + "\n")
-                                buffer.append(line)
-
-
-                    #if dr.get_location_str() not in buffer:
-                    #    f.write(dr.get_location_str() + "\n")
-                    #    buffer.append(dr.get_location_str())
+                        dr_line_1 = str(dr.operation_1.line)
+                        if dr_line_1 not in buffer:
+                            f.write(dr_line_1 + " " + dr.operation_1.target_name + "\n")
+                            buffer.append(dr_line_1)
+                        # write line of second operation to file
+                        dr_line_2 = str(dr.operation_2.line)
+                        if dr_line_2 not in buffer:
+                            f.write(dr_line_2 + " " + dr.operation_2.target_name + "\n")
+                            buffer.append(dr_line_2)
 
     # correct tool support value in evaluation by creating data_races.txt file
     if not data_race_txt_written:
@@ -424,170 +333,16 @@ def __main_start_execution(run_configuration: Configuration):
         open(run_configuration.data_race_ouput_path, "w+")
 
 
-
     time_end_validation = time.time()
     time_end_execution = time.time()
     print("\n### Measured Times: ###")
     print("-------------------------------------------")
     print("--- Get parallelization suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Create Task graph: %s seconds ---" % (time_total_task_graph))
+    print("--- Create Task graph: %s seconds ---" % (time_total_pc_graph))
     print("--- Behavior Extraction: %s seconds ---" % (time_bhv_extraction_total))
     print("--- Calculate Data races: %s seconds ---" % (time_data_race_computation_total))
     print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
 
-
-def __preprocess_omp_pragmas(omp_pragma_list: List[List[OmpPragma]]):
-    result = []
-    for omp_pragmas in omp_pragma_list:
-        inner_result = []
-        for omp_pragma in omp_pragmas:
-            # split parallel for pragma
-            if omp_pragma.get_type() == PragmaType.PARALLEL_FOR:
-                parallel_pragma = OmpPragma()
-                parallel_pragma.file_id = omp_pragma.file_id
-                parallel_pragma.start_line = omp_pragma.start_line
-                omp_pragma.start_line = omp_pragma.start_line + 1
-                parallel_pragma.end_line = omp_pragma.end_line
-                first_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("first_private")])
-                privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("private")])
-                last_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("last_private")])
-                shared = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("shared")])
-                parallel_pragma.pragma = "parallel "
-                parallel_pragma.pragma += "firstprivate(" + first_privates + ") "
-                parallel_pragma.pragma += "private(" + privates + ") "
-                parallel_pragma.pragma += "lastprivate(" + last_privates + ") "
-                parallel_pragma.pragma += "shared(" + shared + ") "
-                inner_result.append(parallel_pragma)
-                omp_pragma.pragma = omp_pragma.pragma.replace("parallel ", "")
-            inner_result.append(omp_pragma)
-        result.append(inner_result)
-    return result
-
-
-
-def __get_omp_pragmas(run_configuration: Configuration):
-    omp_pragma_list = []
-    omp_pragmas = []
-    # parse openmp pragmas file if parameter is set and file exists
-    if os.path.isfile(run_configuration.omp_pragmas_file):
-        with open(run_configuration.omp_pragmas_file) as f:
-            for line in f.readlines():
-                line = line.replace("\n", "")
-                while line.startswith(" "):
-                    line = line[1:]
-                if line.startswith("//"):
-                    # use // as comment marker
-                    continue
-                while "  " in line:
-                    line = line.replace("  ", " ")
-                omp_pragmas.append(OmpPragma().init_with_pragma_line(line))
-    if len(omp_pragmas) > 0:
-        omp_pragma_list.append(omp_pragmas)
-    # interpret DiscoPoP suggestions if parameter is set and file exists
-    if os.path.isfile(run_configuration.json_file):
-        with open(run_configuration.json_file) as f:
-            parallelization_suggestions = json.load(f)
-            omp_pragma_list += get_omp_pragmas_from_dp_suggestions(parallelization_suggestions)
-    return omp_pragma_list
-
-
-"""
-def __old_main_start_execution(cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping, ll_file, verbose_mode, data_race_output_path, arguments):
-    if arguments["--profiling"] == "true":
-        profile = cProfile.Profile()
-        profile.enable()
-        print("profiling enabled...")
-    if verbose_mode:
-        print("creating PET Graph...")
-    time_start_ps = time.time()
-    pet = get_pet_graph(cu_xml, dep_file, loop_counter_file, reduction_file)
-    with open(json_file) as f:
-        parallelization_suggestions = json.load(f)
-    time_end_ps = time.time()
-    if verbose_mode:
-        print("identify target code sections")
-    target_code_sections = identify_target_sections_from_suggestions(parallelization_suggestions)
-    if verbose_mode:
-        print("creating BB Graph...")
-    bb_graph = execute_bb_graph_extraction(parallelization_suggestions, target_code_sections, file_mapping, ll_file, arguments["--dp-build-path"])
-    if verbose_mode:
-        print("insering critical sections into BB Graph...")
-    insert_critical_sections(bb_graph, parallelization_suggestions)
-
-    if verbose_mode:
-        print("creating Schedules....")
-    time_end_bb = time.time()
-    sections_to_schedules_dict = create_schedules_for_sections(bb_graph,
-                                                               get_possible_path_combinations_for_sections(
-                                                                   bb_graph),
-                                                               verbose=verbose_mode)
-    if verbose_mode:
-        print("checking for Data Races...")
-    time_end_schedules = time.time()
-    unfiltered_data_races = check_sections(sections_to_schedules_dict)
-    if verbose_mode:
-        print("filtering Data Races...")
-    filtered_data_races = apply_exception_rules(unfiltered_data_races, pet, parallelization_suggestions)
-    filtered_data_race_strings = get_filtered_data_race_strings(filtered_data_races)
-    time_end_data_races = time.time()
-
-    # print found data races
-    for dr_str in filtered_data_race_strings:
-        print(dr_str)
-
-    # write found data races to file if requested
-    try:
-        os.remove(data_race_output_path)
-    except OSError:
-        pass
-    if data_race_output_path != "None":
-        with open(data_race_output_path, "w+") as f:
-            for dr_str in filtered_data_race_strings:
-                f.write(dr_str)
-
-    print("\n###########################################")
-    print("######### AUXILIARY INFORMATION ###########")
-    print("###########################################\n")
-
-    if arguments["--profiling"] == "true":
-        profile.disable()
-        profile.print_stats(sort="tottime")
-
-    print("### DiscoPoP Do-All Suggestions: ###")
-    print("-------------------------------------------")
-    for suggestion in parallelization_suggestions["do_all"]:
-        print("-->",suggestion, "\n")
-
-    if "critical_section" in parallelization_suggestions:
-        print("### DiscoPoP Critical-Section Suggestions: ###")
-        print("-------------------------------------------")
-        for suggestion in parallelization_suggestions["critical_section"]:
-            print("-->", suggestion, "\n")
-
-    # print graph information
-    if verbose_mode:
-        print("### Counted sections, paths and shared var operations: ###")
-        print("-------------------------------------------")
-        path_dict = get_paths_for_sections(bb_graph)
-        total_paths = 0
-        for section_id in path_dict:
-            total_paths += len(path_dict[section_id])
-        total_operations = 0
-        for bb_node_id in bb_graph.graph.nodes:
-            total_operations += len(bb_graph.graph.nodes[bb_node_id]["data"].operations)
-        print("\ttotal section count: ", len(path_dict))
-        print("\ttotal path count: ", total_paths)
-        print("\ttotal operations count: ", total_operations)
-
-
-    print("\n### Measured Times: ###")
-    print("-------------------------------------------")
-    print("--- Get Parallelization Suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Construct BB Graph: %s seconds ---" % (time_end_bb - time_end_ps))
-    print("--- Create Schedules: %s seconds ---" % (time_end_schedules - time_end_bb))
-    print("--- Check for Data Races: %s seconds ---" % (time_end_data_races - time_end_schedules))
-    print("--- Total time: %s seconds ---" % (time_end_data_races - time_start_ps))
-"""
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,8 @@
-from enum import IntEnum
-import typing
 import re
+from enum import IntEnum
+
 from typing import List
+
 
 class PragmaType(IntEnum):
     PARALLEL_FOR = 1
@@ -11,7 +12,6 @@ class PragmaType(IntEnum):
     TASK = 5
     TASKWAIT = 6
     FOR = 7
-
 
 
 class OmpPragma(object):
@@ -68,7 +68,7 @@ class OmpPragma(object):
     def get_variables_listed_as(self, type: str) -> List[str]:
         """possible types: firstprivate, private, shared, reduction"""
         listed_vars: List[str] = []
-        found_strings =  [x.group() for x in re.finditer(r' ' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
+        found_strings = [x.group() for x in re.finditer(r' ' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
         for found_str in found_strings:
             # separate treatment of reduction clauses required, since operations and ':' need to be removed
             if type == "reduction":
@@ -76,12 +76,13 @@ class OmpPragma(object):
                 # remove whitespaces
                 inner_str = inner_str.replace(" ", "")
                 # since only variable names are needed, operations and : can be removed
-                inner_str = inner_str.replace(":","").replace("+","").replace("-","").replace("*","").replace("&","")
+                inner_str = inner_str.replace(":", "").replace("+", "").replace("-", "").replace("*", "").replace("&",
+                                                                                                                  "")
                 inner_str = inner_str.replace("|", "").replace("^", "")
                 # split on ,
                 tmp_vars = inner_str.split(",")
             else:
-                tmp_vars = found_str[found_str.index("(")+1:found_str.index(")")].split(",")
+                tmp_vars = found_str[found_str.index("(") + 1:found_str.index(")")].split(",")
             # clean up and  add to listed_vars
             for var in tmp_vars:
                 while var.startswith(" "):
@@ -108,4 +109,3 @@ class OmpPragma(object):
             self.pragma = split_pragma[0] + " shared(" + var_name + "," + split_pragma[1]
         else:
             self.pragma += " shared(" + var_name + ")"
-

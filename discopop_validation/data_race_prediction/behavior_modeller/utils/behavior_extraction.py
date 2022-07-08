@@ -1,20 +1,17 @@
 import os
 import shutil
-from pathlib import Path
-from typing import List, Tuple, Dict
 
+from typing import List, Tuple, Dict
 
 try:
     from discopop_explorer import DetectionResult
 except ModuleNotFoundError:
     from discopop_explorer import DetectionResult
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph import BBGraph
-from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
-from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
-def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str]],
-                                file_mapping: str, ll_file_path: str, dp_build_path: str)\
+def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str, str]],
+                                file_mapping: str, ll_file_path: str, dp_build_path: str) \
         -> BBGraph:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")
@@ -34,7 +31,8 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
             # replace file ids with path
             print(file_mapping_dict)
             file_path = file_mapping_dict[file_id]
-            input_file.write(file_path + ";" + file_id + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_names + ";" + suggestion_type + ";\n")
+            input_file.write(
+                file_path + ";" + file_id + ";" + section_id + ";" + start_line + ";" + end_line + ";" + var_names + ";" + suggestion_type + ";\n")
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
@@ -55,8 +53,6 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     bb_graph: BBGraph = BBGraph(output_file_path)
     # cleanup
     # todo re-enable
-    #shutil.rmtree("tmp_behavior_extraction")
+    # shutil.rmtree("tmp_behavior_extraction")
 
     return bb_graph
-
-

@@ -1,5 +1,7 @@
-from typing import List
 import warnings
+
+from typing import List
+
 from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.discopop_suggestion_interpreter.do_all.core import interpret_do_all_suggestion
 from discopop_validation.discopop_suggestion_interpreter.reduction.core import interpret_reduction_suggestion
@@ -29,7 +31,7 @@ def get_omp_pragmas_from_dp_suggestions(dp_suggestions) -> List[List[OmpPragma]]
                 omp_pragma_list.append(omp_pragmas)
 
         else:
-            warnings.warn("Unsupported DiscoPoP suggestion type: \"" + suggestion_type +  "\". IGNORED -> TODO")
+            warnings.warn("Unsupported DiscoPoP suggestion type: \"" + suggestion_type + "\". IGNORED -> TODO")
         # todo pipeline suggestions
         # todo geometric_decomposition suggestions
         # todo task suggestions

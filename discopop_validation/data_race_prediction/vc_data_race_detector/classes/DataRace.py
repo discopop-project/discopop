@@ -1,11 +1,11 @@
-from typing import List, Tuple, Optional
+from termcolor import colored
+from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
-from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
+from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.scheduler.classes.Schedule import Schedule
 from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
-from termcolor import colored
-
+from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 
 
@@ -17,7 +17,8 @@ class DataRace(object):
     var_name: Optional[str]
 
     # represents a found data race for the output to the user
-    def __init__(self, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement], state: State, var_name: str=None):
+    def __init__(self, schedule_element: ScheduleElement, previous_writes: List[ScheduleElement], state: State,
+                 var_name: str = None):
         self.schedule_element: ScheduleElement = schedule_element
         self.previous_accesses: List[ScheduleElement] = previous_writes
         self.state = state
@@ -60,7 +61,8 @@ class DataRace(object):
 
     def get_parent_suggestion_type(self) -> str:
         """returns the type of the suggestion which 'contains' the current DataRace."""
-        for _, _, _, operation in self.schedule_element.updates:
+        for _, _, _, operation_potentially_none in self.schedule_element.updates:
+            operation = cast(Operation, operation_potentially_none)
             if operation.suggestion_type != "":
                 return operation.suggestion_type
         return "UNDEF"
@@ -77,15 +79,17 @@ class DataRace(object):
 
     def get_cu_id(self, pet: PETGraphX) -> str:
         """returns the cu_id which is stored in the schedule element's operations."""
-        for _, _, _, operation in self.schedule_element.updates:
+        for _, _, _, operation_potentially_none in self.schedule_element.updates:
+            operation = cast(Operation, operation_potentially_none)
             if operation.pet_cu_id != "":
                 return operation.pet_cu_id
             else:
-                operation.pet_cu_id = get_pet_node_id_from_source_code_lines(pet, int(operation.file_id), int(operation.line), int(operation.line))
+                operation.pet_cu_id = get_pet_node_id_from_source_code_lines(pet, int(operation.file_id),
+                                                                             int(operation.line), int(operation.line))
                 return operation.pet_cu_id
         return "UNDEF"
 
-    def get_tuple(self) -> Tuple[int, ScheduleElement, List[ScheduleElement]]:
+    def get_tuple(self) -> Tuple[ScheduleElement, List[ScheduleElement]]:
         """returns the stored information as a tuple.
         Used for duplicate filtering."""
         return self.schedule_element, self.previous_accesses

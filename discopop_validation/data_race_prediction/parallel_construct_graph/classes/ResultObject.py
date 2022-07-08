@@ -1,16 +1,13 @@
-import warnings
-
 from typing import List
 
-from discopop_validation.data_race_prediction.scheduler.classes.ScheduleElement import ScheduleElement
-from discopop_validation.data_race_prediction.scheduler.classes.UpdateType import UpdateType
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
-from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 import random
 import string
 
+from typing import List
+
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
+from discopop_validation.data_race_prediction.vc_data_race_detector.classes.State import State
 from discopop_validation.data_race_prediction.vc_data_race_detector.core import get_data_races_and_successful_states
-from discopop_validation.data_race_prediction.vc_data_race_detector.data_race_detector import goto_next_state
 from discopop_validation.data_race_prediction.vc_data_race_detector.exception_rules.application import \
     apply_exception_rules
 
@@ -34,7 +31,7 @@ class ResultObject(object):
         res_str += "\tstates: " + str(len(self.states)) + "\n"
         res_str += "\tdata_races: " + str(len(self.data_races)) + "\n"
         res_str += "\tfingerprints: " + " ".join(self.fingerprint_stack) + "\n"
-        res_str += "\tthread count stack: "+ " ".join(self.thread_count_stack) + "\n"
+        res_str += "\tthread count stack: " + " ".join(self.thread_count_stack) + "\n"
         return res_str
 
     def print_states(self):
@@ -84,7 +81,8 @@ class ResultObject(object):
     def update(self, scheduling_graph):
         if scheduling_graph is None:
             return
-        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph, scheduling_graph.dimensions, self.states)
+        data_races, successful_states = get_data_races_and_successful_states(scheduling_graph,
+                                                                             scheduling_graph.dimensions, self.states)
         self.data_races += data_races
         # remove duplicates from successful states
         successful_states_wo_duplicates = []
@@ -103,5 +101,5 @@ class ResultObject(object):
         for data_race in self.data_races:
             print(data_race)
 
-    def apply_exception_rules_to_data_races(self, pet, task_graph):
-        self.data_races = apply_exception_rules(self.data_races, pet, task_graph)
+    def apply_exception_rules_to_data_races(self, pet, pc_graph):
+        self.data_races = apply_exception_rules(self.data_races, pet, pc_graph)

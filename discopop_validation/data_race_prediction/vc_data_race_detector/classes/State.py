@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from .VectorClock import VectorClock, get_updated_vc, increase
+from .VectorClock import VectorClock, increase
 
 
 class State(object):
@@ -22,7 +22,7 @@ class State(object):
         for i in range(thread_count):
             self.thread_clocks[i] = VectorClock(thread_count)
             self.thread_clocks[i].clocks[i] = 1
-            self.thread_id_to_clock_position_dict[i] = [i]
+            self.thread_id_to_clock_position_dict[i] = i
         for l_name in lock_names:
             self.lock_clocks[l_name] = VectorClock(thread_count)
         for v_name in var_names:
@@ -58,18 +58,22 @@ class State(object):
         increase(self.thread_clocks[thread_id], self.thread_id_to_clock_position_dict[thread_id])
 
     def __str__(self):
-        return "Thread clocks: " + " ".join([str(key)+":"+str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
-               "Lock clocks: " + " ".join([str(key)+":"+str(self.lock_clocks[key]) for key in self.lock_clocks]) + "\n" + \
-               "Var Read clocks: " + " ".join([str(key)+":"+str(self.var_read_clocks[key]) for key in self.var_read_clocks]) + "\n" + \
-               "Var Write clocks: " + " ".join([str(key)+":"+str(self.var_write_clocks[key]) for key in self.var_write_clocks])
+        return "Thread clocks: " + " ".join(
+            [str(key) + ":" + str(self.thread_clocks[key]) for key in self.thread_clocks]) + "\n" + \
+               "Lock clocks: " + " ".join(
+            [str(key) + ":" + str(self.lock_clocks[key]) for key in self.lock_clocks]) + "\n" + \
+               "Var Read clocks: " + " ".join(
+            [str(key) + ":" + str(self.var_read_clocks[key]) for key in self.var_read_clocks]) + "\n" + \
+               "Var Write clocks: " + " ".join(
+            [str(key) + ":" + str(self.var_write_clocks[key]) for key in self.var_write_clocks])
 
     def __eq__(self, other):
         if type(other) != State:
             return False
         if self.thread_clocks != other.thread_clocks or \
-            self.lock_clocks != other.lock_clocks or \
-            self.var_read_clocks != other.var_read_clocks or \
-            self.var_write_clocks != other.var_write_clocks:
+                self.lock_clocks != other.lock_clocks or \
+                self.var_read_clocks != other.var_read_clocks or \
+                self.var_write_clocks != other.var_write_clocks:
             return False
         return True
 
@@ -87,7 +91,7 @@ class State(object):
         # get keys which shall be removed
         remove_keys: List[str] = []
         for key in self.lock_clocks.keys():
-            if key.endswith("_"+fingerprint):
+            if key.endswith("_" + fingerprint):
                 remove_keys.append(key)
         for key in remove_keys:
             del self.lock_clocks[key]

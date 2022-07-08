@@ -1,8 +1,7 @@
-import networkx as nx  # type:ignore
-import matplotlib.pyplot as plt  # type:ignore
-
 import os
 
+import matplotlib.pyplot as plt  # type:ignore
+import networkx as nx  # type:ignore
 from typing import List, Dict, Tuple
 
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode import BBNode
@@ -52,11 +51,13 @@ class BBGraph(object):
                     if "[" in line[5]:
                         target_name = line[5][0:line[5].index("[")]
                         line[5] = line[5][line[5].index("["):]
-                        target_indices = [var_name for var_name in line[5].replace("[", "").split("]") if len(var_name) > 0]
+                        target_indices = [var_name for var_name in line[5].replace("[", "").split("]") if
+                                          len(var_name) > 0]
                     else:
                         target_name = line[5]
                     current_bb.operations.append(
-                        Operation(line[1], line[2], int(line[3]), line[4], target_name, int(line[6]), int(line[7]), int(line[8]), int(line[9]), target_indices=target_indices))
+                        Operation(line[1], line[2], int(line[3]), line[4], target_name, int(line[6]), int(line[7]),
+                                  int(line[8]), int(line[9]), target_indices=target_indices))
                     if not int(line[3]) in current_bb.contained_in_relevant_sections:
                         current_bb.contained_in_relevant_sections.append(int(line[3]))
                 elif line[0] == "inSection":
@@ -97,26 +98,30 @@ class BBGraph(object):
         """open window and plot the graph"""
         pos = nx.spring_layout(self.graph)
         section_entrypoint_nodes = [bb.id for bb in self.section_to_entry_point.values()]
-        nodes_without_operations = [node for node in self.graph.nodes if len(self.graph.nodes[node]["data"].operations) == 0]
+        nodes_without_operations = [node for node in self.graph.nodes if
+                                    len(self.graph.nodes[node]["data"].operations) == 0]
         nodes_with_operations = [node for node in self.graph.nodes if node not in nodes_without_operations]
-        normal_nodes_without_operations = [node for node in nodes_without_operations if node not in section_entrypoint_nodes]
+        normal_nodes_without_operations = [node for node in nodes_without_operations if
+                                           node not in section_entrypoint_nodes]
         normal_nodes_with_operations = [node for node in nodes_with_operations if node not in section_entrypoint_nodes]
         entry_nodes_without_operations = [node for node in nodes_without_operations if node in section_entrypoint_nodes]
         entry_nodes_with_operations = [node for node in nodes_with_operations if node in section_entrypoint_nodes]
         # draw normal nodes w/o operations in grey
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal_nodes_without_operations, node_color="grey", node_shape="o")
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal_nodes_without_operations, node_color="grey",
+                               node_shape="o")
         # draw normal nodes with operations in blue
         nx.draw_networkx_nodes(self.graph, pos, nodelist=normal_nodes_with_operations, node_shape="o")
         # draw section entry nodes w/o operations in grey diamonds
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=entry_nodes_without_operations, node_color="grey", node_shape="d")
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=entry_nodes_without_operations, node_color="grey",
+                               node_shape="d")
         # draw section entry nodes with operations in blue diamonds
         nx.draw_networkx_nodes(self.graph, pos, nodelist=entry_nodes_with_operations, node_shape="d")
         nx.draw_networkx_edges(self.graph, pos)
         labels = {}
         for node in self.graph.nodes:
             labels[node] = str(self.graph.nodes[node]["data"].start_pos) + " - " + self.graph.nodes[node]["data"].name
-            #labels[node] = str(self.graph.nodes[node]["data"].id) + " - " + self.graph.nodes[node]["data"].name
-            #labels[node] = str(len(self.graph.nodes[node]["data"].operations))
-            #labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
+            # labels[node] = str(self.graph.nodes[node]["data"].id) + " - " + self.graph.nodes[node]["data"].name
+            # labels[node] = str(len(self.graph.nodes[node]["data"].operations))
+            # labels[node] = str(self.graph.nodes[node]["data"].contained_in_relevant_sections)
         nx.draw_networkx_labels(self.graph, pos, labels)
         plt.show()

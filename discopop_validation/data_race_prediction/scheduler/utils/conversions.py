@@ -4,7 +4,8 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.BBNode i
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 
 
-def convert_bb_path_to_operations(bb_path_to_operations_cache, section_id: int, bb_path: List[BBNode]) -> List[Tuple[int, Operation]]:
+def convert_bb_path_to_operations(bb_path_to_operations_cache, section_id: int, bb_path: List[BBNode]) -> List[
+    Tuple[int, Operation]]:
     """Converts a given list of BB Nodes which represent a path in the BB graph into a list of tuples containing
     the id of the parent BB node and an Operation."""
     cache_tuple = (section_id, tuple(bb_path))
