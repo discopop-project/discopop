@@ -10,7 +10,7 @@ from enum import IntEnum, Enum
 from platform import node
 from typing import Dict, List, Tuple, Set, Optional, cast
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 
