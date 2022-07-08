@@ -20,20 +20,20 @@ tests="cu dependence reduction"
 
 function test_cu {
   # CU Generation
-  python -m discopop_profiler -v --CUGeneration -c "$1" || return 1
+  python -m discopop_profiler --clang /usr/bin/clang++-14 -v --CUGeneration -c "$1" || return 1
 }
 
 function test_dependence {
   # Dependence Profiling
-  python -m discopop_profiler -v --DPInstrumentation -c "$1" -o out.o || return 1
-  python -m discopop_profiler -v --DPInstrumentation out.o || return 1
+  python -m discopop_profiler --clang /usr/bin/clang++-14 -v --DPInstrumentation -c "$1" -o out.o || return 1
+  python -m discopop_profiler --clang /usr/bin/clang++-14 -v --DPInstrumentation out.o || return 1
   ./a.out || return 1
 }
 
 function test_reduction {
   # Identifying Reduction Operations
-  python -m discopop_profiler -v --DPReduction -c "$1" -o out.o || return 1
-  python -m discopop_profiler -v --DPReduction out.o || return 1
+  python -m discopop_profiler --clang /usr/bin/clang++-14 -v --DPReduction -c "$1" -o out.o || return 1
+  python -m discopop_profiler --clang /usr/bin/clang++-14 -v --DPReduction out.o || return 1
   ./a.out || return 1
 }
 
