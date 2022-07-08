@@ -7,6 +7,8 @@ from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
 from typing import Tuple, List, cast, Optional
 
+from discopop_explorer import PETGraphX
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
@@ -21,6 +23,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
     PragmaParallelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import \
     PragmaTaskwaitNode
+from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
 from discopop_validation.memory_access_graph.MAGDataRace import MAGDataRace
 from discopop_validation.memory_access_graph.PUStack import PUStack
@@ -204,7 +207,7 @@ class MemoryAccessGraph(object):
         return False
 
 
-    def detect_data_races(self, pc_graph: PCGraph):
+    def detect_data_races(self, pc_graph: PCGraph, pet: PETGraphX):
         """starts the detection of data races for each node of the graph"""
         print("#########")
         print("Detecting data races...")
@@ -219,7 +222,7 @@ class MemoryAccessGraph(object):
             incoming_edge_pairs = ((i, j) for i in incoming_accesses for j in incoming_accesses if i != j)
             # check each pair for present data races
             for edge_1, edge_2 in incoming_edge_pairs:
-                data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2, pc_graph)
+                data_race_found = self.__data_race_in_edge_pair(edge_1, edge_2, pc_graph, pet)
                 if data_race_found:
                     op_1: Operation = self.graph.edges[edge_1]["data"].operation
                     op_2: Operation = self.graph.edges[edge_2]["data"].operation
@@ -251,7 +254,8 @@ class MemoryAccessGraph(object):
         return result
 
 
-    def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph):
+    def __data_race_in_edge_pair(self, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,
+                                 pet: PETGraphX):
         """checks the given pair of edges for data races.
         Returns True, if a data race has been found.
         Else, returns False.
@@ -279,5 +283,71 @@ class MemoryAccessGraph(object):
             print("ASDF")
             return False
 
+        # requirement 5: check if the identified data race is backed up by a dependency edge in the PET Graph
+        if not self.__pet_dependency_edge_exists(amd_1, amd_2, pet):
+            return False
+
         return True
+
+
+    def __pet_dependency_edge_exists(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):
+        """
+        Checks if the supposed data race is backed up by a corresponding dependency edge in the PET graph.
+        """
+        print("############")
+        print("REQ 5 CHECK")
+        print("############")
+        pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
+                                                                   amd_1.operation.line, amd_1.operation.line)
+        pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
+                                                                   amd_2.operation.line, amd_2.operation.line)
+        print("PET NODE id: amd_1: ", pet_node_id_amd_1)
+        print("PET NODE id: amd_2: ", pet_node_id_amd_2)
+
+        print("Dependencies between nodes: ")
+        out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
+        # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
+        dependencies_1_2 = [dep for dep in out_dependencies_node_1 if dep[0] == pet_node_id_amd_1 and dep[1] == pet_node_id_amd_2]
+        print(pet_node_id_amd_1, " -> ", pet_node_id_amd_2, ":  ", dependencies_1_2)
+
+        out_dependencies_node_2 = pet.out_edges(pet_node_id_amd_2, PETEdgeType.DATA)
+        # filter dependencies, only conserve dependencies from pet_node_id_amd_2 to pet_node_id_amd_1
+        dependencies_2_1 = [dep for dep in out_dependencies_node_2 if
+                            dep[0] == pet_node_id_amd_2 and dep[1] == pet_node_id_amd_1]
+        print(pet_node_id_amd_2, " -> ", pet_node_id_amd_1, ":  ", dependencies_2_1)
+
+        # combine sets of dependencies
+        dependencies = dependencies_1_2
+        dependencies += [dep for dep in dependencies_2_1 if dep not in dependencies]
+        print("Identified dependencies:")
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
+
+        # ignore INIT type dependencies
+        print("After ignoring INIT Dependencies:")
+        dependencies = [dep for dep in dependencies if dep[2].dtype != DepType.INIT]
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
+
+        # filter dependencies for variables used in amd_1 and amd_2
+        dependencies = [dep for dep in dependencies if dep[2].var_name in [amd_1.operation.target_name, amd_2.operation.target_name]]
+        print("After filtering for variable name:")
+        for source, target, dep in dependencies:
+            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
+
+        self.__debug(pet)
+
+        # if the set of dependencies is not empty, a real dependency exists and thus a potential data race
+        if len(dependencies) > 0:
+            print("==> potential data race backed up by dependency edge")
+            print("############\n")
+            return True
+
+        print("############\n")
+        return False
+
+    def __debug(self, pet: PETGraphX):
+        for edge in pet.g.edges:
+            dep_object = pet.g.edges[edge]["data"]
+            print("edge_data: ", dep_object)
 
