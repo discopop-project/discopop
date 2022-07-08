@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.4.3)
 project(DiscoPoP)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(LLVM_DIR ${LLVM_DIST_PATH}/lib/cmake/llvm)
-find_package(LLVM 8.0 REQUIRED CONFIG)
+find_package(LLVM 14.0 REQUIRED CONFIG)
 message(STATUS "Using LLVM version ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})

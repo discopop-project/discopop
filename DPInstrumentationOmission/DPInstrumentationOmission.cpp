@@ -172,7 +172,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
         if(isa<ReturnInst>(pair2.first->getTerminator()))
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       
-        auto LI = new LoadInst(AI, Twine(""), false, insertionPoint);
+        auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint);
         ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, bbDepCount)});
         CallInst::Create(
           ReportBBPair,
@@ -228,7 +228,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       for (BasicBlock& BB: F){ for(Instruction& I: BB){
         if(!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) continue;
         errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
-        if(dl = I.getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
+        if((dl = I.getDebugLoc())) errs() << dl.getLine() << "," << dl.getCol();
         else errs() << F.getSubprogram()->getLine() << ",*";
         errs() << " | ";
         V = I.getOperand(isa<StoreInst>(I) ? 1 : 0);
@@ -251,7 +251,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       if(!DP_Instrumentation) continue;
       if(CallInst* call_inst = dyn_cast<CallInst>(DP_Instrumentation)){
         if(Function* Fun = call_inst->getCalledFunction()){
-          string fn = Fun->getName();
+          string fn = Fun->getName().str();
           if(fn == "__dp_write" || fn == "__dp_read" || fn == "__dp_alloca"){
             DP_Instrumentation->eraseFromParent();
             ++removedInstrumentations;
@@ -273,7 +273,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
               IRBuilder<> builder(call_inst);
               Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
               CallInst::Create(
-                cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr)),
+                F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr),
                 V, "", call_inst
               );
             }
@@ -289,21 +289,19 @@ bool DPInstrumentationOmission::doInitialization(Module &M){
   Void = const_cast<Type *>(Type::getVoidTy(M.getContext()));
   Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(M.getContext()));
   CharPtr = const_cast<PointerType *>(Type::getInt8PtrTy(M.getContext()));
-  ReportBB = cast<Function>(M.getOrInsertFunction(
+  ReportBB = M.getOrInsertFunction(
       "__dp_report_bb", 
       Void,
       Int32
-    )
   );
-  ReportBBPair = cast<Function>(
-    M.getOrInsertFunction(
+  ReportBBPair = M.getOrInsertFunction(
       "__dp_report_bb_pair", 
       Void,
       Int32, 
       Int32
-    )
   );
   VNF = new dputil::VariableNameFinder(M);
+  return true; // TODO ask Mohammad if this is right!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 char DPInstrumentationOmission::ID = 0;
