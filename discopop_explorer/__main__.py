@@ -40,7 +40,7 @@ import os
 import sys
 import time
 
-from docopt import docopt
+from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 from pathlib import Path
 
