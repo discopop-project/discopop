@@ -43,8 +43,8 @@ jobs:
         uses: actions/checkout@v2
       - name: "Install Dependencies"
         run: |
-          sudo apt-get remove clang-10 clang-9 clang-11 clang-12
-          sudo apt-get install libclang-8-dev clang-8 llvm-8
+          sudo apt-get remove clang-8 clang-10 clang-9 clang-11 clang-12
+          sudo apt-get install libclang-14-dev clang-14 llvm-14
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
