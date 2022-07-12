@@ -33,9 +33,9 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): V
 
 
 void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction* previousInstruction) {
-	bool hasSuccessors = false;
+	// bool hasSuccessors = false;
 	for (BasicBlock *S : successors(BB)) {
-		hasSuccessors = true;
+		// hasSuccessors = true;
 		for (Instruction &I : *S){
 			if(isa<StoreInst>(I) || isa<LoadInst>(I)){
 				Graph::addEdge(previousInstruction, &I);

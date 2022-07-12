@@ -12,9 +12,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/IR/DerivedTypes.h"
 
 #include "InstructionDG.h"
@@ -30,19 +27,18 @@ namespace {
     class DPInstrumentationOmission : public ModulePass {
     private:
         string fileName;
-        int32_t fid;
         Type *Void;
         IntegerType *Int32;
         PointerType *CharPtr;
-        Function *ReportBB, *ReportBBPair;
+        FunctionCallee ReportBB, ReportBBPair;
         dputil::VariableNameFinder *VNF;
         
     public:
         static char ID;
-        StringRef getPassName() const;
-        bool runOnModule(Module &M);
-        void getAnalysisUsage(AnalysisUsage &AU) const;
-        bool doInitialization(Module &M);
+        StringRef getPassName() const override;
+        bool runOnModule(Module &M) override;
+        void getAnalysisUsage(AnalysisUsage &AU) const override;
+        bool doInitialization(Module &M) override;
 
         DPInstrumentationOmission() : ModulePass(ID) {}
     };

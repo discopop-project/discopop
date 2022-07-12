@@ -28,15 +28,14 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Pass.h>
-#include <llvm/PassSupport.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
-#include "llvm/PassAnalysisSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 
 #include "Utils.h"
 #include "DPUtils.h"
@@ -56,7 +55,7 @@ struct instr_info_t {
 };
 
 struct loop_info_t {
-  int line_nr_;
+  unsigned int line_nr_;
   int file_id_;
   llvm::Instruction* first_body_instr_;
   //Mohammad 4.3.2021
@@ -67,8 +66,8 @@ struct loop_info_t {
 struct DPReduction : public llvm::ModulePass {
   static char ID;
   DPReduction() : ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module& M);
-  void getAnalysisUsage(llvm::AnalysisUsage& Info) const;
+  virtual bool runOnModule(llvm::Module& M) override;
+  void getAnalysisUsage(llvm::AnalysisUsage& Info) const override;
 
   void instrument_module(llvm::Module* module);
   void instrument_function(llvm::Function* function);
@@ -93,7 +92,7 @@ struct DPReduction : public llvm::ModulePass {
 
   void create_function_bindings();
   void insert_functions();
-  StringRef getPassName() const;
+  StringRef getPassName() const override;
 
   std::vector<instr_info_t> instructions_;
   std::map<int, llvm::Instruction*> loop_to_instr_;
@@ -193,8 +192,8 @@ string DPReduction::findStructMemberName(MDNode *structNode, unsigned idx, IRBui
         {
             //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
             //return string(member->getOperand(3)->getName().data());
-            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
     }
     return NULL;
@@ -208,7 +207,7 @@ Type *DPReduction::pointsToStruct(PointerType *PTy)
     {
         while (structType->getTypeID() == Type::PointerTyID)
         {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointerElementType();
         }
     }
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
@@ -259,7 +258,7 @@ string DPReduction::determineVariableType(Instruction *I)
                 s = "STRUCT,";
             }
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID)
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID)
             {
                 s = "ARRAY,";
             }
@@ -326,7 +325,7 @@ string DPReduction::determineVariableName(Instruction *I)
             }
 
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
                 return determineVariableName((Instruction *)ptrOperand);
             }
@@ -474,7 +473,6 @@ bool DPReduction::sanityCheck(BasicBlock *BB, int file_id)
 // This is needed to support multiple files in a project.
 int32_t DPReduction::getLID(Instruction* BI, int32_t& fileID)
 {
-    int32_t lid = 0;
     int32_t lno;
 
     const DebugLoc &location = BI->getDebugLoc();
@@ -499,9 +497,9 @@ int32_t DPReduction::getLID(Instruction* BI, int32_t& fileID)
 void DPReduction::insert_functions() {
 
   // insert function calls to monitor the variable's load and store operations
-  int instr_id = 1;
+  // int instr_id = 1;
   for (auto const& instruction : instructions_) {
-    int loop_id = instruction.loop_line_nr_;
+    // int loop_id = instruction.loop_line_nr_;
     int store_line = instruction.store_inst_->getDebugLoc().getLine();
     // errs() << instruction.file_id_ << " " << instruction.loop_line_nr_ << " " << to_string(store_line) << " " << instruction.var_name_ << " " << instruction.operation_ << "\n";
     
@@ -563,7 +561,7 @@ void DPReduction::insert_functions() {
   // insert function calls to monitor loop iterations
   std::ofstream ofile;
   ofile.open("loop_counter_output.txt");
-  int loop_id = 1;
+  // int loop_id = 1;
   for (auto const& loop_info : loops_) {
 
     // 31.03.2021 Mohammad dynamic to static analysis
@@ -655,7 +653,7 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
   // of the current instruction recursively until the desired load instruction
   // is reached.
   llvm::Instruction* result = nullptr;
-  for (int i = 0; i != cur_instr->getNumOperands(); ++i) {
+  for (unsigned int i = 0; i != cur_instr->getNumOperands(); ++i) {
     llvm::Value* operand = cur_instr->getOperand(i);
     if (llvm::isa<llvm::Instruction>(operand)) {
       result = get_load_instr(load_val, llvm::cast<llvm::Instruction>(operand),
@@ -787,9 +785,8 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
   // store instructions.
   for (size_t i = 0; i < basic_blocks.size(); ++i) {
     llvm::BasicBlock* const bb = basic_blocks[i];
-    Loop *L = LI.getLoopFor(bb);
 
-    std::string bb_name = bb->getName();
+    std::string bb_name = bb->getName().str();
     if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) ||
         (std::strncmp("for.cond", bb_name.c_str(), 8) == 0)) {
       continue;
@@ -843,15 +840,15 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
       if (!util::loc_exists(load_loc) || !util::loc_exists(store_loc)) continue;
       if (load_loc.getLine() > store_loc.getLine()) continue;
       if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) continue;
-      if (loop_info.line_nr_ > std::stoi(loop_info.end_line)) continue;
+      if (loop_info.line_nr_ > std::stoul(loop_info.end_line)) continue;
       
       //Check if both load and store insts belong to the loop
-      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoi(loop_info.end_line)) continue;
-      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoi(loop_info.end_line)) continue;
+      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) continue;
+      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) continue;
       
       if (it->first->hasName()) {
         instr_info_t info;
-        info.var_name_ = it->first->getName();
+        info.var_name_ = it->first->getName().str();
         info.loop_line_nr_ = loop_info.line_nr_;
         info.file_id_ = file_id;
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
@@ -932,7 +929,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
             // We want to find the basicblock that contains the load instruction
             // Then, we traverse the whole function to check if the reduction operation is > or <
             BasicBlock *BB = (candidate.load_inst_)->getParent();
-            string bbName = BB->getName();
+            string bbName = BB->getName().str();
 
             // errs() << "------: " << bbName << "\n";
             // Ignore loops. Only look for conditional blocks
@@ -981,7 +978,7 @@ void DPReduction::instrument_module(llvm::Module* module) {
   for (llvm::Module::iterator func_it = module->begin();
        func_it != module->end(); ++func_it) {
     llvm::Function* func = &(*func_it);
-    std::string fn_name = func->getName();
+    std::string fn_name = func->getName().str();
     if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
         fn_name.find("llvm") != std::string::npos) {
       continue;
