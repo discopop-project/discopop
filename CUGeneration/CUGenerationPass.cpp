@@ -1003,7 +1003,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         CUVector.push_back(cu);
         suspiciousVariables.clear();
 
-        //check for call instructions in current basic block
+        // check for call instructions in current basic block
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
             //Mohammad 6.7.2020: Don't create nodes for library functions (c++/llvm).
