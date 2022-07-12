@@ -44,7 +44,8 @@ jobs:
       - name: "Install Dependencies"
         run: |
           sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
-          sudo apt-get install libclang-11.1-dev clang-11.1 llvm-11.1
+          sudo apt-get update
+          sudo apt-get install libclang-11-dev clang-11 llvm-11
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
