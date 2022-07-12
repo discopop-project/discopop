@@ -49,6 +49,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install libclang-11-dev clang-11 llvm-11
           clang-11 --version
+          clang --version
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
