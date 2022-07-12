@@ -41,8 +41,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -53,6 +51,7 @@
 #include <llvm/IR/DebugLoc.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 
@@ -486,7 +485,7 @@ string BehaviorExtraction::findStructMemberName(MDNode *structNode, unsigned idx
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
     }
     return "##UNKNOWN##";
 }
