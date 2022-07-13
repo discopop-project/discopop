@@ -445,7 +445,7 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
 list<sharedVarAccess> BehaviorExtraction::getVarAccessesForFunctionCall(Function* calledFunction, int argIndex, Function &F, bool currentlyInsideRecursion)
 {
     list<sharedVarAccess> accesses;
-    if (argIndex > calledFunction->arg_size()) {
+    if (argIndex >= calledFunction->arg_size()) {
         return accesses;
     }
     // get argument
