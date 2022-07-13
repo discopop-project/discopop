@@ -1,0 +1,4 @@
+python extract_target_data_races_drb.py
+python execute_data_race_detection_on_drb_benchmarks.py
+python extract_evaluation_data_drb.py
+xdg-open evaluation_results_drb.csv
