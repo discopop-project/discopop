@@ -282,7 +282,6 @@ class MemoryAccessGraph(object):
 
         # requirement 4: check for PCGraph predecessor relations
         if self.__pcgraph_predecessor_relation(amd_1, amd_2, pc_graph):
-            print("ASDF")
             return False
 
         # requirement 5: check if the identified data race is backed up by a dependency edge in the PET Graph
@@ -298,24 +297,14 @@ class MemoryAccessGraph(object):
 
     def __originate_from_reduction_operation(self, amd_1: AccessMetaData, amd_2: AccessMetaData):
         """Check whether both accesses originate from the same reduction operation."""
-        print("############")
-        print("REQ 6 CHECK")
-        print("############")
         op_1_modifiers = amd_1.operation.modifiers
-        print("OP1 Mod:")
-        print(op_1_modifiers)
         op_2_modifiers = amd_2.operation.modifiers
-        print("OP2 Mod:")
-        print(op_2_modifiers)
-        # determing overlapping modifiers
+        # determine overlapping modifiers
         overlapping_modifiers = [modifier for modifier in op_1_modifiers if modifier in op_2_modifiers]
-        print("OVERLAP: ")
-        print(overlapping_modifiers)
         # check for reduction modifiers. Key can be ignored
         for modifier_type, _ in overlapping_modifiers:
             if modifier_type == OperationModifierType.REDUCTION_OPERATION:
                 return True
-
         return False
 
 
