@@ -294,60 +294,34 @@ class MemoryAccessGraph(object):
         """
         Checks if the supposed data race is backed up by a corresponding dependency edge in the PET graph.
         """
-        print("############")
-        print("REQ 5 CHECK")
-        print("############")
         pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
                                                                    amd_1.operation.line, amd_1.operation.line)
         pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
                                                                    amd_2.operation.line, amd_2.operation.line)
-        print("PET NODE id: amd_1: ", pet_node_id_amd_1)
-        print("PET NODE id: amd_2: ", pet_node_id_amd_2)
-
-        print("Dependencies between nodes: ")
         out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
         # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
         dependencies_1_2 = [dep for dep in out_dependencies_node_1 if dep[0] == pet_node_id_amd_1 and dep[1] == pet_node_id_amd_2]
-        print(pet_node_id_amd_1, " -> ", pet_node_id_amd_2, ":  ", dependencies_1_2)
 
         out_dependencies_node_2 = pet.out_edges(pet_node_id_amd_2, PETEdgeType.DATA)
         # filter dependencies, only conserve dependencies from pet_node_id_amd_2 to pet_node_id_amd_1
         dependencies_2_1 = [dep for dep in out_dependencies_node_2 if
                             dep[0] == pet_node_id_amd_2 and dep[1] == pet_node_id_amd_1]
-        print(pet_node_id_amd_2, " -> ", pet_node_id_amd_1, ":  ", dependencies_2_1)
 
         # combine sets of dependencies
         dependencies = dependencies_1_2
         dependencies += [dep for dep in dependencies_2_1 if dep not in dependencies]
-        print("Identified dependencies:")
-        for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
 
         # ignore INIT type dependencies
-        print("After ignoring INIT Dependencies:")
         dependencies = [dep for dep in dependencies if dep[2].dtype != DepType.INIT]
-        for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
 
         # filter dependencies for variables used in amd_1 and amd_2
         dependencies = [dep for dep in dependencies if dep[2].var_name in [amd_1.operation.target_name, amd_2.operation.target_name]]
-        print("After filtering for variable name:")
-        for source, target, dep in dependencies:
-            print("\t", dep.var_name, dep.etype, dep.dtype, dep.source, dep.sink)
-
-        self.__debug(pet)
 
         # if the set of dependencies is not empty, a real dependency exists and thus a potential data race
         if len(dependencies) > 0:
             print("==> potential data race backed up by dependency edge")
-            print("############\n")
             return True
 
-        print("############\n")
         return False
 
-    def __debug(self, pet: PETGraphX):
-        for edge in pet.g.edges:
-            dep_object = pet.g.edges[edge]["data"]
-            print("edge_data: ", dep_object)
 
