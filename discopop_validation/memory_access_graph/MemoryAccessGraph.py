@@ -288,14 +288,22 @@ class MemoryAccessGraph(object):
             return False
 
         # requirement 6: ignore data race if it originates from a reduction operation
-
+        if self.__originate_from_reduction_operation(amd_1, amd_2):
+            return False
 
         return True
 
 
     def __originate_from_reduction_operation(self, amd_1: AccessMetaData, amd_2: AccessMetaData):
         """Check whether both accesses originate from the same reduction operation."""
-        pass
+        print("############")
+        print("REQ 6 CHECK")
+        print("############")
+        op_1_modifiers = amd_1.operation.modifiers
+        print("OP1 Mod:")
+        print(op_1_modifiers)
+
+        return False
 
 
     def __pet_dependency_edge_exists(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):
