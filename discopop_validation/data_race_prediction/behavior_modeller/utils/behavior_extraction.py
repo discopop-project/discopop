@@ -40,7 +40,7 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     # todo account for different opt installations
     if not dp_build_path.endswith("/"):
         dp_build_path += "/"
-    opt_executable = "opt-8"
+    opt_executable = "opt-11"
     behavior_extraction_so = os.path.join(dp_build_path, "libi/ValidationBehaviorExtraction.so")
     input_file_path = os.path.join(os.getcwd(), "input.txt")
     output_file_path = os.path.join(os.getcwd(), "output.txt")

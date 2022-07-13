@@ -157,7 +157,7 @@ def __main_start_execution(run_configuration: Configuration):
     time_bhv_extraction_total = 0.0
     time_data_race_computation_total = 0.0
     pet: PETGraphX = get_pet_graph(run_configuration)
-    pet.show()
+    #pet.show()
 
 
     omp_pragma_list = __get_omp_pragmas(run_configuration)
