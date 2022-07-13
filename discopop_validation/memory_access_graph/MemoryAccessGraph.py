@@ -10,6 +10,8 @@ from typing import Tuple, List, cast, Optional
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
+from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
+    OperationModifierType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
@@ -302,6 +304,17 @@ class MemoryAccessGraph(object):
         op_1_modifiers = amd_1.operation.modifiers
         print("OP1 Mod:")
         print(op_1_modifiers)
+        op_2_modifiers = amd_2.operation.modifiers
+        print("OP2 Mod:")
+        print(op_2_modifiers)
+        # determing overlapping modifiers
+        overlapping_modifiers = [modifier for modifier in op_1_modifiers if modifier in op_2_modifiers]
+        print("OVERLAP: ")
+        print(overlapping_modifiers)
+        # check for reduction modifiers. Key can be ignored
+        for modifier_type, _ in overlapping_modifiers:
+            if modifier_type == OperationModifierType.REDUCTION_OPERATION:
+                return True
 
         return False
 
