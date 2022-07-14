@@ -1,4 +1,5 @@
 import copy
+import warnings
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -17,6 +18,9 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.E
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.JoinNode import JoinNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaBarrierNode import PragmaBarrierNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaCriticalNode import \
+    PragmaCriticalNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaFlushNode import PragmaFlushNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaForNode import PragmaForNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaSingleNode import PragmaSingleNode
@@ -106,10 +110,25 @@ class PCGraph(object):
             node_id = self.__add_taskwait_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.BARRIER:
             node_id = self.__add_barrier_pragma(pragma_obj)
+        elif pragma_obj.get_type() == PragmaType.CRITICAL:
+            node_id = self.__add_critical_pragma(pragma_obj)
+        elif pragma_obj.get_type() == PragmaType.FLUSH:
+            warnings.warn("CURRENTLY IGNORED PRAGMA: Flush")
+            node_id = self.__add_flush_pragma(pragma_obj)
         else:
             raise ValueError("No Supported Pragma for: ", pragma_obj.pragma)
         # create entry in dictionary
         self.pragma_to_node_id[pragma_obj] = node_id
+
+    def __add_critical_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaCriticalNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
+
+    def __add_flush_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaFlushNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
 
     def __add_single_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.get_new_node_id()
@@ -198,6 +217,7 @@ class PCGraph(object):
                     if (origin_node_id, child_cu.id, given_pragma) not in seen_configurations:
                         __include_called_functions(origin_node_id, child_cu.id, given_pragma)
 
+            print("PRAGMA: ", pragma)
             __include_called_functions(self.pragma_to_node_id[pragma], pragma_to_cuid[pragma], pragma)
 
     def insert_function_contains_edges(self):

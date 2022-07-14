@@ -1,4 +1,5 @@
 import re
+import warnings
 from enum import IntEnum
 
 from typing import List
@@ -12,6 +13,8 @@ class PragmaType(IntEnum):
     TASK = 5
     TASKWAIT = 6
     FOR = 7
+    CRITICAL = 8
+    FLUSH = 9  # todo currently ignored
 
 
 class OmpPragma(object):
@@ -54,6 +57,11 @@ class OmpPragma(object):
             return PragmaType.TASK
         if self.pragma.startswith("for"):
             return PragmaType.FOR
+        if self.pragma.startswith("critical"):
+            return PragmaType.CRITICAL
+        if self.pragma.startswith("flush"):
+            warnings.warn("CURRENTLY IGNORED PRAGMA: flush")
+            return PragmaType.FLUSH
         raise ValueError("Unsupported pragma-type:", self.pragma)
 
     def get_known_variables(self) -> List[str]:
