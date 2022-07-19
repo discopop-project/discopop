@@ -12,8 +12,8 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
     TODO: For now, only Do-All pattern is reported!
     """
     interim_result: List[Tuple[int, int, int, str, PragmaType]] = []
-    # include parallel, parallel for and single pragmas
-    if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK]:
+    # include parallel, parallel for, single and critical pragmas
+    if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK, PragmaType.CRITICAL]:
         pragma_target_regions: List[Tuple[int, int, Optional[List[str]]]] = [(pragma.start_line, pragma.end_line, None)]
         # add body of called functions to pragma_target_regions, if pragma not contained in called function (recursive call)
         outgoing_calls_edges = [edge for edge in pc_graph.graph.out_edges(pc_graph_node_id) if

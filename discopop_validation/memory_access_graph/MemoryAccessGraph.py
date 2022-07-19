@@ -292,7 +292,20 @@ class MemoryAccessGraph(object):
         if self.__originate_from_reduction_operation(amd_1, amd_2):
             return False
 
+        # requirement 7: ignore data race if at least one access originates from a critical section
+        if self.__originate_from_critical_section(amd_1, amd_2, pc_graph):
+            return False
+
         return True
+
+
+    def __originate_from_critical_section(self, amd_1: AccessMetaData, amd_2: AccessMetaData, pc_graph: PCGraph):
+        """Check whether at least one access originates from a critical section"""
+        # check if amd_1 or amd_2 is contained in a critical section
+        for modifier, _ in  amd_1.operation.modifiers + amd_2.operation.modifiers:
+            if modifier == OperationModifierType.CRITICAL_SECTION_OPERATION:
+                return True
+        return False
 
 
     def __originate_from_reduction_operation(self, amd_1: AccessMetaData, amd_2: AccessMetaData):

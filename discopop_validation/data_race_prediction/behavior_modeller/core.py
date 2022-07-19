@@ -15,7 +15,7 @@ from discopop_validation.data_race_prediction.behavior_modeller.utils.utils impo
 def extract_postprocessed_behavior_models(run_configuration: Configuration, pet, tcs, pragma: OmpPragma,
                                           omp_pragmas: List[OmpPragma]) -> List[BehaviorModel]:
     behavior_models = __extract_behavior_models(run_configuration, pet, tcs, pragma, omp_pragmas)
-    postprocessed_behavior_models = apply_post_processing(behavior_models)
+    postprocessed_behavior_models = apply_post_processing(behavior_models, pragma)
     return postprocessed_behavior_models
 
 
