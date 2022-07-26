@@ -1,0 +1,22 @@
+DPInstrumentation: 
+
+- when there is loop at end of file, ret dbg info shows line 0 causing an abort, always need to have
+one extra instruction after the loop in swift(okay for loops in function)
+- datastructure access over standardlibraries needs to be handled seperately and differently
+
+- finding of true exit blocks just like in swift 
+
+
+CUGeneration: 
+- datastructure access variable names
+- global variable names (detect global variable for differentiation/global to BB vs global to program)
+
+
+DPReduction: 
+- no labels for version 5.1 but ongoing from version 5.2 (ignore incompatibility bc swift 5.2 is based on llvm 9 while dp is 8)
+- MUST fix loop line issue otherwise pattern cannot be detected (explorer/utils)
+
++ fix all passes for array accessing, fix reduction for global variables
++ remove statically coded issues like loopline or index block
+(what if more dependencies that inhibit reduction in reduction?)
++ try for doall, find implementation

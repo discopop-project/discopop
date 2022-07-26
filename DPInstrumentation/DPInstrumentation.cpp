@@ -719,6 +719,8 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
 
             // we've found a struct/class
             Type *structType = pointsToStruct(PTy);
+            cout << "does point to struct but number of operands is \n";
+            errs() << gep->getNumOperands() << "\n";
             if (structType && gep->getNumOperands() > 2)
             {
                 Value *constValue = gep->getOperand(2);
@@ -751,6 +753,7 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
         return getOrInsertVarName(string(operand->getName().data()), builder);
     } else {
         cout << "operand does NOT have name \n";
+        // global arrays?
         if(isa<GetElementPtrInst>(*operand)) {
         GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
         Value *ptrOperand = gep->getPointerOperand();

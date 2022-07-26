@@ -17,6 +17,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/CallingConv.h>
@@ -107,7 +108,10 @@ bool is_operand(llvm::Instruction* instr, llvm::Value* operand) {
   return false;
 }
 
-char get_char_for_opcode(unsigned opcode) {
+char get_char_for_opcode(llvm::Instruction *cur_instr) {
+
+  unsigned opcode = cur_instr->getOpcode();
+
   if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd)
     return '+';
   if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub)
@@ -117,6 +121,32 @@ char get_char_for_opcode(unsigned opcode) {
   if (opcode == llvm::Instruction::And) return '&';
   if (opcode == llvm::Instruction::Or) return '|';
   if (opcode == llvm::Instruction::Xor) return '^';
+   
+   if(opcode == llvm::Instruction::ExtractValue) {
+    std::cout << "is extractvalue instruction\n";
+    cur_instr = llvm::cast<llvm::Instruction>(cur_instr->getOperand(0));
+    opcode = cur_instr->getOpcode();
+
+    llvm::errs() << *cur_instr << "\n"; 
+
+    if(opcode == llvm::Instruction::Call) {
+
+      llvm::StringRef function_name = llvm::cast<llvm::CallInst>(cur_instr)->getCalledFunction()->getName();
+      llvm:: errs() << function_name << "\n";
+      std::cout << function_name.data() << "outing data here name\n";
+
+      if(function_name.find("add") != std::string::npos) {
+        return '+'; 
+      } 
+      if(function_name.find("sub") != std::string::npos) {
+        return '-';
+      }
+      if(function_name.find("mul") != std::string::npos) {
+        return '*'; 
+      }
+    }
+  }
+
   return ' ';
 }
 
@@ -144,6 +174,10 @@ llvm::Instruction* get_prev_use(llvm::Instruction* instr, llvm::Value* val) {
 llvm::Value* get_var_rec(llvm::Value* val) {
   if (!val) return nullptr;
 
+  llvm::errs() << *val << " value get get_var_rec\n";
+
+  // for global variables do the function check here
+
   if (llvm::isa<llvm::AllocaInst>(val) ||
       llvm::isa<llvm::GlobalVariable>(val)) {
     return val;
@@ -152,13 +186,22 @@ llvm::Value* get_var_rec(llvm::Value* val) {
     llvm::GetElementPtrInst* elem_ptr_instr =
         llvm::cast<llvm::GetElementPtrInst>(val);
 
-    // struct member reductions are not supported by OpenMP
+    // struct member reductions are not supported by OpenMP 
     llvm::Value* points_to = points_to_var(elem_ptr_instr);
     llvm::AllocaInst* a_instr = llvm::dyn_cast<llvm::AllocaInst>(points_to);
     llvm::Type* type =
         (a_instr) ? a_instr->getAllocatedType() : points_to->getType();
     if (type->isStructTy()) {
-      return nullptr;
+
+      std::cout << "is struct type indeed \n";
+      //check if less than 2 elements for swift basic types that are packed as structs
+      // of course struct can have one element in swift too however for lack of a better idea 
+      // potential solution in DPInstrumentation
+      if(llvm::dyn_cast<llvm::StructType>(type)->getNumElements() > 1) {
+        return nullptr; 
+      } else {
+        return get_var_rec(a_instr);
+      }
     }
 
     return get_var_rec(elem_ptr_instr->getPointerOperand());

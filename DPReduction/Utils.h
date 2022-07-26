@@ -37,7 +37,9 @@ bool init_util(std::string fmap_path);
 unsigned get_file_id(llvm::Function* func);
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
-char get_char_for_opcode(unsigned opcode);
+// returns char describing the opcode of the instruction, for rust check if llvm intrinsic instruction
+//was generated and return char accordingly
+char get_char_for_opcode(llvm::Instruction *cur_instr);
 
 // return true if 'operand' is an operand of the instruction 'instr'
 bool is_operand(llvm::Instruction* instr, llvm::Value* operand);

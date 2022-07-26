@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "llvm/ADT/StringRef.h"
 #include <llvm/Analysis/LoopInfo.h>
@@ -42,6 +43,7 @@
 
 using namespace llvm;
 using namespace std;
+
 
 struct instr_info_t {
   std::string var_name_;
@@ -161,6 +163,9 @@ void DPReduction::create_function_bindings() {
 
 // Inserts calls to allow for dynamic analysis of the loops.
 void DPReduction::insert_functions() {
+
+  std::cout << "inserting functions: \n"; 
+  
   std::ofstream out_file;
   out_file.open("reduction_meta.txt");
 
@@ -197,6 +202,8 @@ void DPReduction::insert_functions() {
       llvm::CallInst::Create(add_ptr_instr_fn_, args_ref, "",
                              instruction.load_inst_);
     } else {
+
+      std::cout << "inserting add_instr_fn_n because operand is not a getelementptr \n";
       llvm::ArrayRef<llvm::Value*> args_ref(args, 3);
 
       args[2] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 1);
@@ -291,8 +298,8 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
     }
   }
 
-  unsigned opcode = cur_instr->getOpcode();
-  char c = util::get_char_for_opcode(opcode);
+
+  char c = util::get_char_for_opcode(cur_instr);
   if (c != ' ') {
     reduction_operations.push_back(c);
   }
@@ -322,14 +329,22 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
 // returns the reduction instruction where 'val' is the operand if it can find
 // such an operation
 llvm::Instruction* find_reduction_instr(llvm::Value* val) {
+  errs () << *val << "\n";
   if (!val || !llvm::isa<llvm::Instruction>(val)) {
     return nullptr;
   }
 
+  errs() << *val << "val from find reduction instruction \n";
+
   llvm::Instruction* instr = llvm::cast<llvm::Instruction>(val);
   unsigned opcode = instr->getOpcode();
-  char c = util::get_char_for_opcode(opcode);
+  
+  char c = util::get_char_for_opcode(instr);
+ 
+  cout << "char for opcode is: " << c << "\n"; 
   if (c != ' ') {
+    // if the front end generates a call instruction to llvm then the instruction has 
+    // to be built here or there must be a different way to deal with this operation
     return instr;
   } else if (opcode == llvm::Instruction::Load) {
     llvm::Instruction* prev_use =
@@ -356,11 +371,17 @@ int get_op_order(char c) {
 // loads the value (if such a load instruction exists).
 llvm::Instruction* DPReduction::get_reduction_instr(
     llvm::Instruction* store_instr, llvm::Instruction** load_instr) {
+  // error for rust lies here 
+  cout << "getting reduction instruction\n";
+  errs() << *store_instr << "\n"; 
+  errs () << *load_instr << "\n";
 
   // find the reduction operation for the source operand of the 'store_instr'
   llvm::Instruction* reduction_instr =
       find_reduction_instr(store_instr->getOperand(0));
   if (!reduction_instr) return nullptr;
+  cout << "find_reduction_instr was not null \n";
+  errs() << *reduction_instr << "\n"; 
 
   // Now find the destination address of the store instruction.
   // After that, search the load instruction that loads this value and store a
@@ -394,22 +415,42 @@ llvm::Instruction* DPReduction::get_reduction_instr(
 // an entry is added to the 'instructions_' vector.
 void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   llvm::BasicBlock* loop_header = loop->getHeader();
+
+  std::string header_name  = loop_header->getName(); 
+  
+  cout << "loop header name" << header_name << "\n";
+  llvm::errs() << *loop_header << "\n"; 
+
+
+  
+  //this does not work because some front ends like swift can generate instructions
+  //that do not have a pproper debugloc 
+  //could check if dilocation is 0 because this seems to be the only exception to this
+  // then iterate to other instructions until proper one is foundf
   auto loc = loop_header->begin()->getDebugLoc();
   if (!util::loc_exists(loc)) {
     return;
   }
+
+  //this is says header is in line zero for swift 
+  llvm::errs () << *loc << "debug location for loop line \n"; 
 
   auto basic_blocks = loop->getBlocks();
   if (basic_blocks.size() < 3) {
     return;
   }
 
+  std::cout << "instrumenting loop: \n"; 
+
   // add an entry to the 'loops_' vector
   loop_info_t loop_info;
   loop_info.line_nr_ = loc.getLine();
   loop_info.file_id_ = file_id;
+  // in rust, a loop header can go over multiple basic blocks
   loop_info.first_body_instr_ = &(*basic_blocks[1]->begin());
   loops_.push_back(loop_info);
+  std::cout << loop_info.line_nr_ << "\n"; 
+
 
   // call 'instrument_loop' on all its subloops
   auto const sub_loops = loop->getSubLoops();
@@ -424,23 +465,36 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   std::map<llvm::Value*, llvm::Instruction*> store_instructions;
 
   // Scan all instructions in the loop's basic blocks to find the load and
-  // store instructions.
+  // store instructions. 
+  std::cout << "instrumenting loop basic blocks: \n"; 
   for (size_t i = 0; i < basic_blocks.size(); ++i) {
+    std::cout << "entering basic block: \n"; 
+  
     llvm::BasicBlock* const bb = basic_blocks[i];
 
     std::string bb_name = bb->getName();
+    std::cout << bb_name << "\n";
+    //todo: must find different way to find inc and cond block for loops in rust and swift
+   
+    // with generators in rust, the inc and cond basic block are both the header
     if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) ||
-        (std::strncmp("for.cond", bb_name.c_str(), 8) == 0)) {
+        (std::strncmp("for.cond", bb_name.c_str(), 8) == 0) ) {
       continue;
     }
 
+
     for (auto instr_it = bb->begin(); instr_it != bb->end(); ++instr_it) {
       llvm::Instruction* instr = &(*instr_it);
+
       auto opcode = instr->getOpcode();
       if (opcode != llvm::Instruction::Store &&
           opcode != llvm::Instruction::Load) {
         continue;
       }
+
+      llvm::errs() << "found instruction in current basic block" << *instr << "\n"; 
+
+
 
       // Add an entry to the corresponding map or invalidate an already
       // existing entry, if the same instruction is executed on multiple
@@ -450,6 +504,14 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
         std::map<llvm::Value*, llvm::Instruction*>* map_ptr =
             (opcode == llvm::Instruction::Store) ? &store_instructions
                                                  : &load_instructions;
+
+            std::string debug_helper =  (opcode == llvm::Instruction::Store) ? "store instruction"
+                                                 : "load instruction";
+            std::cout << "identified" << debug_helper << "\n";   
+
+            llvm::errs() << "instruction : " << *instr << "\n";
+            std::cout << "\n";                                  
+
         if (!map_ptr->insert(std::make_pair(operand, instr)).second) {
           if ((*map_ptr)[operand]) {
             llvm::DebugLoc new_loc = instr->getDebugLoc();
@@ -461,6 +523,8 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
               (*map_ptr)[operand] = nullptr;
             }
           }
+        } else  {
+          std::cout << "added instruction successfully to map \n";
         }
       }
     }
@@ -469,39 +533,67 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   // only keep the instructions that satisfy the following conditions :
   // - a variable that is read must also be written in the loop
   // - a variable must not be read or written more than once
+  //
   // - the store instruction comes after the load instruction
+  std::cout << "creating candidates list \n";
+
   std::vector<instr_info_t> candidates;
   for (auto it = load_instructions.begin(); it != load_instructions.end();
        ++it) {
     if (!it->second) continue;
 
+    // gets pointer to value that is read from
     auto it2 = store_instructions.find(it->first);
     if (it2 != store_instructions.end() && it2->second) {
       llvm::DebugLoc load_loc = it->second->getDebugLoc();
       llvm::DebugLoc store_loc = it2->second->getDebugLoc();
       if (!util::loc_exists(load_loc) || !util::loc_exists(store_loc)) continue;
+      // abort if load of this variable happens after store
       if (load_loc.getLine() > store_loc.getLine()) continue;
+      // abort if load is in loop header
       if (load_loc.getLine() == loop_info.line_nr_) continue;
 
       if (it->first->hasName()) {
         instr_info_t info;
+        //todo: in rust for array reads, the operand of array indexing load
+        // only importand when arr[i] is the accumulator
+        // instruction has no name because the getelementptr instruction has none
+        // currently no support for arrays as reducers
+        cout << "should have no name" << "\n";
+        llvm::errs() << *it->first << "\n";
         info.var_name_ = it->first->getName();
         info.loop_line_nr_ = loop_info.line_nr_;
         info.file_id_ = file_id;
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
         candidates.push_back(info);
+        errs() << *info.store_inst_ << "\n"; 
+        std::cout << "ADDED INSTRUCTION TO CANDIDATES \n";
       }
     }
   }
 
   // now check if the variables are part of a reduction operation
+  std::cout << "priting candidates \n";
   for (auto candidate : candidates) {
+    std::cout << candidate.var_name_ << "\n"; 
+    std::cout << candidate.loop_line_nr_ << "\n"; 
+    errs () << candidate.store_inst_ << "\n"; 
+
     llvm::Instruction* load_instr = nullptr;
     llvm::Instruction* instr =
         get_reduction_instr(candidate.store_inst_, &load_instr);
+        std::cout << "instruction: \n";
+
     if (instr) {
+      errs () << *instr << "\n";
       candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-      candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
+      cout << "the proper found load instruction is \n"; 
+      errs() << *candidate.load_inst_ << "\n";
+
+      // must be edited for rust/swift  with llvm.operation function calls
+      candidate.operation_ = util::get_char_for_opcode(instr);
+      std::cout << "added candidate to instruction vector \n";
+      errs () << *candidate.load_inst_ << "\n";
       instructions_.push_back(candidate);
     }
   }
