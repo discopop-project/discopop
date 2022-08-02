@@ -64,3 +64,16 @@ jobs:
         run: |
           chmod +x .github/workflows/discopop_profiler/test.sh
           .github/workflows/discopop_profiler/test.sh
+
+  differential_test_llvm_8_vs_11:
+    name: "Differential test: LLVM 8 vs. 11"
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "Copy Filemapping-Script"
+        run: cp scripts/dp-fmap test/differential_mergesort
+      - name: "Change Directory to test/differential_mergesort"
+        run: cd test/differential_mergesort
+      - name: "Create Filemapping"
+        run: |
+          ./dp-dmap
+          cat FileMapping.txt
