@@ -69,6 +69,10 @@ jobs:
     name: "Differential test: LLVM 8 vs. 11"
     runs-on: ubuntu-20.04
     steps:
+      - name: "Show current directory"
+        run: |
+          pwd
+          ls
       - name: "Copy Filemapping-Script"
         run: cp scripts/dp-fmap test/differential_mergesort
       - name: "Change Directory to test/differential_mergesort"
