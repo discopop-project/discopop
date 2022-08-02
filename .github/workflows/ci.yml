@@ -69,16 +69,53 @@ jobs:
     name: "Differential test: LLVM 8 vs. 11"
     runs-on: ubuntu-20.04
     steps:
-      - name: "Show current directory"
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "Install cmake"
         run: |
-          pwd
-      - name: "RUN LS"
-        run: ls
+          sudo apt-get update
+          sudo apt-get install -y cmake
+      - name: "Install LLVM 11"
+          # sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+          sudo apt-get update
+          sudo apt-get install -y libclang-11-dev clang-11 llvm-11
+          clang-11 --version
+          sudo ln -s /usr/bin/clang-11 /usr/bin/clang
+          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++
+          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link
+          sudo ln -s /usr/bin/opt-11 /usr/bin/opt
+      - name: "Build DiscoPoP Profiler"
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          make -j3
       - name: "Copy Filemapping-Script"
         run: cp scripts/dp-fmap test/differential_mergesort
-      - name: "Change Directory to test/differential_mergesort"
-        run: cd test/differential_mergesort
       - name: "Create Filemapping"
         run: |
-          ./dp-dmap
-          cat FileMapping.txt
+          cd test/differential_mergesort
+          ./dp-fmap
+      - name: "Execute DiscoPoP using LLVM 11"
+        run: |
+          cd test/differential_mergesort
+          ./execute_dp.sh
+      - name: "Store Results: LLVM 11"
+        run: |
+          cd test/differential_mergesort
+          mkdir dp_output_llvm_11
+          mv out_dep.txt dp_output_llvm_11
+          mv Data.xml dp_output_llvm_11
+          mv loop_counter_output.txt dp_output_llvm_11
+          mv reduction.txt dp_output_llvm_11
+      - name: "Cleanup"
+        run: |
+          cd test/differential_mergesort
+          rm *.txt
+          rm out
+      - name: "Show contents of test directory"
+        run: |
+          cd test/differential_mergesort/dp_output_llvm_11
+          ls
