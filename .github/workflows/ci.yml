@@ -83,10 +83,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libclang-11-dev clang-11 llvm-11
           clang-11 --version
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt
+          sudo ln -s -p /usr/bin/clang-11 /usr/bin/clang
+          sudo ln -s -p /usr/bin/clang++-11 /usr/bin/clang++
+          sudo ln -s -p /usr/bin/llvm-link-11 /usr/bin/llvm-link
+          sudo ln -s -p /usr/bin/opt-11 /usr/bin/opt
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
