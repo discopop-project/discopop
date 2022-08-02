@@ -21,6 +21,8 @@
 
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/CallingConv.h>
+#include <llvm/IR/Constants.h>
+//#include <llvm/IR/ConstantsContext.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
@@ -30,6 +32,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/Operator.h>
 #include <llvm/Pass.h>
 #include <llvm/PassSupport.h>
 #include <llvm/Support/CommandLine.h>
@@ -153,21 +156,32 @@ char get_char_for_opcode(llvm::Instruction *cur_instr) {
 llvm::Instruction* get_prev_use(llvm::Instruction* instr, llvm::Value* val) {
   if (!instr) return nullptr;
 
+  std::cout << "in prev use\n"; 
+  llvm::errs() << *instr << "\n"; 
+  llvm::errs() << *val << "\n";  
   auto instr_users = val->users();
   bool instr_found = false;
   for (auto user : instr_users) {
     if (!llvm::isa<llvm::Instruction>(user)) {
       continue;
     }
+    
     llvm::Instruction* usr_instr = llvm::cast<llvm::Instruction>(user);
+    std::cout << "pring users \n"; 
+    llvm::errs() << *usr_instr << "\n"; 
 
     if (instr_found) {
       return usr_instr;
     } else if (usr_instr == instr) {
+      std::cout << "users instruction found \n"; 
+      llvm::errs() << *usr_instr << "\n"; 
+      llvm::errs() << *instr << "\n"; 
       instr_found = true;
       continue;
     }
   }
+  std::cout << "returning dynamic cast\n"; 
+  llvm::errs() << *llvm::dyn_cast<llvm::Instruction>(val) << "\n"; 
   return llvm::dyn_cast<llvm::Instruction>(val);
 }
 
@@ -177,6 +191,20 @@ llvm::Value* get_var_rec(llvm::Value* val) {
   llvm::errs() << *val << " value get get_var_rec\n";
 
   // for global variables do the function check here
+
+  //debug
+  if(llvm::isa<llvm::GlobalVariable>(val)) {
+    std::cout << "global variable detected \n"; 
+  }
+
+  if(llvm::isa<llvm::ConstantExpr>(val)) {
+    std::cout << "we have found a global variable access with constant getelementptr expression\n";
+    llvm::errs() << *val << "\n"; 
+    llvm::ConstantExpr *expr = llvm::cast<llvm::ConstantExpr>(val);
+    llvm::errs() << expr->getOpcode() << "getting opcode \n";
+    llvm::errs() << *llvm::dyn_cast<llvm::GEPOperator>(val)->getPointerOperand() << "pointer operand \n";
+    return get_var_rec(llvm::dyn_cast<llvm::GEPOperator>(val)->getPointerOperand());
+  }
 
   if (llvm::isa<llvm::AllocaInst>(val) ||
       llvm::isa<llvm::GlobalVariable>(val)) {

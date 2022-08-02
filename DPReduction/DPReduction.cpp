@@ -19,13 +19,16 @@
 #include "llvm/ADT/StringRef.h"
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/CallingConv.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Operator.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Pass.h>
@@ -263,20 +266,48 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
                                   std::vector<char>& reduction_operations) {
   if (!load_val || !cur_instr) return nullptr;
 
+ 
+
   if (llvm::isa<llvm::LoadInst>(cur_instr)) {
     // Does the current instruction already load the value from the correct
     // address? If that is the case, return it.
+    // check if operand is constantexpression
+    // not call get operand but if getelementptr get the underlying operand
     llvm::Value* val = cur_instr->getOperand(0);
-    if (val == load_val) return cur_instr;
+    if (val == load_val){
+      std::cout << "returning cur_inst because val == load_val \n"; 
+      llvm::errs() << *val << "\n";
+      return cur_instr; 
+      // one exception: if it is constant value like getelementptr constant expression
+      // previous use cannot be the expression itself as it is inlined but is a previous load or store
+      // instruction which would be erroneous
+    } else if(llvm::isa<llvm::ConstantExpr>(val)) {
+      std::cout << "is constant expression \n"; 
+      llvm::errs() << *llvm::dyn_cast<llvm::GEPOperator>(val)->getPointerOperand() << "pointer operand \n";
+     
+      llvm::Value* points_to = llvm::dyn_cast<llvm::GEPOperator>(val)->getPointerOperand();
+      if (points_to == load_val) {
+          std::cout << "points to! \n"; 
+          return cur_instr; 
+      }          
 
+    }
+     
+
+    
+    
     // The current instruction does not load the value from the address of
     // 'load_val'. But it might load the value from a variable where 'load_val'
     // is stored in, so find the previous use of the source operand.
     llvm::Instruction* prev_use = util::get_prev_use(cur_instr, val);
+    llvm::errs() << *prev_use << "\n"; 
     if (prev_use) {
       if (llvm::isa<llvm::StoreInst>(prev_use)) {
+        std::cout << "surprising store instruction \n";
         return get_load_instr(load_val, prev_use, reduction_operations);
       } else if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
+        std::cout << "is getelementptrinst \n"; 
+        llvm::errs() << *prev_use << "\n"; 
         llvm::GetElementPtrInst* ptr_instr =
             llvm::cast<llvm::GetElementPtrInst>(prev_use);
         llvm::Value* points_to = util::points_to_var(ptr_instr);
@@ -291,9 +322,13 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
       } else {
         bool found = static_cast<bool>(
             get_load_instr(load_val, prev_use, reduction_operations));
+        std::cout << "bool is\n"; 
+        std::cout << found << "\n";    
         return (found) ? cur_instr : nullptr;
       }
     } else {
+      std::cout << "current instruction is not load instruction \n"; 
+      std::cout << "returning null pointer\n";
       return nullptr;
     }
   }
@@ -339,6 +374,7 @@ llvm::Instruction* find_reduction_instr(llvm::Value* val) {
   llvm::Instruction* instr = llvm::cast<llvm::Instruction>(val);
   unsigned opcode = instr->getOpcode();
   
+  // not reduction instruction will be returned but the extractvalue instruction
   char c = util::get_char_for_opcode(instr);
  
   cout << "char for opcode is: " << c << "\n"; 
@@ -386,11 +422,14 @@ llvm::Instruction* DPReduction::get_reduction_instr(
   // Now find the destination address of the store instruction.
   // After that, search the load instruction that loads this value and store a
   // pointer to it in 'load_instr'.
+  std::cout << "store destination debug start \n"; 
   llvm::Value* store_dst = util::get_var_rec(store_instr->getOperand(1));
+  llvm::errs() << *store_dst << " store destination\n";
   if (store_dst) {
     std::vector<char> reduction_operations;
     *load_instr =
         get_load_instr(store_dst, reduction_instr, reduction_operations);
+
 
     // { *, / } > { +, - } > { & } > { ^ } > { | }
     if (reduction_operations.size() > 1) {
@@ -420,6 +459,7 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   
   cout << "loop header name" << header_name << "\n";
   llvm::errs() << *loop_header << "\n"; 
+  int loopLine; 
 
 
   
@@ -428,12 +468,35 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   //could check if dilocation is 0 because this seems to be the only exception to this
   // then iterate to other instructions until proper one is foundf
   auto loc = loop_header->begin()->getDebugLoc();
-  if (!util::loc_exists(loc)) {
-    return;
-  }
 
+  if(util::loc_exists(loc)){
+    std::cout << "getting scope" << "\n"; 
+    llvm::DIScope *scopeInfo = loc->getScope();
+    llvm::errs() << *scopeInfo << "\n";
+
+    if(llvm::isa<llvm::DILexicalBlockFile>(scopeInfo)) {
+      //must cast here statically?
+      // get the lexical block
+      std::cout << "is lexical block file"; 
+      llvm::errs() << *scopeInfo << "\n";
+      loopLine = llvm::cast<llvm::DILexicalBlock>(scopeInfo->getScope())->getLine();
+
+    } else if(llvm::isa<llvm::DILexicalBlock>(scopeInfo)) {
+      // must be dilexicalblock
+      std::cout << "is lexical block"; 
+      llvm::errs() << *scopeInfo << "\n";
+      loopLine = llvm::cast<llvm::DILexicalBlock>(scopeInfo)->getLine();
+    } else {
+      llvm::errs() << *scopeInfo << "\n";
+      std::cout << "an error has occured \n";
+      }
+ } else {
+   return; 
+ }
+
+  // can get this from scope
   //this is says header is in line zero for swift 
-  llvm::errs () << *loc << "debug location for loop line \n"; 
+  std::cout << loopLine << "debug location for loop line \n"; 
 
   auto basic_blocks = loop->getBlocks();
   if (basic_blocks.size() < 3) {
@@ -444,9 +507,11 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
 
   // add an entry to the 'loops_' vector
   loop_info_t loop_info;
-  loop_info.line_nr_ = loc.getLine();
+  loop_info.line_nr_ = loopLine;
   loop_info.file_id_ = file_id;
+
   // in rust, a loop header can go over multiple basic blocks
+  // need to make this more dynamic
   loop_info.first_body_instr_ = &(*basic_blocks[1]->begin());
   loops_.push_back(loop_info);
   std::cout << loop_info.line_nr_ << "\n"; 
@@ -478,7 +543,9 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
    
     // with generators in rust, the inc and cond basic block are both the header
     if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) ||
-        (std::strncmp("for.cond", bb_name.c_str(), 8) == 0) ) {
+        (std::strncmp("for.cond", bb_name.c_str(), 8) == 0) ||
+        // skip header basic block even if not labeled
+        (loop_header == bb)) {
       continue;
     }
 
@@ -500,6 +567,8 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
       // existing entry, if the same instruction is executed on multiple
       // lines.
       llvm::Value* operand = util::get_var(instr);
+      std:: cout << "new operand found\n"; 
+      llvm::errs() << *operand << "\n";
       if (operand) {
         std::map<llvm::Value*, llvm::Instruction*>* map_ptr =
             (opcode == llvm::Instruction::Store) ? &store_instructions
@@ -510,8 +579,9 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
             std::cout << "identified" << debug_helper << "\n";   
 
             llvm::errs() << "instruction : " << *instr << "\n";
-            std::cout << "\n";                                  
+            std::cout << "\n";      
 
+        // insetion went wrong? i think reading twice from variable can still be reduction
         if (!map_ptr->insert(std::make_pair(operand, instr)).second) {
           if ((*map_ptr)[operand]) {
             llvm::DebugLoc new_loc = instr->getDebugLoc();
@@ -524,6 +594,7 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
             }
           }
         } else  {
+          llvm::errs() << *instr << "\n"; 
           std::cout << "added instruction successfully to map \n";
         }
       }
@@ -577,12 +648,14 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
   for (auto candidate : candidates) {
     std::cout << candidate.var_name_ << "\n"; 
     std::cout << candidate.loop_line_nr_ << "\n"; 
-    errs () << candidate.store_inst_ << "\n"; 
+    llvm::errs () << *candidate.store_inst_ << "\n"; 
 
     llvm::Instruction* load_instr = nullptr;
+    // this returns null not only if the reduction instruction is null but also if load_instr is null 
     llvm::Instruction* instr =
         get_reduction_instr(candidate.store_inst_, &load_instr);
         std::cout << "instruction: \n";
+
 
     if (instr) {
       errs () << *instr << "\n";
@@ -595,6 +668,9 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
       std::cout << "added candidate to instruction vector \n";
       errs () << *candidate.load_inst_ << "\n";
       instructions_.push_back(candidate);
+    } else {
+      std::cout << "!!! instruction was null for \n" << candidate.var_name_ << "\n"; 
+      
     }
   }
 }

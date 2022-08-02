@@ -754,6 +754,9 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
     } else {
         cout << "operand does NOT have name \n";
         // global arrays?
+        // should be constantexpr instead of this? or does it work as well
+        // llvm::dyn_cast<GEPOperator>(val)->getPointerOperand() gets back operand, ca, call
+        // this function recursively with operand to get global variable
         if(isa<GetElementPtrInst>(*operand)) {
         GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
         Value *ptrOperand = gep->getPointerOperand();
