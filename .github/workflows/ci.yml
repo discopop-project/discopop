@@ -72,7 +72,8 @@ jobs:
       - name: "Show current directory"
         run: |
           pwd
-          ls
+      - name: "RUN LS"
+        run: ls
       - name: "Copy Filemapping-Script"
         run: cp scripts/dp-fmap test/differential_mergesort
       - name: "Change Directory to test/differential_mergesort"
