@@ -173,10 +173,11 @@ jobs:
           mv test/differential_mergesort/reduction.txt ../dp_output_llvm_8
       - name: "Compare results"
         run: |
-          cmp ../dp_output_llvm_11/out_dep.txt ../dp_output_llvm_8/out_dep.txt
-          cmp ../dp_output_llvm_11/loop_counter_output.txt ../dp_output_llvm_8/loop_counter_output.txt
-          cmp ../dp_output_llvm_11/Data.xml ../dp_output_llvm_8/Data.xml
-          cmp ../dp_output_llvm_11/reduction.txt ../dp_output_llvm_8/reduction.txt
+          # || used for error handling
+          cmp ../dp_output_llvm_11/loop_counter_output.txt ../dp_output_llvm_8/loop_counter_output.txt || echo "LLVM 11:" && cat ../dp_output_llvm_11/loop_counter_output.txt && echo "LLVM 8:" && cat ../dp_output_llvm_8/loop_counter_output.txt && exit 1
+          cmp ../dp_output_llvm_11/Data.xml ../dp_output_llvm_8/Data.xml || echo "LLVM 11:" && cat ../dp_output_llvm_11/Data.xml && echo "LLVM 8:" && cat ../dp_output_llvm_8/Data.xml && exit 1
+          cmp ../dp_output_llvm_11/reduction.txt ../dp_output_llvm_8/reduction.txt || echo "LLVM 11:" && cat ../dp_output_llvm_11/reduction.txt && echo "LLVM 8:" && cat ../dp_output_llvm_8/reduction.txt && exit 1
+          cmp ../dp_output_llvm_11/out_dep.txt ../dp_output_llvm_8/out_dep.txt || echo "LLVM 11:" && cat ../dp_output_llvm_11/out_dep.txt && echo "LLVM 8:" && cat ../dp_output_llvm_8/out_dep.txt && exit 1
 
   develop_temp:
     name: "TEMPORARY TESTS"
