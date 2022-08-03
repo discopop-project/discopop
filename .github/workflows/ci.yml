@@ -171,6 +171,19 @@ jobs:
           mv test/differential_mergesort/Data.xml ../dp_output_llvm_8
           mv test/differential_mergesort/loop_counter_output.txt ../dp_output_llvm_8
           mv test/differential_mergesort/reduction.txt ../dp_output_llvm_8
+      - name: "Sort results for sake of comparability"
+        run: |
+          sort ../dp_output_llvm_11/loop_counter_output.txt >> ../dp_output_llvm_11/loop_counter_output.sorted
+          sort ../dp_output_llvm_11/Data.xml >> ../dp_output_llvm_11/Data.sorted
+          sort ../dp_output_llvm_11/reduction.txt >> ../dp_output_llvm_11/reduction.sorted
+          sort ../dp_output_llvm_11/out_dep.txt >> ../dp_output_llvm_11/out_dep.sorted
+          sort ../dp_output_llvm_8/loop_counter_output.txt >> ../dp_output_llvm_8/loop_counter_output.sorted
+          sort ../dp_output_llvm_8/Data.xml >> ../dp_output_llvm_8/Data.sorted
+          sort ../dp_output_llvm_8/reduction.txt >> ../dp_output_llvm_8/reduction.sorted
+          sort ../dp_output_llvm_8/out_dep.txt >> ../dp_output_llvm_8/out_dep.sorted
+          cat ../dp_output_llvm_11/Data.sorted
+          cat ../dp_output_llvm_11/out_dep.sorted
+
       - name: "Compare results"
         run: |
           # || used for error handling
