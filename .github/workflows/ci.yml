@@ -82,7 +82,6 @@ jobs:
           sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
           sudo apt-get update
           sudo apt-get install -y libclang-11-dev clang-11 llvm-11
-          clang-11 --version
           sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
           sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
@@ -93,10 +92,9 @@ jobs:
           cd build
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           make -j3
-      - name: "Copy Filemapping-Script"
-        run: cp scripts/dp-fmap test/differential_mergesort
       - name: "Create Filemapping"
         run: |
+          cp scripts/dp-fmap test/differential_mergesort
           cd test/differential_mergesort
           ./dp-fmap
       - name: "Execute DiscoPoP using LLVM 11"
@@ -115,18 +113,10 @@ jobs:
           cd test/differential_mergesort
           rm *.txt
           rm out
-      - name: "Show contents of test directory"
-        run: |
-          cd ../dp_output_llvm_11
-          ls
       - name: "Install LLVM 8"
         run: |
           sudo apt-get remove -y clang-10 clang-9 clang-12 clang-11
-          # wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          # sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          # sudo apt-get update
           sudo apt-get install -y libclang-8-dev clang-8 llvm-8
-          clang-8 --version
           sudo rm /usr/bin/clang
           sudo rm /usr/bin/clang++
           sudo rm /usr/bin/llvm-link
@@ -139,25 +129,19 @@ jobs:
         run: rm -r build
       - name: "Checkout Repository"
         uses: actions/checkout@v2
-      - name: "SHOW BRANCHES"
-        run: git branch
-      - name: "FETCH"
-        run: git fetch
-      - name: "CHECKOUT COMMIT"
-        run: git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
-      - name: "show branch"
+      - name: "Checkout commit using LLVM 8"
         run: |
-          git branch
+          git fetch
+          git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           make -j3
-      - name: "Copy Filemapping-Script"
-        run: cp scripts/dp-fmap test/differential_mergesort
       - name: "Create Filemapping"
         run: |
+          cp scripts/dp-fmap test/differential_mergesort
           cd test/differential_mergesort
           ./dp-fmap
       - name: "Execute DiscoPoP using LLVM 8"
@@ -189,19 +173,3 @@ jobs:
           cmp ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted || diff ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted
           cmp ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted || diff ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted 
           cmp ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted || diff ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted
-
-  develop_temp:
-    name: "TEMPORARY TESTS"
-    runs-on: ubuntu-20.04
-    steps:
-      - name: "Checkout Repository"
-        uses: actions/checkout@v2
-      - name: "SHOW BRANCHES"
-        run: git branch
-      - name: "FETCH"
-        run: git fetch
-      - name: "CHECKOUT COMMIT"
-        run: git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
-      - name: "show branch"
-        run: |
-          git branch
