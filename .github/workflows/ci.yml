@@ -173,6 +173,8 @@ jobs:
         uses: actions/checkout@v2
       - name: "SHOW BRANCHES"
         run: git branch
+      - name: "FETCH"
+        run: git fetch
       - name: "TEST COMMIT ID"
         run: git show a36374a82e28f0a81883bc868d141405d8278318
       - name: "CHECKOUT COMMIT"
