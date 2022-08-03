@@ -137,10 +137,17 @@ jobs:
           sudo ln -s /usr/bin/opt-8 /usr/bin/opt
       - name: "Remove DiscoPoP build folder created using LLVM 11"
         run: rm -r build
-      - name: "Checkout Repository at TAG:develop_llvm_8"
-        uses: actions/checkout@v3
-        with:
-          ref: develop
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "SHOW BRANCHES"
+        run: git branch
+      - name: "FETCH"
+        run: git fetch
+      - name: "CHECKOUT COMMIT"
+        run: git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
+      - name: "show branch"
+        run: |
+          git branch
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
@@ -164,6 +171,12 @@ jobs:
           mv test/differential_mergesort/Data.xml ../dp_output_llvm_8
           mv test/differential_mergesort/loop_counter_output.txt ../dp_output_llvm_8
           mv test/differential_mergesort/reduction.txt ../dp_output_llvm_8
+      - name: "Compare results"
+        run: |
+          echo "LLVM 11:"
+          cat ../dp_output_llvm_11/loop_counter_output.txt
+          echo "LLVM 8:"
+          cat ../dp_output_llvm_8/loop_counter_output.txt
 
   develop_temp:
     name: "TEMPORARY TESTS"
@@ -175,10 +188,8 @@ jobs:
         run: git branch
       - name: "FETCH"
         run: git fetch
-      - name: "TEST COMMIT ID"
-        run: git show a36374a82e28f0a81883bc868d141405d8278318
       - name: "CHECKOUT COMMIT"
-        run: git checkout a36374a82e28f0a81883bc868d141405d8278318
+        run: git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
       - name: "show branch"
         run: |
           git branch
