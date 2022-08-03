@@ -138,9 +138,9 @@ jobs:
       - name: "Remove DiscoPoP build folder created using LLVM 11"
         run: rm -r build
       - name: "Checkout Repository at TAG:develop_llvm_8"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
-          ref: "develop_llvm_8"
+          ref: develop
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
@@ -164,3 +164,15 @@ jobs:
           mv test/differential_mergesort/Data.xml ../dp_output_llvm_8
           mv test/differential_mergesort/loop_counter_output.txt ../dp_output_llvm_8
           mv test/differential_mergesort/reduction.txt ../dp_output_llvm_8
+
+  develop_temp:
+    name: "TEMPORARY TESTS"
+    runs-on: ubuntu-20.04
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: "pull"
+        run: git pull
+      - name: "show branch"
+        run: |
+          git branch
