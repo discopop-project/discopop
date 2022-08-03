@@ -178,7 +178,7 @@ jobs:
       - name: "TEST COMMIT ID"
         run: git show a36374a82e28f0a81883bc868d141405d8278318
       - name: "CHECKOUT COMMIT"
-        run: git checkout origin/develop
+        run: git checkout a36374a82e28f0a81883bc868d141405d8278318
       - name: "show branch"
         run: |
           git branch
