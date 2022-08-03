@@ -132,7 +132,7 @@ jobs:
       - name: "Checkout commit using LLVM 8"
         run: |
           git fetch
-          git checkout 0df16d047cdb3a883c875bcfe5a8d15d18668d48
+          git checkout c005800d4a44df2c39446786fb8ecb1841308e5a
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
