@@ -174,7 +174,7 @@ jobs:
       - name: "SHOW BRANCHES"
         run: git branch
       - name: "CHECKOUT COMMIT"
-        run: git checkout a36374a82e28f0a81883bc868d141405d8278318
+        run: git checkout origin/develop
       - name: "show branch"
         run: |
           git branch
