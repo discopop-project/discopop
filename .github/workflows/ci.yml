@@ -181,16 +181,14 @@ jobs:
           sort ../dp_output_llvm_8/Data.xml >> ../dp_output_llvm_8/Data.sorted
           sort ../dp_output_llvm_8/reduction.txt >> ../dp_output_llvm_8/reduction.sorted
           sort ../dp_output_llvm_8/out_dep.txt >> ../dp_output_llvm_8/out_dep.sorted
-          cat ../dp_output_llvm_11/Data.sorted
-          cat ../dp_output_llvm_11/out_dep.sorted
 
       - name: "Compare results"
         run: |
           # || used for error handling
-          cmp ../dp_output_llvm_11/loop_counter_output.txt ../dp_output_llvm_8/loop_counter_output.txt || diff ../dp_output_llvm_11/loop_counter_output.txt ../dp_output_llvm_8/loop_counter_output.txt  
-          cmp ../dp_output_llvm_11/Data.xml ../dp_output_llvm_8/Data.xml || diff ../dp_output_llvm_11/Data.xml ../dp_output_llvm_8/Data.xml
-          cmp ../dp_output_llvm_11/reduction.txt ../dp_output_llvm_8/reduction.txt || diff ../dp_output_llvm_11/reduction.txt ../dp_output_llvm_8/reduction.txt 
-          cmp ../dp_output_llvm_11/out_dep.txt ../dp_output_llvm_8/out_dep.txt || diff ../dp_output_llvm_11/out_dep.txt ../dp_output_llvm_8/out_dep.txt
+          cmp ../dp_output_llvm_11/loop_counter_output.sorted ../dp_output_llvm_8/loop_counter_output.sorted || diff ../dp_output_llvm_11/loop_counter_output.sorted ../dp_output_llvm_8/loop_counter_output.sorted  
+          cmp ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted || diff ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted
+          cmp ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted || diff ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted 
+          cmp ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted || diff ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted
 
   develop_temp:
     name: "TEMPORARY TESTS"
