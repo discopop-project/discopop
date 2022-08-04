@@ -9,7 +9,7 @@
  *
  */
 
-#define DEBUG_TYPE "dpop"
+//#define DP_DEBUG_TYPE "dpop"
 //#define SKIP_DUP_INSTR 1
 
 #include "llvm/Transforms/Instrumentation.h"
@@ -34,12 +34,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 
@@ -64,14 +63,14 @@ namespace
     class DiscoPoP : public FunctionPass
     {
     public:
-        DiscoPoP() : FunctionPass(ID), uniqueNum(1) {};
+        DiscoPoP() : FunctionPass(ID) {};
         ~DiscoPoP();
 
-        StringRef getPassName() const;
-        bool runOnFunction(Function &F);
+        StringRef getPassName() const override;
+        bool runOnFunction(Function &F) override;
         void runOnBasicBlock(BasicBlock &BB);
-        bool doInitialization(Module &M);
-        void getAnalysisUsage(AnalysisUsage &Info) const;
+        bool doInitialization(Module &M) override;
+        void getAnalysisUsage(AnalysisUsage &Info) const override;
 
         static char ID; // Pass identification, replacement for typeid
 
@@ -104,14 +103,12 @@ namespace
         void instrumentLoopEntry(BasicBlock *bb, int32_t id);
         void instrumentLoopExit(BasicBlock *bb, int32_t id);
 
-        int64_t uniqueNum;
-
         // Callbacks to run-time library
-        Function *DpInit, *DpFinalize;
-        Function *DpRead, *DpWrite;
-        Function *DpCallOrInvoke;
-        Function *DpFuncEntry, *DpFuncExit;
-        Function *DpLoopEntry, *DpLoopExit;
+        FunctionCallee DpInit, DpFinalize;
+        FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpCallOrInvoke;
+        FunctionCallee DpFuncEntry, DpFuncExit;
+        FunctionCallee DpLoopEntry, DpLoopExit;
 
         // Basic types
         Type *Void;
@@ -179,51 +176,51 @@ void DiscoPoP::setupCallbacks()
      * arg types
      * NULL
      */
-    DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
+    DpInit = ThisModule->getOrInsertFunction("__dp_init",
                             Void,
-                            Int32, Int32, Int32));
+                            Int32, Int32, Int32);
 
-    DpFinalize = cast<Function>(ThisModule->getOrInsertFunction("__dp_finalize",
-                                Void,
-                                Int32));
+    DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize",
+                            Void,
+                            Int32);
 
-    DpRead = cast<Function>(ThisModule->getOrInsertFunction("__dp_read",
+    DpRead = ThisModule->getOrInsertFunction("__dp_read",
                             Void,
 #ifdef SKIP_DUP_INSTR
                             Int32, Int64, CharPtr, Int64, Int64
 #else
                             Int32, Int64, CharPtr
 #endif
-                            ));
+                            );
 
-    DpWrite = cast<Function>(ThisModule->getOrInsertFunction("__dp_write",
-                             Void,
+    DpWrite = ThisModule->getOrInsertFunction("__dp_write",
+                            Void,
 #ifdef SKIP_DUP_INSTR
-                             Int32, Int64, CharPtr, Int64, Int64
+                            Int32, Int64, CharPtr, Int64, Int64
 #else
-                             Int32, Int64, CharPtr
+                            Int32, Int64, CharPtr
 #endif
-                             ));
+                            );
 
-    DpCallOrInvoke = cast<Function>(ThisModule->getOrInsertFunction("__dp_call",
-                                    Void,
-                                    Int32));
+    DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
+                            Void,
+                            Int32);
 
-    DpFuncEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_entry",
-                                 Void,
-                                 Int32, Int32));
+    DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry",
+                            Void,
+                            Int32, Int32);
 
-    DpFuncExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_exit",
-                                Void,
-                                Int32, Int32));
+    DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit",
+                            Void,
+                            Int32, Int32);
 
-    DpLoopEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_entry",
-                                 Void,
-                                 Int32, Int32));
+    DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry",
+                            Void,
+                            Int32, Int32);
 
-    DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
-                                Void,
-                                Int32, Int32));
+    DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit",
+                            Void,
+                            Int32, Int32);
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -554,7 +551,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
+            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
     return NULL;
 }
@@ -567,7 +564,7 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy)
     {
         while(structType->getTypeID() == Type::PointerTyID)
         {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointerElementType();
         }
     }
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
@@ -628,7 +625,7 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
             }
 
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
                 return determineVarName((Instruction *)ptrOperand);
             }
@@ -752,7 +749,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
                 {
                     while(structType->getTypeID() == Type::PointerTyID)
                     {
-                        structType = cast<PointerType>(structType)->getElementType();
+                        structType = cast<PointerType>(structType)->getPointerElementType();
                         ++depth;
                     }
                 }
@@ -828,7 +825,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
         // call and invoke
         else if (isaCallOrInvoke(&*BI))
         {
-            Function *F;
+            Function *F = nullptr;
             if (isa<CallInst>(BI))
                 F = (cast<CallInst>(BI))->getCalledFunction();
             else if (isa<InvokeInst>(BI))

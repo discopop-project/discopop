@@ -10,7 +10,7 @@
  */
 
 #include "DPUtils.h"
-
+#define DP_DEBUG_TYPE "dputils"
 using namespace std;
 
 cl::opt<string> FileMappingPath("fm-path", cl::init(""),
@@ -185,10 +185,10 @@ VariableNameFinder::VariableNameFinder(Module &M){
             vector<string> v;
             for(auto E: CT->getElements()){
                 if(auto DT = dyn_cast<DIDerivedType>(E)){
-                    v.push_back(DT->getName());
+                    v.push_back(DT->getName().str());
                 }
             }
-            StructMemberMap.insert({CT->getName(), v});
+            StructMemberMap.insert({CT->getName().str(), v});
         }
     }
 }
@@ -209,11 +209,11 @@ string VariableNameFinder::getVarName(Value const *V){
                 r += "";
             }
 
-            if(isa<SequentialType>(srcElemT) || isa<IntegerType>(srcElemT)){
+            if(isa<ArrayType>(srcElemT) || isa<IntegerType>(srcElemT)){
                 // return r + "[" + getVarName(GEPI->getOperand(2)) + "]";
                 return r;
             }else if(StructType *st = dyn_cast<StructType>(srcElemT)){
-                int64_t offset = dyn_cast<ConstantInt>(GEPI->getOperand(2))->getSExtValue();
+                // int64_t offset = dyn_cast<ConstantInt>(GEPI->getOperand(2))->getSExtValue();
                 if(st->hasName()){
                     string structTypeName = st->getName().str();
                     if(structTypeName.find("struct.") != string::npos){
@@ -238,10 +238,35 @@ string VariableNameFinder::getVarName(Value const *V){
         if(const BinaryOperator* binop = dyn_cast<BinaryOperator>(I)){
             string op;
             switch(binop->getOpcode()){
-                case 12: op = "+"; break;
-                case 14: op = "-"; break;
-                case 16: op = "*"; break;
-                case 19: op = "/"; break;
+                #define DP_DPUTILS_DEBUG 1
+                case Instruction::BinaryOps::Add:   op = "+"; break;
+                case Instruction::BinaryOps::FAdd:  op = "+"; break;
+                case Instruction::BinaryOps::Sub:   op = "-"; break;
+                case Instruction::BinaryOps::FSub:  op = "-"; break;
+                case Instruction::BinaryOps::Mul:   op = "*"; break;
+                case Instruction::BinaryOps::FMul:  op = "*"; break;
+                case Instruction::BinaryOps::UDiv:  op = "/"; break;
+                case Instruction::BinaryOps::SDiv:  op = "/"; break;
+                case Instruction::BinaryOps::FDiv:  op = "/"; break;
+                case Instruction::BinaryOps::URem:  op = "%"; break;
+                case Instruction::BinaryOps::SRem:  op = "%"; break;
+                case Instruction::BinaryOps::FRem:  op = "%"; break;
+                case Instruction::BinaryOps::Shl:   op = "<<"; break;
+                case Instruction::BinaryOps::LShr:  op = ">>"; break;
+                case Instruction::BinaryOps::AShr:  op = ">>"; break;
+                case Instruction::BinaryOps::And:   op = "&&"; break;
+                case Instruction::BinaryOps::Or:    op = "||"; break;
+                case Instruction::BinaryOps::Xor:   op = "^^"; break;
+                
+                // robust solution to API changes (e.g. llvm adds more instruction types)
+                // case Instruction::BinaryOps::BinaryOpsEnd: // fall through
+                default:
+                    #ifdef DP_DEBUG_TYPE
+                    errs() << "DPUTils VariableNameFinder::getVarName:  did not consider enum value in switch on BinaryOperator";
+                    #endif
+                    break;
+
+
             }
             return getVarName(I->getOperand(0)) + op + getVarName(I->getOperand(1));
         }
@@ -259,7 +284,7 @@ string VariableNameFinder::getVarName(Value const *V){
             Type *st = gepo->getSourceElementType();
             if(StructType *ct = dyn_cast<StructType>(st)){
                 string structTypeName = ct->getName().str().erase(0,7);
-                int64_t offset = dyn_cast<ConstantInt>(gepo->getOperand(2))->getSExtValue();
+                // int64_t offset = dyn_cast<ConstantInt>(gepo->getOperand(2))->getSExtValue();
                 // r += "." + StructMemberMap[structTypeName][offset];
                 r += "";
                 return r;
