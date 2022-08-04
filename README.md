@@ -17,7 +17,9 @@ Before doing anything, you need a basic development setup. We have tested DiscoP
 
 	sudo apt-get install git build-essential cmake
 
-Additionally, you need to install LLVM on your system. Currently, DiscoPoP only supports LLVM 8.0. Due to API changes, which lead to compilation failures, it does not support lower and higher versions. Please follow the [installation tutorial](https://llvm.org/docs/GettingStarted.html), if you have not installed LLVM yet.
+Additionally, you need to install LLVM on your system. Currently, DiscoPoP only supports LLVM versions between 8.0 and 11.1. Due to API changes, which lead to compilation failures, it does not support lower and higher versions. Please follow the [installation tutorial](https://llvm.org/docs/GettingStarted.html), or install LLVM 11 via a package manager as shown in the following snippet, if you have not installed LLVM yet.
+
+    apt-get install libclang-11-dev clang-11 llvm-11
 
 ### DiscoPoP profiler installation
 First, clone the source code into the designated folder. Then, create a build directory:
