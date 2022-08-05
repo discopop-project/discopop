@@ -58,7 +58,8 @@ class OmpPragma(object):
             return PragmaType.TASK
         if self.pragma.startswith("for"):
             return PragmaType.FOR
-        if self.pragma.startswith("critical"):
+        # note: Atomic is handled as a critical section
+        if self.pragma.startswith("critical") or self.pragma.startswith("atomic"):
             return PragmaType.CRITICAL
         if self.pragma.startswith("flush"):
             warnings.warn("CURRENTLY IGNORED PRAGMA: flush")
