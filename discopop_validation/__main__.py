@@ -160,7 +160,7 @@ def __main_start_execution(run_configuration: Configuration):
     #pet.show()
 
 
-    omp_pragma_list = __get_omp_pragmas(run_configuration)
+    omp_pragma_list = __get_omp_pragmas(run_configuration, pet)
 
     omp_pragma_list = __preprocess_omp_pragmas(omp_pragma_list)
 

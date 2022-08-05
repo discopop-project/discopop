@@ -3,7 +3,7 @@ import os
 
 from typing import Dict, List
 
-from discopop_explorer import NodeType
+from discopop_explorer import NodeType, PETGraphX
 from discopop_explorer.utils import classify_loop_variables
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
@@ -133,7 +133,7 @@ def __preprocess_omp_pragmas(omp_pragma_list: List[List[OmpPragma]]):
     return result
 
 
-def __get_omp_pragmas(run_configuration: Configuration):
+def __get_omp_pragmas(run_configuration: Configuration, pet: PETGraphX):
     omp_pragma_list = []
     omp_pragmas = []
     # parse openmp pragmas file if parameter is set and file exists
@@ -156,4 +156,91 @@ def __get_omp_pragmas(run_configuration: Configuration):
         with open(run_configuration.json_file) as f:
             parallelization_suggestions = json.load(f)
             omp_pragma_list += get_omp_pragmas_from_dp_suggestions(parallelization_suggestions)
+
+    omp_pragma_list += get_omp_pragmas_from_filemapping(run_configuration, pet)
     return omp_pragma_list
+
+
+def get_omp_pragmas_from_filemapping(run_configuration: Configuration, pet: PETGraphX) -> [List[List[OmpPragma]]]:
+    """Parse the files in filemapping and extract OpenMP pragmas from them"""
+    omp_pragma_list: List[OmpPragma] = []
+    with open(run_configuration.file_mapping, "r") as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            split_line = line.split("\t")
+            file_id = split_line[0]
+            file_path = split_line[1]
+            omp_pragma_list += __get_omp_pragmas_from_source_file(file_id, file_path, pet)
+    return [omp_pragma_list]
+
+
+def __get_omp_pragmas_from_source_file(file_id: str, file_path, pet: PETGraphX) -> List[OmpPragma]:
+    omp_pragma_list: List[OmpPragma] = []
+    pragma_occurence_line_and_str_list = __get_pragma_strings_from_source_file(file_id, file_path)
+    for occurence_line, pragma_str in pragma_occurence_line_and_str_list:
+        start_line, end_line = __get_start_and_end_line_for_pragma(file_id, occurence_line, pet)
+        pragma_obj = OmpPragma()
+        pragma_obj.init_with_values(file_id, start_line, end_line, pragma_str)
+        omp_pragma_list.append(pragma_obj)
+    return omp_pragma_list
+
+
+def __get_start_and_end_line_for_pragma(file_id: str, occurence_line, pet: PETGraphX):
+    potential_target_nodes = [node for node in pet.all_nodes() if node.file_id == int(file_id) and node.start_line >= occurence_line]
+    # sort nodes by their start line
+    potential_target_nodes = sorted(potential_target_nodes, key=lambda x: x.start_line)
+    # only consider such nodes with the lowest line number and thus the closest code location
+    potential_target_nodes = [node for node in potential_target_nodes if node.start_line == potential_target_nodes[0].start_line]
+    # sort potential_target_nodes by their end_lines
+    potential_target_nodes = sorted(potential_target_nodes, key=lambda x: x.end_line)
+    # the first entry is the closest and smallest fitting CU, and thus the best fit for the given pragma.
+    parent_cu_node = potential_target_nodes[0]
+    return parent_cu_node.start_line, parent_cu_node.end_line
+
+    # old version
+#    # sort and reverse potential_target_nodes by their end_lines
+#    potential_target_nodes = sorted(potential_target_nodes, key=lambda x: x.end_line, reverse=True)
+#    # the first entry is the closest and largest CU, and thus the best fit for the given pragma.
+#    parent_cu_node = potential_target_nodes[0]
+
+
+
+def __get_pragma_strings_from_source_file(file_id, file_path):
+    pragma_occurence_line_and_str_list = []
+    with open(file_path, "r") as source_file:
+        continue_to_buffer = False
+        buffer = ""
+        buffer_line_id = 0
+        for line_id, line in enumerate(source_file.readlines()):
+            line = line.replace("\n", "")
+            if "#pragma omp " in line:
+                buffer_line_id = line_id + 1
+                line = line.replace("#pragma omp ", "")
+                if line.endswith("\\"):
+                    buffer += line[:-1]
+                    continue_to_buffer = True
+                    continue
+                else:
+                    buffer = line
+                    buffer = buffer.replace("  ", "")
+                    while buffer.startswith(" "):
+                        buffer = buffer[1:]
+                    pragma_occurence_line_and_str_list.append((buffer_line_id, buffer))
+                    buffer = ""
+                    continue_to_buffer = False
+                    continue
+            if continue_to_buffer:
+                if line.endswith("\\"):
+                    print("L: ", line[:-1])
+                    buffer += line[:-1]
+                    continue
+                else:
+                    buffer += line
+                    continue_to_buffer = False
+                    buffer = buffer.replace("  ", "")
+                    while buffer.startswith(" "):
+                        buffer = buffer[1:]
+                    pragma_occurence_line_and_str_list.append((buffer_line_id, buffer))
+                    buffer = ""
+                    continue
+    return pragma_occurence_line_and_str_list
