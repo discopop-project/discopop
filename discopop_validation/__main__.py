@@ -191,6 +191,9 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.add_edges(pet, omp_pragmas)
         # pass shared clauses to child nodes
         pc_graph.pass_shared_clauses_to_childnodes()
+        # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
+        pc_graph.apply_and_remove_threadprivate_pragma()
+
 
         # remove redundant successor edges
         pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
