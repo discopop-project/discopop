@@ -273,8 +273,6 @@ class PETGraphX(object):
         # t6 = time.time()
         # print(f"try: {t6-t5}")
         for dep in dependencies_list:
-            print("\nDEP: ", dep.var_name)
-            print(readlineToCUIdMap)
             if dep.type == 'INIT':
                 sink = readlineToCUIdMap[dep.sink]
                 for s in sink:
@@ -283,8 +281,6 @@ class PETGraphX(object):
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
-            print("SINKS: ", sink_cu_ids)
-            print("SOURCES: ", source_cu_ids)
             for sink_cu_id in sink_cu_ids:
                 for source_cu_id in source_cu_ids:
 
