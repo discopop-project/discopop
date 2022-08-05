@@ -26,6 +26,8 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaSingleNode import PragmaSingleNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskNode import PragmaTaskNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import PragmaTaskwaitNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaThreadprivateNode import \
+    PragmaThreadprivateNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.utils.NodeSpecificComputations import \
@@ -115,10 +117,17 @@ class PCGraph(object):
         elif pragma_obj.get_type() == PragmaType.FLUSH:
             warnings.warn("CURRENTLY IGNORED PRAGMA: Flush")
             node_id = self.__add_flush_pragma(pragma_obj)
+        elif pragma_obj.get_type() == PragmaType.THREADPRIVATE:
+            node_id = self.__add_threadprivate_pragma(pragma_obj)
         else:
             raise ValueError("No Supported Pragma for: ", pragma_obj.pragma)
         # create entry in dictionary
         self.pragma_to_node_id[pragma_obj] = node_id
+
+    def __add_threadprivate_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaThreadprivateNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
 
     def __add_critical_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.get_new_node_id()
@@ -1428,6 +1437,46 @@ class PCGraph(object):
             self.graph.add_edge(source, bhv_model.node_id, type=self.graph.edges[(source, target)]["type"])
         for source, target in out_edges:
             self.graph.add_edge(bhv_model.node_id, target, type=self.graph.edges[(source, target)]["type"])
+
+    def apply_and_remove_threadprivate_pragma(self):
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == PragmaThreadprivateNode:
+                in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                out_contained_edges = [edge for edge in self.graph.out_edges(node) if
+                                       self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+
+                tp_variables = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("threadprivate")
+                if len(tp_variables) > 0:
+                    # add tp_variables to all contained pragmas
+                    for _, contained_pragma_node in out_contained_edges:
+                        print("\tContained pragma: ", self.graph.nodes[contained_pragma_node]["data"].pragma)
+                        # overwrite shared variables as private if contained in tp_var
+                        # reason: unspecified variables are assumed to be shared in a prior processing step (extracting
+                        #   from pet graph)
+                        for tp_var in tp_variables:
+                            # remove tp_var from shared
+                            self.graph.nodes[contained_pragma_node]["data"].pragma.remove_from_shared(tp_var)
+                            # add tp_var to private
+                            self.graph.nodes[contained_pragma_node]["data"].pragma.add_to_private(tp_var)
+
+                # connect predecessor with contained entry node (only contained in threadprivate node)
+                for predecessor, _ in in_seq_edges:
+                    for _, successor in out_contained_edges:
+                        # if successor has only one incoming contained edge, connect it to predecessor
+                        successor_in_contained_edges = [edge for edge in self.graph.in_edges(successor) if
+                                                        self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                        if len(successor_in_contained_edges) == 1:
+                            self.graph.add_edge(predecessor, successor, type=EdgeType.SEQUENTIAL)
+                # remove node
+                self.graph.remove_node(node)
+
+
+
+
+
+        pass
 
 
 

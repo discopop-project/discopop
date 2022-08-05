@@ -13,8 +13,33 @@ def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_l
                 start_line >= pet.g.nodes[pet_node]["data"].start_line and \
                 end_line <= pet.g.nodes[pet_node]["data"].end_line:
             potential_nodes.append(pet_node)
+
     if len(potential_nodes) == 0:
-        raise ValueError("No valid CUID found for: ", str(file_id) + ":" + str(start_line) + "-" + str(end_line))
+        # match the next closest CU, used for directives like threadprivate, which can occur outside of CUs
+        successive_nodes = []
+        for pet_node in pet.g.nodes:
+            if file_id == pet.g.nodes[pet_node]["data"].file_id and \
+                    start_line <= pet.g.nodes[pet_node]["data"].start_line:
+                successive_nodes.append(pet_node)
+        # calculate line distances between start_line and the start lines of all successive nodes
+        distances = [(node, pet.g.nodes[node]["data"].start_line - start_line) for node in successive_nodes]
+        # get the minimum distance
+        min_distance = sorted(distances, key=lambda x: x[1])[0][1]
+        # only consider nodes with minimal distance
+        min_distance_successors = [node for (node, distance) in distances if distance == min_distance]
+        # select the CU with the lowest ID
+        lowest_ID_node = None
+        for node in min_distance_successors:
+            if lowest_ID_node is None:
+                lowest_ID_node = node
+            else:
+                if int(lowest_ID_node.split(":")[1]) > int(node.split(":")[1]):
+                    lowest_ID_node = node
+        if lowest_ID_node is not None:
+            potential_nodes.append(lowest_ID_node)
+
+        if len(potential_nodes) == 0:
+            raise ValueError("No valid CUID found for: ", str(file_id) + ":" + str(start_line) + "-" + str(end_line))
 
     # if two potential nodes have equal lines, select the parent and remove the child cu from the list of potential nodes
     buffer: Dict[tuple[int, int], List[Any]] = dict()
@@ -54,3 +79,4 @@ def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_l
                 pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
             narrowest_node_buffer = pet_node
     return narrowest_node_buffer
+
