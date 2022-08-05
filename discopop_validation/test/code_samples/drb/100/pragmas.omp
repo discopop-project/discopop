@@ -1,0 +1,3 @@
+1;72;80;parallel
+1;74;79;single
+1;63;65;task shared(a)
