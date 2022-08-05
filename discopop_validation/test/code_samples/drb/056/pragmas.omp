@@ -1,0 +1,3 @@
+1;31;41;parallel for private(c3, c4, c2)
+1;35;38;simd
+1;80;131;parallel for private(c5, c4, c2, c3)

@@ -1,0 +1,4 @@
+1;37;50;target map(tofrom:b[0:C]) map(to:c[0:C],temp[0:C],a) device(0)
+1;39;49;teams
+1;41;43;distribute
+1;46;48;distribute

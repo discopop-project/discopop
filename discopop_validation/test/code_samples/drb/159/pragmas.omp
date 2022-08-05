@@ -1,0 +1,4 @@
+1;36;49;target map(tofrom:b[0:C]) map(to:c[0:C],temp[0:C],a) device(0)
+1;37;49;parallel
+1;40;42;for
+1;45;47;for

@@ -1,0 +1,4 @@
+1;65;74;parallel shared(b, error)
+1;67;68;for nowait
+1;70;70;barrier
+1;73;73;single

@@ -1,0 +1,3 @@
+1;31;37;target map(tofrom:var[0:C]) device(0)
+1;32;37;teams distribute parallel for
+1;34;36;simd

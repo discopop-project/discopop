@@ -1,0 +1,2 @@
+1;30;37;parallel shared(init) private(local)
+1;32;34;master

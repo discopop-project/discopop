@@ -1,0 +1,4 @@
+1;27;39;parallel
+1;28;39;sections firstprivate( section_count )
+1;30;33;section
+1;35;38;section

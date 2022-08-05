@@ -1,0 +1,6 @@
+1;23;42;parallel num_threads(2)
+1;27;27;critical
+1;29;29;flush(x)
+1;32;32;atomic write
+1;37;37;atomic read acquire
+1;40;40;critical

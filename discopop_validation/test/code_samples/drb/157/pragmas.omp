@@ -1,0 +1,2 @@
+1;31;34;target map(tofrom:var[0:N]) device(0)
+1;32;34;teams distribute parallel for simd safelen(C)

@@ -1,0 +1,5 @@
+1;26;41;parallel default(shared)
+1;28;29;for private(i)
+1;32;34;critical
+1;35;35;barrier
+1;37;39;single

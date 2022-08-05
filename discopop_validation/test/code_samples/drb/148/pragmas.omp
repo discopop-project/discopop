@@ -1,0 +1,4 @@
+1;28;35;target map(tofrom:var) device(0)
+1;29;35;teams distribute parallel for
+1;31;31;critical(addlock)
+1;34;34;critical(sublock)

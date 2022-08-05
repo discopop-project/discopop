@@ -1,0 +1,2 @@
+1;59;61;parallel for default(none) shared(a) private(i,j)
+1;64;66;parallel for default(shared) private(i,j)

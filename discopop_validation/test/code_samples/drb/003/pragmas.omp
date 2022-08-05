@@ -1,0 +1,2 @@
+//MODIFIED
+1;65;69;parallel for private(j) shared(a)

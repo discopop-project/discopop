@@ -1,0 +1,3 @@
+1;25;29;target map(tofrom:var) device(0)
+1;26;29;teams num_teams(1)
+1;27;29;distribute parallel for

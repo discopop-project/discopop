@@ -1,0 +1,5 @@
+1;65;65;target map(to: a[0:len], b[0:len]) map(tofrom: sum)
+1;66;66;teams num_teams(10) thread_limit(256) reduction (+:sum)
+1;68;68;distribute
+1;70;71;parallel for reduction (+:sum)
+1;75;76;parallel for reduction (+:sum2)

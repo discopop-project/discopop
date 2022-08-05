@@ -1,0 +1,1 @@
+1;66;69;parallel reduction(+:sum) num_threads(10) private(i)

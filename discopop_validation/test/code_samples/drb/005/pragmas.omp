@@ -1,0 +1,2 @@
+//MODIFIED
+1;125;130;parallel for schedule(static,1) shared(xa1, xa2)

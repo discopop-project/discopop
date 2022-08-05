@@ -1,0 +1,2 @@
+1;26;29;parallel
+1;28;28;task depend(inout : a) shared(a)

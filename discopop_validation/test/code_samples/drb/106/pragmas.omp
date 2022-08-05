@@ -1,0 +1,6 @@
+1;80;85;parallel shared(result)
+1;82;84;single shared(result)
+1;61;61;task shared(i) firstprivate(n.addr)
+1;63;63;task shared(j) firstprivate(n.addr)
+//1;64;64;taskwait
+1;72;72;taskwait

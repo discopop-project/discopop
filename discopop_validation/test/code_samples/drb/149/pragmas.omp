@@ -1,0 +1,2 @@
+1;37;44;target map(to:a[0:C],b[0:C*C]) map(tofrom:c[0:C]) device(0)
+1;39;43;teams distribute parallel for

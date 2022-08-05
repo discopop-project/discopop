@@ -1,0 +1,5 @@
+1;72;77;parallel
+1;74;76;single
+1;61;61;task shared(i)
+1;63;63;task shared(j)
+1;64;64;taskwait
