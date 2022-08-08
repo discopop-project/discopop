@@ -20,3 +20,4 @@ add_library(DiscoPoP_RT STATIC
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
 add_subdirectory(simple-alias-detection)
+add_subdirectory(omp-pragma-extraction)
