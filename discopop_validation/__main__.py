@@ -4,7 +4,7 @@ Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>] [--thread-count <threads>] [--omp-pragmas-file <path>]
+[--validation-time-limit <seconds>] [--thread-count <threads>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -25,7 +25,6 @@ Options:
                                         Using this flag can lead to an underestimation of data races
                                         and nondeterministic results.
     --thread-count=<threads>    Thread count to be used for multithreaded program parts.
-    --omp-pragmas-file=<path>   Check OpenMP pragmas in file. Specific formatting required!
     -h --help                   Show this screen
 """
 import os
@@ -72,7 +71,6 @@ docopt_schema = Schema({
     '--dp-build-path': Use(str),
     '--validation-time-limit': Use(str),
     '--thread-count': Use(str),
-    '--omp-pragmas-file': Use(str),
 })
 
 
@@ -107,7 +105,6 @@ def main():
     dp_build_path = arguments["--dp-build-path"]
     validation_time_limit = arguments["--validation-time-limit"]
     thread_count = arguments["--thread-count"]
-    omp_pragmas_file = get_path(path, arguments["--omp-pragmas-file"])
     if thread_count == "None":
         thread_count = 1
     else:
@@ -122,7 +119,7 @@ def main():
 
     run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
-                                      validation_time_limit, thread_count, arguments, omp_pragmas_file)
+                                      validation_time_limit, thread_count, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
@@ -160,7 +157,7 @@ def __main_start_execution(run_configuration: Configuration):
     #pet.show()
 
 
-    omp_pragma_list = __get_omp_pragmas(run_configuration)
+    omp_pragma_list = __get_omp_pragmas(run_configuration, pet)
 
     omp_pragma_list = __preprocess_omp_pragmas(omp_pragma_list)
 
