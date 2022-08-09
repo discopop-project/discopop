@@ -44,6 +44,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.E
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.memory_access_graph import MAGDataRace
+from discopop_validation.memory_access_graph.DataRaceDetection import detect_data_races
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
@@ -271,7 +272,7 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         memory_access_graph = MemoryAccessGraph(pc_graph)
-        data_races: List[MAGDataRace] = memory_access_graph.detect_data_races(pc_graph, pet)
+        data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
 
         time_data_race_computation_end = time.time()
         time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
