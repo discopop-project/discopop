@@ -179,16 +179,18 @@ def __get_omp_pragmas_from_source_file(run_configuration: Configuration, file_id
         # find the best fitting scope
         best_fitting_scope = None
         best_distance = None
-        for potential_start, potential_end in scopes[directive]:
-            if potential_start < occurence_line:
-                continue
-            if best_distance is None:
-                best_distance = potential_start - occurence_line
-                best_fitting_scope = (potential_start, potential_end)
-            else:
-                if potential_start - occurence_line < best_distance:
-                    best_distance = potential_start - occurence_line
-                    best_fitting_scope = (potential_start, potential_end)
+        for key in scopes:
+            if directive in key:
+                for potential_start, potential_end in scopes[key]:
+                    if potential_start < occurence_line:
+                        continue
+                    if best_distance is None:
+                        best_distance = potential_start - occurence_line
+                        best_fitting_scope = (potential_start, potential_end)
+                    else:
+                        if potential_start - occurence_line < best_distance:
+                            best_distance = potential_start - occurence_line
+                            best_fitting_scope = (potential_start, potential_end)
 
         pragma_obj = OmpPragma()
         pragma_obj.init_with_values(file_id, best_fitting_scope[0], best_fitting_scope[1], pragma_str)
