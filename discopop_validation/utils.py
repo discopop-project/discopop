@@ -252,7 +252,9 @@ def __get_pragma_strings_from_source_file(file_id, file_path):
         buffer_line_id = 0
         for line_id, line in enumerate(source_file.readlines()):
             line = line.replace("\n", "")
-            if "#pragma omp " in line and not "//" in line:
+            if "//" in line:
+                line = line[:line.index("//")]
+            if "#pragma omp " in line:
                 buffer_line_id = line_id + 1
                 line = line.replace("#pragma omp ", "")
                 if line.endswith("\\"):
