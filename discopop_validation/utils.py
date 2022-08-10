@@ -193,7 +193,10 @@ def __get_omp_pragmas_from_source_file(run_configuration: Configuration, file_id
                             best_fitting_scope = (potential_start, potential_end)
 
         pragma_obj = OmpPragma()
-        pragma_obj.init_with_values(file_id, best_fitting_scope[0], best_fitting_scope[1], pragma_str)
+        if best_fitting_scope is not None:
+            pragma_obj.init_with_values(file_id, best_fitting_scope[0], best_fitting_scope[1], pragma_str)
+        else:
+            pragma_obj.init_with_values(file_id, occurence_line, occurence_line, pragma_str)
         omp_pragma_list.append(pragma_obj)
     return omp_pragma_list
 
@@ -249,7 +252,7 @@ def __get_pragma_strings_from_source_file(file_id, file_path):
         buffer_line_id = 0
         for line_id, line in enumerate(source_file.readlines()):
             line = line.replace("\n", "")
-            if "#pragma omp " in line:
+            if "#pragma omp " in line and not "//" in line:
                 buffer_line_id = line_id + 1
                 line = line.replace("#pragma omp ", "")
                 if line.endswith("\\"):
