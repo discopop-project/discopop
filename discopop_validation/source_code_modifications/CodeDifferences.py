@@ -156,13 +156,47 @@ def main():
     for line_num in line_mapping:
         if line_num != line_mapping[line_num]:
             print(colored(str(line_num) + "  ->  " + str(line_mapping[line_num]), 'green', attrs=["bold"]))
-        #else:
-        #    print(line_num, " -> ", line_mapping[line_num])
 
 
-    # convert raw modifications into a "transition dictionary" for line numbers
-    # modification_scopes give an implicit mapping between line numbers as "anchor points"
-    # found modifications are to be treated in relation to the modifications_scopes
+    print()
+    # check whether all modifications targeted openmp pragmas
+    # if not, profiling the code again is required
+
+    print("ADDED: ", added_lines_dict)
+    print("REMOVED: ", removed_lines_dict)
+    profiling_required = False
+    for key in added_lines_dict:
+        ignore_next_entry = False
+        for line_num, modification in added_lines_dict[key]:
+            cleaned_modification = modification.replace(" ", "").replace("\t", "")
+            print("Entry: ", line_num, modification)
+            if len(cleaned_modification) == 0:
+                ignore_next_entry = False
+                print("\t-> Empty")
+                continue
+            if "#pragma omp " in modification:
+                print("\t-> OMP")
+                if modification.endswith("\\"):
+                    print("\t-> TO NEXT LINE")
+                    ignore_next_entry = True
+                continue
+            if ignore_next_entry:
+                print("\tNEXT LINE")
+                if modification.endswith("\\"):
+                    ignore_next_entry = True
+                else:
+                    ignore_next_entry = False
+                continue
+            if cleaned_modification in ["{", "}", "{}"]:
+                ignore_next_entry = False
+                print("\t-> { or }")
+                continue
+            print("\tPROFILING REQUIRED: ", line_num, " -> ", modification)
+            profiling_required = True
+            break
+
+
+
 
 if __name__ == "__main__":
     main()
