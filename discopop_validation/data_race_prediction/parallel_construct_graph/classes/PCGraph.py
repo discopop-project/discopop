@@ -336,10 +336,10 @@ class PCGraph(object):
                                           pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
                         # todo maybe remove dead code
                         # ensure, that other_pragma lies within the boundary of pragma
-                        # if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                        #    self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
-                                            type=EdgeType.CONTAINS)
+                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        #self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
+                        #                    type=EdgeType.CONTAINS)
                     else:
                         # Fallback: check for contained relations based on source code lines
                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
