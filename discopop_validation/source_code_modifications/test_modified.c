@@ -62,9 +62,8 @@ int main(int argc, char* argv[])
   int a[len];
   for (i=0;i<len;i++)
     a[i]=i;
-
-#pragma omp parallel
-#pragma omp for
+    
+#pragma omp parallel for test
   for (i=0;i<len-1;i++)
     a[i+1]=a[i]+1;
 
