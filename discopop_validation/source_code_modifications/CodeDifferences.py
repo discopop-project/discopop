@@ -192,6 +192,14 @@ def get_line_mapping_and_necessity_for_profiling(original_file: str, modified_fi
                 profiling_required = True
                 break
 
+    # clean up line mapping
+    to_be_removed = []
+    for line in line_mapping:
+        if line_mapping[line] == line:
+            to_be_removed.append(line)
+    for line in to_be_removed:
+        del line_mapping[line]
+
     return line_mapping, profiling_required
 
 
