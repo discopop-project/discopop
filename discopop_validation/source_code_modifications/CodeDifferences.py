@@ -15,6 +15,7 @@ from typing import Tuple, List, Dict
 
 from docopt import docopt
 from schema import SchemaError, Schema, Use  # type: ignore
+from termcolor import colored
 
 
 docopt_schema = Schema({
@@ -96,7 +97,7 @@ def main():
             added_line_number = int(modification_scopes[-1][1]) + added_line_distance
             added_lines_dict[modification_scopes[-1]].append((added_line_number, line[1:]))
 
-
+    print()
     print("mod_scopes: ", modification_scopes)
     print("removed: ", removed_lines_dict)
     print("added:", added_lines_dict)
@@ -106,6 +107,54 @@ def main():
     clean_added_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
     clean_modified_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str, str]]] = dict()
 
+    # todo implement more efficiently
+
+    # get clean modified
+    if False:
+        for key in added_lines_dict:
+            remove_from_added_lines = []
+            remove_from_removed_lines = []
+            for added_line, added_pragma in added_lines_dict[key]:
+                if key in removed_lines_dict:
+                    for removed_line, removed_pragma in removed_lines_dict[key]:
+                        if added_line == removed_line:
+                            if key not in clean_modified_lines_dict:
+                                clean_modified_lines_dict[key] = []
+                            clean_modified_lines_dict[key].append((added_line, removed_pragma, added_pragma))
+                            remove_from_added_lines.append((added_line, added_pragma))
+                            remove_from_removed_lines.append((added_line, removed_pragma))
+            for entry in remove_from_added_lines:
+                added_lines_dict[key].remove(entry)
+            for entry in remove_from_removed_lines:
+                removed_lines_dict[key].remove(entry)
+
+    # get clean removed
+    for key in removed_lines_dict:
+        for removed_line, pragma in removed_lines_dict[key]:
+            if key not in added_lines_dict:
+                if key not in clean_removed_lines_dict:
+                    clean_removed_lines_dict[key] = []
+                clean_removed_lines_dict[key].append((removed_line, pragma))
+            else:
+                added_lines = [added_line for added_line, added_pragma in added_lines_dict[key]]
+                if removed_line not in added_lines:
+                    if key not in clean_removed_lines_dict:
+                        clean_removed_lines_dict[key] = []
+                    clean_removed_lines_dict[key].append((removed_line, pragma))
+
+    # get clean added
+    for key in added_lines_dict:
+        for added_line, pragma in added_lines_dict[key]:
+            if key not in removed_lines_dict:
+                if key not in clean_added_lines_dict:
+                    clean_added_lines_dict = []
+                clean_added_lines_dict[key].append((added_line, pragma))
+            else:
+                removed_lines = [removed_line for removed_line, removed_pragma in removed_lines_dict[key]]
+                if added_line not in removed_lines:
+                    if key not in clean_added_lines_dict:
+                        clean_added_lines_dict[key] = []
+                    clean_added_lines_dict[key].append((added_line, pragma))
 
 
     print("clean removed: ", clean_removed_lines_dict)
@@ -116,16 +165,26 @@ def main():
     # create line mapping and extract line mapping rules
     line_mapping: Dict[int, int] = dict()
     line_mapping_rules: List[Tuple[int, int]] = []  # (boundary line, difference )
+    #line_mapping_rules: dict[int, int]  # [boundary_line: difference]
+
+    # create line mapping rules based on cleaned information
+    for key in added_lines_dict:
+        for entry in added_lines_dict[key]:
+            line_mapping_rules.append((entry[0], 1))  # add one line
+    for key in removed_lines_dict:
+        for entry in removed_lines_dict[key]:
+            line_mapping_rules.append((entry[0], -1))  # remove one line
+
+    print()
 
     # add lines of original file to line mapping
     for line_num in original_file_line_numbers:
         line_mapping[line_num] = line_num
 
-    # add modification scopes to line mapping
-    from termcolor import colored
-    for mod_scope in modification_scopes:
-        # line_mapping[mod_scope[0]] = mod_scope[1]
-        line_mapping_rules.append((mod_scope[0], mod_scope[1] - mod_scope[0]))
+#    # add modification scopes to line mapping
+#    for mod_scope in modification_scopes:
+#        # line_mapping[mod_scope[0]] = mod_scope[1]
+#        line_mapping_rules.append((mod_scope[0]+1, mod_scope[1] - mod_scope[0]))
 
     print("Line Mapping Rules:")
     print(line_mapping_rules)
@@ -134,9 +193,20 @@ def main():
     # apply line mapping rules:
     for rule_boundary_line, rule_line_difference in line_mapping_rules:
         print("RULE: ", rule_boundary_line, rule_line_difference)
-        for line_num in [num for num in line_mapping if num >= rule_boundary_line]:
-            print("\taff: ", line_num)
-            line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
+        for line_num in line_mapping:
+            # apply rule
+            if rule_line_difference > 0:
+                if line_mapping[line_num] >= rule_boundary_line:
+                    line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
+            else:
+                if line_mapping[line_num] >= rule_boundary_line:
+                    line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
+
+        # print out line mapping
+        for line_num in line_mapping:
+            if line_num != line_mapping[line_num]:
+                print("\t" + colored(str(line_num) + "  ->  " + str(line_mapping[line_num]), 'green', attrs=["bold"]))
+
 
     print()
     # add removed and added lines to line mapping
@@ -146,8 +216,8 @@ def main():
     for line_num in line_mapping:
         if line_num != line_mapping[line_num]:
             print(colored(str(line_num) + "  ->  " + str(line_mapping[line_num]), 'green', attrs=["bold"]))
-        else:
-            print(line_num, " -> ", line_mapping[line_num])
+        #else:
+        #    print(line_num, " -> ", line_mapping[line_num])
 
 
     # convert raw modifications into a "transition dictionary" for line numbers
