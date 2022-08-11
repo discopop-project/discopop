@@ -102,70 +102,69 @@ def main():
     print("removed: ", removed_lines_dict)
     print("added:", added_lines_dict)
     print()
-    # get clean lists of added, removed and modified lines and their contents
-    clean_removed_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
-    clean_added_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
-    clean_modified_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str, str]]] = dict()
-
-    # todo implement more efficiently
-
-    # get clean modified
-    if False:
-        for key in added_lines_dict:
-            remove_from_added_lines = []
-            remove_from_removed_lines = []
-            for added_line, added_pragma in added_lines_dict[key]:
-                if key in removed_lines_dict:
-                    for removed_line, removed_pragma in removed_lines_dict[key]:
-                        if added_line == removed_line:
-                            if key not in clean_modified_lines_dict:
-                                clean_modified_lines_dict[key] = []
-                            clean_modified_lines_dict[key].append((added_line, removed_pragma, added_pragma))
-                            remove_from_added_lines.append((added_line, added_pragma))
-                            remove_from_removed_lines.append((added_line, removed_pragma))
-            for entry in remove_from_added_lines:
-                added_lines_dict[key].remove(entry)
-            for entry in remove_from_removed_lines:
-                removed_lines_dict[key].remove(entry)
-
-    # get clean removed
-    for key in removed_lines_dict:
-        for removed_line, pragma in removed_lines_dict[key]:
-            if key not in added_lines_dict:
-                if key not in clean_removed_lines_dict:
-                    clean_removed_lines_dict[key] = []
-                clean_removed_lines_dict[key].append((removed_line, pragma))
-            else:
-                added_lines = [added_line for added_line, added_pragma in added_lines_dict[key]]
-                if removed_line not in added_lines:
-                    if key not in clean_removed_lines_dict:
-                        clean_removed_lines_dict[key] = []
-                    clean_removed_lines_dict[key].append((removed_line, pragma))
-
-    # get clean added
-    for key in added_lines_dict:
-        for added_line, pragma in added_lines_dict[key]:
-            if key not in removed_lines_dict:
-                if key not in clean_added_lines_dict:
-                    clean_added_lines_dict = []
-                clean_added_lines_dict[key].append((added_line, pragma))
-            else:
-                removed_lines = [removed_line for removed_line, removed_pragma in removed_lines_dict[key]]
-                if added_line not in removed_lines:
-                    if key not in clean_added_lines_dict:
-                        clean_added_lines_dict[key] = []
-                    clean_added_lines_dict[key].append((added_line, pragma))
-
-
-    print("clean removed: ", clean_removed_lines_dict)
-    print("clean added: ", clean_added_lines_dict)
-    print("clean modified: ", clean_modified_lines_dict)
-    print()
+#    # get clean lists of added, removed and modified lines and their contents
+#    clean_removed_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
+#    clean_added_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
+#    clean_modified_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str, str]]] = dict()
+#
+#    # todo implement more efficiently
+#
+#    # get clean modified
+#    if False:
+#        for key in added_lines_dict:
+#            remove_from_added_lines = []
+#            remove_from_removed_lines = []
+#            for added_line, added_pragma in added_lines_dict[key]:
+#                if key in removed_lines_dict:
+#                    for removed_line, removed_pragma in removed_lines_dict[key]:
+#                        if added_line == removed_line:
+#                            if key not in clean_modified_lines_dict:
+#                                clean_modified_lines_dict[key] = []
+#                            clean_modified_lines_dict[key].append((added_line, removed_pragma, added_pragma))
+#                            remove_from_added_lines.append((added_line, added_pragma))
+#                            remove_from_removed_lines.append((added_line, removed_pragma))
+#            for entry in remove_from_added_lines:
+#                added_lines_dict[key].remove(entry)
+#            for entry in remove_from_removed_lines:
+#                removed_lines_dict[key].remove(entry)
+#
+#    # get clean removed
+#    for key in removed_lines_dict:
+#        for removed_line, pragma in removed_lines_dict[key]:
+#            if key not in added_lines_dict:
+#                if key not in clean_removed_lines_dict:
+#                    clean_removed_lines_dict[key] = []
+#                clean_removed_lines_dict[key].append((removed_line, pragma))
+#            else:
+#                added_lines = [added_line for added_line, added_pragma in added_lines_dict[key]]
+#                if removed_line not in added_lines:
+#                    if key not in clean_removed_lines_dict:
+#                        clean_removed_lines_dict[key] = []
+#                    clean_removed_lines_dict[key].append((removed_line, pragma))
+#
+#    # get clean added
+#    for key in added_lines_dict:
+#        for added_line, pragma in added_lines_dict[key]:
+#            if key not in removed_lines_dict:
+#                if key not in clean_added_lines_dict:
+#                    clean_added_lines_dict = []
+#                clean_added_lines_dict[key].append((added_line, pragma))
+#            else:
+#                removed_lines = [removed_line for removed_line, removed_pragma in removed_lines_dict[key]]
+#                if added_line not in removed_lines:
+#                    if key not in clean_added_lines_dict:
+#                        clean_added_lines_dict[key] = []
+#                    clean_added_lines_dict[key].append((added_line, pragma))
+#
+#
+#    print("clean removed: ", clean_removed_lines_dict)
+#    print("clean added: ", clean_added_lines_dict)
+#    print("clean modified: ", clean_modified_lines_dict)
+#    print()
 
     # create line mapping and extract line mapping rules
     line_mapping: Dict[int, int] = dict()
     line_mapping_rules: List[Tuple[int, int]] = []  # (boundary line, difference )
-    #line_mapping_rules: dict[int, int]  # [boundary_line: difference]
 
     # create line mapping rules based on cleaned information
     for key in added_lines_dict:
@@ -196,10 +195,10 @@ def main():
         for line_num in line_mapping:
             # apply rule
             if rule_line_difference > 0:
-                if line_mapping[line_num] >= rule_boundary_line:
+                if line_mapping[line_num] > rule_boundary_line:
                     line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
             else:
-                if line_mapping[line_num] >= rule_boundary_line:
+                if line_mapping[line_num] > rule_boundary_line:
                     line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
 
         # print out line mapping
