@@ -15,8 +15,10 @@ def handle_source_code_modifications(run_configuration: Configuration):
             file_path = split_line[1]
             file_path_last_profiled = file_path + ".last_profiled"
 
-            # get file difference and necessity for execution of profiling
-            line_mapping, profiling_necessity = get_line_mapping_and_necessity_for_profiling(file_path_last_profiled, file_path)
+            profiling_necessity = True
+            if os.path.exists(file_path_last_profiled):
+                # get file difference and necessity for execution of profiling
+                line_mapping, profiling_necessity = get_line_mapping_and_necessity_for_profiling(file_path_last_profiled, file_path)
 
             if profiling_necessity:
                 print("PROFILING REQUIRED...")
@@ -31,7 +33,7 @@ def handle_source_code_modifications(run_configuration: Configuration):
                 subprocess.call(["sh", run_configuration.dp_profiling_executable])
                 # change back to original dir
                 os.chdir(original_dir)
-                print("FINISHED profiling.")
+                print("\nFINISHED profiling.")
             else:
                 print("No profiling required.")
 
