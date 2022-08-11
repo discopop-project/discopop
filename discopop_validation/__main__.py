@@ -4,7 +4,7 @@ Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>] [--thread-count <threads>]
+[--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -25,6 +25,7 @@ Options:
                                         Using this flag can lead to an underestimation of data races
                                         and nondeterministic results.
     --thread-count=<threads>    Thread count to be used for multithreaded program parts.
+    --dp-profiling-executable=<path>   Path to an executable which is able to automatically execute the discopop profiling.
     -h --help                   Show this screen
 """
 import os
@@ -46,6 +47,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
 from discopop_validation.memory_access_graph import MAGDataRace
 from discopop_validation.memory_access_graph.DataRaceDetection import detect_data_races
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
+from discopop_validation.source_code_modifications.core import handle_source_code_modifications
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
     __get_omp_pragmas
 from .interfaces.discopop_explorer import get_pet_graph
@@ -72,6 +74,7 @@ docopt_schema = Schema({
     '--dp-build-path': Use(str),
     '--validation-time-limit': Use(str),
     '--thread-count': Use(str),
+    '--dp-profiling-executable': Use(str),
 })
 
 
@@ -106,6 +109,7 @@ def main():
     dp_build_path = arguments["--dp-build-path"]
     validation_time_limit = arguments["--validation-time-limit"]
     thread_count = arguments["--thread-count"]
+    dp_profiling_executable = arguments["--dp-profiling-executable"]
     if thread_count == "None":
         thread_count = 1
     else:
@@ -120,7 +124,7 @@ def main():
 
     run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
-                                      validation_time_limit, thread_count, arguments)
+                                      validation_time_limit, thread_count, dp_profiling_executable, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
@@ -154,6 +158,10 @@ def __main_start_execution(run_configuration: Configuration):
     time_total_pc_graph = 0.0
     time_bhv_extraction_total = 0.0
     time_data_race_computation_total = 0.0
+
+    # check whether re-profiling is required and modify input data to accommodate changed source code lines
+    handle_source_code_modifications(run_configuration)
+
     pet: PETGraphX = get_pet_graph(run_configuration)
     #pet.show()
 

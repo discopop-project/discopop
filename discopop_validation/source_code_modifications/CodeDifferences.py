@@ -45,7 +45,10 @@ def main():
     original_file = arguments["--original_file"]
     modified_file = arguments["--modified_file"]
 
+    mapping, profiling_required = get_line_mapping_and_necessity_for_profiling("DUMMY", original_file, modified_file)
 
+
+def get_line_mapping_and_necessity_for_profiling(original_file: str, modified_file: str) -> Tuple[Dict[int, int], bool]:
     original = open(original_file, "r")
     original_file_line_numbers = range(1, len(open(original_file, "r").readlines()) + 1)
     print("line numbers: ", original_file_line_numbers)
@@ -158,37 +161,38 @@ def main():
     print("ADDED: ", added_lines_dict)
     print("REMOVED: ", removed_lines_dict)
     profiling_required = False
-    for key in added_lines_dict:
-        ignore_next_entry = False
-        for line_num, modification in added_lines_dict[key]:
-            cleaned_modification = modification.replace(" ", "").replace("\t", "")
-            print("Entry: ", line_num, modification)
-            if len(cleaned_modification) == 0:
-                ignore_next_entry = False
-                print("\t-> Empty")
-                continue
-            if "#pragma omp " in modification:
-                print("\t-> OMP")
-                if modification.endswith("\\"):
-                    print("\t-> TO NEXT LINE")
-                    ignore_next_entry = True
-                continue
-            if ignore_next_entry:
-                print("\tNEXT LINE")
-                if modification.endswith("\\"):
-                    ignore_next_entry = True
-                else:
+    for dict_obj in [added_lines_dict, removed_lines_dict]:
+        for key in dict_obj:
+            ignore_next_entry = False
+            for line_num, modification in dict_obj[key]:
+                cleaned_modification = modification.replace(" ", "").replace("\t", "")
+                print("Entry: ", line_num, modification)
+                if len(cleaned_modification) == 0:
                     ignore_next_entry = False
-                continue
-            if cleaned_modification in ["{", "}", "{}"]:
-                ignore_next_entry = False
-                print("\t-> { or }")
-                continue
-            print("\tPROFILING REQUIRED: ", line_num, " -> ", modification)
-            profiling_required = True
-            break
+                    print("\t-> Empty")
+                    continue
+                if "#pragma omp " in modification:
+                    print("\t-> OMP")
+                    if modification.endswith("\\"):
+                        print("\t-> TO NEXT LINE")
+                        ignore_next_entry = True
+                    continue
+                if ignore_next_entry:
+                    print("\tNEXT LINE")
+                    if modification.endswith("\\"):
+                        ignore_next_entry = True
+                    else:
+                        ignore_next_entry = False
+                    continue
+                if cleaned_modification in ["{", "}", "{}"]:
+                    ignore_next_entry = False
+                    print("\t-> { or }")
+                    continue
+                print("\tPROFILING REQUIRED: ", line_num, " -> ", modification)
+                profiling_required = True
+                break
 
-
+    return line_mapping, profiling_required
 
 
 if __name__ == "__main__":
