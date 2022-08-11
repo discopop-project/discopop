@@ -401,7 +401,9 @@ class PCGraph(object):
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
-            if len(self.graph.in_edges(node)) == 0 and node != 0:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(in_seq_edges) == 0 and node != 0 and type(self.graph.nodes[node]["data"]) == PragmaParallelNode:
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
     def remove_redundant_edges(self, edge_types: List[EdgeType]):

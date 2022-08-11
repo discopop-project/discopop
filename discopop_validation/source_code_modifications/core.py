@@ -26,8 +26,6 @@ def handle_source_code_modifications(run_configuration: Configuration):
         # apply complete line mapping to profiling data
         __apply_line_mapping_to_profiling_data(run_configuration, complete_line_mapping)
 
-    import sys
-    sys.exit(0)
 
 
 def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, line_mapping: Dict[str, str]):
@@ -42,7 +40,6 @@ def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, lin
     __apply_line_mapping_to_dependences_file(run_configuration, line_mapping)
     # apply to reduction.txt
     __apply_line_mapping_to_reduction_txt(run_configuration, line_mapping)
-    pass
 
 
 def __apply_line_mapping_to_cu_xml(run_configuration: Configuration, line_mapping: Dict[str, str]):
