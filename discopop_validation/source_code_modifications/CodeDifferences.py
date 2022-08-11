@@ -132,7 +132,6 @@ def main():
 
     # apply line mapping rules:
     for rule_boundary_line, rule_line_difference in line_mapping_rules:
-        print("RULE: ", rule_boundary_line, rule_line_difference)
         for line_num in line_mapping:
             # apply rule
             if rule_line_difference > 0:
@@ -141,12 +140,6 @@ def main():
             else:
                 if line_mapping[line_num] > rule_boundary_line:
                     line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
-
-        # print out line mapping
-        for line_num in line_mapping:
-            if line_num != line_mapping[line_num]:
-                print("\t" + colored(str(line_num) + "  ->  " + str(line_mapping[line_num]), 'green', attrs=["bold"]))
-
 
     print()
     # add removed and added lines to line mapping

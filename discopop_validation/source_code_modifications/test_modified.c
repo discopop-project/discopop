@@ -50,7 +50,7 @@ Data race pair: a[i+1]@68:5:W vs. a[i]@68:12:R
 */
 #include <stdlib.h>
 #include <stdio.h>
-
+	
 int main(int argc, char* argv[])
 {
   int i;
