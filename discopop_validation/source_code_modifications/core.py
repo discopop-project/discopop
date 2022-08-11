@@ -35,11 +35,32 @@ def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, lin
     print(line_mapping)
     # apply to Data.xml
     # apply to loop_counter_output.txt
+    __apply_line_mapping_to_loop_counter_file(run_configuration, line_mapping)
     # apply to out_dep.txt
     __apply_line_mapping_to_dependences_file(run_configuration, line_mapping)
     # apply to reduction.txt
     __apply_line_mapping_to_reduction_txt(run_configuration, line_mapping)
     pass
+
+
+def __apply_line_mapping_to_loop_counter_file(run_configuration: Configuration, line_mapping: Dict[str, str]):
+    with open(run_configuration.loop_counter_file + ".modified", "w+") as output:
+        with open(run_configuration.loop_counter_file, "r") as input:
+            for line in input.readlines():
+                split_line = line.split(" ")
+                replaced_buffer = []
+                for key in line_mapping:
+                    file_id = key.split(":")[0]
+                    line_num = key.split(":")[1]
+                    if file_id != split_line[0]:
+                        continue
+                    if line_num == split_line[1] and line_num not in replaced_buffer:
+                        mapped_line = line_mapping[key].split(":")[1]
+                        split_line[1] = mapped_line
+                        replaced_buffer.append(mapped_line)
+                output.write(" ".join(split_line))
+    # use modified loop counter file
+    run_configuration.loop_counter_file = run_configuration.loop_counter_file + ".modified"
 
 
 def __apply_line_mapping_to_dependences_file(run_configuration: Configuration, line_mapping: Dict[str, str]):
