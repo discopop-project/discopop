@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 from os.path import dirname
 from typing import Dict
@@ -34,6 +35,7 @@ def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, lin
     print("Line mapping:")
     print(line_mapping)
     # apply to Data.xml
+    __apply_line_mapping_to_cu_xml(run_configuration, line_mapping)
     # apply to loop_counter_output.txt
     __apply_line_mapping_to_loop_counter_file(run_configuration, line_mapping)
     # apply to out_dep.txt
@@ -41,6 +43,40 @@ def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, lin
     # apply to reduction.txt
     __apply_line_mapping_to_reduction_txt(run_configuration, line_mapping)
     pass
+
+
+def __apply_line_mapping_to_cu_xml(run_configuration: Configuration, line_mapping: Dict[str, str]):
+    with open(run_configuration.cu_xml + ".modified", "w+") as output:
+        with open(run_configuration.cu_xml, "r") as input:
+            for line in input.readlines():
+                replaced_buffer = []
+                for key in line_mapping:
+                    # "Line" prior to occurence and not "occurence</nodeCalled>"
+                    if "Line" not in line:
+                        continue
+                    line_index = line.index("Line")
+                    if key not in line:
+                        continue
+                    key_indices = [m.start() for m in re.finditer(key, line)]
+                    # "Line" has to occur prior to key
+                    for key_index in key_indices:
+                        if key_index in replaced_buffer:
+                            continue
+                        if line_index > key_index:
+                            continue
+                        # occurence may not be "occurence</nodeCalled>"
+                        if key + "</nodeCalled>" in line:
+                            tmp_idx = line.index(key + "</nodeCalled>")
+                            if tmp_idx == key_index:
+                                continue
+                        # proper occurence
+                        # replace occurence
+                        line = line[:key_index] + line_mapping[key] + line[key_index + len(key):]
+                        replaced_buffer.append(key_index)
+                output.write(line)
+
+    # use modified cu xml file
+    run_configuration.cu_xml = run_configuration.cu_xml + ".modified"
 
 
 def __apply_line_mapping_to_loop_counter_file(run_configuration: Configuration, line_mapping: Dict[str, str]):
