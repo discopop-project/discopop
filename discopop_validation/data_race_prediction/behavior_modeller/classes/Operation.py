@@ -17,6 +17,7 @@ class Operation:
     section_id: int
     file_id: str
     modifiers: List[Tuple[OperationModifierType, str]]
+    line_mapping_applied = False
 
     def __init__(self, suggestion_type, file_id, section_id, mode, target_name, line, col, origin_line, origin_col,
                  target_indices=[]):

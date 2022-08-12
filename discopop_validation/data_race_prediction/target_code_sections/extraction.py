@@ -6,9 +6,9 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.E
 
 
 def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_node_id) -> List[
-    Tuple[str, str, str, str, str, str]]:
+    Tuple[str, str, str, str, str]]:
     """extracts relevant section in the original source code from the given suggestion and reports it as a tuple.
-    Output format: [(<section_id>, <file_id>, <start_line>, <end_line>, <var_name>, <suggestion_type>)]
+    Output format: [(<section_id>, <file_id>, "target_line_0,target_line_1,..." , <var_name>, <suggestion_type>)]
     TODO: For now, only Do-All pattern is reported!
     """
     interim_result: List[Tuple[int, int, int, str, PragmaType]] = []
@@ -71,9 +71,13 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
             else:
                 interim_result.append((pragma.file_id, p_start_line, p_end_line,
                                        ",".join(shared_variables) + ",", pragma.get_type()))
-            result: List[Tuple[str, str, str, str, str, str]] = []
+            result: List[Tuple[str, str, str, str, str]] = []
             for idx, r in enumerate(interim_result):
-                result.append((str(idx), str(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4])))
+                target_lines = range(r[1], r[2]+1)
+                targets_line = ""
+                for l in target_lines:
+                    targets_line += str(l) + ","
+                result.append((str(idx), str(r[0]), targets_line, str(r[3]), str(r[4])))
         return result
     else:
         return []

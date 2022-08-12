@@ -7,13 +7,13 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Behavior
 
 
 def modify_behavior_models(unmodified_behavior_models: List[BehaviorModel],
-                           target_code_section: Tuple[str, str, str, str, str, str],
+                           target_code_section: Tuple[str, str, str, str, str],
                            pragma: OmpPragma,
                            omp_pragmas: List[OmpPragma],
                            run_configuration: Configuration):
     """modify the given operation sequences to represent the behavior of the given target code section,
     considering the respective parallelization suggestion"""
-    pragma_type = target_code_section[5]
+    pragma_type = target_code_section[4]
     # todo currently, only FOR is supported
     if pragma_type == str(PragmaType.FOR):
         return pragma_for.apply_behavior_modification(unmodified_behavior_models, pragma, omp_pragmas,

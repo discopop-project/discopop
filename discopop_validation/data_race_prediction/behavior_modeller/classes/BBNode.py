@@ -26,6 +26,9 @@ class BBNode:
 
     def apply_line_mapping_to_operations(self, run_configuration: Configuration):
         for op in self.operations:
+            if op.line_mapping_applied:
+                # operation has already been modified, skip.
+                continue
             replaced_buffer = []
             for key in run_configuration.line_mapping:
                 key_file_id = key.split(":")[0]
@@ -36,4 +39,5 @@ class BBNode:
                     if str(op.line) == key_line_num:
                         # apply mapping
                         op.line = int(run_configuration.line_mapping[key].split(":")[1])
+                        op.line_mapping_applied = True
                         replaced_buffer.append(str(op.line))
