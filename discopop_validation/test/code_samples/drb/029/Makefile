@@ -22,3 +22,4 @@ clean:
 	rm -f simple
 	rm -f *.last_profiled
 	rm -f *.modified
+	rm -f *.omp

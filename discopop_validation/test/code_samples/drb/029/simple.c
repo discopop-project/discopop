@@ -59,10 +59,17 @@ int main(int argc, char* argv[])
   for (i=0;i<len;i++)
     a[i]=i;
 
-#pragma omp parallel for
+#pragma omp parallel 
+{
+#pragma omp for
   for (i=0;i<len-1;i++)
+  #pragma omp critical
+  {
     a[i+1]=a[i]+1;
+  }
+}
 
   printf("a[50]=%d\n", a[50]);   
   return 0;
 }
+

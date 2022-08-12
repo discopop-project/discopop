@@ -1,12 +1,11 @@
 all: combine
 
-combine: simple.o utilities/polybench.o
-	gcc -o out simple.o utilities/polybench.o
-simple.o:
-	gcc -c simple.c
-utilities/polybench.o:
-	gcc -c utilities/polybench.c
+combine: simple
+	gcc -o out simple.o
 
+simple:
+	cp simple.c simple.c.last_profiled
+	gcc -c simple.c
 
 clean:
 	rm -f *.o
@@ -21,3 +20,6 @@ clean:
 	rm -f simple_dp_run
 	rm -f simple_dp_run_red
 	rm -f simple
+	rm -f *.last_profiled
+	rm -f *.modified
+	rm -f *.omp
