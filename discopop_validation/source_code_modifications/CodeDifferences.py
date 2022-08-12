@@ -110,13 +110,47 @@ def get_line_mapping_and_necessity_for_profiling(original_file: str, modified_fi
     line_mapping: Dict[int, int] = dict()
     line_mapping_rules: List[Tuple[int, int]] = []  # (boundary line, difference )
 
-    # create line mapping rules based on cleaned information
+    # gather add and removed lines information
+    added_lines_after_dict = dict()
     for key in added_lines_dict:
+        print("KEY: ", key)
         for entry in added_lines_dict[key]:
-            line_mapping_rules.append((entry[0], 1))  # add one line
+            print("\tEntry: ", entry)
+            print("Added line after: ", key[0])
+            if key[0] not in added_lines_after_dict:
+                added_lines_after_dict[key[0]] = 0
+            added_lines_after_dict[key[0]] += 1
+    removed_lines_after_dict = dict()
     for key in removed_lines_dict:
+        print("KEY: ", key)
         for entry in removed_lines_dict[key]:
-            line_mapping_rules.append((entry[0], -1))  # remove one line
+            print("\tEntry: ", entry)
+            print("Removed from Line: ", key[0]-1)
+            if key[0]-1 not in removed_lines_after_dict:
+                removed_lines_after_dict[key[0]-1] = 0
+            removed_lines_after_dict[key[0]-1] -= 1
+
+    print()
+    print("added_lines_after_dict")
+    print(added_lines_after_dict)
+    print("removed_lines_after_dict")
+    print(removed_lines_after_dict)
+
+    # create line mapping rules based on added_lines_after_dict
+    for line_num in sorted(added_lines_after_dict, reverse=True):
+        line_mapping_rules.append((line_num, added_lines_after_dict[line_num]))
+    # create line mapping rules based on removed_lines_after_dict
+    for line_num in sorted(removed_lines_after_dict, reverse=True):
+        line_mapping_rules.append((line_num, removed_lines_after_dict[line_num]))
+
+
+    # create line mapping rules based on cleaned information
+#    for key in added_lines_dict:
+#        for entry in added_lines_dict[key]:
+#            line_mapping_rules.append((entry[0], 1))  # add one line
+#    for key in removed_lines_dict:
+#        for entry in removed_lines_dict[key]:
+#            line_mapping_rules.append((entry[0], -1))  # remove one line
 
     print()
 
@@ -138,11 +172,22 @@ def get_line_mapping_and_necessity_for_profiling(original_file: str, modified_fi
         for line_num in line_mapping:
             # apply rule
             if rule_line_difference > 0:
-                if line_mapping[line_num] > rule_boundary_line:
+                if line_num > rule_boundary_line:
                     line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
             else:
-                if line_mapping[line_num] > rule_boundary_line:
+                if line_num > rule_boundary_line:
                     line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
+
+# old implementation
+#    for rule_boundary_line, rule_line_difference in line_mapping_rules:
+#        for line_num in line_mapping:
+#            # apply rule
+#            if rule_line_difference > 0:
+#                if line_mapping[line_num] > rule_boundary_line:
+#                    line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
+#            else:
+#                if line_mapping[line_num] > rule_boundary_line:
+#                    line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
 
     print()
     # add removed and added lines to line mapping
