@@ -4,6 +4,7 @@ combine: simple
 	gcc -o out simple.o
 
 simple:
+	cp simple.c simple.c.last_profiled
 	gcc -c simple.c
 
 clean:
@@ -19,3 +20,6 @@ clean:
 	rm -f simple_dp_run
 	rm -f simple_dp_run_red
 	rm -f simple
+	rm -f *.last_profiled
+	rm -f *.modified
+	rm -f *.omp

@@ -336,10 +336,10 @@ class PCGraph(object):
                                           pet.node_at(pragma_to_cuid[pragma]), [PETEdgeType.CHILD]):
                         # todo maybe remove dead code
                         # ensure, that other_pragma lies within the boundary of pragma
-                        # if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
-                        #    self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
-                        self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
-                                            type=EdgeType.CONTAINS)
+                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
+                            self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma], type=EdgeType.CONTAINS)
+                        #self.graph.add_edge(self.pragma_to_node_id[pragma], self.pragma_to_node_id[other_pragma],
+                        #                    type=EdgeType.CONTAINS)
                     else:
                         # Fallback: check for contained relations based on source code lines
                         if pragma.start_line <= other_pragma.start_line and pragma.end_line >= other_pragma.end_line:
@@ -401,7 +401,9 @@ class PCGraph(object):
 
         # Fallback: add edge from root node to current node if no predecessor exists
         for node in self.graph.nodes:
-            if len(self.graph.in_edges(node)) == 0 and node != 0:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            if len(in_seq_edges) == 0 and node != 0 and type(self.graph.nodes[node]["data"]) == PragmaParallelNode:
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
     def remove_redundant_edges(self, edge_types: List[EdgeType]):

@@ -66,3 +66,4 @@ int main(int argc, char* argv[])
   printf("a[50]=%d\n", a[50]);   
   return 0;
 }
+

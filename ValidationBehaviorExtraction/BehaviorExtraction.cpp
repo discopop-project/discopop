@@ -99,6 +99,8 @@ namespace
         string filePath;
         unsigned int startLine;
         unsigned int endLine;
+        string targetLinesRaw;
+        list<int> targetLines;
         list<string> varNames;
         string suggestionType;
     };
@@ -614,15 +616,31 @@ bool BehaviorExtraction::runOnFunction(Function &F)
         list<unsigned int> bb_in_sections;
         for(auto section : sections){
             //errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
+            //errs() << "section: \n";
+            //for(auto ln : section.targetLines)
+            //   errs() << "\t" << ln << "\n";
             //errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
             // check if graphNode inside section or section inside graphNode
-            if(graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first <= section.endLine){
+            bool foundStartLocation = (std::find(section.targetLines.begin(), section.targetLines.end(), graphNode.startLocation.first) != section.targetLines.end());
+            bool foundEndLocation = (std::find(section.targetLines.begin(), section.targetLines.end(), graphNode.endLocation.first) != section.targetLines.end());
+            bool anyOverlap = false;
+            for(int ln : section.targetLines){
+                if(ln >= graphNode.startLocation.first && ln <= graphNode.endLocation.first){
+                    anyOverlap = true;
+                }
+            }
+            //if(graphNode.startLocation.first >= section.startLine && graphNode.endLocation.first <= section.endLine){
+            if(foundStartLocation && foundEndLocation)
+            {
                 // graphNode in section
                 // errs() << "section: " << section.startLine << " -- " << section.endLine << "\n";
                 // errs() << "graphNode: " << graphNode.startLocation.first << ":" << graphNode.startLocation.second << " -- " << graphNode.endLocation.first << ":" << graphNode.endLocation.second << "\n";
                 bb_in_sections.push_back(section.sectionId);
             }
-            else if(section.startLine >= graphNode.startLocation.first && section.endLine <= graphNode.endLocation.first){
+            else if(anyOverlap){
+                bb_in_sections.push_back(section.sectionId);
+            }
+/*            else if(section.startLine >= graphNode.startLocation.first && section.endLine <= graphNode.endLocation.first){
                 // section in graphNode
                 bb_in_sections.push_back(section.sectionId);
             }
@@ -631,9 +649,10 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 // partial overlap
                 bb_in_sections.push_back(section.sectionId);
             }
+*/
         }
         // if no BBs inside scope have been found, check if scope is inside BB
-        if(bb_in_sections.size() == 0){
+/*        if(bb_in_sections.size() == 0){
             for(auto section : sections){
                 if(graphNode.startLocation.first <= section.startLine && graphNode.endLocation.first >= section.endLine){
                     bb_in_sections.push_back(section.sectionId);
@@ -644,6 +663,7 @@ bool BehaviorExtraction::runOnFunction(Function &F)
             continue;
             }
         }
+*/
         tmpOutputFile << "bbIndex;" << graphNode.bbIndex << "\n";
         tmpOutputFile << "bbName;" << LLVMGetBasicBlockName(wrap(&BB)) << "\n";
         tmpOutputFile << "bbStart;" << graphNode.startLocation.first << ";" << graphNode.startLocation.second << "\n";
@@ -671,7 +691,10 @@ bool BehaviorExtraction::runOnFunction(Function &F)
                 // check for presence for each entry in section.varNames
                 for(auto varName : section.varNames){
                     if(svaNameWithoutIndices.compare(varName) == 0){
-                        if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
+                         bool foundSVALocation = (std::find(section.targetLines.begin(), section.targetLines.end(), sva.codeLocation.first) != section.targetLines.end());
+
+                         if(foundSVALocation){
+//                       if(sva.codeLocation.first >= section.startLine && sva.codeLocation.first <= section.endLine){
                             tmpOutputFile << "operation;" << section.suggestionType << ";" << section.fileId << ";" << section.sectionId << ";" << sva.mode << ";" << sva.name << ";" << sva.codeLocation.first
                                           << ";" << sva.codeLocation.second << ";" <<  sva.originLocation.first << ";" << sva.originLocation.second << "\n";
                         }
@@ -746,15 +769,23 @@ bool BehaviorExtraction::doInitialization(Module &M){
         curSection.filePath = tmp[0];
         curSection.fileId = stoi(tmp[1]);
         curSection.sectionId = stoi(tmp[2]);
-        curSection.startLine = stoi(tmp[3]);
-        curSection.endLine = stoi(tmp[4]);
+        curSection.targetLinesRaw = tmp[3];
+        //curSection.startLine = stoi(tmp[3]);
+        //curSection.endLine = stoi(tmp[4]);
+        // split curSection.targetLinesRaw and add to curSection.targetLines
+        while ((pos = curSection.targetLinesRaw.find(columnEntryDelimiter)) != std::string::npos) {
+            token = curSection.targetLinesRaw.substr(0, pos);
+            curSection.targetLinesRaw.erase(0, pos + columnEntryDelimiter.length());
+            curSection.targetLines.push_back(std::stoi(token));
+        }
+
         // split tmp[5] at "," and add to curSection.varNames
-        while ((pos = tmp[5].find(columnEntryDelimiter)) != std::string::npos) {
-            token = tmp[5].substr(0, pos);
-            tmp[5].erase(0, pos + columnEntryDelimiter.length());
+        while ((pos = tmp[4].find(columnEntryDelimiter)) != std::string::npos) {
+            token = tmp[4].substr(0, pos);
+            tmp[4].erase(0, pos + columnEntryDelimiter.length());
             curSection.varNames.push_back(token);
         }
-        curSection.suggestionType = tmp[6];
+        curSection.suggestionType = tmp[5];
         sections.push_back(curSection);
     }
     inputFile.close();

@@ -12,6 +12,8 @@ from discopop_validation.data_race_prediction.target_code_sections.extraction im
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.utils.NodeSpecificComputations import \
     perform_node_specific_result_computation
+from discopop_validation.data_race_prediction.target_code_sections.utils import \
+    modify_tcs_according_to_inverse_line_mapping
 from discopop_validation.data_race_prediction.vc_data_race_detector.classes.DataRace import DataRace
 
 
@@ -89,7 +91,14 @@ class PCGraphNode(object):
         print("Pragma: ", self.pragma)
         target_code_sections = identify_target_sections_from_pragma(pc_graph, self.pragma, self.node_id)
         for tcs in target_code_sections:
-            print("TCS: ", tcs)
+            print("TCS PRE: ", tcs)
+        # modify target code sections according to the inversed line mapping to
+        # get the correct output for potentially modified source codes
+        target_code_sections = modify_tcs_according_to_inverse_line_mapping(target_code_sections, run_configuration)
+
+        for tcs in target_code_sections:
+            print("TCS POST: ", tcs)
+
         behavior_models: List[BehaviorModel] = []
         for tcs in target_code_sections:
             behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
