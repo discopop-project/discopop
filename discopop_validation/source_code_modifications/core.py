@@ -26,6 +26,9 @@ def handle_source_code_modifications(run_configuration: Configuration):
         # apply complete line mapping to profiling data
         __apply_line_mapping_to_profiling_data(run_configuration, complete_line_mapping)
 
+        # save line_mapping in run_configuration
+        run_configuration.save_line_mapping(complete_line_mapping)
+
 
 
 def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, line_mapping: Dict[str, str]):
