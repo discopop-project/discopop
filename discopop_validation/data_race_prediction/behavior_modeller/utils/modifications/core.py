@@ -19,6 +19,4 @@ def modify_behavior_models(unmodified_behavior_models: List[BehaviorModel],
         return pragma_for.apply_behavior_modification(unmodified_behavior_models, pragma, omp_pragmas,
                                                       run_configuration)
     else:
-        import warnings
-        warnings.warn("TODO: Pragma type: " + pragma_type + " not supported!")
         return unmodified_behavior_models
