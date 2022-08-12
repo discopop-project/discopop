@@ -21,7 +21,9 @@ def modify_tcs_according_to_inverse_line_mapping(target_code_sections: List[Tupl
             if str(file_id) + ":" + str(line) in inverted_line_mapping:
                 modified_target_lines.append(inverted_line_mapping[str(file_id) + ":" + str(line)].split(":")[1])
             else:
-                modified_target_lines.append(line)
+                # if line is key in regular line_mapping, ignore it.
+                if str(file_id) + ":" + str(line) not in run_configuration.line_mapping:
+                    modified_target_lines.append(line)
         modified_target_lines_str = ""
         for l in modified_target_lines:
             modified_target_lines_str += str(l) + ","

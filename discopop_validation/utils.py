@@ -263,7 +263,7 @@ def __get_pragma_strings_from_source_file(file_id, file_path):
                     continue
                 else:
                     buffer = line
-                    buffer = buffer.replace("  ", "")
+                    buffer = buffer.replace("\t", " ").replace("  ", "")
                     while buffer.startswith(" "):
                         buffer = buffer[1:]
                     pragma_occurence_line_and_str_list.append((buffer_line_id, buffer))
@@ -278,7 +278,7 @@ def __get_pragma_strings_from_source_file(file_id, file_path):
                 else:
                     buffer += line
                     continue_to_buffer = False
-                    buffer = buffer.replace("  ", "")
+                    buffer = buffer.replace("\t", " ").replace("  ", "")
                     while buffer.startswith(" "):
                         buffer = buffer[1:]
                     pragma_occurence_line_and_str_list.append((buffer_line_id, buffer))
