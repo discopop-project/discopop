@@ -25,7 +25,7 @@
 using namespace std;
 using namespace dputil;
 
-bool DP_DEBUG = false;        // debug flag
+bool DP_DEBUG = true;        // debug flag
 
 bool USE_PERFECT = false;
 // Shadow memory parameters
@@ -706,7 +706,10 @@ namespace __dp
                 }
 #else
                 out->open("Output.txt", ios::out);
-#endif
+#endif          
+                if(!(out->is_open())) {
+                    out->open("Output.txt", ios::out);
+                }
                 assert(out->is_open() && "Cannot open a file to output dependences.\n");
 
                 if (DP_DEBUG)

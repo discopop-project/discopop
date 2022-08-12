@@ -22,3 +22,17 @@ DPReduction:
 + remove statically coded issues like loopline or index block
 (what if more dependencies that inhibit reduction in reduction?)
 + try for doall, find implementation
+
+
+
+
+-> compiling the ir and linking with libs does cause segfault when running if swift program includes array
+-> can run with lli but not force interpreter because some function call types are not implemented for it
+-> edited cmakelist for rtlib to compile a shared library for this case that can be loaded with lli because static libs or archives cannot(need to link lpthread too)
+-> change part in ifunctions about selfpath because it is not a standalone executable but rather lli is the executing process doing jit
+
+-> command:
+li-8 -load="/home/simonschmalfuss/swift-5.1/swift-5.1.5-RELEASE-ubuntu18.04/usr/lib/swift/linux/libswiftCore.so" 
+-load="/home/simonschmalfuss/swift-5.1/swift-5.1.5-RELEASE-ubuntu18.04/usr/lib/swift/linux/libswiftSwiftOnoneSupport.so" 
+-load="/home/simonschmalfuss/discopop/build/rtlib/libmyruntime.so" 
+-force-interpreter=false instrumented.ll

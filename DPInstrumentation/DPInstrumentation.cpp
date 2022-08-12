@@ -29,6 +29,9 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
@@ -99,6 +102,7 @@ namespace
         //void insertDpFinalize(Instruction *before);
         void instrumentStore(StoreInst *toInstrument);
         void instrumentLoad(LoadInst *toInstrument);
+        void arrayreadOverFunction(CallInst *toInstrument); 
         void insertDpFinalize(Instruction *before);
         void instrumentFuncEntry(Function &F);
         void instrumentLoopEntry(BasicBlock *bb, int32_t id);
@@ -112,6 +116,7 @@ namespace
         Function *DpCallOrInvoke;
         Function *DpFuncEntry, *DpFuncExit;
         Function *DpLoopEntry, *DpLoopExit;
+        Function *DPSwiftAddr; 
 
         // Basic types
         Type *Void;
@@ -179,6 +184,7 @@ void DiscoPoP::setupCallbacks()
      * arg types
      * NULL
      */
+
     DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
                             Void,
                             Int32, Int32, Int32));
@@ -224,6 +230,10 @@ void DiscoPoP::setupCallbacks()
     DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
                                 Void,
                                 Int32, Int32));
+
+
+    // get function that gets index from array given an index and arraybase struct
+    DPSwiftAddr = cast<Function>(ThisModule->getFunction("$sSayxSiciMSi_Tg5"));                           
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -596,6 +606,9 @@ void DiscoPoP::collectDebugInfo()
             for (unsigned i = 0, e = GVs.size(); i < e; ++i)
             {
                 DIGlobalVariable *DIG = GVs[i]->getVariable();
+                errs() << "global variable" << *DIG << "\n";
+
+                errs() << DIG->getLinkageName() << " linkage name" << DIG->getDisplayName() << " display name\n"; 
                 if (DIG)
                 {
                     GlobalVars.insert(DIG);
@@ -608,26 +621,36 @@ void DiscoPoP::collectDebugInfo()
 DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v)
 {
     assert(v && "Global variable cannot be null");
+
+    errs() << "globalvariable linkname debug" << *v <<  "\n";
+
     for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it)
-    {
-        if ((*it)->getDisplayName() == v->getName())
+    {   
+        errs() << (*it)->getDisplayName() << "\n" << (*it)->getLinkageName() << "\n" << v->getName() << "\n"; 
+        if ((*it)->getLinkageName() == v->getName())
             return *it;
     }
     return NULL;
 }
 
 Value *DiscoPoP::getOrInsertVarName(string varName, IRBuilder<> &builder)
-{
+{   
+    cout << "can get here too segfault \n" << varName << "\n";
+
     Value *vName = NULL;
     map<string, Value *>:: iterator pair = VarNames.find(varName);
+
     if (pair == VarNames.end())
     {
+        cout << "not already in varnames << " << varName << "\n"; 
         vName = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
         VarNames[varName] = vName;
     }
     else
-    {
+    {   
+        cout << "is already in varnames \n"; 
         vName = pair->second;
+        errs() << *vName << "\n";
     }
     return vName;
 }
@@ -752,12 +775,13 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
         }
         return getOrInsertVarName(string(operand->getName().data()), builder);
     } else {
-        cout << "operand does NOT have name \n";
-        // global arrays?
+        cout << "operand does NOT have name for instruction and operand: \n";
+        
         // should be constantexpr instead of this? or does it work as well
         // llvm::dyn_cast<GEPOperator>(val)->getPointerOperand() gets back operand, ca, call
         // this function recursively with operand to get global variable
-        if(isa<GetElementPtrInst>(*operand)) {
+        //todo: above for global arrays still
+        /*if(isa<GetElementPtrInst>(*operand)) {
         GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
         Value *ptrOperand = gep->getPointerOperand();
         PointerType *PTy = cast<PointerType>(ptrOperand->getType());   
@@ -767,10 +791,97 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
         errs () << PTy->getElementType()->getTypeID();
        
 
-        cout << "\n"; 
+        cout << "\n"; */
 
+        errs() << "Instruction I: " << *I << "\n"; 
+        errs() << "Operand: " << *operand << "\n"; 
+        //check if gelelementptr
+        //check if pointer operand is extractvalue isntruction
+        // get call instruction
+        //check if it is proper function(mangeled name)
+        // get 3rd argument of call instruction
+        // check if global vs local
+        // insert accordingly
+        // inits will be wrong 
+
+        // swift global variable detected
+        // same as in reduction pass    
+
+        if(isa<ConstantExpr>(*operand)) {
+            errs() << "global arrary loard/store: " << *I << "\n"; 
+            // operand(0) is getelementptr const expr
+            // make it operator and get name
+            errs() << *dyn_cast<GEPOperator>(operand)->getPointerOperand() << "pointer operand \n";
+            Value *globl = dyn_cast<GEPOperator>(operand)->getPointerOperand(); 
+            if(isa<GlobalVariable>(*globl)) {
+                
+                errs() << "found global variable swift: " << *globl << "\n";
+                DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(globl));
+                if (gv != NULL){   
+                    cout << "global variable is not null \n"; 
+                    return getOrInsertVarName(string (gv->getDisplayName().data()), builder);
+                    }
+                
+            } else {
+                return getOrInsertVarName(string(globl->getName().data()), builder);
+            }
+     
+
+        } else if(isa<GetElementPtrInst>(*I)){ 
+
+        GetElementPtrInst *gep = cast<GetElementPtrInst>(I);
+        Value *ptrOperand = gep->getPointerOperand();
+
+        errs() << "pointer operand is: " << *ptrOperand << "\n"; 
+        // swift array store case
+        if(isa<ExtractValueInst>(*ptrOperand)) {
+        cout << "is extractvalue instraction? \n";   
+        ExtractValueInst *extractVal = cast<ExtractValueInst>(ptrOperand); 
+
+        
+        if(extractVal) {
+            errs() << "found extract value instruction" << *extractVal << "\n"; 
+    
+            CallInst *callInst = cast<CallInst>(extractVal->getOperand(0));
+            if(callInst) {
+                Function *f = callInst->getCalledFunction();
+                if(f->getName().find("$sSayxSiciMSi_Tg5") != string::npos) {
+                int index = 2;     
+                //Function::arg_iterator it = f->arg_begin(); 
+
+
+                Value *arrayIdent = callInst->getArgOperand(2);	
+              
+            
+                // check if global or local variable, return insert
+                errs() << "arrayIdent is: " << *arrayIdent << "\n"; 
+                if (isa<GlobalVariable>(*arrayIdent)) {   
+                    cout << "we have found a array write global variable\n"; 
+                    errs() << cast<GlobalVariable>(arrayIdent)->getName() << "\n"; 
+                    // do global variable stuff else do local variable stuff
+                    errs() << "can get here" << *I << "\n";
+                    //segfault here? with getname
+
+                    DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(arrayIdent));
+                    if (gv != NULL)
+                    {   
+                        cout << "global variable is not null \n"; 
+                        return getOrInsertVarName(string (gv->getDisplayName().data()), builder);
+                     }
+                    
+                } else {
+                    cout << "we have found a local array write \n"; 
+                    return getOrInsertVarName(string(arrayIdent->getName().data()), builder);
+
+                }
+            }
+    
+        } 
         }
-    }
+
+        }     
+        }
+       }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
@@ -870,6 +981,8 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
 {
     for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI)
     {
+        errs() << "next instruction" << *BI << "\n"; 
+
         if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
         {
             assert(DI->getOperand(0));
@@ -968,6 +1081,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
                 F = (cast<CallInst>(BI))->getCalledFunction();
             else if (isa<InvokeInst>(BI))
                 F = (cast<InvokeInst>(BI))->getCalledFunction();
+
+            // check if functionname is sSayxSicigSi_Tg5 (subscript mangeled)
+            //insert dp runtime function after the callinstr for array reads 
+            cout << "here\n";  
+            arrayreadOverFunction(cast<CallInst>(BI)); 
 
             // For ordinary function calls, F has a name.
             // However, sometimes the function being called
@@ -1130,6 +1248,190 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument)
 }
 
 
+
+void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
+    int32_t lid = getLID(toInstrument, fileID);
+    if (lid == 0) return;
+
+    vector<Value *> args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    // check if call isntruction with correct name
+    // get offset and array pointer, calculate index (not here as this is runtiem dependent, 
+    // issue add instruction instead )
+    // get name of array from second call instruction argument
+
+    // type from load instruction before, pointer to type from load
+    // instruction before, register from load instruction before, offset index from 
+    // current call instruction
+
+    // get the offset
+    cout << "in my function arrayreadoverfunction\n"; 
+    Function *f = toInstrument->getCalledFunction();
+    if(f) {
+    if(f->getName().find("$sSayxSicigSi_Tg5") != string::npos) {
+
+
+    Instruction *prev = cast<Instruction>(toInstrument->getArgOperand(1)); 
+
+    errs() << "previous instruction" << *prev << "\n"; 
+    errs() << "this instruction: " << *toInstrument << "\n"; 
+    Value *oper = prev->getOperand(0); 
+    errs() << "oper " << *cast<Value>(prev) << "\n"; 
+    errs() << "oper->getType()" << *cast<Value>(prev)->getType() << "\n"; 
+    Type *loadType = prev->getOperand(0)->getType(); 
+
+    errs() << "loadType is" << *loadType << "\n"; 
+
+    Value *base = cast<Value>(prev);
+
+    Value *offset = toInstrument->getArgOperand(0);
+    
+    cout << "fail \n";
+    Type *t = offset->getType(); 
+    //Type *tt = basePointer->getType();
+
+    errs() << "the type for the offset is: " << *t << "\n"; 
+    errs() << "offset: " << *offset << "\n"; 
+
+    //errs() << "basePointer: " << *basePointer << "\n"; 
+
+    //Value* indexList[2] = {offset, ConstantInt::get(offset->getType(), 0)};
+    
+
+    //basePointer: @"$s9reduction3arrSaySiGvp" = hidden global %TSa zeroinitializer, align 8, !dbg !0
+///opt-8: /usr/lib/llvm-8/include/llvm/IR/Instructions.h:889: static llvm::GetElementPtrInst* 
+//llvm::GetElementPtrInst::Create(llvm::Type*, llvm::Value*, llvm::ArrayRef<llvm::Value*>, const llvm::Twine&, llvm::Instruction*): 
+//Assertion `PointeeType == cast<PointerType>(Ptr->getType()->getScalarType())->getElementType()' failed.
+    /*if(isa<GlobalVariable>(*basePointer)) {
+        errs() << "is of type global variable with type: " << *tt << "\n"; 
+        errs() << tt->isPointerTy() << "\n";
+        errs() << *tt->getPointerElementType() << "\n";
+        
+    } */
+    
+
+    //Value *getOffsetIndex = GetElementPtrInst::Create(t, base, ArrayRef<Value*>(indexList, 2), "arrayidx",  toInstrument);
+
+    //errs() << "getOffsetIndex: " << *getOffsetIndex << "\n"; 
+
+    LoadInst *prevLoad = cast<LoadInst>(prev);
+
+    // the load should be of pointer type arraybase pointer opague
+    /* Value *memToInt = PtrToIntInst::CreatePointerCast(prevLoad,
+                     Int64, "", toInstrument); */
+                 
+
+
+    //Value *memAddr = PtrToIntInst::CreatePointerCast(getOffsetIndex,
+    //                 Int64, "", toInstrument);
+
+    //add instruction to add int64 offset and int 64 memToInt cast inst together to obtain real memory instruction
+    //BinaryOps *op = Instruction::Add;
+    //Value *memAddr = BinaryOperator::Create(Instruction::Add, offset, memToInt, "idxadd", toInstrument); 
+
+
+    // since basepointer is struct type not directly pointing to array beginning rather with 4 64bit word offset
+    // get address from same function call as writing to array(no actual read, just for instrumentation to get address)
+    vector<Value *> arr_read_args; 
+
+    /* declare swiftcc { i8*, %TSi* } @"$sSayxSiciMSi_Tg5"(i8* noalias dereferenceable(32), i64, %TSa* nocapture swiftself dereferenceable(8)) #0
+
+*/
+    if(prevLoad) {
+    
+    // differentiate between local and global array writes
+    // for locals it is not getelementptr constant expression but 
+    errs() << prevLoad->getOperand(0) << "\n"; 
+    Value *opr = prevLoad->getOperand(0); 
+    Value *val; 
+
+    // if local array
+    if(isa<GetElementPtrInst>(*opr)) {
+        // find base type
+        Value *iter = opr; 
+
+        while(!isa<AllocaInst>(*iter)) {
+            iter = cast<GetElementPtrInst>(iter)->getPointerOperand();
+        }
+        errs() << "arrived at alloca instruction" << *iter << "\n"; 
+
+        val = cast<Value>(iter); 
+
+    // if global array
+    // GetElementPtrConstantExpr for global variables(like pointer to array base is)
+    } else if(isa<ConstantExpr>(*opr)) {
+        errs() << "is constant expression -> global arr: " << *opr << "\n"; 
+
+        GEPOperator *op = cast<GEPOperator>(opr);
+        val = op->getPointerOperand();
+        errs() << "val: " << *val << "\n"; 
+    }
+
+    errs() << "now argument value and type are: " << *val << *val->getType() << "\n"; 
+
+
+    // value of type i8* 
+    // not sure if any side effects possible bc dont know what argument is for
+    // this is a bad solution, should get 
+    Value *ptrArg = ConstantPointerNull::get(CharPtr);
+    arr_read_args.push_back(ptrArg); 
+    arr_read_args.push_back(offset); 
+    // 
+    arr_read_args.push_back(val); 
+
+    unsigned indices[1] = {1};
+
+    Value *getAddressCall = CallInst::Create(DPSwiftAddr, arr_read_args ,"loadIdx", toInstrument); 
+
+    Value *extractAddr = ExtractValueInst::Create(getAddressCall, ArrayRef<unsigned>(indices, 1), "unpackedIdx", toInstrument); 
+
+    Value *memToInt = PtrToIntInst::CreatePointerCast(extractAddr,
+                     Int64, "", toInstrument);
+
+    args.push_back(memToInt);
+
+    //errs() << "memeAddr: " << *memAddr << "\n";
+
+    //determine varname right here because it is a special case
+    
+
+
+    cout << "previous load does exist \n"; 
+ 
+    errs() << "pointer operand for array variable: " << *val << "\n"; 
+
+    // other cases
+    IRBuilder<> builder(toInstrument);
+    Value *varName; 
+
+    if (isa<GlobalVariable>(*val)) {   
+        cout << "we have found a global variable\n"; 
+        errs() << cast<GlobalVariable>(val)->getName() << "\n"; 
+        // do global variable stuff else do local variable stuff
+
+        DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(val));
+        if (gv != NULL) {
+        cout << "gv is not null \n"; 
+        varName = getOrInsertVarName(string(gv->getName().data()), builder);
+
+        args.push_back(varName);
+        Instruction *ins = CallInst::Create(DpRead, args, "", toInstrument);
+        }     
+
+    } else {
+        cout << "local array read \n"; 
+
+        varName = getOrInsertVarName(string(val->getName().data()), builder);
+        args.push_back(varName);
+        Instruction *ins = CallInst::Create(DpRead, args, "", toInstrument);
+    }
+   }
+  } 
+}
+
+}
+
 void DiscoPoP::instrumentStore(StoreInst *toInstrument)
 {
 
@@ -1176,7 +1478,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument)
     args.push_back(currentAddrTracker);
     args.push_back(currentCount);
 #endif
-
+    cout << "could get here too in instrumentload\n";
     CallInst::Create(DpWrite, args, "", toInstrument);
 
 #ifdef SKIP_DUP_INSTR
