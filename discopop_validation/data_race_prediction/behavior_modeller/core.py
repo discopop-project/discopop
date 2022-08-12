@@ -28,13 +28,13 @@ def __extract_behavior_models(run_configuration: Configuration, pet, tcs, pragma
     if run_configuration.verbose_mode:
         print("insering critical sections into BB Graph...")
     insert_critical_sections(bb_graph, omp_pragmas)
-    unmodified_behavior_models: List[BehaviorModel] = get_unmodified_behavior_models(bb_graph)
+    unmodified_behavior_models: List[BehaviorModel] = get_unmodified_behavior_models(run_configuration, bb_graph)
     modified_behavior_models: List[BehaviorModel] = modify_behavior_models(unmodified_behavior_models, tcs, pragma,
                                                                            omp_pragmas, run_configuration)
     return modified_behavior_models
 
 
-def get_unmodified_behavior_models(bb_graph) -> List[BehaviorModel]:
+def get_unmodified_behavior_models(run_configuration: Configuration, bb_graph) -> List[BehaviorModel]:
     paths = get_paths(bb_graph)
     # convert paths to read/write sequences
     behavior_models: List[BehaviorModel] = []
@@ -42,6 +42,8 @@ def get_unmodified_behavior_models(bb_graph) -> List[BehaviorModel]:
         for path in paths[section_id]:
             current_sequence = []
             for bb_node in path:
+                # modify lines of operations according to run_configuration.line_mapping
+                bb_node.apply_line_mapping_to_operations(run_configuration)
                 current_sequence += bb_node.operations
             behavior_models.append(BehaviorModel(current_sequence))
     return behavior_models
