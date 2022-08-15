@@ -1,7 +1,9 @@
 message(STATUS "Found LLVM/Clang version " ${LLVM_VERSION})
-if(NOT ${LLVM_VERSION} VERSION_EQUAL 14)
-  message(WARNING "Make sure to use Clang 14")
+if(NOT ${LLVM_VERSION} VERSION_EQUAL 11)
+  message(WARNING "Make sure to use Clang 11")
 endif()
+
+project(OMP_pragma_extraction)
 
 find_package(Clang)
 

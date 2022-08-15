@@ -19,5 +19,18 @@ add_library(DiscoPoP_RT STATIC
     ${DiscoPoP_SOURCES})
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
-add_subdirectory(simple-alias-detection)
-add_subdirectory(omp-pragma-extraction)
+# add_subdirectory(simple-alias-detection)
+# add_subdirectory(omp-pragma-extraction)
+
+# current dir: ${CMAKE_CURRENT_SOURCE_DIR}
+execute_process(
+    COMMAND echo ${CMAKE_CURRENT_SOURCE_DIR}
+)
+execute_process(
+    COMMAND echo ${CMAKE_BINARY_DIR}
+)
+
+# compile omp-pragma-extraction
+exec_program(${CMAKE_CURRENT_SOURCE_DIR}/omp-pragma-extraction/compile.sh
+    ARGS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+)
