@@ -3,7 +3,7 @@ if(NOT ${LLVM_VERSION} VERSION_EQUAL 11)
   message(WARNING "Make sure to use Clang 11")
 endif()
 
-project(OMP_pragma_extraction)
+project(omp_pragma_extraction)
 
 find_package(Clang)
 

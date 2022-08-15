@@ -3,6 +3,8 @@ if(NOT ${LLVM_VERSION} VERSION_EQUAL 14)
   message(WARNING "Make sure to use Clang 14")
 endif()
 
+project(simple_alias_extraction)
+
 find_package(Clang)
 
 set(SOURCES
