@@ -22,5 +22,11 @@ target_include_directories(getOmpPragmas PUBLIC
 )
 
 target_link_libraries(getOmpPragmas
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSerialization
   clangTooling
 )
