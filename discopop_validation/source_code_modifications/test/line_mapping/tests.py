@@ -134,7 +134,7 @@ class TestSourceCodeModifications(unittest.TestCase):
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
         expected_line_mapping = {
-
+            2: -1
         }
         self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
@@ -146,7 +146,8 @@ class TestSourceCodeModifications(unittest.TestCase):
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
         expected_line_mapping = {
-
+            2: -1,
+            3: -1
         }
         self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
@@ -159,7 +160,8 @@ class TestSourceCodeModifications(unittest.TestCase):
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
         expected_line_mapping = {
-
+            1: -1,
+            3: -1
         }
         self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
