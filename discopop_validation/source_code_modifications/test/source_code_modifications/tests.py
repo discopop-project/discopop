@@ -7,7 +7,7 @@ from discopop_validation.source_code_modifications.CodeDifferences import file_d
 class TestSourceCodeModifications(unittest.TestCase):
     def test_add_line_prior(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add_line_prior"
+        dir_name = "add/line_prior"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
@@ -20,7 +20,7 @@ class TestSourceCodeModifications(unittest.TestCase):
 
     def test_add_line_after(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add_line_after"
+        dir_name = "add/line_after"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
@@ -33,7 +33,7 @@ class TestSourceCodeModifications(unittest.TestCase):
 
     def test_add_line_after_last_line(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add_line_after_last_line"
+        dir_name = "add/line_after_last_line"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
