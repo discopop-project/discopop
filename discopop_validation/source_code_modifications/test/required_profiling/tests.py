@@ -5,123 +5,81 @@ from discopop_validation.source_code_modifications.CodeDifferences import file_d
 
 
 class TestSourceCodeModifications(unittest.TestCase):
-    def test_add_line_before(self):
+    def test_yes_added_line(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add/line_before"
+        dir_name = "yes/added_line"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            1: 2
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
 
 
-    def test_add_line_after(self):
+    def test_yes_removed_line(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add/line_after"
+        dir_name = "yes/removed_line"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: 3
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
 
 
-    def test_add_line_after_last_line(self):
+    def test_yes_modified_line(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add/line_after_last_line"
+        dir_name = "yes/modified_line"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
 
-
-    def test_add_two_lines(self):
+    def test_no_added_pragma(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add/two_lines"
+        dir_name = "no/added_pragma"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: 4
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
 
 
-    def test_add_two_lines_distributed(self):
+    def test_no_removed_pragma(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "add/two_lines_distributed"
+        dir_name = "no/removed_pragma"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: 3,
-            3: 5
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
 
 
-    def test_remove_line(self):
+    def test_no_modified_pragma(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "remove/line"
+        dir_name = "no/modified_pragma"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: -1,
-            3: 2
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
 
-    def test_remove_last_line(self):
+
+    def test_no_added_braces(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "remove/last_line"
+        dir_name = "no/added_braces"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: -1
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
 
 
-    def test_remove_two_lines(self):
+    def test_no_added_braced_pragma(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "remove/two_lines"
+        dir_name = "no/added_braced_pragma"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: -1,
-            3: -1,
-            4: 2
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
 
 
-    def test_remove_two_lines_distributed(self):
+    def test_no_removed_braced_pragma(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        dir_name = "remove/two_lines_distributed"
+        dir_name = "no/removed_braced_pragma"
         original_file = path + "/" + dir_name + "/original.c"
         modified_file = path + "/" + dir_name + "/modified.c"
         line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
-        expected_line_mapping = {
-            2: -1,
-            3: 2,
-            4: -1,
-            5: 3
-        }
-        self.assertEqual(line_mapping, expected_line_mapping)
-        self.assertTrue(profiling_required)
+        self.assertFalse(profiling_required)
