@@ -57,7 +57,9 @@ def main():
 
 def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dict[int, int], bool]:
     original = open(original_file, "r")
-    original_file_line_numbers = range(1, len(open(original_file, "r").readlines()) + 1)
+    original_file_line_numbers = range(1, len(original.readlines()) + 1)
+    original.close()
+    original = open(original_file, "r")
     print("line numbers: ", original_file_line_numbers)
     original_path = os.path.realpath(original.name)
     print("Last profiled file: ", original_path)
@@ -66,6 +68,8 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
     print("Modified file: ", modified_path)
     print()
     diff_lines = unified_diff(original.readlines(), modified.readlines(), fromfile=original_path, tofile=modified_path, n=0)
+    original.close()
+    modified.close()
 
     modification_scopes: List[Tuple[str, str]] = []
     added_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
