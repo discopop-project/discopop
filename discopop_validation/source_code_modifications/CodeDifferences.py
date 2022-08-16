@@ -45,10 +45,17 @@ def main():
     original_file = arguments["--original_file"]
     modified_file = arguments["--modified_file"]
 
-    mapping, profiling_required = get_line_mapping_and_necessity_for_profiling(original_file, modified_file)
+    mapping, profiling_required = file_difference_checker(original_file, modified_file)
+
+    print("Line Mapping:")
+    for line_num in mapping:
+        if line_num != mapping[line_num]:
+            print(colored(str(line_num) + "  ->  " + str(mapping[line_num]), 'green', attrs=["bold"]))
+    print("Profiling required:")
+    print(profiling_required)
 
 
-def get_line_mapping_and_necessity_for_profiling(original_file: str, modified_file: str) -> Tuple[Dict[int, int], bool]:
+def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dict[int, int], bool]:
     original = open(original_file, "r")
     original_file_line_numbers = range(1, len(open(original_file, "r").readlines()) + 1)
     print("line numbers: ", original_file_line_numbers)

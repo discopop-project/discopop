@@ -5,7 +5,7 @@ from os.path import dirname
 from typing import Dict
 
 from discopop_validation.classes.Configuration import Configuration
-from discopop_validation.source_code_modifications.CodeDifferences import get_line_mapping_and_necessity_for_profiling
+from discopop_validation.source_code_modifications.CodeDifferences import file_difference_checker
 
 
 def handle_source_code_modifications(run_configuration: Configuration):
@@ -148,8 +148,8 @@ def __execute_profiling_if_necessary(run_configuration: Configuration, file_path
     line_mapping = dict()
     if os.path.exists(file_path_last_profiled):
         # get file difference and necessity for execution of profiling
-        line_mapping, profiling_necessity = get_line_mapping_and_necessity_for_profiling(file_path_last_profiled,
-                                                                                         file_path)
+        line_mapping, profiling_necessity = file_difference_checker(file_path_last_profiled,
+                                                                    file_path)
 
     if profiling_necessity:
         print("PROFILING REQUIRED...")
