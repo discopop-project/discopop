@@ -163,3 +163,31 @@ class TestSourceCodeModifications(unittest.TestCase):
         }
         self.assertEqual(line_mapping, expected_line_mapping)
         self.assertTrue(profiling_required)
+
+    def test_remove_add_two_lines_distributed(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+        dir_name = "remove_add/two_lines_distributed"
+        original_file = path + "/" + dir_name + "/original.c"
+        modified_file = path + "/" + dir_name + "/modified.c"
+        line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
+        expected_line_mapping = {
+            2: -1,
+            3: 2,
+            4: 3
+        }
+        self.assertEqual(line_mapping, expected_line_mapping)
+        self.assertTrue(profiling_required)
+
+
+    def test_add_remove_two_lines_distributed(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+        dir_name = "add_remove/two_lines_distributed"
+        original_file = path + "/" + dir_name + "/original.c"
+        modified_file = path + "/" + dir_name + "/modified.c"
+        line_mapping, profiling_required = file_difference_checker(original_file, modified_file)
+        expected_line_mapping = {
+            3: 4,
+            4: -1
+        }
+        self.assertEqual(line_mapping, expected_line_mapping)
+        self.assertTrue(profiling_required)
