@@ -60,13 +60,9 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
     original_file_line_numbers = range(1, len(original.readlines()) + 1)
     original.close()
     original = open(original_file, "r")
-    print("line numbers: ", original_file_line_numbers)
     original_path = os.path.realpath(original.name)
-    print("Last profiled file: ", original_path)
     modified = open(modified_file, "r")
     modified_path = os.path.realpath(modified.name)
-    print("Modified file: ", modified_path)
-    print()
     diff_lines = unified_diff(original.readlines(), modified.readlines(), fromfile=original_path, tofile=modified_path, n=0)
     original.close()
     modified.close()
@@ -81,7 +77,6 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
 
     for line in diff_lines:
         line = line.replace("\n", "")
-        print(line)
         if line.startswith("@@"):
             # get line numbers
             split_line = line.split(" ")
@@ -111,12 +106,6 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
             added_line_number = int(modification_scopes[-1][1]) + added_line_distance
             added_lines_dict[modification_scopes[-1]].append((added_line_number, line[1:]))
 
-    print()
-    print("mod_scopes: ", modification_scopes)
-    print("removed: ", removed_lines_dict)
-    print("added:", added_lines_dict)
-    print()
-
     # create line mapping and extract line mapping rules
     line_mapping: Dict[int, int] = dict()
     line_mapping_rules: List[Tuple[int, int]] = []  # (boundary line, difference )
@@ -124,28 +113,16 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
     # gather add and removed lines information
     added_lines_after_dict = dict()
     for key in added_lines_dict:
-        print("KEY: ", key)
         for entry in added_lines_dict[key]:
-            print("\tEntry: ", entry)
-            print("Added line after: ", key[0])
             if key[0] not in added_lines_after_dict:
                 added_lines_after_dict[key[0]] = 0
             added_lines_after_dict[key[0]] += 1
     removed_lines_after_dict = dict()
     for key in removed_lines_dict:
-        print("KEY: ", key)
         for entry in removed_lines_dict[key]:
-            print("\tEntry: ", entry)
-            print("Removed from Line: ", key[0]-1)
             if key[0]-1 not in removed_lines_after_dict:
                 removed_lines_after_dict[key[0]-1] = 0
             removed_lines_after_dict[key[0]-1] -= 1
-
-    print()
-    print("added_lines_after_dict")
-    print(added_lines_after_dict)
-    print("removed_lines_after_dict")
-    print(removed_lines_after_dict)
 
     # create line mapping rules based on added_lines_after_dict
     for line_num in sorted(added_lines_after_dict, reverse=True):
@@ -163,8 +140,6 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
 #        for entry in removed_lines_dict[key]:
 #            line_mapping_rules.append((entry[0], -1))  # remove one line
 
-    print()
-
     # add lines of original file to line mapping
     for line_num in original_file_line_numbers:
         line_mapping[line_num] = line_num
@@ -173,10 +148,6 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
 #    for mod_scope in modification_scopes:
 #        # line_mapping[mod_scope[0]] = mod_scope[1]
 #        line_mapping_rules.append((mod_scope[0]+1, mod_scope[1] - mod_scope[0]))
-
-    print("Line Mapping Rules:")
-    print(line_mapping_rules)
-    print()
 
     # apply line mapping rules:
     for rule_boundary_line, rule_line_difference in line_mapping_rules:
@@ -200,14 +171,8 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
 #                if line_mapping[line_num] > rule_boundary_line:
 #                    line_mapping[line_num] = line_mapping[line_num] + rule_line_difference
 
-    print()
     # add removed and added lines to line mapping
 
-    # print out line mapping
-    print("Line Mapping:")
-    for line_num in line_mapping:
-        if line_num != line_mapping[line_num]:
-            print(colored(str(line_num) + "  ->  " + str(line_mapping[line_num]), 'green', attrs=["bold"]))
 
 
     # check whether all modifications targeted openmp pragmas
