@@ -65,6 +65,7 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
         "diff --old-line-format='-$$$ %L\n' --new-line-format='+$$$ %L\n' --unchanged-line-format='|$$$ %L\n' " + original_file + " " + modified_file)
     # $$$ used to identify the amount of operations per line
     output_lines = stream.readlines()
+    stream.close()
 
     line_mapping: Dict[int, int] = dict()
     original_line_num = 1
@@ -76,7 +77,7 @@ def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dic
         line = line.replace("\n", "")
         if len(line) == 0:
             continue
-        update_line_mapping(copy.deepcopy(line), original_line_num, current_offset, line_mapping)
+        original_line_num, current_offset, line_mapping = update_line_mapping(copy.deepcopy(line), original_line_num, current_offset, line_mapping)
         cur_result, ignore_next_entry = get_profiling_necessity(copy.deepcopy(line), ignore_next_entry)
         profiling_required = profiling_required or cur_result
 
@@ -121,7 +122,7 @@ def get_profiling_necessity(line: str, ignore_next_entry: bool) -> Tuple[bool, b
 
 def update_line_mapping(line: str, original_line_num: int, current_offset: int, line_mapping: Dict[int, int]):
     if len(line) == 0:  # empty lines required to split old and new line in case of modifications
-        return
+        return original_line_num, current_offset, line_mapping
     # always write to line_mapping prior to modifying original_line_num
 
     # if line has been added, original_line_num is not increased as it was not present in the original code
@@ -138,7 +139,7 @@ def update_line_mapping(line: str, original_line_num: int, current_offset: int, 
     # if line has been added, increase current offset by one
     if line.startswith("+"):
         current_offset += 1
-    return
+    return original_line_num, current_offset, line_mapping
 
 
 if __name__ == "__main__":
