@@ -1,2 +1,1 @@
-  #pragma omp parallel
-  int x = 0;
+int x = 42;
