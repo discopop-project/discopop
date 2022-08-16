@@ -8,6 +8,7 @@ Options:
     --modified_file=<path>               Path to potentially modified file
     -h --help                   Show this screen
 """
+import copy
 import os
 import subprocess
 import sys
@@ -59,135 +60,25 @@ def main():
 
 
 def file_difference_checker(original_file: str, modified_file: str) -> Tuple[Dict[int, int], bool]:
-    # new line mapping
-    line_mapping = get_line_mapping(original_file, modified_file)
-
-    profiling_required = get_profiling_necessity(original_file, modified_file)
-
-    return line_mapping, profiling_required
-
-
-def get_profiling_necessity(original_file: str, modified_file: str) -> bool:
-    original = open(original_file, "r")
-    original_file_line_numbers = range(1, len(original.readlines()) + 1)
-    original.close()
-    original = open(original_file, "r")
-    original_path = os.path.realpath(original.name)
-    modified = open(modified_file, "r")
-    modified_path = os.path.realpath(modified.name)
-    diff_lines = unified_diff(original.readlines(), modified.readlines(), fromfile=original_path, tofile=modified_path,
-                              n=0)
-    original.close()
-    modified.close()
-
-    modification_scopes: List[Tuple[str, str]] = []
-    added_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
-    removed_lines_dict: Dict[Tuple[str, str], List[Tuple[int, str]]] = dict()
-    removed_line_distance = -1
-    added_line_distance = -1
-
-    # read raw modifications from diff
-
-    for line in diff_lines:
-        line = line.replace("\n", "")
-        if line.startswith("@@"):
-            # get line numbers
-            split_line = line.split(" ")
-            start_line_original = split_line[1].replace("-", "")
-            start_line_modified = split_line[2].replace("+", "")
-            # ignore column numbers
-            if "," in start_line_original:
-                start_line_original = start_line_original[:start_line_original.index(",")]
-            if "," in start_line_modified:
-                start_line_modified = start_line_modified[:start_line_modified.index(",")]
-            start_line_original = int(start_line_original)
-            start_line_modified = int(start_line_modified)
-            modification_scopes.append((start_line_original, start_line_modified))
-            removed_lines_dict[(start_line_original, start_line_modified)] = []
-            added_lines_dict[(start_line_original, start_line_modified)] = []
-            removed_line_distance = -1
-            added_line_distance = -1
-
-        if line.startswith("-") and not line.startswith("---"):
-            # line removed from original file
-            removed_line_distance += 1
-            removed_line_number = int(modification_scopes[-1][0]) + removed_line_distance
-            removed_lines_dict[modification_scopes[-1]].append((removed_line_number, line[1:]))
-        if line.startswith("+") and not line.startswith("+++"):
-            # line added to original file
-            added_line_distance += 1
-            added_line_number = int(modification_scopes[-1][1]) + added_line_distance
-            added_lines_dict[modification_scopes[-1]].append((added_line_number, line[1:]))
-
-    # check whether all modifications targeted openmp pragmas
-    # if not, profiling the code again is required
-
-    profiling_required = False
-    for dict_obj in [added_lines_dict, removed_lines_dict]:
-        for key in dict_obj:
-            ignore_next_entry = False
-            for line_num, modification in dict_obj[key]:
-                cleaned_modification = modification.replace(" ", "").replace("\t", "")
-                if len(cleaned_modification) == 0:
-                    ignore_next_entry = False
-                    continue
-                if "#pragma omp " in modification:
-                    if modification.endswith("\\"):
-                        ignore_next_entry = True
-                    continue
-                if ignore_next_entry:
-                    if modification.endswith("\\"):
-                        ignore_next_entry = True
-                    else:
-                        ignore_next_entry = False
-                    continue
-                if cleaned_modification in ["{", "}", "{}"]:
-                    ignore_next_entry = False
-                    continue
-                profiling_required = True
-                break
-
-    # clean up line mapping
-#    to_be_removed = []
-#    for line in line_mapping:
-#        if line_mapping[line] == line:
-#            to_be_removed.append(line)
-#    for line in to_be_removed:
-#        del line_mapping[line]
-
-    return profiling_required
-
-
-def get_line_mapping(original_file: str, modified_file: str) -> Dict[int, int]:
     import os
-    stream = os.popen("diff --old-line-format='-$$$ %L\n' --new-line-format='+$$$ %L\n' --unchanged-line-format='|$$$ %L\n' " + original_file + " " + modified_file)
+    stream = os.popen(
+        "diff --old-line-format='-$$$ %L\n' --new-line-format='+$$$ %L\n' --unchanged-line-format='|$$$ %L\n' " + original_file + " " + modified_file)
     # $$$ used to identify the amount of operations per line
     output_lines = stream.readlines()
 
     line_mapping: Dict[int, int] = dict()
     original_line_num = 1
     current_offset = 0
+    profiling_required = False
+    ignore_next_entry = False
 
     for line in output_lines:
         line = line.replace("\n", "")
-        if len(line) == 0:  # empty lines required to split old and new line in case of modifications
+        if len(line) == 0:
             continue
-        # always write to line_mapping prior to modifying original_line_num
-
-        # if line has been added, original_line_num is not increased as it was not present in the original code
-        if line.startswith("|"):
-            line_mapping[original_line_num] = original_line_num + current_offset
-            original_line_num += 1
-
-        # if line has been removed, decrease the current offset by one
-        if line.startswith("-"):
-            line_mapping[original_line_num] = -1
-            current_offset -= 1
-            original_line_num += 1
-
-        # if line has been added, increase current offset by one
-        if line.startswith("+"):
-            current_offset += 1
+        update_line_mapping(copy.deepcopy(line), original_line_num, current_offset, line_mapping)
+        cur_result, ignore_next_entry = get_profiling_necessity(copy.deepcopy(line), ignore_next_entry)
+        profiling_required = profiling_required or cur_result
 
     # clean up line mapping
     to_be_removed = []
@@ -197,7 +88,57 @@ def get_line_mapping(original_file: str, modified_file: str) -> Dict[int, int]:
     for line in to_be_removed:
         del line_mapping[line]
 
-    return line_mapping
+    return line_mapping, profiling_required
+
+
+def get_profiling_necessity(line: str, ignore_next_entry: bool) -> Tuple[bool, bool]:
+    # check whether all modifications targeted openmp pragmas
+    # if not, profiling the code again is required
+    # if no modification has been done, skip line
+    if "|$$$" in line:
+        ignore_next_entry = False
+        return False, ignore_next_entry
+    cleaned_line = line.replace(" ", "").replace("\t", "").replace("|$$$", "").replace("+$$$","").replace("-$$$","")
+    if len(cleaned_line) == 0:
+        ignore_next_entry = False
+        return False, ignore_next_entry
+    if "#pragma omp " in line:
+        if line.endswith("\\"):
+            ignore_next_entry = True
+        return False, ignore_next_entry
+    if ignore_next_entry:
+        if line.endswith("\\"):
+            ignore_next_entry = True
+        else:
+            ignore_next_entry = False
+        return False, ignore_next_entry
+    if cleaned_line in ["{", "}", "{}"]:
+        ignore_next_entry = False
+        return False, ignore_next_entry
+    return True, ignore_next_entry
+
+
+
+def update_line_mapping(line: str, original_line_num: int, current_offset: int, line_mapping: Dict[int, int]):
+    if len(line) == 0:  # empty lines required to split old and new line in case of modifications
+        return
+    # always write to line_mapping prior to modifying original_line_num
+
+    # if line has been added, original_line_num is not increased as it was not present in the original code
+    if line.startswith("|"):
+        line_mapping[original_line_num] = original_line_num + current_offset
+        original_line_num += 1
+
+    # if line has been removed, decrease the current offset by one
+    if line.startswith("-"):
+        line_mapping[original_line_num] = -1
+        current_offset -= 1
+        original_line_num += 1
+
+    # if line has been added, increase current offset by one
+    if line.startswith("+"):
+        current_offset += 1
+    return
 
 
 if __name__ == "__main__":
