@@ -29,7 +29,7 @@ def handle_source_code_modifications(pet: PETGraphX, run_configuration: Configur
         # apply complete line mapping to pet graph
         pet = __apply_line_mapping_to_pet(pet, complete_line_mapping)
         # apply complete line mapping to reduction data
-        __apply_line_mapping_to_profiling_data(run_configuration, line_mapping)
+        __apply_line_mapping_to_profiling_data(run_configuration, complete_line_mapping)
 
     return pet
 
