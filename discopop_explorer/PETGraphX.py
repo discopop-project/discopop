@@ -18,7 +18,7 @@ from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 import time
 import itertools
-import jsonpickle
+import jsonpickle  # type:ignore
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
