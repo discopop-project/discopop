@@ -1,4 +1,7 @@
 import json
+import os.path
+
+import jsonpickle
 
 from typing import List, Tuple, cast, Dict, Any
 
@@ -16,10 +19,17 @@ except ModuleNotFoundError:
 
 
 def get_pet_graph(run_configuration: Configuration) -> PETGraphX:
-    pet = PETGraphX.from_parsed_input(*parser.parse_inputs(run_configuration.cu_xml, run_configuration.dep_file,
-                                                           run_configuration.loop_counter_file,
-                                                           run_configuration.reduction_file,
-                                                           run_configuration.file_mapping))
+    # load pet from dump if existing
+    if run_configuration.pet_dump_file != "None" and os.path.exists(run_configuration.pet_dump_file):
+        # reconstruct from dump
+        pet_dump = open(run_configuration.pet_dump_file, "r")
+        pet: PETGraphX = jsonpickle.decode(pet_dump.read())
+    else:
+        # construct from raw files
+        pet = PETGraphX.from_parsed_input(*parser.parse_inputs(run_configuration.cu_xml, run_configuration.dep_file,
+                                                               run_configuration.loop_counter_file,
+                                                               run_configuration.reduction_file,
+                                                               run_configuration.file_mapping))
     return pet
 
 

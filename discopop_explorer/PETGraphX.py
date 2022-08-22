@@ -18,6 +18,7 @@ from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 import time
 import itertools
+import jsonpickle
 
 node_props = [
     ('BasicBlockID', 'string', '\'\''),
@@ -888,3 +889,12 @@ class PETGraphX(object):
             if rv['loop_line'] == line and rv['name'] == name:
                 return rv['operation']
         return ""
+
+    def dump_to_pickled_json(self) -> str:
+        """Encodes and returns the entire Object into a pickled json string.
+        The encoded string can be reconstructed into an object by using:
+        jsonpickle.decode(json_str)
+
+        :return: encoded string
+        """
+        return jsonpickle.encode(self)

@@ -3,3 +3,4 @@ termcolor
 pydot
 graphviz
 coverage
+jsonpickle

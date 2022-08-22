@@ -4,7 +4,7 @@ Usage:
     discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>]
+[--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] [--pet-dump-file <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -26,6 +26,8 @@ Options:
                                         and nondeterministic results.
     --thread-count=<threads>    Thread count to be used for multithreaded program parts.
     --dp-profiling-executable=<path>   Path to an executable which is able to automatically execute the discopop profiling.
+    --pet-dump-file=<path>      Path to the PET dump file. If existing, cu-xml, dep-file and loop-counter are not necessary.
+                                The dump file will be overwritten if a modification in the source code has been detected!
     -h --help                   Show this screen
 """
 import os
@@ -75,6 +77,7 @@ docopt_schema = Schema({
     '--validation-time-limit': Use(str),
     '--thread-count': Use(str),
     '--dp-profiling-executable': Use(str),
+    '--pet-dump-file': Use(str),
 })
 
 
@@ -110,6 +113,7 @@ def main():
     validation_time_limit = arguments["--validation-time-limit"]
     thread_count = arguments["--thread-count"]
     dp_profiling_executable = arguments["--dp-profiling-executable"]
+    pet_dump_file = arguments["--pet-dump-file"]
     if thread_count == "None":
         thread_count = 1
     else:
@@ -124,7 +128,8 @@ def main():
 
     run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
-                                      validation_time_limit, thread_count, dp_profiling_executable, arguments)
+                                      validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
+                                      arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
