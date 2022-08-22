@@ -1,4 +1,0 @@
-1;59;81;threadprivate(sum0)
-1;63;73;parallel copyin(sum0)
-1;65;68;for
-1;70;72;critical

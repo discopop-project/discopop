@@ -1,4 +1,0 @@
-1;31;42;target map(to:y[0:C],a) map(tofrom:x[0:C]) device(0)
-1;34;36;task depend(inout:x[i])
-1;38;40;task depend(inout:x[i])
-1;51;51;taskwait

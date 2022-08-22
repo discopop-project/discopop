@@ -1,5 +1,0 @@
-1;57;68;parallel
-1;58;68;single
-1;60;63;task shared(i) depend(out:i)
-1;65;65;task shared(i) depend(in:i)
-1;67;67;task shared(i) depend(in:i)

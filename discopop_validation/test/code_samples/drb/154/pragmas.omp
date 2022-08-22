@@ -1,2 +1,0 @@
-1;24;29;target map(tofrom:var) device(0)
-1;25;29;teams distribute reduction(+:var)

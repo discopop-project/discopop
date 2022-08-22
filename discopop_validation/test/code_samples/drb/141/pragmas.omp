@@ -1,5 +1,0 @@
-1;24;37;parallel shared(a) private(i)
-1;26;26;master
-1;28;28;barrier
-1;31;33;for reduction(+:a)
-1;36;36;single

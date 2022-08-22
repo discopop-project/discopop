@@ -1,3 +1,0 @@
-1;27;33;target map(tofrom:var[0:C]) device(0)
-1;28;33;teams distribute parallel for reduction(+:var) 
-1;30;32;simd

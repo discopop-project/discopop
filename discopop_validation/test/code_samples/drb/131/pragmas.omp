@@ -1,6 +1,0 @@
-1;41;43;parallel
-1;42;43;single
-1;25;25;task depend(inout: x) shared(x)
-1;28;28;task shared(y)
-1;31;31;task depend(in: x) if(0)
-1;35;35;taskwait

@@ -1,2 +1,0 @@
-1;26;29;target map(tofrom:var[0:N]) device(0)
-1;27;29;teams distribute parallel for

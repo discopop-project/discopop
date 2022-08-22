@@ -1,4 +1,0 @@
-1;23;34;parallel shared(a) private(i)
-1;25;25;master
-1;28;30;for reduction(+:a)
-1;33;33;single
