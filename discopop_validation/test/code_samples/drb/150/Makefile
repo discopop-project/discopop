@@ -23,3 +23,4 @@ clean:
 	rm -f *.last_profiled
 	rm -f *.modified
 	rm -f *.omp
+	rm -f *.json
