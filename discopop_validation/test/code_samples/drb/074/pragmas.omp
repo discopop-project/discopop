@@ -1,3 +1,0 @@
-1;60;60;critical
-1;61;61;flush
-1;69;72;parallel reduction(+:sum) num_threads(10)

@@ -1,1 +1,0 @@
-1;62;65;parallel for reduction(+:pi) private(x)

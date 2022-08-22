@@ -2,13 +2,10 @@ from typing import Dict
 
 
 class Configuration(object):
-    def __init__(self, path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping,
+    def __init__(self, path, reduction_file, json_file, file_mapping,
                  ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count,
                  dp_profiling_executable, pet_dump_file, arguments):
         self.path = path
-        self.cu_xml = cu_xml
-        self.dep_file = dep_file
-        self.loop_counter_file = loop_counter_file
         self.reduction_file = reduction_file
         self.json_file = json_file
         self.file_mapping = file_mapping

@@ -1,1 +1,0 @@
-1;245;258;parallel default(none) shared(H, P, maxPos, nDiag) private(nEle, i, si, sj, ai, aj)

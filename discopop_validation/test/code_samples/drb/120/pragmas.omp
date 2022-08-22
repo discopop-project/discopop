@@ -1,4 +1,0 @@
-1;23;31;parallel shared(var)
-1;25;25;single
-1;27;27;barrier
-1;30;30;single

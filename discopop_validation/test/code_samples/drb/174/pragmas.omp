@@ -1,8 +1,0 @@
-1;26;41;parallel
-1;27;41;single
-1;29;33;task depend(inout : a) shared(a)
-1;31;31;task depend(inout : a) shared(a)
-1;32;32;taskwait
-1;36;40;task depend(inout : a) shared(a)
-1;38;38;task depend(inout : a) shared(a)
-1;39;39;taskwait

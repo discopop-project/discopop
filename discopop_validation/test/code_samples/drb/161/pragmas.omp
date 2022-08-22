@@ -1,4 +1,0 @@
-1;28;35;target map(tofrom:var) device(0)
-1;29;35;teams num_teams(1) thread_limit(1048) 
-1;30;35;distribute parallel for
-1;32;34;simd

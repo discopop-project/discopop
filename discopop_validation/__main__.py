@@ -1,16 +1,13 @@
 """Discopop validation
 
 Usage:
-    discopop_validation [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
+    discopop_validation [--path <path>] [--plugins <plugs>] \
+[--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
 [--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] [--pet-dump-file <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
-    --cu-xml=<cuxml>            CU node xml file [default: Data.xml]
-    --dep-file=<depfile>        Dependencies text file [default: dp_run_dep.txt]
-    --loop-counter=<loopcount>  Loop counter data [default: loop_counter_output.txt]
     --reduction=<reduction>     Reduction variables file [default: reduction.txt]
     --ll-file=<llfile>          Path to .ll file to be analyzed
     --json=<jsonfile>           Path to .json file, which contains parallelization suggestions to be analyzed
@@ -61,9 +58,6 @@ from pycallgraph2 import Grouper
 
 docopt_schema = Schema({
     '--path': Use(str),
-    '--cu-xml': Use(str),
-    '--dep-file': Use(str),
-    '--loop-counter': Use(str),
     '--reduction': Use(str),
     '--ll-file': Use(str),
     '--json': Use(str),
@@ -100,9 +94,6 @@ def main():
         exit(e)
 
     path = arguments["--path"]
-    cu_xml = get_path(path, arguments['--cu-xml'])
-    dep_file = get_path(path, arguments['--dep-file'])
-    loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
     ll_file = get_path(path, arguments['--ll-file'])
     json_file = get_path(path, arguments['--json'])
@@ -120,13 +111,13 @@ def main():
         thread_count = int(thread_count)
     if data_race_output_path != "None":
         data_race_output_path = get_path(path, data_race_output_path)
-    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, ll_file]:
+    for file in [reduction_file, ll_file, pet_dump_file]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
             sys.exit()
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
-    run_configuration = Configuration(path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file,
+    run_configuration = Configuration(path, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
                                       validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
                                       arguments)
@@ -153,24 +144,28 @@ def main():
 
 
 def __main_start_execution(run_configuration: Configuration):
+    time_start_execution = time.time()
     if run_configuration.arguments["--profiling"] == "true":
         profile = cProfile.Profile()
         profile.enable()
         print("profiling enabled...")
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
-    time_start_ps = time.time()
+    time_start_ps = 0.0
     time_total_pc_graph = 0.0
     time_bhv_extraction_total = 0.0
     time_data_race_computation_total = 0.0
 
-    # check whether re-profiling is required and modify input data to accommodate changed source code lines
-    handle_source_code_modifications(run_configuration)
-
+    # check whether re-profiling is required and modify PET to accommodate changed source code lines if required
+    time_construct_pet_graph_start = time.time()
     pet: PETGraphX = get_pet_graph(run_configuration)
+    time_modify_pet_graph_start = time.time()
+    pet = handle_source_code_modifications(pet, run_configuration)
+    time_modify_pet_graph_end = time.time()
     #pet.show()
 
 
+    time_start_ps = time.time()
     omp_pragma_list = __get_omp_pragmas(run_configuration, pet)
 
     omp_pragma_list = __preprocess_omp_pragmas(omp_pragma_list)
@@ -347,15 +342,19 @@ def __main_start_execution(run_configuration: Configuration):
         open(run_configuration.data_race_ouput_path, "w+")
 
 
-    time_end_validation = time.time()
     time_end_execution = time.time()
     print("\n### Measured Times: ###")
-    print("-------------------------------------------")
-    print("--- Get parallelization suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Create Task graph: %s seconds ---" % (time_total_pc_graph))
-    print("--- Behavior Extraction: %s seconds ---" % (time_bhv_extraction_total))
-    print("--- Calculate Data races: %s seconds ---" % (time_data_race_computation_total))
-    print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
+    print("--------------------------------------------------")
+    print("--- Get PET graph: \t\t%.4f seconds ---" % (
+                time_modify_pet_graph_start - time_construct_pet_graph_start))
+    print("--- Modify PET graph: \t\t%.4f seconds ---" % (
+                time_modify_pet_graph_end - time_modify_pet_graph_start))
+    print("--- Get Pragmas: \t\t%.4f seconds ---" % (time_end_ps - time_start_ps))
+    print("--- Create Task graph: \t\t%.4f seconds ---" % (time_total_pc_graph))
+    print("--- Behavior Extraction: \t%.4f seconds ---" % (time_bhv_extraction_total))
+    print("--- Detect Data races: \t\t%.4f seconds ---" % (time_data_race_computation_total))
+    print("--- Total time: \t\t%.4f seconds ---" % (time_end_execution - time_start_execution))
+    print("--------------------------------------------------")
 
 
 if __name__ == "__main__":

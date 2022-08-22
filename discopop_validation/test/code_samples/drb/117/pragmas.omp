@@ -1,6 +1,0 @@
-1;27;49;parallel
-1;29;33;for
-1;36;48;single shared(psum0, psum1)
-1;38;44;task shared(psum0)
-1;40;42;task shared(psum1)
-1;46;46;taskwait

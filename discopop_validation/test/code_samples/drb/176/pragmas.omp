@@ -1,5 +1,0 @@
-1;23;23;task shared(i) depend(out : i)
-1;25;25;task shared(j) depend(out : j)
-1;27;27;task shared(i, j) depend(in : i, j)
-1;28;28;taskwait
-1;37;37;parallel sections

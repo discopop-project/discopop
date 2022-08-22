@@ -1,8 +1,0 @@
-1;24;38;parallel
-1;25;38;single
-1;27;27;task depend(out: c)
-1;29;29;task depend(out: a)
-1;31;31;task depend(out: b)
-1;33;33;task depend(in: a) depend(mutexinoutset: c)
-1;35;35;task depend(in: b) depend(mutexinoutset: c)
-1;37;37;task depend(in: c)
