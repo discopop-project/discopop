@@ -144,22 +144,28 @@ def main():
 
 
 def __main_start_execution(run_configuration: Configuration):
+    time_start_execution = time.time()
     if run_configuration.arguments["--profiling"] == "true":
         profile = cProfile.Profile()
         profile.enable()
         print("profiling enabled...")
     if run_configuration.verbose_mode:
         print("creating PET Graph...")
-    time_start_ps = time.time()
+    time_start_ps = 0.0
     time_total_pc_graph = 0.0
     time_bhv_extraction_total = 0.0
     time_data_race_computation_total = 0.0
 
     # check whether re-profiling is required and modify PET to accommodate changed source code lines if required
+    time_construct_pet_graph_start = time.time()
     pet: PETGraphX = get_pet_graph(run_configuration)
+    time_modify_pet_graph_start = time.time()
     pet = handle_source_code_modifications(pet, run_configuration)
+    time_modify_pet_graph_end = time.time()
     #pet.show()
 
+
+    time_start_ps = time.time()
     omp_pragma_list = __get_omp_pragmas(run_configuration, pet)
 
     omp_pragma_list = __preprocess_omp_pragmas(omp_pragma_list)
@@ -336,15 +342,19 @@ def __main_start_execution(run_configuration: Configuration):
         open(run_configuration.data_race_ouput_path, "w+")
 
 
-    time_end_validation = time.time()
     time_end_execution = time.time()
     print("\n### Measured Times: ###")
-    print("-------------------------------------------")
-    print("--- Get parallelization suggestions: %s seconds ---" % (time_end_ps - time_start_ps))
-    print("--- Create Task graph: %s seconds ---" % (time_total_pc_graph))
-    print("--- Behavior Extraction: %s seconds ---" % (time_bhv_extraction_total))
-    print("--- Calculate Data races: %s seconds ---" % (time_data_race_computation_total))
-    print("--- Total time: %s seconds ---" % (time_end_execution - time_start_ps))
+    print("--------------------------------------------------")
+    print("--- Get PET graph: \t\t%.4f seconds ---" % (
+                time_modify_pet_graph_start - time_construct_pet_graph_start))
+    print("--- Modify PET graph: \t\t%.4f seconds ---" % (
+                time_modify_pet_graph_end - time_modify_pet_graph_start))
+    print("--- Get Pragmas: \t\t%.4f seconds ---" % (time_end_ps - time_start_ps))
+    print("--- Create Task graph: \t\t%.4f seconds ---" % (time_total_pc_graph))
+    print("--- Behavior Extraction: \t%.4f seconds ---" % (time_bhv_extraction_total))
+    print("--- Detect Data races: \t\t%.4f seconds ---" % (time_data_race_computation_total))
+    print("--- Total time: \t\t%.4f seconds ---" % (time_end_execution - time_start_execution))
+    print("--------------------------------------------------")
 
 
 if __name__ == "__main__":
