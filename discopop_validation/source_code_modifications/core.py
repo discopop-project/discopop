@@ -2,13 +2,14 @@ import os
 import re
 import subprocess
 from os.path import dirname
-from typing import Dict
+from typing import Dict, Optional
 
+from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.source_code_modifications.CodeDifferences import file_difference_checker
 
 
-def handle_source_code_modifications(run_configuration: Configuration):
+def handle_source_code_modifications(pet: PETGraphX, run_configuration: Configuration) -> PETGraphX:
     with open(run_configuration.file_mapping, "r") as fmap:
         complete_line_mapping: Dict[str, str] = dict()  # maps file_id:line to updated file_id:line
         for line in fmap:
@@ -23,95 +24,32 @@ def handle_source_code_modifications(run_configuration: Configuration):
             for key in line_mapping:
                 complete_line_mapping[str(file_id) + ":" + str(key)] = str(file_id) + ":" + str(line_mapping[key])
 
-        # apply complete line mapping to profiling data
-        __apply_line_mapping_to_profiling_data(run_configuration, complete_line_mapping)
-
         # save line_mapping in run_configuration
         run_configuration.save_line_mapping(complete_line_mapping)
+        # apply complete line mapping to pet graph
+        pet = __apply_line_mapping_to_pet(pet, complete_line_mapping)
+        # apply complete line mapping to reduction data
+        __apply_line_mapping_to_profiling_data(run_configuration, line_mapping)
 
+    return pet
+
+
+def __apply_line_mapping_to_pet(pet: PETGraphX, line_mapping: Dict[str, str]) -> PETGraphX:
+    for node in pet.all_nodes():
+        # check start line
+        start_line_str = "" + str(node.file_id) + ":" + str(node.start_line)
+        if start_line_str in line_mapping:
+            node.start_line = int(line_mapping[start_line_str].split(":")[1])
+        # check end line
+        end_line_str = "" + str(node.file_id) + ":" + str(node.end_line)
+        if end_line_str in line_mapping:
+            node.end_line = int(line_mapping[end_line_str].split(":")[1])
+    return pet
 
 
 def __apply_line_mapping_to_profiling_data(run_configuration: Configuration, line_mapping: Dict[str, str]):
-    print()
-    print("Line mapping:")
-    print(line_mapping)
-    # apply to Data.xml
-    __apply_line_mapping_to_cu_xml(run_configuration, line_mapping)
-    # apply to loop_counter_output.txt
-    __apply_line_mapping_to_loop_counter_file(run_configuration, line_mapping)
-    # apply to out_dep.txt
-    __apply_line_mapping_to_dependences_file(run_configuration, line_mapping)
     # apply to reduction.txt
     __apply_line_mapping_to_reduction_txt(run_configuration, line_mapping)
-
-
-def __apply_line_mapping_to_cu_xml(run_configuration: Configuration, line_mapping: Dict[str, str]):
-    with open(run_configuration.cu_xml + ".modified", "w+") as output:
-        with open(run_configuration.cu_xml, "r") as input:
-            for line in input.readlines():
-                replaced_buffer = []
-                for key in line_mapping:
-                    # "Line" prior to occurence and not "occurence</nodeCalled>"
-                    if "Line" not in line:
-                        continue
-                    line_index = line.index("Line")
-                    if key not in line:
-                        continue
-                    key_indices = [m.start() for m in re.finditer(key, line)]
-                    # "Line" has to occur prior to key
-                    for key_index in key_indices:
-                        if key_index in replaced_buffer:
-                            continue
-                        if line_index > key_index:
-                            continue
-                        # occurence may not be "occurence</nodeCalled>"
-                        if key + "</nodeCalled>" in line:
-                            tmp_idx = line.index(key + "</nodeCalled>")
-                            if tmp_idx == key_index:
-                                continue
-                        # proper occurence
-                        # replace occurence
-                        line = line[:key_index] + line_mapping[key] + line[key_index + len(key):]
-                        replaced_buffer.append(key_index)
-                output.write(line)
-
-    # use modified cu xml file
-    run_configuration.cu_xml = run_configuration.cu_xml + ".modified"
-
-
-def __apply_line_mapping_to_loop_counter_file(run_configuration: Configuration, line_mapping: Dict[str, str]):
-    with open(run_configuration.loop_counter_file + ".modified", "w+") as output:
-        with open(run_configuration.loop_counter_file, "r") as input:
-            for line in input.readlines():
-                split_line = line.split(" ")
-                replaced_buffer = []
-                for key in line_mapping:
-                    file_id = key.split(":")[0]
-                    line_num = key.split(":")[1]
-                    if file_id != split_line[0]:
-                        continue
-                    if line_num == split_line[1] and line_num not in replaced_buffer:
-                        mapped_line = line_mapping[key].split(":")[1]
-                        split_line[1] = mapped_line
-                        replaced_buffer.append(mapped_line)
-                output.write(" ".join(split_line))
-    # use modified loop counter file
-    run_configuration.loop_counter_file = run_configuration.loop_counter_file + ".modified"
-
-
-def __apply_line_mapping_to_dependences_file(run_configuration: Configuration, line_mapping: Dict[str, str]):
-    with open(run_configuration.dep_file + ".modified", "w+") as output:
-        with open(run_configuration.dep_file, "r") as input:
-            for line in input.readlines():
-                replaced_buffer = []
-                for key in line_mapping:
-                    if key in line and key not in replaced_buffer:
-                        line = line.replace(key, line_mapping[key])
-                        replaced_buffer.append(line_mapping[key])
-
-                output.write(line)
-    # use modified dependency file
-    run_configuration.dep_file = run_configuration.dep_file + ".modified"
 
 
 def __apply_line_mapping_to_reduction_txt(run_configuration: Configuration, line_mapping: Dict[str, str]):
