@@ -4,7 +4,7 @@ from typing import Dict
 class Configuration(object):
     def __init__(self, path, cu_xml, dep_file, loop_counter_file, reduction_file, json_file, file_mapping,
                  ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count,
-                 dp_profiling_executable, arguments):
+                 dp_profiling_executable, pet_dump_file, arguments):
         self.path = path
         self.cu_xml = cu_xml
         self.dep_file = dep_file
@@ -22,6 +22,7 @@ class Configuration(object):
         self.omp_pragmas_file = path + "/pragmas.omp"
         self.dp_profiling_executable = dp_profiling_executable
         self.line_mapping: Dict[str, str] = None
+        self.pet_dump_file: str = pet_dump_file
 
     def save_line_mapping(self, line_mapping: Dict[str, str]):
         self.line_mapping = line_mapping
