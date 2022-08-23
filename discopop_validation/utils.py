@@ -101,6 +101,7 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
         for pragma in omp_pragmas:
             print(pragma)
         print("###################################")
+        print()
 
         result_list.append(omp_pragmas)
     return result_list

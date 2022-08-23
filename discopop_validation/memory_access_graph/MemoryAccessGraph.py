@@ -9,6 +9,7 @@ from typing import Tuple, List, cast, Optional
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
+from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
@@ -35,10 +36,12 @@ from discopop_validation.memory_access_graph.ParallelUnit import ParallelUnit
 class MemoryAccessGraph(object):
     graph: nx.MultiDiGraph
     next_free_parallel_frame_id: int
+    run_configuration: Configuration
 
-    def __init__(self, pc_graph: PCGraph):
+    def __init__(self, pc_graph: PCGraph, run_configuration: Configuration):
         self.next_free_parallel_frame_id = 0
         self.graph = nx.MultiDiGraph()
+        self.run_configuration = run_configuration
         self.__construct_from_pc_graph(pc_graph)
 
     def __get_new_parallel_frame_id(self) -> int:
@@ -72,7 +75,8 @@ class MemoryAccessGraph(object):
         #self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
-        print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+        if self.run_configuration.verbose_mode:
+            print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
 
         # modify the memory access graph according to the current node
         self.__modify_memory_access_graph(pc_graph, pc_graph_node, pu_stack, current_path)
@@ -115,7 +119,8 @@ class MemoryAccessGraph(object):
 
     def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation, bhv_node: BehaviorModelNode,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
-        print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
+        if self.run_configuration.verbose_mode:
+            print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
             self.graph.add_node(previous_node_id)
@@ -171,9 +176,7 @@ class MemoryAccessGraph(object):
                     if pu_origin.node_id in sources:
                         # pu_stack entry of related FORK node found. stop iteration
                         pu_stack.pop()
-                        print("POP END")
                         break
                     else:
                         # restart search
                         pu_stack.pop()
-                        print("POP")

@@ -90,7 +90,8 @@ def __execute_profiling_if_necessary(run_configuration: Configuration, file_path
                                                                     file_path)
 
     if profiling_necessity:
-        print("PROFILING REQUIRED...")
+        if run_configuration.verbose_mode:
+            print("PROFILING REQUIRED...")
         if run_configuration.dp_profiling_executable == "None":
             raise ValueError(
                 "Profiling required. Please either:\n\t- execute profiling manually and restart the application, or\n\t- set the --dp-profiling-executable flag.")
@@ -103,8 +104,10 @@ def __execute_profiling_if_necessary(run_configuration: Configuration, file_path
         subprocess.call(["sh", run_configuration.dp_profiling_executable])
         # change back to original dir
         os.chdir(original_dir)
-        print("\nFINISHED profiling.")
+        if run_configuration.verbose_mode:
+            print("\nFINISHED profiling.")
     else:
-        print("No profiling required.")
+        if run_configuration.verbose_mode:
+            print("No profiling required.")
 
     return line_mapping

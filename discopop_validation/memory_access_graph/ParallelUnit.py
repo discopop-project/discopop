@@ -13,7 +13,6 @@ class ParallelUnit(object):
         self.origin_pc_graph_node = origin
         # generate random color for the visualization
         self.visualization_color = "#" + ''.join([random.choice('0123456789ABCDEF') for j in range(6)])
-        print("\nCOLOR: ", self.visualization_color, " \n")
 
     def __str__(self):
         return "(" + str(self.identifier) + ",or" + str(self.origin_pc_graph_node.node_id) + ")"

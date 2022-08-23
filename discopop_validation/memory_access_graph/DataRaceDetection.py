@@ -12,15 +12,15 @@ from discopop_validation.memory_access_graph.MAGDataRace import MAGDataRace
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 
 
-def detect_data_races(ma_graph: MemoryAccessGraph, pc_graph: PCGraph, pet: PETGraphX):
+def detect_data_races(ma_graph: MemoryAccessGraph, pc_graph: PCGraph, pet: PETGraphX) -> List[MAGDataRace]:
     """starts the detection of data races for each node of the graph"""
-    print("#########")
-    print("Detecting data races...")
-    print("#########")
+    if ma_graph.run_configuration.verbose_mode:
+        print("#########")
+        print("Detecting data races...")
+        print("#########")
     data_races: List[MAGDataRace] = []
     # start data race detection for each node in the graph
     for node in ma_graph.graph.nodes:
-        print("NODE: ", node)
         # get the set of incoming access edges for node
         incoming_accesses = ma_graph.graph.in_edges(node, keys=True)
         # create all possible pairs of incoming edges
@@ -31,16 +31,17 @@ def detect_data_races(ma_graph: MemoryAccessGraph, pc_graph: PCGraph, pet: PETGr
             if data_race_found:
                 op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
                 op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
-                print("\tDATA RACE FOUND!")
-                print("\t\t", op_1)
-                print("\t\t\t", ma_graph.graph.edges[edge_1]["data"].operation_path_id)
-                print("\t\t", op_2)
-                print("\t\t\t", ma_graph.graph.edges[edge_2]["data"].operation_path_id)
-                print()
-                # todo do anything useful with identified data races
                 data_race_object = MAGDataRace(node, op_1, op_2)
                 data_races.append(data_race_object)
     return data_races
+
+
+def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph):
+    print("### Detected data races: ###")
+    for data_race in data_races:
+        print(data_race.operation_1)
+        print(data_race.operation_2)
+        print()
 
 
 def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,
@@ -163,7 +164,7 @@ def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, p
 
     # if the set of dependencies is not empty, a real dependency exists and thus a potential data race
     if len(dependencies) > 0:
-        print("==> potential data race backed up by dependency edge")
+        # ==> potential data race backed up by dependency edge
         return True
 
     return False
