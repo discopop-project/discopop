@@ -44,7 +44,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.E
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.memory_access_graph import MAGDataRace
-from discopop_validation.memory_access_graph.DataRaceDetection import detect_data_races
+from discopop_validation.memory_access_graph.DataRaceDetection import detect_data_races, print_data_races
 from discopop_validation.memory_access_graph.MemoryAccessGraph import MemoryAccessGraph
 from discopop_validation.source_code_modifications.core import handle_source_code_modifications
 from discopop_validation.utils import __extract_data_sharing_clauses_from_pet, __preprocess_omp_pragmas, \
@@ -270,7 +270,6 @@ def __main_start_execution(run_configuration: Configuration):
         time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
-        print("PRE COMPUTATION")
         #pc_graph.plot_graph()
 
         # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
@@ -279,8 +278,9 @@ def __main_start_execution(run_configuration: Configuration):
 
         time_data_race_computation_start = time.time()
 
-        memory_access_graph = MemoryAccessGraph(pc_graph)
+        memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
+        print_data_races(data_races, memory_access_graph)
 
         time_data_race_computation_end = time.time()
         time_data_race_computation_total += time_data_race_computation_end - time_data_race_computation_start
@@ -343,7 +343,7 @@ def __main_start_execution(run_configuration: Configuration):
 
 
     time_end_execution = time.time()
-    print("\n### Measured Times: ###")
+    print("### Measured Times: ###")
     print("--------------------------------------------------")
     print("--- Get PET graph: \t\t%.4f seconds ---" % (
                 time_modify_pet_graph_start - time_construct_pet_graph_start))

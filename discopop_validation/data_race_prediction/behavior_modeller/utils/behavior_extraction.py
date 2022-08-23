@@ -29,7 +29,6 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     with open("input.txt", "w+") as input_file:
         for section_id, file_id, target_lines, var_names, suggestion_type in target_code_sections:
             # replace file ids with path
-            print(file_mapping_dict)
             file_path = file_mapping_dict[file_id]
             input_file.write(
                 file_path + ";" + file_id + ";" + section_id + ";" + target_lines + ";" + var_names + ";" + suggestion_type + ";\n")
@@ -46,7 +45,7 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     output_file_path = os.path.join(os.getcwd(), "output.txt")
 
     command = opt_executable + " < " + ll_file_path + " -load " + behavior_extraction_so + " -BehaviorExtraction" + \
-              " -inputFile " + input_file_path + " -outputFile " + output_file_path
+              " -inputFile " + input_file_path + " -outputFile " + output_file_path + " > /dev/null"
     os.system(command)
     os.chdir("..")
     # construct BBGraph

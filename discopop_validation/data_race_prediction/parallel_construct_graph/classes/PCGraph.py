@@ -226,7 +226,6 @@ class PCGraph(object):
                     if (origin_node_id, child_cu.id, given_pragma) not in seen_configurations:
                         __include_called_functions(origin_node_id, child_cu.id, given_pragma)
 
-            print("PRAGMA: ", pragma)
             __include_called_functions(self.pragma_to_node_id[pragma], pragma_to_cuid[pragma], pragma)
 
     def insert_function_contains_edges(self):

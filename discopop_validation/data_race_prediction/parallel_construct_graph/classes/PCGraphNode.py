@@ -74,7 +74,6 @@ class PCGraphNode(object):
             # todo handle and store results for further use
             return result_obj
         else:
-            print("NODE: ", self.get_label())
             raise ValueError(
                 "Invalid number of successors: " + str(len(successors)) + " at node_id: " + str(self.node_id))
 
@@ -88,16 +87,10 @@ class PCGraphNode(object):
         if self.pragma is None:
             return
         self.pragma.apply_preprocessing()
-        print("Pragma: ", self.pragma)
         target_code_sections = identify_target_sections_from_pragma(pc_graph, self.pragma, self.node_id)
-        for tcs in target_code_sections:
-            print("TCS PRE: ", tcs)
         # modify target code sections according to the inversed line mapping to
         # get the correct output for potentially modified source codes
         target_code_sections = modify_tcs_according_to_inverse_line_mapping(target_code_sections, run_configuration)
-
-        for tcs in target_code_sections:
-            print("TCS POST: ", tcs)
 
         behavior_models: List[BehaviorModel] = []
         for tcs in target_code_sections:
