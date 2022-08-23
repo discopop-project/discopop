@@ -4,3 +4,4 @@ pydot
 graphviz
 coverage
 jsonpickle
+multiprocessing

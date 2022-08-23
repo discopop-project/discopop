@@ -41,8 +41,8 @@ def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph)
         if data_race in buffer:
             # do not print duplicates
             continue
-        print(data_race.operation_1, data_race.parent_node_id)
-        print(data_race.operation_2, data_race.parent_node_id)
+        print(data_race.operation_1)
+        print(data_race.operation_2)
         if data_race.is_weak:
             print("\t==> Weak")
         print()
