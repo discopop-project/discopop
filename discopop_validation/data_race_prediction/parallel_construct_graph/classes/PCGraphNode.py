@@ -1,6 +1,6 @@
 import copy
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from discopop_explorer import PETGraphX
 from discopop_validation.classes.Configuration import Configuration
@@ -92,6 +92,13 @@ class PCGraphNode(object):
         # get the correct output for potentially modified source codes
         target_code_sections = modify_tcs_according_to_inverse_line_mapping(target_code_sections, run_configuration)
 
+        # modify target code sections so that no overlap with pragmas inside a called function exist
+        target_code_sections = self.__tcs_remove_overlap_with_pragmas_in_called_function(target_code_sections, pc_graph)
+
+        if run_configuration.verbose_mode:
+            for tcs in target_code_sections:
+                print("TCS: ", tcs)
+
         behavior_models: List[BehaviorModel] = []
         for tcs in target_code_sections:
             behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
@@ -106,6 +113,38 @@ class PCGraphNode(object):
                 for op in model.operations:
                     print("\t", op)
         self.behavior_models = behavior_models
+
+    def __tcs_remove_overlap_with_pragmas_in_called_function(self, target_code_sections, pc_graph) \
+            -> List[Tuple[str, str, str, str, str]]:
+        out_calls_edges = [edge for edge in pc_graph.graph.out_edges(self.node_id) if pc_graph.graph.edges[edge]["type"] == EdgeType.CALLS]
+        modified_tcs = []
+        for tcs in target_code_sections:
+            target_file_id = int(tcs[1])
+            target_lines = [int(line) for line in tcs[2].split(",")[:-1]]  # remove last entry, as it will always be empty as a result of the trailing ','
+            for _, called_function in out_calls_edges:
+                contained_nodes = [target for source, target in pc_graph.graph.out_edges(called_function) if pc_graph.graph.edges[(source, target)]["type"] == EdgeType.CONTAINS]
+                for contained in contained_nodes:
+                    if contained == self.node_id:
+                        # only pragma itself is allowed to keep the lines
+                        continue
+                    contained_file_id = pc_graph.graph.nodes[contained]["data"].pragma.file_id
+                    if target_file_id != contained_file_id:
+                        continue
+                    contained_start_line = pc_graph.graph.nodes[contained]["data"].pragma.start_line
+                    contained_end_line = pc_graph.graph.nodes[contained]["data"].pragma.end_line
+                    contained_lines = range(contained_start_line, contained_end_line + 1)
+                    # remove overlapping lines from original tcs
+                    target_lines = [line for line in target_lines if line not in contained_lines]
+            # convert target_lines to strings for joining
+            target_lines = [str(line) for line in target_lines]
+            # overwrite tcs with modified target_lines
+            modified_tcs.append((tcs[0], tcs[1], ",".join(target_lines), tcs[3], tcs[4]))
+
+        # alles entfernen was bereits durch ein pragma in der aufgerufenen funktion abgedeckt ist
+        # wenn ein zyklus existiert, und die anweisungen bereits durch das pragma selbst abgedeckt wäre, nichts entfernen.
+
+        return modified_tcs
+
 
     def get_behavior_models(self, pc_graph, result_obj):
         """returns a list of behavior models which represent the behavior of the subtree which starts at the current node.

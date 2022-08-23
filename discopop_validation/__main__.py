@@ -225,6 +225,7 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.insert_behavior_storage_nodes()
         # remove CalledFunctionNodes
         pc_graph.remove_called_function_nodes()
+        pc_graph.plot_graph()
         # remove redundant CONTAINS edges
         pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
