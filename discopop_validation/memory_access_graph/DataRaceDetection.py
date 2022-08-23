@@ -35,13 +35,18 @@ def detect_data_races(ma_graph: MemoryAccessGraph, pc_graph: PCGraph, pet: PETGr
 
 
 def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph):
+    buffer: List[MAGDataRace] = []
     print("### Detected data races: ###")
     for data_race in data_races:
-        print(data_race.operation_1)
-        print(data_race.operation_2)
+        if data_race in buffer:
+            # do not print duplicates
+            continue
+        print(data_race.operation_1, data_race.parent_node_id)
+        print(data_race.operation_2, data_race.parent_node_id)
         if data_race.is_weak:
             print("\t==> Weak")
         print()
+        buffer.append(data_race)
 
 
 def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,

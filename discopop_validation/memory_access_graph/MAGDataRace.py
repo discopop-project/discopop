@@ -12,3 +12,11 @@ class MAGDataRace(object):
         self.operation_1 = operation_1
         self.operation_2 = operation_2
         self.is_weak = is_weak_data_race
+
+    def __eq__(self, other):
+        if self.parent_node_id == other.parent_node_id and \
+            self.operation_1 == other.operation_1 and \
+            self.operation_2 == other.operation_2 and \
+            self.is_weak == other.is_weak:
+            return True
+        return False
