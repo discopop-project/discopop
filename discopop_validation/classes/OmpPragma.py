@@ -12,10 +12,11 @@ class PragmaType(IntEnum):
     BARRIER = 4
     TASK = 5
     TASKWAIT = 6
-    FOR = 7
-    CRITICAL = 8
-    FLUSH = 9  # todo currently ignored
-    THREADPRIVATE = 10
+    TASKLOOP = 7
+    FOR = 8
+    CRITICAL = 9
+    FLUSH = 10  # todo currently ignored
+    THREADPRIVATE = 11
 
 
 class OmpPragma(object):
@@ -52,6 +53,8 @@ class OmpPragma(object):
             return PragmaType.SINGLE
         if self.pragma.startswith("barrier"):
             return PragmaType.BARRIER
+        if self.pragma.startswith("taskloop"):
+            return PragmaType.TASKLOOP
         if self.pragma.startswith("taskwait"):
             return PragmaType.TASKWAIT
         if self.pragma.startswith("task"):

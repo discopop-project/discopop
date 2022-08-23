@@ -100,6 +100,7 @@ class PCGraphNode(object):
         behavior_models = [model for model in behavior_models if len(model.operations) > 0]
 
         if run_configuration.verbose_mode:
+            print("Pragma: ", self.pragma)
             for model in behavior_models:
                 print("Behavior Model (NodeID: ", self.node_id, "):")
                 for op in model.operations:

@@ -25,6 +25,8 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.P
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaParallelNode import PragmaParallelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaSingleNode import PragmaSingleNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskNode import PragmaTaskNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskloopNode import \
+    PragmaTaskloopNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import PragmaTaskwaitNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaThreadprivateNode import \
     PragmaThreadprivateNode
@@ -110,6 +112,8 @@ class PCGraph(object):
             node_id = self.__add_task_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.TASKWAIT:
             node_id = self.__add_taskwait_pragma(pragma_obj)
+        elif pragma_obj.get_type() == PragmaType.TASKLOOP:
+            node_id = self.__add_taskloop_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.BARRIER:
             node_id = self.__add_barrier_pragma(pragma_obj)
         elif pragma_obj.get_type() == PragmaType.CRITICAL:
@@ -157,6 +161,11 @@ class PCGraph(object):
     def __add_task_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.get_new_node_id()
         self.graph.add_node(new_node_id, data=PragmaTaskNode(new_node_id, pragma=pragma_obj))
+        return new_node_id
+
+    def __add_taskloop_pragma(self, pragma_obj: OmpPragma):
+        new_node_id = self.get_new_node_id()
+        self.graph.add_node(new_node_id, data=PragmaTaskloopNode(new_node_id, pragma=pragma_obj))
         return new_node_id
 
     def __add_taskwait_pragma(self, pragma_obj: OmpPragma):

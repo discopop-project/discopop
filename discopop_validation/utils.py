@@ -130,6 +130,24 @@ def __preprocess_omp_pragmas(omp_pragma_list: List[List[OmpPragma]]):
                 parallel_pragma.pragma += "shared(" + shared + ") "
                 inner_result.append(parallel_pragma)
                 omp_pragma.pragma = omp_pragma.pragma.replace("parallel ", "")
+            # split TASKLOOP pragma into two TASK pragmas
+            if omp_pragma.get_type() == PragmaType.TASKLOOP:
+                task_pragma = OmpPragma()
+                task_pragma.file_id = omp_pragma.file_id
+                task_pragma.start_line = omp_pragma.start_line + 1
+                omp_pragma.start_line = omp_pragma.start_line + 1
+                task_pragma.end_line = omp_pragma.end_line
+                first_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("first_private")])
+                privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("private")])
+                last_privates = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("last_private")])
+                shared = " ".join([var + "," for var in omp_pragma.get_variables_listed_as("shared")])
+                task_pragma.pragma = "task "
+                task_pragma.pragma += "firstprivate(" + first_privates + ") "
+                task_pragma.pragma += "private(" + privates + ") "
+                task_pragma.pragma += "lastprivate(" + last_privates + ") "
+                task_pragma.pragma += "shared(" + shared + ") "
+                inner_result.append(task_pragma)
+                omp_pragma.pragma = omp_pragma.pragma.replace("taskloop ", "task ").replace("taskloop", "task")
             inner_result.append(omp_pragma)
         result.append(inner_result)
     return result
