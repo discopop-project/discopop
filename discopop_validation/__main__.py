@@ -191,24 +191,29 @@ def __main_start_execution(run_configuration: Configuration):
         # pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
 
         # insert function nodes
-        pc_graph.insert_function_nodes(pet, omp_pragmas)
-
-        # insert calls edges
-
-        pc_graph.plot_graph()
-
+        pc_graph.insert_function_nodes(pet)
 
         # insert contains edges between function nodes and contained pragma nodes
         pc_graph.insert_function_contains_edges()
-        pc_graph.plot_graph()
-        # remove all but the best fitting CALLS edges for each function call in the source code
-        pc_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
         pc_graph.add_edges(pet, omp_pragmas)
+
+        # remove all but the best fitting CALLS edges for each function call in the source code
+        pc_graph.remove_incorrect_function_contains_edges()
+
+        # identify pragma target code sections
+        for node in pc_graph.graph.nodes:
+            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+
+        # insert calls edges
+        pc_graph.insert_calls_edges(pet, omp_pragmas)
+
         pc_graph.plot_graph()
+
         import sys
         sys.exit(0)
+
         # pass shared clauses to child nodes
         pc_graph.pass_shared_clauses_to_childnodes()
         # remove threadprivate pragma and add specified variables to private clauses of contained pragmas

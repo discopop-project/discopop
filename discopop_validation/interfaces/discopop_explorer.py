@@ -78,3 +78,18 @@ def check_reachability(pet: PETGraphX, target: CUNode,
                 if e[0] not in visited:
                     queue.append(pet.node_at(e[0]))
     return False
+
+
+def get_called_functions(pet: PETGraphX, root: CUNode) -> CUNode:
+    """returns a list of all functions CUNodes which are called inside the scope of root.
+    The list is created by traversing the list of children nodes."""
+    result_list: List[CUNode] = []
+    queue: List[CUNode] = [root]
+    visited: List[CUNode] = []
+    while len(queue) > 0:
+        current = queue.pop()
+        visited.append(current)
+        result_list += current.node_calls
+        queue += [child for child in pet.direct_children(current) if child not in visited]
+
+    return result_list

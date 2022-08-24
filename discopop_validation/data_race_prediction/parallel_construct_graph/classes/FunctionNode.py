@@ -14,13 +14,15 @@ class FunctionNode(PCGraphNode):
     file_id: Optional[int]
     start_line: Optional[int]
     end_line: Optional[int]
+    pet_cu_id: str
 
-    def __init__(self, node_id, pragma=None, name=None, file_id=None, start_line=None, end_line=None):
+    def __init__(self, node_id, pet_cu_id, pragma=None, name=None, file_id=None, start_line=None, end_line=None):
         super().__init__(node_id, pragma)
         self.name = name
         self.file_id = file_id
         self.start_line = start_line
         self.end_line = end_line
+        self.pet_cu_id = pet_cu_id
 
     def __str__(self):
         return str(self.node_id)

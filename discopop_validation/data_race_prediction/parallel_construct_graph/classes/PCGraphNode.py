@@ -24,6 +24,7 @@ class PCGraphNode(object):
     seen_in_result_computation: bool
     data_races: List[DataRace]
     covered_by_fork_node: bool
+    target_code_sections: List
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
@@ -82,8 +83,7 @@ class PCGraphNode(object):
         for model in self.behavior_models:
             model.simulation_thread_count = new_thread_count
 
-    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, pc_graph,
-                              omp_pragmas: List[OmpPragma]):
+    def identify_target_code_sections(self, pc_graph, run_configuration: Configuration):
         if self.pragma is None:
             return
         self.pragma.apply_preprocessing()
@@ -94,6 +94,23 @@ class PCGraphNode(object):
 
         # modify target code sections so that no overlap with pragmas inside a called function exist
         target_code_sections = self.__tcs_remove_overlap_with_pragmas_in_called_function(target_code_sections, pc_graph)
+
+        self.target_code_sections = target_code_sections
+
+
+
+    def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, pc_graph,
+                              omp_pragmas: List[OmpPragma]):
+        if self.pragma is None:
+            return
+#        self.pragma.apply_preprocessing()
+#        target_code_sections = identify_target_sections_from_pragma(pc_graph, self.pragma, self.node_id)
+#        # modify target code sections according to the inversed line mapping to
+#        # get the correct output for potentially modified source codes
+#        target_code_sections = modify_tcs_according_to_inverse_line_mapping(target_code_sections, run_configuration)
+#
+#        # modify target code sections so that no overlap with pragmas inside a called function exist
+#        target_code_sections = self.__tcs_remove_overlap_with_pragmas_in_called_function(target_code_sections, pc_graph)
 
         if run_configuration.verbose_mode:
             for tcs in target_code_sections:
