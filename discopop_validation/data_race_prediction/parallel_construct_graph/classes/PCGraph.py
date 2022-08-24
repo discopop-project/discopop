@@ -7,13 +7,13 @@ from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
 from typing import List, Dict, Tuple, Optional
 
 from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import EdgeType as PETEdgeType
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, NodeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
-from discopop_validation.data_race_prediction.parallel_construct_graph.classes.CalledFunctionNode import CalledFunctionNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.FunctionNode import FunctionNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ForkNode import ForkNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.JoinNode import JoinNode
@@ -188,6 +188,23 @@ class PCGraph(object):
         self.graph.add_node(new_node_id, data=JoinNode(new_node_id))
         return new_node_id
 
+    def insert_function_nodes(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
+        for node in pet.all_nodes():
+            if node.type == NodeType.FUNC:
+                new_node_id = self.get_new_node_id()
+                function_name = node.name
+                function_file_id = node.file_id
+                function_start_line = node.start_line
+                function_end_line = node.end_line
+
+                self.graph.add_node(new_node_id, data=FunctionNode(new_node_id, name=function_name,
+                                                                   file_id=function_file_id,
+                                                                   start_line=function_start_line,
+                                                                   end_line=function_end_line))
+
+
+
+
     def insert_called_function_nodes_and_calls_edges(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         # copied from add_edges
         pragma_to_cuid: Dict[OmpPragma, str] = dict()
@@ -220,10 +237,10 @@ class PCGraph(object):
                         function_start_line = pet.node_at(called_cu_id).start_line
                         function_end_line = pet.node_at(called_cu_id).end_line
 
-                        self.graph.add_node(new_node_id, data=CalledFunctionNode(new_node_id, name=function_name,
-                                                                                 file_id=function_file_id,
-                                                                                 start_line=function_start_line,
-                                                                                 end_line=function_end_line))
+                        self.graph.add_node(new_node_id, data=FunctionNode(new_node_id, name=function_name,
+                                                                           file_id=function_file_id,
+                                                                           start_line=function_start_line,
+                                                                           end_line=function_end_line))
                         self.graph.add_edge(origin_node_id, new_node_id, type=EdgeType.CALLS,
                                             atLine=called_function_dict["atLine"])
                     else:
@@ -239,7 +256,7 @@ class PCGraph(object):
 
     def insert_function_contains_edges(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) == CalledFunctionNode:
+            if type(self.graph.nodes[node]["data"]) == FunctionNode:
                 for other_node in self.graph.nodes:
                     if node == other_node:
                         continue
@@ -258,7 +275,7 @@ class PCGraph(object):
 
     def remove_incorrect_function_contains_edges(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) == CalledFunctionNode:
+            if type(self.graph.nodes[node]["data"]) == FunctionNode:
                 in_calls_edges = [edge for edge in self.graph.in_edges(node) if
                                   self.graph.edges[edge]["type"] == EdgeType.CALLS]
                 # group edges by their atLine-value
@@ -408,11 +425,19 @@ class PCGraph(object):
                 self.graph.remove_edge(source, target)
 
         # Fallback: add edge from root node to current node if no predecessor exists
+#        for node in self.graph.nodes:
+#            in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+#                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+#            if len(in_seq_edges) == 0 and node != 0 and type(self.graph.nodes[node]["data"]) == PragmaParallelNode:
+#                self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
+
+        # Add edge from ROOT to main function node
         for node in self.graph.nodes:
-            in_seq_edges = [edge for edge in self.graph.in_edges(node) if
-                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-            if len(in_seq_edges) == 0 and node != 0 and type(self.graph.nodes[node]["data"]) == PragmaParallelNode:
+            if type(self.graph.nodes[node]["data"]) != FunctionNode:
+                continue
+            if self.graph.nodes[node]["data"].name == "main":
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
+
 
     def remove_redundant_edges(self, edge_types: List[EdgeType]):
 
@@ -1066,7 +1091,7 @@ class PCGraph(object):
     def remove_called_function_nodes(self):
         to_be_removed = []
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) == CalledFunctionNode:
+            if type(self.graph.nodes[node]["data"]) == FunctionNode:
                 to_be_removed.append(node)
         for node in to_be_removed:
             self.graph.remove_node(node)

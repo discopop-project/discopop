@@ -6,7 +6,7 @@ from discopop_validation.data_race_prediction.parallel_construct_graph.classes.R
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 
 
-class CalledFunctionNode(PCGraphNode):
+class FunctionNode(PCGraphNode):
     result: Optional[ResultObject]
     pragma: Optional[OmpPragma]
     behavior_models: List[BehaviorModel]
