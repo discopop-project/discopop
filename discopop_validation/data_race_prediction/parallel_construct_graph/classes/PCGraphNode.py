@@ -137,8 +137,11 @@ class PCGraphNode(object):
                     target_lines = [line for line in target_lines if line not in contained_lines]
             # convert target_lines to strings for joining
             target_lines = [str(line) for line in target_lines]
+            target_lines_str = ",".join(target_lines)
+            if not target_lines_str.endswith(","):
+                target_lines_str += ","
             # overwrite tcs with modified target_lines
-            modified_tcs.append((tcs[0], tcs[1], ",".join(target_lines), tcs[3], tcs[4]))
+            modified_tcs.append((tcs[0], tcs[1], target_lines_str, tcs[3], tcs[4]))
 
         # alles entfernen was bereits durch ein pragma in der aufgerufenen funktion abgedeckt ist
         # wenn ein zyklus existiert, und die anweisungen bereits durch das pragma selbst abgedeckt wäre, nichts entfernen.
