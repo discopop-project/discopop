@@ -413,8 +413,24 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
         }
         return string(operand->getName().data());
         //return getOrInsertVarName(string(operand->getName().data()), builder);
-    }
 
+    } else if(isa<ConstantExpr>(operand)) {
+        //errs() << "GLOBAL VARIABLE DEBUG" << *operand << "\n"; 
+
+        if(isa<GEPOperator>(*operand)) {
+        Value *globl = dyn_cast<GEPOperator>(operand)->getPointerOperand(); 
+        if(isa<GlobalVariable>(*globl)) {
+            isGlobalVariable = true; 
+                
+            //errs() << "found global variable swift: " << *globl << "\n";
+            return string(globl->getName());  
+
+
+         }
+        } 
+
+
+    }
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
         return determineVariableName((Instruction *)(operand), isGlobalVariable);
@@ -775,12 +791,14 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
     for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb)
     {
+        
+
 
         // Get the closest loop where bb lives in.
         // (loop == NULL) if bb is not in any loop.
         Loop *loop = LI.getLoopFor(*bb);
         if (loop)
-        {
+        {   
             //if bb is in a loop and if we have already created a node for that loop, assign it to currentNode.
             if (loopToNodeMap.find(loop) != loopToNodeMap.end())
             {
@@ -789,7 +807,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             }
             //else, create a new Node for the loop, add it as children of currentNode and add it to the map.
             else
-            {
+            {   
+                cout << "creating new node because we are in new loop block now \n"; 
                 if (bb->getName().size() != 0)
                 {
                     //errs() << "Name: " << bb->getName() << "\n";
@@ -824,6 +843,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
         cu = new CU;
 
+
         // errs() << "==== " << bb->getName() << "\n"; //"cu->ID: " << cu->ID << " , " << "node->ID: " << currentNode->ID << " , " << "tmpNode->ID: " << tmpNode->ID << " , " << "bb->Name: " << bb->getName() << "\n";
 
         if (bb->getName().size() == 0)
@@ -836,7 +856,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         BBIDToCUIDsMap.insert(pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
 
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
-        {
+        {   
+
             //NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName();
@@ -947,6 +968,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 }
             }
         }
+
         if (cu->instructionsLineNumbers.empty())
         {
             cu->removeCU();
@@ -964,9 +986,11 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         suspiciousVariables.clear();
 
         //check for call instructions in current basic block
+
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
             //Mohammad 6.7.2020: Don't create nodes for library functions (c++/llvm).
+           
             int32_t lid = getLID(&*instruction, fileID);
             if (lid > 0)
             {
@@ -976,6 +1000,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
                     Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                     //TODO: DO the same for Invoke inst
+                    // add this check because asm sideeffect function returns null here
+                    if(f){
 
                     //Mohammad 6.7.2020
                     Function::iterator FI = f->begin();
@@ -1059,6 +1085,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                             break;
                         }
                     }
+                  }
                 }
             }
         }
@@ -1134,9 +1161,14 @@ void CUGeneration::findStartEndLineNumbers(Node *root, int &start, int &end)
 {
     if (root->type == nodeTypes::cu)
     {
-        if (start == -1 || start > root->startLine)
-        {
+        if (start == -1 || ((start > root->startLine) && root->startLine != -1))
+        {   
+            cout << "getting startline from node with ID: " << root->ID << "\n";
+            cout << "start line: " << root->startLine << "\n"; 
+            cout << "start: " << start << "\n"; 
+    
             start = root->startLine;
+            cout << "start is then set to: " << dputil::decodeLID(start) << "\n"; 
         }
 
         if (end < root->endLine)
@@ -1157,7 +1189,17 @@ void CUGeneration::fillStartEndLineNumbers(Node *root)
     {
         int start = -1, end = -1;
 
+        if(root->type == nodeTypes::loop){
+        cout << "running on loop childnoes to get lines \n"; }
         findStartEndLineNumbers(root, start, end);
+
+        if(root->type == nodeTypes::loop) {
+
+            cout << "LOOP DETECTED: filling in lines for loop node, start, end, ID, " << start << "\n" << end << "\n" << root->ID << "\n"; 
+            cout << "encoded?" << dputil::decodeLID(start) << "\n" << dputil::decodeLID(end) << "\n"; 
+        
+        }
+
 
         root->startLine = start;
         root->endLine = end;
@@ -1245,6 +1287,8 @@ bool CUGeneration::runOnFunction(Function &F)
 {
     StringRef funcName = F.getName();
 
+    cout << "running on function: " << funcName.data() << "\n"; 
+
     // Avoid functions we don't want to analyze
     if (funcName.find("llvm.") != string::npos) // llvm debug calls
     {
@@ -1330,7 +1374,7 @@ bool CUGeneration::runOnFunction(Function &F)
 
     secureStream();
 
-    printOriginalVariables(originalVariablesSet);
+    printOriginalVariables(originalVariablesSet); 
 
     printData(root);
 
