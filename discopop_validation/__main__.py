@@ -202,6 +202,9 @@ def __main_start_execution(run_configuration: Configuration):
         # remove all but the best fitting CALLS edges for each function call in the source code
         pc_graph.remove_incorrect_function_contains_edges()
 
+        # pass shared clauses to child nodes
+        pc_graph.pass_shared_clauses_to_childnodes()
+
         # identify pragma target code sections
         for node in pc_graph.graph.nodes:
             pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
@@ -209,8 +212,6 @@ def __main_start_execution(run_configuration: Configuration):
         # insert calls edges
         pc_graph.insert_calls_edges(pet, omp_pragmas)
 
-        # pass shared clauses to child nodes
-        pc_graph.pass_shared_clauses_to_childnodes()
         # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
         pc_graph.apply_and_remove_threadprivate_pragma()
 
