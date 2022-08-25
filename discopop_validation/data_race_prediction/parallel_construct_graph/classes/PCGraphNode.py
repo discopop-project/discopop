@@ -155,7 +155,7 @@ class PCGraphNode(object):
             # convert target_lines to strings for joining
             target_lines = [str(line) for line in target_lines]
             target_lines_str = ",".join(target_lines)
-            if not target_lines_str.endswith(","):
+            if not target_lines_str.endswith(",") and len(target_lines_str) > 0:
                 target_lines_str += ","
             # overwrite tcs with modified target_lines
             modified_tcs.append((tcs[0], tcs[1], target_lines_str, tcs[3], tcs[4]))
