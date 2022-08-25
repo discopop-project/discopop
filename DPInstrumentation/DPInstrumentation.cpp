@@ -295,7 +295,7 @@ bool DiscoPoP::sanityCheck(BasicBlock *BB)
             return true;
         }
     }
-    errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
 }
 
@@ -336,7 +336,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI)
 
             if (ExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
                 continue;
             }
 
@@ -392,7 +392,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI)
             //assert((RealExitBlocks.size() == 1) && "Loop has more than one real exit block!");
             if (RealExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
                 continue;
             }
 
@@ -651,7 +651,7 @@ void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNo
     // sometimes it's impossible to get the list of struct members (e.g badref)
     if (structNode->getNumOperands() <= 10 || structNode->getOperand(10) == NULL)
     {
-        errs() << "cannot process member list of this struct: \n";
+        // errs() << "cannot process member list of this struct: \n";
         structNode->dump();
         return;
     }
@@ -1110,6 +1110,8 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id)
         if (isa<CallInst>(BI))
         {
             Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
+            if(!tmpF)
+                continue;
             StringRef tmpFn = tmpF->getName();
             if (tmpFn.find("__dp_loop_exit") != string::npos)
                 continue;
