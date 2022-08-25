@@ -567,9 +567,10 @@ void DPReduction::instrument_loop(int file_id, llvm::Loop* loop) {
       // existing entry, if the same instruction is executed on multiple
       // lines.
       llvm::Value* operand = util::get_var(instr);
-      std:: cout << "new operand found\n"; 
-      llvm::errs() << *operand << "\n";
+      
       if (operand) {
+        std:: cout << "new operand found\n"; 
+        llvm::errs() << *operand << "\n";
         std::map<llvm::Value*, llvm::Instruction*>* map_ptr =
             (opcode == llvm::Instruction::Store) ? &store_instructions
                                                  : &load_instructions;
