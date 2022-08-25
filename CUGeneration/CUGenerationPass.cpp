@@ -187,7 +187,7 @@ namespace
         Function *function;
         LLVMContext *ctx;
         ofstream *outCUs;
-        ofstream *outOriginalVariables;
+        // ofstream *outOriginalVariables;
         ofstream *outCUIDCounter;
 
         // Mohammad 23.12.2020
@@ -541,8 +541,8 @@ string CUGeneration::xmlEscape(string data)
 
 void CUGeneration::secureStream()
 {
-    outOriginalVariables = new std::ofstream();
-    outOriginalVariables->open("OriginalVariables.txt", std::ios_base::app);
+    // outOriginalVariables = new std::ofstream();
+    // outOriginalVariables->open("OriginalVariables.txt", std::ios_base::app);
 
     outCUs = new std::ofstream();
     outCUs->open("Data.xml", std::ios_base::app);
@@ -596,10 +596,10 @@ string CUGeneration::getChildrenNodesString(Node *root)
 void CUGeneration::printOriginalVariables(set<string> &originalVariablesSet)
 {
 
-    for (auto i : originalVariablesSet)
-    {
-        *outOriginalVariables << i << endl;
-    }
+    // for (auto i : originalVariablesSet)
+    // {
+    //     *outOriginalVariables << i << endl;
+    // }
 }
 
 void CUGeneration::printData(Node *root)
@@ -675,13 +675,13 @@ void CUGeneration::printNode(Node *root, bool isRoot)
         {
             CU *cu = static_cast<CU *>(root);
             *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
-            *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
-            *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
+            // *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
+            // *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
 
-            *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
-            *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
-            *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
-            *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
+            // *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
+            // *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
+            // *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
+            // *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
             *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
@@ -735,11 +735,11 @@ void CUGeneration::closeOutputFiles()
         outCUs->close();
     }
 
-    if (outOriginalVariables != NULL && outOriginalVariables->is_open())
-    {
-        outOriginalVariables->flush();
-        outOriginalVariables->close();
-    }
+    // if (outOriginalVariables != NULL && outOriginalVariables->is_open())
+    // {
+    //     outOriginalVariables->flush();
+    //     outOriginalVariables->close();
+    // }
     //delete outCUs;
 }
 /*********************************** End of output functions **************************************/
@@ -882,7 +882,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             if (lid > 0)
             {
                 cu->instructionsLineNumbers.insert(lid);
-                cu->instructionsCount++;
+                // cu->instructionsCount++;
                 // find return instructions
                 if (isa<ReturnInst>(instruction))
                 {
@@ -916,15 +916,15 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     Value *operand = instruction->getOperand(1);
                     Type *Ty = operand->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
-                    cu->writeDataSize += u;
+                    // cu->writeDataSize += u;
                     //varName = refineVarName(determineVariableName(instruction));
                     varName = determineVariableName(&*instruction);
                     varType = determineVariableType(&*instruction);
                     // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                     {
                         suspiciousVariables.insert(varName);
-                        if (lid > 0)
-                            cu->writePhaseLineNumbers.insert(lid);
+                        // if (lid > 0)
+                        //     cu->writePhaseLineNumbers.insert(lid);
                     }
                 }
                 else if (isa<LoadInst>(instruction))
@@ -933,7 +933,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     // get size of data read from memory by this load instruction
                     Type *Ty = instruction->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
-                    cu->readDataSize += u;
+                    // cu->readDataSize += u;
                     //varName = refineVarName(determineVariableName(instruction));
                     varName = determineVariableName(&*instruction);
                     if (suspiciousVariables.count(varName))
@@ -942,10 +942,10 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         //it is a load instruction which read the value of a global variable.
                         // This global variable has already been stored previously.
                         // A new CU should be created here.
-                        cu->readPhaseLineNumbers.erase(lid);
-                        cu->writePhaseLineNumbers.erase(lid);
+                        // cu->readPhaseLineNumbers.erase(lid);
+                        // cu->writePhaseLineNumbers.erase(lid);
                         cu->instructionsLineNumbers.erase(lid);
-                        cu->instructionsCount--;
+                        // cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty())
                         {
                             cu->removeCU();
@@ -972,18 +972,18 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
                         if (lid > 0)
                         {
-                            cu->readPhaseLineNumbers.insert(lid);
+                            // cu->readPhaseLineNumbers.insert(lid);
                             cu->instructionsLineNumbers.insert(lid);
                         }
                     }
-                    else
-                    {
-                        if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
-                        {
-                            if (lid > 0)
-                                cu->readPhaseLineNumbers.insert(lid);
-                        }
-                    }
+                    // else
+                    // {
+                    //     if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
+                    //     {
+                    //         if (lid > 0)
+                    //             cu->readPhaseLineNumbers.insert(lid);
+                    //     }
+                    // }
                 }
             }
         }
@@ -1017,6 +1017,13 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                     //TODO: DO the same for Invoke inst
 
+                    // Bertin
+                    Node *n = new Node;
+                    n->type = nodeTypes::dummy;
+                    if(f) {
+                    //     errs() << "fNULL: "<< (cast<CallInst>(instruction))->getFunction()->getName().str() << " -- " << to_string((cast<CallInst>(instruction))->getDebugLoc()->getLine()) << "\n";
+                    // }
+
                     //Mohammad 6.7.2020
                     bool externalFunction = true;
                     string lid;
@@ -1043,16 +1050,16 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     if (externalFunction)
                         continue;
 
-                    Node *n = new Node;
-                    n->type = nodeTypes::dummy;
+                    // Node *n = new Node;
+                    // n->type = nodeTypes::dummy;
                     // For ordinary function calls, F has a name.
                     // However, sometimes the function being called
                     // in IR is encapsulated by "bitcast()" due to
                     // the way of compiling and linking. In this way,
                     // getCalledFunction() method returns NULL.
                     // Also, getName() returns NULL if this is an indirect function call.
-                    if (f)
-                    {
+                    // if (f)
+                    // {
                         n->name = f->getName().str();
 
                         // @Zia: This for loop appeared after the else part. For some function calls, the value of f is null.

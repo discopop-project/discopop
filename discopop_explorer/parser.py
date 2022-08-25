@@ -41,13 +41,13 @@ def __parse_xml_input(xml_fd):
     for node in parsed_cu.Node:
         node.childrenNodes = str(node.childrenNodes).split(
             ',') if node.childrenNodes else []
-        if node.get('type') == '0':
-            for instruction_id in str(node.instructionLines).split(','):
-                lineToCUIdMap[instruction_id].add(node.get('id'))
-            for instruction_id in str(node.writePhaseLines).split(','):
-                writelineToCUIdMap[instruction_id].add(node.get('id'))
-            for instruction_id in str(node.readPhaseLines).split(','):
-                readlineToCUIdMap[instruction_id].add(node.get('id'))
+        # if node.get('type') == '0':
+        #     for instruction_id in str(node.instructionLines).split(','):
+        #         lineToCUIdMap[instruction_id].add(node.get('id'))
+        #     for instruction_id in str(node.writePhaseLines).split(','):
+        #         writelineToCUIdMap[instruction_id].add(node.get('id'))
+        #     for instruction_id in str(node.readPhaseLines).split(','):
+        #         readlineToCUIdMap[instruction_id].add(node.get('id'))
 
         cu_dict[node.get('id')] = node
 

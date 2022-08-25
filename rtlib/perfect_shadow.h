@@ -16,7 +16,7 @@
 #include "abstract_shadow.h"
 
 #include <stdint.h>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 
 
@@ -31,8 +31,8 @@ namespace __dp
 
         PerfectShadow()
         {
-            sigRead = new std::map<int64_t, sigElement>();
-            sigWrite = new std::map<int64_t, sigElement>();
+            sigRead = new std::unordered_map<int64_t, sigElement>();
+            sigWrite = new std::unordered_map<int64_t, sigElement>();
         }
 
         ~PerfectShadow()
@@ -86,8 +86,8 @@ namespace __dp
         }
 
     private:
-        std::map <int64_t, sigElement> *sigRead;
-        std::map <int64_t, sigElement> *sigWrite;
+        std::unordered_map <int64_t, sigElement> *sigRead;
+        std::unordered_map <int64_t, sigElement> *sigWrite;
     };
 
 } // namespace __dp
