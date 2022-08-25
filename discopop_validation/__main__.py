@@ -209,11 +209,6 @@ def __main_start_execution(run_configuration: Configuration):
         # insert calls edges
         pc_graph.insert_calls_edges(pet, omp_pragmas)
 
-        pc_graph.plot_graph()
-
-        import sys
-        sys.exit(0)
-
         # pass shared clauses to child nodes
         pc_graph.pass_shared_clauses_to_childnodes()
         # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
@@ -242,9 +237,10 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
         pc_graph.insert_behavior_storage_nodes()
-        # remove CalledFunctionNodes
-        pc_graph.remove_called_function_nodes()
-        pc_graph.plot_graph()
+        # remove FunctionNodes
+        #pc_graph.plot_graph()
+        #pc_graph.remove_function_nodes()
+        #pc_graph.plot_graph()
         # remove redundant CONTAINS edges
         pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
@@ -290,7 +286,6 @@ def __main_start_execution(run_configuration: Configuration):
         time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
-        #pc_graph.plot_graph()
 
         # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.

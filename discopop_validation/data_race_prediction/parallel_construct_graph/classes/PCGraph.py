@@ -1143,7 +1143,7 @@ class PCGraph(object):
                 if last_access_node is not None:
                     self.graph.add_edge(last_access_node, origin_node, type=EdgeType.DATA_RACE)
 
-    def remove_called_function_nodes(self):
+    def remove_function_nodes(self):
         to_be_removed = []
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == FunctionNode:

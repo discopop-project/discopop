@@ -33,6 +33,7 @@ class PCGraphNode(object):
         self.seen_in_result_computation = False
         self.data_races = []
         self.covered_by_fork_node = False
+        self.target_code_sections = []
 
     def get_label(self):
         if self.node_id == 0:
@@ -113,11 +114,11 @@ class PCGraphNode(object):
 #        target_code_sections = self.__tcs_remove_overlap_with_pragmas_in_called_function(target_code_sections, pc_graph)
 
         if run_configuration.verbose_mode:
-            for tcs in target_code_sections:
+            for tcs in self.target_code_sections:
                 print("TCS: ", tcs)
 
         behavior_models: List[BehaviorModel] = []
-        for tcs in target_code_sections:
+        for tcs in self.target_code_sections:
             behavior_models += extract_postprocessed_behavior_models(run_configuration, pet, tcs,
                                                                      self.pragma, omp_pragmas)
         # remove empty models
