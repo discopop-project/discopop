@@ -233,7 +233,9 @@ void DiscoPoP::setupCallbacks()
 
 
     // get function that gets index from array given an index and arraybase struct
-    DPSwiftAddr = cast<Function>(ThisModule->getFunction("$sSayxSiciMSi_Tg5"));                           
+    if(ThisModule->getFunction("$sSayxSiciMSi_Tg5")) {
+        DPSwiftAddr = cast<Function>(ThisModule->getFunction("$sSayxSiciMSi_Tg5"));
+    }                           
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -257,7 +259,9 @@ bool DiscoPoP::doInitialization(Module &M)
     collectDebugInfo();
 
     // Initialize variables needed
+    cout << "setting up datatypes \n"; 
     setupDataTypes();
+    cout << "setting up callbacks \n"; 
     setupCallbacks();
 
     // Check loop parallelism?
@@ -484,8 +488,7 @@ bool DiscoPoP::runOnFunction(Function &F)
         errs() << "pass DiscoPoP: run pass on function\n";
     }
 
-    cout << "debug call\n";
-    cout << F.getName().data();
+    cout << "editions to pass, running on function with name: " << F.getName().data() << "\n"; 
     
     
 
@@ -1277,8 +1280,8 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
     errs() << "previous instruction" << *prev << "\n"; 
     errs() << "this instruction: " << *toInstrument << "\n"; 
     Value *oper = prev->getOperand(0); 
-    errs() << "oper " << *cast<Value>(prev) << "\n"; 
-    errs() << "oper->getType()" << *cast<Value>(prev)->getType() << "\n"; 
+    errs() << "oper " << *oper << "\n"; 
+    errs() << "oper->getType()" << oper->getType() << "\n"; 
     Type *loadType = prev->getOperand(0)->getType(); 
 
     errs() << "loadType is" << *loadType << "\n"; 
@@ -1315,7 +1318,7 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
 
     //errs() << "getOffsetIndex: " << *getOffsetIndex << "\n"; 
 
-    LoadInst *prevLoad = cast<LoadInst>(prev);
+    //LoadInst *prevLoad = cast<LoadInst>(prev);
 
     // the load should be of pointer type arraybase pointer opague
     /* Value *memToInt = PtrToIntInst::CreatePointerCast(prevLoad,
@@ -1337,14 +1340,23 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
 
     /* declare swiftcc { i8*, %TSi* } @"$sSayxSiciMSi_Tg5"(i8* noalias dereferenceable(32), i64, %TSa* nocapture swiftself dereferenceable(8)) #0
 
-*/
-    if(prevLoad) {
+*/  
+
+    errs() << "prev is now" << *prev << "isa callinst:" << isa<CallInst>(*prev) << "isaloadinst:" << isa<LoadInst>(*prev) << "\n"; 
+    
+
+    Value *val; 
+
+    if(isa<LoadInst>(*prev)) {
     
     // differentiate between local and global array writes
     // for locals it is not getelementptr constant expression but 
+
+    LoadInst *prevLoad = cast<LoadInst>(prev);
+
     errs() << prevLoad->getOperand(0) << "\n"; 
     Value *opr = prevLoad->getOperand(0); 
-    Value *val; 
+    
 
     // if local array
     if(isa<GetElementPtrInst>(*opr)) {
@@ -1369,7 +1381,20 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
     }
 
     errs() << "now argument value and type are: " << *val << *val->getType() << "\n"; 
-
+    } else {
+        errs() << "instruction is not a load instruction but" << *prev << "\n"; 
+        if(isa<CallInst>(*prev)) {
+            cout << "prev is a call instruction \n"; 
+            // next instruction will be getelementptr
+            CallInst *cal = cast<CallInst>(prev); 
+            Instruction *next = cal->getNextNode(); 
+            if(isa<GetElementPtrInst>(*next)) {
+                cout << "is a getlemenetptr type instruction \n"; 
+                val = next->getOperand(0);
+                errs() << "finally the value is: " << *val << "\n"; 
+            }
+        }
+    } 
 
     // value of type i8* 
     // not sure if any side effects possible bc dont know what argument is for
@@ -1384,6 +1409,7 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
 
     Value *getAddressCall = CallInst::Create(DPSwiftAddr, arr_read_args ,"loadIdx", toInstrument); 
 
+    errs() << "creating extractvalue instruction" << *toInstrument << "\n"; 
     Value *extractAddr = ExtractValueInst::Create(getAddressCall, ArrayRef<unsigned>(indices, 1), "unpackedIdx", toInstrument); 
 
     Value *memToInt = PtrToIntInst::CreatePointerCast(extractAddr,
@@ -1426,7 +1452,7 @@ void DiscoPoP::arrayreadOverFunction(CallInst *toInstrument) {
         args.push_back(varName);
         Instruction *ins = CallInst::Create(DpRead, args, "", toInstrument);
     }
-   }
+   
   } 
 }
 
