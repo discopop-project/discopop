@@ -61,6 +61,8 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                 shared_defined_outside = []
                 for name, raw_def_line in known_variables:
                     if raw_def_line == "LineNotFound":
+                        # todo might need a proper fix, such that less instances of LineNotFound occur
+                        shared_defined_outside.append(name)
                         continue
                     if ":" in raw_def_line:
                         split_raw_def_line = raw_def_line.split(":")
