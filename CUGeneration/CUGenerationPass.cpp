@@ -434,7 +434,12 @@ string CUGeneration::determineVariableName(Instruction *I, map<string, string>* 
 
     if (operand == NULL)
     {
-        return getOrInsertVarName("", builder);
+        string retVal = getOrInsertVarName("", builder);
+        if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+            return retVal;  // not found
+        } else {
+            return (*trueVarNamesFromMetadataMap)[retVal];  // found
+        }
     }
 
     if (operand->hasName())
@@ -444,7 +449,12 @@ string CUGeneration::determineVariableName(Instruction *I, map<string, string>* 
         {
             //MOHAMMAD ADDED THIS FOR CHECKING
             isGlobalVariable = true;
-            return string(operand->getName());
+            string retVal = string(operand->getName());
+            if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                return retVal;  // not found
+            } else {
+                return (*trueVarNamesFromMetadataMap)[retVal];  // found
+            }
         }
         if (isa<GetElementPtrInst>(*operand))
         {
@@ -469,10 +479,24 @@ string CUGeneration::determineVariableName(Instruction *I, map<string, string>* 
                         {
                             std::string ret = findStructMemberName(it->second, memberIdx, builder);
                             if (ret.size() > 0)
-                                return ret;
+                            {
+                                string retVal = ret;
+                                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return (*trueVarNamesFromMetadataMap)[retVal];  // found
+                                }
+                            }
                             else
-                                return getOrInsertVarName("", builder);
+                            {
+                                string retVal = getOrInsertVarName("", builder);
+                                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return (*trueVarNamesFromMetadataMap)[retVal];  // found
+                                }
                             //return ret;
+                            }
                         }
                     }
                 }
@@ -485,7 +509,12 @@ string CUGeneration::determineVariableName(Instruction *I, map<string, string>* 
             }
             return determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap, isGlobalVariable);
         }
-        return string(operand->getName().data());
+        string retVal = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+            return retVal;  // not found
+        } else {
+            return (*trueVarNamesFromMetadataMap)[retVal];  // found
+        }
         //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
