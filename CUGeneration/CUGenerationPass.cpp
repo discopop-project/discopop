@@ -844,7 +844,6 @@ void CUGeneration::populateGlobalVariablesSet(Region *TopRegion, set<string> &gl
                 //string varName = refineVarName(determineVariableName(instruction, isGlobalVariable));
                 // NOTE: changed 'instruction' to '&*instruction'
                 string varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap, isGlobalVariable);
-                errs() << "VARNAME: " << varName << "\n";
 
 
                 if (isGlobalVariable) // add it if it is a global variable in the program
