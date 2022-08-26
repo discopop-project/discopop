@@ -260,7 +260,6 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
     {
         if (isa<GetElementPtrInst>(*operand))
         {
-            errs() << "GEP\n";
             GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
             Value *ptrOperand = gep->getPointerOperand();
             PointerType *PTy = cast<PointerType>(ptrOperand->getType());
@@ -269,7 +268,6 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
             Type *structType = pointsToStruct(PTy);
             if (structType && gep->getNumOperands() > 2)
             {
-                errs() << "Struct 1\n";
                 Value *constValue = gep->getOperand(2);
                 if (constValue && isa<ConstantInt>(*constValue))
                 {
@@ -283,7 +281,6 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
                         if (it != Structs.end())
                         {
                             string ret = findStructMemberName(it->second, memberIdx, builder);
-                            errs() << "STRUCT: " << ret << "\n";
                             return ret;
                         }
                     }
@@ -294,7 +291,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
             // we've found an array
             if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
-                errs() << "ARR: " << determineVarName((Instruction *)ptrOperand, isIndex) << "\n";
+//                errs() << "ARR: " << determineVarName((Instruction *)ptrOperand, isIndex) << "\n";
                 string indexString = "";
                 if(isa<GetElementPtrInst>(ptrOperand)){
                     GetElementPtrInst* ptrOpGep = cast<GetElementPtrInst>(ptrOperand);
@@ -310,7 +307,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
 //                errs() << "IndexString: " << indexString << "\n";
                 return determineVarName((Instruction *)ptrOperand, isIndex) + indexString;
             }
-            errs() << "VAR_ACCESS " << determineVarName((Instruction *)gep, isIndex) << "\n";
+//            errs() << "VAR_ACCESS " << determineVarName((Instruction *)gep, isIndex) << "\n";
             string indexString = "";
             for(auto &index : gep->indices()){
                 Value* idxVal = index.get();
@@ -322,24 +319,10 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
         }
 
         // we've found a variable
-        errs() << "ISVAR: \n";
         if(isIndex){
-            errs() << "ISVAR 1\n";
             return "[" + string(operand->getName().data()) + "]";
         }
         else{
-            errs() << "ISVAR 2: \n";
-            errs() << "Name:" << string(operand->getName().data()) << "\n";
-            errs() << "==> type: ";
-            errs() << "\n";
-            // try get metadata
-            ValueName* vn = operand->getValueName();
-            errs() << "==> " << vn->getKey() << "\n";
-            //MDNode* meta = operand->getMetadata();
-
-
-            errs() <<"\n";
-
             return string(operand->getName().data());
         }
 
@@ -347,7 +330,6 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
     }
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
-        errs() << "IS LOAD OR STORE\n";
         return determineVarName((Instruction *)(operand), isIndex);
     }
     // if we cannot determine the name, then return Unknown
