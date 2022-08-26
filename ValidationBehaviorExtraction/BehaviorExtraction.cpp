@@ -118,6 +118,7 @@ namespace
         string getParentFileNameFromFunction(Function &F);
         list<sharedVarAccess> getSharedVarAccesses(BasicBlock &BB, Function &F, bool currentlyInsideRecursion);
         string determineVarName(Instruction *const I, bool isIndex);
+        void getTrueVarNamesFromMetadata(Function& F);
         Type *pointsToStruct(PointerType *PTy);
         void processStructTypes(string const &fullStructName, MDNode *structNode);
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
@@ -126,6 +127,8 @@ namespace
         unsigned int nextFreeBBId;
         unsigned int getNextFreeBBId();
         map<string, MDNode *> Structs;
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
 
     }; // end of struct BehaviorExtraction
 
@@ -138,6 +141,48 @@ unsigned int BehaviorExtraction::getNextFreeBBId(){
     return tmp;
 }
 
+void BehaviorExtraction::getTrueVarNamesFromMetadata(Function &F)
+{
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+
+        for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                std::string dbg_declare = "llvm.dbg.declare";
+                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+
+                    // extract original and working variable name
+                    string originalVarName;
+                    string workingVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                      Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                      workingVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    originalVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap.find(workingVarName) == trueVarNamesFromMetadataMap.end()) {
+                      // not found
+                      trueVarNamesFromMetadataMap.insert(std::pair<string, string>(workingVarName, originalVarName));
+                    } else {
+                      // found
+                      trueVarNamesFromMetadataMap[workingVarName] = originalVarName;
+                    }
+                }
+            }
+        }
+    }
+}
 
 pair<int, int> BehaviorExtraction::getClosestCodeLocation(Instruction* inst, unsigned int fallback_line, unsigned int fallback_column){
     pair<unsigned int, unsigned int> returnLocation(fallback_line, fallback_column);
@@ -280,8 +325,14 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
                         map<string, MDNode *>::iterator it = Structs.find(strName);
                         if (it != Structs.end())
                         {
-                            string ret = findStructMemberName(it->second, memberIdx, builder);
-                            return ret;
+                            string retVal = findStructMemberName(it->second, memberIdx, builder);
+                            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                errs() << "not found: " << retVal << "\n";
+                                return retVal;  // not found
+                            } else {
+                                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
+                                return trueVarNamesFromMetadataMap[retVal];  // found
+                            }
                         }
                     }
                 }
@@ -320,10 +371,25 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
 
         // we've found a variable
         if(isIndex){
-            return "[" + string(operand->getName().data()) + "]";
+            string retVal = string(operand->getName().data());
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                // not found, do nothing
+                errs() << "not found: " << retVal << "\n";
+            } else {
+                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
+                retVal = trueVarNamesFromMetadataMap[retVal];  // found
+            }
+            return "[" + retVal + "]";
         }
         else{
-            return string(operand->getName().data());
+            string retVal = string(operand->getName().data());
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                return retVal;  // not found
+                errs() << "not found: " << retVal << "\n";
+            } else {
+                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
+                return trueVarNamesFromMetadataMap[retVal];  // found
+            }
         }
 
         
@@ -571,6 +637,8 @@ void BehaviorExtraction::initializeStructs(BasicBlock &BB){
 
 bool BehaviorExtraction::runOnFunction(Function &F)
 {
+    getTrueVarNamesFromMetadata(F);// Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
     string parentFileName = getParentFileNameFromFunction(F);
     // initialize bbToGraphNodeMap
     for(auto &BB : F.getBasicBlockList()){
