@@ -223,6 +223,9 @@ namespace
         string determineVariableDefLine(Instruction *I, map<string, string>* trueVarNamesFromMetadataMap);
         void getFunctionReturnLines(Region *TopRegion, Node *root, map<string, string>* trueVarNamesFromMetadataMap);
 
+        //26.08.2022 Lukas
+        void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap);
+
         //functions to get list of global variables
         bool doInitialization(Module &ThisModule) override;
         bool doFinalization(Module &M) override;
@@ -285,7 +288,7 @@ void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root, map<str
     }
 }
 
-void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap)
+void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap)
 {
     int lid = 0;
     for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb){
