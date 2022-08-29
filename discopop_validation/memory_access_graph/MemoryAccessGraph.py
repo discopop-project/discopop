@@ -75,8 +75,8 @@ class MemoryAccessGraph(object):
         #self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
-        if self.run_configuration.verbose_mode:
-            print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+        # if self.run_configuration.verbose_mode:
+        #     print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
 
         # modify the memory access graph according to the current node
         self.__modify_memory_access_graph(pc_graph, pc_graph_node, pu_stack, current_path)
@@ -119,8 +119,8 @@ class MemoryAccessGraph(object):
 
     def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation, bhv_node: BehaviorModelNode,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
-        if self.run_configuration.verbose_mode:
-            print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
+        # if self.run_configuration.verbose_mode:
+        #    print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
         if not previous_node_id in self.graph.nodes:
             # add previous node into MemoryAccessGraph (Dummy as source of the edge)
             self.graph.add_node(previous_node_id)

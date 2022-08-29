@@ -211,6 +211,13 @@ def __main_start_execution(run_configuration: Configuration):
 
         # insert calls edges
         pc_graph.insert_calls_edges(pet, omp_pragmas)
+        #pc_graph.plot_graph()
+
+        # insert parallel sections for called functions
+        pc_graph.insert_parallel_sections_for_called_functions()
+
+        for node in pc_graph.graph.nodes:
+            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
 
         # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
         pc_graph.apply_and_remove_threadprivate_pragma()
@@ -238,6 +245,9 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
         pc_graph.insert_behavior_storage_nodes()
+        # restore sequence order after insertion of behavior storage nodes.
+        # this step is not included in the insertion method to keep it slightly simpler.
+        pc_graph.restore_sequence_order()
         # remove FunctionNodes
         #pc_graph.plot_graph()
         #pc_graph.remove_function_nodes()

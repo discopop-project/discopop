@@ -4,7 +4,7 @@ import warnings
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from networkx.drawing.nx_agraph import graphviz_layout  # type:ignore
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, NodeType
@@ -100,7 +100,7 @@ class PCGraph(object):
             self.graph.add_edge(parent_node_id, new_node_id)
         return new_node_id
 
-    def add_pragma_node(self, pragma_obj: OmpPragma):
+    def add_pragma_node(self, pragma_obj: OmpPragma) -> int:
         """create a new node in the graph which represents the given pragma"""
         # get dependencies to previous nodes
         if pragma_obj.get_type() == PragmaType.FOR:
@@ -128,6 +128,7 @@ class PCGraph(object):
             raise ValueError("No Supported Pragma for: ", pragma_obj.pragma)
         # create entry in dictionary
         self.pragma_to_node_id[pragma_obj] = node_id
+        return node_id
 
     def __add_threadprivate_pragma(self, pragma_obj: OmpPragma):
         new_node_id = self.get_new_node_id()
@@ -808,6 +809,8 @@ class PCGraph(object):
                                         self.graph.remove_edge(location, target)
                                         self.graph.add_edge(new_node_id, target)
                                     self.graph.add_edge(location, new_node_id, type=EdgeType.SEQUENTIAL)
+
+
 
     def add_virtual_sequential_edges(self):
         """replace a sequential edge with a virtual sequential edge, if the target is a Taskwait node."""
@@ -1559,14 +1562,89 @@ class PCGraph(object):
                                                         self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
                         if len(successor_in_contained_edges) == 1:
                             self.graph.add_edge(predecessor, successor, type=EdgeType.SEQUENTIAL)
-                # remove node
+                # remove nodeinsert_parallel_sections_for_called_functions(pet)
                 self.graph.remove_node(node)
-
-
-
-
-
         pass
 
 
+    def insert_parallel_sections_for_called_functions(self):
+        for source, target in copy.deepcopy(self.graph.edges):
+            # only consider CALLS edges
+            if self.graph.edges[(source, target)]["type"] != EdgeType.CALLS:
+                continue
+            # get called function node
+            called_function_node: FunctionNode = cast(FunctionNode, self.graph.nodes[target]["data"])
+            # add new parallel section node and Single node
+            parallel_pragma = OmpPragma()
+            parallel_pragma.init_with_values(str(called_function_node.file_id), str(called_function_node.start_line),
+                                             str(called_function_node.end_line), "parallel shared(i,j)")
+            #parallel_node_id = self.__add_parallel_pragma(parallel_pragma)
+            parallel_node_id = self.add_pragma_node(parallel_pragma)
+            single_pragma = OmpPragma()
+            single_pragma.init_with_values(str(called_function_node.file_id), str(called_function_node.start_line),
+                                            str(called_function_node.end_line), "single shared(i, j)")
+            single_node_id = self.add_pragma_node(single_pragma)
+            #single_node_id = self.__add_single_pragma(single_pragma)
 
+
+            # connect body of called function to single pragma
+            out_contains_edge = [edge for edge in self.graph.out_edges(target) if
+                                 self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for _, body_node in out_contains_edge:
+                self.graph.add_edge(single_node_id, body_node, type=EdgeType.CONTAINS)
+            # add contains edge between original calling node and newly created parallel section
+            self.graph.add_edge(source, parallel_node_id, type=EdgeType.CONTAINS)
+            # add contains edge between newly created parallel section and single node
+            self.graph.add_edge(parallel_node_id, single_node_id, type=EdgeType.CONTAINS)
+
+
+    def restore_sequence_order(self):
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for node in copy.deepcopy(self.graph.nodes):
+                # check if node has exactly one predecessor
+                predecessors = [edge[0] for edge in self.graph.in_edges(node) if
+                                self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                if len(predecessors) != 1:
+                    continue
+
+                node_obj: PCGraphNode = self.graph.nodes[node]["data"]
+                predecessor_obj: PCGraphNode = self.graph.nodes[predecessors[0]]["data"]
+
+                node_start_line = node_obj.get_start_line()
+                node_end_line = node_obj.get_end_line()
+                node_file_id = node_obj.get_file_id()
+                pred_start_line = predecessor_obj.get_start_line()
+                pred_end_line = predecessor_obj.get_end_line()
+                pred_file_id = predecessor_obj.get_file_id()
+
+                if node_file_id != pred_file_id:
+                    continue
+                # if location of node is after location of predecessor, do nothing
+                if node_start_line >= pred_end_line:
+                    continue
+                elif node_end_line <= pred_start_line:
+                    # switch positions
+                    # else, switch positions
+                    node_out_edges = [edge for edge in self.graph.out_edges(node)]
+                    pred_in_edges = [edge for edge in self.graph.in_edges(predecessors[0])]
+
+                    for source, target in pred_in_edges:
+                        self.graph.add_edge(source, node, type=self.graph.edges[(source, target)]["type"])
+                    for source, target in node_out_edges:
+                        self.graph.add_edge(predecessors[0], target, type=self.graph.edges[(source, target)]["type"])
+
+                    for source, target in pred_in_edges:
+                        self.graph.remove_edge(source, target)
+                    for source, target in node_out_edges:
+                        self.graph.remove_edge(source, target)
+
+                    self.graph.remove_edge(predecessors[0], node)
+                    self.graph.add_edge(node, predecessors[0], type=EdgeType.SEQUENTIAL)
+
+                    modification_found = True
+                    break
+                else:
+                    # undefined
+                    raise ValueError("Undefined node constellation! - TODO implement?")

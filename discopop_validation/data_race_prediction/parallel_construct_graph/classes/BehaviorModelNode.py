@@ -35,6 +35,15 @@ class BehaviorModelNode(PCGraphNode):
             self.single_behavior_model.get_start_line()) + "-" + str(self.single_behavior_model.get_end_line())
         return label
 
+    def get_start_line(self) -> int:
+        return self.single_behavior_model.get_start_line()
+
+    def get_end_line(self) -> int:
+        return self.single_behavior_model.get_end_line()
+
+    def get_file_id(self) -> int:
+        return self.single_behavior_model.get_file_id()
+
     def get_color(self, mark_data_races: bool):
         color = "green"
         if mark_data_races:

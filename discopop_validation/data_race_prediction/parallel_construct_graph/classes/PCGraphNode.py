@@ -45,6 +45,33 @@ class PCGraphNode(object):
             self.behavior_models[0].get_start_line()) + "-" + str(self.behavior_models[0].get_end_line())
         return label
 
+    def get_start_line(self) -> int:
+        if len(self.behavior_models) == 0:
+            if self.pragma is None:
+                return -1
+            else:
+                return self.pragma.start_line
+        else:
+            return self.behavior_models[0].get_start_line()
+
+    def get_end_line(self) -> int:
+        if len(self.behavior_models) == 0:
+            if self.pragma is None:
+                return -1
+            else:
+                return self.pragma.end_line
+        else:
+            return self.behavior_models[0].get_end_line()
+
+    def get_file_id(self) -> int:
+        if len(self.behavior_models) == 0:
+            if self.pragma is None:
+                return -1
+            else:
+                return self.pragma.file_id
+        else:
+            return self.behavior_models[0].get_file_id()
+
     def get_color(self, mark_data_races: bool):
         color = "green"
         if mark_data_races:
