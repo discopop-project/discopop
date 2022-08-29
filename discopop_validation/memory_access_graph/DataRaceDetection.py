@@ -114,7 +114,7 @@ def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> 
 
                 # check if element with index idx exists in inner_path_2.
                 # If not, inner_path_2 is a predecessor of inner_path_1
-                if idx > len(inner_path_2):
+                if idx >= len(inner_path_2):
                     return True
 
                 # check if elements at index idx in both lists are equivalent

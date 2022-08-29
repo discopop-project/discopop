@@ -1646,5 +1646,5 @@ class PCGraph(object):
                     modification_found = True
                     break
                 else:
-                    # undefined
-                    raise ValueError("Undefined node constellation! - TODO implement?")
+                    # do nothing
+                    continue
