@@ -327,10 +327,8 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
                         {
                             string retVal = findStructMemberName(it->second, memberIdx, builder);
                             if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
-                                errs() << "not found: " << retVal << "\n";
                                 return retVal;  // not found
                             } else {
-                                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
                                 return trueVarNamesFromMetadataMap[retVal];  // found
                             }
                         }
@@ -374,9 +372,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
             string retVal = string(operand->getName().data());
             if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
                 // not found, do nothing
-                errs() << "not found: " << retVal << "\n";
             } else {
-                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
                 retVal = trueVarNamesFromMetadataMap[retVal];  // found
             }
             return "[" + retVal + "]";
@@ -385,9 +381,7 @@ string BehaviorExtraction::determineVarName(Instruction *const I, bool isIndex)
             string retVal = string(operand->getName().data());
             if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
                 return retVal;  // not found
-                errs() << "not found: " << retVal << "\n";
             } else {
-                errs() << "replaced: " << retVal << " with: " << trueVarNamesFromMetadataMap[retVal] << "\n";
                 return trueVarNamesFromMetadataMap[retVal];  // found
             }
         }
