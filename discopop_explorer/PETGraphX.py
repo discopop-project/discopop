@@ -100,7 +100,7 @@ class CUNode:
     end_line: int
     type: NodeType
     name: str
-    instructions_count: int = -1
+    # instructions_count: int = -1
     return_instructions_count: int = -1
     loop_iterations: int = -1
     mw_type = MWType.FORK
@@ -164,7 +164,7 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
     n.source_file, n.start_line = parse_id(node.get("startsAtLine"))
     _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
-    n.instructions_count = node.get("instructionsCount", 0)
+    # n.instructions_count = node.get("instructionsCount", 0)
 
     if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
         n.args = [Variable(v.get('type'), v.text, v.get('defLine'))
