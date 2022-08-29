@@ -89,6 +89,8 @@ namespace
         Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         Type *pointsToStruct(PointerType *PTy);
         Value *determineVarName(Instruction *const I);
+        //26.08.2022 Lukas
+        void getTrueVarNamesFromMetadata(Function &F);
 
         // Control flow analysis
         void CFA(Function &F, LoopInfo &LI);
@@ -129,6 +131,9 @@ namespace
         map<string, Value *> VarNames;
         set<DIGlobalVariable *> GlobalVars;
         map<string, MDNode *> Structs;
+
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
     };
 }  // namespace
 
@@ -297,6 +302,49 @@ bool DiscoPoP::sanityCheck(BasicBlock *BB)
     }
     // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
+}
+
+void DiscoPoP::getTrueVarNamesFromMetadata(Function &F)
+{
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+
+        for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                std::string dbg_declare = "llvm.dbg.declare";
+                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+
+                    // extract original and working variable name
+                    string SRCVarName;
+                    string IRVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                      Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                      IRVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    SRCVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
+                      // not found
+                      trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
+                    } else {
+                      // found
+                      trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Control-flow analysis functions
@@ -472,6 +520,8 @@ bool DiscoPoP::runOnFunction(Function &F)
         CFA(F, LI);
     }
 
+    getTrueVarNamesFromMetadata(F);
+
     // Instrument the entry of the function.
     // Each function entry is instrumented, and the first
     // executed function will initialize shadow memory.
@@ -526,6 +576,15 @@ DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v)
 
 Value *DiscoPoP::getOrInsertVarName(string varName, IRBuilder<> &builder)
 {
+    // 26.08.2022 Lukas
+    // update varName with original varName from Metadata
+    if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
+        // not found, do nothing
+    } else {
+        // found, update varName
+        varName = trueVarNamesFromMetadataMap[varName];
+    }
+
     Value *vName = NULL;
     map<string, Value *>:: iterator pair = VarNames.find(varName);
     if (pair == VarNames.end())
