@@ -186,17 +186,32 @@ def __main_start_execution(run_configuration: Configuration):
 
         for pragma in omp_pragmas:
             pc_graph.add_pragma_node(pragma)
+
         # insert nodes for called functions
-        pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+        # pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+
+        # insert function nodes
+        pc_graph.insert_function_nodes(pet)
+
         # insert contains edges between function nodes and contained pragma nodes
         pc_graph.insert_function_contains_edges()
-        # remove all but the best fitting CALLS edges for each function call in the source code
-        pc_graph.remove_incorrect_function_contains_edges()
 
         # insert edges into the graph
         pc_graph.add_edges(pet, omp_pragmas)
+
+        # remove all but the best fitting CALLS edges for each function call in the source code
+        pc_graph.remove_incorrect_function_contains_edges()
+
         # pass shared clauses to child nodes
         pc_graph.pass_shared_clauses_to_childnodes()
+
+        # identify pragma target code sections
+        for node in pc_graph.graph.nodes:
+            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+
+        # insert calls edges
+        pc_graph.insert_calls_edges(pet, omp_pragmas)
+
         # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
         pc_graph.apply_and_remove_threadprivate_pragma()
 
@@ -223,8 +238,10 @@ def __main_start_execution(run_configuration: Configuration):
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
         pc_graph.insert_behavior_storage_nodes()
-        # remove CalledFunctionNodes
-        pc_graph.remove_called_function_nodes()
+        # remove FunctionNodes
+        #pc_graph.plot_graph()
+        #pc_graph.remove_function_nodes()
+        #pc_graph.plot_graph()
         # remove redundant CONTAINS edges
         pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
@@ -270,7 +287,6 @@ def __main_start_execution(run_configuration: Configuration):
         time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
-        #pc_graph.plot_graph()
 
         # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.

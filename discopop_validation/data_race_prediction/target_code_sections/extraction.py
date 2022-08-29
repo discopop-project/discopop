@@ -16,31 +16,31 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
     if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK, PragmaType.CRITICAL]:
         pragma_target_regions: List[Tuple[int, int, Optional[List[str]]]] = [(pragma.start_line, pragma.end_line, None)]
         # add body of called functions to pragma_target_regions, if pragma not contained in called function (recursive call)
-        outgoing_calls_edges = [edge for edge in pc_graph.graph.out_edges(pc_graph_node_id) if
-                                pc_graph.graph.edges[edge]["type"] == EdgeType.CALLS]
-        for _, target in outgoing_calls_edges:
-            target_outgoing_contains_edges = [edge for edge in pc_graph.graph.out_edges(target) if
-                                              pc_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
-            # check if pragma is contained in called function and skip it if necessary
-            skip_current_target = False
-            for _, target_contains in target_outgoing_contains_edges:
-                if pragma == pc_graph.graph.nodes[target_contains]["data"].pragma:
-                    skip_current_target = True
-                    break
-            if skip_current_target:
-                continue
-
-            called_function_body_start = pc_graph.graph.nodes[target]["data"].start_line
-            called_function_body_end = pc_graph.graph.nodes[target]["data"].end_line
-            # get shared variables used in contained pragmas
-            used_shared_variables = []
-            for _, inner_target in target_outgoing_contains_edges:
-                inner_target_pragma = pc_graph.graph.nodes[inner_target]["data"].pragma
-                if inner_target_pragma is not None:
-                    used_shared_variables += inner_target_pragma.get_variables_listed_as("shared")
-            # remove duplicates
-            used_shared_variables = list(dict.fromkeys(used_shared_variables))
-            pragma_target_regions.append((called_function_body_start, called_function_body_end, used_shared_variables))
+#        outgoing_calls_edges = [edge for edge in pc_graph.graph.out_edges(pc_graph_node_id) if
+#                                pc_graph.graph.edges[edge]["type"] == EdgeType.CALLS]
+#        for _, target in outgoing_calls_edges:
+#            target_outgoing_contains_edges = [edge for edge in pc_graph.graph.out_edges(target) if
+#                                              pc_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+#            # check if pragma is contained in called function and skip it if necessary
+#            skip_current_target = False
+#            for _, target_contains in target_outgoing_contains_edges:
+#                if pragma == pc_graph.graph.nodes[target_contains]["data"].pragma:
+#                    skip_current_target = True
+#                    break
+#            if skip_current_target:
+#                continue
+#
+#            called_function_body_start = pc_graph.graph.nodes[target]["data"].start_line
+#            called_function_body_end = pc_graph.graph.nodes[target]["data"].end_line
+#            # get shared variables used in contained pragmas
+#            used_shared_variables = []
+#            for _, inner_target in target_outgoing_contains_edges:
+#                inner_target_pragma = pc_graph.graph.nodes[inner_target]["data"].pragma
+#                if inner_target_pragma is not None:
+#                    used_shared_variables += inner_target_pragma.get_variables_listed_as("shared")
+#            # remove duplicates
+#            used_shared_variables = list(dict.fromkeys(used_shared_variables))
+#            pragma_target_regions.append((called_function_body_start, called_function_body_end, used_shared_variables))
 
         # split pragma region if outgoing contains-edges exist
         for edge in pc_graph.graph.out_edges(pc_graph.pragma_to_node_id[pragma]):

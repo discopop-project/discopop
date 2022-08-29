@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
@@ -27,25 +27,30 @@ def detect_data_races(ma_graph: MemoryAccessGraph, pc_graph: PCGraph, pet: PETGr
         incoming_edge_pairs = ((i, j) for i in incoming_accesses for j in incoming_accesses if i != j)
         # check each pair for present data races
         for edge_1, edge_2 in incoming_edge_pairs:
-            data_race_found = __data_race_in_edge_pair(ma_graph, edge_1, edge_2, pc_graph, pet)
-            if data_race_found:
-                op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
-                op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
-                data_race_object = MAGDataRace(node, op_1, op_2)
+            optional_data_race = __data_race_in_edge_pair(ma_graph, node, edge_1, edge_2, pc_graph, pet)
+            if optional_data_race is not None:
+                data_race_object = cast(MAGDataRace, optional_data_race)
                 data_races.append(data_race_object)
     return data_races
 
 
 def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph):
+    buffer: List[MAGDataRace] = []
     print("### Detected data races: ###")
     for data_race in data_races:
+        if data_race in buffer:
+            # do not print duplicates
+            continue
         print(data_race.operation_1)
         print(data_race.operation_2)
+        if data_race.is_weak:
+            print("\t==> Weak")
         print()
+        buffer.append(data_race)
 
 
-def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,
-                             pet: PETGraphX):
+def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,
+                             pet: PETGraphX) -> Optional[MAGDataRace]:
     """checks the given pair of edges for data races.
     Returns True, if a data race has been found.
     Else, returns False.
@@ -54,37 +59,42 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, edge_1: Tuple[str, str
     amd_1: AccessMetaData = ma_graph.graph.edges[edge_1]["data"]
     amd_2: AccessMetaData = ma_graph.graph.edges[edge_2]["data"]
 
+
     # requirement 1: both accesses happen within the same parallel unit
     # todo might require: both accesses happen within nested parallel units
     if amd_1.parallel_unit != amd_2.parallel_unit:
-        return False
+        return None
 
     # requirement 2: at least of the accesses must be a write
     if (not amd_1.access_mode == "w") and (not amd_2.access_mode == "w"):
-        return False
+        return None
 
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
     if __path_predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
         # predecessor relation exists
-        return False
+        return None
 
     # requirement 4: check for PCGraph predecessor relations
     if __pcgraph_predecessor_relation(amd_1, amd_2, pc_graph):
-        return False
+        return None
 
     # requirement 5: check if the identified data race is backed up by a dependency edge in the PET Graph
+    is_weak_data_race = False
     if not __pet_dependency_edge_exists(amd_1, amd_2, pet):
-        return False
+        is_weak_data_race = True
 
     # requirement 6: ignore data race if it originates from a reduction operation
     if __originate_from_reduction_operation(amd_1, amd_2):
-        return False
+        return None
 
     # requirement 7: ignore data race if at least one access originates from a critical section
     if __originate_from_critical_section(amd_1, amd_2):
-        return False
+        return None
 
-    return True
+    op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
+    op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
+    data_race_object = MAGDataRace(ma_node, op_1, op_2, is_weak_data_race)
+    return data_race_object
 
 
 def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> bool:
