@@ -25,20 +25,28 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
   string bbDepString;
 
   for(Function &F: M){
-    if(F.getInstructionCount() == 0) continue;
-    if(DP_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
+    bool Debug = false;
+    if (F.getInstructionCount() == 0)
+      continue;
+    if(F.getName() == "fbdev_read_packet")
+      Debug = true;
 
-    DebugLoc dl;
-    Value *V;
-    
-    set<Instruction*> omittableInstructions;
-    
-    set<Value*> staticallyPredictableValues;
-    // Get local values (variables)
-    for (Instruction& I: F.getEntryBlock()) {
-      if (AllocaInst* AI = dyn_cast<AllocaInst>(&I)) {
-        staticallyPredictableValues.insert(AI);
-      }
+      if (Debug)
+        errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
+
+      DebugLoc dl;
+      Value *V;
+
+      set<Instruction *> omittableInstructions;
+
+      set<Value *> staticallyPredictableValues;
+      // Get local values (variables)
+      for (Instruction &I : F.getEntryBlock())
+      {
+        if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
+        {
+          staticallyPredictableValues.insert(AI);
+        }
     }
     for (BasicBlock& BB: F){ for(Instruction& I: BB){
       // Remove from staticallyPredictableValues those which are passed to other functions (by ref/ptr)
@@ -54,7 +62,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
             std::set<Value*>::iterator it = staticallyPredictableValues.find(V);
             if(it != staticallyPredictableValues.end()){
               staticallyPredictableValues.erase(V);
-              if(DP_DEBUG) errs() << VNF->getVarName(V) << "\n";
+              if(Debug) errs() << VNF->getVarName(V) << "\n";
             }
             // for(Value *w: staticallyPredictableValues){
               // for (auto w = staticallyPredictableValues.begin(); w != staticallyPredictableValues.end(); ) {
@@ -69,15 +77,19 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       // Remove values from locals if dereferenced
       if(isa<StoreInst>(I)){
         V = I.getOperand(0);
-        for(Value *w: staticallyPredictableValues){
-          if(w == V){
-            staticallyPredictableValues.erase(V);
-          }
+        std::set<Value*>::iterator it = staticallyPredictableValues.find(V);
+        if(it != staticallyPredictableValues.end()){
+          staticallyPredictableValues.erase(V);
         }
+        // for(Value *w: staticallyPredictableValues){
+        //   if(w == V){
+        //     staticallyPredictableValues.erase(V);
+        //   }
+        // }
       }
     }}
 
-    if(DP_DEBUG){
+    if(Debug){
       errs() << "--- Local Values ---\n";
       for(auto V: staticallyPredictableValues){
         errs() << VNF->getVarName(V) << "\n";
@@ -203,7 +215,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       DG.dumpToDot(fileName + "_" + string(F.getName()) + ".DG.dot");
     }
     
-    if(DP_DEBUG){
+    if(Debug){
       errs() << "--- Conditional BB Dependences:\n";
       for(auto pair : conditionalBBDepMap){
         errs() << pair.first->getName() << ":\n";
@@ -223,7 +235,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       }
     }
   
-    if(DP_DEBUG){
+    if(Debug){
       errs() << "--- Program Instructions:\n";
       for (BasicBlock& BB: F){ for(Instruction& I: BB){
         if(!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) continue;
@@ -259,7 +271,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
         }
       }
     }
-    if(DP_DEBUG) errs() << "Done with function " << F.getName() << ":\n";
+    if(Debug) errs() << "Done with function " << F.getName() << ":\n";
   }
 
   // Find __dp_finalize call and add a call to __dp_add_bb_deps before it

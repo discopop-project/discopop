@@ -4,6 +4,7 @@
 
 //STL IMPORTS
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <set>
 #include <stack>
@@ -92,6 +93,8 @@ public:
 
 	Node<NodeT> *getNode(NodeT item)
 	{
+		// if(nodes.find(item) == nodes.end()) return nullptr;
+		// if (nodes.find(item) == nodes.end()) return nullptr;
 		if (nodes.count(item) == 0) return nullptr;
 		return nodes.find(item)->second.second;
 	}
@@ -127,6 +130,8 @@ public:
 
 	Edge<NodeT> *addEdge(Node<NodeT> *src, Node<NodeT> *dst)
 	{
+		if (outEdges.find(src) != outEdges.end())
+		// if(outEdges.count(src) != 0)
 		for(Edge<NodeT> *ed : outEdges[src]){
 			if(ed->getDst() == dst){
 				return nullptr;
