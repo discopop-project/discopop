@@ -321,25 +321,25 @@ void DiscoPoP::getTrueVarNamesFromMetadata(Function &F)
                     // call to @llvm.dbg.declare found
 
                     // extract original and working variable name
-                    string originalVarName;
-                    string workingVarName;
+                    string SRCVarName;
+                    string IRVarName;
 
                     Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
                     if (isa<ValueAsMetadata>(Meta)){
                       Value *V = cast <ValueAsMetadata>(Meta)->getValue();
-                      workingVarName = V->getName().str();
+                      IRVarName = V->getName().str();
                     }
                     DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
-                    originalVarName = V->getName().str();
+                    SRCVarName = V->getName().str();
 
                     // add to trueVarNamesFromMetadataMap
                     // overwrite entry if already existing
-                    if (trueVarNamesFromMetadataMap.find(workingVarName) == trueVarNamesFromMetadataMap.end()) {
+                    if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
                       // not found
-                      trueVarNamesFromMetadataMap.insert(std::pair<string, string>(workingVarName, originalVarName));
+                      trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
                     } else {
                       // found
-                      trueVarNamesFromMetadataMap[workingVarName] = originalVarName;
+                      trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
                     }
                 }
             }
