@@ -376,7 +376,8 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
 
             if (ExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
+              // if(F.getName() == "draw_axis_yuv")
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
                 continue;
             }
 
@@ -451,6 +452,34 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
             }
         }
     }
+    if(lid == "LOOPENDNOTFOUND"){
+      if (MDNode *LoopID = L->getLoopID()) {
+        DebugLoc Start;
+        // We use the first DebugLoc in the header as the start location of the loop
+        // and if there is a second DebugLoc in the header we use it as end location
+        // of the loop.
+        bool foundEnd = false;
+        for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+        {
+          if (DILocation *DIL = dyn_cast<DILocation>(LoopID->getOperand(i))) {
+            if (!Start){
+              if(foundEnd){
+                lid = to_string(DebugLoc(DIL)->getLine());
+
+                break;
+              } else{
+                foundEnd = true;
+              }
+              // errs() << "+++++ " << file_id << " " << DebugLoc(DIL)->getLine() << "\n";
+            }
+            // else
+              // errs() << "----- " << file_id << " " << Start->getLine() << " " << DebugLoc(DIL)->getLine() << "\n";
+          }
+        }
+
+      }
+    }
+
     return lid;
 }
 
@@ -465,7 +494,7 @@ bool DPReduction::sanityCheck(BasicBlock *BB, int file_id)
             return true;
         }
     }
-    errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
 }
 
@@ -840,8 +869,15 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
       if (!util::loc_exists(load_loc) || !util::loc_exists(store_loc)) continue;
       if (load_loc.getLine() > store_loc.getLine()) continue;
       if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) continue;
-      if (loop_info.line_nr_ > std::stoul(loop_info.end_line)) continue;
       
+      if(loop_info.end_line == "LOOPENDNOTFOUND"){
+        errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName() << " Start line: " << loop_info.start_line << "\n";
+        continue;
+      }
+        // errs() << F.getName() << " " << loop_info.start_line << " " << loop_info.line_nr_ << " " << loop_info.end_line << "\n";
+      if (loop_info.line_nr_ > std::stoul(loop_info.end_line))
+        continue;
+
       //Check if both load and store insts belong to the loop
       if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) continue;
       if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) continue;

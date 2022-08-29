@@ -16,7 +16,7 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): V
 			}
 		}
 		// Add edges from last instruction in current block to first instruction all the successor blocks
-		if(previousInstruction != nullptr) findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction);
+		if(previousInstruction != nullptr && !BB.empty()) findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction);
 	}
 	
 	// Conect entry/exit nodes
@@ -34,10 +34,13 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): V
 
 void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction* previousInstruction) {
 	// bool hasSuccessors = false;
+	if(BB == nullptr)
+		return;
 	for (BasicBlock *S : successors(BB)) {
 		// hasSuccessors = true;
 		for (Instruction &I : *S){
-			if(isa<StoreInst>(I) || isa<LoadInst>(I)){
+			if(&I == nullptr) continue;
+			if(isa<llvm::StoreInst>(I) || isa<llvm::LoadInst>(I)){
 				Graph::addEdge(previousInstruction, &I);
 				goto next;
 			}else if(isa<AllocaInst>(&I)){

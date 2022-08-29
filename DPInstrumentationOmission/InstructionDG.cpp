@@ -4,6 +4,7 @@
 
 InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid): VNF(_VNF), CFG(_CFG), fid(_fid){
 	for(auto edge: CFG->getInEdges(CFG->getExit()))
+	if(edge->getSrc())
 		recursiveDepFinder(new set<Instruction*>(), edge->getSrc()->getItem());
 }
 
