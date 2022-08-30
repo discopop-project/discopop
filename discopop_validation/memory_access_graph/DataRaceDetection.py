@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
@@ -82,6 +82,7 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     is_weak_data_race = False
     if not __pet_dependency_edge_exists(amd_1, amd_2, pet):
         is_weak_data_race = True
+        return None
 
     # requirement 6: ignore data race if it originates from a reduction operation
     if __originate_from_reduction_operation(amd_1, amd_2):
@@ -148,9 +149,11 @@ def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, p
     Checks if the supposed data race is backed up by a corresponding dependency edge in the PET graph.
     """
     pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
-                                                               amd_1.operation.line, amd_1.operation.line)
+                                                               amd_1.operation.line, amd_1.operation.line,
+                                                               accessed_var_name=amd_1.operation.target_name)
     pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
-                                                               amd_2.operation.line, amd_2.operation.line)
+                                                               amd_2.operation.line, amd_2.operation.line,
+                                                               accessed_var_name=amd_2.operation.target_name)
     out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
     # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
     dependencies_1_2 = [dep for dep in out_dependencies_node_1 if

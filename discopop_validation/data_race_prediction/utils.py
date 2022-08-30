@@ -5,7 +5,7 @@ from discopop_explorer.PETGraphX import EdgeType
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
 
-def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_line: int, end_line: int):
+def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_line: int, end_line: int, accessed_var_name:str=""):
     """Returns the ID of the pet-graph node which contains the given pragma"""
     potential_nodes = []
     for pet_node in pet.g.nodes:
@@ -75,8 +75,14 @@ def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_l
     # find narrowest matching node
     narrowest_node_buffer = potential_nodes[0]
     for pet_node in potential_nodes:
-        if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
-                pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
-            narrowest_node_buffer = pet_node
+        if accessed_var_name == "":
+            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
+                    pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
+                narrowest_node_buffer = pet_node
+        else:
+            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
+                    pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line and \
+                    accessed_var_name in [var.name for var in pet.g.nodes[pet_node]["data"].local_vars + pet.g.nodes[pet_node]["data"].global_vars]:
+                narrowest_node_buffer = pet_node
     return narrowest_node_buffer
 

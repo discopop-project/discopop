@@ -307,8 +307,15 @@ class PETGraphX(object):
                         # if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
                         #     continue
                     if sink_cu_id and source_cu_id:
-                        g.add_edge(sink_cu_id, source_cu_id,
-                                   data=parse_dependency(dep))
+                        # make sure that dep.var_name is a variable which is used in both CUs
+                        # this step is necessary, since no read and write phase line information is present anymore
+                        # and each line of a CU is assumed to be both
+
+                        sink_vars = [var.name for var in sink_node.global_vars + sink_node.local_vars]
+                        source_vars = [var.name for var in source_node.global_vars + source_node.local_vars]
+                        if dep.var_name in sink_vars and dep.var_name in source_vars:
+                            g.add_edge(sink_cu_id, source_cu_id,
+                                       data=parse_dependency(dep))
         # t7 = time.time()
         # print(f"for dep in dependencies_list: {t7-t6}")
         return cls(g, reduction_vars, pos)
