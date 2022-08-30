@@ -49,6 +49,19 @@ def __parse_xml_input(xml_fd):
         #     for instruction_id in str(node.readPhaseLines).split(','):
         #         readlineToCUIdMap[instruction_id].add(node.get('id'))
 
+        # since no instruction-line-information is present anymore, assume that each line of the CU contains reads and writes
+        if node.get("type") == '0':
+            node_id: str = node.get("id")
+            file_id: str = node_id.split(":")[0]
+            node_start_line: str = node.get("startsAtLine").split(":")[1]
+            node_end_line: str = node.get("endsAtLine").split(":")[1]
+            node_lines = list(range(int(node_start_line), int(node_end_line) + 1))
+            for line in node_lines:
+                full_line = file_id + ":" + str(line)
+                lineToCUIdMap[full_line].add(node_id)
+                writelineToCUIdMap[full_line].add(node_id)
+                readlineToCUIdMap[full_line].add(node_id)
+
         cu_dict[node.get('id')] = node
 
     return cu_dict
