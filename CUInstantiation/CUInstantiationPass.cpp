@@ -105,6 +105,8 @@ namespace {
         //DiscoPoP Data structures
         map<string, MDNode*> Structs;
         map<string, Value*> VarNames;
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
 
         //DiscoPoP Functions
         string determineVariableName(Instruction* I);
@@ -138,6 +140,7 @@ namespace {
         virtual bool runOnModule(Module &M) override;
         StringRef getPassName() const override;
         void getAnalysisUsage(AnalysisUsage &Info) const override;
+        void getTrueVarNamesFromMetadata(Function &F);
 
         CUInstantiation() : ModulePass(ID) {}
 
@@ -145,6 +148,48 @@ namespace {
 }  // end of anonymous namespace
 
 /*****************************   DiscoPoP Functions  ***********************************/
+void CUInstantiation::getTrueVarNamesFromMetadata(Function &F)
+{
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+
+        for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                std::string dbg_declare = "llvm.dbg.declare";
+                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+
+                    // extract original and working variable name
+                    string SRCVarName;
+                    string IRVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                        Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                        IRVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    SRCVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
+                        // not found
+                        trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
+                    } else {
+                        // found
+                        trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
+                    }
+                }
+            }
+        }
+    }
+}
 
 string CUInstantiation::determineVariableName(Instruction* I) {
 
@@ -155,14 +200,24 @@ string CUInstantiation::determineVariableName(Instruction* I) {
     IRBuilder<> builder(I);
 
     if (operand == NULL) {
-        return getOrInsertVarName("", builder);
+        string retVal = getOrInsertVarName("", builder);
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
     }
 
     if (operand->hasName()) {
         //// we've found a global variable
         if (isa<GlobalVariable>(*operand)) {
             //MOHAMMAD ADDED THIS FOR CHECKING
-            return string(operand->getName());
+            string retVal = string(operand->getName());
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                return retVal;  // not found
+            } else {
+                return trueVarNamesFromMetadataMap[retVal];  // found
+            }
         }
         if (isa<GetElementPtrInst>(*operand)) {
             GetElementPtrInst* gep = cast<GetElementPtrInst>(operand);
@@ -181,10 +236,23 @@ string CUInstantiation::determineVariableName(Instruction* I) {
                     map<string, MDNode*>::iterator it = Structs.find(strName);
                     if (it != Structs.end()) {
                         std::string ret = findStructMemberName(it->second, memberIdx, builder);
-                        if (ret.size() > 0)
-                            return ret;
-                        else
-                            return getOrInsertVarName("", builder);
+                        if (ret.size() > 0) {
+                            string retVal = ret;
+                            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                return retVal;  // not found
+                            } else {
+                                return trueVarNamesFromMetadataMap[retVal];  // found
+                            }
+                        }
+                        else {
+                            string retVal = getOrInsertVarName("", builder);
+                            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                return retVal;  // not found
+                            } else {
+                                return trueVarNamesFromMetadataMap[retVal];  // found
+                            }
+                        }
+
                         //return ret;
 
                     }
@@ -197,7 +265,12 @@ string CUInstantiation::determineVariableName(Instruction* I) {
             }
             return determineVariableName((Instruction*)gep);
         }
-        return string(operand->getName().data());
+        string retVal = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
         //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
@@ -571,6 +644,8 @@ bool CUInstantiation::runOnModule(Module &M){
 
     for (Module::iterator func = ThisModule->begin(), E = ThisModule->end(); func != E; ++func)
     {
+        getTrueVarNamesFromMetadata(*func);
+
         determineFileID(*func, fileID);
 
         if (func->hasName() && func->getName().equals("main")){
