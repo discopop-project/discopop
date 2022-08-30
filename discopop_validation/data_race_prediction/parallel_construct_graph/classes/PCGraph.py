@@ -1596,6 +1596,17 @@ class PCGraph(object):
             self.graph.add_edge(source, parallel_node_id, type=EdgeType.CONTAINS)
             # add contains edge between newly created parallel section and single node
             self.graph.add_edge(parallel_node_id, single_node_id, type=EdgeType.CONTAINS)
+            # add shared variables of contained nodes to single node
+            single_out_contains_edges = [edge for edge in self.graph.out_edges(single_node_id) if
+                                         self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for _, target in single_out_contains_edges:
+                target_pragma = self.graph.nodes[target]["data"].pragma
+                if target_pragma is None:
+                    continue
+                shared_vars = target_pragma.get_variables_listed_as("shared")
+                for var in shared_vars:
+                    if var not in single_pragma.get_known_variables():
+                        single_pragma.add_to_shared(var)
 
 
     def restore_sequence_order(self):
