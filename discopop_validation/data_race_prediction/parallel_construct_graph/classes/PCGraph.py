@@ -1577,12 +1577,12 @@ class PCGraph(object):
             # add new parallel section node and Single node
             parallel_pragma = OmpPragma()
             parallel_pragma.init_with_values(str(called_function_node.file_id), str(called_function_node.start_line),
-                                             str(called_function_node.end_line), "parallel shared(i,j)")
+                                             str(called_function_node.end_line), "parallel")
             #parallel_node_id = self.__add_parallel_pragma(parallel_pragma)
             parallel_node_id = self.add_pragma_node(parallel_pragma)
             single_pragma = OmpPragma()
             single_pragma.init_with_values(str(called_function_node.file_id), str(called_function_node.start_line),
-                                            str(called_function_node.end_line), "single shared(i, j)")
+                                            str(called_function_node.end_line), "single")
             single_node_id = self.add_pragma_node(single_pragma)
             #single_node_id = self.__add_single_pragma(single_pragma)
 
