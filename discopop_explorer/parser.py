@@ -13,11 +13,11 @@ from collections import defaultdict
 from lxml import objectify  # type:ignore
 
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
-readlineToCUIdMap = defaultdict(set)
+readlineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to write set of nodes. LID -> NodeIds
-writelineToCUIdMap = defaultdict(set)
+writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
-lineToCUIdMap = defaultdict(set)
+lineToCUIdMap = defaultdict(set)  # type: ignore
 
 
 class DependenceItem(object):

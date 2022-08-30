@@ -84,6 +84,7 @@ struct DPReduction : public llvm::ModulePass {
   string determineVariableName(Instruction *I);
   string getOrInsertVarName(string varName, IRBuilder<> &builder);
   string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+  void getTrueVarNamesFromMetadata(Module &M);
   // static bool defaultIsGlobalVariableValue;
   map<string, MDNode *> Structs;
   map<string, Value *> VarNames;
@@ -97,6 +98,8 @@ struct DPReduction : public llvm::ModulePass {
   std::vector<instr_info_t> instructions_;
   std::map<int, llvm::Instruction*> loop_to_instr_;
   std::vector<loop_info_t> loops_;
+    // Lukas 26.08.2022
+    map<string, string> trueVarNamesFromMetadataMap;
 
   llvm::Function* add_instr_fn_;
   llvm::Function* add_ptr_instr_fn_;
@@ -178,6 +181,50 @@ static llvm::cl::opt<std::string> fmap_file(
 //   output_fn_ = llvm::dyn_cast<llvm::Function>(
 //       module_->getOrInsertFunction("loop_counter_output", output_fn_type));
 // }
+
+void DPReduction::getTrueVarNamesFromMetadata(Module &M)
+{
+    for (Function &F: M) {
+        for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+            BasicBlock &BB = *FI;
+
+            for (BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction) {
+                // search for call instructions to @llvm.dbg.declare
+                if (isa<CallInst>(instruction)) {
+                    CallInst *call = cast<CallInst>(instruction);
+                    // check if @llvm.dbg.declare is called
+                    std::string dbg_declare = "llvm.dbg.declare";
+                    int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                    if (cmp_res == 0) {
+                        // call to @llvm.dbg.declare found
+
+                        // extract original and working variable name
+                        string SRCVarName;
+                        string IRVarName;
+
+                        Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                        if (isa<ValueAsMetadata>(Meta)) {
+                            Value *V = cast<ValueAsMetadata>(Meta)->getValue();
+                            IRVarName = V->getName().str();
+                        }
+                        DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                        SRCVarName = V->getName().str();
+
+                        // add to trueVarNamesFromMetadataMap
+                        // overwrite entry if already existing
+                        if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
+                            // not found
+                            trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
+                        } else {
+                            // found
+                            trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 string DPReduction::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder)
 {
@@ -281,7 +328,12 @@ string DPReduction::determineVariableName(Instruction *I)
 
     if (operand == NULL)
     {
-        return getOrInsertVarName("", builder);
+        string retVal = getOrInsertVarName("", builder);
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
     }
 
     if (operand->hasName())
@@ -290,7 +342,12 @@ string DPReduction::determineVariableName(Instruction *I)
         if (isa<GlobalVariable>(*operand))
         {
             //MOHAMMAD ADDED THIS FOR CHECKING
-            return string(operand->getName());
+            string retVal = string(operand->getName());
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                return retVal;  // not found
+            } else {
+                return trueVarNamesFromMetadataMap[retVal];  // found
+            }
         }
         if (isa<GetElementPtrInst>(*operand))
         {
@@ -314,10 +371,22 @@ string DPReduction::determineVariableName(Instruction *I)
                         if (it != Structs.end())
                         {
                             std::string ret = findStructMemberName(it->second, memberIdx, builder);
-                            if (ret.size() > 0)
-                                return ret;
-                            else
-                                return getOrInsertVarName("", builder);
+                            if (ret.size() > 0) {
+                                string retVal = ret;
+                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return trueVarNamesFromMetadataMap[retVal];  // found
+                                }
+                            }
+                            else {
+                                string retVal = getOrInsertVarName("", builder);
+                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return trueVarNamesFromMetadataMap[retVal];  // found
+                                }
+                            }
                             //return ret;
                         }
                     }
@@ -331,7 +400,12 @@ string DPReduction::determineVariableName(Instruction *I)
             }
             return determineVariableName((Instruction *)gep);
         }
-        return string(operand->getName().data());
+        string retVal = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
         //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
@@ -376,7 +450,8 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
 
             if (ExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
+              // if(F.getName() == "draw_axis_yuv")
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
                 continue;
             }
 
@@ -451,6 +526,34 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
             }
         }
     }
+    if(lid == "LOOPENDNOTFOUND"){
+      if (MDNode *LoopID = L->getLoopID()) {
+        DebugLoc Start;
+        // We use the first DebugLoc in the header as the start location of the loop
+        // and if there is a second DebugLoc in the header we use it as end location
+        // of the loop.
+        bool foundEnd = false;
+        for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+        {
+          if (DILocation *DIL = dyn_cast<DILocation>(LoopID->getOperand(i))) {
+            if (!Start){
+              if(foundEnd){
+                lid = to_string(DebugLoc(DIL)->getLine());
+
+                break;
+              } else{
+                foundEnd = true;
+              }
+              // errs() << "+++++ " << file_id << " " << DebugLoc(DIL)->getLine() << "\n";
+            }
+            // else
+              // errs() << "----- " << file_id << " " << Start->getLine() << " " << DebugLoc(DIL)->getLine() << "\n";
+          }
+        }
+
+      }
+    }
+
     return lid;
 }
 
@@ -465,7 +568,7 @@ bool DPReduction::sanityCheck(BasicBlock *BB, int file_id)
             return true;
         }
     }
-    errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
 }
 
@@ -840,8 +943,15 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
       if (!util::loc_exists(load_loc) || !util::loc_exists(store_loc)) continue;
       if (load_loc.getLine() > store_loc.getLine()) continue;
       if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) continue;
-      if (loop_info.line_nr_ > std::stoul(loop_info.end_line)) continue;
       
+      if(loop_info.end_line == "LOOPENDNOTFOUND"){
+        errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName() << " Start line: " << loop_info.start_line << "\n";
+        continue;
+      }
+        // errs() << F.getName() << " " << loop_info.start_line << " " << loop_info.line_nr_ << " " << loop_info.end_line << "\n";
+      if (loop_info.line_nr_ > std::stoul(loop_info.end_line))
+        continue;
+
       //Check if both load and store insts belong to the loop
       if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) continue;
       if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) continue;
@@ -1006,6 +1116,8 @@ bool DPReduction::runOnModule(llvm::Module& M) {
     llvm::errs() << "could not find the FileMapping file\n";
     return false;
   }
+
+  getTrueVarNamesFromMetadata(M);
 
   instrument_module(&M);
 

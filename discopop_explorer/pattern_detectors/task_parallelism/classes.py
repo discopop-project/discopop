@@ -1,9 +1,11 @@
 from enum import Enum
 from typing import List, Optional
 
-from ...PETGraphX import CUNode, MWType, PETGraphX
-from ...pattern_detectors.PatternInfo import PatternInfo
-from ...utils import total_instructions_count, calculate_workload
+from discopop_explorer.PETGraphX import CUNode, MWType, PETGraphX
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+
+# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+# from discopop_explorer.utils import total_instructions_count, calculate_workload
 
 
 class Task(object):
@@ -25,8 +27,12 @@ class Task(object):
         self.region_end_line = None
         self.end_line = node.end_position()
         self.mw_type = node.mw_type
-        self.instruction_count = total_instructions_count(pet, node)
-        self.workload = calculate_workload(pet, node)
+
+        # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+#        self.instruction_count = total_instructions_count(pet, node)
+#        self.workload = calculate_workload(pet, node)
+        self.instruction_count = 0
+        self.workload = 0
         self.child_tasks = []
 
     def aggregate(self, other: 'Task'):
