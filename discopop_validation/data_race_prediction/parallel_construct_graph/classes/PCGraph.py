@@ -736,7 +736,6 @@ class PCGraph(object):
                 # old version:
                 self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                 if region_start is None or region_end is None:
-                    self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                     continue
 
                 # new node is also contained in parent of node
