@@ -1180,10 +1180,12 @@ class PCGraph(object):
 
     def add_depends_edges(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
+            if self.graph.nodes[node]["data"].pragma is None:
                 continue
+            print("Pragma: ", self.graph.nodes[node]["data"].pragma)
             # check if node has dependencies
             node_depend_entries = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("depend")
+            print("\tdeopends: ", node_depend_entries)
             if len(node_depend_entries) == 0:
                 # no depends entries exist, skip current node
                 continue
@@ -1201,7 +1203,7 @@ class PCGraph(object):
             for other_node in self.graph.nodes:
                 if node == other_node:
                     continue
-                if type(self.graph.nodes[other_node]["data"]) != PragmaTaskNode:
+                if self.graph.nodes[other_node]["data"].pragma is None:
                     continue
                 other_node_depend_entries = self.graph.nodes[other_node]["data"].pragma.get_variables_listed_as(
                     "depend")
@@ -1237,8 +1239,6 @@ class PCGraph(object):
     def replace_depends_with_sequential_edges(self):
         add_edge_buffer = []
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
-                continue
             out_dep_edges = [edge for edge in self.graph.out_edges(node) if
                              self.graph.edges[edge]["type"] == EdgeType.DEPENDS]
             if len(out_dep_edges) == 0:
