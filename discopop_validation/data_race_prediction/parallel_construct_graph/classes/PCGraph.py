@@ -748,14 +748,44 @@ class PCGraph(object):
                 # separate treatment of behavior nodes stemming from called functions vs nodes from the original scope
                 if model.get_start_line() >= region_start and model.get_end_line() <= region_end:
                     # model is contained in the original pragma region of node
-                    # insert behavior after each path
-                    exit_points = get_contained_exit_points(self, node)
-                    exit_points = [point for point in exit_points if point != new_node_id]
-                    for point in exit_points:
-                        self.graph.add_edge(point, new_node_id, type=EdgeType.SEQUENTIAL)
+
+#                    # insert behavior after each path
+#                    exit_points = get_contained_exit_points(self, node)
+#                    exit_points = [point for point in exit_points if point != new_node_id]
+#                    for point in exit_points:
+#                        self.graph.add_edge(point, new_node_id, type=EdgeType.SEQUENTIAL)
+
+                    # find insertion points in sequence for behavior_storage_node
+                    # select insert position on each path / sequence
+                    insert_locations = []
+                    for sequence_entry in get_sequence_entry_points(self, node):
+                        insert_locations.append(
+                            self.__get_insert_location(sequence_entry, model.get_start_line()))
+                    # remove duplicated entries, possible in case of multiple merging sequences
+                    insert_locations = list(dict.fromkeys(insert_locations))
+                    # remove entries which are in relation to the new node itself
+                    insert_locations = [(mode, location) for mode, location in insert_locations if
+                                        location != new_node_id]
+
+                    # insert edges according to the identified locations
+                    for mode, location in insert_locations:
+                        if mode == "before":
+                            in_seq_edges = [edge for edge in self.graph.in_edges(location) if
+                                            self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                            for source, _ in in_seq_edges:
+                                self.graph.remove_edge(source, location)
+                                self.graph.add_edge(source, new_node_id, type=EdgeType.SEQUENTIAL)
+                            self.graph.add_edge(new_node_id, location, type=EdgeType.SEQUENTIAL)
+                        if mode == "after":
+                            out_seq_edges = [edge for edge in self.graph.out_edges(location) if
+                                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                            for _, target in out_seq_edges:
+                                self.graph.remove_edge(location, target)
+                                self.graph.add_edge(new_node_id, target)
+                            self.graph.add_edge(location, new_node_id, type=EdgeType.SEQUENTIAL)
 
                     # if no exit points have been found, insert the behavior node right after node
-                    if len(exit_points) == 0:
+                    if len(insert_locations) == 0:
                         out_seq_edges = [edge for edge in self.graph.out_edges(node) if
                                          self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                         for _, target in out_seq_edges:
