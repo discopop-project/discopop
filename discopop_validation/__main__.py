@@ -234,13 +234,10 @@ def __main_start_execution(run_configuration: Configuration):
         # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
         # add depends edges between interdependent TASK nodes
         pc_graph.add_depends_edges()
-        pc_graph.plot_graph()
         # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-        # todo: only consider TASKWAITS if no dependence violation exists
         pc_graph.redirect_tasks_successors()
         # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
         pc_graph.replace_depends_with_sequential_edges()
-        pc_graph.plot_graph()
         # extract and insert behavior models for pragmas
         time_bhv_extraction_start = time.time()
         pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
