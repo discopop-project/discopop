@@ -200,7 +200,6 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.add_edges(pet, omp_pragmas)
         #pc_graph.plot_graph()
         pc_graph.remove_redundant_contains_edges()
-        pc_graph.plot_graph()
 
         # remove all but the best fitting CALLS edges for each function call in the source code
         pc_graph.remove_incorrect_function_contains_edges()
@@ -246,10 +245,25 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
         time_bhv_extraction_end = time.time()
         # insert TaskGraphNodes to store behavior models
-        pc_graph.insert_behavior_storage_nodes()
+#        pc_graph.insert_behavior_storage_nodes()
+        pc_graph.new_insert_behavior_storage_nodes()
+        pc_graph.remove_redundant_contains_edges()
+
+        # create sequence for contained nodes of every node
+        pc_graph.plot_graph()
+        pc_graph.create_sequence_for_contained_nodes()
+
+        # remove sequential edges between tasks, as no ordering can be specified
+        pc_graph.remove_sequential_edges_between_tasks()
+
+        # if a node has multiple outgoing sequential edges, combine them into a single sequence
+        pc_graph.combined_out_sequential_edges_into_single_sequence()
+        pc_graph.plot_graph()
+
         # restore sequence order after insertion of behavior storage nodes.
         # this step is not included in the insertion method to keep it slightly simpler.
-        pc_graph.restore_sequence_order()
+#        pc_graph.restore_sequence_order()
+
         # remove FunctionNodes
         #pc_graph.plot_graph()
         #pc_graph.remove_function_nodes()
@@ -262,6 +276,11 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.skip_taskwait_if_no_prior_task_exists()
 
         pc_graph.add_fork_and_join_nodes()
+
+        # make contained nodes part of the sequence
+
+        #pc_graph.make_contained_nodes_part_of_sequence(0)  # 0 is the id of the ROOT node
+
         # remove TASKWAIT nodes without prior TASK node
         pc_graph.remove_taskwait_without_prior_task()
         #parallel_construct_graph.plot_graph()
@@ -285,7 +304,7 @@ def __main_start_execution(run_configuration: Configuration):
         # mark behavior storage nodes which are already covered by fork nodes
         pc_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
         # add fork and join nodes around behavior storage node if it's not contained in a fork section
-        pc_graph.add_fork_and_join_around_behavior_storage_nodes()
+        #pc_graph.add_fork_and_join_around_behavior_storage_nodes()
 
         # remove behavior models from all but BehaviorStorageNodes
         pc_graph.remove_behavior_models_from_nodes()
@@ -304,9 +323,12 @@ def __main_start_execution(run_configuration: Configuration):
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
         pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
+        pc_graph.plot_graph()
+
         time_data_race_computation_start = time.time()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
+        memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

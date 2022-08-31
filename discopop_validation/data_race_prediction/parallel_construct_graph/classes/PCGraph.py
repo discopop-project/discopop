@@ -730,6 +730,36 @@ class PCGraph(object):
 
         pass
 
+    def new_insert_behavior_storage_nodes(self):
+        """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
+        modify_nodes: List[Tuple[str, int, PCGraphNode]] = []
+        modify_edges: List[Tuple[str, int, int, EdgeType]] = []
+        edge_replacements = dict()
+
+        bhv_storage_node_to_parent: Dict[int, int] = dict()
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            region_start = None
+            region_end = None
+            if self.graph.nodes[node]["data"].pragma is not None:
+                region_start = self.graph.nodes[node]["data"].pragma.start_line
+                region_end = self.graph.nodes[node]["data"].pragma.end_line
+
+            # create contained BehaviorStorageNodes
+            for model in self.graph.nodes[node]["data"].behavior_models:
+                new_node_id = self.get_new_node_id()
+                behavior_storage_node = PCGraphNode(new_node_id)
+                behavior_storage_node.behavior_models.append(model)
+                # set thread count to 1 if parent is PragmaSingleNode
+                if type(self.graph.nodes[node]["data"]) == PragmaSingleNode:
+                    behavior_storage_node.set_simulation_thread_count(1)
+
+                self.graph.add_node(new_node_id, data=behavior_storage_node)
+                bhv_storage_node_to_parent[new_node_id] = node
+                # old version:
+                self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
+
+
     def insert_behavior_storage_nodes(self):
         """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
         modify_nodes: List[Tuple[str, int, PCGraphNode]] = []
@@ -808,13 +838,13 @@ class PCGraph(object):
                             self.graph.add_edge(location, new_node_id, type=EdgeType.SEQUENTIAL)
 
                     # if no exit points have been found, insert the behavior node right after node
-                    if len(insert_locations) == 0:
-                        out_seq_edges = [edge for edge in self.graph.out_edges(node) if
-                                         self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-                        for _, target in out_seq_edges:
-                            self.graph.remove_edge(node, target)
-                            self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
-                            self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
+#                    if len(insert_locations) == 0:
+#                        out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+#                                         self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+#                        for _, target in out_seq_edges:
+#                            self.graph.remove_edge(node, target)
+#                            self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+#                            self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
                 else:
                     # model originated from the body of a called function
                     # find optimal positioning for new node based on minimal location differences
@@ -878,6 +908,18 @@ class PCGraph(object):
                     self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
         pass
 
+    def __barr_and_node_share_parent(self, node_id, barr_node_id) -> bool:
+        node_in_contains_edges = [edge for edge in self.graph.in_edges(node_id) if
+                                  self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+        node_parents = [source for source, _ in node_in_contains_edges]
+        barr_in_contains_edges = [edge for edge in self.graph.in_edges(barr_node_id) if
+                                  self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+        barr_parents = [source for source, _ in barr_in_contains_edges]
+        shared_parents = [parent for parent in node_parents if parent in barr_parents]
+        if len(shared_parents) > 0:
+            return True
+        return False
+
     def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True):
         queue = [node_id]
         visited = []
@@ -885,6 +927,9 @@ class PCGraph(object):
             current = queue.pop()
             visited.append(current)
             if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
+                # check if found barrier and node share a common parent
+                if not self.__barr_and_node_share_parent(node_id, current):
+                    continue
                 if ignore_depend_clauses:
                     return current
                 else:
@@ -1025,6 +1070,53 @@ class PCGraph(object):
                 for _, target in out_seq_edges:
                     self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
             self.graph.remove_node(node)
+
+    def make_contained_nodes_part_of_sequence(self, node):
+        # every node should have one or 0 entry nodes
+        print("node: ", node)
+        contained_entry_points = get_sequence_entry_points(self, node)
+        out_seq_edges = []
+        if len(contained_entry_points) == 0:
+            pass
+        elif len(contained_entry_points) == 1:
+            # make contained sequence part of the sequence
+            print("NODE: ", node)
+            print("\tEntry points: ", contained_entry_points)
+            # enter recursion
+            last_contained_seq_node = self.make_contained_nodes_part_of_sequence(contained_entry_points[0])
+            # add contained sequence to outer sequence of node
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            for _, target in out_seq_edges:
+                self.graph.remove_edge(node, target)
+                self.graph.add_edge(node, contained_entry_points[0], type=EdgeType.SEQUENTIAL)
+                self.graph.add_edge(last_contained_seq_node, target, type=EdgeType.SEQUENTIAL)
+        else:
+            raise ValueError("Node should not have more than one entry point! Node:", node, self.plot_graph())
+
+        # start method for successor
+        successors = out_seq_edges
+        if len(successors) == 0:
+            # end of sequence reached
+            # return id of last node
+            return node
+        if len(successors) == 1:
+            # start method for successors
+            print("SUCCESSORS: ", successors)
+            return self.make_contained_nodes_part_of_sequence(successors[0])
+        else:
+            if type(self.graph.nodes[node]["data"]) == ForkNode:
+                # endpoint should be equal for all successors
+                endpoints = []
+                print("SUCCESSORS 2", successors)
+                for succ in successors:
+                    endpoints.append(self.make_contained_nodes_part_of_sequence(succ))
+                endpoints = list(set(endpoints))
+                if len(endpoints) > 1:
+                    raise ValueError("More than one endpoint encountered! Node:", node)
+                return endpoints[0]
+            else:
+                raise ValueError("Node should not have more than one successor! Node:", node, " Type: ", type(self.graph.nodes[node]["data"]), self.plot_graph())
 
     def add_fork_and_join_nodes(self):
         node_ids = copy.deepcopy(self.graph.nodes())
@@ -1340,6 +1432,17 @@ class PCGraph(object):
         for source, target in add_edge_buffer:
             self.graph.add_edge(source, taskwait_node, type=EdgeType.SEQUENTIAL)
             self.graph.add_edge(taskwait_node, target, type=EdgeType.SEQUENTIAL)
+
+    def remove_sequential_edges_between_tasks(self):
+        for node_1 in self.graph.nodes:
+            if type(self.graph.nodes[node_1]["data"]) != PragmaTaskNode:
+                continue
+            out_seq_edges = [edge for edge in self.graph.out_edges(node_1) if
+                             self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            for _, target in out_seq_edges:
+                if type(self.graph.nodes[target]["data"]) == PragmaTaskNode:
+                    self.graph.remove_edge(node_1, target)
+
 
     def add_fork_nodes_at_path_splits(self):
         buffer = copy.deepcopy(self.graph.nodes)
@@ -1685,6 +1788,59 @@ class PCGraph(object):
                 for var in shared_vars:
                     if var not in single_pragma.get_known_variables():
                         single_pragma.add_to_shared(var)
+
+    def create_sequence_for_contained_nodes(self):
+        for node in self.graph.nodes:
+            out_contained_edges = [edge for edge in self.graph.out_edges(node) if
+                                   self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            contained_nodes = [target for _, target in out_contained_edges]
+            successor_relations = dict()
+            for node_1 in contained_nodes:
+                for node_2 in contained_nodes:
+                    if node_1 == node_2:
+                        continue
+                    graph_node_1: PCGraphNode = self.graph.nodes[node_1]["data"]
+                    graph_node_2: PCGraphNode = self.graph.nodes[node_2]["data"]
+                    if graph_node_1.get_start_line() >= graph_node_2.get_end_line():
+                        if node_2 in successor_relations:
+                            successor_relations[node_2].append(node_1)
+                        else:
+                            successor_relations[node_2] = [node_1]
+            # remove unnecessary (transitive) relations
+            for key in successor_relations:
+                transitive_successors = []
+                for successor in successor_relations[key]:
+                    if successor not in successor_relations:
+                        continue
+                    transitive_successors += [t_suc for t_suc in successor_relations[successor] if t_suc not in transitive_successors]
+                # remove transitive successors from successor_relations
+                for t_suc in transitive_successors:
+                    successor_relations[key].remove(t_suc)
+            # add sequential edges for successor relations
+            for key in successor_relations:
+                for succ in successor_relations[key]:
+                    self.graph.add_edge(key, succ, type=EdgeType.SEQUENTIAL)
+
+    def combined_out_sequential_edges_into_single_sequence(self):
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for node in self.graph.nodes:
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                if len(out_seq_edges) <= 1:
+                    continue
+                print("NODE: ", node)
+                successors_and_start_lines = [self.graph.nodes[target]["data"] for _, target in out_seq_edges]
+                successors_and_start_lines = [(node, node.get_start_line()) for node in successors_and_start_lines]
+                sorted_successors = sorted(successors_and_start_lines, key=lambda x: x[1])
+                sorted_successors = [succ[0] for succ in sorted_successors]  # remove start line
+
+                for succ in sorted_successors:
+                    self.graph.remove_edge(node, succ.node_id)
+                self.graph.add_edge(node, sorted_successors[0].node_id, type=EdgeType.SEQUENTIAL)
+                for idx in range(0, len(sorted_successors) - 1):
+                    self.graph.add_edge(sorted_successors[idx].node_id, sorted_successors[idx+1].node_id, type=EdgeType.SEQUENTIAL)
 
 
     def restore_sequence_order(self):
