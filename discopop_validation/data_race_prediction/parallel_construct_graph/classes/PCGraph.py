@@ -736,7 +736,6 @@ class PCGraph(object):
                 # old version:
                 self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                 if region_start is None or region_end is None:
-                    self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
                     continue
 
                 # new node is also contained in parent of node
@@ -826,14 +825,42 @@ class PCGraph(object):
                     self.graph.edges[edge]["type"] = EdgeType.VIRTUAL_SEQUENTIAL
         pass
 
-    def __get_closest_successor_barrier_or_taskwait(self, node_id):
+    def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True):
         queue = [node_id]
         visited = []
         while len(queue) > 0:
             current = queue.pop()
             visited.append(current)
             if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
-                return current
+                if ignore_depend_clauses:
+                    return current
+                else:
+                    # check if found barrier is a valid option due to depend-clauses
+                    if self.graph.nodes[current]["data"].pragma is None:
+                        return current
+                    barr_depend_entries = self.graph.nodes[current]["data"].pragma.get_variables_listed_as("depend")
+                    barr_depend_in_entries = [var for mode, var in [entry.split(":") for entry in barr_depend_entries]
+                                              if mode == "in"]
+                    barr_depend_inout_entries = [var for mode, var in
+                                                 [entry.split(":") for entry in barr_depend_entries] if
+                                                 mode == "inout"]
+                    barr_depend_in_entries += barr_depend_inout_entries
+                    barr_depend_in_entries = [var.replace(" ", "") for var in barr_depend_in_entries]
+                    if len(barr_depend_in_entries) == 0:
+                        return current
+                    # check if node_id satisfies in_deps
+                    node_depend_entries = self.graph.nodes[node_id]["data"].pragma.get_variables_listed_as("depend")
+                    node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries]
+                                              if mode == "out"]
+                    node_depend_inout_entries = [var for mode, var in
+                                                 [entry.split(":") for entry in node_depend_entries] if
+                                                 mode == "inout"]
+                    node_depend_out_entries += node_depend_inout_entries
+                    node_depend_out_entries = [var.replace(" ", "") for var in node_depend_out_entries]
+                    if len([var for var in node_depend_out_entries if var in barr_depend_in_entries]) > 0:
+                        return current
+                    # no dependency between barrier and node, ignore
+
             # add successors of current to queue
             successors = [edge[1] for edge in self.graph.out_edges(current) if
                           self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
@@ -853,7 +880,7 @@ class PCGraph(object):
                     # skip task node as parent
                     result = None
                 else:
-                    result = self.__get_closest_successor_barrier_or_taskwait(current)
+                    result = self.__get_closest_successor_barrier_or_taskwait(current, ignore_depend_clauses=False)
                 if result is not None:
                     return result
                 for edge in self.graph.in_edges(current):
@@ -862,8 +889,8 @@ class PCGraph(object):
 
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
-                # find next BARRIER or TASKWAIT
-                next_barrier = self.__get_closest_successor_barrier_or_taskwait(node)
+                # find next BARRIER or TASKWAIT considering depend-clauses.
+                next_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
                 if next_barrier is None:
                     # no barrier found in successors, search in parent node
                     next_barrier = __get_closest_parent_barrier_or_taskwait(node)
@@ -1180,7 +1207,7 @@ class PCGraph(object):
 
     def add_depends_edges(self):
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
+            if self.graph.nodes[node]["data"].pragma is None:
                 continue
             # check if node has dependencies
             node_depend_entries = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("depend")
@@ -1201,7 +1228,7 @@ class PCGraph(object):
             for other_node in self.graph.nodes:
                 if node == other_node:
                     continue
-                if type(self.graph.nodes[other_node]["data"]) != PragmaTaskNode:
+                if self.graph.nodes[other_node]["data"].pragma is None:
                     continue
                 other_node_depend_entries = self.graph.nodes[other_node]["data"].pragma.get_variables_listed_as(
                     "depend")
@@ -1237,8 +1264,6 @@ class PCGraph(object):
     def replace_depends_with_sequential_edges(self):
         add_edge_buffer = []
         for node in self.graph.nodes:
-            if type(self.graph.nodes[node]["data"]) != PragmaTaskNode:
-                continue
             out_dep_edges = [edge for edge in self.graph.out_edges(node) if
                              self.graph.edges[edge]["type"] == EdgeType.DEPENDS]
             if len(out_dep_edges) == 0:

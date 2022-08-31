@@ -211,7 +211,6 @@ def __main_start_execution(run_configuration: Configuration):
 
         # insert calls edges
         pc_graph.insert_calls_edges(pet, omp_pragmas)
-        #pc_graph.plot_graph()
 
         # insert parallel sections for called functions
         pc_graph.insert_parallel_sections_for_called_functions()
