@@ -1210,10 +1210,8 @@ class PCGraph(object):
         for node in self.graph.nodes:
             if self.graph.nodes[node]["data"].pragma is None:
                 continue
-            print("Pragma: ", self.graph.nodes[node]["data"].pragma)
             # check if node has dependencies
             node_depend_entries = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("depend")
-            print("\tdeopends: ", node_depend_entries)
             if len(node_depend_entries) == 0:
                 # no depends entries exist, skip current node
                 continue
