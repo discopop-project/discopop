@@ -198,6 +198,9 @@ def __main_start_execution(run_configuration: Configuration):
 
         # insert edges into the graph
         pc_graph.add_edges(pet, omp_pragmas)
+        #pc_graph.plot_graph()
+        pc_graph.remove_redundant_contains_edges()
+        pc_graph.plot_graph()
 
         # remove all but the best fitting CALLS edges for each function call in the source code
         pc_graph.remove_incorrect_function_contains_edges()

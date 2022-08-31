@@ -495,6 +495,29 @@ class PCGraph(object):
                 self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
 
+    def remove_redundant_contains_edges(self):
+        """simplifies the contains relations."""
+        for node in self.graph.nodes:
+            in_contains_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            to_be_removed = []
+            contains_sources = [source for source, _ in in_contains_edges]
+            # check if contains relation between sources exists
+            parent_relations = []
+            for potential_parent in copy.deepcopy(contains_sources):
+                parent_out_contains_edges = [edge for edge in self.graph.out_edges(potential_parent) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                children = [target for _, target in parent_out_contains_edges]
+                children = [child for child in children if child in contains_sources]
+                for child in children:
+                    parent_relations.append((potential_parent, child))
+                    if (potential_parent, node) not in to_be_removed:
+                        to_be_removed.append((potential_parent, node))
+            for source, target in to_be_removed:
+                self.graph.remove_edge(source, target)
+
+
+
+
+
     def remove_redundant_edges(self, edge_types: List[EdgeType]):
 
         def __get_start_line(stl_target):
