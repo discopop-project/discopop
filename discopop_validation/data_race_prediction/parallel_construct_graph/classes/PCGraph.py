@@ -1815,11 +1815,14 @@ class PCGraph(object):
                     transitive_successors += [t_suc for t_suc in successor_relations[successor] if t_suc not in transitive_successors]
                 # remove transitive successors from successor_relations
                 for t_suc in transitive_successors:
-                    successor_relations[key].remove(t_suc)
+                    if t_suc in successor_relations[key]:
+                        successor_relations[key].remove(t_suc)
             # add sequential edges for successor relations
             for key in successor_relations:
                 for succ in successor_relations[key]:
-                    self.graph.add_edge(key, succ, type=EdgeType.SEQUENTIAL)
+                    # create edge if inverse edge does not exist already (in case of equal scopes)
+                    if (succ, key) not in self.graph.edges:
+                        self.graph.add_edge(key, succ, type=EdgeType.SEQUENTIAL)
 
     def combined_out_sequential_edges_into_single_sequence(self):
         modification_found = True
