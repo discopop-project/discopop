@@ -1,0 +1,207 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="fib" startsAtLine = "1:53" endsAtLine = "1:75">
+		<childrenNodes>1:1,1:2,1:4,1:5,1:6,1:7,1:8</childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="1:53">n</arg>
+		</funcArguments>
+		<funcReturnLines>1:56, 1:73, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:53" endsAtLine = "1:53">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:2</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:53">n</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:2" type="0" name="" startsAtLine = "1:55" endsAtLine = "1:55">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:4</CU>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:53">n</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:4" type="0" name="" startsAtLine = "1:56" endsAtLine = "1:56">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<returnInstructions count="1">1:56</returnInstructions>
+		<successors>
+			<CU>1:5</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:53">n</global>
+			<global type="i32*" defLine="LineNotFound">retval</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:5" type="0" name="" startsAtLine = "1:75" endsAtLine = "1:75">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>return</BasicBlockID>
+		<returnInstructions count="1">1:75</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="LineNotFound">retval</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:6" type="0" name="" startsAtLine = "1:59" endsAtLine = "1:63">
+		<childrenNodes>1:11,1:12</childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:7</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:59">i</local>
+			<local type="i32*" defLine="1:59">j</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:53">n</global>
+		</globalVariables>
+		<callsNode>
+			<nodeCalled atLine="1:61">1:11</nodeCalled>
+				<recursiveFunctionCall>fib 1:61,</recursiveFunctionCall>
+			<nodeCalled atLine="1:63">1:12</nodeCalled>
+				<recursiveFunctionCall>fib 1:63,</recursiveFunctionCall>
+		</callsNode>
+	</Node>
+
+	<Node id="1:11" type="3" name="fib" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="53">n</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
+	</Node>
+
+	<Node id="1:12" type="3" name="fib" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="53">n</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
+	</Node>
+
+	<Node id="1:7" type="0" name="" startsAtLine = "1:65" endsAtLine = "1:65">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:8</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:59">i</local>
+			<local type="i32*" defLine="1:59">j</local>
+			<local type="i32*" defLine="1:65">res</local>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:8" type="0" name="" startsAtLine = "1:73" endsAtLine = "1:73">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<returnInstructions count="1">1:73</returnInstructions>
+		<successors>
+			<CU>1:5</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:65">res</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="LineNotFound">retval</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+
+<Nodes>
+
+	<Node id="1:14" type="1" name="main" startsAtLine = "1:76" endsAtLine = "1:87">
+		<childrenNodes>1:15,1:16</childrenNodes>
+		<funcArguments>
+		</funcArguments>
+		<funcReturnLines>1:76, </funcReturnLines>
+	</Node>
+
+	<Node id="1:15" type="0" name="" startsAtLine = "1:76" endsAtLine = "1:83">
+		<childrenNodes>1:18</childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:16</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="GlobalVar">input</global>
+			<global type="i32*" defLine="1:78">result</global>
+		</globalVariables>
+		<callsNode>
+			<nodeCalled atLine="1:83">1:18</nodeCalled>
+				<recursiveFunctionCall>fib 1:83,</recursiveFunctionCall>
+		</callsNode>
+	</Node>
+
+	<Node id="1:18" type="3" name="fib" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="53">n</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
+	</Node>
+
+	<Node id="1:16" type="0" name="" startsAtLine = "1:86" endsAtLine = "1:87">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="1">1:87</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="GlobalVar">input</global>
+			<global type="i32*" defLine="1:78">result</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

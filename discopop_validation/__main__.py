@@ -187,8 +187,9 @@ def __main_start_execution(run_configuration: Configuration):
         for pragma in omp_pragmas:
             pc_graph.add_pragma_node(pragma)
 
+
         # insert nodes for called functions
-        # pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+        #pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
 
         # insert function nodes
         pc_graph.insert_function_nodes(pet)
@@ -196,124 +197,163 @@ def __main_start_execution(run_configuration: Configuration):
         # insert contains edges between function nodes and contained pragma nodes
         pc_graph.insert_function_contains_edges()
 
-        # insert edges into the graph
-        pc_graph.add_edges(pet, omp_pragmas)
-        #pc_graph.plot_graph()
-        pc_graph.remove_redundant_contains_edges()
-
-        # remove all but the best fitting CALLS edges for each function call in the source code
-        pc_graph.remove_incorrect_function_contains_edges()
-
-        # pass shared clauses to child nodes
-        pc_graph.pass_shared_clauses_to_childnodes()
-
-        # identify pragma target code sections
+        # insert TCS nodes
         for node in pc_graph.graph.nodes:
+            print("NODE: ", node)
             pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+            for tcs in pc_graph.graph.nodes[node]["data"].target_code_sections:
+                print("\tTCS: ", tcs)
 
-        # insert calls edges
-        pc_graph.insert_calls_edges(pet, omp_pragmas)
+        # insert PCGraph nodes for lines inbetween contained pragmas
+        pc_graph.plot_graph()
+        pc_graph.insert_pcg_nodes_inbetween_pragmas()
 
-        # insert parallel sections for called functions
-        pc_graph.insert_parallel_sections_for_called_functions()
+        # since no holes exists at this point in time, use the opportunity to draw accurate sequence edges
+        # between children nodes
+        pc_graph.draw_sequence_edges_for_contained_nodes()
 
-        for node in pc_graph.graph.nodes:
-            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
-
-        # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
-        pc_graph.apply_and_remove_threadprivate_pragma()
-
-
-        # remove redundant successor edges
-        pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
-        # move successor edges if source is contained in a different pragma
-        pc_graph.move_successor_edges_if_source_is_contained_in_pragma()
-        # move successor edges if target is contained in a different pragma
-        pc_graph.move_successor_edges_if_target_is_contained_in_pragma()
-        # create implicit barriers
-        pc_graph.insert_implicit_barriers()
-
-        # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
-        # add depends edges between interdependent TASK nodes
-        pc_graph.add_depends_edges()
-        # redirect successor edges of TASKS to next BARRIER or TASKWAIT
-        pc_graph.redirect_tasks_successors()
-        # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
-        pc_graph.replace_depends_with_sequential_edges()
-        # extract and insert behavior models for pragmas
         time_bhv_extraction_start = time.time()
         pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
         time_bhv_extraction_end = time.time()
-        # insert TaskGraphNodes to store behavior models
-#        pc_graph.insert_behavior_storage_nodes()
-        pc_graph.new_insert_behavior_storage_nodes()
-        pc_graph.remove_redundant_contains_edges()
 
-        # create sequence for contained nodes of every node
+        # remove PCGraphNodes without stored behavior information
+        pc_graph.remove_empty_pcgraph_nodes()
+
         pc_graph.plot_graph()
-        pc_graph.create_sequence_for_contained_nodes()
+
+
+
+#### OLD CODE
+
+        # insert edges into the graph
+#        pc_graph.add_edges(pet, omp_pragmas)
+        #pc_graph.plot_graph()
+#        pc_graph.remove_redundant_contains_edges()
+
+        # remove all but the best fitting CALLS edges for each function call in the source code
+#        pc_graph.remove_incorrect_function_contains_edges()
+
+        # pass shared clauses to child nodes
+#        pc_graph.pass_shared_clauses_to_childnodes()
+
+        # identify pragma target code sections
+#        for node in pc_graph.graph.nodes:
+#            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+
+        # insert calls edges
+#       pc_graph.insert_calls_edges(pet, omp_pragmas)
+
+        # insert sequential edge from root to un-called function (no function call in pragma occured)
+#        pc_graph.include_uncalled_functions()
+
+
+        # insert parallel sections for called functions
+#        pc_graph.insert_parallel_sections_for_called_functions()
+
+#        for node in pc_graph.graph.nodes:
+#            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+
+#        pc_graph.plot_graph()
+
+        # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
+#        pc_graph.apply_and_remove_threadprivate_pragma()
+
+
+        # remove redundant successor edges
+#        pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
+        # move successor edges if source is contained in a different pragma
+#        pc_graph.move_successor_edges_if_source_is_contained_in_pragma()
+        # move successor edges if target is contained in a different pragma
+#        pc_graph.move_successor_edges_if_target_is_contained_in_pragma()
+        # create implicit barriers
+#        pc_graph.insert_implicit_barriers()
+
+        # ORDER OF FOLLOWING 3 STATEMENTS MUST BE PRESERVED DUE TO MADE ASSUMPTIONS!
+        # add depends edges between interdependent TASK nodes
+#        pc_graph.add_depends_edges()
+        # redirect successor edges of TASKS to next BARRIER or TASKWAIT
+#        pc_graph.redirect_tasks_successors()
+        # modify SEQUENTIAL edge to represent the behavior of identified DEPENDS edges
+#        pc_graph.replace_depends_with_sequential_edges()
+        # extract and insert behavior models for pragmas
+#        time_bhv_extraction_start = time.time()
+#        pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+#        time_bhv_extraction_end = time.time()
+        # insert TaskGraphNodes to store behavior models
+##        pc_graph.insert_behavior_storage_nodes()
+#        pc_graph.new_insert_behavior_storage_nodes()
+#        pc_graph.remove_redundant_contains_edges()
+##        # create sequence for contained nodes of every node
+##        pc_graph.create_sequence_for_contained_nodes()
+##        pc_graph.new_create_sequence_for_contained_nodes()
 
         # remove sequential edges between tasks, as no ordering can be specified
-        pc_graph.remove_sequential_edges_between_tasks()
+#        pc_graph.remove_sequential_edges_between_tasks()
 
-        # if a node has multiple outgoing sequential edges, combine them into a single sequence
-        pc_graph.combined_out_sequential_edges_into_single_sequence()
-        pc_graph.plot_graph()
+#        # if a node has multiple outgoing sequential edges, combine them into a single sequence
+##        pc_graph.combined_out_sequential_edges_into_single_sequence()
 
         # restore sequence order after insertion of behavior storage nodes.
         # this step is not included in the insertion method to keep it slightly simpler.
-#        pc_graph.restore_sequence_order()
+##        pc_graph.restore_sequence_order()
+
+
 
         # remove FunctionNodes
         #pc_graph.plot_graph()
         #pc_graph.remove_function_nodes()
         #pc_graph.plot_graph()
         # remove redundant CONTAINS edges
-        pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
+#        pc_graph.remove_redundant_edges([EdgeType.CONTAINS])
         # replace SEQUENTIAL edges to Taskwait nodes with VIRTUAL_SEQUENTIAL edges
         # parallel_construct_graph.add_virtual_sequential_edges()
         # skip successive TASKWAIT node, if no prior TASK node exists
-        pc_graph.skip_taskwait_if_no_prior_task_exists()
-
-        pc_graph.add_fork_and_join_nodes()
+#        pc_graph.skip_taskwait_if_no_prior_task_exists()
+#        pc_graph.add_fork_and_join_nodes()
 
         # make contained nodes part of the sequence
 
         #pc_graph.make_contained_nodes_part_of_sequence(0)  # 0 is the id of the ROOT node
 
-        # remove TASKWAIT nodes without prior TASK node
-        pc_graph.remove_taskwait_without_prior_task()
-        #parallel_construct_graph.plot_graph()
-        # add join nodes prior to Barriers and Taskwait nodes
-        pc_graph.add_join_nodes_before_barriers()
-        # add join nodes at path merge points to reduce complexity
-        # NOT VALID
-        # parallel_construct_graph.add_join_nodes_before_path_merge()
-        # add fork nodes at path splits which are not caused by other FORK nodes
-        pc_graph.add_fork_nodes_at_path_splits()
-        # remove SINGLE nodes from graph and replace with contained nodes
-        pc_graph.replace_pragma_single_nodes()
-        # remove FOR nodes from graph and replace with contained nodes
-        pc_graph.replace_pragma_for_nodes()
-        # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
-        pc_graph.remove_single_incoming_join_node()
-        # remove sequential edges between Fork and Join nodes
-        pc_graph.remove_edges_between_fork_and_join()
-        # add BELONGS_TO edges between Fork and Join nodes
-        pc_graph.add_belongs_to_edges()
-        # mark behavior storage nodes which are already covered by fork nodes
-        pc_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
-        # add fork and join nodes around behavior storage node if it's not contained in a fork section
-        #pc_graph.add_fork_and_join_around_behavior_storage_nodes()
 
-        # remove behavior models from all but BehaviorStorageNodes
-        pc_graph.remove_behavior_models_from_nodes()
+### OLD OLD CODE
 
-        # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
 
-        # todo remove / ignore irrelevant join nodes
-        # todo enable nested fork nodes
-
+#        # remove TASKWAIT nodes without prior TASK node
+#        pc_graph.remove_taskwait_without_prior_task()
+#        #parallel_construct_graph.plot_graph()
+#        # add join nodes prior to Barriers and Taskwait nodes
+#        pc_graph.add_join_nodes_before_barriers()
+#        # add join nodes at path merge points to reduce complexity
+#        # NOT VALID
+#        # parallel_construct_graph.add_join_nodes_before_path_merge()
+#        # add fork nodes at path splits which are not caused by other FORK nodes
+#        pc_graph.add_fork_nodes_at_path_splits()
+#        # remove SINGLE nodes from graph and replace with contained nodes
+#        pc_graph.plot_graph()
+#        pc_graph.replace_pragma_single_nodes()
+##        pc_graph.apply_pragma_single_nodes()
+#        # remove FOR nodes from graph and replace with contained nodes
+#        pc_graph.replace_pragma_for_nodes()
+#        # remove join nodes with only one incoming SEQUENTIAL edge, if no ougoing sequential edge to Barrier or Taskwait exists
+#        pc_graph.remove_single_incoming_join_node()
+#        # remove sequential edges between Fork and Join nodes
+#        pc_graph.remove_edges_between_fork_and_join()
+#        # add BELONGS_TO edges between Fork and Join nodes
+#        pc_graph.add_belongs_to_edges()
+#        # mark behavior storage nodes which are already covered by fork nodes
+#        pc_graph.mark_behavior_storage_nodes_covered_by_fork_nodes()
+#        # add fork and join nodes around behavior storage node if it's not contained in a fork section
+#        #pc_graph.add_fork_and_join_around_behavior_storage_nodes()
+#
+#        # remove behavior models from all but BehaviorStorageNodes
+#        pc_graph.remove_behavior_models_from_nodes()
+#
+#        # replace successor edges of FORK node with outgoing CONTAINS edges and connect FORK node to JOIN node
+#
+#        # todo remove / ignore irrelevant join nodes
+#        # todo enable nested fork nodes
+#
         time_pc_graph_end = time.time()
         time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
         time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
@@ -323,12 +363,10 @@ def __main_start_execution(run_configuration: Configuration):
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
         pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
-        pc_graph.plot_graph()
-
         time_data_race_computation_start = time.time()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        memory_access_graph.plot_graph()
+        #memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

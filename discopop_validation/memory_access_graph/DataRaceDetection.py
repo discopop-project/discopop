@@ -92,10 +92,36 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if __originate_from_critical_section(amd_1, amd_2):
         return None
 
+    # requirement 8: ignore data races which stem from two different paths through the source code
+    if __originated_from_different_paths(amd_1, amd_2):
+        return None
+
     op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
     op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
     data_race_object = MAGDataRace(ma_node, op_1, op_2, is_weak_data_race)
     return data_race_object
+
+
+def __originated_from_different_paths(amd_1: AccessMetaData, amd_2: AccessMetaData):
+    """checks whether both accesses share a MUTEX-Modifier. If so, the data race is only valid if both accesses
+    originated from the same path. This is the case, if the digits after the last ':' are equal."""
+    mutexes_1 = [mod for mod in amd_1.operation.modifiers if mod[0] == OperationModifierType.MUTEX]
+    mutexes_2 = [mod for mod in amd_2.operation.modifiers if mod[0] == OperationModifierType.MUTEX]
+    # split modifiers into mutex-id + path id
+    split_mutexes_1 = [(x[:x.rfind(":")], x[x.rfind(":") + 1:]) for _, x in mutexes_1]
+    split_mutexes_2 = [(x[:x.rfind(":")], x[x.rfind(":") + 1:]) for _, x in mutexes_2]
+    # get overlap based on first value of split_mutexes
+    overlap = []
+    for mid_1, pid_1 in split_mutexes_1:
+        for mid_2, pid_2 in split_mutexes_2:
+            if mid_1 == mid_2:
+                overlap.append((mid_1, pid_1, pid_2))
+    # check if both accesses originated from different paths
+    for mutex_id, path_id_1, path_id_2 in overlap:
+        if path_id_1 != path_id_2:
+            return True
+    return False
+
 
 
 def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> bool:

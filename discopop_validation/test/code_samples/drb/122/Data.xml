@@ -1,0 +1,102 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="main" startsAtLine = "1:20" endsAtLine = "1:36">
+		<childrenNodes>1:1,1:6,1:10</childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="1:20">argc</arg>
+			<arg type="i8**" defLine="1:20">argv</arg>
+		</funcArguments>
+		<funcReturnLines>1:20, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:20" endsAtLine = "1:27">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:7</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:20">argc</local>
+			<local type="i8***" defLine="1:20">argv</local>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:23">i</global>
+			<global type="i32*" defLine="1:22">var</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:6" type="2" name="" startsAtLine = "1:27" endsAtLine = "1:32">
+		<childrenNodes>1:7,1:8,1:9</childrenNodes>
+	</Node>
+
+	<Node id="1:7" type="0" name="" startsAtLine = "1:27" endsAtLine = "1:27">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.cond</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:8</CU>
+			<CU>1:10</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:23">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:8" type="0" name="" startsAtLine = "1:30" endsAtLine = "1:32">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:9</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:22">var</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:9" type="0" name="" startsAtLine = "1:27" endsAtLine = "1:27">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:7</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:23">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:10" type="0" name="" startsAtLine = "1:35" endsAtLine = "1:36">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end</BasicBlockID>
+		<returnInstructions count="1">1:36</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:22">var</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

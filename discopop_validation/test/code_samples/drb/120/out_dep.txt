@@ -1,0 +1,9 @@
+START 1:18
+1:35 NOM  RAW 1:34|error
+1:30 NOM  RAW 1:25|var WAR 1:30|var
+1:34 NOM  INIT *|error RAW 1:30|var
+1:25 NOM  RAW 1:20|var WAR 1:25|var
+1:33 NOM  RAW 1:30|var
+1:20 NOM  INIT *|var
+1:18 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:35 END program

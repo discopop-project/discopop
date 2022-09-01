@@ -1,0 +1,17 @@
+START 1:68
+1:62 BGN loop 1000
+1:66 END loop
+1:74 BGN func 1:57
+1:66 END func
+1:77 NOM  RAW 1:72|newSyy
+1:74 NOM  RAW 1:70|length RAW 1:71|newSxx RAW 1:72|newSyy
+1:72 NOM  INIT *|newSyy RAW 1:70|length
+1:64 NOM  INIT *|newSyy RAW 1:57|newSyy RAW 1:62|i
+1:71 NOM  INIT *|newSxx RAW 1:70|length
+1:76 NOM  RAW 1:71|newSxx
+1:57 NOM  INIT *|length INIT *|newSxx INIT *|newSyy
+1:63 NOM  INIT *|newSxx RAW 1:57|newSxx RAW 1:62|i
+1:70 NOM  INIT *|length
+1:62 NOM  INIT *|i RAW 1:57|length RAW 1:62|i WAR 1:62|i
+1:68 NOM  INIT *|retval
+1:78 END program

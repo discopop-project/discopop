@@ -1,0 +1,45 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="main" startsAtLine = "1:26" endsAtLine = "1:38">
+		<childrenNodes>1:1,1:2</childrenNodes>
+		<funcArguments>
+		</funcArguments>
+		<funcReturnLines>1:26, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:26" endsAtLine = "1:31">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:2</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="GlobalVar">tp</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:2" type="0" name="" startsAtLine = "1:35" endsAtLine = "1:38">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="1">1:38</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="GlobalVar">tp</global>
+			<global type="i32*" defLine="GlobalVar">var</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

@@ -1,0 +1,220 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="main" startsAtLine = "1:58" endsAtLine = "1:81">
+		<childrenNodes>1:1,1:5,1:9,1:10,1:14,1:16,1:17,1:18</childrenNodes>
+		<funcArguments>
+		</funcArguments>
+		<funcReturnLines>1:58, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:58" endsAtLine = "1:65">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="1:60">len</global>
+			<global type="i32*" defLine="1:61">sum</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:5" type="2" name="" startsAtLine = "1:65" endsAtLine = "1:68">
+		<childrenNodes>1:6,1:7,1:8</childrenNodes>
+	</Node>
+
+	<Node id="1:6" type="0" name="" startsAtLine = "1:65" endsAtLine = "1:65">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.cond</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:7</CU>
+			<CU>1:9</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="1:60">len</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:7" type="0" name="" startsAtLine = "1:67" endsAtLine = "1:68">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:8</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="GlobalVar">sum0</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:8" type="0" name="" startsAtLine = "1:65" endsAtLine = "1:65">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:9" type="0" name="" startsAtLine = "1:71" endsAtLine = "1:75">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:11</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="1:61">sum</global>
+			<global type="i32*" defLine="GlobalVar">sum0</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:10" type="2" name="" startsAtLine = "1:75" endsAtLine = "1:78">
+		<childrenNodes>1:11,1:12,1:13</childrenNodes>
+	</Node>
+
+	<Node id="1:11" type="0" name="" startsAtLine = "1:75" endsAtLine = "1:75">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.cond2</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:12</CU>
+			<CU>1:14</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="1:60">len</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:12" type="0" name="" startsAtLine = "1:77" endsAtLine = "1:78">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body4</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:13</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+			<global type="i32*" defLine="GlobalVar">sum1</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:13" type="0" name="" startsAtLine = "1:75" endsAtLine = "1:75">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc6</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:11</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:14" type="0" name="" startsAtLine = "1:79" endsAtLine = "1:80">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end8</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:16</CU>
+			<CU>1:18</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:61">sum</global>
+			<global type="i32*" defLine="GlobalVar">sum1</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:16" type="0" name="" startsAtLine = "1:80" endsAtLine = "1:80">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<returnInstructions count="1">1:80</returnInstructions>
+		<successors>
+			<CU>1:17</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:17" type="0" name="" startsAtLine = "1:81" endsAtLine = "1:81">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.end</BasicBlockID>
+		<returnInstructions count="1">1:81</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:18" type="0" name="" startsAtLine = "1:80" endsAtLine = "1:80">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

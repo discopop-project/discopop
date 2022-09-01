@@ -1,0 +1,10 @@
+START 1:38
+1:41 BGN func 1:20
+1:35 END func
+1:33 NOM  RAW 1:28|y
+1:28 NOM  RAW 1:22|y WAR 1:28|y
+1:22 NOM  INIT *|x INIT *|y
+1:38 NOM  INIT *|retval
+1:25 NOM  RAW 1:22|x WAR 1:25|x
+1:32 NOM  RAW 1:25|x
+1:43 END program

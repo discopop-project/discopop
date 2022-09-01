@@ -1,0 +1,3 @@
+ FileID : 1 Loop Line Number : 75 Reduction Line Number : 76 Variable Name : sum2 Operation Name : +
+ FileID : 1 Loop Line Number : 70 Reduction Line Number : 71 Variable Name : sum Operation Name : +
+ FileID : 1 Loop Line Number : 68 Reduction Line Number : 71 Variable Name : sum Operation Name : +

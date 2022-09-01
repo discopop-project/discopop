@@ -1,0 +1,6 @@
+OMPTaskDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:25:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:25:4
+OMPTaskDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:28:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:28:9
+OMPTaskwaitDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:30:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:30:88
+OMPTaskwaitDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:34:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:34:88
+OMPParallelDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:41:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:42:7
+OMPSingleDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:42:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/167/simple.c:42:7

@@ -1,0 +1,76 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="main" startsAtLine = "1:54" endsAtLine = "1:67">
+		<childrenNodes>1:1,1:4,1:6,1:7</childrenNodes>
+		<funcArguments>
+		</funcArguments>
+		<funcReturnLines>1:54, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:54" endsAtLine = "1:59">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:4</CU>
+			<CU>1:7</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:56">numThreads</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:4" type="0" name="" startsAtLine = "1:60" endsAtLine = "1:61">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<returnInstructions count="1">1:61</returnInstructions>
+		<successors>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:56">numThreads</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:6" type="0" name="" startsAtLine = "1:67" endsAtLine = "1:67">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.end</BasicBlockID>
+		<returnInstructions count="1">1:67</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:7" type="0" name="" startsAtLine = "1:64" endsAtLine = "1:64">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:56">numThreads</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

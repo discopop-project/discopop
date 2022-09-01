@@ -75,8 +75,8 @@ class MemoryAccessGraph(object):
         #self.plot_graph()
 
     def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
-        # if self.run_configuration.verbose_mode:
-        #     print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+        if self.run_configuration.verbose_mode:
+             print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
 
         # modify the memory access graph according to the current node
         self.__modify_memory_access_graph(pc_graph, pc_graph_node, pu_stack, current_path)
@@ -149,6 +149,9 @@ class MemoryAccessGraph(object):
         # check if last entry needs to be removed and remove it if so
         self.__close_last_pu_entry(pc_graph, pc_graph_node, pu_stack)
 
+        # check if new entry needs to be created
+        self.__push_substitute_pu_entry(pc_graph, pc_graph_node, pu_stack)
+
     def __create_new_pu_entry(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
         """"create a new entry if any of the following node types is encountered:
             PARALLEL
@@ -180,3 +183,10 @@ class MemoryAccessGraph(object):
                     else:
                         # restart search
                         pu_stack.pop()
+
+    def __push_substitute_pu_entry(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack):
+        """pushes a new pu entry if it is required.
+        Pushing a new PU Entry is required for:
+        - BARRIER and TASKWAIT nodes."""
+        if type(pc_graph_node) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+            pu_stack.push(self.__get_new_parallel_frame_id(), pc_graph_node)

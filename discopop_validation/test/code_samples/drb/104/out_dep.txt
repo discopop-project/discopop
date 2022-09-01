@@ -1,0 +1,18 @@
+START 1:55
+1:67 BGN loop 1000
+1:73 END loop
+1:61 BGN loop 1000
+1:67 END loop
+1:77 NOM  WAW 1:55|retval
+1:62 NOM  INIT *|a RAW 1:61|i
+1:61 NOM  INIT *|i RAW 1:58|len RAW 1:61|i WAR 1:61|i
+1:78 NOM  RAW 1:59|saved_stack RAW 1:77|retval
+1:67 NOM  RAW 1:58|len RAW 1:67|i WAR 1:61|i WAR 1:67|i
+1:59 NOM  INIT *|__vla_expr0 INIT *|b INIT *|saved_stack RAW 1:58|len
+1:58 NOM  INIT *|len
+1:68 NOM  RAW 1:59|b RAW 1:62|a RAW 1:67|i WAR 1:68|a
+1:55 NOM  INIT *|retval
+1:73 NOM  INIT *|error RAW 1:68|a
+1:75 NOM  RAW 1:73|error
+1:76 NOM  RAW 1:73|error
+1:78 END program

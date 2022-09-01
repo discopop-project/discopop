@@ -1,0 +1,9 @@
+START 1:51
+1:55 BGN loop 100
+1:58 END loop
+1:51 NOM  INIT *|retval
+1:58 NOM  RAW 1:56|x
+1:55 NOM  INIT *|i RAW 1:55|i WAR 1:55|i
+1:56 NOM  RAW 1:53|x RAW 1:56|x WAR 1:56|x
+1:53 NOM  INIT *|x
+1:59 END program

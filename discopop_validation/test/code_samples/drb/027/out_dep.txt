@@ -1,0 +1,7 @@
+START 1:54
+1:66 NOM  RAW 1:63|i
+1:61 NOM  WAW 1:56|i
+1:54 NOM  INIT *|retval
+1:63 NOM  WAW 1:61|i
+1:56 NOM  INIT *|i
+1:67 END program

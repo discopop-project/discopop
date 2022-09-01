@@ -1,0 +1,2 @@
+xa1[idx]
+xa2[idx]

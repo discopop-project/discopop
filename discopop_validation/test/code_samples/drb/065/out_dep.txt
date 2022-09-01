@@ -1,0 +1,11 @@
+START 1:54
+1:62 BGN loop 2000000000
+1:67 END loop
+1:64 NOM  RAW 1:56|pi RAW 1:63|x RAW 1:64|pi WAR 1:64|pi
+1:63 NOM  INIT *|x RAW 1:59|interval_width RAW 1:62|i WAR 1:64|x
+1:54 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:67 NOM  WAR 1:67|pi
+1:59 NOM  INIT *|interval_width
+1:56 NOM  INIT *|pi
+1:62 NOM  INIT *|i RAW 1:62|i WAR 1:62|i
+1:69 END program
