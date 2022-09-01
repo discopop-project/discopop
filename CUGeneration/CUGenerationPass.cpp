@@ -295,18 +295,19 @@ void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, st
         for(BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction){
             // search for call instructions to @llvm.dbg.declare
             if(isa<CallInst>(instruction)){
-                CallInst* call = cast<CallInst>(instruction);
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                        CallInst* call = cast<CallInst>(instruction);
                 // check if @llvm.dbg.declare is called
-                std::string dbg_declare = "llvm.dbg.declare";
-                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
-                if(cmp_res == 0){
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
                     // call to @llvm.dbg.declare found
-
                     // extract original and working variable name
                     string SRCVarName;
                     string IRVarName;
-
-                    
 
                     Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
                     if (isa<ValueAsMetadata>(Meta)){
@@ -326,6 +327,7 @@ void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, st
                       (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
                     }
                 }
+            }
             }
         }
     }

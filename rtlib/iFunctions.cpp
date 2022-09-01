@@ -26,7 +26,7 @@ using namespace dputil;
 
 bool DP_DEBUG = false; // debug flag
 
-bool USE_PERFECT = false;
+bool USE_PERFECT = true;
 // Shadow memory parameters
 int32_t SIG_ELEM_BIT = 24;
 int32_t SIG_NUM_ELEM = 270000;
@@ -438,7 +438,9 @@ namespace __dp
                if (chunks[id].size())
                {
                     // take a chunk of memory accesses from the queue
-                    AccessInfo *accesses = chunks[id].front();
+                    AccessInfo *accesses = new AccessInfo();
+                    accesses = NULL;
+                    accesses = chunks[id].front();
                     chunks[id].pop();
 
                     // unlock the mutex so that the master thread can add more chunks
@@ -496,7 +498,8 @@ namespace __dp
                     }
 
                     // delete the current chunk at the end
-                    delete[] accesses;
+                    if(accesses)
+                         delete[] accesses;
                }
 
                if (!isLocked)
@@ -617,7 +620,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "instLoad at encoded LID " << std::dec << lid << " and addr " << std::hex << addr << endl;
+                    cout << "instLoad at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
                //addAccessInfo(true, lid, var, addr);
@@ -669,7 +672,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "instStore at encoded LID " << std::dec << lid << " and addr " << std::hex << addr << endl;
+                    cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
                //addAccessInfo(false, lid, var, addr);
@@ -721,7 +724,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "instStore at encoded LID " << std::dec << lid << " and addr " << std::hex << addr << endl;
+                    cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
                //addAccessInfo(false, lid, var, addr);
@@ -774,7 +777,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "instStore at encoded LID " << std::dec << lid << " and addr " << std::hex << addr << endl;
+                    cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
                //addAccessInfo(false, lid, var, addr);
@@ -831,7 +834,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "Program terminates at LID " << std::dec << lid << ", clearing up" << endl;
+                    cout << "Program terminates at LID " << std::dec << decodeLID(lid) << ", clearing up" << endl;
                }
 
                finalizeParallelization();
@@ -958,16 +961,16 @@ namespace __dp
 
                     if (DP_DEBUG)
                     {
-                         cout << "DP initialized at LID " << std::dec << lid << endl;
+                         cout << "DP initialized at LID " << std::dec << decodeLID(lid) << endl;
                     }
-                    initParallelization();
                     dpInited = true;
+                    initParallelization();
                }
                else if (targetTerminated)
                {
                     if (DP_DEBUG)
                     {
-                         cout << "Entering function LID " << std::dec << lid;
+                         cout << "Entering function LID " << std::dec << decodeLID(lid);
                          cout << " but target program has returned from main(). Destructors?" << endl;
                     }
                }
@@ -982,10 +985,10 @@ namespace __dp
 
                     if (DP_DEBUG)
                     {
-                         cout << "Entering function LID " << std::dec << lid << endl;
+                         cout << "Entering function LID " << std::dec << decodeLID(lid) << endl;
                          cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
                     }
-
+                    // cout << "+++++ " << syscall(__NR_gettid) << "\n";
                     BGNFuncList::iterator func = beginFuncs->find(lastCallOrInvoke);
                     if (func == beginFuncs->end())
                     {
@@ -1014,7 +1017,7 @@ namespace __dp
                {
                     if (DP_DEBUG)
                     {
-                         cout << "Exiting function LID " << std::dec << lid;
+                         cout << "Exiting function LID " << std::dec << decodeLID(lid);
                          cout << " but target program has returned from main(). Destructors?" << endl;
                     }
                     return;
@@ -1032,6 +1035,7 @@ namespace __dp
                     // No way to get the real end line of loop. Use the line where
                     // function returns instead.
                     LoopRecords::iterator loop = loops->find(loopStack->top().begin);
+                    // cout << "---- " << decodeLID(loop->first) << "\n";
                     assert(loop != loops->end() && "A loop ends without its entry being recorded.");
                     if (loop->second->end == 0)
                     {
@@ -1072,7 +1076,7 @@ namespace __dp
 
                if (DP_DEBUG)
                {
-                    cout << "Exiting fucntion LID " << std::dec << lid << endl;
+                    cout << "Exiting fucntion LID " << std::dec << decodeLID(lid) << endl;
                     cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
                }
           }

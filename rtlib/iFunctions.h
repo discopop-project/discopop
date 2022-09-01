@@ -24,6 +24,9 @@
 #include <unordered_set>
 #include <utility>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 #include "DPUtils.h"
 // hybrid analysis
  #include <regex>
