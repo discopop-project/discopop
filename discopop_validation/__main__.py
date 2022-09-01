@@ -221,7 +221,7 @@ def __main_start_execution(run_configuration: Configuration):
 
         pc_graph.plot_graph()
 
-
+#        pc_graph.insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
 
 #### OLD CODE
 
