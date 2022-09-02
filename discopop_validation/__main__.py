@@ -143,6 +143,49 @@ def main():
         __main_start_execution(run_configuration)
 
 
+def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
+    # insert nodes for called functions
+    # pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
+
+    # insert function nodes
+    pc_graph.insert_function_nodes(pet)
+
+    # insert contains edges between function nodes and contained pragma nodes
+    pc_graph.insert_function_contains_edges()
+
+    # identify target code sections of pragmas
+    for node in pc_graph.graph.nodes:
+        pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+
+    # insert PCGraph nodes for lines inbetween contained pragmas
+    pc_graph.insert_pcg_nodes_inbetween_pragmas()
+
+    # if nodes are contained in each other, they are not part of the created sequence.
+    # create contains edges for between such nodes
+    pc_graph.draw_node_contains_edges()
+
+    # since no holes exists at this point in time, use the opportunity to draw accurate sequence edges
+    # between children nodes
+    pc_graph.draw_sequence_edges_for_contained_nodes()
+
+    pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+
+    # remove PCGraphNodes without stored behavior information
+    pc_graph.plot_graph()
+    pc_graph.remove_empty_pcgraph_nodes()
+
+    # insert calls edges
+    pc_graph.insert_calls_edges(pet, omp_pragmas)
+
+    # insert parallel sections for called functions
+    pc_graph.insert_parallel_sections_for_called_functions()
+
+    # insert sequential edge from root to un-called function (no function call in pragma occured)
+    pc_graph.include_uncalled_functions()
+
+    return pc_graph
+
+
 def __main_start_execution(run_configuration: Configuration):
     time_start_execution = time.time()
     if run_configuration.arguments["--profiling"] == "true":
@@ -187,51 +230,12 @@ def __main_start_execution(run_configuration: Configuration):
         for pragma in omp_pragmas:
             pc_graph.add_pragma_node(pragma)
 
-
-        # insert nodes for called functions
-        #pc_graph.insert_called_function_nodes_and_calls_edges(pet, omp_pragmas)
-
-        # insert function nodes
-        pc_graph.insert_function_nodes(pet)
-
-        # insert contains edges between function nodes and contained pragma nodes
-        pc_graph.insert_function_contains_edges()
-
-        # identify target code sections of pragmas
-        for node in pc_graph.graph.nodes:
-            pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
-
-        # insert PCGraph nodes for lines inbetween contained pragmas
-        pc_graph.insert_pcg_nodes_inbetween_pragmas()
-
-        # if nodes are contained in each other, they are not part of the created sequence.
-        # create contains edges for between such nodes
-        pc_graph.draw_node_contains_edges()
-
-        # since no holes exists at this point in time, use the opportunity to draw accurate sequence edges
-        # between children nodes
-        pc_graph.draw_sequence_edges_for_contained_nodes()
-
-        time_bhv_extraction_start = time.time()
-        pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
-        time_bhv_extraction_end = time.time()
-
-        # remove PCGraphNodes without stored behavior information
-        pc_graph.remove_empty_pcgraph_nodes()
+        pc_graph = generic_preparation(pet, pc_graph, run_configuration, omp_pragmas)
 
         ##### TEST
-        # insert calls edges
-        pc_graph.insert_calls_edges(pet, omp_pragmas)
-
-        # insert sequential edge from root to un-called function (no function call in pragma occured)
-        #        pc_graph.include_uncalled_functions()
-
-        # insert parallel sections for called functions
-        #        pc_graph.insert_parallel_sections_for_called_functions()
-
-
 
         ##### END OF TEST
+
         pc_graph.plot_graph()
 
 
@@ -372,8 +376,8 @@ def __main_start_execution(run_configuration: Configuration):
 #        # todo enable nested fork nodes
 #
         time_pc_graph_end = time.time()
-        time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
-        time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
+#        time_total_pc_graph += time_pc_graph_end - time_pc_graph_start - (time_bhv_extraction_end - time_bhv_extraction_start)
+#        time_bhv_extraction_total += time_bhv_extraction_end - time_bhv_extraction_start
 
 
         # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
@@ -464,5 +468,3 @@ def __main_start_execution(run_configuration: Configuration):
 
 if __name__ == "__main__":
     main()
-
-
