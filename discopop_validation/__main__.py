@@ -197,16 +197,16 @@ def __main_start_execution(run_configuration: Configuration):
         # insert contains edges between function nodes and contained pragma nodes
         pc_graph.insert_function_contains_edges()
 
-        # insert TCS nodes
+        # identify target code sections of pragmas
         for node in pc_graph.graph.nodes:
-            print("NODE: ", node)
             pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
-            for tcs in pc_graph.graph.nodes[node]["data"].target_code_sections:
-                print("\tTCS: ", tcs)
 
         # insert PCGraph nodes for lines inbetween contained pragmas
-        pc_graph.plot_graph()
         pc_graph.insert_pcg_nodes_inbetween_pragmas()
+
+        # if nodes are contained in each other, they are not part of the created sequence.
+        # create contains edges for between such nodes
+        pc_graph.draw_node_contains_edges()
 
         # since no holes exists at this point in time, use the opportunity to draw accurate sequence edges
         # between children nodes
@@ -219,7 +219,24 @@ def __main_start_execution(run_configuration: Configuration):
         # remove PCGraphNodes without stored behavior information
         pc_graph.remove_empty_pcgraph_nodes()
 
+        ##### TEST
+        # insert calls edges
+        pc_graph.insert_calls_edges(pet, omp_pragmas)
+
+        # insert sequential edge from root to un-called function (no function call in pragma occured)
+        #        pc_graph.include_uncalled_functions()
+
+        # insert parallel sections for called functions
+        #        pc_graph.insert_parallel_sections_for_called_functions()
+
+
+
+        ##### END OF TEST
         pc_graph.plot_graph()
+
+
+
+
 
 #        pc_graph.insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
 

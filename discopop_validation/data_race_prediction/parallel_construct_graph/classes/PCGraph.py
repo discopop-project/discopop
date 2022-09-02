@@ -259,6 +259,8 @@ class PCGraph(object):
                         else:
                             # not recursive
                             self.graph.add_edge(node, inner_node, type=EdgeType.CALLS)
+        # remove redundant calls edges
+        self.remove_redundant_calls_edges()
 
     def include_uncalled_functions(self):
         for node in self.graph.nodes:
@@ -521,6 +523,26 @@ class PCGraph(object):
             for source, target in to_be_removed:
                 self.graph.remove_edge(source, target)
 
+
+    def remove_redundant_calls_edges(self):
+        """simplifies the contains relations."""
+        for node in self.graph.nodes:
+            in_calls_edges = [edge for edge in self.graph.in_edges(node) if
+                              self.graph.edges[edge]["type"] == EdgeType.CALLS]
+            to_be_removed = []
+            call_sources = [source for source, _ in in_calls_edges]
+            # check if contains relation between sources exists
+            parent_relations = []
+            for potential_parent in copy.deepcopy(call_sources):
+                parent_out_contains_edges = [edge for edge in self.graph.out_edges(potential_parent) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                children = [target for _, target in parent_out_contains_edges]
+                children = [child for child in children if child in call_sources]
+                for child in children:
+                    parent_relations.append((potential_parent, child))
+                    if (potential_parent, node) not in to_be_removed:
+                        to_be_removed.append((potential_parent, node))
+            for source, target in to_be_removed:
+                self.graph.remove_edge(source, target)
 
 
 
@@ -1979,6 +2001,27 @@ class PCGraph(object):
                         # direct successors
                         self.graph.add_edge(entry_1[0], entry_2[0], type=EdgeType.SEQUENTIAL)
 
+
+    def draw_node_contains_edges(self):
+        for node in self.graph.nodes:
+            node_obj = self.graph.nodes[node]["data"]
+            # get the list of contained nodes
+            contained_nodes = [edge[1] for edge in self.graph.out_edges(node) if
+                               self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            # pairwise check contained relation
+            for node_1 in contained_nodes:
+                for node_2 in contained_nodes:
+                    if node_1 == node_2:
+                        continue
+                    node_1_obj = self.graph.nodes[node_1]["data"]
+                    node_2_obj = self.graph.nodes[node_2]["data"]
+                    # check if node_2 is contained in node_1
+                    if node_1_obj.get_start_line() <= node_2_obj.get_start_line() and \
+                        node_1_obj.get_end_line() >= node_2_obj.get_end_line():
+                        # node_2 contained in node_1
+                        self.graph.add_edge(node_1, node_2, type=EdgeType.CONTAINS)
+        # remove redundant contains edges
+        self.remove_redundant_contains_edges()
 
 
     def __get_sequence_range(self, entry_point) -> Tuple[int, int]:
