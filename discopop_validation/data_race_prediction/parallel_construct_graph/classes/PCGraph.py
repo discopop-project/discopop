@@ -936,6 +936,7 @@ class PCGraph(object):
         return False
 
     def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True):
+        print("TODO FIX, so barriers are found across parents.!")
         queue = [node_id]
         visited = []
         while len(queue) > 0:
@@ -951,6 +952,7 @@ class PCGraph(object):
                     # check if found barrier is a valid option due to depend-clauses
                     if self.graph.nodes[current]["data"].pragma is None:
                         return current
+
                     barr_depend_entries = self.graph.nodes[current]["data"].pragma.get_variables_listed_as("depend")
                     barr_depend_in_entries = [var for mode, var in [entry.split(":") for entry in barr_depend_entries]
                                               if mode == "in"]
@@ -962,14 +964,19 @@ class PCGraph(object):
                     if len(barr_depend_in_entries) == 0:
                         return current
                     # check if node_id satisfies in_deps
-                    node_depend_entries = self.graph.nodes[node_id]["data"].pragma.get_variables_listed_as("depend")
-                    node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries]
-                                              if mode == "out"]
-                    node_depend_inout_entries = [var for mode, var in
-                                                 [entry.split(":") for entry in node_depend_entries] if
-                                                 mode == "inout"]
-                    node_depend_out_entries += node_depend_inout_entries
-                    node_depend_out_entries = [var.replace(" ", "") for var in node_depend_out_entries]
+                    # if pragma of node is None, it can not have any dependences
+                    if self.graph.nodes[node_id]["data"].pragma is not None:
+                        node_depend_entries = self.graph.nodes[node_id]["data"].pragma.get_variables_listed_as("depend")
+                        node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries]
+                                                  if mode == "out"]
+                        node_depend_inout_entries = [var for mode, var in
+                                                     [entry.split(":") for entry in node_depend_entries] if
+                                                     mode == "inout"]
+                        node_depend_out_entries += node_depend_inout_entries
+                        node_depend_out_entries = [var.replace(" ", "") for var in node_depend_out_entries]
+                    else:
+                        # no dependences can exist
+                        node_depend_out_entries = []
                     if len([var for var in node_depend_out_entries if var in barr_depend_in_entries]) > 0:
                         return current
                     # no dependency between barrier and node, ignore
@@ -1518,6 +1525,16 @@ class PCGraph(object):
                 self.graph.remove_edge(node, target)
                 self.graph.add_edge(new_node_id, target, type=EdgeType.SEQUENTIAL)
             self.graph.add_edge(node, new_node_id, type=EdgeType.SEQUENTIAL)
+
+    def mark_barrier_affiliations(self):
+        """create belongs_to edges between each node and it's immediate successiv Barrier"""
+        for node in self.graph.nodes:
+            print("NODE: ", node)
+            closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
+            print("\tBARR: ", closest_barrier)
+            if closest_barrier is not None:
+                if node != closest_barrier:
+                    self.graph.add_edge(node, closest_barrier, type=EdgeType.BELONGS_TO)
 
     def add_belongs_to_edges(self):
         for node in self.graph.nodes:
