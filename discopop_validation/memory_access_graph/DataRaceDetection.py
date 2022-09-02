@@ -69,32 +69,42 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if (not amd_1.access_mode == "w") and (not amd_2.access_mode == "w"):
         return None
 
+    print()
+    print("AMD1: ", amd_1.operation, " -> ", amd_1.origin_bhv_node.node_id)
+    print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
+
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
     if __path_predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
         # predecessor relation exists
         return None
+    print("\t3")
 
     # requirement 4: check for PCGraph predecessor relations
     if __pcgraph_predecessor_relation(amd_1, amd_2, pc_graph):
         return None
+    print("\t4")
 
     # requirement 5: check if the identified data race is backed up by a dependency edge in the PET Graph
     is_weak_data_race = False
     if not __pet_dependency_edge_exists(amd_1, amd_2, pet):
         is_weak_data_race = True
         return None
+    print("\t5")
 
     # requirement 6: ignore data race if it originates from a reduction operation
     if __originate_from_reduction_operation(amd_1, amd_2):
         return None
+    print("\t6")
 
     # requirement 7: ignore data race if at least one access originates from a critical section
     if __originate_from_critical_section(amd_1, amd_2):
         return None
+    print("\t7")
 
     # requirement 8: ignore data races which stem from two different paths through the source code
     if __originated_from_different_paths(amd_1, amd_2):
         return None
+    print("\t8")
 
     op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
     op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
@@ -163,10 +173,10 @@ def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData,
     # check both directions
     result = False
     result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
-                                                                                  amd_2.origin_bhv_node.node_id)
+                                                                                  amd_2.origin_bhv_node.node_id, [])
 
     result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
-                                                                                  amd_1.origin_bhv_node.node_id)
+                                                                                  amd_1.origin_bhv_node.node_id, [])
     return result
 
 

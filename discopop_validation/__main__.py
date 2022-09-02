@@ -155,7 +155,9 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     # identify target code sections of pragmas
     for node in pc_graph.graph.nodes:
+        print("NODE: ", node)
         pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+        print(pc_graph.graph.nodes[node]["data"].target_code_sections)
 
     # insert PCGraph nodes for lines inbetween contained pragmas
     pc_graph.insert_pcg_nodes_inbetween_pragmas()
@@ -164,14 +166,18 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
     # create contains edges for between such nodes
     pc_graph.draw_node_contains_edges()
 
+    pc_graph.remove_redundant_contains_edges()
+
     # since no holes exists at this point in time, use the opportunity to draw accurate sequence edges
     # between children nodes
     pc_graph.draw_sequence_edges_for_contained_nodes()
 
+    # create sequence edges between contained nodes, but this time it does not require perfect continuity
+    pc_graph.draw_sequence_edges_for_contained_nodes_2()
+
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # remove PCGraphNodes without stored behavior information
-    pc_graph.plot_graph()
     pc_graph.remove_empty_pcgraph_nodes()
 
     # insert calls edges
@@ -180,8 +186,40 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
     # insert parallel sections for called functions
     pc_graph.insert_parallel_sections_for_called_functions()
 
+    # pass shared clauses to child nodes
+    pc_graph.pass_shared_clauses_to_childnodes()
+
+    # identify target code sections of pragmas
+    for node in pc_graph.graph.nodes:
+        print("NODE: ", node)
+        pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
+        print(pc_graph.graph.nodes[node]["data"].target_code_sections)
+
+    pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
+
+    pc_graph.new_insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
+
     # insert sequential edge from root to un-called function (no function call in pragma occured)
     pc_graph.include_uncalled_functions()
+
+    # create implicit barriers
+    pc_graph.insert_implicit_barriers()
+
+    return pc_graph
+
+
+def add_forking_information(pc_graph):
+    #pc_graph.add_fork_nodes_between_multiple_entry_points()
+
+    #pc_graph.add_fork_and_join_nodes_at_parallel_pragmas()
+
+    return pc_graph
+
+
+def prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas):
+    pc_graph.add_depends_edges()
+    pc_graph.replace_depends_with_sequential_edges()
+    pc_graph.plot_graph()
 
     return pc_graph
 
@@ -232,11 +270,19 @@ def __main_start_execution(run_configuration: Configuration):
 
         pc_graph = generic_preparation(pet, pc_graph, run_configuration, omp_pragmas)
 
+        pc_graph = prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas)
+
+        pc_graph = add_forking_information(pc_graph)
+
         ##### TEST
+
+        for node in pc_graph.graph.nodes:
+            print("NODE: ", node)
+            print("\tPragma: ", pc_graph.graph.nodes[node]["data"].pragma)
 
         ##### END OF TEST
 
-        pc_graph.plot_graph()
+        #pc_graph.plot_graph()
 
 
 
@@ -385,9 +431,10 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
         time_data_race_computation_start = time.time()
+        pc_graph.plot_graph()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        #memory_access_graph.plot_graph()
+        memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

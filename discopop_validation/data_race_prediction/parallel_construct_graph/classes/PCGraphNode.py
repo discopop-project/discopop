@@ -25,6 +25,7 @@ class PCGraphNode(object):
     data_races: List[DataRace]
     covered_by_fork_node: bool
     target_code_sections: List
+    added_to_sequence: bool
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
@@ -34,6 +35,7 @@ class PCGraphNode(object):
         self.data_races = []
         self.covered_by_fork_node = False
         self.target_code_sections = []
+        self.added_to_sequence = False
 
     def get_label(self):
         if self.node_id == 0:
@@ -189,6 +191,8 @@ class PCGraphNode(object):
                     if contained == self.node_id:
                         # only pragma itself is allowed to keep the lines
                         continue
+                    if pc_graph.graph.nodes[contained]["data"].pragma is None:
+                        continue
                     contained_file_id = pc_graph.graph.nodes[contained]["data"].pragma.file_id
                     if target_file_id != contained_file_id:
                         continue
@@ -247,9 +251,12 @@ class PCGraphNode(object):
         """replaces this PCGraphNode with an equivalent set of BehaviorModelNodes and removes the PCGraphNode
         afterwards."""
         for model in self.behavior_models:
-            for idx in range(0, model.simulation_thread_count):
-                # insert and connect BehaviorModelNode
-                pc_graph.insert_behavior_model_node(self, model)
+            # old behavior
+            # for idx in range(0, model.simulation_thread_count):
+            #    # insert and connect BehaviorModelNode
+            #    pc_graph.insert_behavior_model_node(self, model)
+
+            pc_graph.insert_behavior_model_node(self, model)
 
         # delete PCGraphNode
         pc_graph.graph.remove_node(self.node_id)

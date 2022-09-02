@@ -46,6 +46,8 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
         for edge in pc_graph.graph.out_edges(pc_graph.pragma_to_node_id[pragma]):
             # check if edge type is "CONTAINS"
             if pc_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS:
+                if pc_graph.graph.nodes[edge[1]]["data"].pragma is None:
+                    continue
                 # split pragma regions around contained pragma
                 contained_pragma_start_line = pc_graph.graph.nodes[edge[1]]["data"].pragma.start_line
                 contained_pragma_end_line = pc_graph.graph.nodes[edge[1]]["data"].pragma.end_line
