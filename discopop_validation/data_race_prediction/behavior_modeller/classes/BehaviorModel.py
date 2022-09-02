@@ -11,7 +11,7 @@ class BehaviorModel(object):
 
     def __init__(self, operations: List[Operation]):
         self.operations = operations
-        self.simulation_thread_count = 2
+        self.simulation_thread_count = 1
 
     def get_file_id(self) -> Optional[int]:
         if len(self.operations) == 0:

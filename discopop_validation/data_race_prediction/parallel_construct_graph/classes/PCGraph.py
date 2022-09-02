@@ -263,7 +263,7 @@ class PCGraph(object):
         self.remove_redundant_calls_edges()
 
     def include_uncalled_functions(self):
-        for node in self.graph.nodes:
+        for node in copy.deepcopy(self.graph.nodes):
             if type(self.graph.nodes[node]["data"]) == FunctionNode:
                 in_calls_edges = [edge for edge in self.graph.in_edges(node) if
                                   self.graph.edges[edge]["type"] == EdgeType.CALLS]
@@ -1963,6 +1963,8 @@ class PCGraph(object):
     def remove_empty_pcgraph_nodes(self):
         to_be_removed = []
         for node in self.graph.nodes:
+            if node == 0:  # skip ROOT node
+                continue
             node_obj: PCGraphNode = self.graph.nodes[node]["data"]
             if type(node_obj) == PCGraphNode:
                 if len(node_obj.behavior_models) == 0:
