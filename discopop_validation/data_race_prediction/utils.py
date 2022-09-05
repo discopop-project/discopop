@@ -1,18 +1,23 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import EdgeType
+from discopop_explorer.PETGraphX import EdgeType, NodeType
 from discopop_validation.interfaces.discopop_explorer import check_reachability
 
 
-def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_line: int, end_line: int, accessed_var_name:str=""):
+def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_line: int, end_line: int, accessed_var_name:str="", node_type:Optional[NodeType]=None):
     """Returns the ID of the pet-graph node which contains the given pragma"""
     potential_nodes = []
     for pet_node in pet.g.nodes:
         if file_id == pet.g.nodes[pet_node]["data"].file_id and \
                 start_line >= pet.g.nodes[pet_node]["data"].start_line and \
                 end_line <= pet.g.nodes[pet_node]["data"].end_line:
-            potential_nodes.append(pet_node)
+            # check if potential node satisfies node_type requirement
+            if node_type is None:
+                potential_nodes.append(pet_node)
+            else:
+                if pet.g.nodes[pet_node]["data"].type is node_type:
+                    potential_nodes.append(pet_node)
 
     if len(potential_nodes) == 0:
         # match the next closest CU, used for directives like threadprivate, which can occur outside of CUs
@@ -73,16 +78,20 @@ def get_pet_node_id_from_source_code_lines(pet: PETGraphX, file_id: int, start_l
         potential_nodes.remove(pet_node)
 
     # find narrowest matching node
-    narrowest_node_buffer = potential_nodes[0]
-    for pet_node in potential_nodes:
-        if accessed_var_name == "":
-            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
-                    pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
-                narrowest_node_buffer = pet_node
-        else:
-            if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
-                    pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line and \
-                    accessed_var_name in [var.name for var in pet.g.nodes[pet_node]["data"].local_vars + pet.g.nodes[pet_node]["data"].global_vars]:
-                narrowest_node_buffer = pet_node
+    if len(potential_nodes) > 0:
+        narrowest_node_buffer = potential_nodes[0]
+        for pet_node in potential_nodes:
+            if accessed_var_name == "":
+                if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
+                        pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line:
+                    narrowest_node_buffer = pet_node
+            else:
+                if pet.g.nodes[pet_node]["data"].start_line >= pet.g.nodes[narrowest_node_buffer]["data"].start_line and \
+                        pet.g.nodes[pet_node]["data"].end_line <= pet.g.nodes[narrowest_node_buffer]["data"].end_line and \
+                        accessed_var_name in [var.name for var in pet.g.nodes[pet_node]["data"].local_vars + pet.g.nodes[pet_node]["data"].global_vars]:
+                    narrowest_node_buffer = pet_node
+    else:
+        raise ValueError("No matching CU could be found!")
+
     return narrowest_node_buffer
 

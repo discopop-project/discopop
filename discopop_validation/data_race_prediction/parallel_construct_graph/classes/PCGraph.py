@@ -1659,6 +1659,23 @@ class PCGraph(object):
             result_dict[key] = contained_nodes
         return result_dict
 
+    def remove_function_nodes(self):
+        for node in copy.deepcopy(self.graph.nodes):
+            if type(self.graph.nodes[node]["data"]) == FunctionNode:
+                self.graph.remove_node(node)
+
+    def prepare_root_for_MAGraph_creation(self):
+        """remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges"""
+        out_edges = [edge for edge in self.graph.out_edges(0)]
+        for _, target in out_edges:
+            self.graph.remove_edge(0, target)
+        entry_fork_nodes = [node for node in self.graph.nodes if type(self.graph.nodes[node]["data"]) == ForkNode and
+                            len(self.graph.in_edges(node)) == 0]
+        print("Entry Fork Nodes:")
+        print(entry_fork_nodes)
+        for node in entry_fork_nodes:
+            self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
+
     def add_belongs_to_edges(self):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == ForkNode:

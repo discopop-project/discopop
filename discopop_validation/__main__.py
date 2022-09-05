@@ -205,24 +205,27 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
     # create implicit barriers
     pc_graph.insert_implicit_barriers()
 
-    pc_graph.mark_barrier_affiliations()
-
-    # insert fork nodes
-    pc_graph.insert_fork_nodes()
-
-    #todo  create sub-sequences for parallel regions (denoted by "belongs_to" relations to barriers)
-
-
-
-    pc_graph.plot_graph()
+    #(todo)  create sub-sequences for parallel regions (denoted by "belongs_to" relations to barriers)
 
     return pc_graph
 
 
 def add_forking_information(pc_graph):
-    #pc_graph.add_fork_nodes_between_multiple_entry_points()
 
-    #pc_graph.add_fork_and_join_nodes_at_parallel_pragmas()
+    pc_graph.mark_barrier_affiliations()
+
+    # insert fork nodes
+    pc_graph.insert_fork_nodes()
+
+
+    pc_graph.remove_function_nodes()
+
+    pc_graph.plot_graph()
+
+    return pc_graph
+
+def prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas):
+    pc_graph.redirect_tasks_successors()
 
     return pc_graph
 
@@ -233,7 +236,6 @@ def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
     pc_graph.replace_depends_with_sequential_edges()
     # redirect Task successor to proper barrier
     #pc_graph.redirect_tasks_successors()
-    pc_graph.plot_graph()
     return pc_graph
 
 
@@ -283,7 +285,11 @@ def __main_start_execution(run_configuration: Configuration):
 
         pc_graph = generic_preparation(pet, pc_graph, run_configuration, omp_pragmas)
 
-#        pc_graph = prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas)
+        pc_graph = prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas)
+
+        pc_graph = prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas)
+
+        pc_graph.plot_graph()
 
         pc_graph = add_forking_information(pc_graph)
 
@@ -446,10 +452,12 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
         time_data_race_computation_start = time.time()
+
+        # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
+        pc_graph.prepare_root_for_MAGraph_creation()
         pc_graph.plot_graph()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        #memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

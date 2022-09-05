@@ -69,14 +69,17 @@ class MemoryAccessGraph(object):
         # traverse task graph in a depth-first manner
         # in doing so, traverse outgoing contains edges before sequential edges to analyze the effects of a node in the
         # correct order
-        self.__visit_node(pc_graph, pc_graph_root_node, pu_stack, current_path)
+        self.__visit_node(pc_graph, pc_graph_root_node, pu_stack, current_path, [])
 
         #pc_graph.plot_graph()
         #self.plot_graph()
 
-    def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
+    def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int], visited: List[int]) -> List[int]:
+        """returns a list of visited nodes"""
         if self.run_configuration.verbose_mode:
              print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+
+        visited.append(pc_graph_node)
 
         # modify the memory access graph according to the current node
         self.__modify_memory_access_graph(pc_graph, pc_graph_node, pu_stack, current_path)
@@ -84,10 +87,12 @@ class MemoryAccessGraph(object):
         # visit children following contains edges which have no incoming sequential edges and thus are entry points
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.CONTAINS])
         for child_idx, child in enumerate(children):
+            if child in visited:
+                continue
             # ignore child if it has an incoming sequential edge
             in_sequential_edges = pc_graph.get_incoming_edges_of_node(child, [EdgeType.SEQUENTIAL])
             if len(in_sequential_edges) == 0:
-                self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(current_path + [child_idx]))
+                visited = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(current_path + [child_idx]), visited)
 
         # increment last digit of current_path
         incremented_path = copy.deepcopy(current_path)
@@ -96,7 +101,10 @@ class MemoryAccessGraph(object):
         # visit children following sequential edges
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.SEQUENTIAL])
         for child_idx, child in enumerate(children):
-            self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(incremented_path + [child_idx]))
+            if child in visited:
+                continue
+            visited = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(incremented_path + [child_idx]), visited)
+        return visited
 
     def __modify_memory_access_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
         # check if pu stack needs to be modified

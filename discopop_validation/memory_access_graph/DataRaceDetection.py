@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency, NodeType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
@@ -186,10 +186,12 @@ def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, p
     """
     pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
                                                                amd_1.operation.line, amd_1.operation.line,
-                                                               accessed_var_name=amd_1.operation.target_name)
+                                                               accessed_var_name=amd_1.operation.target_name,
+                                                               node_type=NodeType.CU)
     pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
                                                                amd_2.operation.line, amd_2.operation.line,
-                                                               accessed_var_name=amd_2.operation.target_name)
+                                                               accessed_var_name=amd_2.operation.target_name,
+                                                               node_type=NodeType.CU)
     out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
     # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
     dependencies_1_2 = [dep for dep in out_dependencies_node_1 if
