@@ -935,17 +935,18 @@ class PCGraph(object):
             return True
         return False
 
-    def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True):
-        print("TODO FIX, so barriers are found across parents.!")
+    def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True, ignore_this_node=None):
         queue = [node_id]
         visited = []
         while len(queue) > 0:
-            current = queue.pop()
+            current = queue.pop(0)
             visited.append(current)
-            if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
-                # check if found barrier and node share a common parent
-                if not self.__barr_and_node_share_parent(node_id, current):
-                    continue
+            if type(self.graph.nodes[current]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode] and not current == ignore_this_node:
+# outdated
+#                # check if found barrier and node share a common parent
+#                if not self.__arr_and_node_share_parent(node_id, current):
+#                    continue
+
                 if ignore_depend_clauses:
                     return current
                 else:
@@ -984,7 +985,15 @@ class PCGraph(object):
             # add successors of current to queue
             successors = [edge[1] for edge in self.graph.out_edges(current) if
                           self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
-            queue += [s for s in successors if s not in visited]
+            queue += [s for s in successors if s not in visited and s not in queue]
+            # add contained nodes of parent to queue
+            parents = [edge[0] for edge in self.graph.in_edges(current) if
+                       self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            for parent in parents:
+                parents_children = [edge[1] for edge in self.graph.out_edges(parent) if
+                                    self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                queue += [c for c in parents_children if c not in visited and c not in queue]
+            queue += [p for p in parents if p not in visited and p not in queue]
         return None
 
     def redirect_tasks_successors(self):
@@ -1529,9 +1538,10 @@ class PCGraph(object):
     def mark_barrier_affiliations(self):
         """create belongs_to edges between each node and it's immediate successiv Barrier"""
         for node in self.graph.nodes:
-            print("NODE: ", node)
-            closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
-            print("\tBARR: ", closest_barrier)
+            if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+                closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False, ignore_this_node=node)
+            else:
+                closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
             if closest_barrier is not None:
                 if node != closest_barrier:
                     self.graph.add_edge(node, closest_barrier, type=EdgeType.BELONGS_TO)
