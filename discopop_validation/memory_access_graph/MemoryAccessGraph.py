@@ -173,7 +173,7 @@ class MemoryAccessGraph(object):
             BARRIER
             JOIN (closes all pu entries up until the one which has been created by the FORK node which belongs to it
         """
-        if type(pc_graph_node) == PragmaBarrierNode:
+        if type(pc_graph_node) in [PragmaBarrierNode, PragmaTaskwaitNode]:
             pu_stack.pop()
         if type(pc_graph_node) == JoinNode:
             incoming_belongs_to_edges = pc_graph.get_incoming_edges_of_node(pc_graph_node, [EdgeType.BELONGS_TO])

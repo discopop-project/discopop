@@ -174,9 +174,11 @@ def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData,
     result = False
     result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
                                                                                   amd_2.origin_bhv_node.node_id, [])
+    print("RES 1: ", result)
 
     result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
                                                                                   amd_1.origin_bhv_node.node_id, [])
+    print("RES 2: ", result)
     return result
 
 

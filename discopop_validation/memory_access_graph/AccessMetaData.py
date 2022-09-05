@@ -21,4 +21,4 @@ class AccessMetaData(object):
         self.parallel_unit = parallel_unit
 
     def get_edge_label(self) -> str:
-        return "" + str(self.operation_path_id) + "\n" + str(self.parallel_unit)
+        return "" + str(self.operation.get_location_str()) + "\n" + str(self.operation_path_id) + "\n" + str(self.parallel_unit)

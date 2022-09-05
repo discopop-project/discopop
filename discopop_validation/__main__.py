@@ -191,9 +191,7 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     # identify target code sections of pragmas
     for node in pc_graph.graph.nodes:
-        print("NODE: ", node)
         pc_graph.graph.nodes[node]["data"].identify_target_code_sections(pc_graph, run_configuration)
-        print(pc_graph.graph.nodes[node]["data"].target_code_sections)
 
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
@@ -211,16 +209,12 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
 
 def add_forking_information(pc_graph):
-
     pc_graph.mark_barrier_affiliations()
 
     # insert fork nodes
     pc_graph.insert_fork_nodes()
 
-
     pc_graph.remove_function_nodes()
-
-    pc_graph.plot_graph()
 
     return pc_graph
 
@@ -236,6 +230,8 @@ def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
     pc_graph.replace_depends_with_sequential_edges()
     # redirect Task successor to proper barrier
     #pc_graph.redirect_tasks_successors()
+
+    pc_graph.check_and_fix_dependences_to_barriers()
     return pc_graph
 
 
@@ -288,8 +284,6 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph = prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas)
 
         pc_graph = prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas)
-
-        pc_graph.plot_graph()
 
         pc_graph = add_forking_information(pc_graph)
 
@@ -458,6 +452,7 @@ def __main_start_execution(run_configuration: Configuration):
         pc_graph.plot_graph()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
+        memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

@@ -1068,7 +1068,7 @@ class PCGraph(object):
                 modification_found = False
                 # redirect incoming SEQUENTIAL edges to Successors
                 for edge in in_seq_edges:
-                    self.graph.remove_edge(edge[0], edge[1])
+#                    self.graph.remove_edge(edge[0], edge[1])
                     for out_edge in out_seq_edges:
                         self.graph.add_edge(edge[0], out_edge[1], type=EdgeType.SEQUENTIAL)
                         modification_found = True
@@ -1397,6 +1397,7 @@ class PCGraph(object):
         return result
 
     def is_successor_with_encountered_barrier_or_taskwait(self, root_node, target_node, visited, encountered_barrier=False):
+        print("ROOT: ", root_node)
         visited.append(root_node)
         if type(self.graph.nodes[root_node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
             encountered_barrier = True
@@ -1419,14 +1420,85 @@ class PCGraph(object):
                 continue
             result = result or self.is_successor_with_encountered_barrier_or_taskwait(contained, target_node, visited,
                                                                                       encountered_barrier=encountered_barrier)
-        # extend search to the parent of root node
+        # extend search to the successors of the parent of root node
         in_contains_edges = [edge for edge in self.graph.in_edges(root_node) if
                              self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
         for parent, _ in in_contains_edges:
             if parent in visited:
                 continue
-            result = result or self.is_successor_with_encountered_barrier_or_taskwait(parent, target_node, visited, encountered_barrier=encountered_barrier)
+            # since outgoing edges of FORK nodes can not be successors, ignore FORK Nodes
+            if type(self.graph.nodes[parent]["data"]) == ForkNode:
+                continue
+            # ignore successors of barrier or taskwait nodes
+            if type(self.graph.nodes[parent]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]:
+                continue
+            # search in successors of parent
+            parent_successors = [edge[1] for edge in self.graph.out_edges(parent) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            # remove root node from successors
+            parent_successors = [s for s in parent_successors if s != root_node]
+            for p_s in parent_successors:
+                if p_s in visited:
+                    continue
+                result = result or self.is_successor_with_encountered_barrier_or_taskwait(p_s, target_node, visited, encountered_barrier=encountered_barrier)
         return result
+
+    def check_and_fix_dependences_to_barriers(self):
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for node in self.graph.nodes:
+                if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
+                    continue
+                # get successor barriers
+                succ_barriers = [edge[1] for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and
+                                 type(self.graph.nodes[edge[1]]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]]
+                print("\nNode: ", node)
+                print("Succ Barr: ", succ_barriers)
+                for barr in succ_barriers:
+                    if self.graph.nodes[barr]["data"].pragma is None:
+                        # requirements trivially satisfied
+                        continue
+                    barr_depend_entries = self.graph.nodes[barr]["data"].pragma.get_variables_listed_as("depend")
+                    barr_depend_in_entries = [var for mode, var in [entry.split(":") for entry in barr_depend_entries]
+                                              if mode == "in"]
+                    barr_depend_inout_entries = [var for mode, var in
+                                                 [entry.split(":") for entry in barr_depend_entries] if
+                                                 mode == "inout"]
+                    barr_depend_in_entries += barr_depend_inout_entries
+                    barr_depend_in_entries = [var.replace(" ", "") for var in barr_depend_in_entries]
+                    if len(barr_depend_in_entries) == 0:
+                        # nothing to be checked
+                        continue
+                    # check if node satisfies in-dependencies of barrier
+                    if self.graph.nodes[node]["data"].pragma is None:
+                        # requirements can not be satisfied
+                        missing_deps = ["dummy"]
+                    else:
+                        node_depend_entries = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("depend")
+                        node_depend_out_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if
+                                                   mode == "out"]
+                        node_depend_inout_entries = [var for mode, var in [entry.split(":") for entry in node_depend_entries] if
+                                                     mode == "inout"]
+                        node_depend_out_entries += node_depend_inout_entries
+                        node_depend_out_entries = [var.replace(" ", "") for var in node_depend_out_entries]
+                        missing_deps = [var for var in barr_depend_in_entries if var not in node_depend_out_entries]
+
+                    if len(missing_deps) == 0:
+                        # requirements satisfied
+                        continue
+                    else:
+                        # requirements not met. Connect node to next barrier
+                        next_barrier = self.__get_closest_successor_barrier_or_taskwait(barr, ignore_this_node=barr)
+                        self.graph.remove_edge(node, barr)
+                        self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
+                        modification_found = True
+                        break
+                if modification_found:
+                    break
+
+
 
     def add_depends_edges(self):
         for node in self.graph.nodes:
