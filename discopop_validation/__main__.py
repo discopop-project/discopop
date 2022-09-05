@@ -205,8 +205,9 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
     # create implicit barriers
     pc_graph.insert_implicit_barriers()
 
-    # TODO FIX, so barriers are found across parents!
     pc_graph.mark_barrier_affiliations()
+
+    
 
     #todo  create sub-sequences for parallel regions (denoted by "belongs_to" relations to barriers)
 
