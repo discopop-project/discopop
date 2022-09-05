@@ -1396,8 +1396,8 @@ class PCGraph(object):
             result = result or self.is_successor(successor, target_node)
         return result
 
+
     def is_successor_with_encountered_barrier_or_taskwait(self, root_node, target_node, visited, encountered_barrier=False):
-        print("ROOT: ", root_node)
         visited.append(root_node)
         if type(self.graph.nodes[root_node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
             encountered_barrier = True
@@ -1454,8 +1454,6 @@ class PCGraph(object):
                 succ_barriers = [edge[1] for edge in self.graph.out_edges(node) if
                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL and
                                  type(self.graph.nodes[edge[1]]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]]
-                print("\nNode: ", node)
-                print("Succ Barr: ", succ_barriers)
                 for barr in succ_barriers:
                     if self.graph.nodes[barr]["data"].pragma is None:
                         # requirements trivially satisfied

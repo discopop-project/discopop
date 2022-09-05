@@ -6,6 +6,10 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Operatio
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaBarrierNode import \
+    PragmaBarrierNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import \
+    PragmaTaskwaitNode
 from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
 from discopop_validation.memory_access_graph.MAGDataRace import MAGDataRace
@@ -74,7 +78,7 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
 
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
-    if __path_predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
+    if __path_predecessor_relation_exists(amd_1.operation_path, amd_2.operation_path) or False:
         # predecessor relation exists
         return None
     print("\t3")
@@ -172,14 +176,34 @@ def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData,
     """
     # check both directions
     result = False
-    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
-                                                                                  amd_2.origin_bhv_node.node_id, [])
-    print("RES 1: ", result)
+#    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
+#                                                                                  amd_2.origin_bhv_node.node_id, [])
+#
+#    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
+#                                                                                  amd_1.origin_bhv_node.node_id, [])
 
-    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
-                                                                                  amd_1.origin_bhv_node.node_id, [])
-    print("RES 2: ", result)
+    result = result or __new_is_successor_with_encountered_barrier_or_taskwait(amd_1, amd_2)
+
+    result = result or __new_is_successor_with_encountered_barrier_or_taskwait(amd_2, amd_1)
     return result
+
+
+def __new_is_successor_with_encountered_barrier_or_taskwait(amd_1: AccessMetaData, amd_2: AccessMetaData):
+    #todo
+    # check if amd_1 in operation_path of amd_2
+    # check nodes inbetween for taskwaits or barriers
+    amd_2_id_path = [op.node_id for op in amd_2.operation_path[:-1]]
+    if amd_1.origin_bhv_node.node_id in amd_2_id_path:
+        # amd_2 is a successor of amd_1
+        # check if taskwait or barrier encountered along path
+        amd_1_index = amd_2_id_path.index(amd_1.origin_bhv_node.node_id)
+        sub_path = amd_2.operation_path[amd_1_index:-1]
+        for elem in sub_path:
+            if type(elem) in [PragmaTaskwaitNode, PragmaBarrierNode]:
+                return True
+        return False
+    return False
+
 
 
 def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):

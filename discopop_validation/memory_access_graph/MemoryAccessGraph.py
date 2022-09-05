@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from graphviz import Source  # type: ignore
 from networkx.drawing.nx_pydot import to_pydot  # type: ignore
-from typing import Tuple, List, cast, Optional
+from typing import Tuple, List, cast, Optional, Union
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType
@@ -64,7 +64,7 @@ class MemoryAccessGraph(object):
         pc_graph_root_node: PCGraphNode = pc_graph.graph.nodes[0]["data"]  # root node of parallel_construct_graph
         # create and initialize pu_stack
         pu_stack = PUStack(self.__get_new_parallel_frame_id(), pc_graph_root_node)
-        current_path: List[int] = [0]
+        current_path: List[PCGraphNode] = [pc_graph_root_node]
 
         # traverse task graph in a depth-first manner
         # in doing so, traverse outgoing contains edges before sequential edges to analyze the effects of a node in the
@@ -72,41 +72,59 @@ class MemoryAccessGraph(object):
         self.__visit_node(pc_graph, pc_graph_root_node, pu_stack, current_path, [])
 
         #pc_graph.plot_graph()
+        print("NODES: ", self.graph.nodes)
+        print("Edges: ", self.graph.edges)
         #self.plot_graph()
 
-    def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int], visited: List[int]) -> List[int]:
-        """returns a list of visited nodes"""
-        if self.run_configuration.verbose_mode:
-             print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+    def __visit_node(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[PCGraphNode], visited: List[PCGraphNode]) -> Tuple[List[PCGraphNode], List[List[PCGraphNode]]]:
+        """returns a list of visited nodes and a list of all encountered paths"""
+        #if self.run_configuration.verbose_mode:
+        #     print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", current_path)
+        if pc_graph_node not in visited:
+            visited.append(pc_graph_node)
+        current_path.append(pc_graph_node)
 
-        visited.append(pc_graph_node)
+        print("VISITING: ", pc_graph_node.node_id)
+        print("PATH: ", [c.node_id for c in current_path])
 
         # modify the memory access graph according to the current node
         self.__modify_memory_access_graph(pc_graph, pc_graph_node, pu_stack, current_path)
 
         # visit children following contains edges which have no incoming sequential edges and thus are entry points
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.CONTAINS])
+        print("\tchildren: ", [c.node_id for c in children])
+        child_paths: List[List[PCGraphNode]] = []
         for child_idx, child in enumerate(children):
             if child in visited:
                 continue
             # ignore child if it has an incoming sequential edge
             in_sequential_edges = pc_graph.get_incoming_edges_of_node(child, [EdgeType.SEQUENTIAL])
             if len(in_sequential_edges) == 0:
-                visited = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(current_path + [child_idx]), visited)
+                tmp_visited, tmp_paths = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(current_path), visited)
+                child_paths += tmp_paths
+                visited += [n for n in tmp_visited if n not in visited]
 
-        # increment last digit of current_path
-        incremented_path = copy.deepcopy(current_path)
-        incremented_path[-1] = incremented_path[-1] + 1
+        # if no child exists, copy the current_path
+        if len(child_paths) == 0:
+            child_paths = [current_path]
 
         # visit children following sequential edges
         children = pc_graph.get_children_of_node(pc_graph_node, [EdgeType.SEQUENTIAL])
-        for child_idx, child in enumerate(children):
-            if child in visited:
-                continue
-            visited = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(incremented_path + [child_idx]), visited)
-        return visited
+        print("\tsuccessors: ", [c.node_id for c in children])
+        # iterate over encountered child paths
+        successor_paths: List[List[PCGraphNode]] = []
+        successor_visited: List[PCGraphNode] = []
+        for child_path in child_paths:
+            for child_idx, child in enumerate(children):
+                if child in visited:
+                    continue
+                tmp_visited, tmp_paths = self.__visit_node(pc_graph, child, copy.deepcopy(pu_stack), copy.deepcopy(child_path), visited)
+                successor_paths += tmp_paths
+                successor_visited += [n for n in tmp_visited if n not in successor_visited]
+        visited += [n for n in successor_visited if n not in visited]
+        return visited, successor_paths
 
-    def __modify_memory_access_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[int]):
+    def __modify_memory_access_graph(self, pc_graph: PCGraph, pc_graph_node: PCGraphNode, pu_stack: PUStack, current_path: List[PCGraphNode]):
         # check if pu stack needs to be modified
         self.__modify_pu_stack(pc_graph, pc_graph_node, pu_stack)
 
@@ -114,7 +132,7 @@ class MemoryAccessGraph(object):
         self.__detect_and_include_memory_accesses_to_graph(pc_graph, pc_graph_node, pu_stack, current_path)
 
     def __detect_and_include_memory_accesses_to_graph(self, pc_graph: PCGraph, raw_pc_graph_node: PCGraphNode,
-                                                      pu_stack: PUStack, current_path: List[int]):
+                                                      pu_stack: PUStack, current_path: List[PCGraphNode]):
         # add memory accesses from BehaviorModelNodes
         if type(raw_pc_graph_node) == BehaviorModelNode:
             bhv_node = cast(BehaviorModelNode, raw_pc_graph_node)
@@ -125,7 +143,7 @@ class MemoryAccessGraph(object):
                 previous_node_id = self.__add_memory_access_to_graph(operation_path_id, op, bhv_node,
                                                                      previous_node_id, pu_stack.peek())
 
-    def __add_memory_access_to_graph(self, operation_path_id: List[int], operation: Operation, bhv_node: BehaviorModelNode,
+    def __add_memory_access_to_graph(self, operation_path_id: List[Union[BehaviorModelNode,int]], operation: Operation, bhv_node: BehaviorModelNode,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
         # if self.run_configuration.verbose_mode:
         #    print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
