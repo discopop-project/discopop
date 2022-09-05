@@ -147,9 +147,11 @@ class MemoryAccessGraph(object):
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
         # if self.run_configuration.verbose_mode:
         #    print("Adding: ", operation_path_id, "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
-        if not previous_node_id in self.graph.nodes:
-            # add previous node into MemoryAccessGraph (Dummy as source of the edge)
-            self.graph.add_node(previous_node_id)
+#        if not previous_node_id in self.graph.nodes:
+#            # add previous node into MemoryAccessGraph (Dummy as source of the edge)
+#            self.graph.add_node(previous_node_id)
+        if str(bhv_node.node_id) not in self.graph.nodes:
+            self.graph.add_node(str(bhv_node.node_id))
 
         if not operation.target_name in self.graph.nodes:
             # add node vor target_name into MemoryAccessGraph
@@ -158,11 +160,11 @@ class MemoryAccessGraph(object):
         access_metadata = AccessMetaData(operation, operation.mode, operation_path_id, bhv_node, parallel_unit)
 
         if operation.mode == "r":
-            self.graph.add_edge(previous_node_id, operation.target_name, data=access_metadata, style="dashed",
+            self.graph.add_edge(str(bhv_node.node_id), operation.target_name, data=access_metadata, style="dashed",
                                 label=access_metadata.get_edge_label(),
                                 color=access_metadata.parallel_unit.visualization_color)
         if operation.mode == "w":
-            self.graph.add_edge(previous_node_id, operation.target_name, data=access_metadata,
+            self.graph.add_edge(str(bhv_node.node_id), operation.target_name, data=access_metadata,
                                 label=access_metadata.get_edge_label(),
                                 color=access_metadata.parallel_unit.visualization_color)
 
