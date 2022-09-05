@@ -169,10 +169,7 @@ def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> 
 
 
 def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData, pc_graph: PCGraph):
-    """Check if a Taskwait or Barrier is encountered on the path from amd_1.origin_bhv_node
-    to amd_2.origin_bhv_node or vice versa.
-    Returns True, if a Taskwait or Barrier lies between both origin_bhv_nodes.
-    Reutrns False, else
+    """Check if amd_1 is a successor of amd_2 or vice-versa.
     """
     # check both directions
     result = False
@@ -181,27 +178,24 @@ def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData,
 #
 #    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
 #                                                                                  amd_1.origin_bhv_node.node_id, [])
-
-    result = result or __new_is_successor_with_encountered_barrier_or_taskwait(amd_1, amd_2)
-
-    result = result or __new_is_successor_with_encountered_barrier_or_taskwait(amd_2, amd_1)
+    # Note: Check for barrier in path is not required anymore since barriers now directly correspond to parallel units.
+    result = result or __new_is_successor(amd_1, amd_2)
+    print("switched")
+    result = result or __new_is_successor(amd_2, amd_1)
     return result
 
 
-def __new_is_successor_with_encountered_barrier_or_taskwait(amd_1: AccessMetaData, amd_2: AccessMetaData):
+def __new_is_successor(amd_1: AccessMetaData, amd_2: AccessMetaData):
     #todo
     # check if amd_1 in operation_path of amd_2
     # check nodes inbetween for taskwaits or barriers
     amd_2_id_path = [op.node_id for op in amd_2.operation_path[:-1]]
+    print("amd_1: ", amd_1.origin_bhv_node.node_id)
+    print("amd_2: ", amd_2_id_path)
     if amd_1.origin_bhv_node.node_id in amd_2_id_path:
+        print("IN")
         # amd_2 is a successor of amd_1
-        # check if taskwait or barrier encountered along path
-        amd_1_index = amd_2_id_path.index(amd_1.origin_bhv_node.node_id)
-        sub_path = amd_2.operation_path[amd_1_index:-1]
-        for elem in sub_path:
-            if type(elem) in [PragmaTaskwaitNode, PragmaBarrierNode]:
-                return True
-        return False
+        return True
     return False
 
 

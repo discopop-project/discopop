@@ -1691,13 +1691,15 @@ class PCGraph(object):
                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 if len(out_seq_edges) == 0:
                     self.graph.add_edge(node, barrier, type=EdgeType.SEQUENTIAL)
-            # get barriers from raw_belonging_nodes
+#            # get barriers from raw_belonging_nodes
             belonging_barriers = [node for node in raw_belonging_nodes if
                                   type(self.graph.nodes[node]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]]
             print("Bel Barriers: ", belonging_barriers)
-            # connect belonging barriers to fork node
-            for bel_barr in belonging_barriers:
-                self.graph.add_edge(bel_barr, fork_node, type=EdgeType.SEQUENTIAL)
+#            # connect belonging barriers to fork node
+#            for bel_barr in belonging_barriers:
+#                if (fork_node, bel_barr) not in self.graph.edges:
+#                    self.graph.add_edge(bel_barr, fork_node, type=EdgeType.SEQUENTIAL)
+
 
     def check_reachability(self, root, target, edge_type, visited) -> bool:
         if root == target:

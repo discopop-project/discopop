@@ -146,6 +146,8 @@ class PCGraphNode(object):
 
 
 
+
+
     def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, pc_graph,
                               omp_pragmas: List[OmpPragma]):
 #        if self.pragma is None:

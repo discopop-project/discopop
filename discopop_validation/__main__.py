@@ -182,7 +182,6 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     # insert calls edges
     pc_graph.insert_calls_edges(pet, omp_pragmas)
-
     # insert parallel sections for called functions
     pc_graph.insert_parallel_sections_for_called_functions()
 
@@ -448,8 +447,9 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-        pc_graph.prepare_root_for_MAGraph_creation()
         pc_graph.plot_graph()
+        pc_graph.prepare_root_for_MAGraph_creation()
+
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
         memory_access_graph.plot_graph()
