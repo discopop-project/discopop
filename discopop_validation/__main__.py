@@ -207,7 +207,8 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     pc_graph.mark_barrier_affiliations()
 
-    
+    # insert fork nodes
+    pc_graph.insert_fork_nodes()
 
     #todo  create sub-sequences for parallel regions (denoted by "belongs_to" relations to barriers)
 

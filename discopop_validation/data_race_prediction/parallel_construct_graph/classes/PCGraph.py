@@ -524,6 +524,25 @@ class PCGraph(object):
                 self.graph.remove_edge(source, target)
 
 
+    def remove_redundant_sequential_edges(self, target_nodes):
+        """simplifies the contains relations."""
+        for node in target_nodes:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            to_be_removed = []
+            sequential_sources = [source for source, _ in in_seq_edges]
+            # check if sequential relation between sources exists
+            parent_relations = []
+            for potential_parent in copy.deepcopy(sequential_sources):
+                parent_out_seq_edges = [edge for edge in self.graph.out_edges(potential_parent) if self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                children = [target for _, target in parent_out_seq_edges]
+                children = [child for child in children if child in sequential_sources]
+                for child in children:
+                    parent_relations.append((potential_parent, child))
+                    if (potential_parent, node) not in to_be_removed:
+                        to_be_removed.append((potential_parent, node))
+            for source, target in to_be_removed:
+                self.graph.remove_edge(source, target)
+
     def remove_redundant_calls_edges(self):
         """simplifies the contains relations."""
         for node in self.graph.nodes:
@@ -1545,6 +1564,100 @@ class PCGraph(object):
             if closest_barrier is not None:
                 if node != closest_barrier:
                     self.graph.add_edge(node, closest_barrier, type=EdgeType.BELONGS_TO)
+
+    def insert_fork_nodes(self):
+        """traverse graph upwards, starting from barriers without outgoing belongs_to edges and insert fork nodes
+        in order to represent the parallel executions made possible by the barriers."""
+        # get exit_barriers (barriers without outgoing belongs_to edges)
+        exit_barriers: List[PCGraphNode] = []
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) not in [PragmaBarrierNode, PragmaTaskwaitNode]:
+                continue
+            out_belongs_to_edges = [edge for edge in self.graph.out_edges(node) if
+                                    self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+            if len(out_belongs_to_edges) == 0 or True:
+                exit_barriers.append(node)
+        for barrier in exit_barriers:
+            print("\nBarrier: ", barrier)
+            # create a fork node
+            fork_node = self.__add_fork_node()
+            raw_belonging_nodes = [edge[0] for edge in self.graph.in_edges(barrier) if
+                               self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+            print("\tbelonging: ", raw_belonging_nodes)
+            # get contained nodes for all belonging_nodes
+            contained_nodes_dict = self.get_contained_nodes_dict(raw_belonging_nodes)
+            # remove nodes from belonging nodes if they are contained in another node
+            to_be_removed = []
+            for node in raw_belonging_nodes:
+                for key in contained_nodes_dict:
+                    if node in contained_nodes_dict[key]:
+                        to_be_removed.append(node)
+            belonging_nodes = copy.deepcopy(raw_belonging_nodes)
+            for node in to_be_removed:
+                try:
+                    belonging_nodes.remove(node)
+                except ValueError:
+                    pass
+            print("\tbelonging: ", belonging_nodes)
+            # check if sequential sequence between belonging nodes exists
+            reachable: List[Tuple[int, int]] = []
+            for node_1 in belonging_nodes:
+                for node_2 in belonging_nodes:
+                    if node_1 == node_2:
+                        continue
+                    if self.check_reachability(node_1, node_2, EdgeType.SEQUENTIAL, []):
+                        reachable.append((node_1, node_2))
+            print("REACHABLE: ")
+            print(reachable)
+            reached_targets = [pair[1] for pair in reachable]
+
+            # connect fork and belonging nodes
+            for node in [n for n in belonging_nodes if n not in reached_targets]:
+                self.graph.add_edge(fork_node, node, type=EdgeType.SEQUENTIAL)
+
+            # connect belonging nodes with barrier if node is the end of a sequence
+            for node in belonging_nodes:
+                out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                                 self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+                if len(out_seq_edges) == 0:
+                    self.graph.add_edge(node, barrier, type=EdgeType.SEQUENTIAL)
+            # get barriers from raw_belonging_nodes
+            belonging_barriers = [node for node in raw_belonging_nodes if
+                                  type(self.graph.nodes[node]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]]
+            print("Bel Barriers: ", belonging_barriers)
+            # connect belonging barriers to fork node
+            for bel_barr in belonging_barriers:
+                self.graph.add_edge(bel_barr, fork_node, type=EdgeType.SEQUENTIAL)
+
+    def check_reachability(self, root, target, edge_type, visited) -> bool:
+        if root == target:
+            return True
+        visited.append(root)
+        next_roots = [edge[1] for edge in self.graph.out_edges(root) if
+                      self.graph.edges[edge]["type"] == edge_type and
+                      edge[1] not in visited]
+        for next_root in next_roots:
+            if self.check_reachability(next_root, target, edge_type, copy.deepcopy(visited)):
+                return True
+        return False
+
+
+    def get_contained_nodes_dict(self, target_nodes) -> Dict[int, List[int]]:
+        result_dict: Dict[int, List[int]] = dict()
+        for key in target_nodes:
+            contained_nodes: List[int] = []
+            queue: List[int] = [edge[1] for edge in self.graph.out_edges(key) if
+                                self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+            visited: List[int] = []
+            while len(queue) > 0:
+                current = queue.pop(0)
+                visited.append(current)
+                contained_nodes.append(current)
+                queue += [edge[1] for edge in self.graph.out_edges(current) if
+                                    self.graph.edges[edge]["type"] == EdgeType.CONTAINS and edge[1] not in visited and
+                                    edge[1] not in queue]
+            result_dict[key] = contained_nodes
+        return result_dict
 
     def add_belongs_to_edges(self):
         for node in self.graph.nodes:
