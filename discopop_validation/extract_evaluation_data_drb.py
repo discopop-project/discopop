@@ -51,7 +51,8 @@ def main():
 
         # check for evaluation values
         correct_data_races_identified = 0
-        if set(target_data_races) == set(identified_data_races):
+        missed_data_races = [dr for dr in target_data_races if dr not in identified_data_races]
+        if len(missed_data_races) == 0:
             correct_data_races_identified = 1
 
         some_correct_data_races_identified = 0
@@ -63,7 +64,7 @@ def main():
 
         additional_data_races_identified = 0
         if len([dr for dr in identified_data_races if dr not in target_data_races]) > 0:
-            additional_data_races_identified = 1
+            additional_data_races_identified = len([dr for dr in identified_data_races if dr not in target_data_races])
 
         evaluation_results[benchmark_number] = (is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified,
                                                 some_correct_data_races_identified, additional_data_races_identified)

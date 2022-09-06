@@ -215,7 +215,6 @@ class PCGraph(object):
             pragma_to_cuid[pragma] = cu_id
 
         for node in self.graph.nodes:
-            print("NODE: ", node)
             if type(self.graph.nodes[node]["data"]) == FunctionNode:
                 continue
             pragma = self.graph.nodes[node]["data"].pragma
@@ -781,7 +780,6 @@ class PCGraph(object):
     def new_insert_behavior_storage_nodes(self):
         """creates TaskGraphNodes to store Behavior Models in the graph structure, rather than on each node"""
         for node in copy.deepcopy(self.graph.nodes):
-            print("NODE: ", node)
             node_obj: PCGraphNode = self.graph.nodes[node]["data"]
             if type(node_obj) is PCGraphNode:
                 continue
@@ -1123,15 +1121,12 @@ class PCGraph(object):
 
     def make_contained_nodes_part_of_sequence(self, node):
         # every node should have one or 0 entry nodes
-        print("node: ", node)
         contained_entry_points = get_sequence_entry_points(self, node)
         out_seq_edges = []
         if len(contained_entry_points) == 0:
             pass
         elif len(contained_entry_points) == 1:
             # make contained sequence part of the sequence
-            print("NODE: ", node)
-            print("\tEntry points: ", contained_entry_points)
             # enter recursion
             last_contained_seq_node = self.make_contained_nodes_part_of_sequence(contained_entry_points[0])
             # add contained sequence to outer sequence of node
@@ -1152,13 +1147,11 @@ class PCGraph(object):
             return node
         if len(successors) == 1:
             # start method for successors
-            print("SUCCESSORS: ", successors)
             return self.make_contained_nodes_part_of_sequence(successors[0])
         else:
             if type(self.graph.nodes[node]["data"]) == ForkNode:
                 # endpoint should be equal for all successors
                 endpoints = []
-                print("SUCCESSORS 2", successors)
                 for succ in successors:
                     endpoints.append(self.make_contained_nodes_part_of_sequence(succ))
                 endpoints = list(set(endpoints))
@@ -1648,13 +1641,11 @@ class PCGraph(object):
             if len(out_belongs_to_edges) == 0 or True:
                 exit_barriers.append(node)
         for barrier in exit_barriers:
-            print("\nBarrier: ", barrier)
             # create a fork node
             fork_node = self.__add_fork_node()
             raw_belonging_nodes = [edge[0] for edge in self.graph.in_edges(barrier) if
                                self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
             self.graph.add_edge(fork_node, barrier, type=EdgeType.BELONGS_TO)
-            print("\tbelonging: ", raw_belonging_nodes)
             # get contained nodes for all belonging_nodes
             contained_nodes_dict = self.get_contained_nodes_dict(raw_belonging_nodes)
             # remove nodes from belonging nodes if they are contained in another node
@@ -1669,7 +1660,6 @@ class PCGraph(object):
                     belonging_nodes.remove(node)
                 except ValueError:
                     pass
-            print("\tbelonging: ", belonging_nodes)
             # check if sequential sequence between belonging nodes exists
             reachable: List[Tuple[int, int]] = []
             for node_1 in belonging_nodes:
@@ -1678,8 +1668,6 @@ class PCGraph(object):
                         continue
                     if self.check_reachability(node_1, node_2, EdgeType.SEQUENTIAL, []):
                         reachable.append((node_1, node_2))
-            print("REACHABLE: ")
-            print(reachable)
             reached_targets = [pair[1] for pair in reachable]
 
             # connect fork and belonging nodes
@@ -1695,7 +1683,6 @@ class PCGraph(object):
 #            # get barriers from raw_belonging_nodes
             belonging_barriers = [node for node in raw_belonging_nodes if
                                   type(self.graph.nodes[node]["data"]) in [PragmaTaskwaitNode, PragmaBarrierNode]]
-            print("Bel Barriers: ", belonging_barriers)
 #            # connect belonging barriers to fork node
 #            for bel_barr in belonging_barriers:
 #                if (fork_node, bel_barr) not in self.graph.edges:
@@ -1746,8 +1733,6 @@ class PCGraph(object):
             self.graph.remove_edge(0, target)
         entry_fork_nodes = [node for node in self.graph.nodes if type(self.graph.nodes[node]["data"]) == ForkNode and
                             len(self.graph.in_edges(node)) == 0]
-        print("Entry Fork Nodes:")
-        print(entry_fork_nodes)
         for node in entry_fork_nodes:
             self.graph.add_edge(0, node, type=EdgeType.SEQUENTIAL)
 
@@ -2046,7 +2031,6 @@ class PCGraph(object):
                 if len(tp_variables) > 0:
                     # add tp_variables to all contained pragmas
                     for _, contained_pragma_node in out_contained_edges:
-                        print("\tContained pragma: ", self.graph.nodes[contained_pragma_node]["data"].pragma)
                         # overwrite shared variables as private if contained in tp_var
                         # reason: unspecified variables are assumed to be shared in a prior processing step (extracting
                         #   from pet graph)
@@ -2147,15 +2131,12 @@ class PCGraph(object):
 
     def new_create_sequence_for_contained_nodes(self):
         for node in self.graph.nodes:
-            print("Node: ", node)
             out_contained_edges = [edge for edge in self.graph.out_edges(node) if
                                    self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
             contained_nodes = [target for _, target in out_contained_edges]
             entry_points = get_sequence_entry_points(self, node)
-            print("\t", entry_points)
             # get ranges of contained sequences
             sequence_ranges = [(entry, self.__get_sequence_range(entry)) for entry in entry_points]
-            print("\tRanges: ", sequence_ranges)
             for tuple_1 in sequence_ranges:
                 for tuple_2 in sequence_ranges:
                     if tuple_1 == tuple_2:
@@ -2171,7 +2152,6 @@ class PCGraph(object):
         for node in copy.deepcopy(self.graph.nodes):
             if node == 0:  # skip root node
                 continue
-            print("Node: ", node)
             node_obj: PCGraphNode = self.graph.nodes[node]["data"]
             contained_nodes = [edge[1] for edge in self.graph.out_edges(node) if
                                self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
@@ -2189,8 +2169,6 @@ class PCGraph(object):
                 if contained_obj.pragma is not None:
                     shared_vars += [var for var in contained_obj.pragma.get_variables_listed_as("shared")
                                     if var not in shared_vars]
-            print("\tcoverage holes:", coverage_holes)
-            print("\tshared_vars: ", shared_vars)
             # check if coverage holes are filled by the pragma of the current node
             if node_obj.pragma is not None:
                 covered_lines = range(node_obj.get_start_line(),
@@ -2221,12 +2199,10 @@ class PCGraph(object):
             if start_line is not None:
                 uncovered_regions.append((start_line, last_line))
 
-            print("\tuncovered regions:", uncovered_regions)
             # create PCGraphNodes for uncovered regions and store target code sections
             for start_line, end_line in uncovered_regions:
                 new_node_id = self.get_new_node_id()
                 new_pcgraph_node = PCGraphNode(new_node_id)
-                print("-->BHV: ", new_node_id)
                 target_lines = ",".join([str(line) for line in range(start_line, end_line + 1)])
                 if not target_lines.endswith(","):
                     target_lines += ","
@@ -2239,7 +2215,6 @@ class PCGraph(object):
                 # add node to graph and create contains edge between 'node' and the new PCGraphNode
                 self.graph.add_node(new_node_id, data=new_pcgraph_node)
                 self.graph.add_edge(node, new_node_id, type=EdgeType.CONTAINS)
-            print("\tBLUB: ", str(node_obj.get_file_id()))
 
 
     def remove_empty_pcgraph_nodes(self):
@@ -2292,8 +2267,6 @@ class PCGraph(object):
             contained_nodes_without_sequence = [edge[1] for edge in self.graph.out_edges(node) if
                                self.graph.edges[edge]["type"] == EdgeType.CONTAINS and \
                                                 self.graph.nodes[edge[1]]["data"].added_to_sequence == False]
-            print("NODE: ", node)
-            print("\tcontained: ", contained_nodes_without_sequence)
             for node_1 in contained_nodes_without_sequence:
                 for node_2 in contained_nodes_without_sequence:
                     if node_1 == node_2:
@@ -2357,7 +2330,6 @@ class PCGraph(object):
                                  self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
                 if len(out_seq_edges) <= 1:
                     continue
-                print("NODE: ", node)
                 successors_and_start_lines = [self.graph.nodes[target]["data"] for _, target in out_seq_edges]
                 successors_and_start_lines = [(node, node.get_start_line()) for node in successors_and_start_lines]
                 sorted_successors = sorted(successors_and_start_lines, key=lambda x: x[1])

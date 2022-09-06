@@ -68,9 +68,6 @@ class MemoryAccessGraph(object):
 
         # assign a unique parallel unit to each barrier / taskwait node
         barrier_to_pu_map = self.get_barrier_to_pu_map(pc_graph)
-        print("BARR TO PU MAP:")
-        for key in barrier_to_pu_map:
-            print(key.node_id, " -> ", str(barrier_to_pu_map[key]))
 
         # traverse task graph in a depth-first manner
         # in doing so, traverse outgoing contains edges before sequential edges to analyze the effects of a node in the
@@ -95,8 +92,8 @@ class MemoryAccessGraph(object):
                      barrier_to_pu_map: Dict[PCGraphNode, ParallelUnit])\
             -> Tuple[List[PCGraphNode], List[List[PCGraphNode]]]:
         """returns a list of visited nodes and a list of all encountered paths"""
-        if self.run_configuration.verbose_mode:
-             print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", [c.node_id for c in current_path])
+#        if self.run_configuration.verbose_mode:
+#             print("Visiting: ", pc_graph_node.node_id, "   PU Stack: ", pu_stack, "   Path: ", [c.node_id for c in current_path])
         if pc_graph_node not in visited:
             visited.append(pc_graph_node)
         current_path.append(pc_graph_node)
@@ -169,8 +166,8 @@ class MemoryAccessGraph(object):
 
     def __add_memory_access_to_graph(self, operation_path_id: List[Union[BehaviorModelNode,int]], operation: Operation, bhv_node: BehaviorModelNode,
                                      previous_node_id: str, parallel_unit: ParallelUnit) -> str:
-        if self.run_configuration.verbose_mode:
-            print("Adding: ", "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
+        #if self.run_configuration.verbose_mode:
+        #    print("Adding: ", "\t", operation.mode, "\t", operation.target_name, "\t", parallel_unit)
 #        if not previous_node_id in self.graph.nodes:
 #            # add previous node into MemoryAccessGraph (Dummy as source of the edge)
 #            self.graph.add_node(previous_node_id)
