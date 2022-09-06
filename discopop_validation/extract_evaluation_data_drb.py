@@ -64,7 +64,7 @@ def main():
 
         additional_data_races_identified = 0
         if len([dr for dr in identified_data_races if dr not in target_data_races]) > 0:
-            additional_data_races_identified = len([dr for dr in identified_data_races if dr not in target_data_races])
+            additional_data_races_identified = " ".join([dr for dr in identified_data_races if dr not in target_data_races])
 
         evaluation_results[benchmark_number] = (is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified,
                                                 some_correct_data_races_identified, additional_data_races_identified)

@@ -1548,6 +1548,7 @@ class PCGraph(object):
                     continue
                 if self.graph.nodes[other_node]["data"].pragma is None:
                     continue
+
                 other_node_depend_entries = self.graph.nodes[other_node]["data"].pragma.get_variables_listed_as(
                     "depend")
                 if len(other_node_depend_entries) == 0:
@@ -1556,9 +1557,9 @@ class PCGraph(object):
 
                 # node and other_node are different and both of type TASK with non-empty depend clauses
                 # check if both share a common successive barrier / taskwait
-                if self.get_closest_successor_barrier_or_taskwait(
-                        node) != self.get_closest_successor_barrier_or_taskwait(other_node):
-                    continue
+#                if self.get_closest_successor_barrier_or_taskwait(
+#                        node) != self.get_closest_successor_barrier_or_taskwait(other_node):
+#                    continue
                 # node and other_node share a common successive barrier
                 # check if depends relation exists from node to other_node
                 other_node_depend_in_entries = [var for mode, var in
@@ -1578,6 +1579,57 @@ class PCGraph(object):
                         # if SEQUENTIAL path from other_node to node exists, create a DEPENDS edge
                         if self.is_successor(other_node, node):
                             self.graph.add_edge(node, other_node, type=EdgeType.DEPENDS)
+
+
+    def fix_sibling_task_barrier_affiliation(self):
+        task_nodes = []
+        for node in self.graph.nodes:
+            if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
+                task_nodes.append(node)
+
+        for task_1 in task_nodes:
+            for task_2 in task_nodes:
+                if task_1 == task_2:
+                    continue
+                # check if node_1 is contained in another task
+                if self.check_reachability(task_2, task_1, EdgeType.CONTAINS, []):
+                    # task_1 is contained in task_2
+                    #
+                    # check if task_1 and task_2 share a successor barrier
+                    task_1_barr = None
+                    task_2_barr = None
+                    task_1_belongs_successors = [edge[1] for edge in self.graph.out_edges(task_1) if
+                                                 self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+                    task_2_belongs_successors = [edge[1] for edge in self.graph.out_edges(task_2) if
+                                                 self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+                    if len(task_1_belongs_successors) == 1:
+                        task_1_barr = task_1_belongs_successors[0]
+                    if len(task_2_belongs_successors) == 1:
+                        task_2_barr = task_2_belongs_successors[0]
+                    if task_1_barr is None:
+                        task_1_barr = self.get_closest_successor_barrier_or_taskwait(task_1, ignore_depend_clauses=False)
+                    if task_2_barr is None:
+                        task_2_barr = self.get_closest_successor_barrier_or_taskwait(task_2, ignore_depend_clauses=False)
+                    if task_1_barr != task_2_barr:
+                        # nothing to do
+                        continue
+                    # get next barrier from task_2_barr
+                    new_barr = self.get_closest_successor_barrier_or_taskwait(task_2_barr, ignore_depend_clauses=False,
+                                                                              ignore_this_node=task_2_barr)
+                    if new_barr is not None:
+                        # relocate task_1 to next successive barrier
+                        if (task_1, task_1_barr) in self.graph.edges:
+                            self.graph.remove_edge(task_1, task_1_barr)
+                        self.graph.add_edge(task_1, new_barr, type=EdgeType.BELONGS_TO)
+                        # delete incoming contains edge of task_1
+                        in_contains_edges = [edge for edge in self.graph.in_edges(task_1) if
+                                             self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                        for source, target in in_contains_edges:
+                            self.graph.remove_edge(source, target)
+
+
+
+
 
     def replace_depends_with_sequential_edges(self):
         add_edge_buffer = []

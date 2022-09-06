@@ -210,6 +210,8 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 def add_forking_information(pc_graph):
     pc_graph.mark_barrier_affiliations()
 
+    pc_graph = fix_barrier_affiliations(pc_graph)
+
     # insert fork nodes
     pc_graph.insert_fork_nodes()
 
@@ -235,6 +237,11 @@ def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
     #pc_graph.redirect_tasks_successors()
 
     pc_graph.check_and_fix_dependences_to_barriers()
+    return pc_graph
+
+def fix_barrier_affiliations(pc_graph):
+    pc_graph.fix_sibling_task_barrier_affiliation()
+
     return pc_graph
 
 
@@ -439,7 +446,7 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-        #pc_graph.plot_graph()
+        pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
