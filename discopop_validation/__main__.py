@@ -222,6 +222,9 @@ def prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas):
 
     return pc_graph
 
+def prepare_for(pet, pc_graph, run_configuration, omp_pragmas):
+    pc_graph.new_replace_pragma_for_nodes()
+    return pc_graph
 
 def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
     pc_graph.add_depends_edges()
@@ -279,6 +282,8 @@ def __main_start_execution(run_configuration: Configuration):
             pc_graph.add_pragma_node(pragma)
 
         pc_graph = generic_preparation(pet, pc_graph, run_configuration, omp_pragmas)
+
+        pc_graph = prepare_for(pet, pc_graph, run_configuration, omp_pragmas)
 
         pc_graph = prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas)
 
@@ -447,12 +452,11 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-#        pc_graph.plot_graph()
-        pc_graph.prepare_root_for_MAGraph_creation()
         pc_graph.plot_graph()
+        pc_graph.prepare_root_for_MAGraph_creation()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        memory_access_graph.plot_graph()
+        #memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 

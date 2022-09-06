@@ -1852,6 +1852,38 @@ class PCGraph(object):
         for node in remove_nodes:
             self.graph.remove_node(node)
 
+    def new_replace_pragma_for_nodes(self):
+        remove_nodes = []
+        for node in copy.deepcopy(self.graph.nodes):
+            if type(self.graph.nodes[node]["data"]) == PragmaForNode:
+                remove_nodes.append(node)
+                # replace node with contained sequences
+                in_edges = [edge for edge in self.graph.in_edges(node)]
+                out_edges = [edge for edge in self.graph.out_edges(node)]
+
+                # move stored behavior to two separate nodes
+                for_node_obj: PCGraphNode = self.graph.nodes[node]["data"]
+                pcgn_id_1 = self.get_new_node_id()
+                pcgn_id_2 = self.get_new_node_id()
+                pcgn_obj_1 = PCGraphNode(pcgn_id_1)
+                pcgn_obj_2 = PCGraphNode(pcgn_id_2)
+                pcgn_obj_1.behavior_models = copy.deepcopy(for_node_obj.behavior_models)
+                pcgn_obj_2.behavior_models = copy.deepcopy(for_node_obj.behavior_models)
+                self.graph.add_node(pcgn_id_1, data=pcgn_obj_1)
+                self.graph.add_node(pcgn_id_2, data=pcgn_obj_2)
+
+                # connect nodes to incoming / outgoing edges of for node
+                for source, target in in_edges:
+                    self.graph.add_edge(source, pcgn_id_1, type=self.graph.edges[(source, target)]["type"])
+                    self.graph.add_edge(source, pcgn_id_2, type=self.graph.edges[(source, target)]["type"])
+                for source, target in out_edges:
+                    self.graph.add_edge(pcgn_id_1, target, type=self.graph.edges[(source, target)]["type"])
+                    self.graph.add_edge(pcgn_id_2, target, type=self.graph.edges[(source, target)]["type"])
+
+                # remove for node
+                self.graph.remove_node(node)
+
+
     def pass_shared_clauses_to_childnodes(self):
         re_run = True
         while re_run:
