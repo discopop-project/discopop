@@ -206,6 +206,38 @@ class PCGraph(object):
                                                                    end_line=function_end_line))
                 print("Inserted Function -", function_name, "- with CUID -", pet_cu_id, "- at NodeId -", new_node_id, "-")
 
+    def remove_bhv_nodes_if_not_contained_in_parallel_pragma(self):
+        pragma_parallel_nodes: List[PCGraphNode] = []
+        for node in self.graph.nodes:
+            node_obj = self.graph.nodes[node]["data"]
+            if type(node_obj) == PragmaParallelNode:
+                pragma_parallel_nodes.append(node)
+
+        to_be_removed = []
+        for node in self.graph.nodes:
+            if node == 0:  # do not remove ROOT-node
+                continue
+            node_obj = self.graph.nodes[node]["data"]
+            if type(node_obj) == PCGraphNode:
+                # check if node is reachable from any PragmaParallelNode
+                is_reachable = False
+                for pp_node in pragma_parallel_nodes:
+                    if self.check_reachability(pp_node, node, EdgeType.CONTAINS, []):
+                        is_reachable = True
+                if not is_reachable:
+                    to_be_removed.append(node)
+        for node in to_be_removed:
+            in_seq_edges = [edge for edge in self.graph.in_edges(node) if
+                            self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            out_seq_edges = [edge for edge in self.graph.out_edges(node) if
+                            self.graph.edges[edge]["type"] == EdgeType.SEQUENTIAL]
+            for source, _ in in_seq_edges:
+                for _, target in out_seq_edges:
+                    if source != target:
+                        self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
+            self.graph.remove_node(node)
+
+
     def insert_calls_edges(self, pet: PETGraphX, omp_pragmas: List[OmpPragma]):
         # copied from add_edges
         pragma_to_cuid: Dict[OmpPragma, str] = dict()

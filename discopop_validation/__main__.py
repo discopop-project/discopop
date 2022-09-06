@@ -214,6 +214,7 @@ def add_forking_information(pc_graph):
     pc_graph.insert_fork_nodes()
 
     pc_graph.remove_function_nodes()
+    pc_graph.remove_bhv_nodes_if_not_contained_in_parallel_pragma()
 
     return pc_graph
 
