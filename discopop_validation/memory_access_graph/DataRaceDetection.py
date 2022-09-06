@@ -78,7 +78,7 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
 
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
-    if __path_predecessor_relation_exists(amd_1.operation_path, amd_2.operation_path) or False:
+    if __path_predecessor_relation_exists(amd_1.operation_path, amd_2.operation_path):
         # predecessor relation exists
         return None
     print("\t3")
@@ -189,7 +189,7 @@ def __new_is_successor(amd_1: AccessMetaData, amd_2: AccessMetaData):
     #todo
     # check if amd_1 in operation_path of amd_2
     # check nodes inbetween for taskwaits or barriers
-    amd_2_id_path = [op.node_id for op in amd_2.operation_path[:-1]]
+    amd_2_id_path = [op.node_id for op in amd_2.operation_path[:-2]]  # ignore model and operation id
     print("amd_1: ", amd_1.origin_bhv_node.node_id)
     print("amd_2: ", amd_2_id_path)
     if amd_1.origin_bhv_node.node_id in amd_2_id_path:

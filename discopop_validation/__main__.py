@@ -194,7 +194,7 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
-    pc_graph.new_insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
+    #pc_graph.new_insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
 
     # insert sequential edge from root to un-called function (no function call in pragma occured)
     pc_graph.include_uncalled_functions()
@@ -442,14 +442,14 @@ def __main_start_execution(run_configuration: Configuration):
 
         # replace PCGraphNodes with BehaviorModelNodes. In case of BehaviorModel.simulation_thread_count > 1, create
         # multiple nodes each of which represents a single behavior model and has a simulation_thread_count of 1.
-        pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
+        #pc_graph.replace_PCGraphNodes_with_BehaviorModelNodes()
 
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-        pc_graph.plot_graph()
+#        pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
-
+        pc_graph.plot_graph()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
         memory_access_graph.plot_graph()

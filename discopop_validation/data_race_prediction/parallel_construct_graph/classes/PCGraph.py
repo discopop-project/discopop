@@ -954,7 +954,7 @@ class PCGraph(object):
             return True
         return False
 
-    def __get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True, ignore_this_node=None):
+    def get_closest_successor_barrier_or_taskwait(self, node_id, ignore_depend_clauses=True, ignore_this_node=None):
         queue = [node_id]
         visited = []
         while len(queue) > 0:
@@ -1028,7 +1028,7 @@ class PCGraph(object):
                     # skip task node as parent
                     result = None
                 else:
-                    result = self.__get_closest_successor_barrier_or_taskwait(current, ignore_depend_clauses=False)
+                    result = self.get_closest_successor_barrier_or_taskwait(current, ignore_depend_clauses=False)
                 if result is not None:
                     return result
                 for edge in self.graph.in_edges(current):
@@ -1038,7 +1038,7 @@ class PCGraph(object):
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) == PragmaTaskNode:
                 # find next BARRIER or TASKWAIT considering depend-clauses.
-                next_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
+                next_barrier = self.get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
                 if next_barrier is None:
                     # no barrier found in successors, search in parent node
                     next_barrier = __get_closest_parent_barrier_or_taskwait(node)
@@ -1488,7 +1488,7 @@ class PCGraph(object):
                         continue
                     else:
                         # requirements not met. Connect node to next barrier
-                        next_barrier = self.__get_closest_successor_barrier_or_taskwait(barr, ignore_this_node=barr)
+                        next_barrier = self.get_closest_successor_barrier_or_taskwait(barr, ignore_this_node=barr)
                         self.graph.remove_edge(node, barr)
                         self.graph.add_edge(node, next_barrier, type=EdgeType.SEQUENTIAL)
                         modification_found = True
@@ -1531,8 +1531,8 @@ class PCGraph(object):
 
                 # node and other_node are different and both of type TASK with non-empty depend clauses
                 # check if both share a common successive barrier / taskwait
-                if self.__get_closest_successor_barrier_or_taskwait(
-                        node) != self.__get_closest_successor_barrier_or_taskwait(other_node):
+                if self.get_closest_successor_barrier_or_taskwait(
+                        node) != self.get_closest_successor_barrier_or_taskwait(other_node):
                     continue
                 # node and other_node share a common successive barrier
                 # check if depends relation exists from node to other_node
@@ -1628,9 +1628,9 @@ class PCGraph(object):
         """create belongs_to edges between each node and it's immediate successiv Barrier"""
         for node in self.graph.nodes:
             if type(self.graph.nodes[node]["data"]) in [PragmaBarrierNode, PragmaTaskwaitNode]:
-                closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False, ignore_this_node=node)
+                closest_barrier = self.get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False, ignore_this_node=node)
             else:
-                closest_barrier = self.__get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
+                closest_barrier = self.get_closest_successor_barrier_or_taskwait(node, ignore_depend_clauses=False)
             if closest_barrier is not None:
                 if node != closest_barrier:
                     self.graph.add_edge(node, closest_barrier, type=EdgeType.BELONGS_TO)
@@ -1653,6 +1653,7 @@ class PCGraph(object):
             fork_node = self.__add_fork_node()
             raw_belonging_nodes = [edge[0] for edge in self.graph.in_edges(barrier) if
                                self.graph.edges[edge]["type"] == EdgeType.BELONGS_TO]
+            self.graph.add_edge(fork_node, barrier, type=EdgeType.BELONGS_TO)
             print("\tbelonging: ", raw_belonging_nodes)
             # get contained nodes for all belonging_nodes
             contained_nodes_dict = self.get_contained_nodes_dict(raw_belonging_nodes)
@@ -1699,6 +1700,8 @@ class PCGraph(object):
 #            for bel_barr in belonging_barriers:
 #                if (fork_node, bel_barr) not in self.graph.edges:
 #                    self.graph.add_edge(bel_barr, fork_node, type=EdgeType.SEQUENTIAL)
+
+            #self.plot_graph()
 
 
     def check_reachability(self, root, target, edge_type, visited) -> bool:
