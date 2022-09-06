@@ -291,22 +291,8 @@ def __main_start_execution(run_configuration: Configuration):
 
         pc_graph = add_forking_information(pc_graph)
 
-        # todo determine parallel regions by searching from barriers in reverse
 
-        ##### TEST
-
-        for node in pc_graph.graph.nodes:
-            print("NODE: ", node)
-            print("\tPragma: ", pc_graph.graph.nodes[node]["data"].pragma)
-
-        ##### END OF TEST
-
-        #pc_graph.plot_graph()
-
-
-
-
-
+# actually not necessary, since behavior is stored in the pragma nodes themselves
 #        pc_graph.insert_behavior_storage_nodes()  # trivial, thus excluded for now for overview purposes
 
 #### OLD CODE
@@ -452,7 +438,7 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-        pc_graph.plot_graph()
+        #pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
