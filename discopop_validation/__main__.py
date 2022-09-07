@@ -175,6 +175,9 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
     # create sequence edges between contained nodes, but this time it does not require perfect continuity
     pc_graph.draw_sequence_edges_for_contained_nodes_2()
 
+    pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
+
+
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
     # remove PCGraphNodes without stored behavior information
@@ -446,7 +449,7 @@ def __main_start_execution(run_configuration: Configuration):
         time_data_race_computation_start = time.time()
 
         # remove edges between ROOT and successors and create edges between ROOT and FORK nodes without incoming edges
-        pc_graph.plot_graph()
+        #pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
 
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
