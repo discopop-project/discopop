@@ -12,6 +12,7 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
     TODO: For now, only Do-All pattern is reported!
     """
     interim_result: List[Tuple[int, int, int, str, PragmaType]] = []
+    print("Node: ", pc_graph_node_id)
     # include parallel, parallel for, single and critical pragmas
     if pragma.get_type() in [PragmaType.FOR, PragmaType.PARALLEL, PragmaType.SINGLE, PragmaType.TASK, PragmaType.CRITICAL]:
         pragma_target_regions: List[Tuple[int, int, Optional[List[str]]]] = [(pragma.start_line, pragma.end_line, None)]
@@ -46,9 +47,13 @@ def identify_target_sections_from_pragma(pc_graph, pragma: OmpPragma, pc_graph_n
         for edge in pc_graph.graph.out_edges(pc_graph.pragma_to_node_id[pragma]):
             # check if edge type is "CONTAINS"
             if pc_graph.graph.edges[edge]["type"] == EdgeType.CONTAINS:
+#                if pc_graph.graph.nodes[edge[1]]["data"].pragma is None:
+#                    continue
+                print("\tContained: ", edge[1])
+
                 # split pragma regions around contained pragma
-                contained_pragma_start_line = pc_graph.graph.nodes[edge[1]]["data"].pragma.start_line
-                contained_pragma_end_line = pc_graph.graph.nodes[edge[1]]["data"].pragma.end_line
+                contained_pragma_start_line = pc_graph.graph.nodes[edge[1]]["data"].get_start_line()
+                contained_pragma_end_line = pc_graph.graph.nodes[edge[1]]["data"].get_end_line()
                 # get regions which need to be removed (resp. split) and newly created
                 remove_regions = []
                 add_regions = []

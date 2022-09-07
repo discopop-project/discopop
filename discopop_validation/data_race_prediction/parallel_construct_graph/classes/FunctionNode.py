@@ -42,3 +42,15 @@ class FunctionNode(PCGraphNode):
             if len(self.data_races) > 0:
                 color = "red"
         return color
+
+    def get_start_line(self) -> int:
+        if self.start_line is not None:
+            return self.start_line
+
+    def get_end_line(self) -> int:
+        if self.end_line is not None:
+            return self.end_line
+
+    def get_file_id(self) -> int:
+        if self.file_id is not None:
+            return self.file_id

@@ -18,6 +18,9 @@ class PUStack(object):
         parallel_frame = ParallelUnit(parallel_frame_id, origin_pc_graph_node)
         self.contents.append(parallel_frame)
 
+    def push_pu(self, parallel_unit: ParallelUnit):
+        self.contents.append(parallel_unit)
+
     def pop(self) -> ParallelUnit:
         """removes and returns the last element of the stack.
         """

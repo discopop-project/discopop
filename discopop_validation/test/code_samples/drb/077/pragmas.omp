@@ -1,0 +1,2 @@
+OMPParallelDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/077/simple.c:51:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/077/simple.c:54:3
+OMPSingleDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/077/simple.c:53:5;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/077/simple.c:53:14

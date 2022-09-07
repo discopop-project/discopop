@@ -1,0 +1,2 @@
+OMPTargetDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/071/simple.c:60:1;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/071/simple.c:62:15
+OMPParallelForDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/071/simple.c:61:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/071/simple.c:62:15

@@ -1,0 +1,4 @@
+OMPTargetDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:28:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:35:3
+OMPTeamsDistributeParallelForDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:29:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:35:3
+OMPCriticalDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:31:5;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:31:8
+OMPCriticalDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:34:5;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/148/simple.c:34:12

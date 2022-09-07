@@ -1,0 +1,2 @@
+OMPParallelSectionsDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/122/simple.c:26:3;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/122/simple.c:33:3
+OMPTaskDirective;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/122/simple.c:29:7;/home/lukas/git/discopop/discopop_validation/test/code_samples/drb/122/simple.c:31:7

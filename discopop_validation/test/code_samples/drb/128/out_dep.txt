@@ -1,0 +1,5 @@
+START 1:26
+1:35 NOM  INIT *|var RAW 1:31|tp
+1:31 NOM  INIT *|tp
+1:26 NOM  INIT *|retval
+1:38 END program

@@ -1,0 +1,6 @@
+START 1:60
+1:64 BGN func 1:57
+1:58 END func
+1:57 NOM  INIT *|foo.q
+1:60 NOM  INIT *|retval
+1:66 END program

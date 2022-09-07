@@ -46,7 +46,7 @@ class Operation:
         if self.mode.startswith("c"):
             return_str += " Origin: " + str(self.origin_line) + ":" + str(self.origin_col)
         if len(self.modifiers) > 0:
-            return_str += " Modifiers: " + " ".join([str(m[0]) + "-" + m[1] for m in self.modifiers])
+            return_str += "\n\tModifiers: " + " ".join([str(m[0]) + "-" + m[1] for m in self.modifiers])
         return return_str
 
     def __eq__(self, other):

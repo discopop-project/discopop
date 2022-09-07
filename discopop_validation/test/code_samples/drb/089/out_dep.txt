@@ -1,0 +1,9 @@
+START 1:62
+1:73 NOM  RAW 1:64|counter RAW 1:70|counter WAR 1:73|counter
+1:70 NOM  INIT *|counter RAW 1:64|counter
+1:65 NOM  RAW 1:64|counter
+1:64 NOM  INIT *|counter
+1:76 NOM  RAW 1:64|counter
+1:75 NOM  RAW 1:64|counter RAW 1:73|counter
+1:62 NOM  INIT *|retval
+1:77 END program

@@ -1,0 +1,129 @@
+START 1:165
+1:111 BGN loop 12
+1:113 END loop
+1:110 BGN loop 12
+1:115 END loop
+1:109 BGN loop 40
+1:117 END loop
+1:108 BGN loop 500
+1:119 END loop
+1:63 BGN loop 10
+1:71 END loop
+1:62 BGN loop 10
+1:72 END loop
+1:60 BGN loop 500
+1:78 END loop
+1:72 BGN loop 10
+1:76 END loop
+1:159 BGN loop 40
+1:162 END loop
+1:144 BGN loop 10
+1:146 END loop
+1:87 BGN loop 500
+1:102 END loop
+1:90 BGN loop 40
+1:101 END loop
+1:142 BGN loop 10
+1:146 END loop
+1:64 BGN loop 10
+1:71 END loop
+1:93 BGN loop 12
+1:100 END loop
+1:74 BGN loop 10
+1:75 END loop
+1:132 BGN loop 1
+1:148 END loop
+1:96 BGN loop 12
+1:99 END loop
+1:135 BGN loop 1
+1:148 END loop
+1:73 BGN loop 10
+1:75 END loop
+1:131 BGN loop 1
+1:149 END loop
+1:133 BGN loop 1
+1:148 END loop
+1:134 BGN loop 1
+1:148 END loop
+1:136 BGN loop 1
+1:148 END loop
+1:141 BGN loop 40
+1:147 END loop
+1:143 BGN loop 10
+1:146 END loop
+1:178 BGN func 1:104
+1:160 BGN func 1:50
+1:157 BGN func 1:122
+1:176 BGN func 1:153
+1:174 BGN func 1:81
+1:78 END func
+1:102 END func
+1:120 END func
+1:149 END func
+1:162 END func
+1:90 NOM  INIT *|m RAW 1:169|num_vars RAW 1:90|m RAW 1:97|m RAW 1:97|num_vars WAR 1:90|m
+1:141 NOM  RAW 1:141|var RAW 1:97|num_vars WAR 1:141|var WAW 1:97|var
+1:64 NOM  RAW 1:64|k RAW 1:75|z_block_size RAW 1:97|z_block_size WAR 1:131|k WAR 1:64|k WAR 1:74|k
+1:165 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:65 NOM  INIT *|work RAW 1:132|bp RAW 1:134|bp RAW 1:136|bp RAW 1:138|bp RAW 1:139|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:97|bp WAR 1:65|work WAR 1:66|work WAR 1:67|work WAR 1:68|work WAR 1:69|work WAR 1:70|work WAR 1:71|work WAR 1:75|work WAR 1:97|work WAW 1:75|work WAW 1:97|work
+1:147 NOM  RAW 1:131|o WAR 1:147|o
+1:135 NOM  RAW 1:135|i WAR 1:135|i WAR 1:97|i WAW 1:97|i1
+1:117 NOM  RAW 1:108|n RAW 1:75|blocks
+1:88 NOM  INIT *|blocks RAW 1:85|blocks RAW 1:87|n RAW 1:97|blocks WAR 1:97|blocks WAW 1:97|blocks
+1:67 NOM  RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:96|bp RAW 1:97|bp
+1:134 NOM  RAW 1:133|j1 RAW 1:134|j2 WAR 1:134|j1 WAR 1:134|j2 WAW 1:97|j2
+1:94 NOM  INIT *|blocks RAW 1:85|blocks RAW 1:87|n RAW 1:89|blocks RAW 1:90|m RAW 1:91|blocks RAW 1:93|i RAW 1:94|blocks RAW 1:94|n RAW 1:97|blocks RAW 1:97|m RAW 1:97|n WAR 1:94|blocks WAR 1:97|blocks WAW 1:88|blocks WAW 1:97|blocks
+1:95 NOM  RAW 1:171|y_block_size RAW 1:97|y_block_size
+1:75 NOM  INIT *|bp RAW 1:145|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:65|bp RAW 1:65|work RAW 1:72|bp RAW 1:72|i RAW 1:73|bp RAW 1:73|j RAW 1:74|bp RAW 1:74|k RAW 1:75|bp RAW 1:75|i RAW 1:75|j RAW 1:75|var RAW 1:75|work RAW 1:88|bp RAW 1:89|bp RAW 1:91|bp RAW 1:94|bp RAW 1:97|bp WAR 1:65|bp WAR 1:66|bp WAR 1:67|bp WAR 1:68|bp WAR 1:69|bp WAR 1:70|bp WAR 1:71|bp WAR 1:72|bp WAR 1:73|bp WAR 1:74|bp WAR 1:75|bp WAW 1:65|bp WAW 1:75|bp
+1:133 NOM  RAW 1:133|j WAR 1:133|j WAW 1:97|j WAW 1:97|j1
+1:66 NOM  RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:94|bp RAW 1:96|bp RAW 1:97|bp
+1:53 NOM  RAW 1:75|x_block_size RAW 1:75|y_block_size RAW 1:75|z_block_size RAW 1:97|x_block_size RAW 1:97|y_block_size RAW 1:97|z_block_size WAR 1:132|__vla_expr0 WAR 1:134|saved_stack WAR 1:143|__vla_expr1 WAR 1:65|__vla_expr0 WAR 1:65|__vla_expr1 WAR 1:65|__vla_expr2 WAR 1:66|__vla_expr0 WAR 1:66|__vla_expr1 WAR 1:66|__vla_expr2 WAR 1:67|__vla_expr2 WAR 1:69|__vla_expr0 WAR 1:69|__vla_expr1 WAR 1:69|__vla_expr2 WAR 1:71|__vla_expr0 WAR 1:71|__vla_expr1 WAR 1:71|__vla_expr2 WAR 1:78|saved_stack WAW 1:53|__vla_expr0 WAW 1:53|__vla_expr1 WAW 1:53|__vla_expr2 WAW 1:75|__vla_expr0 WAW 1:75|__vla_expr1 WAW 1:75|__vla_expr2 WAW 1:97|__vla_expr2
+1:136 NOM  RAW 1:131|n RAW 1:135|i1 RAW 1:136|i2 WAR 1:136|i1 WAR 1:136|i2 WAR 1:136|n WAW 1:97|i2
+1:87 NOM  INIT *|n RAW 1:167|max_num_blocks RAW 1:87|n RAW 1:94|n RAW 1:97|max_num_blocks RAW 1:97|n WAR 1:87|n
+1:115 NOM  RAW 1:108|n RAW 1:109|m RAW 1:65|blocks RAW 1:75|blocks
+1:144 NOM  RAW 1:144|kb RAW 1:97|z_block_size WAR 1:144|kb WAW 1:97|kb
+1:93 NOM  INIT *|i RAW 1:170|x_block_size RAW 1:93|i RAW 1:97|i RAW 1:97|x_block_size WAR 1:93|i
+1:108 NOM  RAW 1:108|n RAW 1:75|max_num_blocks WAR 1:108|n WAR 1:75|n
+1:111 NOM  RAW 1:111|j RAW 1:75|y_block_size WAR 1:111|j WAR 1:67|j
+1:91 NOM  INIT *|blocks RAW 1:85|blocks RAW 1:87|n RAW 1:89|blocks RAW 1:90|m RAW 1:94|blocks RAW 1:94|n RAW 1:97|blocks RAW 1:97|n WAR 1:97|blocks WAW 1:88|blocks WAW 1:97|blocks
+1:92 NOM  RAW 1:170|x_block_size RAW 1:97|x_block_size
+1:169 NOM  INIT *|num_vars
+1:142 NOM  RAW 1:142|ib RAW 1:97|x_block_size WAR 1:142|ib WAW 1:97|ib
+1:97 NOM  INIT *|blocks RAW 1:85|blocks RAW 1:87|n RAW 1:89|blocks RAW 1:90|m RAW 1:91|blocks RAW 1:93|i RAW 1:94|blocks RAW 1:94|n RAW 1:96|j RAW 1:97|blocks RAW 1:97|i RAW 1:97|m RAW 1:97|n WAR 1:87|blocks WAR 1:90|blocks WAR 1:93|blocks WAR 1:96|blocks WAR 1:97|blocks WAR 1:98|blocks WAW 1:165|blocks WAW 1:168|blocks WAW 1:88|blocks WAW 1:97|blocks
+1:61 NOM  RAW 1:60|in RAW 1:75|blocks RAW 1:97|blocks WAR 1:75|bp WAW 1:97|bp
+1:113 NOM  RAW 1:108|n RAW 1:109|blocks RAW 1:109|m RAW 1:110|blocks RAW 1:110|i RAW 1:50|blocks RAW 1:60|blocks RAW 1:61|blocks RAW 1:65|blocks RAW 1:72|blocks RAW 1:73|blocks RAW 1:74|blocks RAW 1:75|blocks
+1:170 NOM  INIT *|x_block_size
+1:139 NOM  RAW 1:131|n RAW 1:137|bp WAW 1:97|bp
+1:60 NOM  RAW 1:60|in RAW 1:75|in RAW 1:75|max_num_blocks RAW 1:97|max_num_blocks WAR 1:60|in WAW 1:97|in
+1:110 NOM  RAW 1:110|i RAW 1:75|x_block_size WAR 1:110|i WAR 1:65|i
+1:71 NOM  RAW 1:132|bp RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:97|bp
+1:68 NOM  RAW 1:132|bp RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:96|bp RAW 1:97|bp
+1:85 NOM  INIT *|blocks RAW 1:167|max_num_blocks
+1:69 NOM  RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:96|bp RAW 1:97|bp
+1:167 NOM  INIT *|max_num_blocks
+1:62 NOM  RAW 1:62|i RAW 1:75|x_block_size RAW 1:97|x_block_size WAR 1:135|i WAR 1:62|i WAR 1:72|i
+1:72 NOM  RAW 1:72|i RAW 1:75|i RAW 1:75|x_block_size RAW 1:97|x_block_size WAR 1:62|i WAR 1:72|i
+1:131 NOM  RAW 1:131|k WAR 1:131|k WAR 1:97|n WAW 1:97|k WAW 1:97|k1 WAW 1:97|o
+1:70 NOM  RAW 1:132|bp RAW 1:134|bp RAW 1:136|bp RAW 1:137|bp RAW 1:138|bp RAW 1:142|bp RAW 1:144|bp RAW 1:145|bp RAW 1:147|bp RAW 1:159|bp RAW 1:50|bp RAW 1:50|var RAW 1:53|bp RAW 1:60|bp RAW 1:61|bp RAW 1:62|bp RAW 1:62|i RAW 1:63|bp RAW 1:63|j RAW 1:64|bp RAW 1:64|k RAW 1:65|bp RAW 1:75|bp RAW 1:75|var RAW 1:87|bp RAW 1:88|bp RAW 1:89|bp RAW 1:90|bp RAW 1:91|bp RAW 1:93|bp RAW 1:94|bp RAW 1:96|bp RAW 1:97|bp
+1:160 NOM  RAW 1:159|var
+1:143 NOM  RAW 1:143|jb RAW 1:97|y_block_size WAR 1:143|jb WAW 1:97|jb
+1:109 NOM  RAW 1:109|m RAW 1:75|num_vars WAR 1:109|m WAR 1:159|m
+1:96 NOM  INIT *|j RAW 1:171|y_block_size RAW 1:96|j RAW 1:97|j RAW 1:97|y_block_size WAR 1:96|j
+1:168 NOM  INIT *|num_refine
+1:50 NOM  WAR 1:141|stencil_in WAR 1:65|stencil_in WAR 1:66|stencil_in WAR 1:67|stencil_in WAR 1:69|stencil_in WAR 1:71|stencil_in WAR 1:75|var WAW 1:136|var WAW 1:50|stencil_in WAW 1:75|stencil_in
+1:132 NOM  RAW 1:131|k1 RAW 1:132|k2 WAR 1:132|k1 WAR 1:132|k2 WAW 1:97|k2
+1:172 NOM  INIT *|z_block_size
+1:89 NOM  INIT *|blocks RAW 1:169|num_vars RAW 1:85|blocks RAW 1:87|n RAW 1:97|blocks RAW 1:97|num_vars WAR 1:97|blocks WAW 1:97|blocks
+1:137 NOM  RAW 1:131|o RAW 1:97|blocks WAW 1:97|bp
+1:171 NOM  INIT *|y_block_size
+1:98 NOM  RAW 1:172|z_block_size RAW 1:97|z_block_size
+1:78 NOM  RAW 1:53|saved_stack RAW 1:75|saved_stack
+1:138 NOM  RAW 1:137|bp WAW 1:97|bp
+1:119 NOM  RAW 1:75|blocks
+1:145 NOM  INIT *|bp RAW 1:137|bp RAW 1:141|var RAW 1:142|ib RAW 1:143|jb RAW 1:144|kb RAW 1:145|bp RAW 1:91|bp RAW 1:94|bp RAW 1:97|bp WAR 1:145|bp WAR 1:97|bp WAW 1:145|bp WAW 1:88|bp WAW 1:97|bp
+1:112 NOM  RAW 1:108|blocks RAW 1:108|n RAW 1:109|blocks RAW 1:109|m RAW 1:110|blocks RAW 1:110|i RAW 1:111|blocks RAW 1:111|j RAW 1:50|blocks RAW 1:60|blocks RAW 1:61|blocks RAW 1:65|blocks RAW 1:72|blocks RAW 1:73|blocks RAW 1:74|blocks RAW 1:75|blocks
+1:73 NOM  RAW 1:73|j RAW 1:75|j RAW 1:75|y_block_size RAW 1:97|y_block_size WAR 1:63|j WAR 1:73|j
+1:159 NOM  RAW 1:159|var RAW 1:75|num_vars RAW 1:75|var RAW 1:97|num_vars WAR 1:159|var WAR 1:97|var
+1:63 NOM  RAW 1:63|j RAW 1:75|y_block_size RAW 1:97|y_block_size WAR 1:133|j WAR 1:63|j WAR 1:73|j
+1:74 NOM  RAW 1:74|k RAW 1:75|k RAW 1:75|z_block_size RAW 1:97|z_block_size WAR 1:64|k WAR 1:74|k
+1:179 END program

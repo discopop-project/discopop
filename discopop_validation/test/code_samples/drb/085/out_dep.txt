@@ -1,0 +1,20 @@
+START 1:62
+1:79 BGN loop 1000
+1:83 END loop
+1:69 BGN loop 1000
+1:75 END loop
+1:71 BGN func 1:57
+1:60 END func
+1:83 NOM  RAW 1:75|sum RAW 1:81|sum1
+1:84 NOM  RAW 1:75|sum RAW 1:81|sum1
+1:69 NOM  INIT *|i RAW 1:64|len RAW 1:69|i WAR 1:69|i
+1:71 NOM  RAW 1:69|i
+1:64 NOM  INIT *|len
+1:57 NOM  INIT *|i WAR 1:59|i
+1:79 NOM  RAW 1:64|len RAW 1:79|i WAR 1:69|i WAR 1:79|i
+1:75 NOM  RAW 1:59|sum0 RAW 1:65|sum WAR 1:75|sum
+1:81 NOM  INIT *|sum1 RAW 1:79|i RAW 1:81|sum1 WAR 1:81|sum1
+1:62 NOM  INIT *|retval
+1:59 NOM  INIT *|sum0 RAW 1:57|i RAW 1:59|sum0 WAR 1:59|sum0
+1:65 NOM  INIT *|sum
+1:85 END program

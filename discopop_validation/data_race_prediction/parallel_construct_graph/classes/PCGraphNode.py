@@ -25,6 +25,7 @@ class PCGraphNode(object):
     data_races: List[DataRace]
     covered_by_fork_node: bool
     target_code_sections: List
+    added_to_sequence: bool
 
     def __init__(self, node_id, pragma=None):
         self.node_id = node_id
@@ -34,6 +35,7 @@ class PCGraphNode(object):
         self.data_races = []
         self.covered_by_fork_node = False
         self.target_code_sections = []
+        self.added_to_sequence = False
 
     def get_label(self):
         if self.node_id == 0:
@@ -48,7 +50,16 @@ class PCGraphNode(object):
     def get_start_line(self) -> int:
         if len(self.behavior_models) == 0:
             if self.pragma is None:
-                return -1
+                start_line = -1
+                for tcs in self.target_code_sections:
+                    # ('0', '1', '40,41,', 'y,x,retval,', 'PragmaType.PARALLEL')
+                    target_lines = tcs[2]
+                    if len(target_lines) > 0:
+                        tmp = int(target_lines.split(",")[0])
+                        if start_line == -1 or tmp < start_line:
+                            start_line = tmp
+                return start_line
+
             else:
                 return self.pragma.start_line
         else:
@@ -57,7 +68,15 @@ class PCGraphNode(object):
     def get_end_line(self) -> int:
         if len(self.behavior_models) == 0:
             if self.pragma is None:
-                return -1
+                end_line = -1
+                for tcs in self.target_code_sections:
+                    # ('0', '1', '40,41,', 'y,x,retval,', 'PragmaType.PARALLEL')
+                    target_lines = tcs[2]
+                    if len(target_lines) > 0:
+                        tmp = int(target_lines.split(",")[-2])
+                        if end_line == -1 or tmp < end_line:
+                            end_line = tmp
+                return end_line
             else:
                 return self.pragma.end_line
         else:
@@ -127,10 +146,12 @@ class PCGraphNode(object):
 
 
 
+
+
     def insert_behavior_model(self, run_configuration: Configuration, pet: PETGraphX, pc_graph,
                               omp_pragmas: List[OmpPragma]):
-        if self.pragma is None:
-            return
+#        if self.pragma is None:
+#            return
 #        self.pragma.apply_preprocessing()
 #        target_code_sections = identify_target_sections_from_pragma(pc_graph, self.pragma, self.node_id)
 #        # modify target code sections according to the inversed line mapping to
@@ -171,6 +192,8 @@ class PCGraphNode(object):
                 for contained in contained_nodes:
                     if contained == self.node_id:
                         # only pragma itself is allowed to keep the lines
+                        continue
+                    if pc_graph.graph.nodes[contained]["data"].pragma is None:
                         continue
                     contained_file_id = pc_graph.graph.nodes[contained]["data"].pragma.file_id
                     if target_file_id != contained_file_id:
@@ -230,9 +253,12 @@ class PCGraphNode(object):
         """replaces this PCGraphNode with an equivalent set of BehaviorModelNodes and removes the PCGraphNode
         afterwards."""
         for model in self.behavior_models:
-            for idx in range(0, model.simulation_thread_count):
-                # insert and connect BehaviorModelNode
-                pc_graph.insert_behavior_model_node(self, model)
+            # old behavior
+            # for idx in range(0, model.simulation_thread_count):
+            #    # insert and connect BehaviorModelNode
+            #    pc_graph.insert_behavior_model_node(self, model)
+
+            pc_graph.insert_behavior_model_node(self, model)
 
         # delete PCGraphNode
         pc_graph.graph.remove_node(self.node_id)

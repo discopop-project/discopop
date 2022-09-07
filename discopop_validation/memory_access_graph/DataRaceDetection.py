@@ -1,11 +1,15 @@
 from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
-from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency
+from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency, NodeType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaBarrierNode import \
+    PragmaBarrierNode
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PragmaTaskwaitNode import \
+    PragmaTaskwaitNode
 from discopop_validation.data_race_prediction.utils import get_pet_node_id_from_source_code_lines
 from discopop_validation.memory_access_graph.AccessMetaData import AccessMetaData
 from discopop_validation.memory_access_graph.MAGDataRace import MAGDataRace
@@ -69,8 +73,12 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if (not amd_1.access_mode == "w") and (not amd_2.access_mode == "w"):
         return None
 
+#    print()
+#    print("AMD1: ", amd_1.operation, " -> ", amd_1.origin_bhv_node.node_id)
+#    print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
+
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
-    if __path_predecessor_relation_exists(amd_1.operation_path_id, amd_2.operation_path_id):
+    if __path_predecessor_relation_exists(amd_1.operation_path, amd_2.operation_path):
         # predecessor relation exists
         return None
 
@@ -92,10 +100,36 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if __originate_from_critical_section(amd_1, amd_2):
         return None
 
+    # requirement 8: ignore data races which stem from two different paths through the source code
+    if __originated_from_different_paths(amd_1, amd_2):
+        return None
+
     op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
     op_2: Operation = ma_graph.graph.edges[edge_2]["data"].operation
     data_race_object = MAGDataRace(ma_node, op_1, op_2, is_weak_data_race)
     return data_race_object
+
+
+def __originated_from_different_paths(amd_1: AccessMetaData, amd_2: AccessMetaData):
+    """checks whether both accesses share a MUTEX-Modifier. If so, the data race is only valid if both accesses
+    originated from the same path. This is the case, if the digits after the last ':' are equal."""
+    mutexes_1 = [mod for mod in amd_1.operation.modifiers if mod[0] == OperationModifierType.MUTEX]
+    mutexes_2 = [mod for mod in amd_2.operation.modifiers if mod[0] == OperationModifierType.MUTEX]
+    # split modifiers into mutex-id + path id
+    split_mutexes_1 = [(x[:x.rfind(":")], x[x.rfind(":") + 1:]) for _, x in mutexes_1]
+    split_mutexes_2 = [(x[:x.rfind(":")], x[x.rfind(":") + 1:]) for _, x in mutexes_2]
+    # get overlap based on first value of split_mutexes
+    overlap = []
+    for mid_1, pid_1 in split_mutexes_1:
+        for mid_2, pid_2 in split_mutexes_2:
+            if mid_1 == mid_2:
+                overlap.append((mid_1, pid_1, pid_2))
+    # check if both accesses originated from different paths
+    for mutex_id, path_id_1, path_id_2 in overlap:
+        if path_id_1 != path_id_2:
+            return True
+    return False
+
 
 
 def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> bool:
@@ -129,19 +163,29 @@ def __path_predecessor_relation_exists(path_1: List[int], path_2: List[int]) -> 
 
 
 def __pcgraph_predecessor_relation(amd_1: AccessMetaData, amd_2: AccessMetaData, pc_graph: PCGraph):
-    """Check if a Taskwait or Barrier is encountered on the path from amd_1.origin_bhv_node
-    to amd_2.origin_bhv_node or vice versa.
-    Returns True, if a Taskwait or Barrier lies between both origin_bhv_nodes.
-    Reutrns False, else
+    """Check if amd_1 is a successor of amd_2 or vice-versa.
     """
     # check both directions
     result = False
-    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
-                                                                                  amd_2.origin_bhv_node.node_id)
-
-    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
-                                                                                  amd_1.origin_bhv_node.node_id)
+#    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_1.origin_bhv_node.node_id,
+#                                                                                  amd_2.origin_bhv_node.node_id, [])
+#
+#    result = result or pc_graph.is_successor_with_encountered_barrier_or_taskwait(amd_2.origin_bhv_node.node_id,
+#                                                                                  amd_1.origin_bhv_node.node_id, [])
+    # Note: Check for barrier in path is not required anymore since barriers now directly correspond to parallel units.
+    result = result or __new_is_successor(amd_1, amd_2)
+    result = result or __new_is_successor(amd_2, amd_1)
     return result
+
+
+def __new_is_successor(amd_1: AccessMetaData, amd_2: AccessMetaData):
+    # check if amd_1 in operation_path of amd_2
+    amd_2_id_path = [op.node_id for op in amd_2.operation_path[:-2]]  # ignore model and operation id
+    if amd_1.origin_bhv_node.node_id in amd_2_id_path:
+        # amd_2 is a successor of amd_1
+        return True
+    return False
+
 
 
 def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, pet: PETGraphX):
@@ -150,10 +194,12 @@ def __pet_dependency_edge_exists(amd_1: AccessMetaData, amd_2: AccessMetaData, p
     """
     pet_node_id_amd_1 = get_pet_node_id_from_source_code_lines(pet, int(amd_1.operation.file_id),
                                                                amd_1.operation.line, amd_1.operation.line,
-                                                               accessed_var_name=amd_1.operation.target_name)
+                                                               accessed_var_name=amd_1.operation.target_name,
+                                                               node_type=NodeType.CU)
     pet_node_id_amd_2 = get_pet_node_id_from_source_code_lines(pet, int(amd_2.operation.file_id),
                                                                amd_2.operation.line, amd_2.operation.line,
-                                                               accessed_var_name=amd_2.operation.target_name)
+                                                               accessed_var_name=amd_2.operation.target_name,
+                                                               node_type=NodeType.CU)
     out_dependencies_node_1 = pet.out_edges(pet_node_id_amd_1, PETEdgeType.DATA)
     # filter dependencies, only conserve dependencies from pet_node_id_amd_1 to pet_node_id_amd_2
     dependencies_1_2 = [dep for dep in out_dependencies_node_1 if

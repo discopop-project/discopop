@@ -1,0 +1,50 @@
+<Nodes>
+
+	<Node id="1:0" type="1" name="main" startsAtLine = "1:56" endsAtLine = "1:67">
+		<childrenNodes>1:1,1:2</childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="1:56">argc</arg>
+			<arg type="i8**" defLine="1:56">argv</arg>
+		</funcArguments>
+		<funcReturnLines>1:56, </funcReturnLines>
+	</Node>
+
+	<Node id="1:1" type="0" name="" startsAtLine = "1:56" endsAtLine = "1:63">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:2</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:56">argc</local>
+			<local type="i8***" defLine="1:56">argv</local>
+			<local type="i32*" defLine="LineNotFound">retval</local>
+		</localVariables>
+		<globalVariables>
+			<global type="float*" defLine="GlobalVar">x</global>
+			<global type="i32*" defLine="GlobalVar">y</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:2" type="0" name="" startsAtLine = "1:66" endsAtLine = "1:67">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<returnInstructions count="1">1:67</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="float*" defLine="GlobalVar">x</global>
+			<global type="i32*" defLine="GlobalVar">y</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
+
+

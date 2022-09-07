@@ -26,6 +26,8 @@ def apply_behavior_modification(unmodified_behavior_models: List[BehaviorModel],
 def __apply_reduction_modification(behavior_model: BehaviorModel, pragma: OmpPragma,
                                    run_configuration: Configuration) -> BehaviorModel:
     """search for the reduction operation and mark it by adding an entry to the list of modifiers"""
+    if pragma is None:
+        return behavior_model
     # get a list of reduction operations from reduction file
     reduction_line_information = []
     with open(run_configuration.reduction_file, "r") as reduction_file:

@@ -15,6 +15,8 @@ def apply_post_processing(behavior_models: List[BehaviorModel], pragma: OmpPragm
 
 
 def mark_operations_in_critical_sections(behavior_models: List[BehaviorModel], pragma: OmpPragma) -> List[BehaviorModel]:
+    if pragma is None:
+        return behavior_models
     if pragma.get_type() != PragmaType.CRITICAL:
         return behavior_models
     critical_section_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))

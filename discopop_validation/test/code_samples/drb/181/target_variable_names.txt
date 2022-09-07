@@ -1,0 +1,4 @@
+*maxPos
+*maxPos
+H[index]
+H[*maxPos]

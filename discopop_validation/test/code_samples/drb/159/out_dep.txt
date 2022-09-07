@@ -1,0 +1,33 @@
+START 1:27
+1:58 BGN loop 8
+1:65 END loop
+1:45 BGN loop 8
+1:48 END loop
+1:53 BGN loop 100
+1:58 END loop
+1:40 BGN loop 8
+1:45 END loop
+1:38 BGN loop 100
+1:51 END loop
+1:28 BGN loop 8
+1:33 END loop
+1:58 NOM  INIT *|i RAW 1:58|i WAR 1:58|i
+1:29 NOM  INIT *|b RAW 1:28|i
+1:27 NOM  INIT *|retval
+1:40 NOM  INIT *|i RAW 1:40|i WAR 1:40|i
+1:53 NOM  INIT *|i RAW 1:53|i WAR 1:53|i
+1:55 NOM  RAW 1:54|val WAR 1:55|val
+1:65 NOM  WAW 1:27|retval
+1:30 NOM  INIT *|c RAW 1:28|i
+1:66 NOM  RAW 1:65|retval
+1:54 NOM  RAW 1:51|val RAW 1:55|val WAR 1:54|val
+1:45 NOM  INIT *|i RAW 1:45|i WAR 1:45|i
+1:28 NOM  INIT *|i RAW 1:28|i WAR 1:28|i
+1:38 NOM  INIT *|i RAW 1:38|i WAR 1:38|i
+1:33 NOM  INIT *|a
+1:59 NOM  RAW 1:46|b RAW 1:55|val RAW 1:58|i
+1:46 NOM  RAW 1:33|a RAW 1:41|temp RAW 1:45|i WAR 1:41|b
+1:41 NOM  RAW 1:29|b RAW 1:30|c RAW 1:40|i RAW 1:46|b WAR 1:46|temp WAW 1:31|temp
+1:51 NOM  INIT *|val
+1:31 NOM  INIT *|temp RAW 1:28|i
+1:66 END program

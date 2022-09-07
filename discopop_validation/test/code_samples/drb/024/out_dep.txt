@@ -1,0 +1,17 @@
+START 1:52
+1:68 BGN loop 100
+1:70 END loop
+1:65 BGN loop 99
+1:68 END loop
+1:58 BGN loop 100
+1:65 END loop
+1:66 NOM  RAW 1:60|a RAW 1:61|b RAW 1:65|i RAW 1:66|a WAW 1:60|a
+1:61 NOM  INIT *|b RAW 1:58|i
+1:60 NOM  INIT *|a RAW 1:58|i
+1:69 NOM  RAW 1:60|a RAW 1:66|a RAW 1:68|i
+1:58 NOM  INIT *|i RAW 1:55|len RAW 1:58|i WAR 1:58|i
+1:52 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:68 NOM  RAW 1:55|len RAW 1:68|i WAR 1:65|i WAR 1:68|i
+1:65 NOM  RAW 1:55|len RAW 1:65|i WAR 1:58|i WAR 1:65|i
+1:55 NOM  INIT *|len
+1:70 END program

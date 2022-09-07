@@ -1,0 +1,5 @@
+START 1:25
+1:35 NOM  INIT *|local RAW 1:33|init
+1:25 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:33 NOM  INIT *|init
+1:38 END program

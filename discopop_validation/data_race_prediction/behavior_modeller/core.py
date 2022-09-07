@@ -1,8 +1,13 @@
+import copy
+import random
+import string
 from typing import List
 
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
+from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
+    OperationModifierType
 from discopop_validation.data_race_prediction.behavior_modeller.utils.behavior_extraction import \
     execute_bb_graph_extraction
 from discopop_validation.data_race_prediction.behavior_modeller.utils.modifications.core import modify_behavior_models
@@ -39,11 +44,18 @@ def get_unmodified_behavior_models(run_configuration: Configuration, bb_graph) -
     # convert paths to read/write sequences
     behavior_models: List[BehaviorModel] = []
     for section_id in paths:
-        for path in paths[section_id]:
+        # multiple paths result from different paths through the target source code
+        # since paths are mutually exclusive, mark the resulting operations as such
+        mutex_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+        for path_id, path in enumerate(paths[section_id]):
             current_sequence = []
             for bb_node in path:
                 # modify lines of operations according to run_configuration.line_mapping
                 bb_node.apply_line_mapping_to_operations(run_configuration)
-                current_sequence += bb_node.operations
+                tmp_operations = copy.deepcopy(bb_node.operations)
+                # add mutex modifier
+                for op in tmp_operations:
+                    op.add_modifier(OperationModifierType.MUTEX, mutex_id + ":" + str(path_id))
+                current_sequence += tmp_operations
             behavior_models.append(BehaviorModel(current_sequence))
     return behavior_models

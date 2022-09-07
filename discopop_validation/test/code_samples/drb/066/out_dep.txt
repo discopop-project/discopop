@@ -1,0 +1,16 @@
+START 1:67
+1:57 BGN loop 1000
+1:63 END loop
+1:70 BGN func 1:51
+1:65 END func
+1:60 NOM  INIT *|m_nvol RAW 1:54|m_nvol RAW 1:57|i
+1:59 NOM  INIT *|m_pdv_sum RAW 1:53|m_pdv_sum RAW 1:57|i
+1:63 NOM  RAW 1:53|m_pdv_sum
+1:70 NOM  RAW 1:69|N
+1:54 NOM  INIT *|m_nvol RAW 1:51|N
+1:53 NOM  INIT *|m_pdv_sum RAW 1:51|N
+1:57 NOM  INIT *|i RAW 1:51|N RAW 1:57|i WAR 1:57|i
+1:51 NOM  INIT *|N
+1:64 NOM  RAW 1:54|m_nvol
+1:69 NOM  INIT *|N
+1:71 END program
