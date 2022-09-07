@@ -748,7 +748,7 @@ class PCGraph(object):
             # detect implicit barriers
             # single-pragma has an implicit barrier at the end
             # parallel-pragma has an implicit barrier at the end
-            if node_pragma.get_type() in [PragmaType.SINGLE, PragmaType.PARALLEL]:
+            if node_pragma.get_type() in [PragmaType.PARALLEL]:  # PragmaType.SINGLE,
                 add_barrier_buffer.append(node)
 
         # create barriers
