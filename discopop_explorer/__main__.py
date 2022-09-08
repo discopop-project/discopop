@@ -10,7 +10,9 @@
 
 Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
-[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>]
+[--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
+[--task-pattern] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] \
+[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -21,6 +23,15 @@ Options:
     --fmap=<fmap>               File mapping [default: FileMapping.txt]
     --json=<json_out>           Json output
     --plugins=<plugs>           Plugins to execute
+    --task-pattern              Enables the task parallelism pattern identification.
+                                Requires --cu-inst-res and --llvm-cxxfilt-path to be set.
+    --cu-inst-res=<cuinstres>   CU instantiation result file.
+    --llvm-cxxfilt-path=<cxxfp> Path to llvm-cxxfilt executable. Required for task pattern detector
+                                if non-standard path should be used.
+    --dp-build-path=<dpbuildpath>           Path to DiscoPoP build folder [default: discopop/build]
+    --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
+                                            Stops the regular execution of the discopop_explorer.
+                                            Requires --cu-xml, --dep-file, --loop-counter, --reduction.
     -h --help                   Show this screen
 """
 
@@ -31,6 +42,7 @@ import time
 
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
+from pathlib import Path
 
 from . import run, __version__
 from .json_serializer import PatternInfoSerializer
@@ -44,6 +56,11 @@ docopt_schema = Schema({
     '--fmap': Use(str),
     '--plugins': Use(str),
     '--json': Use(str),
+    '--task-pattern': Use(bool),
+    '--cu-inst-res': Use(str),
+    '--llvm-cxxfilt-path': Use(str),
+    '--dp-build-path': Use(str),
+    '--generate-data-cu-inst': Use(str),
 })
 
 
@@ -72,7 +89,14 @@ def main():
     dep_file = get_path(path, arguments['--dep-file'])
     loop_counter_file = get_path(path, arguments['--loop-counter'])
     reduction_file = get_path(path, arguments['--reduction'])
-    file_mapping = get_path(path, arguments['--fmap'])
+    file_mapping = get_path(path, 'FileMapping.txt')
+    cu_inst_result_file = get_path(path, arguments['--cu-inst-res'])
+    if arguments['--dp-build-path'] != 'None':
+        discopop_build_path = arguments['--dp-build-path']
+    else:
+        # set default discopop build path
+        discopop_build_path = Path(__file__).resolve().parent.parent
+        discopop_build_path = os.path.join(discopop_build_path, "build")
 
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
@@ -82,10 +106,19 @@ def main():
     plugins = [
     ] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
+    if arguments['--generate-data-cu-inst'] != 'None':
+        # start generation of Data_CUInst and stop execution afterwards
+        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+        generate_data_cuinst_wrapper(cu_xml, dep_file, loop_counter_file, reduction_file,
+                                     arguments['--generate-data-cu-inst'])
+        sys.exit(0)
+
     start = time.time()
-    # print(f"init time: {start-t1}")
-    res = run(cu_xml, dep_file, loop_counter_file,
-              reduction_file, file_mapping, plugins)
+
+    res = run(cu_xml, dep_file, loop_counter_file, reduction_file, plugins, file_mapping=file_mapping,
+              cu_inst_result_file=cu_inst_result_file, llvm_cxxfilt_path=arguments[
+                  '--llvm-cxxfilt-path'],
+              discopop_build_path=discopop_build_path, enable_task_pattern=arguments['--task-pattern'])
 
     end = time.time()
 

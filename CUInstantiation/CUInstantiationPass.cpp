@@ -39,14 +39,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 
@@ -93,10 +92,10 @@ namespace {
         //map<string, int> signature;
 
          // Callbacks to run-time library
-        Function *CUInstFinalize, *CUInstInitialize;
-        Function *CUInstRead, *CUInstWrite;
-        Function *CUInstCallBefore;
-        Function *CUInstCallAfter;
+        FunctionCallee CUInstFinalize, CUInstInitialize;
+        FunctionCallee CUInstRead, CUInstWrite;
+        FunctionCallee CUInstCallBefore;
+        FunctionCallee CUInstCallAfter;
 
         // Basic types
         Type *Void;
@@ -106,6 +105,8 @@ namespace {
         //DiscoPoP Data structures
         map<string, MDNode*> Structs;
         map<string, Value*> VarNames;
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
 
         //DiscoPoP Functions
         string determineVariableName(Instruction* I);
@@ -135,10 +136,11 @@ namespace {
         LID encodeLID(const string s);
         int isLastCall(LID line, string fName, int index);
 
-        bool doInitialization(Module &M);
-        virtual bool runOnModule(Module &M);
-        StringRef getPassName() const;
-        void getAnalysisUsage(AnalysisUsage &Info) const;
+        bool doInitialization(Module &M) override;
+        virtual bool runOnModule(Module &M) override;
+        StringRef getPassName() const override;
+        void getAnalysisUsage(AnalysisUsage &Info) const override;
+        void getTrueVarNamesFromMetadata(Function &F);
 
         CUInstantiation() : ModulePass(ID) {}
 
@@ -146,6 +148,54 @@ namespace {
 }  // end of anonymous namespace
 
 /*****************************   DiscoPoP Functions  ***********************************/
+void CUInstantiation::getTrueVarNamesFromMetadata(Function &F)
+{
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+
+        for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                // std::string dbg_declare = "llvm.dbg.declare";
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+
+                    // extract original and working variable name
+                    string SRCVarName;
+                    string IRVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                        Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                        IRVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    SRCVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
+                        // not found
+                        trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
+                    } else {
+                        // found
+                        trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
+                    }
+                }
+            }
+            }
+        }
+    }
+}
 
 string CUInstantiation::determineVariableName(Instruction* I) {
 
@@ -156,14 +206,24 @@ string CUInstantiation::determineVariableName(Instruction* I) {
     IRBuilder<> builder(I);
 
     if (operand == NULL) {
-        return getOrInsertVarName("", builder);
+        string retVal = getOrInsertVarName("", builder);
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
     }
 
     if (operand->hasName()) {
         //// we've found a global variable
         if (isa<GlobalVariable>(*operand)) {
             //MOHAMMAD ADDED THIS FOR CHECKING
-            return string(operand->getName());
+            string retVal = string(operand->getName());
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                return retVal;  // not found
+            } else {
+                return trueVarNamesFromMetadataMap[retVal];  // found
+            }
         }
         if (isa<GetElementPtrInst>(*operand)) {
             GetElementPtrInst* gep = cast<GetElementPtrInst>(operand);
@@ -182,10 +242,23 @@ string CUInstantiation::determineVariableName(Instruction* I) {
                     map<string, MDNode*>::iterator it = Structs.find(strName);
                     if (it != Structs.end()) {
                         std::string ret = findStructMemberName(it->second, memberIdx, builder);
-                        if (ret.size() > 0)
-                            return ret;
-                        else
-                            return getOrInsertVarName("", builder);
+                        if (ret.size() > 0) {
+                            string retVal = ret;
+                            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                return retVal;  // not found
+                            } else {
+                                return trueVarNamesFromMetadataMap[retVal];  // found
+                            }
+                        }
+                        else {
+                            string retVal = getOrInsertVarName("", builder);
+                            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                return retVal;  // not found
+                            } else {
+                                return trueVarNamesFromMetadataMap[retVal];  // found
+                            }
+                        }
+
                         //return ret;
 
                     }
@@ -193,12 +266,17 @@ string CUInstantiation::determineVariableName(Instruction* I) {
             }
 
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
                 return determineVariableName((Instruction*)ptrOperand);
             }
             return determineVariableName((Instruction*)gep);
         }
-        return string(operand->getName().data());
+        string retVal = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            return retVal;  // not found
+        } else {
+            return trueVarNamesFromMetadataMap[retVal];  // found
+        }
         //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
@@ -214,7 +292,7 @@ Type* CUInstantiation::pointsToStruct(PointerType* PTy) {
     Type* structType = PTy;
     if (PTy->getTypeID() == Type::PointerTyID) {
         while (structType->getTypeID() == Type::PointerTyID) {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointerElementType();
         }
     }
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
@@ -246,8 +324,8 @@ string CUInstantiation::findStructMemberName(MDNode* structNode, unsigned idx, I
         if (member->getOperand(3)) {
             //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
             //return string(member->getOperand(3)->getName().data());
-            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
     }
     return NULL;
@@ -259,18 +337,18 @@ bool CUInstantiation::isaCallOrInvoke(Instruction* BI) {
 
 string CUInstantiation::getFunctionName(Instruction *instruction){
 
-    string name;
+    StringRef name;
 
     Function* f;
     Value* v;
 
     if(isa<CallInst>(instruction)){
         f = (cast<CallInst>(instruction))->getCalledFunction();
-        v = (cast<CallInst>(instruction))->getCalledValue();
+        v = (cast<CallInst>(instruction))->getCalledOperand();
     }
     else {
         f = (cast<InvokeInst>(instruction))->getCalledFunction();
-        v = (cast<InvokeInst>(instruction))->getCalledValue();
+        v = (cast<InvokeInst>(instruction))->getCalledOperand();
     }
 
     // For ordinary function calls, F has a name.
@@ -284,10 +362,9 @@ string CUInstantiation::getFunctionName(Instruction *instruction){
     }
     else{ // get name of the indirect function which is called
         Value* sv = v->stripPointerCasts();
-        StringRef  fname = sv->getName();
-        name = fname;
+        name = sv->getName();
     }
-    return name;
+    return name.str();
 }
 
 void CUInstantiation::setupDataTypes() {
@@ -304,37 +381,37 @@ void CUInstantiation::setupCallbacks() {
      * NULL
      */
 
-    CUInstInitialize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationInitialize",
+    CUInstInitialize = ThisModule->getOrInsertFunction("__CUInstantiationInitialize",
         Void,
-        CharPtr));
+        CharPtr);
 
-    CUInstFinalize = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationFinalize",
-        Void));
+    CUInstFinalize = ThisModule->getOrInsertFunction("__CUInstantiationFinalize",
+        Void);
 
-    CUInstRead = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationRead",
-            Void,
-            Int32,
-            Int32,
-            Int64,
-            CharPtr,
-            CharPtr));
+    CUInstRead = ThisModule->getOrInsertFunction("__CUInstantiationRead",
+        Void,
+        Int32,
+        Int32,
+        Int64,
+        CharPtr,
+        CharPtr);
 
-    CUInstWrite = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationWrite",
-            Void,
-            Int32,
-            Int32,
-            Int64,
-            CharPtr,
-            CharPtr));
+    CUInstWrite = ThisModule->getOrInsertFunction("__CUInstantiationWrite",
+        Void,
+        Int32,
+        Int32,
+        Int64,
+        CharPtr,
+        CharPtr);
 
-    CUInstCallBefore = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallBefore",
-            Void,
-            Int32));
+    CUInstCallBefore = ThisModule->getOrInsertFunction("__CUInstantiationCallBefore",
+        Void,
+        Int32);
 
-    CUInstCallAfter = cast<Function>(ThisModule->getOrInsertFunction("__CUInstantiationCallAfter",
-            Void,
-            Int32,
-            Int32));
+    CUInstCallAfter = ThisModule->getOrInsertFunction("__CUInstantiationCallAfter",
+        Void,
+        Int32,
+        Int32);
 }
 
 bool CUInstantiation::doInitialization(Module &M) {
@@ -573,6 +650,8 @@ bool CUInstantiation::runOnModule(Module &M){
 
     for (Module::iterator func = ThisModule->begin(), E = ThisModule->end(); func != E; ++func)
     {
+        getTrueVarNamesFromMetadata(*func);
+
         determineFileID(*func, fileID);
 
         if (func->hasName() && func->getName().equals("main")){

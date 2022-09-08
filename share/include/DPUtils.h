@@ -33,8 +33,10 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -44,8 +46,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -118,6 +118,15 @@ namespace dputil
     void determineFileID(Function &F, int32_t &fileID);
 
     string get_exe_dir();
+
+    class VariableNameFinder{
+        private:
+            map<string, vector<string>> StructMemberMap;
+        public:
+            VariableNameFinder(Module &M);
+    
+            string getVarName(Value const *V);
+    };
 
 } // namespace
 #endif

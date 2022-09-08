@@ -41,8 +41,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
+#include "llvm/InitializePasses.h"
 #include "llvm-c/Core.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -188,11 +187,14 @@ namespace
         Function *function;
         LLVMContext *ctx;
         ofstream *outCUs;
-        ofstream *outOriginalVariables;
+        // ofstream *outOriginalVariables;
         ofstream *outCUIDCounter;
 
         // Mohammad 23.12.2020
         map<string, string> loopStartLines;
+
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
 
         //structures to get list of global variables
         Module *ThisModule;
@@ -211,29 +213,32 @@ namespace
 
         //DiscoPoP Functions
         string determineVariableType(Instruction *I);
-        string determineVariableName(Instruction *I, bool &isGlobalVariable = defaultIsGlobalVariableValue);
+        string determineVariableName(Instruction *I, map<string, string>* trueVarNamesFromMetadataMap, bool &isGlobalVariable = defaultIsGlobalVariableValue);
         Type *pointsToStruct(PointerType *PTy);
         string getOrInsertVarName(string varName, IRBuilder<> &builder);
         string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         //DIGlobalVariable* findDbgGlobalDeclare(GlobalVariable *v);
 
         //29.6.2020 Mohammad
-        string determineVariableDefLine(Instruction *I);
-        void getFunctionReturnLines(Region *TopRegion, Node *root);
+        string determineVariableDefLine(Instruction *I, map<string, string>* trueVarNamesFromMetadataMap);
+        void getFunctionReturnLines(Region *TopRegion, Node *root, map<string, string>* trueVarNamesFromMetadataMap);
+
+        //26.08.2022 Lukas
+        void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap);
 
         //functions to get list of global variables
-        bool doInitialization(Module &ThisModule);
-        bool doFinalization(Module &M);
+        bool doInitialization(Module &ThisModule) override;
+        bool doFinalization(Module &M) override;
         void collectGlobalVariables();
 
         //functions to get recursive functions (Mo 5.11.2019)
         bool isRecursive(Function &F, CallGraph &CG);
 
         //Populate variable sets global to BB
-        void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
-        void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI);
+        void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet, map<string, string>* trueVarNamesFromMetadataMap);
+        void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, map<string, string>* trueVarNamesFromMetadataMap);
         string refineVarName(string varName);
-        void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap);
+        void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, map<string, string>* trueVarNamesFromMetadataMap);
         void fillStartEndLineNumbers(Node *root, LoopInfo &LI);
         void findStartEndLineNumbers(Node *root, int &start, int &end);
 
@@ -249,10 +254,9 @@ namespace
         void printNode(Node *node, bool isRoot);
         void closeOutputFiles();
 
-        virtual bool runOnFunction(Function &F);
-        //changed const char * to Stringref
-        StringRef getPassName() const;
-        void getAnalysisUsage(AnalysisUsage &Info) const;
+        virtual bool runOnFunction(Function &F) override;
+        StringRef getPassName() const override;
+        void getAnalysisUsage(AnalysisUsage &Info) const override;
 
         CUGeneration() : FunctionPass(ID) {}
 
@@ -261,7 +265,7 @@ namespace
 
 /*****************************   DiscoPoP Functions  ***********************************/
 
-void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root)
+void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root, map<string, string>* trueVarNamesFromMetadataMap)
 {
     int lid = 0;
     for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb)
@@ -270,7 +274,7 @@ void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root)
         {
             if (isa<StoreInst>(instruction))
             {
-                string varName = determineVariableName(&*instruction);
+                string varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap);
                 size_t pos = varName.find("retval");
                 if (pos != varName.npos)
                 {
@@ -284,19 +288,66 @@ void CUGeneration::getFunctionReturnLines(Region *TopRegion, Node *root)
     }
 }
 
-string CUGeneration::determineVariableDefLine(Instruction *I)
+void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap)
+{
+    int lid = 0;
+    for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb){
+        for(BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                        CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+                    // extract original and working variable name
+                    string SRCVarName;
+                    string IRVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                      Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                      IRVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    SRCVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap->find(IRVarName) == trueVarNamesFromMetadataMap->end()) {
+                      // not found
+                      trueVarNamesFromMetadataMap->insert(std::pair<string, string>(IRVarName, SRCVarName));
+                    } else {
+                      // found
+                      (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
+                    }
+                }
+            }
+            }
+        }
+    }
+}
+
+string CUGeneration::determineVariableDefLine(Instruction *I, map<string, string>* trueVarNamesFromMetadataMap)
 {
     string varDefLine = "LineNotFound";
 
-    string varName = determineVariableName(&*I);
+    string varName = determineVariableName(&*I, trueVarNamesFromMetadataMap);
     varName = refineVarName(varName);
+    string varType = determineVariableType(&*I);
 
     if (programGlobalVariablesSet.count(varName))
     {
         varDefLine = "GlobalVar";
         //TODO: Find definition line of global variables
     }
-
+    
+    // Start from the beginning of a function and look for the variable
     Function *F = I->getFunction();
     for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
     {
@@ -305,21 +356,42 @@ string CUGeneration::determineVariableDefLine(Instruction *I)
         {
             if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
             {
+
                 if (auto *N = dyn_cast<MDNode>(DI->getVariable()))
                 {
                     if (auto *DV = dyn_cast<DILocalVariable>(N))
                     {
-                        if (DV->getName() == varName)
-                        {
-                            varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
-                            break;
+                        if(varType.find("ARRAY") != string::npos || 
+                            varType.find("STRUCT") != string::npos){
+                            if(DV->getName() == varName){
+                                varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                break;
+                            }
+                        }else{
+                            string vn = "----";
+                            AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DI->getAddress());
+                            if (AI) {
+                                for (User *U : AI->users()) {
+                                    if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
+                                        vn = determineVariableName(&*SI, trueVarNamesFromMetadataMap);
+                                        break;
+                                    } else if(LoadInst *LI = dyn_cast<LoadInst>(U)){
+                                        vn = determineVariableName(&*LI, trueVarNamesFromMetadataMap);
+                                        break;
+                                    }
+                                }
+                                if ( vn == varName)
+                                {
+                                    varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-
     return varDefLine;
 }
 
@@ -347,7 +419,7 @@ string CUGeneration::determineVariableType(Instruction *I)
                 s = "STRUCT,";
             }
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID)
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID)
             {
                 s = "ARRAY,";
             }
@@ -358,7 +430,7 @@ string CUGeneration::determineVariableType(Instruction *I)
     return s;
 }
 
-string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/)
+string CUGeneration::determineVariableName(Instruction *I, map<string, string>* trueVarNamesFromMetadataMap, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/)
 {
 
     assert(I && "Instruction cannot be NULL \n");
@@ -369,7 +441,12 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
 
     if (operand == NULL)
     {
-        return getOrInsertVarName("", builder);
+        string retVal = getOrInsertVarName("", builder);
+        if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+            return retVal;  // not found
+        } else {
+            return (*trueVarNamesFromMetadataMap)[retVal];  // found
+        }
     }
 
     if (operand->hasName())
@@ -379,7 +456,12 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
         {
             //MOHAMMAD ADDED THIS FOR CHECKING
             isGlobalVariable = true;
-            return string(operand->getName());
+            string retVal = string(operand->getName());
+            if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                return retVal;  // not found
+            } else {
+                return (*trueVarNamesFromMetadataMap)[retVal];  // found
+            }
         }
         if (isa<GetElementPtrInst>(*operand))
         {
@@ -404,29 +486,48 @@ string CUGeneration::determineVariableName(Instruction *I, bool &isGlobalVariabl
                         {
                             std::string ret = findStructMemberName(it->second, memberIdx, builder);
                             if (ret.size() > 0)
-                                return ret;
+                            {
+                                string retVal = ret;
+                                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return (*trueVarNamesFromMetadataMap)[retVal];  // found
+                                }
+                            }
                             else
-                                return getOrInsertVarName("", builder);
+                            {
+                                string retVal = getOrInsertVarName("", builder);
+                                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+                                    return retVal;  // not found
+                                } else {
+                                    return (*trueVarNamesFromMetadataMap)[retVal];  // found
+                                }
                             //return ret;
+                            }
                         }
                     }
                 }
             }
 
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
-                return determineVariableName((Instruction *)ptrOperand, isGlobalVariable);
+                return determineVariableName((Instruction *)ptrOperand, trueVarNamesFromMetadataMap, isGlobalVariable);
             }
-            return determineVariableName((Instruction *)gep, isGlobalVariable);
+            return determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap, isGlobalVariable);
         }
-        return string(operand->getName().data());
+        string retVal = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
+            return retVal;  // not found
+        } else {
+            return (*trueVarNamesFromMetadataMap)[retVal];  // found
+        }
         //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
-        return determineVariableName((Instruction *)(operand), isGlobalVariable);
+        return determineVariableName((Instruction *)(operand), trueVarNamesFromMetadataMap, isGlobalVariable);
     }
     // if we cannot determine the name, then return *
     return ""; //getOrInsertVarName("*", builder);
@@ -440,7 +541,7 @@ Type *CUGeneration::pointsToStruct(PointerType *PTy)
     {
         while (structType->getTypeID() == Type::PointerTyID)
         {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointerElementType();
         }
     }
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
@@ -478,8 +579,8 @@ string CUGeneration::findStructMemberName(MDNode *structNode, unsigned idx, IRBu
         {
             //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
             //return string(member->getOperand(3)->getName().data());
-            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
-            return dyn_cast<MDString>(member->getOperand(3))->getString();
+            getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+            return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
     }
     return NULL;
@@ -520,8 +621,8 @@ string CUGeneration::xmlEscape(string data)
 
 void CUGeneration::secureStream()
 {
-    outOriginalVariables = new std::ofstream();
-    outOriginalVariables->open("OriginalVariables.txt", std::ios_base::app);
+    // outOriginalVariables = new std::ofstream();
+    // outOriginalVariables->open("OriginalVariables.txt", std::ios_base::app);
 
     outCUs = new std::ofstream();
     outCUs->open("Data.xml", std::ios_base::app);
@@ -575,10 +676,10 @@ string CUGeneration::getChildrenNodesString(Node *root)
 void CUGeneration::printOriginalVariables(set<string> &originalVariablesSet)
 {
 
-    for (auto i : originalVariablesSet)
-    {
-        *outOriginalVariables << i << endl;
-    }
+    // for (auto i : originalVariablesSet)
+    // {
+    //     *outOriginalVariables << i << endl;
+    // }
 }
 
 void CUGeneration::printData(Node *root)
@@ -654,13 +755,13 @@ void CUGeneration::printNode(Node *root, bool isRoot)
         {
             CU *cu = static_cast<CU *>(root);
             *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
-            *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
-            *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
+            // *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
+            // *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
 
-            *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
-            *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
-            *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
-            *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
+            // *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
+            // *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
+            // *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
+            // *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
             *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
@@ -714,11 +815,11 @@ void CUGeneration::closeOutputFiles()
         outCUs->close();
     }
 
-    if (outOriginalVariables != NULL && outOriginalVariables->is_open())
-    {
-        outOriginalVariables->flush();
-        outOriginalVariables->close();
-    }
+    // if (outOriginalVariables != NULL && outOriginalVariables->is_open())
+    // {
+    //     outOriginalVariables->flush();
+    //     outOriginalVariables->close();
+    // }
     //delete outCUs;
 }
 /*********************************** End of output functions **************************************/
@@ -735,7 +836,7 @@ string CUGeneration::refineVarName(string varName)
 }
 
 //recieves the region and outputs all variables and variables crossing basic block boundaries in the region.
-void CUGeneration::populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet)
+void CUGeneration::populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet, map<string, string>* trueVarNamesFromMetadataMap)
 {
 
     map<string, BasicBlock *> variableToBBMap;
@@ -749,7 +850,8 @@ void CUGeneration::populateGlobalVariablesSet(Region *TopRegion, set<string> &gl
 
                 //string varName = refineVarName(determineVariableName(instruction, isGlobalVariable));
                 // NOTE: changed 'instruction' to '&*instruction'
-                string varName = determineVariableName(&*instruction, isGlobalVariable);
+                string varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap, isGlobalVariable);
+
 
                 if (isGlobalVariable) // add it if it is a global variable in the program
                 {
@@ -776,7 +878,7 @@ void CUGeneration::populateGlobalVariablesSet(Region *TopRegion, set<string> &gl
     }
 }
 
-void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI)
+void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, map<string, string>* trueVarNamesFromMetadataMap)
 {
     // NOTE: changed 'ThisModule->getDataLayout()' to '&ThisModule->getDataLayout()'
     const DataLayout *DL = &ThisModule->getDataLayout(); // used to get data size of variables, pointers, structs etc.
@@ -846,7 +948,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         if (bb->getName().size() == 0)
             bb->setName(cu->ID);
 
-        cu->BBID = bb->getName();
+        cu->BBID = bb->getName().str();
         cu->BB = *bb; // Mohammad 23.12.2020
         currentNode->childrenNodes.push_back(cu);
         vector<CU *> basicBlockCUVector;
@@ -857,11 +959,11 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         {
             //NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
-            basicBlockName = bb->getName();
+            basicBlockName = bb->getName().str();
             if (lid > 0)
             {
                 cu->instructionsLineNumbers.insert(lid);
-                cu->instructionsCount++;
+                // cu->instructionsCount++;
                 // find return instructions
                 if (isa<ReturnInst>(instruction))
                 {
@@ -895,15 +997,15 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     Value *operand = instruction->getOperand(1);
                     Type *Ty = operand->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
-                    cu->writeDataSize += u;
+                    // cu->writeDataSize += u;
                     //varName = refineVarName(determineVariableName(instruction));
-                    varName = determineVariableName(&*instruction);
+                    varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap);
                     varType = determineVariableType(&*instruction);
                     // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                     {
                         suspiciousVariables.insert(varName);
-                        if (lid > 0)
-                            cu->writePhaseLineNumbers.insert(lid);
+                        // if (lid > 0)
+                        //     cu->writePhaseLineNumbers.insert(lid);
                     }
                 }
                 else if (isa<LoadInst>(instruction))
@@ -912,19 +1014,19 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     // get size of data read from memory by this load instruction
                     Type *Ty = instruction->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
-                    cu->readDataSize += u;
+                    // cu->readDataSize += u;
                     //varName = refineVarName(determineVariableName(instruction));
-                    varName = determineVariableName(&*instruction);
+                    varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap);
                     if (suspiciousVariables.count(varName))
                     {
                         // VIOLATION OF CAUTIOUS PROPERTY
                         //it is a load instruction which read the value of a global variable.
                         // This global variable has already been stored previously.
                         // A new CU should be created here.
-                        cu->readPhaseLineNumbers.erase(lid);
-                        cu->writePhaseLineNumbers.erase(lid);
+                        // cu->readPhaseLineNumbers.erase(lid);
+                        // cu->writePhaseLineNumbers.erase(lid);
                         cu->instructionsLineNumbers.erase(lid);
-                        cu->instructionsCount--;
+                        // cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty())
                         {
                             cu->removeCU();
@@ -942,27 +1044,27 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         CU *temp = cu; // keep current CU to make a reference to the successor CU
                         cu = new CU;
 
-                        cu->BBID = bb->getName();
+                        cu->BBID = bb->getName().str();
                         cu->BB = *bb; // Mohammad 23.12.2020
                         //errs() << "bb->Name: "  << bb->getName() << " , " << "cu->ID: " << cu->ID  << " , " << "node->ID: " << currentNode->ID << "\n";
 
                         currentNode->childrenNodes.push_back(cu);
                         temp->successorCUs.push_back(cu->ID);
-                        BBIDToCUIDsMap[bb->getName()].push_back(cu);
+                        BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
                         if (lid > 0)
                         {
-                            cu->readPhaseLineNumbers.insert(lid);
+                            // cu->readPhaseLineNumbers.insert(lid);
                             cu->instructionsLineNumbers.insert(lid);
                         }
                     }
-                    else
-                    {
-                        if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
-                        {
-                            if (lid > 0)
-                                cu->readPhaseLineNumbers.insert(lid);
-                        }
-                    }
+                    // else
+                    // {
+                    //     if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
+                    //     {
+                    //         if (lid > 0)
+                    //             cu->readPhaseLineNumbers.insert(lid);
+                    //     }
+                    // }
                 }
             }
         }
@@ -996,8 +1098,14 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                     //TODO: DO the same for Invoke inst
 
+                    // Bertin
+                    Node *n = new Node;
+                    n->type = nodeTypes::dummy;
+                    if(f) {
+                    //     errs() << "fNULL: "<< (cast<CallInst>(instruction))->getFunction()->getName().str() << " -- " << to_string((cast<CallInst>(instruction))->getDebugLoc()->getLine()) << "\n";
+                    // }
+
                     //Mohammad 6.7.2020
-                    Function::iterator FI = f->begin();
                     bool externalFunction = true;
                     string lid;
 
@@ -1023,17 +1131,17 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     if (externalFunction)
                         continue;
 
-                    Node *n = new Node;
-                    n->type = nodeTypes::dummy;
+                    // Node *n = new Node;
+                    // n->type = nodeTypes::dummy;
                     // For ordinary function calls, F has a name.
                     // However, sometimes the function being called
                     // in IR is encapsulated by "bitcast()" due to
                     // the way of compiling and linking. In this way,
                     // getCalledFunction() method returns NULL.
                     // Also, getName() returns NULL if this is an indirect function call.
-                    if (f)
-                    {
-                        n->name = f->getName();
+                    // if (f)
+                    // {
+                        n->name = f->getName().str();
 
                         // @Zia: This for loop appeared after the else part. For some function calls, the value of f is null.
                         // I guess that is why you have checked if f is not null here. Anyway, I (Mohammad) had to bring the
@@ -1050,10 +1158,9 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     }
                     else // get name of the indirect function which is called
                     {
-                        Value *v = (cast<CallInst>(instruction))->getCalledValue();
+                        Value *v = (cast<CallInst>(instruction))->getCalledOperand();
                         Value *sv = v->stripPointerCasts();
-                        StringRef fname = sv->getName();
-                        n->name = fname;
+                        n->name = sv->getName().str();
                     }
 
                     //Recursive functions (Mo 5.11.2019)
@@ -1064,7 +1171,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
                     }
 
-                    vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
+                    vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
                     //locate the CU where this function call belongs
                     for (auto i : BBCUsVector)
                     {
@@ -1084,7 +1191,7 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     }
 }
 
-void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap)
+void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector, map<string, vector<CU *>> &BBIDToCUIDsMap, map<string, string>* trueVarNamesFromMetadataMap)
 {
     int lid;
     string varName, varType, varDefLine;
@@ -1094,18 +1201,18 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
 
     for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb)
     {
-        CU *lastCU = BBIDToCUIDsMap[bb->getName()].back(); //get the last CU in the basic block
+        CU *lastCU = BBIDToCUIDsMap[bb->getName().str()].back(); //get the last CU in the basic block
         //get all successor basic blocks for bb
         TInst = bb->getTerminator();
         for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i)
         {
             //get the name of successor basicBlock
-            successorBB = TInst->getSuccessor(i)->getName();
+            successorBB = TInst->getSuccessor(i)->getName().str();
             //get the first CU of the successor basicBlock and record its ID in current CU's successorCUs
             lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
         }
 
-        auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
+        auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction))
@@ -1116,9 +1223,9 @@ void CUGeneration::fillCUVariables(Region *TopRegion, set<string> &globalVariabl
                     continue;
                 //varName = refineVarName(determineVariableName(instruction));
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-                varName = determineVariableName(&*instruction);
+                varName = determineVariableName(&*instruction, trueVarNamesFromMetadataMap);
                 varType = determineVariableType(&*instruction);
-                varDefLine = determineVariableDefLine(&*instruction);
+                varDefLine = determineVariableDefLine(&*instruction, trueVarNamesFromMetadataMap);
 
                 Variable v(varName, varType, varDefLine);
 
@@ -1313,7 +1420,7 @@ bool CUGeneration::runOnFunction(Function &F)
     determineFileID(F, fileID);
     /********************* Initialize root values ***************************/
     Node *root = new Node;
-    root->name = F.getName();
+    root->name = F.getName().str();
     root->type = nodeTypes::func;
 
     //Get list of arguments for this function and store them in root.
@@ -1339,7 +1446,7 @@ bool CUGeneration::runOnFunction(Function &F)
         raw_string_ostream rso(type_str);
         (it->getType())->print(rso);
 
-        Variable v(it->getName(), rso.str(), to_string(fileID) + ":" + lid);
+        Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
         root->argumentsList.push_back(v);
     }
     /********************* End of initialize root values ***************************/
@@ -1352,13 +1459,15 @@ bool CUGeneration::runOnFunction(Function &F)
     RI = &(RIpass->getRegionInfo());
     Region *TopRegion = RI->getTopLevelRegion();
 
-    getFunctionReturnLines(TopRegion, root);
+    getTrueVarNamesFromMetadata(TopRegion, root, &trueVarNamesFromMetadataMap);
 
-    populateGlobalVariablesSet(TopRegion, globalVariablesSet);
+    getFunctionReturnLines(TopRegion, root, &trueVarNamesFromMetadataMap);
 
-    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
+    populateGlobalVariablesSet(TopRegion, globalVariablesSet, &trueVarNamesFromMetadataMap);
 
-    fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
+    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI, &trueVarNamesFromMetadataMap);
+
+    fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, &trueVarNamesFromMetadataMap);
 
     fillStartEndLineNumbers(root, LI);
 

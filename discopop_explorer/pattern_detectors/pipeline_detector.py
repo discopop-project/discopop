@@ -7,7 +7,7 @@
 # directory for details.
 
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
@@ -135,6 +135,8 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :return: List of detected pattern info
     """
     result = []
+    children_cache: Dict[CUNode, List[CUNode]] = dict()
+    dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):
         if node.do_all == False and node.reduction == False:
             node.pipeline = __detect_pipeline(pet, node)
@@ -144,11 +146,13 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     return result
 
 
-def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
+def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cache=None) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph
     :param root: current node
+    :param children_cache: used to cache intermediate children
+    :param dep_cache: used to cache intermediate dependencies
     :return: Pipeline scalar value
     """
 
@@ -174,7 +178,8 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode) -> float:
     min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
+            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root, children_cache=children_cache,
+                                           dep_cache=dep_cache):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:

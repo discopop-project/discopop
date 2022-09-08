@@ -26,8 +26,41 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     :return: correlation coefficient, 0 if one of the norms is 0
     """
     norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)  # type:ignore
-    # type:ignore
-    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product
+    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
+
+
+def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[CUNode]:
+    """Returns direct children of a given node
+
+    :param pet: PET graph
+    :param node: CUNode
+    :param criteria: EdgeType, type of edges to traverse
+    :return: list of children nodes
+    """
+    return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
+
+
+def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
+    """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+
+    :param pet: PET graph
+    :param source: source node for dependency detection
+    :param target: target of dependency
+    :return: true, if there is RAW dependency
+    """
+    if source == target:
+        return False
+    # target_nodes = pet.get_left_right_subtree(target, True)
+    target_nodes = pet.subtree_of_type(target, None)
+
+    # for node in pet.get_left_right_subtree(source, True):
+    for node in pet.subtree_of_type(source, NodeType.CU):
+        # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
+        for target in [pet.node_at(target_id) for source_id, target_id, dependence in
+                       pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+            if target in target_nodes:
+                return True
+    return False
 
 
 def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
@@ -41,6 +74,54 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     loops_start_lines = [v.start_position()
                          for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
     return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
+
+
+# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+#def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
+#    """Calculates total number of the instructions in the subtree of a given node
+#
+#    :param pet: PET graph
+#    :param root: root node
+#    :return: number of instructions
+#    """
+#    res = 0
+#    for node in pet.get_left_right_subtree(root, True):
+#        res += node.instructions_count
+#    return res
+
+
+# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+#def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
+#    """Calculates workload for a given node
+#    The workload is the number of instructions multiplied by respective number of iterations
+#
+#    :param pet: PET graph
+#    :param node: root node
+#    :return: workload
+#    """
+#    res = 0
+#    if node.type == NodeType.DUMMY:
+#        return 0
+#    elif node.type == NodeType.CU:
+#        res += node.instructions_count
+#    elif node.type == NodeType.FUNC:
+#        for child in find_subnodes(pet, node, EdgeType.CHILD):
+#            res += calculate_workload(pet, child)
+#    elif node.type == NodeType.LOOP:
+#        for child in find_subnodes(pet, node, EdgeType.CHILD):
+#            if child.type == NodeType.CU:
+#                if 'for.inc' in child.basic_block_id:
+#                    res += child.instructions_count
+#                elif 'for.cond' in child.basic_block_id:
+#                    res += child.instructions_count * (
+#                        get_loop_iterations(node.start_position()) + 1)
+#                else:
+#                    res += child.instructions_count * \
+#                        get_loop_iterations(node.start_position())
+#            else:
+#                res += calculate_workload(pet, child) * \
+#                    get_loop_iterations(node.start_position())
+#    return res
 
 
 def get_loop_iterations(line: str) -> int:
@@ -138,15 +219,16 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
         return False
     if '.' not in var:
         return False
-
-    path: List[CUNode] = pet.path(pet.main, node)
-
-    for node in reversed(path):
-        if node.type == NodeType.FUNC:
-            for arg in node.args:
-                if var.startswith(arg.name):
-                    return True
-
+    parents = [pet.node_at(edge[0])
+               for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    # add current node to parents, if it is of type FUNC
+    if node.type == NodeType.FUNC:
+        parents.append(node)
+    parent_functions = [cu for cu in parents if cu.type == NodeType.FUNC]
+    for pf in parent_functions:
+        for arg in pf.args:
+            if var.startswith(arg.name):
+                return True
     return False
 
 
@@ -460,7 +542,7 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
 
 
 def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
-                       out_deps: List[Tuple[str, str, Dependency]]):
+                       out_deps: List[Tuple[str, str, Dependency]], used_in_task_parallelism_detection=False):
     """Classify task variables
 
     :param pet: CU graph
@@ -468,6 +550,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     :param type: type of task
     :param in_deps: in dependencies
     :param out_deps: out dependencies
+    :param used_in_task_parallelism_detection: set True, if called in a task-parallelism detection context
     """
     first_private: List[Variable] = []
     private: List[Variable] = []
@@ -478,6 +561,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     reduction: List[str] = []
 
     left_sub_tree = pet.get_left_right_subtree(task, False)
+
     right_sub_tree = pet.get_left_right_subtree(task, True)
     subtree = pet.subtree_of_type(task, NodeType.CU)
     t_loop = pet.subtree_of_type(task, NodeType.LOOP)
@@ -571,7 +655,8 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
             else:
                 first_private.append(var)
         elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
-            if is_scalar_val(var):
+            if is_scalar_val(var) and \
+                    (not used_in_task_parallelism_detection or not __is_written_prior_to_task(pet, var, task)):
                 if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
                     shared.append(var)
                 else:
@@ -580,3 +665,33 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
                 shared.append(var)
 
     return first_private, private, shared, depend_in, depend_out, depend_in_out, reduction
+
+
+def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> bool:
+    """Check if var has been written in predecessor of task.
+
+    :param pet: CU graph
+    :param var: variable
+    :param task: node
+    """
+    # get predecessors of task
+    queue: List[CUNode] = [task]
+    visited: List[CUNode] = []
+    predecessors: List[CUNode] = []
+    while queue:
+        current = queue.pop()
+        if current not in visited:
+            visited.append(current)
+        if current not in predecessors:
+            predecessors.append(current)
+        queue += [pet.node_at(edge[0]) for edge in pet.in_edges(current.id,
+                                                                EdgeType.SUCCESSOR) if pet.node_at(edge[0]) not in visited]
+
+    # check if raw-dependency on var to any predecessor exists)
+    for out_dep in pet.out_edges(task.id, EdgeType.DATA):
+        if out_dep[2].dtype != DepType.RAW:
+            continue
+        # check if out_dep.source in predecessors
+        if pet.node_at(out_dep[0]) in predecessors:
+            return True
+    return False

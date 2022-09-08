@@ -17,7 +17,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -37,7 +37,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "*:local_var"
       ]
     },
     {
@@ -57,7 +57,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "-:local_var"
       ]
     },
     {
@@ -77,7 +77,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "&:local_var"
       ]
     },
     {
@@ -97,7 +97,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "|:local_var"
       ]
     },
     {
@@ -117,7 +117,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "^:local_var"
       ]
     },
     {
@@ -137,7 +137,7 @@
         "local_array"
       ],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -157,7 +157,7 @@
         "local_array"
       ],
       "reduction": [
-        "global_var"
+        "+:global_var"
       ]
     },
     {
@@ -177,7 +177,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -197,7 +197,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "global_var"
+        "+:global_var"
       ]
     },
     {
@@ -217,7 +217,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "_ZZ9reductionvE10static_var"
+        "+:_ZZ9reductionvE10static_var"
       ]
     },
     {
@@ -235,7 +235,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -253,7 +253,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -273,7 +273,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -293,7 +293,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var_f"
+        "+:local_var_f"
       ]
     },
     {
@@ -313,7 +313,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var_f2"
+        "+:local_var_f2"
       ]
     },
     {
@@ -328,13 +328,13 @@
         "global_array"
       ],
       "private": [
-        "j",
-        "i145"
+        "i145",
+        "j"
       ],
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -355,7 +355,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -376,8 +376,8 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "global_var",
-        "local_var"
+        "+:local_var",
+        "+:global_var"
       ]
     },
     {
@@ -398,7 +398,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -419,8 +419,8 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "global_var",
-        "local_var"
+        "+:local_var",
+        "+:global_var"
       ]
     },
     {
@@ -435,13 +435,13 @@
         "global_array"
       ],
       "private": [
-        "j187",
-        "i183"
+        "i183",
+        "j187"
       ],
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -454,15 +454,15 @@
       "pragma": "#pragma omp parallel for",
       "first_private": [],
       "private": [
-        "j208",
-        "i204"
+        "i204",
+        "j208"
       ],
       "last_private": [],
       "shared": [
         "local_multi_dim_array"
       ],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -475,15 +475,15 @@
       "pragma": "#pragma omp parallel for",
       "first_private": [],
       "private": [
-        "j208",
-        "i204"
+        "i204",
+        "j208"
       ],
       "last_private": [],
       "shared": [
         "local_multi_dim_array"
       ],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -501,7 +501,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     },
     {
@@ -514,13 +514,13 @@
       "pragma": "#pragma omp parallel for",
       "first_private": [],
       "private": [
-        "tmp_var236",
-        "i232"
+        "i232",
+        "tmp_var236"
       ],
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     },
     {
@@ -538,7 +538,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     },
     {
@@ -556,7 +556,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     },
     {
@@ -574,7 +574,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_multi_dim_array"
+        "+:local_multi_dim_array"
       ]
     },
     {
@@ -592,7 +592,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     },
     {
@@ -612,7 +612,7 @@
         "local_array"
       ],
       "reduction": [
-        "local_var"
+        "+:local_var"
       ]
     },
     {
@@ -632,7 +632,7 @@
         "local_array"
       ],
       "reduction": [
-        "local_var"
+        "*:local_var"
       ]
     },
     {
@@ -650,7 +650,7 @@
       "last_private": [],
       "shared": [],
       "reduction": [
-        "local_array"
+        "+:local_array"
       ]
     }
   ],
@@ -880,7 +880,7 @@
           ],
           "out_deps": [],
           "in_out_deps": [
-            "local_array"
+            "+:local_array"
           ]
         }
       ]

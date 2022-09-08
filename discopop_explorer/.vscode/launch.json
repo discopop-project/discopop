@@ -14,7 +14,6 @@
                "cwd": "/media/backuphd/norouzi/discopop/gpu/discopop/",
                "args": [
                     "--path=/media/backuphd/norouzi/benchmarks/polybench-gpu/backup/data/input/ludcmp/MINI_DATASET/",
-                    "--fmap=/media/backuphd/norouzi/benchmarks/polybench-gpu/FileMapping.txt"
                ]
           }
      ]

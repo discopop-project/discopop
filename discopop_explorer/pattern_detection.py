@@ -12,7 +12,9 @@ from .pattern_detectors.do_all_detector import run_detection as detect_do_all, D
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
 from .pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
-import time
+from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import build_preprocessed_graph_and_run_detection \
+    as detect_tp
+from .pattern_detectors.PatternInfo import PatternInfo
 
 
 class DetectionResult(object):
@@ -20,6 +22,7 @@ class DetectionResult(object):
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
+    task: List[PatternInfo]
 
     def __init__(self):
         pass
@@ -31,7 +34,7 @@ class DetectionResult(object):
 class PatternDetectorX(object):
     pet: PETGraphX
 
-    def __init__(self, pet_graph: PETGraphX):
+    def __init__(self, pet_graph: PETGraphX) -> None:
         """This class runs detection algorithms on CU graph
 
         :param pet_graph: CU graph
@@ -56,7 +59,8 @@ class PatternDetectorX(object):
         for n in dummies_to_remove:
             self.pet.g.remove_node(n)
 
-    def detect_patterns(self):
+    def detect_patterns(self, cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
+                        llvm_cxxfilt_path, discopop_build_path, enable_task_pattern):
         """Runs pattern discovery on the CU graph
         """
         self.__merge(False, True)
@@ -78,4 +82,8 @@ class PatternDetectorX(object):
         # t5 = time.time()
         # print(f"geometric_decomposition detection: {t5-t4}")
 
+        # check if task pattern should be enabled
+        if enable_task_pattern:
+            res.task = detect_tp(cu_dict, dependencies, loop_data, reduction_vars, file_mapping, cu_inst_result_file,
+                                 llvm_cxxfilt_path, discopop_build_path)
         return res
