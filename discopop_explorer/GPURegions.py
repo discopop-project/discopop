@@ -1,5 +1,5 @@
-from numpy import long
-from typing import List, Set
+from numpy import long  # type: ignore
+from typing import List, Set, Optional, cast
 from .PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
@@ -21,7 +21,7 @@ class GPURegions:
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
 
-    def findGPULoop(self, nodeID: str) -> GPULoopPattern:
+    def findGPULoop(self, nodeID: str) -> Optional[GPULoopPattern]:
         """
 
         :param nodeID:
@@ -30,6 +30,7 @@ class GPURegions:
         for i in self.gpu_loop_patterns:
             if i.node_id == nodeID:
                 return i
+        return None
 
     def reachableCUs(self, cuID: str, nextCUID: str) -> bool:
         """
@@ -89,7 +90,10 @@ class GPURegions:
 
         for i in range(0, self.numRegions):
             for j in self.cascadingLoopsInRegions[i]:
-                gpuLoop: GPULoopPattern = self.findGPULoop(j)
+                tmp_result = self.findGPULoop(j)
+                if tmp_result is None:
+                    continue
+                gpuLoop: GPULoopPattern = cast(GPULoopPattern, tmp_result)
                 gpuLoop.printGPULoop()
         print(f"==============================================")
         for i in range(0, self.numRegions):
@@ -104,8 +108,12 @@ class GPURegions:
                 self.pet, firstNodeID, start, end, 1000)
             visitedVars: Set[Variable] = set()
             while t >= 0:
-                loopIter: GPULoopPattern = self.findGPULoop(
+                tmp_result = self.findGPULoop(
                     self.cascadingLoopsInRegions[i][t])
+                if tmp_result is None:
+                    t -= 1
+                    continue
+                loopIter: GPULoopPattern = cast(GPULoopPattern, tmp_result)
                 varis: Set[Variable] = set([])
                 varis.update(loopIter.map_type_alloc)
                 varis.update(loopIter.map_type_to)

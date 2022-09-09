@@ -1,4 +1,4 @@
-from numpy import long
+from numpy import long  # type: ignore
 from typing import List, Set
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
@@ -149,29 +149,30 @@ class GPULoopPattern(PatternInfo):
 
         # == default construct ==
         clauses: List[str] = []
+        var_names: List[str] = []
         if self.map_type_to:
-            var_names: List[str] = []
             for var_id in self.map_type_to:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(to: args)", var_names))
+            var_names = []
 
         if self.map_type_from:
-            var_names: List[str] = []
             for var_id in self.map_type_from:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(from: args)", var_names))
+            var_names = []
 
         if self.map_type_tofrom:
-            var_names: List[str] = []
             for var_id in self.map_type_tofrom:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(tofrom: args)", var_names))
+            var_names = []
 
         if self.map_type_alloc:
-            var_names: List[str] = []
             for var_id in self.map_type_alloc:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(alloc: args)", var_names))
+            var_names = []
 
         if self.reduction_vars_str:
             clauses.append(omp_clause_str("reduction(args)",
