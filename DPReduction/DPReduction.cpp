@@ -76,6 +76,8 @@ struct DPReduction : public llvm::ModulePass {
   llvm::Instruction* get_reduction_instr(llvm::Instruction* store_instr,
                                          llvm::Instruction** load_instr);
 
+  bool inlinedFunction(Function *F);
+
   //Mohammad 4.3.2021
   std::string CFA(Function &F, llvm::Loop* loop, int file_id);
   bool sanityCheck(BasicBlock *BB, int file_id);
@@ -906,6 +908,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
 
     for (auto instr_it = bb->begin(); instr_it != bb->end(); ++instr_it) {
       llvm::Instruction* instr = &(*instr_it);
+
       auto opcode = instr->getOpcode();
       if (opcode != llvm::Instruction::Store &&
           opcode != llvm::Instruction::Load) {
@@ -964,18 +967,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
       //Check if both load and store insts belong to the loop
       if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) continue;
       if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) continue;
-      
-      // Inlined function?
-      // Load instruction is in a different function than the loop
-      // if(it->second->getParent()->getParent()->getName() == "encode_rgb_frame"){
-      //   errs() << it->second->getParent()->getParent()->getName() << " " << loop_info.function_name << "\n";
-      //   continue;
-      // }
-      // // Store instruction is in a different function than the loop
-      // if(it2->second->getParent()->getParent()->getName() == "encode_rgb_frame"){
-      //   errs() << it2->second->getParent()->getParent()->getName() << " " << loop_info.function_name << "\n";
-      //   continue;
-      // }
 
       if (it->first->hasName()) {
         instr_info_t info;
@@ -987,17 +978,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
         //17.03.2021 Mohammad
         info.load_inst_ = llvm::dyn_cast<llvm::LoadInst>(it->second);
-
-        if(it->second->getParent()->getParent()->getName() == "encode_rgb_frame"){
-          errs() << "---\n";
-          if (DbgDeclareInst *OldIntrin = dyn_cast<DbgDeclareInst>(&*it->second))
-          {
-            errs() << "+++\n";
-            if (OldIntrin->getDebugLoc()->getInlinedAt()) {
-              errs() << info.var_name_ << " " << OldIntrin->getVariable() << " " << it2->second->getParent()->getParent()->getName() << " " << loop_info.function_name << "\n";
-            }
-          }
-        }
 
         candidates.push_back(info);
       }
@@ -1113,6 +1093,21 @@ void DPReduction::instrument_function(llvm::Function* function, map<string, stri
   }
 }
 
+bool DPReduction::inlinedFunction(Function *F){
+  for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
+    {
+  for (BasicBlock::iterator BI = FI->begin(), E = FI->end(); BI != E; ++BI)
+  {
+    if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI))
+    {
+      if(DI->getDebugLoc()->getInlinedAt())
+        return true;
+    }
+  }
+    }
+  return false;
+}
+
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
 void DPReduction::instrument_module(llvm::Module* module, map<string, string>* trueVarNamesFromMetadataMap) {
@@ -1124,7 +1119,8 @@ void DPReduction::instrument_module(llvm::Module* module, map<string, string>* t
     llvm::Function* func = &(*func_it);
     std::string fn_name = func->getName().str();
     if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
-        fn_name.find("llvm") != std::string::npos) {
+        fn_name.find("llvm") != std::string::npos || 
+        inlinedFunction(func)) {
       continue;
     }
     instrument_function(func, trueVarNamesFromMetadataMap);
