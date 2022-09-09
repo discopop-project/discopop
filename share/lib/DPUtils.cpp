@@ -54,7 +54,9 @@ int32_t getLID(Instruction* BI, int32_t& fileID)
     {
         lno = BI->getDebugLoc().getLine();
     }else if(isa<AllocaInst>(BI) || isa<StoreInst>(BI)){
-        lno = BI->getFunction()->getSubprogram()->getLine();
+        if(BI->getFunction()->getSubprogram()){
+            lno = BI->getFunction()->getSubprogram()->getLine();
+        }
     }else{
         return 0;
     }

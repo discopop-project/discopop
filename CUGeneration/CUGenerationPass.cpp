@@ -1292,7 +1292,10 @@ void CUGeneration::fillStartEndLineNumbers(Node *root, LoopInfo &LI)
                     Loop *loop = LI.getLoopFor(i->BB);
                     DebugLoc dl = loop->getStartLoc();
                     int32_t lid = 0;
-                    lid = (fileID << LIDSIZE) + dl->getLine();
+                    if(dl){
+                        lid = (fileID << LIDSIZE) + dl->getLine();
+                    }
+
                     loopStartLines[root->ID] = dputil::decodeLID(lid);
                     break;
                 }
