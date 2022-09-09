@@ -1435,11 +1435,21 @@ bool CUGeneration::runOnFunction(Function &F)
     string lid;
     if (DebugLoc dl = BI->getDebugLoc())
     {
-        lid = to_string(dl->getLine());
+        if(dl){
+            lid = to_string(dl->getLine());
+        }
+        else{
+            lid = "LineNotFound";
+        }
     }
     else
     {
-        lid = to_string(BI->getFunction()->getSubprogram()->getLine());
+        if(BI->getFunction()->getSubprogram()){
+            lid = to_string(BI->getFunction()->getSubprogram()->getLine());
+        }
+        else{
+            lid = "LineNotFound";
+        }
     }
 
     for (Function::arg_iterator it = F.arg_begin(); it != F.arg_end(); it++)
