@@ -4,7 +4,7 @@ from typing import Dict
 class Configuration(object):
     def __init__(self, path, reduction_file, json_file, file_mapping,
                  ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count,
-                 dp_profiling_executable, pet_dump_file, arguments):
+                 dp_profiling_executable, pet_dump_file, loop_access_pattern_file,arguments):
         self.path = path
         self.reduction_file = reduction_file
         self.json_file = json_file
@@ -20,6 +20,7 @@ class Configuration(object):
         self.dp_profiling_executable = dp_profiling_executable
         self.line_mapping: Dict[str, str] = None
         self.pet_dump_file: str = pet_dump_file
+        self.loop_access_pattern_file: str = loop_access_pattern_file
 
     def save_line_mapping(self, line_mapping: Dict[str, str]):
         self.line_mapping = line_mapping

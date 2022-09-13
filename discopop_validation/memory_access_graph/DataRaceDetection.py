@@ -53,6 +53,64 @@ def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph)
         buffer.append(data_race)
 
 
+def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryAccessGraph, amd_1: AccessMetaData, amd_2: AccessMetaData):
+    # check if both operations stem from the same loop
+    amd_1_loop_modifiers = [mod[1] for mod in amd_1.operation.modifiers if
+                            mod[0] == OperationModifierType.LOOP_OPERATION]
+    amd_2_loop_modifiers = [mod[1] for mod in amd_2.operation.modifiers if
+                            mod[0] == OperationModifierType.LOOP_OPERATION]
+    # if overlap exists, both accesses occured from the same loop.
+    if len([mod for mod in amd_1_loop_modifiers if mod in amd_2_loop_modifiers]) == 0:
+        # no overlap, return False
+        return False
+    print("amd_1: ", amd_1.operation)
+    print("amd_2: ", amd_2.operation)
+    # check if amd_1 and amd_2 originate from inter-iteration dependency producing instructions
+    with open(ma_graph.run_configuration.loop_access_pattern_file, "r") as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            split_line = line.split(" ")
+            if split_line[0] == "InterItDep":
+                # unpack access information
+                access_1_raw = split_line[1].split("@")
+                access_2_raw = split_line[2].split("@")
+                access_1_var = access_1_raw[0].split(":")[0]
+                access_1_mode = access_1_raw[0].split(":")[1]
+                access_1_file_id = access_1_raw[1].split(":")[0]
+                access_1_line_num = access_1_raw[1].split(":")[1]
+                access_2_var = access_2_raw[0].split(":")[0]
+                access_2_mode = access_2_raw[0].split(":")[1]
+                access_2_file_id = access_2_raw[1].split(":")[0]
+                access_2_line_num = access_2_raw[1].split(":")[1]
+
+                # check if amd_1 and amd_2 are contained. check both ways
+                # check if amd_1 is access_1 and amd_2 is access_2
+                if access_1_var == amd_1.operation.target_name and \
+                        access_1_file_id == str(amd_1.operation.file_id) and \
+                        access_1_line_num == str(amd_1.operation.line) and \
+                        access_1_mode == amd_1.operation.mode.upper() and \
+                        access_2_var == amd_2.operation.target_name and \
+                        access_2_file_id == str(amd_2.operation.file_id) and \
+                        access_2_line_num == str(amd_2.operation.line) and \
+                        access_2_mode == amd_2.operation.mode.upper():
+                    # accesses originated from inter-iteration dependencies
+                    # data race is possible
+                    return False
+
+                # check if amd_1 is access_2 and amd_2 is access_1
+                elif access_2_var == amd_1.operation.target_name and \
+                        access_2_file_id == str(amd_1.operation.file_id) and \
+                        access_2_line_num == str(amd_1.operation.line) and \
+                        access_2_mode == amd_1.operation.mode.upper() and \
+                        access_1_var == amd_2.operation.target_name and \
+                        access_1_file_id == str(amd_2.operation.file_id) and \
+                        access_1_line_num == str(amd_2.operation.line) and \
+                        access_1_mode == amd_2.operation.mode.upper():
+                    # accesses originated from inter-iteration dependencies
+                    # data race is possible
+                    return False
+    return True
+
 def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple[str, str, int], edge_2: Tuple[str, str, int], pc_graph: PCGraph,
                              pet: PETGraphX) -> Optional[MAGDataRace]:
     """checks the given pair of edges for data races.
@@ -102,6 +160,10 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
 
     # requirement 8: ignore data races which stem from two different paths through the source code
     if __originated_from_different_paths(amd_1, amd_2):
+        return None
+
+    # requirement 9: ignore data races which stem from the same loop body without inter-iteration dependencies
+    if __originated_from_loop_without_inter_iteration_dependences(ma_graph, amd_1, amd_2):
         return None
 
     op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation

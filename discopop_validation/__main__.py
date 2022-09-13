@@ -4,7 +4,8 @@ Usage:
     discopop_validation [--path <path>] [--plugins <plugs>] \
 [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
-[--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] [--pet-dump-file <path>]
+[--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] \
+[--pet-dump-file <path>] [--loop-access-pattern-file <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -25,6 +26,7 @@ Options:
     --dp-profiling-executable=<path>   Path to an executable which is able to automatically execute the discopop profiling.
     --pet-dump-file=<path>      Path to the PET dump file. If existing, cu-xml, dep-file and loop-counter are not necessary.
                                 The dump file will be overwritten if a modification in the source code has been detected!
+    --loop-access-pattern-file=<path>   path to the loop access pattern file. [default: loopAccessPatterns.txt]
     -h --help                   Show this screen
 """
 import os
@@ -72,6 +74,7 @@ docopt_schema = Schema({
     '--thread-count': Use(str),
     '--dp-profiling-executable': Use(str),
     '--pet-dump-file': Use(str),
+    '--loop-access-pattern-file': Use(str),
 })
 
 
@@ -105,6 +108,7 @@ def main():
     thread_count = arguments["--thread-count"]
     dp_profiling_executable = arguments["--dp-profiling-executable"]
     pet_dump_file = arguments["--pet-dump-file"]
+    loop_access_patterns_file = get_path(path, arguments["--loop-access-pattern-file"])
     if thread_count == "None":
         thread_count = 1
     else:
@@ -120,7 +124,7 @@ def main():
     run_configuration = Configuration(path, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
                                       validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
-                                      arguments)
+                                      loop_access_patterns_file, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
@@ -229,6 +233,7 @@ def prepare_tasks(pet, pc_graph, run_configuration, omp_pragmas):
     return pc_graph
 
 def prepare_for(pet, pc_graph, run_configuration, omp_pragmas):
+    pc_graph.mark_loop_body_operations()
     pc_graph.new_replace_pragma_for_nodes()
     return pc_graph
 

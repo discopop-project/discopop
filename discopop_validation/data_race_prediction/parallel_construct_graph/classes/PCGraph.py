@@ -1,4 +1,6 @@
 import copy
+import random
+import string
 import warnings
 
 import matplotlib.pyplot as plt  # type:ignore
@@ -11,6 +13,8 @@ from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, NodeType
 from discopop_validation.classes.Configuration import Configuration
 from discopop_validation.classes.OmpPragma import OmpPragma, PragmaType
 from discopop_validation.data_race_prediction.behavior_modeller.classes.BehaviorModel import BehaviorModel
+from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
+    OperationModifierType
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.BehaviorModelNode import \
     BehaviorModelNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.FunctionNode import FunctionNode
@@ -1920,6 +1924,16 @@ class PCGraph(object):
                         self.graph.add_edge(source, target, type=EdgeType.SEQUENTIAL)
         for node in remove_nodes:
             self.graph.remove_node(node)
+
+    def mark_loop_body_operations(self):
+        for node in self.graph.nodes():
+            node_obj = self.graph.nodes[node]["data"]
+            if type(node_obj) == PragmaForNode:
+                loop_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
+                for model in node_obj.behavior_models:
+                    for op in model.operations:
+                        #  modifier_type: OperationModifierType, value_string: str):
+                        op.add_modifier(OperationModifierType.LOOP_OPERATION, loop_id)
 
     def new_replace_pragma_for_nodes(self):
         remove_nodes = []
