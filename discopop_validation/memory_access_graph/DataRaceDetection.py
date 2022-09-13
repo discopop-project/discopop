@@ -63,8 +63,7 @@ def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryA
     if len([mod for mod in amd_1_loop_modifiers if mod in amd_2_loop_modifiers]) == 0:
         # no overlap, return False
         return False
-    print("amd_1: ", amd_1.operation)
-    print("amd_2: ", amd_2.operation)
+
     # check if amd_1 and amd_2 originate from inter-iteration dependency producing instructions
     with open(ma_graph.run_configuration.loop_access_pattern_file, "r") as f:
         for line in f.readlines():
@@ -120,7 +119,6 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     # retrieve AccessMetaData objects of edges
     amd_1: AccessMetaData = ma_graph.graph.edges[edge_1]["data"]
     amd_2: AccessMetaData = ma_graph.graph.edges[edge_2]["data"]
-
 
     # requirement 1: both accesses happen within the same parallel unit
     # todo might require: both accesses happen within nested parallel units

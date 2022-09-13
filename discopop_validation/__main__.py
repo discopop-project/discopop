@@ -457,8 +457,10 @@ def __main_start_execution(run_configuration: Configuration):
         #pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
 
+
         memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        #memory_access_graph.plot_graph()
+        memory_access_graph.merge_nodes_if_used_in_dependent_loop_iterations()
+        memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 
