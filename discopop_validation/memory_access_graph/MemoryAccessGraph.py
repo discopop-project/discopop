@@ -37,12 +37,14 @@ class MemoryAccessGraph(object):
     graph: nx.MultiDiGraph
     next_free_parallel_frame_id: int
     run_configuration: Configuration
+    pet: PETGraphX
 
-    def __init__(self, pc_graph: PCGraph, run_configuration: Configuration):
+    def __init__(self, pc_graph: PCGraph, pet: PETGraphX, run_configuration: Configuration):
         self.next_free_parallel_frame_id = 0
         self.graph = nx.MultiDiGraph()
         self.run_configuration = run_configuration
         self.__construct_from_pc_graph(pc_graph)
+        self.pet = pet
 
     def __get_new_parallel_frame_id(self) -> int:
         buffer = self.next_free_parallel_frame_id
@@ -266,42 +268,3 @@ class MemoryAccessGraph(object):
             pu_stack.push_pu(barrier_to_pu_map[next_barrier])
 
             # pu_stack.push(self.__get_new_parallel_frame_id(), pc_graph_node)
-
-    def merge_nodes_if_used_in_dependent_loop_iterations(self):
-        # todo: just add edges to second node rather than merging nodes?
-        merge_targets: List[str, str] = []
-        with open(self.run_configuration.loop_access_pattern_file, "r") as f:
-            for line in f.readlines():
-                line = line.replace("\n", "")
-                split_line = line.split(" ")
-                if split_line[0] == "InterItDep":
-                    # unpack access information
-                    access_1_raw = split_line[1].split("@")
-                    access_2_raw = split_line[2].split("@")
-                    access_1_var = access_1_raw[0].split(":")[0]
-                    access_1_mode = access_1_raw[0].split(":")[1]
-                    access_1_file_id = access_1_raw[1].split(":")[0]
-                    access_1_line_num = access_1_raw[1].split(":")[1]
-                    access_2_var = access_2_raw[0].split(":")[0]
-                    access_2_mode = access_2_raw[0].split(":")[1]
-                    access_2_file_id = access_2_raw[1].split(":")[0]
-                    access_2_line_num = access_2_raw[1].split(":")[1]
-
-                    # check if accesses define a new merge target
-                    if access_1_var != access_2_var:
-                        merge_targets.append((access_1_var, access_2_var))
-        # remove duplicates
-        merge_targets_wo_duplicates = []
-        for var_1, var_2 in merge_targets:
-            if (var_1, var_2) not in merge_targets_wo_duplicates and (var_2, var_1) not in merge_targets_wo_duplicates:
-                merge_targets_wo_duplicates.append((var_1, var_2))
-        # merge nodes
-        for var_1, var_2 in merge_targets_wo_duplicates:
-            var_1_in_edges = [edge for edge in self.graph.in_edges(var_1, keys=True)]
-            for source, target, key in var_1_in_edges:
-                # get metadata from edge
-                metadata = self.graph.edges[(source, target, key)]["data"]
-                self.graph.add_edge(source, var_2, data=metadata,
-                                    label=metadata.get_edge_label(),
-                                    color=metadata.parallel_unit.visualization_color)
-                self.graph.remove_edge(source, target, key)

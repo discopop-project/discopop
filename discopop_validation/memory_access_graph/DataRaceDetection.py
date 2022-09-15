@@ -54,6 +54,13 @@ def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph)
 
 
 def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryAccessGraph, amd_1: AccessMetaData, amd_2: AccessMetaData):
+    # Note:
+    # identify variables which are used in dependent loop iterations
+    # -> parent CU is child of loop node
+    # -> dependency edge to self exists
+    # -> variable is not a loop index
+
+
     # check if both operations stem from the same loop
     amd_1_loop_modifiers = [mod[1] for mod in amd_1.operation.modifiers if
                             mod[0] == OperationModifierType.LOOP_OPERATION]
@@ -129,10 +136,6 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if (not amd_1.access_mode == "w") and (not amd_2.access_mode == "w"):
         return None
 
-#    print()
-#    print("AMD1: ", amd_1.operation, " -> ", amd_1.origin_bhv_node.node_id)
-#    print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
-
     # requirement 3: edge_1 not a predecessor of edge_2 or vice-versa
     if __path_predecessor_relation_exists(amd_1.operation_path, amd_2.operation_path):
         # predecessor relation exists
@@ -160,8 +163,13 @@ def __data_race_in_edge_pair(ma_graph: MemoryAccessGraph, ma_node, edge_1: Tuple
     if __originated_from_different_paths(amd_1, amd_2):
         return None
 
+    #    print()
+    #    print("AMD1: ", amd_1.operation, " -> ", amd_1.origin_bhv_node.node_id)
+    #    print("AMD2: ", amd_2.operation, " -> ", amd_2.origin_bhv_node.node_id)
+
     # requirement 9: ignore data races which stem from the same loop body without inter-iteration dependencies
     if __originated_from_loop_without_inter_iteration_dependences(ma_graph, amd_1, amd_2):
+        print("--> NONE")
         return None
 
     op_1: Operation = ma_graph.graph.edges[edge_1]["data"].operation
