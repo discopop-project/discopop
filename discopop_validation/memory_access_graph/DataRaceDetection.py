@@ -2,6 +2,7 @@ from typing import List, Tuple, Optional, cast
 
 from discopop_explorer import PETGraphX
 from discopop_explorer.PETGraphX import EdgeType as PETEdgeType, DepType, Dependency, NodeType
+from discopop_explorer.utils import is_loop_index2
 from discopop_validation.data_race_prediction.behavior_modeller.classes.Operation import Operation
 from discopop_validation.data_race_prediction.behavior_modeller.classes.OperationModifierType import \
     OperationModifierType
@@ -52,15 +53,70 @@ def print_data_races(data_races: List[MAGDataRace], ma_graph: MemoryAccessGraph)
         print()
         buffer.append(data_race)
 
-
 def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryAccessGraph, amd_1: AccessMetaData, amd_2: AccessMetaData):
-    # Note:
-    # identify variables which are used in dependent loop iterations
+    # check if both operations stem from the same loop
+    amd_1_loop_modifiers = [mod[1] for mod in amd_1.operation.modifiers if
+                            mod[0] == OperationModifierType.LOOP_OPERATION]
+    amd_2_loop_modifiers = [mod[1] for mod in amd_2.operation.modifiers if
+                            mod[0] == OperationModifierType.LOOP_OPERATION]
+    # if overlap exists, both accesses occured from the same loop.
+    if len([mod for mod in amd_1_loop_modifiers if mod in amd_2_loop_modifiers]) == 0:
+        # no overlap, return False
+        return False
+
+    # check if amd_1 and amd_2 originate from inter-iteration dependency producing instructions
+    # inter-iteration dependencies exists for variable, if:
     # -> parent CU is child of loop node
     # -> dependency edge to self exists
     # -> variable is not a loop index
 
+    # check if amd_1 and amd_2 originated from same CU
+    amd_1_cu = get_pet_node_id_from_source_code_lines(ma_graph.pet, int(amd_1.operation.file_id),
+                                                      int(amd_1.operation.line), int(amd_1.operation.line),
+                                                      accessed_var_name=amd_1.operation.target_name)
+    amd_2_cu = get_pet_node_id_from_source_code_lines(ma_graph.pet, int(amd_2.operation.file_id),
+                                                      int(amd_2.operation.line), int(amd_2.operation.line),
+                                                      accessed_var_name=amd_2.operation.target_name)
 
+    if amd_1_cu != amd_2_cu:
+        return False
+
+    print()
+    print("AMD1: ", amd_1.operation)
+    print("AMD2: ", amd_2.operation)
+    print("CU: ", amd_1_cu)
+    print("Node ID: ", ma_graph.pet.node_at(amd_1_cu).id)
+
+    # check if CU is a child of a loop node
+    parent_loop_nodes = [source for source, _, _ in ma_graph.pet.in_edges(ma_graph.pet.node_at(amd_1_cu).id, PETEdgeType.CHILD) if
+                         ma_graph.pet.node_at(source).type == NodeType.LOOP]
+    print("parent loop nodes: ", parent_loop_nodes)
+    if len(parent_loop_nodes) == 0:
+        return False
+
+    # check if dependency edge to own CU node exists
+    in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.RAW, reversed=False)
+    # filter in dep edges for variable and source
+    circular_dependencies = [(source, target, dep) for source, target, dep in in_dep_edges if source == amd_1_cu and
+                             target == amd_1_cu and dep.var_name == amd_1.operation.target_name]
+    print("circular deps: ", circular_dependencies)
+    if len(circular_dependencies) == 0:
+        return False
+
+
+    # check if variable is a loop index
+    for parent_loop_id in parent_loop_nodes:
+        print("Parent_loop: ", parent_loop_id)
+        if is_loop_index2(ma_graph.pet, ma_graph.pet.node_at(parent_loop_id), amd_1.operation.target_name):
+            print("Is loop index: ", amd_1.operation.target_name)
+            # since access originated from loop index, no inter-iteration dependency => not a potential data race
+            return True
+
+    # accesses originated from inter-iteration dependency => potential data race
+    return False
+
+
+def __old_originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryAccessGraph, amd_1: AccessMetaData, amd_2: AccessMetaData):
     # check if both operations stem from the same loop
     amd_1_loop_modifiers = [mod[1] for mod in amd_1.operation.modifiers if
                             mod[0] == OperationModifierType.LOOP_OPERATION]
