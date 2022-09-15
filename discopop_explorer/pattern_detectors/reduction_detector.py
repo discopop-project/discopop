@@ -11,7 +11,7 @@ from typing import List
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode
-from ..utils import is_reduction_var, classify_loop_variables
+from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
 class ReductionInfo(PatternInfo):
@@ -54,7 +54,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     result = []
 
     for node in pet.all_nodes(NodeType.LOOP):
-        if __detect_reduction(pet, node):
+        if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
             node.reduction = True
             if node.loop_iterations >= 0:
                 result.append(ReductionInfo(pet, node))

@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-from ..utils import classify_task_vars, get_child_loops
+from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
@@ -85,7 +85,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     global __loop_iterations
     __loop_iterations = {}
     for node in pet.all_nodes(NodeType.FUNC):
-        if __detect_geometric_decomposition(pet, node):
+        if not contains(result, lambda x: x.node_id == node.id) and __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test and min_iter is not None:
