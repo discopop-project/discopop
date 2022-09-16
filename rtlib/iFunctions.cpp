@@ -119,6 +119,12 @@ namespace __dp
                case INIT:
                     cout << "INIT";
                     break;
+               case IIRAW:
+                    cout << "IIRAW";
+                    break;
+               case IIWAR:
+                    cout << "IIWAR";
+                    break;
                default:
                     break;
                }
@@ -151,6 +157,12 @@ namespace __dp
                               break;
                          case INIT:
                               dep += "INIT";
+                              break;
+                         case IIRAW:
+                              dep += "IIRAW";
+                              break;
+                         case IIWAR:
+                              dep += "IIWAR";
                               break;
                          default:
                               break;
@@ -419,7 +431,7 @@ namespace __dp
      }
 
      inline void clearAccess(ADDR addr, unordered_map<ADDR, size_t>& logMap){
-         logMap.erase(addr);
+         logMap[addr] = 0;
      }
 
      inline bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, size_t>& logMap1,
@@ -493,21 +505,21 @@ namespace __dp
                               sigElement lastWrite = SMem->testInWrite(access.addr);
                               if (lastWrite != 0)
                               {
-                                   // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
-                                   if(loopIterationsEqualOrHashesNull(access.addr, lastReadLog, access.addr, lastWriteLog)){
-                                        // regular RAW
-                                        // todo
-                                   }
-                                   else{
-                                       // inter-iteration RAW
-                                       // todo
-                                   }
-
-                                   // RAW
-                                   SMem->insertToRead(access.addr, access.lid);
-                                   // log read access
-                                   logAccess(access.addr, lastReadLog, access.loopHash);
-                                   addDep(RAW, access.lid, lastWrite, access.var);
+                                  // RAW
+                                  // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                  bool interIterationRAW = !(loopIterationsEqualOrHashesNull(access.addr,
+                                                                                             lastReadLog,
+                                                                                             access.addr,
+                                                                                             lastWriteLog));
+                                  SMem->insertToRead(access.addr, access.lid);
+                                  // log read access
+                                  logAccess(access.addr, lastReadLog, access.loopHash);
+                                  if(interIterationRAW){
+                                      addDep(IIRAW, access.lid, lastWrite, access.var);
+                                  }
+                                  else{
+                                      addDep(RAW, access.lid, lastWrite, access.var);
+                                  }
                               }
                          }
                          else
@@ -525,14 +537,26 @@ namespace __dp
                                    sigElement lastRead = SMem->testInRead(access.addr);
                                    if (lastRead != 0)
                                    {
-                                        // WAR
-                                        addDep(WAR, access.lid, lastRead, access.var);
+                                       // WAR
+                                       // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                       bool interIterationWAR = !(loopIterationsEqualOrHashesNull(access.addr,
+                                                                                                  lastWriteLog,
+                                                                                                  access.addr,
+                                                                                                  lastReadLog));
+                                       if(interIterationWAR){
+                                           addDep(IIWAR, access.lid, lastRead, access.var);
+                                       }
+                                       else{
+                                           addDep(WAR, access.lid, lastRead, access.var);
+                                       }
                                         // Clear intermediate read ops
                                         SMem->insertToRead(access.addr, 0);
+                                        // clear read log
+                                        clearAccess(access.addr, lastReadLog);
                                    }
                                    else
                                    {
-                                        // WAW
+                                       // WAW
                                         addDep(WAW, access.lid, lastWrite, access.var);
                                    }
                               }

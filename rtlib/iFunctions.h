@@ -38,7 +38,9 @@ namespace __dp
         RAW,
         WAR,
         WAW,
-        INIT
+        INIT,
+        IIRAW,  // inter-iteration RAW
+        IIWAR,  // inter-iteration WAR
     }
     depType;
 
