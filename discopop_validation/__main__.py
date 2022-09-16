@@ -42,6 +42,7 @@ from discopop_validation.classes.Configuration import Configuration
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.memory_access_graph import MAGDataRace
@@ -178,6 +179,7 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
 
+    apply_clauses(pc_graph)
 
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
@@ -246,6 +248,24 @@ def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
 
 def fix_barrier_affiliations(pc_graph):
     pc_graph.fix_sibling_task_barrier_affiliation()
+
+    return pc_graph
+
+def apply_clauses(pc_graph):
+    # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
+    pc_graph.apply_and_remove_threadprivate_pragma()
+
+    # propagate effects of clauses
+    pc_graph.propagate_data_sharing_clauses()
+
+    # remove implicit markings from variable names and remove dummy pragmas
+    for node in pc_graph.graph.nodes:
+        node_obj: PCGraphNode = pc_graph.graph.nodes[node]["data"]
+        if node_obj.pragma is not None:
+            if node_obj.pragma.pragma.startswith("dummy"):
+                node_obj.pragma = None
+            else:
+                node_obj.pragma.pragma = node_obj.pragma.pragma.replace("%%implicit", "")
 
     return pc_graph
 
