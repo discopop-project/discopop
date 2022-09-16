@@ -44,8 +44,8 @@ namespace __dp
 
     struct AccessInfo
     {
-        AccessInfo(bool isRead, LID lid, char *var, ADDR addr, bool skip = false)
-            : isRead(isRead), lid(lid), var(var), addr(addr), skip(skip) {}
+        AccessInfo(bool isRead, LID lid, char *var, ADDR addr, size_t loopHash, bool skip = false)
+            : isRead(isRead), lid(lid), var(var), addr(addr), loopHash(loopHash), skip(skip) {}
         AccessInfo() : lid(0) {}
 
         bool isRead;
@@ -55,6 +55,8 @@ namespace __dp
         LID lid;
         char *var;
         ADDR addr;
+        size_t loopHash;
+
     };
 
     // For runtime dependency merging
@@ -105,9 +107,46 @@ namespace __dp
         int32_t loopID;
         int32_t count;
         LID begin;
+
+        size_t getHashValue(){
+            cout << "loop: " << loopID << "@" << count << endl;
+            return ((((hash<int32_t>()(funcLevel)
+                       ^ (hash<int32_t>()(loopID) << 1)) >> 1)
+                     ^ (hash<int32_t>()(count) << 1)) >> 1)
+                   ^ (hash<LID>()(begin) << 1);
+        }
     };
 
-    typedef std::stack<LoopTableEntry> LoopTable;
+//    typedef std::stack<LoopTableEntry> LoopTable;
+    struct LoopTable{
+        vector<LoopTableEntry> elements;
+        stack<size_t> hashValueStack;
+
+        bool empty(){ return elements.empty(); }
+        int size(){ return elements.size(); }
+        LoopTableEntry& top(){ return elements.back(); }
+        void push(LoopTableEntry lte){
+            elements.push_back(lte);
+            size_t hashValue;
+            if(hashValueStack.size() != 0){
+                hashValueStack.top();
+            }
+            hashValue = (hashValue ^ (lte.getHashValue() << 1) >> 1);
+            hashValueStack.push(hashValue);
+            cout << "pushed hash: " << hashValueStack.top() << endl;
+        }
+        void pop(){
+            elements.pop_back();
+            hashValueStack.pop();
+        }
+
+        size_t getHashValue(){
+            if(hashValueStack.size() == 0)
+                return 0;
+            return hashValueStack.top();
+        }
+
+    };
 
     // For loop merging
     // Assumption: no more than one loops can begin at the same line
@@ -179,3 +218,21 @@ namespace __dp
     }
 } // namespace __dp
 #endif
+
+
+namespace std {
+    using namespace __dp;
+
+    // define hash functions
+    template <>
+    struct hash<LoopTableEntry>
+    {
+        std::size_t operator()(const LoopTableEntry& lte) const
+        {
+            return ((((hash<int32_t>()(lte.funcLevel)
+                       ^ (hash<int32_t>()(lte.loopID) << 1)) >> 1)
+                     ^ (hash<int32_t>()(lte.count) << 1)) >> 1)
+                   ^ (hash<LID>()(lte.begin) << 1);
+        }
+    };
+}
