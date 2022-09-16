@@ -413,35 +413,23 @@ namespace __dp
           pthread_mutex_unlock(&allDepsLock);
      }
 
-     // todo inline
-     void logAccess(ADDR addr,  unordered_map<ADDR, size_t>& logMap, size_t loopHash){
+     inline void logAccess(ADDR addr,  unordered_map<ADDR, size_t>& logMap, size_t loopHash){
          // logMap can be either refer to read or write log map
-         //size_t hash = loopStack->getHashValue();
-         //size_t hashval = hash<LoopTable>(loopStack->elements);
          logMap[addr] = loopHash;
      }
 
-     // todo inline
-     void clearAccess(ADDR addr, unordered_map<ADDR, size_t>& logMap){
+     inline void clearAccess(ADDR addr, unordered_map<ADDR, size_t>& logMap){
          logMap.erase(addr);
      }
 
-     // todo inline
-     bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, size_t>& logMap1,
+     inline bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, size_t>& logMap1,
                                        ADDR addr2, unordered_map<ADDR, size_t>& logMap2){
          size_t val1 = logMap1[addr1];
          size_t val2 = logMap2[addr2];
 
-         if((val1 == 0) || (val2 == 0))
-             return true;
-
-         //cout << "val1 " << val1 << endl;
-         //cout << "val2 " << val2 << endl;
-
          if((val1 == 0) || (val2 == 0) || (val1 == val2)){
              return true;
          }
-         cout << "\tfalse: " << logMap1[addr1] << " - " << logMap2[addr2] << endl;
          return false;
      }
 

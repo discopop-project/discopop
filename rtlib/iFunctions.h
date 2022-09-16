@@ -109,7 +109,6 @@ namespace __dp
         LID begin;
 
         size_t getHashValue(){
-            cout << "loop: " << loopID << "@" << count << endl;
             return ((((hash<int32_t>()(funcLevel)
                        ^ (hash<int32_t>()(loopID) << 1)) >> 1)
                      ^ (hash<int32_t>()(count) << 1)) >> 1)
@@ -120,30 +119,34 @@ namespace __dp
 //    typedef std::stack<LoopTableEntry> LoopTable;
     struct LoopTable{
         vector<LoopTableEntry> elements;
-        stack<size_t> hashValueStack;
 
         bool empty(){ return elements.empty(); }
         int size(){ return elements.size(); }
         LoopTableEntry& top(){ return elements.back(); }
         void push(LoopTableEntry lte){
             elements.push_back(lte);
-            size_t hashValue;
+/*            size_t hashValue;
             if(hashValueStack.size() != 0){
                 hashValueStack.top();
             }
             hashValue = (hashValue ^ (lte.getHashValue() << 1) >> 1);
             hashValueStack.push(hashValue);
             cout << "pushed hash: " << hashValueStack.top() << endl;
+*/
         }
         void pop(){
             elements.pop_back();
-            hashValueStack.pop();
         }
 
         size_t getHashValue(){
-            if(hashValueStack.size() == 0)
-                return 0;
-            return hashValueStack.top();
+            size_t hashValue = 0;
+            for(LoopTableEntry lte : elements){
+                hashValue = (hashValue ^ (lte.getHashValue() << 1) >> 1);
+            }
+            return hashValue;
+//            if(hashValueStack.size() == 0)
+ //               return 0;
+ //           return hashValueStack.top();
         }
 
     };
