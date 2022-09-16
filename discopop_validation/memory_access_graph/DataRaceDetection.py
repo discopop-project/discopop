@@ -96,13 +96,14 @@ def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryA
 
     # check if dependency edge to own CU node exists
     in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.RAW, reversed=False)
+    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAR, reversed=False)
+    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAW, reversed=False)
     # filter in dep edges for variable and source
     circular_dependencies = [(source, target, dep) for source, target, dep in in_dep_edges if source == amd_1_cu and
                              target == amd_1_cu and dep.var_name == amd_1.operation.target_name]
     print("circular deps: ", circular_dependencies)
     if len(circular_dependencies) == 0:
         return False
-
 
     # check if variable is a loop index
     for parent_loop_id in parent_loop_nodes:
