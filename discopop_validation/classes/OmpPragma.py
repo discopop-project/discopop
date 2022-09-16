@@ -71,19 +71,21 @@ class OmpPragma(object):
             return PragmaType.THREADPRIVATE
         raise ValueError("Unsupported pragma-type:", self.pragma)
 
-    def get_known_variables(self) -> List[str]:
+    def get_known_variables(self, remove_implicit_markings=True) -> List[str]:
         known_vars: List[str] = []
         known_vars += self.get_variables_listed_as("firstprivate")
         known_vars += self.get_variables_listed_as("private")
         known_vars += self.get_variables_listed_as("lastprivate")
         known_vars += self.get_variables_listed_as("shared")
         known_vars = list(dict.fromkeys(known_vars))
+        if remove_implicit_markings:
+            return [var.replace("%%implicit", "") for var in known_vars]
         return known_vars
 
-    def get_variables_listed_as(self, type: str) -> List[str]:
+    def get_variables_listed_as(self, type: str, remove_implicit_markings=True) -> List[str]:
         """possible types: firstprivate, private, shared, reduction"""
         listed_vars: List[str] = []
-        found_strings = [x.group() for x in re.finditer(r'' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', self.pragma)]
+        found_strings = [x.group() for x in re.finditer(r'' + type + '\s*\([\w\s\,\:\+\-\*\&\|\^\.\%]*\)', self.pragma)]
         for found_str in found_strings:
             # separate treatment of reduction clauses required, since operations and ':' need to be removed
             if type == "reduction":
@@ -106,6 +108,8 @@ class OmpPragma(object):
                     var = var[:-1]
                 if len(var) > 0:
                     listed_vars.append(var)
+        if remove_implicit_markings:
+            return [var.replace("%%implicit", "") for var in listed_vars]
         return listed_vars
 
     def apply_preprocessing(self):
@@ -133,13 +137,29 @@ class OmpPragma(object):
         else:
             self.pragma += " private(" + var_name + ")"
 
+    def add_to_variable_type(self, var_name: str, var_type: str):
+        if " " + var_type + "(" in self.pragma:
+            split_pragma = self.pragma.split(" " + var_type + "(")
+            self.pragma = split_pragma[0] + " " + var_type + "(" + var_name + "," + split_pragma[1]
+        else:
+            self.pragma += " " + var_type + "(" + var_name + ")"
+
     def remove_from_shared(self, var_name: str):
-        shared_vars = self.get_variables_listed_as("shared")
+        shared_vars = self.get_variables_listed_as("shared", remove_implicit_markings=False)
         if var_name not in shared_vars:
             return
         shared_vars = [var for var in shared_vars if not var == var_name]
-        self.pragma = re.sub(r'shared\s*\([\w\s\,\:\+\-\*\&\|\^\.]*\)', '', self.pragma)
+        self.pragma = re.sub(r'shared\s*\([\w\s\,\:\+\-\*\&\|\^\.\%]*\)', '', self.pragma)
         for var in shared_vars:
             self.add_to_shared(var)
         self.pragma = self.pragma.replace("  ", " ", )
 
+    def remove_from_var_type(self, var_name: str, var_type: str):
+        type_vars = self.get_variables_listed_as(var_type, remove_implicit_markings=False)
+        if var_name not in type_vars:
+            return
+        type_vars = [var for var in type_vars if not var == var_name]
+        self.pragma = re.sub(r''+var_type+'\s*\([\w\s\,\:\+\-\*\&\|\^\.\%]*\)', '', self.pragma)
+        for var in type_vars:
+            self.add_to_variable_type(var, var_type)
+        self.pragma = self.pragma.replace("  ", " ", )
