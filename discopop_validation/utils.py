@@ -34,6 +34,7 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                 fpriv, priv, lpriv, shared, red = classify_loop_variables(pet, pet.node_at(cu_id))
                 for var in shared:
                     if var.name not in pragma.get_variables_listed_as("shared"):
+                        var.name = var.name + "%%implicit"
                         pragma.add_to_shared(var.name)
             #elif pragma.get_type() == PragmaType.TASK:
             #    fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(pet, pet.node_at(cu_id), "", [], [])
@@ -92,11 +93,12 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
 
                 # add outside-defined variables to list of shared variables
                 for var_name in shared_defined_outside:
+                    var_name_implicit = var_name + "%%implicit"
                     if var_name not in pragma.get_variables_listed_as("shared"):
                         # check if var_name already use in another clause
                         if var_name not in pragma.get_known_variables():
                             if var_name is not None:
-                                pragma.add_to_shared(var_name)
+                                pragma.add_to_shared(var_name_implicit)
 
 
         print("PRAGMAS AFTER ADDING FROM PET GRAPH")

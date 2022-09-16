@@ -2116,7 +2116,128 @@ class PCGraph(object):
         for source, target in out_edges:
             self.graph.add_edge(bhv_model.node_id, target, type=self.graph.edges[(source, target)]["type"])
 
+
     def apply_and_remove_threadprivate_pragma(self):
+        buffer = copy.deepcopy(self.graph.nodes)
+        for node in buffer:
+            if type(self.graph.nodes[node]["data"]) == PragmaThreadprivateNode:
+                # search for nodes with equal parents as node
+                in_contains_edges = [edge for edge in self.graph.in_edges(node) if
+                                     self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+
+                tp_variables = self.graph.nodes[node]["data"].pragma.get_variables_listed_as("threadprivate")
+
+                siblings: List[int] = []
+                for other_node in [n for n in buffer if (n != node and n != 0)]:  # exclude root node
+                    other_node_in_contains_edges = [edge for edge in self.graph.in_edges(other_node) if
+                                                    self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                    if other_node_in_contains_edges == in_contains_edges:
+                        siblings.append(other_node)
+                for sibling in siblings:
+                    # create a pragma string if not already present (for functions nodes etc.)
+                    sibling_node: PCGraphNode = self.graph.nodes[sibling]["data"]
+                    if sibling_node.pragma is None:
+                        sibling_node.pragma = OmpPragma().init_with_values(sibling_node.get_file_id(),
+                                                                           sibling_node.get_start_line(),
+                                                                           sibling_node.get_end_line(), "dummy")
+                    # add threadprivate variables to pragma of sibling
+                    for tp_var in tp_variables:
+                        # remove tp_var from shared
+                        sibling_node.pragma.remove_from_shared(tp_var)
+                        # add tp_var to private
+                        sibling_node.pragma.add_to_private(tp_var)
+                self.graph.remove_node(node)
+
+
+    def propagate_data_sharing_clauses(self):
+        def __propagate_variable(target, var_type, var_name, other_var_types) -> bool:
+            print("Prop: ", var_name, var_type)
+            target_node: PCGraphNode = self.graph.nodes[target]["data"]
+            if target_node.pragma is None:
+                return False
+            target_vars = target_node.pragma.get_variables_listed_as(var_type, remove_implicit_markings=False)
+
+            mod_found = False
+
+            # check if var_name is implicit
+            if "%%implicit" in var_name:
+                # if implicit or explicit version of var_name is contained in target_vars, do nothing
+                if var_name in target_vars or var_name.replace("%%implicit", "") in target_vars:
+                    pass
+                else:
+                    # add var_name to target_vars
+                    target_node.pragma.add_to_variable_type(var_name, var_type)
+                    mod_found = True
+            else:
+                # var_name is explicit
+                # if var_name in target_vars, do nothing
+                if var_name in target_vars:
+                    pass
+                # elif implicit version of var_name in target_vars, replace implicit with explicit version
+                elif var_name+"%%implicit" in target_vars:
+                    target_node.pragma.remove_from_var_type(var_name+"%%implicit", var_type)
+                    target_node.pragma.add_to_variable_type(var_name, var_type)
+                    mod_found = True
+                # else: add var_name to target_vars
+                else:
+                    target_node.pragma.add_to_variable_type(var_name, var_type)
+                    mod_found = True
+
+            # check if other variable types can be overwritten
+            # only overwrite, if var_name is explicit and other_var_name is implicit
+            if "%%implicit" not in var_name:
+                # var_name is explicit
+                for other_var_type in other_var_types:
+                    target_vars = target_node.pragma.get_variables_listed_as(other_var_type, remove_implicit_markings=False)
+                    # if implicit var_name is contained in target_vars, remove the occurrence
+                    if var_name+"%%implicit" in target_vars:
+                        target_node.pragma.remove_from_var_type(var_name+"%%implicit", other_var_type)
+
+            return mod_found
+
+        modification_found = True
+        visited_root_nodes = []
+        while modification_found:
+            modification_found = False
+            for node in self.graph.nodes:
+                if node in visited_root_nodes:
+                    continue
+                visited_root_nodes.append(node)
+                node_obj: PCGraphNode = self.graph.nodes[node]["data"]
+                if node_obj.pragma is None:
+                    continue
+                out_contains_edges = [edge for edge in self.graph.out_edges(node) if
+                                       self.graph.edges[edge]["type"] == EdgeType.CONTAINS]
+                contained_nodes = [edge[1] for edge in out_contains_edges]
+
+                fp = node_obj.pragma.get_variables_listed_as("firstprivate", remove_implicit_markings=False)
+                p = node_obj.pragma.get_variables_listed_as("private", remove_implicit_markings=False)
+                lp = node_obj.pragma.get_variables_listed_as("lastprivate", remove_implicit_markings=False)
+                s = node_obj.pragma.get_variables_listed_as("shared", remove_implicit_markings=False)
+
+                for target in contained_nodes:
+                    # propagate firstprivate
+                    for var in fp:
+                        modification_found = modification_found or __propagate_variable(target, "firstprivate", var,
+                                                                                        ["private", "lastprivate",
+                                                                                         "shared"])
+                    # propagate private
+                    for var in p:
+                        modification_found = modification_found or __propagate_variable(target, "private", var,
+                                                                                        ["firstprivate", "lastprivate", "shared"])
+                    # propagate lastprivate
+                    for var in lp:
+                        modification_found = modification_found or __propagate_variable(target, "lastprivate", var, ["firstprivate", "private", "shared"])
+                    # propagate shared
+                    for var in s:
+                        modification_found = modification_found or __propagate_variable(target, "shared", var, ["firstprivate", "private", "lastprivate"])
+                if modification_found:
+                    break
+
+
+
+
+    def old_apply_and_remove_threadprivate_pragma(self):
         buffer = copy.deepcopy(self.graph.nodes)
         for node in buffer:
             if type(self.graph.nodes[node]["data"]) == PragmaThreadprivateNode:

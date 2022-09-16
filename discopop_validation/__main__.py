@@ -5,7 +5,7 @@ Usage:
 [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
 [--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] \
-[--pet-dump-file <path>] [--loop-access-pattern-file <path>]
+[--pet-dump-file <path>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -26,7 +26,6 @@ Options:
     --dp-profiling-executable=<path>   Path to an executable which is able to automatically execute the discopop profiling.
     --pet-dump-file=<path>      Path to the PET dump file. If existing, cu-xml, dep-file and loop-counter are not necessary.
                                 The dump file will be overwritten if a modification in the source code has been detected!
-    --loop-access-pattern-file=<path>   path to the loop access pattern file. [default: loopAccessPatterns.txt]
     -h --help                   Show this screen
 """
 import os
@@ -43,6 +42,7 @@ from discopop_validation.classes.Configuration import Configuration
 #from discopop_validation.data_race_prediction.target_code_sections.extraction import \
 #    identify_target_sections_from_suggestions
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.EdgeType import EdgeType
+from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraphNode import PCGraphNode
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.ResultObject import ResultObject
 from discopop_validation.data_race_prediction.parallel_construct_graph.classes.PCGraph import PCGraph
 from discopop_validation.memory_access_graph import MAGDataRace
@@ -74,7 +74,6 @@ docopt_schema = Schema({
     '--thread-count': Use(str),
     '--dp-profiling-executable': Use(str),
     '--pet-dump-file': Use(str),
-    '--loop-access-pattern-file': Use(str),
 })
 
 
@@ -108,7 +107,6 @@ def main():
     thread_count = arguments["--thread-count"]
     dp_profiling_executable = arguments["--dp-profiling-executable"]
     pet_dump_file = arguments["--pet-dump-file"]
-    loop_access_patterns_file = get_path(path, arguments["--loop-access-pattern-file"])
     if thread_count == "None":
         thread_count = 1
     else:
@@ -124,7 +122,7 @@ def main():
     run_configuration = Configuration(path, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
                                       validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
-                                      loop_access_patterns_file, arguments)
+                                      arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")
@@ -181,6 +179,7 @@ def generic_preparation(pet, pc_graph, run_configuration, omp_pragmas):
 
     pc_graph.remove_redundant_edges([EdgeType.SEQUENTIAL])
 
+    apply_clauses(pc_graph)
 
     pc_graph.insert_behavior_models(run_configuration, pet, omp_pragmas)
 
@@ -249,6 +248,24 @@ def prepare_dependences(pet, pc_graph, run_configuration, omp_pragmas):
 
 def fix_barrier_affiliations(pc_graph):
     pc_graph.fix_sibling_task_barrier_affiliation()
+
+    return pc_graph
+
+def apply_clauses(pc_graph):
+    # remove threadprivate pragma and add specified variables to private clauses of contained pragmas
+    pc_graph.apply_and_remove_threadprivate_pragma()
+
+    # propagate effects of clauses
+    pc_graph.propagate_data_sharing_clauses()
+
+    # remove implicit markings from variable names and remove dummy pragmas
+    for node in pc_graph.graph.nodes:
+        node_obj: PCGraphNode = pc_graph.graph.nodes[node]["data"]
+        if node_obj.pragma is not None:
+            if node_obj.pragma.pragma.startswith("dummy"):
+                node_obj.pragma = None
+            else:
+                node_obj.pragma.pragma = node_obj.pragma.pragma.replace("%%implicit", "")
 
     return pc_graph
 
@@ -457,10 +474,8 @@ def __main_start_execution(run_configuration: Configuration):
         #pc_graph.plot_graph()
         pc_graph.prepare_root_for_MAGraph_creation()
 
-
-        memory_access_graph = MemoryAccessGraph(pc_graph, run_configuration)
-        memory_access_graph.merge_nodes_if_used_in_dependent_loop_iterations()
-        memory_access_graph.plot_graph()
+        memory_access_graph = MemoryAccessGraph(pc_graph, pet, run_configuration)
+        #memory_access_graph.plot_graph()
         data_races: List[MAGDataRace] = detect_data_races(memory_access_graph, pc_graph, pet)
         print_data_races(data_races, memory_access_graph)
 
