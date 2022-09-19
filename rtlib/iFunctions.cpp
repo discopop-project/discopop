@@ -82,6 +82,10 @@ namespace __dp
 
      /******* END: parallelization section *******/
 
+    // dependencies between loop iterations can only be checked within chunks to prevent drastic slowdowns
+    unordered_map<ADDR, pair<size_t, LID>> lastReadLog;
+    unordered_map<ADDR, pair<size_t, LID>> lastWriteLog;
+
      /******* Helper functions *******/
 
      void addDep(depType type, LID curr, LID depOn, char *var)
@@ -125,6 +129,9 @@ namespace __dp
                case IIWAR:
                     cout << "IIWAR";
                     break;
+               case IIWAW:
+                    cout << "IIWAW";
+                    break;
                default:
                     break;
                }
@@ -164,6 +171,9 @@ namespace __dp
                          case IIWAR:
                               dep += "IIWAR";
                               break;
+                         case IIWAW:
+                             dep += "IIWAW";
+                             break;
                          default:
                               break;
                          }
@@ -425,25 +435,45 @@ namespace __dp
           pthread_mutex_unlock(&allDepsLock);
      }
 
-     inline void logAccess(ADDR addr,  unordered_map<ADDR, size_t>& logMap, size_t loopHash){
+    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>>& logMap, size_t loopHash, LID lid){
          // logMap can be either refer to read or write log map
-         logMap[addr] = loopHash;
+         logMap[addr] = pair<size_t, LID>(loopHash, lid);
      }
 
-     inline void clearAccess(ADDR addr, unordered_map<ADDR, size_t>& logMap){
-         logMap[addr] = 0;
+     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>>& logMap){
+         logMap[addr] = pair<size_t, LID>(0, 0);
      }
 
-     inline bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, size_t>& logMap1,
-                                       ADDR addr2, unordered_map<ADDR, size_t>& logMap2){
-         size_t val1 = logMap1[addr1];
-         size_t val2 = logMap2[addr2];
+     bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>>& logMap1,
+                                       ADDR addr2, unordered_map<ADDR, pair<size_t, LID>>& logMap2){
+         pair<size_t, LID> val1 = logMap1[addr1];
+         pair<size_t, LID> val2 = logMap2[addr2];
 
-         if((val1 == 0) || (val2 == 0) || (val1 == val2)){
+         // check lids
+         if(val1.second != val2.second){
+             return true;  // not a inter-iteration dependency
+         }
+
+         // check loop hashes
+         if((val1.first == 0) || (val2.first == 0) || (val1.first == val2.first)){
              return true;
          }
          return false;
      }
+
+    bool loopIterationsEqualOrHashesNull(size_t hash1,
+                                         size_t hash2,
+                                         LID lid1,
+                                         LID lid2){
+         if(lid1 != lid2){
+             return true;  // not a inter-iteration dependency
+         }
+
+        if((hash1 == 0) || (hash2 == 0) || (hash1 == hash2)){
+            return true;
+        }
+        return false;
+    }
 
      void *analyzeDeps(void *arg)
      {
@@ -481,14 +511,33 @@ namespace __dp
                     isLocked = false;
                     AccessInfo access;
 
-                    // dependencies between loop iterations can only be checked within chunks to prevent drastic slowdowns
-                    unordered_map<ADDR, size_t> lastReadLog;
-                    unordered_map<ADDR, size_t> lastWriteLog;
-
                     // analyze data dependences
                     for (unsigned short i = 0; i < CHUNK_SIZE; ++i)
                     {
                          access = accesses[i];
+/*
+                        cout << "Var: " << access.var << endl;
+                        cout << "ADDR: " << access.addr << endl;
+                        cout << "LID: " << access.lid << endl;
+                        cout << "isRead: " << access.isRead << endl;
+                        cout << "skip: " << access.skip << endl;
+                        cout << "CurrentHash: " << access.loopHash << endl;
+                        cout << "lastReadHash: " << lastReadLog[access.addr].first << "@" << lastReadLog[access.addr].second << endl;
+                        cout << "lastWriteHash: " << lastWriteLog[access.addr].first << "@" << lastWriteLog[access.addr].second << endl;
+                        cout << "IIRAW: " << !(loopIterationsEqualOrHashesNull(access.addr,
+                                                                               lastReadLog,
+                                                                               access.addr,
+                                                                               lastWriteLog)) << endl;
+                        cout << "IIWAR: " << !(loopIterationsEqualOrHashesNull(access.addr,
+                                                                               lastWriteLog,
+                                                                               access.addr,
+                                                                               lastReadLog)) << endl;
+                        cout << "IIWAW: " << !(loopIterationsEqualOrHashesNull(access.loopHash,
+                                                                               lastWriteLog[access.addr].first,
+                                                                               access.lid,
+                                                                               lastWriteLog[access.addr].second
+                        )) << endl << endl;
+*/
 
                          if (access.isRead)
                          {
@@ -498,7 +547,7 @@ namespace __dp
                               {
                                    SMem->insertToRead(access.addr, access.lid);
                                    // log read access
-                                   logAccess(access.addr, lastReadLog, access.loopHash);
+                                   logAccess(access.addr, lastReadLog, access.loopHash, access.lid);
                                    continue;
                               }
                               // End HA
@@ -506,14 +555,14 @@ namespace __dp
                               if (lastWrite != 0)
                               {
                                   // RAW
+                                  SMem->insertToRead(access.addr, access.lid);
+                                  // log read access
+                                  logAccess(access.addr, lastReadLog, access.loopHash, access.lid);
                                   // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
                                   bool interIterationRAW = !(loopIterationsEqualOrHashesNull(access.addr,
                                                                                              lastReadLog,
                                                                                              access.addr,
                                                                                              lastWriteLog));
-                                  SMem->insertToRead(access.addr, access.lid);
-                                  // log read access
-                                  logAccess(access.addr, lastReadLog, access.loopHash);
                                   if(interIterationRAW){
                                       addDep(IIRAW, access.lid, lastWrite, access.var);
                                   }
@@ -526,7 +575,8 @@ namespace __dp
                          {
                               sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                               // log write access
-                              logAccess(access.addr, lastWriteLog, access.loopHash);
+                              pair<size_t, LID> lastLoopHash = lastWriteLog[access.addr];
+                              logAccess(access.addr, lastWriteLog, access.loopHash, access.lid);
                               if (lastWrite == 0)
                               {
                                    // INIT
@@ -557,7 +607,18 @@ namespace __dp
                                    else
                                    {
                                        // WAW
-                                        addDep(WAW, access.lid, lastWrite, access.var);
+                                       // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                       bool interIterationWAW = !(loopIterationsEqualOrHashesNull(access.loopHash,
+                                                                                                  lastLoopHash.first,
+                                                                                                  access.lid,
+                                                                                                  lastLoopHash.second
+                                                                                                  ));
+                                       if(interIterationWAW){
+                                           addDep(IIWAW, access.lid, lastWrite, access.var);
+                                       }
+                                       else{
+                                           addDep(WAW, access.lid, lastWrite, access.var);
+                                       }
                                    }
                               }
                          }

@@ -41,6 +41,7 @@ namespace __dp
         INIT,
         IIRAW,  // inter-iteration RAW
         IIWAR,  // inter-iteration WAR
+        IIWAW   // inter-iteration WAW
     }
     depType;
 
@@ -111,10 +112,11 @@ namespace __dp
         LID begin;
 
         size_t getHashValue(){
-            return ((((hash<int32_t>()(funcLevel)
-                       ^ (hash<int32_t>()(loopID) << 1)) >> 1)
-                     ^ (hash<int32_t>()(count) << 1)) >> 1)
-                   ^ (hash<LID>()(begin) << 1);
+            size_t hashVal = ((((hash<int32_t>()(funcLevel)
+                                 ^ (hash<int32_t>()(loopID) << 1)) >> 1)
+                               ^ (hash<int32_t>()(count) << 1)) >> 1)
+                             ^ (hash<LID>()(begin) << 1);
+            return hashVal;
         }
     };
 
@@ -143,7 +145,7 @@ namespace __dp
         size_t getHashValue(){
             size_t hashValue = 0;
             for(LoopTableEntry lte : elements){
-                hashValue = (hashValue ^ (lte.getHashValue() << 1) >> 1);
+                hashValue = ((hashValue << 1) ^ (lte.getHashValue() << 1) >> 1);
             }
             return hashValue;
 //            if(hashValueStack.size() == 0)

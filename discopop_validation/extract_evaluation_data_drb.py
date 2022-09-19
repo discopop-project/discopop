@@ -17,6 +17,13 @@ def main():
 
     evaluation_results = dict()
     for benchmark_number, benchmark_path in benchmark_numbers_and_paths:
+        discopop_execution_successful = 0
+        if os.path.exists(os.path.join(benchmark_path, "Data.xml")) and \
+                os.path.exists(os.path.join(benchmark_path, "out_dep.txt")) and \
+                os.path.exists(os.path.join(benchmark_path, "reduction.txt")) and \
+                os.path.exists(os.path.join(benchmark_path, "out_dp_inst.ll")):
+            discopop_execution_successful = 1
+
         is_supported_by_tool = 0
         # if data_races.txt has been created, set to 1
         if os.path.exists(os.path.join(benchmark_path, "data_races.txt")):
@@ -66,23 +73,24 @@ def main():
         if len([dr for dr in identified_data_races if dr not in target_data_races]) > 0:
             additional_data_races_identified = " ".join([dr for dr in identified_data_races if dr not in target_data_races])
 
-        evaluation_results[benchmark_number] = (is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified,
+        evaluation_results[benchmark_number] = (discopop_execution_successful, is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified,
                                                 some_correct_data_races_identified, additional_data_races_identified)
 
     print(evaluation_results)
 
     # write evaluation results to evaluation_results.csv
     with open("evaluation_results_drb.csv", "w+") as f:
-        f.write("Benchmark;Is supported by our tool;Benchmark contains data races;Data races on array type;Correct data races identified;Some correct data races identified;Additional data races reported\n")
+        f.write("Benchmark;DiscoPoP execution successful;Is supported by our tool;Benchmark contains data races;Data races on array type;Correct data races identified;Some correct data races identified;Additional data races reported\n")
         sorted_keys = list(evaluation_results.keys())
         sorted_keys.sort()
         for benchmark_number in sorted_keys:
-            is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified, some_correct_data_races_identified, additional_data_races_identified = evaluation_results[benchmark_number]
+            discopop_execution_successful, is_supported_by_tool, benchmark_contains_data_races, data_races_in_arrays, correct_data_races_identified, some_correct_data_races_identified, additional_data_races_identified = evaluation_results[benchmark_number]
             corrected_benchmark_number = str(benchmark_number)
             while len(corrected_benchmark_number) < 3:
                 corrected_benchmark_number = "0" + corrected_benchmark_number
 
             f.write(str(corrected_benchmark_number)+";")
+            f.write(str(discopop_execution_successful)+";")
             f.write(str(is_supported_by_tool)+";")
             f.write(str(benchmark_contains_data_races)+";")
             f.write(str(data_races_in_arrays) + ";")
