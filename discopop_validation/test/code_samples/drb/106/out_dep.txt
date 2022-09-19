@@ -3,16 +3,16 @@ START 1:76
 1:61 BGN func 1:53
 1:83 BGN func 1:53
 1:75 END func
-1:86 NOM  RAW 1:83|result
 1:73 NOM  INIT *|retval RAW 1:65|res WAR 1:75|retval
+1:86 NOM  RAW 1:83|result
+1:78 NOM  INIT *|result
 1:75 NOM  RAW 1:56|retval RAW 1:73|retval
 1:76 NOM  INIT *|retval
-1:83 NOM  WAW 1:78|result
+1:56 NOM  INIT *|retval RAW 1:53|n WAR 1:75|retval
+1:65 NOM  INIT *|res RAW 1:61|i RAW 1:63|j WAR 1:73|res
+1:55 NOM  RAW 1:53|n
 1:63 NOM  INIT *|j RAW 1:53|n WAR 1:65|j
 1:61 NOM  INIT *|i RAW 1:53|n WAR 1:65|i
 1:53 NOM  INIT *|n WAR 1:56|n WAR 1:63|n
-1:56 NOM  INIT *|retval RAW 1:53|n WAR 1:75|retval
-1:55 NOM  RAW 1:53|n
-1:65 NOM  INIT *|res RAW 1:61|i RAW 1:63|j WAR 1:73|res
-1:78 NOM  INIT *|result
+1:83 NOM  WAW 1:78|result
 1:87 END program

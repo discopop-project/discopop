@@ -2,8 +2,8 @@ START 1:52
 1:58 BGN loop 10000
 1:61 END loop
 1:61 NOM  RAW 1:59|x
-1:58 NOM  INIT *|i RAW 1:55|len RAW 1:58|i WAR 1:58|i
+1:58 NOM  IIRAW 1:58|i INIT *|i RAW 1:55|len RAW 1:58|i WAR 1:58|i
 1:55 NOM  INIT *|len
 1:52 NOM  INIT *|argc INIT *|argv INIT *|retval
-1:59 NOM  INIT *|x RAW 1:58|i WAW 1:59|x
+1:59 NOM  IIWAW 1:59|x INIT *|x RAW 1:58|i
 1:62 END program

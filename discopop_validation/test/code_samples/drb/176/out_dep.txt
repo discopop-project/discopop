@@ -4,9 +4,6 @@ START 1:32
 1:37 BGN func 1:18
 1:30 END func
 1:27 NOM  INIT *|s RAW 1:23|i RAW 1:25|j WAW 1:27|s
-1:29 NOM  INIT *|retval RAW 1:23|i RAW 1:25|j WAR 1:30|retval
-1:18 NOM  INIT *|n WAR 1:21|n WAR 1:25|n
-1:37 NOM  RAW 1:33|n
 1:30 NOM  RAW 1:21|retval RAW 1:29|retval
 1:21 NOM  INIT *|retval RAW 1:18|n WAR 1:30|retval
 1:25 NOM  INIT *|j RAW 1:18|n WAR 1:29|j
@@ -14,5 +11,8 @@ START 1:32
 1:23 NOM  INIT *|i RAW 1:18|n WAR 1:29|i
 1:20 NOM  RAW 1:18|n
 1:33 NOM  INIT *|n
+1:29 NOM  INIT *|retval RAW 1:23|i RAW 1:25|j WAR 1:30|retval
+1:18 NOM  INIT *|n WAR 1:21|n WAR 1:25|n
 1:32 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:37 NOM  RAW 1:33|n
 1:38 END program

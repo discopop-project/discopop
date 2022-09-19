@@ -1,10 +1,10 @@
 START 1:19
-1:36 NOM  INIT *|d RAW 1:34|c
 1:34 NOM  RAW 1:30|b RAW 1:32|c WAR 1:34|c
+1:30 NOM  INIT *|b
 1:39 NOM  RAW 1:36|d
+1:36 NOM  INIT *|d RAW 1:34|c
 1:26 NOM  INIT *|c
 1:32 NOM  RAW 1:26|c RAW 1:28|a WAR 1:32|c
 1:19 NOM  INIT *|retval
-1:30 NOM  INIT *|b
 1:28 NOM  INIT *|a
 1:40 END program

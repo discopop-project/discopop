@@ -3,12 +3,12 @@ START 1:53
 1:70 END loop
 1:68 NOM  RAW 1:65|i RAW 1:67|a WAR 1:67|tmp
 1:67 NOM  INIT *|a RAW 1:57|tmp RAW 1:65|i RAW 1:68|tmp
-1:65 NOM  INIT *|i RAW 1:58|len RAW 1:65|i WAR 1:65|i
+1:65 NOM  IIRAW 1:65|i INIT *|i RAW 1:58|len RAW 1:65|i WAR 1:65|i
 1:60 NOM  RAW 1:53|argc
 1:57 NOM  INIT *|tmp
 1:53 NOM  INIT *|argc INIT *|argv INIT *|retval
-1:63 NOM  INIT *|__vla_expr0 INIT *|saved_stack RAW 1:58|len
 1:70 NOM  WAW 1:53|retval
+1:63 NOM  INIT *|__vla_expr0 INIT *|saved_stack RAW 1:58|len
 1:71 NOM  RAW 1:63|saved_stack RAW 1:70|retval
 1:58 NOM  INIT *|len
 1:71 END program

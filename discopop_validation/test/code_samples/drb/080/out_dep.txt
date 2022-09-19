@@ -1,9 +1,9 @@
 START 1:62
 1:67 BGN func 1:57
 1:60 END func
+1:69 NOM  RAW 1:59|i
 1:59 NOM  RAW 1:57|q RAW 1:64|q WAR 1:59|q
+1:64 NOM  INIT *|i
 1:57 NOM  INIT *|q
 1:62 NOM  INIT *|retval
-1:69 NOM  RAW 1:59|i
-1:64 NOM  INIT *|i
 1:70 END program

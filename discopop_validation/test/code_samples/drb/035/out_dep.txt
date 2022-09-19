@@ -1,7 +1,7 @@
 START 1:54
 1:64 BGN loop 100
 1:70 END loop
-1:64 NOM  INIT *|i RAW 1:59|len RAW 1:64|i WAR 1:64|i
+1:64 NOM  IIRAW 1:64|i INIT *|i RAW 1:59|len RAW 1:64|i WAR 1:64|i
 1:66 NOM  INIT *|a RAW 1:58|tmp RAW 1:64|i RAW 1:67|tmp
 1:59 NOM  INIT *|len
 1:67 NOM  RAW 1:64|i RAW 1:66|a WAR 1:66|tmp

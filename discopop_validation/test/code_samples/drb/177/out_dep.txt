@@ -6,13 +6,13 @@ START 1:34
 1:32 NOM  RAW 1:23|retval RAW 1:31|retval
 1:31 NOM  INIT *|retval RAW 1:25|i RAW 1:27|j WAR 1:32|retval
 1:29 NOM  INIT *|s RAW 1:25|i RAW 1:27|j WAW 1:29|s
-1:36 NOM  RAW 1:34|argc
+1:39 NOM  RAW 1:35|n
+1:20 NOM  INIT *|n WAR 1:23|n WAR 1:27|n
+1:23 NOM  INIT *|retval RAW 1:20|n WAR 1:32|retval
 1:27 NOM  INIT *|j RAW 1:20|n WAR 1:31|j
+1:36 NOM  RAW 1:34|argc
 1:22 NOM  RAW 1:20|n
 1:35 NOM  INIT *|n
-1:23 NOM  INIT *|retval RAW 1:20|n WAR 1:32|retval
-1:20 NOM  INIT *|n WAR 1:23|n WAR 1:27|n
 1:25 NOM  INIT *|i RAW 1:20|n WAR 1:31|i
 1:34 NOM  INIT *|argc INIT *|argv INIT *|retval
-1:39 NOM  RAW 1:35|n
 1:40 END program

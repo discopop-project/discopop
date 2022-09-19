@@ -7,19 +7,19 @@ START 1:55
 1:65 END loop
 1:63 BGN loop 100
 1:68 END loop
-1:69 NOM  RAW 1:59|len RAW 1:69|j WAR 1:64|j WAR 1:69|j
-1:76 NOM  RAW 1:62|saved_stack RAW 1:75|retval
-1:59 NOM  INIT *|len
-1:74 NOM  RAW 1:72|sum
-1:64 NOM  INIT *|j RAW 1:59|len RAW 1:64|j WAR 1:64|j
-1:65 NOM  INIT *|u RAW 1:63|i RAW 1:64|j
 1:55 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:68 NOM  IIRAW 1:68|i RAW 1:59|len RAW 1:68|i WAR 1:63|i WAR 1:68|i
+1:58 NOM  INIT *|sum
+1:59 NOM  INIT *|len
+1:71 NOM  INIT *|temp RAW 1:65|u RAW 1:68|i RAW 1:69|j WAR 1:72|temp
+1:72 NOM  IIRAW 1:72|sum IIWAR 1:72|sum RAW 1:58|sum RAW 1:71|temp RAW 1:72|sum WAR 1:72|sum
+1:74 NOM  RAW 1:72|sum
+1:64 NOM  IIRAW 1:64|j IIWAR 1:64|j INIT *|j RAW 1:59|len RAW 1:64|j WAR 1:64|j
+1:65 NOM  INIT *|u RAW 1:63|i RAW 1:64|j
+1:69 NOM  IIRAW 1:69|j IIWAR 1:69|j RAW 1:59|len RAW 1:69|j WAR 1:64|j WAR 1:69|j
+1:76 NOM  RAW 1:62|saved_stack RAW 1:75|retval
+1:63 NOM  IIRAW 1:63|i INIT *|i RAW 1:59|len RAW 1:63|i WAR 1:63|i
 1:75 NOM  WAW 1:55|retval
-1:63 NOM  INIT *|i RAW 1:59|len RAW 1:63|i WAR 1:63|i
 1:62 NOM  INIT *|__vla_expr0 INIT *|__vla_expr1 INIT *|saved_stack RAW 1:59|len
 1:60 NOM  RAW 1:55|argc
-1:72 NOM  RAW 1:58|sum RAW 1:71|temp RAW 1:72|sum WAR 1:72|sum
-1:71 NOM  INIT *|temp RAW 1:65|u RAW 1:68|i RAW 1:69|j WAR 1:72|temp
-1:58 NOM  INIT *|sum
-1:68 NOM  RAW 1:59|len RAW 1:68|i WAR 1:63|i WAR 1:68|i
 1:76 END program

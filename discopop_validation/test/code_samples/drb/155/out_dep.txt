@@ -5,13 +5,13 @@ START 1:20
 1:44 END loop
 1:24 BGN loop 100
 1:30 END loop
-1:33 NOM  RAW 1:25|var RAW 1:30|i RAW 1:33|var WAW 1:25|var
+1:37 NOM  IIRAW 1:37|i INIT *|i RAW 1:37|i WAR 1:37|i
+1:33 NOM  IIRAW 1:33|var RAW 1:25|var RAW 1:30|i WAW 1:25|var
 1:20 NOM  INIT *|retval
 1:38 NOM  RAW 1:25|var RAW 1:33|var RAW 1:37|i
-1:37 NOM  INIT *|i RAW 1:37|i WAR 1:37|i
+1:24 NOM  IIRAW 1:24|i INIT *|i RAW 1:24|i WAR 1:24|i
 1:25 NOM  INIT *|var RAW 1:24|i
-1:24 NOM  INIT *|i RAW 1:24|i WAR 1:24|i
 1:45 NOM  RAW 1:44|retval
 1:44 NOM  WAW 1:20|retval
-1:30 NOM  INIT *|i RAW 1:30|i WAR 1:30|i
+1:30 NOM  IIRAW 1:30|i INIT *|i RAW 1:30|i WAR 1:30|i
 1:45 END program

@@ -2,8 +2,8 @@ START 1:46
 1:47 BGN func 1:22
 1:44 END func
 1:43 NOM  RAW 1:38|a
-1:46 NOM  INIT *|retval
-1:38 NOM  RAW 1:31|a WAR 1:38|a
 1:31 NOM  RAW 1:23|a WAR 1:31|a
 1:23 NOM  INIT *|a
+1:38 NOM  RAW 1:31|a WAR 1:38|a
+1:46 NOM  INIT *|retval
 1:49 END program

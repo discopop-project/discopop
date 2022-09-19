@@ -6,9 +6,9 @@ START 1:69
 1:71 BGN func 1:53
 1:66 END func
 1:64 NOM  INIT *|v_out RAW 1:57|i RAW 1:62|sum
-1:62 NOM  RAW 1:57|i RAW 1:59|sum RAW 1:60|j RAW 1:62|sum WAR 1:62|sum
-1:57 NOM  INIT *|i RAW 1:57|i WAR 1:57|i
+1:62 NOM  IIRAW 1:62|sum RAW 1:57|i RAW 1:59|sum RAW 1:60|j WAR 1:62|sum
+1:57 NOM  IIRAW 1:57|i INIT *|i RAW 1:57|i WAR 1:57|i
 1:59 NOM  INIT *|sum WAR 1:64|sum
-1:60 NOM  INIT *|j RAW 1:60|j WAR 1:60|j
+1:60 NOM  IIRAW 1:60|j IIWAR 1:60|j INIT *|j WAR 1:60|j
 1:69 NOM  INIT *|retval
 1:72 END program

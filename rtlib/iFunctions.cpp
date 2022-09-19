@@ -575,7 +575,12 @@ namespace __dp
                          {
                               sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                               // log write access
-                              pair<size_t, LID> lastLoopHash = lastWriteLog[access.addr];
+                              pair<size_t, LID> lastLoopHash;
+                              if(lastWriteLog.find(access.addr) != lastWriteLog.end()){
+                                   lastLoopHash = lastWriteLog[access.addr];
+                              }
+
+
                               logAccess(access.addr, lastWriteLog, access.loopHash, access.lid);
                               if (lastWrite == 0)
                               {

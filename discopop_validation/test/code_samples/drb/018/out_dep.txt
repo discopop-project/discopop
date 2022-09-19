@@ -3,12 +3,12 @@ START 1:60
 1:75 END loop
 1:66 BGN loop 1000
 1:70 END loop
+1:72 NOM  IIRAW 1:72|outLen INIT *|output RAW 1:64|outLen RAW 1:67|input RAW 1:70|i WAR 1:72|outLen
+1:67 NOM  INIT *|input RAW 1:66|i
+1:66 NOM  IIRAW 1:66|i INIT *|i RAW 1:63|inLen RAW 1:66|i WAR 1:66|i
+1:70 NOM  IIRAW 1:70|i RAW 1:63|inLen RAW 1:70|i WAR 1:66|i WAR 1:70|i
+1:63 NOM  INIT *|inLen
 1:75 NOM  RAW 1:72|*
 1:64 NOM  INIT *|outLen
 1:60 NOM  INIT *|retval
-1:72 NOM  INIT *|output RAW 1:64|outLen RAW 1:67|input RAW 1:70|i RAW 1:72|outLen WAR 1:72|outLen
-1:67 NOM  INIT *|input RAW 1:66|i
-1:66 NOM  INIT *|i RAW 1:63|inLen RAW 1:66|i WAR 1:66|i
-1:70 NOM  RAW 1:63|inLen RAW 1:70|i WAR 1:66|i WAR 1:70|i
-1:63 NOM  INIT *|inLen
 1:77 END program

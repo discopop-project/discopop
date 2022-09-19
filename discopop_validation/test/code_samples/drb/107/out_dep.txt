@@ -1,8 +1,8 @@
 START 1:54
+1:54 NOM  INIT *|retval
 1:76 NOM  RAW 1:71|result
 1:75 NOM  RAW 1:71|result
 1:71 NOM  WAW 1:66|result
 1:66 NOM  WAW 1:56|result
 1:56 NOM  INIT *|result
-1:54 NOM  INIT *|retval
 1:77 END program

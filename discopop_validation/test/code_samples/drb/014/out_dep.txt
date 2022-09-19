@@ -3,12 +3,12 @@ START 1:67
 1:75 END loop
 1:73 BGN loop 99
 1:77 END loop
-1:74 NOM  INIT *|j RAW 1:70|m RAW 1:74|j WAR 1:74|j
-1:79 NOM  WAW 1:67|retval
-1:75 NOM  INIT *|b RAW 1:73|i RAW 1:74|j RAW 1:75|b
+1:74 NOM  IIRAW 1:74|j IIWAR 1:74|j INIT *|j RAW 1:70|m WAR 1:74|j
 1:71 NOM  INIT *|__vla_expr0 INIT *|__vla_expr1 INIT *|saved_stack RAW 1:70|m RAW 1:70|n
+1:75 NOM  IIRAW 1:75|b INIT *|b RAW 1:73|i RAW 1:74|j
+1:79 NOM  WAW 1:67|retval
 1:70 NOM  INIT *|m INIT *|n
-1:73 NOM  INIT *|i RAW 1:70|n RAW 1:73|i WAR 1:73|i
+1:73 NOM  IIRAW 1:73|i INIT *|i RAW 1:70|n RAW 1:73|i WAR 1:73|i
 1:80 NOM  RAW 1:71|saved_stack RAW 1:79|retval
 1:67 NOM  INIT *|argc INIT *|argv INIT *|retval
 1:77 NOM  RAW 1:75|b

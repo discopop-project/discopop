@@ -3,8 +3,8 @@ START 1:52
 1:64 END loop
 1:59 BGN loop 19
 1:65 END loop
-1:61 NOM  INIT *|j RAW 1:61|j WAR 1:61|j
+1:61 NOM  IIRAW 1:61|j IIWAR 1:61|j INIT *|j WAR 1:61|j
 1:62 NOM  INIT *|a RAW 1:59|i RAW 1:61|j
 1:52 NOM  INIT *|argc INIT *|argv INIT *|retval
-1:59 NOM  INIT *|i RAW 1:59|i WAR 1:59|i
+1:59 NOM  IIRAW 1:59|i INIT *|i RAW 1:59|i WAR 1:59|i
 1:65 END program
