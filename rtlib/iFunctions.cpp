@@ -575,6 +575,7 @@ namespace __dp
                          {
                               sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                               // log write access
+                              // todo support parallelization. currently, DP.conf -> workers=1 required!
                               pair<size_t, LID> lastLoopHash;
                               if(lastWriteLog.find(access.addr) != lastWriteLog.end()){
                                    lastLoopHash = lastWriteLog[access.addr];
