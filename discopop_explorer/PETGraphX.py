@@ -61,6 +61,7 @@ class DepType(Enum):
     INIT = 3
     IIRAW = 4  # inter-iteration RAW
     IIWAR = 5  # inter-iteration WAR
+    IIWAW = 6  # inter-iteration WAW
 
 
 class NodeType(IntEnum):
