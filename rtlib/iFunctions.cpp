@@ -83,8 +83,9 @@ namespace __dp
      /******* END: parallelization section *******/
 
     // dependencies between loop iterations can only be checked within chunks to prevent drastic slowdowns
-    unordered_map<ADDR, pair<size_t, LID>[3]> lastReadLog;
-    unordered_map<ADDR, pair<size_t, LID>[3]> lastWriteLog;
+# define BUFFERLENGTH 3
+    unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastReadLog;
+    unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastWriteLog;
 
      /******* Helper functions *******/
 
@@ -435,18 +436,19 @@ namespace __dp
           pthread_mutex_unlock(&allDepsLock);
      }
 
-    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>[3]>& logMap, size_t loopHash, LID lid){
+    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap, size_t loopHash, LID lid){
          // logMap can be either refer to read or write log map
          // move old accesses backwards
-         logMap[addr][2] = logMap[addr][1];
-         logMap[addr][1] = logMap[addr][0];
+         for(int i = BUFFERLENGTH - 1; i > 0; i--){
+             logMap[addr][i] = logMap[addr][i-1];
+         }
          logMap[addr][0] = pair<size_t, LID>(loopHash, lid);
      }
 
-     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap){
-         logMap[addr][0] = pair<size_t, LID>(0, 0);
-         logMap[addr][1] = pair<size_t, LID>(0, 0);
-         logMap[addr][2] = pair<size_t, LID>(0, 0);
+     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap){
+         for(int i = 0; i < BUFFERLENGTH; i++){
+             logMap[addr][i] = pair<size_t, LID>(0, 0);
+         }
      }
 /*
      bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>>& logMap1,
@@ -466,8 +468,8 @@ namespace __dp
          return false;
      }
 */
-    bool checkInterIterationAccess(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap1,
-                                   ADDR addr2, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap2){
+    bool checkInterIterationAccess(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap1,
+                                   ADDR addr2, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap2){
          // check single access in first given map against the logged accesses in the second map
 
         pair<size_t, LID> val1 = logMap1[addr1][0];
@@ -475,7 +477,7 @@ namespace __dp
 
         bool retVal = false;
 
-        for(int i=0; i < 3; i++){
+        for(int i=0; i < BUFFERLENGTH; i++){
             // check lids
             if(val1.second != logMap2[addr2][i].second){
                 continue;  // not an inter-iteration access
@@ -546,7 +548,7 @@ namespace __dp
                     for (unsigned short i = 0; i < CHUNK_SIZE; ++i)
                     {
                          access = accesses[i];
-    
+
                         cout << "Var: " << access.var << endl;
                         cout << "ADDR: " << access.addr << endl;
                         cout << "LID: " << access.lid << endl;
@@ -554,13 +556,13 @@ namespace __dp
                         cout << "skip: " << access.skip << endl;
                         cout << "CurrentHash: " << access.loopHash << endl;
                         cout << "lastReadHashes: " << endl;
-                        for(int i = 0; i < 3; i++){
+                        for(int i = 0; i < BUFFERLENGTH; i++){
                             cout << "\t" << lastReadLog[access.addr][i].first << "@" << lastReadLog[access.addr][i].second << " ";
                         }
                         cout << endl;
 
                         cout << "lastWriteHashes: " << endl;
-                        for(int i = 0; i < 3; i++){
+                        for(int i = 0; i < BUFFERLENGTH; i++){
                             cout << "\t" << lastWriteLog[access.addr][i].first << "@" << lastWriteLog[access.addr][i].second << " ";
                         }
                         cout << endl << endl;
