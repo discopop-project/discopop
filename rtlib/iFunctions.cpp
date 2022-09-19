@@ -83,8 +83,8 @@ namespace __dp
      /******* END: parallelization section *******/
 
     // dependencies between loop iterations can only be checked within chunks to prevent drastic slowdowns
-    unordered_map<ADDR, pair<size_t, LID>> lastReadLog;
-    unordered_map<ADDR, pair<size_t, LID>> lastWriteLog;
+    unordered_map<ADDR, pair<size_t, LID>[3]> lastReadLog;
+    unordered_map<ADDR, pair<size_t, LID>[3]> lastWriteLog;
 
      /******* Helper functions *******/
 
@@ -435,15 +435,20 @@ namespace __dp
           pthread_mutex_unlock(&allDepsLock);
      }
 
-    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>>& logMap, size_t loopHash, LID lid){
+    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>[3]>& logMap, size_t loopHash, LID lid){
          // logMap can be either refer to read or write log map
-         logMap[addr] = pair<size_t, LID>(loopHash, lid);
+         // move old accesses backwards
+         logMap[addr][2] = logMap[addr][1];
+         logMap[addr][1] = logMap[addr][0];
+         logMap[addr][0] = pair<size_t, LID>(loopHash, lid);
      }
 
-     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>>& logMap){
-         logMap[addr] = pair<size_t, LID>(0, 0);
+     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap){
+         logMap[addr][0] = pair<size_t, LID>(0, 0);
+         logMap[addr][1] = pair<size_t, LID>(0, 0);
+         logMap[addr][2] = pair<size_t, LID>(0, 0);
      }
-
+/*
      bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>>& logMap1,
                                        ADDR addr2, unordered_map<ADDR, pair<size_t, LID>>& logMap2){
          pair<size_t, LID> val1 = logMap1[addr1];
@@ -460,19 +465,45 @@ namespace __dp
          }
          return false;
      }
+*/
+    bool checkInterIterationAccess(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap1,
+                                   ADDR addr2, unordered_map<ADDR, pair<size_t, LID>[3]>& logMap2){
+         // check single access in first given map against the logged accesses in the second map
 
-    bool loopIterationsEqualOrHashesNull(size_t hash1,
-                                         size_t hash2,
-                                         LID lid1,
-                                         LID lid2){
+        pair<size_t, LID> val1 = logMap1[addr1][0];
+        //pair<size_t, LID>[] val2 = logMap2[addr2];
+
+        bool retVal = false;
+
+        for(int i=0; i < 3; i++){
+            // check lids
+            if(val1.second != logMap2[addr2][i].second){
+                continue;  // not an inter-iteration access
+            }
+
+            // check loop hashes
+            if((val1.first == 0) || (logMap2[addr2][i].first == 0) || (val1.first == logMap2[addr2][i].first)){
+                continue;  // not an inter-iteration access
+            }
+
+            retVal = true;
+            break;
+        }
+        return retVal;
+     }
+
+    bool checkInterIterationAccess(size_t hash1,
+                                   size_t hash2,
+                                   LID lid1,
+                                   LID lid2){
          if(lid1 != lid2){
-             return true;  // not a inter-iteration dependency
+             return false;  // not an inter-iteration dependency
          }
 
         if((hash1 == 0) || (hash2 == 0) || (hash1 == hash2)){
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
      void *analyzeDeps(void *arg)
@@ -515,28 +546,38 @@ namespace __dp
                     for (unsigned short i = 0; i < CHUNK_SIZE; ++i)
                     {
                          access = accesses[i];
-/*
+    
                         cout << "Var: " << access.var << endl;
                         cout << "ADDR: " << access.addr << endl;
                         cout << "LID: " << access.lid << endl;
                         cout << "isRead: " << access.isRead << endl;
                         cout << "skip: " << access.skip << endl;
                         cout << "CurrentHash: " << access.loopHash << endl;
-                        cout << "lastReadHash: " << lastReadLog[access.addr].first << "@" << lastReadLog[access.addr].second << endl;
-                        cout << "lastWriteHash: " << lastWriteLog[access.addr].first << "@" << lastWriteLog[access.addr].second << endl;
-                        cout << "IIRAW: " << !(loopIterationsEqualOrHashesNull(access.addr,
-                                                                               lastReadLog,
-                                                                               access.addr,
-                                                                               lastWriteLog)) << endl;
-                        cout << "IIWAR: " << !(loopIterationsEqualOrHashesNull(access.addr,
-                                                                               lastWriteLog,
-                                                                               access.addr,
-                                                                               lastReadLog)) << endl;
-                        cout << "IIWAW: " << !(loopIterationsEqualOrHashesNull(access.loopHash,
-                                                                               lastWriteLog[access.addr].first,
-                                                                               access.lid,
-                                                                               lastWriteLog[access.addr].second
-                        )) << endl << endl;
+                        cout << "lastReadHashes: " << endl;
+                        for(int i = 0; i < 3; i++){
+                            cout << "\t" << lastReadLog[access.addr][i].first << "@" << lastReadLog[access.addr][i].second << " ";
+                        }
+                        cout << endl;
+
+                        cout << "lastWriteHashes: " << endl;
+                        for(int i = 0; i < 3; i++){
+                            cout << "\t" << lastWriteLog[access.addr][i].first << "@" << lastWriteLog[access.addr][i].second << " ";
+                        }
+                        cout << endl << endl;
+
+
+/*                        cout << "IIRAW: " << checkInterIterationAccess(access.addr,
+                                                                       lastReadLog,
+                                                                       access.addr,
+                                                                       lastWriteLog) << endl;
+                        cout << "IIWAR: " << checkInterIterationAccess(access.addr,
+                                                                       lastWriteLog,
+                                                                       access.addr,
+                                                                       lastReadLog) << endl;
+                        cout << "IIWAW: " << checkInterIterationAccess(access.loopHash,
+                                                                       lastWriteLog[access.addr].first,
+                                                                       access.lid,
+                                                                       lastWriteLog[access.addr].second) << endl << endl;
 */
 
                          if (access.isRead)
@@ -559,10 +600,12 @@ namespace __dp
                                   // log read access
                                   logAccess(access.addr, lastReadLog, access.loopHash, access.lid);
                                   // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
-                                  bool interIterationRAW = !(loopIterationsEqualOrHashesNull(access.addr,
-                                                                                             lastReadLog,
-                                                                                             access.addr,
-                                                                                             lastWriteLog));
+                                  bool interIterationRAW = checkInterIterationAccess(access.addr,
+                                                                                         lastReadLog,
+                                                                                         access.addr,
+                                                                                         lastWriteLog);
+
+
                                   if(interIterationRAW){
                                       addDep(IIRAW, access.lid, lastWrite, access.var);
                                   }
@@ -578,7 +621,7 @@ namespace __dp
                               // todo support parallelization. currently, DP.conf -> workers=1 required!
                               pair<size_t, LID> lastLoopHash;
                               if(lastWriteLog.find(access.addr) != lastWriteLog.end()){
-                                   lastLoopHash = lastWriteLog[access.addr];
+                                   lastLoopHash = lastWriteLog[access.addr][0];
                               }
 
 
@@ -595,10 +638,10 @@ namespace __dp
                                    {
                                        // WAR
                                        // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
-                                       bool interIterationWAR = !(loopIterationsEqualOrHashesNull(access.addr,
-                                                                                                  lastWriteLog,
-                                                                                                  access.addr,
-                                                                                                  lastReadLog));
+                                       bool interIterationWAR = checkInterIterationAccess(access.addr,
+                                                                                          lastWriteLog,
+                                                                                          access.addr,
+                                                                                          lastReadLog);
                                        if(interIterationWAR){
                                            addDep(IIWAR, access.lid, lastRead, access.var);
                                        }
@@ -614,11 +657,10 @@ namespace __dp
                                    {
                                        // WAW
                                        // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
-                                       bool interIterationWAW = !(loopIterationsEqualOrHashesNull(access.loopHash,
-                                                                                                  lastLoopHash.first,
-                                                                                                  access.lid,
-                                                                                                  lastLoopHash.second
-                                                                                                  ));
+                                       bool interIterationWAW = checkInterIterationAccess(access.loopHash,
+                                                                                          lastLoopHash.first,
+                                                                                          access.lid,
+                                                                                          lastLoopHash.second );
                                        if(interIterationWAW){
                                            addDep(IIWAW, access.lid, lastWrite, access.var);
                                        }
