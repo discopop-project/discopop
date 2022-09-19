@@ -542,7 +542,7 @@ class PETGraphX(object):
 
         for v in children:
             for s, t, d in [(s, t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
-                            if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop]:
+                            if d.dtype in [DepType.RAW, DepType.IIRAW] and d.var_name in undefinedVarsInLoop]:
                 if (self.is_loop_index(d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU))
                         or self.is_readonly_inside_loop_body(d, root_loop)):
                     continue
@@ -729,7 +729,7 @@ class PETGraphX(object):
 
         for v in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
-                         if d.dtype == DepType.WAR or d.dtype == DepType.WAW]:
+                         if d.dtype in [DepType.WAR, DepType.IIWAR] or d.dtype in [DepType.WAW, DepType.IIWAW]]:
                 if d.var_name is None:
                     return False
                 assert d.var_name is not None
@@ -777,7 +777,7 @@ class PETGraphX(object):
 
         for c in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(c.id, EdgeType.DATA)
-                         if d.dtype == DepType.RAW and d.var_name == var_name]:
+                         if d.dtype in [DepType.RAW, DepType.IIRAW] and d.var_name == var_name]:
                 if (d.sink == d.source
                         and d.source in loops_start_lines
                         and self.node_at(t) in children):
@@ -799,14 +799,14 @@ class PETGraphX(object):
 
         for v in children:
             for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA)
-                         if d.dtype == DepType.WAR or d.dtype == DepType.WAW]:
+                         if d.dtype in [DepType.WAR, DepType.IIWAR] or d.dtype in [DepType.WAW, DepType.IIWAW]]:
                 # If there is a waw dependency for var, then var is written in loop
                 # (sink is always inside loop for waw/war)
                 if (dep.var_name == d.var_name
                         and not (d.sink in loops_start_lines)):
                     return False
             for t, d in [(t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA)
-                         if d.dtype == DepType.RAW]:
+                         if d.dtype in [DepType.RAW, DepType.IIRAW]]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
                 if (dep.var_name == d.var_name
