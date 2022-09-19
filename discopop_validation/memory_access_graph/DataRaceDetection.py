@@ -126,7 +126,7 @@ def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryA
     for dep in circular_dependencies:
         print("\t--> ", dep[0], dep[1], dep[2].var_name)
     if len(circular_dependencies) == 0:
-        return True
+        return False
 
     # check if variable is a loop index
     for parent_loop_id in parent_loop_nodes:
