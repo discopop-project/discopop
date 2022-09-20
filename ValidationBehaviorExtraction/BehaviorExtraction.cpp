@@ -153,7 +153,11 @@ void BehaviorExtraction::getTrueVarNamesFromMetadata(Function &F)
                 CallInst* call = cast<CallInst>(instruction);
                 // check if @llvm.dbg.declare is called
                 std::string dbg_declare = "llvm.dbg.declare";
-                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                //prevent segfault
+                int cmp_res = 1;
+                if(call->getCalledFunction() != nullptr){
+                    cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                }
                 if(cmp_res == 0){
                     // call to @llvm.dbg.declare found
 
