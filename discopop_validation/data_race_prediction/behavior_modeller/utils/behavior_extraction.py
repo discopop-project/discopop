@@ -28,10 +28,14 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     # create input file for behavior extraction
     with open("input.txt", "w+") as input_file:
         for section_id, file_id, target_lines, var_names, suggestion_type in target_code_sections:
-            # replace file ids with path
-            file_path = file_mapping_dict[file_id]
-            input_file.write(
-                file_path + ";" + file_id + ";" + section_id + ";" + target_lines + ";" + var_names + ";" + suggestion_type + ";\n")
+            # if file_id is unknown, skip the target code section as it is malformed
+            try:
+                # replace file ids with path
+                file_path = file_mapping_dict[file_id]
+                input_file.write(
+                    file_path + ";" + file_id + ";" + section_id + ";" + target_lines + ";" + var_names + ";" + suggestion_type + ";\n")
+            except KeyError:
+                continue
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
