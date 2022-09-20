@@ -89,7 +89,7 @@ def __execute_profiling_if_necessary(run_configuration: Configuration, file_path
         line_mapping, profiling_necessity = file_difference_checker(file_path_last_profiled,
                                                                     file_path)
 
-    if profiling_necessity:
+    if profiling_necessity and run_configuration.target_profiling_not_allowed != "True":
         if run_configuration.verbose_mode:
             print("PROFILING REQUIRED...")
         if run_configuration.dp_profiling_executable == "None":

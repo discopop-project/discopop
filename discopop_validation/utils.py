@@ -89,7 +89,8 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                             continue
                         if pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.CU)):
                             loop_indices_to_remove.append(var_name)
-                shared_defined_outside = [var for var in shared_defined_outside if var not in loop_indices_to_remove]
+                shared_defined_outside = [var for var in shared_defined_outside if var not in loop_indices_to_remove and
+                                          var is not None]
 
                 # add outside-defined variables to list of shared variables
                 for var_name in shared_defined_outside:
