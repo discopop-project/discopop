@@ -5,5 +5,5 @@ START 1:23
 1:23 NOM  INIT *|retval
 1:32 NOM  RAW 1:29|var WAR 1:32|var
 1:29 NOM  INIT *|var RAW 1:32|var WAR 1:29|var
-1:27 NOM  INIT *|i RAW 1:27|i WAR 1:27|i
+1:27 NOM  IIRAW 1:27|i INIT *|i RAW 1:27|i WAR 1:27|i
 1:36 END program

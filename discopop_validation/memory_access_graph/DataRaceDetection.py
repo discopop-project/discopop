@@ -59,10 +59,12 @@ def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryA
                             mod[0] == OperationModifierType.LOOP_OPERATION]
     amd_2_loop_modifiers = [mod[1] for mod in amd_2.operation.modifiers if
                             mod[0] == OperationModifierType.LOOP_OPERATION]
+
     # if overlap exists, both accesses occured from the same loop.
     if len([mod for mod in amd_1_loop_modifiers if mod in amd_2_loop_modifiers]) == 0:
         # no overlap, return False
         return False
+
 
     # check if amd_1 and amd_2 originate from inter-iteration dependency producing instructions
     # inter-iteration dependencies exists for variable, if:
@@ -78,30 +80,51 @@ def __originated_from_loop_without_inter_iteration_dependences(ma_graph: MemoryA
                                                       int(amd_2.operation.line), int(amd_2.operation.line),
                                                       accessed_var_name=amd_2.operation.target_name)
 
-    if amd_1_cu != amd_2_cu:
-        return False
+#    if amd_1_cu != amd_2_cu:
+#        return False
 
     print()
     print("AMD1: ", amd_1.operation)
     print("AMD2: ", amd_2.operation)
-    print("CU: ", amd_1_cu)
+    print("CU1: ", amd_1_cu)
+    print("CU2: ", amd_2_cu)
     print("Node ID: ", ma_graph.pet.node_at(amd_1_cu).id)
 
     # check if CU is a child of a loop node
-    parent_loop_nodes = [source for source, _, _ in ma_graph.pet.in_edges(ma_graph.pet.node_at(amd_1_cu).id, PETEdgeType.CHILD) if
+    parent_loop_nodes1 = [source for source, _, _ in ma_graph.pet.in_edges(ma_graph.pet.node_at(amd_1_cu).id, PETEdgeType.CHILD) if
                          ma_graph.pet.node_at(source).type == NodeType.LOOP]
+    parent_loop_nodes2 = [source for source, _, _ in ma_graph.pet.in_edges(ma_graph.pet.node_at(amd_2_cu).id, PETEdgeType.CHILD) if
+                         ma_graph.pet.node_at(source).type == NodeType.LOOP]
+    # get overlapping parent loops
+    parent_loop_nodes = [loop for loop in parent_loop_nodes1 if loop in parent_loop_nodes2]
     print("parent loop nodes: ", parent_loop_nodes)
     if len(parent_loop_nodes) == 0:
         return False
 
-    # check if dependency edge to own CU node exists
-    in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.RAW, reversed=False)
-    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAR, reversed=False)
-    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAW, reversed=False)
+    # check if inter-iteration dependency edge to own CU node exists
+    II_in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.IIRAW, reversed=False)
+    II_in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.IIWAR, reversed=False)
+
+    II_in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_2_cu), DepType.IIRAW, reversed=False)
+    II_in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_2_cu), DepType.IIWAR, reversed=False)
+
+#    in_dep_edges = ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.RAW, reversed=False)
+#    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAR, reversed=False)
+#    in_dep_edges += ma_graph.pet.get_dep(ma_graph.pet.node_at(amd_1_cu), DepType.WAW, reversed=False)
+
+    print("Target; ", amd_1.operation.target_name)
+    print("In deps: ")
+    for edge in II_in_dep_edges:
+        print("\t", edge[0], edge[1], edge[2].var_name)
+
     # filter in dep edges for variable and source
-    circular_dependencies = [(source, target, dep) for source, target, dep in in_dep_edges if source == amd_1_cu and
-                             target == amd_1_cu and dep.var_name == amd_1.operation.target_name]
-    print("circular deps: ", circular_dependencies)
+    circular_dependencies = [(source, target, dep) for source, target, dep in II_in_dep_edges if
+                             source in [amd_1_cu, amd_2_cu] and
+                             target in [amd_1_cu, amd_2_cu] and
+                             dep.var_name == amd_1.operation.target_name]
+    print("circular deps: ")
+    for dep in circular_dependencies:
+        print("\t--> ", dep[0], dep[1], dep[2].var_name)
     if len(circular_dependencies) == 0:
         return False
 

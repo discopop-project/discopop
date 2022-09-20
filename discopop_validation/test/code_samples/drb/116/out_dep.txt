@@ -4,7 +4,7 @@ START 1:53
 1:71 NOM  RAW 1:57|saved_stack RAW 1:70|retval
 1:69 NOM  RAW 1:66|a
 1:56 NOM  INIT *|len
-1:60 NOM  INIT *|i RAW 1:56|len RAW 1:60|i WAR 1:60|i
+1:60 NOM  IIRAW 1:60|i INIT *|i RAW 1:56|len RAW 1:60|i WAR 1:60|i
 1:57 NOM  INIT *|__vla_expr0 INIT *|saved_stack RAW 1:56|len
 1:66 NOM  RAW 1:61|a WAR 1:66|a
 1:61 NOM  INIT *|a RAW 1:60|i

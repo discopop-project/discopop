@@ -2,10 +2,10 @@ START 1:66
 1:77 BGN func 1:63
 1:64 END func
 1:80 NOM  RAW 1:68|counter
+1:79 NOM  RAW 1:63|counter RAW 1:68|counter
+1:66 NOM  INIT *|retval
 1:63 NOM  RAW 1:68|counter RAW 1:74|counter WAR 1:63|counter
 1:74 NOM  INIT *|counter RAW 1:68|counter
 1:69 NOM  RAW 1:68|counter
 1:68 NOM  INIT *|counter
-1:79 NOM  RAW 1:63|counter RAW 1:68|counter
-1:66 NOM  INIT *|retval
 1:81 END program

@@ -5,11 +5,11 @@ START 1:50
 1:61 END loop
 1:62 NOM  RAW 1:57|a RAW 1:61|i WAR 1:62|a
 1:57 NOM  INIT *|a RAW 1:56|i
-1:61 NOM  RAW 1:53|len RAW 1:61|i WAR 1:56|i WAR 1:61|i
+1:61 NOM  IIRAW 1:61|i RAW 1:53|len RAW 1:61|i WAR 1:56|i WAR 1:61|i
 1:54 NOM  INIT *|__vla_expr0 INIT *|saved_stack RAW 1:53|len
 1:53 NOM  INIT *|len
-1:64 NOM  WAW 1:50|retval
-1:56 NOM  INIT *|i RAW 1:53|len RAW 1:56|i WAR 1:56|i
+1:56 NOM  IIRAW 1:56|i INIT *|i RAW 1:53|len RAW 1:56|i WAR 1:56|i
 1:65 NOM  RAW 1:54|saved_stack RAW 1:64|retval
 1:50 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:64 NOM  WAW 1:50|retval
 1:65 END program

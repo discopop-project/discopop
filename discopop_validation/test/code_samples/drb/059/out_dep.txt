@@ -3,8 +3,8 @@ START 1:65
 1:62 END loop
 1:67 BGN func 1:56
 1:63 END func
+1:61 NOM  IIWAW 1:61|x INIT *|x RAW 1:60|i
+1:60 NOM  IIRAW 1:60|i INIT *|i RAW 1:60|i WAR 1:60|i
 1:62 NOM  RAW 1:61|x
-1:61 NOM  INIT *|x RAW 1:60|i WAW 1:61|x
 1:65 NOM  INIT *|retval
-1:60 NOM  INIT *|i RAW 1:60|i WAR 1:60|i
 1:68 END program

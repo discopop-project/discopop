@@ -3,15 +3,15 @@ START 1:51
 1:75 END loop
 1:60 BGN loop 1000
 1:63 END loop
-1:72 NOM  RAW 1:61|A RAW 1:63|pfile RAW 1:70|i
-1:70 NOM  RAW 1:56|len RAW 1:70|i WAR 1:60|i WAR 1:70|i
-1:63 NOM  INIT *|pfile
-1:61 NOM  INIT *|A RAW 1:60|i
-1:60 NOM  INIT *|i RAW 1:56|len RAW 1:60|i WAR 1:60|i
-1:64 NOM  RAW 1:63|pfile
-1:75 NOM  RAW 1:63|pfile
-1:76 NOM  INIT *|ret
-1:51 NOM  INIT *|argc INIT *|argv INIT *|retval
 1:77 NOM  RAW 1:76|ret
+1:64 NOM  RAW 1:63|pfile
+1:72 NOM  RAW 1:61|A RAW 1:63|pfile RAW 1:70|i
+1:63 NOM  INIT *|pfile
+1:70 NOM  IIRAW 1:70|i RAW 1:56|len RAW 1:70|i WAR 1:60|i WAR 1:70|i
+1:61 NOM  INIT *|A RAW 1:60|i
+1:60 NOM  IIRAW 1:60|i INIT *|i RAW 1:56|len RAW 1:60|i WAR 1:60|i
 1:56 NOM  INIT *|len
+1:51 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:76 NOM  INIT *|ret
+1:75 NOM  RAW 1:63|pfile
 1:81 END program

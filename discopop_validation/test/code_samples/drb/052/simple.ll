@@ -8,10 +8,20 @@ target triple = "x86_64-pc-linux-gnu"
 @.str.1 = private unnamed_addr constant [13 x i8] c"base[i]!=4.0\00", align 1
 @.str.2 = private unnamed_addr constant [9 x i8] c"simple.c\00", align 1
 @__PRETTY_FUNCTION__.main = private unnamed_addr constant [23 x i8] c"int main(int, char **)\00", align 1
+@.str.3 = private unnamed_addr constant [7 x i8] c"retval\00", align 1
+@.str.4 = private unnamed_addr constant [5 x i8] c"argc\00", align 1
+@.str.5 = private unnamed_addr constant [5 x i8] c"argv\00", align 1
+@.str.6 = private unnamed_addr constant [5 x i8] c"base\00", align 1
+@.str.7 = private unnamed_addr constant [4 x i8] c"xa1\00", align 1
+@.str.8 = private unnamed_addr constant [4 x i8] c"xa2\00", align 1
+@.str.9 = private unnamed_addr constant [2 x i8] c"i\00", align 1
+@.str.10 = private unnamed_addr constant [9 x i8] c"indexSet\00", align 1
+@.str.11 = private unnamed_addr constant [4 x i8] c"idx\00", align 1
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @main(i32 %argc, i8** %argv) #0 !dbg !17 {
 entry:
+  call void @__dp_func_entry(i32 16481, i32 1)
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
   %argv.addr = alloca i8**, align 8
@@ -20,115 +30,197 @@ entry:
   %xa2 = alloca double*, align 8
   %i = alloca i32, align 4
   %idx = alloca i32, align 4
+  %0 = ptrtoint i32* %retval to i64
+  call void @__dp_write(i32 16481, i64 %0, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
   store i32 0, i32* %retval, align 4
+  %1 = ptrtoint i32* %argc.addr to i64
+  call void @__dp_write(i32 16481, i64 %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.4, i32 0, i32 0))
   store i32 %argc, i32* %argc.addr, align 4
   call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  %2 = ptrtoint i8*** %argv.addr to i64
+  call void @__dp_write(i32 16481, i64 %2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.5, i32 0, i32 0))
   store i8** %argv, i8*** %argv.addr, align 8
   call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !25, metadata !DIExpression()), !dbg !26
   call void @llvm.dbg.declare(metadata double** %base, metadata !27, metadata !DIExpression()), !dbg !28
+  call void @__dp_call(i32 16483), !dbg !29
   %call = call noalias i8* @malloc(i64 16208) #5, !dbg !29
-  %0 = bitcast i8* %call to double*, !dbg !30
-  store double* %0, double** %base, align 8, !dbg !28
-  %1 = load double*, double** %base, align 8, !dbg !31
-  %cmp = icmp eq double* %1, null, !dbg !33
+  %3 = bitcast i8* %call to double*, !dbg !30
+  %4 = ptrtoint double** %base to i64
+  call void @__dp_write(i32 16483, i64 %4, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  store double* %3, double** %base, align 8, !dbg !28
+  %5 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16484, i64 %5, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %6 = load double*, double** %base, align 8, !dbg !31
+  %cmp = icmp eq double* %6, null, !dbg !33
   br i1 %cmp, label %if.then, label %if.end, !dbg !34
 
 if.then:                                          ; preds = %entry
+  call void @__dp_call(i32 16486), !dbg !35
   %call1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([47 x i8], [47 x i8]* @.str, i64 0, i64 0)), !dbg !35
+  %7 = ptrtoint i32* %retval to i64
+  call void @__dp_write(i32 16487, i64 %7, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
   store i32 1, i32* %retval, align 4, !dbg !37
   br label %return, !dbg !37
 
 if.end:                                           ; preds = %entry
   call void @llvm.dbg.declare(metadata double** %xa1, metadata !38, metadata !DIExpression()), !dbg !39
-  %2 = load double*, double** %base, align 8, !dbg !40
-  store double* %2, double** %xa1, align 8, !dbg !39
+  %8 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16490, i64 %8, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %9 = load double*, double** %base, align 8, !dbg !40
+  %10 = ptrtoint double** %xa1 to i64
+  call void @__dp_write(i32 16490, i64 %10, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i32 0, i32 0))
+  store double* %9, double** %xa1, align 8, !dbg !39
   call void @llvm.dbg.declare(metadata double** %xa2, metadata !41, metadata !DIExpression()), !dbg !42
-  %3 = load double*, double** %base, align 8, !dbg !43
-  %add.ptr = getelementptr inbounds double, double* %3, i64 12, !dbg !44
+  %11 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16491, i64 %11, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %12 = load double*, double** %base, align 8, !dbg !43
+  %add.ptr = getelementptr inbounds double, double* %12, i64 12, !dbg !44
+  %13 = ptrtoint double** %xa2 to i64
+  call void @__dp_write(i32 16491, i64 %13, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.8, i32 0, i32 0))
   store double* %add.ptr, double** %xa2, align 8, !dbg !42
   call void @llvm.dbg.declare(metadata i32* %i, metadata !45, metadata !DIExpression()), !dbg !46
+  %14 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16494, i64 %14, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 521, i32* %i, align 4, !dbg !47
   br label %for.cond, !dbg !49
 
 for.cond:                                         ; preds = %for.inc, %if.end
-  %4 = load i32, i32* %i, align 4, !dbg !50
-  %cmp2 = icmp sle i32 %4, 2025, !dbg !52
+  call void @__dp_loop_entry(i32 16494, i32 0)
+  %15 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16494, i64 %15, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %16 = load i32, i32* %i, align 4, !dbg !50
+  %cmp2 = icmp sle i32 %16, 2025, !dbg !52
   br i1 %cmp2, label %for.body, label %for.end, !dbg !53
 
 for.body:                                         ; preds = %for.cond
-  %5 = load double*, double** %base, align 8, !dbg !54
-  %6 = load i32, i32* %i, align 4, !dbg !56
-  %idxprom = sext i32 %6 to i64, !dbg !54
-  %arrayidx = getelementptr inbounds double, double* %5, i64 %idxprom, !dbg !54
+  %17 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16496, i64 %17, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %18 = load double*, double** %base, align 8, !dbg !54
+  %19 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16496, i64 %19, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %20 = load i32, i32* %i, align 4, !dbg !56
+  %idxprom = sext i32 %20 to i64, !dbg !54
+  %arrayidx = getelementptr inbounds double, double* %18, i64 %idxprom, !dbg !54
+  %21 = ptrtoint double* %arrayidx to i64
+  call void @__dp_write(i32 16496, i64 %21, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
   store double 0.000000e+00, double* %arrayidx, align 8, !dbg !57
   br label %for.inc, !dbg !58
 
 for.inc:                                          ; preds = %for.body
-  %7 = load i32, i32* %i, align 4, !dbg !59
-  %inc = add nsw i32 %7, 1, !dbg !59
+  %22 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16494, i64 %22, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %23 = load i32, i32* %i, align 4, !dbg !59
+  %inc = add nsw i32 %23, 1, !dbg !59
+  %24 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16494, i64 %24, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 %inc, i32* %i, align 4, !dbg !59
   br label %for.cond, !dbg !60, !llvm.loop !61
 
 for.end:                                          ; preds = %for.cond
+  call void @__dp_loop_exit(i32 16500, i32 0)
+  %25 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16500, i64 %25, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 0, i32* %i, align 4, !dbg !63
   br label %for.cond3, !dbg !65
 
 for.cond3:                                        ; preds = %for.inc13, %for.end
-  %8 = load i32, i32* %i, align 4, !dbg !66
-  %cmp4 = icmp slt i32 %8, 180, !dbg !68
+  call void @__dp_loop_entry(i32 16500, i32 1)
+  %26 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16500, i64 %26, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %27 = load i32, i32* %i, align 4, !dbg !66
+  %cmp4 = icmp slt i32 %27, 180, !dbg !68
   br i1 %cmp4, label %for.body5, label %for.end15, !dbg !69
 
 for.body5:                                        ; preds = %for.cond3
   call void @llvm.dbg.declare(metadata i32* %idx, metadata !70, metadata !DIExpression()), !dbg !72
-  %9 = load i32, i32* %i, align 4, !dbg !73
-  %idxprom6 = sext i32 %9 to i64, !dbg !74
+  %28 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16502, i64 %28, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %29 = load i32, i32* %i, align 4, !dbg !73
+  %idxprom6 = sext i32 %29 to i64, !dbg !74
   %arrayidx7 = getelementptr inbounds [180 x i32], [180 x i32]* @indexSet, i64 0, i64 %idxprom6, !dbg !74
-  %10 = load i32, i32* %arrayidx7, align 4, !dbg !74
-  store i32 %10, i32* %idx, align 4, !dbg !72
-  %11 = load double*, double** %xa1, align 8, !dbg !75
-  %12 = load i32, i32* %idx, align 4, !dbg !76
-  %idxprom8 = sext i32 %12 to i64, !dbg !75
-  %arrayidx9 = getelementptr inbounds double, double* %11, i64 %idxprom8, !dbg !75
-  %13 = load double, double* %arrayidx9, align 8, !dbg !77
-  %add = fadd double %13, 1.000000e+00, !dbg !77
+  %30 = ptrtoint i32* %arrayidx7 to i64
+  call void @__dp_read(i32 16502, i64 %30, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.10, i32 0, i32 0))
+  %31 = load i32, i32* %arrayidx7, align 4, !dbg !74
+  %32 = ptrtoint i32* %idx to i64
+  call void @__dp_write(i32 16502, i64 %32, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.11, i32 0, i32 0))
+  store i32 %31, i32* %idx, align 4, !dbg !72
+  %33 = ptrtoint double** %xa1 to i64
+  call void @__dp_read(i32 16503, i64 %33, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i32 0, i32 0))
+  %34 = load double*, double** %xa1, align 8, !dbg !75
+  %35 = ptrtoint i32* %idx to i64
+  call void @__dp_read(i32 16503, i64 %35, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.11, i32 0, i32 0))
+  %36 = load i32, i32* %idx, align 4, !dbg !76
+  %idxprom8 = sext i32 %36 to i64, !dbg !75
+  %arrayidx9 = getelementptr inbounds double, double* %34, i64 %idxprom8, !dbg !75
+  %37 = ptrtoint double* %arrayidx9 to i64
+  call void @__dp_read(i32 16503, i64 %37, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i32 0, i32 0))
+  %38 = load double, double* %arrayidx9, align 8, !dbg !77
+  %add = fadd double %38, 1.000000e+00, !dbg !77
+  %39 = ptrtoint double* %arrayidx9 to i64
+  call void @__dp_write(i32 16503, i64 %39, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.7, i32 0, i32 0))
   store double %add, double* %arrayidx9, align 8, !dbg !77
-  %14 = load double*, double** %xa2, align 8, !dbg !78
-  %15 = load i32, i32* %idx, align 4, !dbg !79
-  %idxprom10 = sext i32 %15 to i64, !dbg !78
-  %arrayidx11 = getelementptr inbounds double, double* %14, i64 %idxprom10, !dbg !78
-  %16 = load double, double* %arrayidx11, align 8, !dbg !80
-  %add12 = fadd double %16, 3.000000e+00, !dbg !80
+  %40 = ptrtoint double** %xa2 to i64
+  call void @__dp_read(i32 16504, i64 %40, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.8, i32 0, i32 0))
+  %41 = load double*, double** %xa2, align 8, !dbg !78
+  %42 = ptrtoint i32* %idx to i64
+  call void @__dp_read(i32 16504, i64 %42, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.11, i32 0, i32 0))
+  %43 = load i32, i32* %idx, align 4, !dbg !79
+  %idxprom10 = sext i32 %43 to i64, !dbg !78
+  %arrayidx11 = getelementptr inbounds double, double* %41, i64 %idxprom10, !dbg !78
+  %44 = ptrtoint double* %arrayidx11 to i64
+  call void @__dp_read(i32 16504, i64 %44, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.8, i32 0, i32 0))
+  %45 = load double, double* %arrayidx11, align 8, !dbg !80
+  %add12 = fadd double %45, 3.000000e+00, !dbg !80
+  %46 = ptrtoint double* %arrayidx11 to i64
+  call void @__dp_write(i32 16504, i64 %46, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.8, i32 0, i32 0))
   store double %add12, double* %arrayidx11, align 8, !dbg !80
   br label %for.inc13, !dbg !81
 
 for.inc13:                                        ; preds = %for.body5
-  %17 = load i32, i32* %i, align 4, !dbg !82
-  %inc14 = add nsw i32 %17, 1, !dbg !82
+  %47 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16500, i64 %47, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %48 = load i32, i32* %i, align 4, !dbg !82
+  %inc14 = add nsw i32 %48, 1, !dbg !82
+  %49 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16500, i64 %49, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 %inc14, i32* %i, align 4, !dbg !82
   br label %for.cond3, !dbg !83, !llvm.loop !84
 
 for.end15:                                        ; preds = %for.cond3
+  call void @__dp_loop_exit(i32 16508, i32 1)
+  %50 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16508, i64 %50, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 521, i32* %i, align 4, !dbg !86
   br label %for.cond16, !dbg !88
 
 for.cond16:                                       ; preds = %for.inc24, %for.end15
-  %18 = load i32, i32* %i, align 4, !dbg !89
-  %cmp17 = icmp sle i32 %18, 2025, !dbg !91
+  call void @__dp_loop_entry(i32 16508, i32 2)
+  %51 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16508, i64 %51, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %52 = load i32, i32* %i, align 4, !dbg !89
+  %cmp17 = icmp sle i32 %52, 2025, !dbg !91
   br i1 %cmp17, label %for.body18, label %for.end26, !dbg !92
 
 for.body18:                                       ; preds = %for.cond16
-  %19 = load double*, double** %base, align 8, !dbg !93
-  %20 = load i32, i32* %i, align 4, !dbg !93
-  %idxprom19 = sext i32 %20 to i64, !dbg !93
-  %arrayidx20 = getelementptr inbounds double, double* %19, i64 %idxprom19, !dbg !93
-  %21 = load double, double* %arrayidx20, align 8, !dbg !93
-  %cmp21 = fcmp une double %21, 4.000000e+00, !dbg !93
+  %53 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16511, i64 %53, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %54 = load double*, double** %base, align 8, !dbg !93
+  %55 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16511, i64 %55, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %56 = load i32, i32* %i, align 4, !dbg !93
+  %idxprom19 = sext i32 %56 to i64, !dbg !93
+  %arrayidx20 = getelementptr inbounds double, double* %54, i64 %idxprom19, !dbg !93
+  %57 = ptrtoint double* %arrayidx20 to i64
+  call void @__dp_read(i32 16511, i64 %57, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %58 = load double, double* %arrayidx20, align 8, !dbg !93
+  %cmp21 = fcmp une double %58, 4.000000e+00, !dbg !93
   br i1 %cmp21, label %if.then22, label %if.else, !dbg !97
 
 if.then22:                                        ; preds = %for.body18
   br label %if.end23, !dbg !97
 
 if.else:                                          ; preds = %for.body18
+  call void @__dp_finalize(i32 16511), !dbg !93
   call void @__assert_fail(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.1, i64 0, i64 0), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.2, i64 0, i64 0), i32 127, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @__PRETTY_FUNCTION__.main, i64 0, i64 0)) #6, !dbg !93
   unreachable, !dbg !93
 
@@ -136,21 +228,34 @@ if.end23:                                         ; preds = %if.then22
   br label %for.inc24, !dbg !98
 
 for.inc24:                                        ; preds = %if.end23
-  %22 = load i32, i32* %i, align 4, !dbg !99
-  %inc25 = add nsw i32 %22, 1, !dbg !99
+  %59 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16508, i64 %59, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
+  %60 = load i32, i32* %i, align 4, !dbg !99
+  %inc25 = add nsw i32 %60, 1, !dbg !99
+  %61 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16508, i64 %61, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.9, i32 0, i32 0))
   store i32 %inc25, i32* %i, align 4, !dbg !99
   br label %for.cond16, !dbg !100, !llvm.loop !101
 
 for.end26:                                        ; preds = %for.cond16
-  %23 = load double*, double** %base, align 8, !dbg !103
-  %24 = bitcast double* %23 to i8*, !dbg !103
-  call void @free(i8* %24) #5, !dbg !104
+  call void @__dp_loop_exit(i32 16514, i32 2)
+  %62 = ptrtoint double** %base to i64
+  call void @__dp_read(i32 16514, i64 %62, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.6, i32 0, i32 0))
+  %63 = load double*, double** %base, align 8, !dbg !103
+  %64 = bitcast double* %63 to i8*, !dbg !103
+  call void @__dp_call(i32 16514), !dbg !104
+  call void @free(i8* %64) #5, !dbg !104
+  %65 = ptrtoint i32* %retval to i64
+  call void @__dp_write(i32 16515, i64 %65, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
   store i32 0, i32* %retval, align 4, !dbg !105
   br label %return, !dbg !105
 
 return:                                           ; preds = %for.end26, %if.then
-  %25 = load i32, i32* %retval, align 4, !dbg !106
-  ret i32 %25, !dbg !106
+  %66 = ptrtoint i32* %retval to i64
+  call void @__dp_read(i32 16516, i64 %66, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.3, i32 0, i32 0))
+  %67 = load i32, i32* %retval, align 4, !dbg !106
+  call void @__dp_finalize(i32 16516), !dbg !106
+  ret i32 %67, !dbg !106
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
@@ -166,6 +271,24 @@ declare dso_local void @__assert_fail(i8*, i8*, i32, i8*) #4
 
 ; Function Attrs: nounwind
 declare dso_local void @free(i8*) #2
+
+declare void @__dp_init(i32, i32, i32)
+
+declare void @__dp_finalize(i32)
+
+declare void @__dp_read(i32, i64, i8*)
+
+declare void @__dp_write(i32, i64, i8*)
+
+declare void @__dp_call(i32)
+
+declare void @__dp_func_entry(i32, i32)
+
+declare void @__dp_func_exit(i32, i32)
+
+declare void @__dp_loop_entry(i32, i32)
+
+declare void @__dp_loop_exit(i32, i32)
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable willreturn }

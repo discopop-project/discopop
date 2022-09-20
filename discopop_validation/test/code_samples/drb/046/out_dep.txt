@@ -4,7 +4,7 @@ START 1:55
 1:59 BGN loop 100
 1:62 END loop
 1:61 NOM  INIT *|a RAW 1:59|i RAW 1:60|j
+1:60 NOM  IIRAW 1:60|j IIWAR 1:60|j INIT *|j WAR 1:60|j
 1:55 NOM  INIT *|retval
-1:59 NOM  INIT *|i RAW 1:59|i WAR 1:59|i
-1:60 NOM  INIT *|j RAW 1:60|j WAR 1:60|j
+1:59 NOM  IIRAW 1:59|i INIT *|i RAW 1:59|i WAR 1:59|i
 1:62 END program

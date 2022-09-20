@@ -1,10 +1,10 @@
 START 1:64
 1:70 BGN func 1:57
 1:62 END func
-1:64 NOM  INIT *|retval
-1:71 NOM  RAW 1:60|i RAW 1:66|sum WAR 1:71|sum
 1:60 NOM  RAW 1:57|q WAW 1:66|q
 1:73 NOM  RAW 1:71|sum
 1:57 NOM  INIT *|q
 1:66 NOM  INIT *|i INIT *|sum
+1:71 NOM  RAW 1:60|i RAW 1:66|sum WAR 1:71|sum
+1:64 NOM  INIT *|retval
 1:73 END program

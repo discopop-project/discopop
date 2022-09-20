@@ -16,6 +16,8 @@
 #include <string>
 #include <cstdio>
 
+#include <unordered_map>
+
 #ifdef __linux__ // headers only available on Linux
 #include <unistd.h>
 #include <linux/limits.h>
@@ -80,6 +82,11 @@ namespace __dp
 
      /******* END: parallelization section *******/
 
+    // dependencies between loop iterations can only be checked within chunks to prevent drastic slowdowns
+# define BUFFERLENGTH 3
+    unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastReadLog;
+    unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastWriteLog;
+
      /******* Helper functions *******/
 
      void addDep(depType type, LID curr, LID depOn, char *var)
@@ -117,6 +124,15 @@ namespace __dp
                case INIT:
                     cout << "INIT";
                     break;
+               case IIRAW:
+                    cout << "IIRAW";
+                    break;
+               case IIWAR:
+                    cout << "IIWAR";
+                    break;
+               case IIWAW:
+                    cout << "IIWAW";
+                    break;
                default:
                     break;
                }
@@ -150,6 +166,15 @@ namespace __dp
                          case INIT:
                               dep += "INIT";
                               break;
+                         case IIRAW:
+                              dep += "IIRAW";
+                              break;
+                         case IIWAR:
+                              dep += "IIWAR";
+                              break;
+                         case IIWAW:
+                             dep += "IIWAW";
+                             break;
                          default:
                               break;
                          }
@@ -367,6 +392,7 @@ namespace __dp
           current.lid = lid;
           current.var = var;
           current.addr = addr;
+          current.loopHash = loopStack->getHashValue();
 
           if (tempAddrCount[workerID] == CHUNK_SIZE)
           {
@@ -410,6 +436,78 @@ namespace __dp
           pthread_mutex_unlock(&allDepsLock);
      }
 
+    void logAccess(ADDR addr,  unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap, size_t loopHash, LID lid){
+         // logMap can be either refer to read or write log map
+         // move old accesses backwards
+         for(int i = BUFFERLENGTH - 1; i > 0; i--){
+             logMap[addr][i] = logMap[addr][i-1];
+         }
+         logMap[addr][0] = pair<size_t, LID>(loopHash, lid);
+     }
+
+     void clearAccess(ADDR addr, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap){
+         for(int i = 0; i < BUFFERLENGTH; i++){
+             logMap[addr][i] = pair<size_t, LID>(0, 0);
+         }
+     }
+/*
+     bool loopIterationsEqualOrHashesNull(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>>& logMap1,
+                                       ADDR addr2, unordered_map<ADDR, pair<size_t, LID>>& logMap2){
+         pair<size_t, LID> val1 = logMap1[addr1];
+         pair<size_t, LID> val2 = logMap2[addr2];
+
+         // check lids
+         if(val1.second != val2.second){
+             return true;  // not a inter-iteration dependency
+         }
+
+         // check loop hashes
+         if((val1.first == 0) || (val2.first == 0) || (val1.first == val2.first)){
+             return true;
+         }
+         return false;
+     }
+*/
+    bool checkInterIterationAccess(ADDR addr1, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap1,
+                                   ADDR addr2, unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]>& logMap2){
+         // check single access in first given map against the logged accesses in the second map
+
+        pair<size_t, LID> val1 = logMap1[addr1][0];
+        //pair<size_t, LID>[] val2 = logMap2[addr2];
+
+        bool retVal = false;
+
+        for(int i=0; i < BUFFERLENGTH; i++){
+            // check lids
+            if(val1.second != logMap2[addr2][i].second){
+                continue;  // not an inter-iteration access
+            }
+
+            // check loop hashes
+            if((val1.first == 0) || (logMap2[addr2][i].first == 0) || (val1.first == logMap2[addr2][i].first)){
+                continue;  // not an inter-iteration access
+            }
+
+            retVal = true;
+            break;
+        }
+        return retVal;
+     }
+
+    bool checkInterIterationAccess(size_t hash1,
+                                   size_t hash2,
+                                   LID lid1,
+                                   LID lid2){
+         if(lid1 != lid2){
+             return false;  // not an inter-iteration dependency
+         }
+
+        if((hash1 == 0) || (hash2 == 0) || (hash1 == hash2)){
+            return false;
+        }
+        return true;
+    }
+
      void *analyzeDeps(void *arg)
      {
           int64_t id = (int64_t)arg;
@@ -451,26 +549,85 @@ namespace __dp
                     {
                          access = accesses[i];
 
+                        cout << "Var: " << access.var << endl;
+                        cout << "ADDR: " << access.addr << endl;
+                        cout << "LID: " << access.lid << endl;
+                        cout << "isRead: " << access.isRead << endl;
+                        cout << "skip: " << access.skip << endl;
+                        cout << "CurrentHash: " << access.loopHash << endl;
+                        cout << "lastReadHashes: " << endl;
+                        for(int i = 0; i < BUFFERLENGTH; i++){
+                            cout << "\t" << lastReadLog[access.addr][i].first << "@" << lastReadLog[access.addr][i].second << " ";
+                        }
+                        cout << endl;
+
+                        cout << "lastWriteHashes: " << endl;
+                        for(int i = 0; i < BUFFERLENGTH; i++){
+                            cout << "\t" << lastWriteLog[access.addr][i].first << "@" << lastWriteLog[access.addr][i].second << " ";
+                        }
+                        cout << endl << endl;
+
+
+/*                        cout << "IIRAW: " << checkInterIterationAccess(access.addr,
+                                                                       lastReadLog,
+                                                                       access.addr,
+                                                                       lastWriteLog) << endl;
+                        cout << "IIWAR: " << checkInterIterationAccess(access.addr,
+                                                                       lastWriteLog,
+                                                                       access.addr,
+                                                                       lastReadLog) << endl;
+                        cout << "IIWAW: " << checkInterIterationAccess(access.loopHash,
+                                                                       lastWriteLog[access.addr].first,
+                                                                       access.lid,
+                                                                       lastWriteLog[access.addr].second) << endl << endl;
+*/
+
                          if (access.isRead)
                          {
+
                               // hybrid analysis
                               if (access.skip)
                               {
                                    SMem->insertToRead(access.addr, access.lid);
+                                   // log read access
+                                   logAccess(access.addr, lastReadLog, access.loopHash, access.lid);
                                    continue;
                               }
                               // End HA
                               sigElement lastWrite = SMem->testInWrite(access.addr);
                               if (lastWrite != 0)
                               {
-                                   // RAW
-                                   SMem->insertToRead(access.addr, access.lid);
-                                   addDep(RAW, access.lid, lastWrite, access.var);
+                                  // RAW
+                                  SMem->insertToRead(access.addr, access.lid);
+                                  // log read access
+                                  logAccess(access.addr, lastReadLog, access.loopHash, access.lid);
+                                  // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                  bool interIterationRAW = checkInterIterationAccess(access.addr,
+                                                                                         lastReadLog,
+                                                                                         access.addr,
+                                                                                         lastWriteLog);
+
+
+                                  if(interIterationRAW){
+                                      addDep(IIRAW, access.lid, lastWrite, access.var);
+                                  }
+                                  else{
+                                      addDep(RAW, access.lid, lastWrite, access.var);
+                                  }
                               }
                          }
                          else
                          {
                               sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+                              // log write access
+                              // todo support parallelization. currently, DP.conf -> workers=1 required!
+                              pair<size_t, LID> lastLoopHash;
+                              if(lastWriteLog.find(access.addr) != lastWriteLog.end()){
+                                   lastLoopHash = lastWriteLog[access.addr][0];
+                              }
+
+
+                              logAccess(access.addr, lastWriteLog, access.loopHash, access.lid);
                               if (lastWrite == 0)
                               {
                                    // INIT
@@ -481,15 +638,37 @@ namespace __dp
                                    sigElement lastRead = SMem->testInRead(access.addr);
                                    if (lastRead != 0)
                                    {
-                                        // WAR
-                                        addDep(WAR, access.lid, lastRead, access.var);
+                                       // WAR
+                                       // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                       bool interIterationWAR = checkInterIterationAccess(access.addr,
+                                                                                          lastWriteLog,
+                                                                                          access.addr,
+                                                                                          lastReadLog);
+                                       if(interIterationWAR){
+                                           addDep(IIWAR, access.lid, lastRead, access.var);
+                                       }
+                                       else{
+                                           addDep(WAR, access.lid, lastRead, access.var);
+                                       }
                                         // Clear intermediate read ops
                                         SMem->insertToRead(access.addr, 0);
+                                        // clear read log
+                                        clearAccess(access.addr, lastReadLog);
                                    }
                                    else
                                    {
-                                        // WAW
-                                        addDep(WAW, access.lid, lastWrite, access.var);
+                                       // WAW
+                                       // check if read and write access loop iterations are equal and both hash values are not 0 (both occur inside a loop)
+                                       bool interIterationWAW = checkInterIterationAccess(access.loopHash,
+                                                                                          lastLoopHash.first,
+                                                                                          access.lid,
+                                                                                          lastLoopHash.second );
+                                       if(interIterationWAW){
+                                           addDep(IIWAW, access.lid, lastWrite, access.var);
+                                       }
+                                       else{
+                                           addDep(WAW, access.lid, lastWrite, access.var);
+                                       }
                                    }
                               }
                          }
@@ -627,6 +806,7 @@ namespace __dp
                current.lid = lid;
                current.var = var;
                current.addr = addr;
+               current.loopHash = loopStack->getHashValue();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -679,6 +859,7 @@ namespace __dp
                current.lid = lid;
                current.var = var;
                current.addr = addr;
+               current.loopHash = loopStack->getHashValue();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -732,6 +913,7 @@ namespace __dp
                current.var = var;
                current.addr = addr;
                current.skip = true;
+               current.loopHash = loopStack->getHashValue();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -785,6 +967,7 @@ namespace __dp
                current.var = var;
                current.addr = addr;
                current.skip = true;
+               current.loopHash = loopStack->getHashValue();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {

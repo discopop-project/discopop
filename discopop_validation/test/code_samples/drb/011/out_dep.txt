@@ -3,15 +3,15 @@ START 1:54
 1:77 END loop
 1:63 BGN loop 100
 1:72 END loop
-1:74 NOM  RAW 1:59|numNodes2 RAW 1:74|numNodes2 WAR 1:74|numNodes2
+1:74 NOM  IIRAW 1:74|numNodes2 RAW 1:59|numNodes2 WAR 1:74|numNodes2
 1:73 NOM  RAW 1:66|x RAW 1:68|x RAW 1:72|i
 1:68 NOM  INIT *|x RAW 1:63|i
 1:66 NOM  INIT *|x RAW 1:63|i
+1:72 NOM  IIRAW 1:72|i RAW 1:59|numNodes RAW 1:72|i WAR 1:63|i WAR 1:72|i
 1:59 NOM  INIT *|numNodes INIT *|numNodes2 RAW 1:57|len
-1:72 NOM  RAW 1:59|numNodes RAW 1:72|i WAR 1:63|i WAR 1:72|i
-1:57 NOM  INIT *|len
 1:77 NOM  RAW 1:74|numNodes2
 1:65 NOM  RAW 1:63|i
-1:63 NOM  INIT *|i RAW 1:57|len RAW 1:63|i WAR 1:63|i
 1:54 NOM  INIT *|argc INIT *|argv INIT *|retval
+1:63 NOM  IIRAW 1:63|i INIT *|i RAW 1:57|len RAW 1:63|i WAR 1:63|i
+1:57 NOM  INIT *|len
 1:78 END program

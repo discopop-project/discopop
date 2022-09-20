@@ -6,76 +6,127 @@ target triple = "x86_64-pc-linux-gnu"
 @a = dso_local global [1000 x [1000 x double]] zeroinitializer, align 16, !dbg !0
 @v = dso_local global [1000 x double] zeroinitializer, align 16, !dbg !6
 @v_out = dso_local global [1000 x double] zeroinitializer, align 16, !dbg !12
+@.str = private unnamed_addr constant [2 x i8] c"i\00", align 1
+@.str.1 = private unnamed_addr constant [4 x i8] c"sum\00", align 1
+@.str.2 = private unnamed_addr constant [2 x i8] c"j\00", align 1
+@.str.3 = private unnamed_addr constant [2 x i8] c"a\00", align 1
+@.str.4 = private unnamed_addr constant [2 x i8] c"v\00", align 1
+@.str.5 = private unnamed_addr constant [6 x i8] c"v_out\00", align 1
+@.str.6 = private unnamed_addr constant [7 x i8] c"retval\00", align 1
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @mv() #0 !dbg !20 {
 entry:
+  call void @__dp_func_entry(i32 16437, i32 0)
   %i = alloca i32, align 4
   %j = alloca i32, align 4
   %sum = alloca float, align 4
   call void @llvm.dbg.declare(metadata i32* %i, metadata !23, metadata !DIExpression()), !dbg !25
   call void @llvm.dbg.declare(metadata i32* %j, metadata !26, metadata !DIExpression()), !dbg !27
+  %0 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16440, i64 %0, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
   store i32 0, i32* %i, align 4, !dbg !28
   br label %for.cond, !dbg !30
 
 for.cond:                                         ; preds = %for.inc12, %entry
-  %0 = load i32, i32* %i, align 4, !dbg !31
-  %cmp = icmp slt i32 %0, 1000, !dbg !33
+  call void @__dp_loop_entry(i32 16440, i32 0)
+  %1 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16440, i64 %1, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %2 = load i32, i32* %i, align 4, !dbg !31
+  %cmp = icmp slt i32 %2, 1000, !dbg !33
   br i1 %cmp, label %for.body, label %for.end14, !dbg !34
 
 for.body:                                         ; preds = %for.cond
   call void @llvm.dbg.declare(metadata float* %sum, metadata !35, metadata !DIExpression()), !dbg !38
+  %3 = ptrtoint float* %sum to i64
+  call void @__dp_write(i32 16442, i64 %3, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   store float 0.000000e+00, float* %sum, align 4, !dbg !38
+  %4 = ptrtoint i32* %j to i64
+  call void @__dp_write(i32 16444, i64 %4, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
   store i32 0, i32* %j, align 4, !dbg !39
   br label %for.cond1, !dbg !41
 
 for.cond1:                                        ; preds = %for.inc, %for.body
-  %1 = load i32, i32* %j, align 4, !dbg !42
-  %cmp2 = icmp slt i32 %1, 1000, !dbg !44
+  call void @__dp_loop_entry(i32 16444, i32 1)
+  %5 = ptrtoint i32* %j to i64
+  call void @__dp_read(i32 16444, i64 %5, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %6 = load i32, i32* %j, align 4, !dbg !42
+  %cmp2 = icmp slt i32 %6, 1000, !dbg !44
   br i1 %cmp2, label %for.body3, label %for.end, !dbg !45
 
 for.body3:                                        ; preds = %for.cond1
-  %2 = load i32, i32* %i, align 4, !dbg !46
-  %idxprom = sext i32 %2 to i64, !dbg !48
+  %7 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16446, i64 %7, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %8 = load i32, i32* %i, align 4, !dbg !46
+  %idxprom = sext i32 %8 to i64, !dbg !48
   %arrayidx = getelementptr inbounds [1000 x [1000 x double]], [1000 x [1000 x double]]* @a, i64 0, i64 %idxprom, !dbg !48
-  %3 = load i32, i32* %j, align 4, !dbg !49
-  %idxprom4 = sext i32 %3 to i64, !dbg !48
+  %9 = ptrtoint i32* %j to i64
+  call void @__dp_read(i32 16446, i64 %9, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %10 = load i32, i32* %j, align 4, !dbg !49
+  %idxprom4 = sext i32 %10 to i64, !dbg !48
   %arrayidx5 = getelementptr inbounds [1000 x double], [1000 x double]* %arrayidx, i64 0, i64 %idxprom4, !dbg !48
-  %4 = load double, double* %arrayidx5, align 8, !dbg !48
-  %5 = load i32, i32* %j, align 4, !dbg !50
-  %idxprom6 = sext i32 %5 to i64, !dbg !51
+  %11 = ptrtoint double* %arrayidx5 to i64
+  call void @__dp_read(i32 16446, i64 %11, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.3, i32 0, i32 0))
+  %12 = load double, double* %arrayidx5, align 8, !dbg !48
+  %13 = ptrtoint i32* %j to i64
+  call void @__dp_read(i32 16446, i64 %13, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %14 = load i32, i32* %j, align 4, !dbg !50
+  %idxprom6 = sext i32 %14 to i64, !dbg !51
   %arrayidx7 = getelementptr inbounds [1000 x double], [1000 x double]* @v, i64 0, i64 %idxprom6, !dbg !51
-  %6 = load double, double* %arrayidx7, align 8, !dbg !51
-  %mul = fmul double %4, %6, !dbg !52
-  %7 = load float, float* %sum, align 4, !dbg !53
-  %conv = fpext float %7 to double, !dbg !53
+  %15 = ptrtoint double* %arrayidx7 to i64
+  call void @__dp_read(i32 16446, i64 %15, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.4, i32 0, i32 0))
+  %16 = load double, double* %arrayidx7, align 8, !dbg !51
+  %mul = fmul double %12, %16, !dbg !52
+  %17 = ptrtoint float* %sum to i64
+  call void @__dp_read(i32 16446, i64 %17, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
+  %18 = load float, float* %sum, align 4, !dbg !53
+  %conv = fpext float %18 to double, !dbg !53
   %add = fadd double %conv, %mul, !dbg !53
   %conv8 = fptrunc double %add to float, !dbg !53
+  %19 = ptrtoint float* %sum to i64
+  call void @__dp_write(i32 16446, i64 %19, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   store float %conv8, float* %sum, align 4, !dbg !53
   br label %for.inc, !dbg !54
 
 for.inc:                                          ; preds = %for.body3
-  %8 = load i32, i32* %j, align 4, !dbg !55
-  %inc = add nsw i32 %8, 1, !dbg !55
+  %20 = ptrtoint i32* %j to i64
+  call void @__dp_read(i32 16444, i64 %20, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %21 = load i32, i32* %j, align 4, !dbg !55
+  %inc = add nsw i32 %21, 1, !dbg !55
+  %22 = ptrtoint i32* %j to i64
+  call void @__dp_write(i32 16444, i64 %22, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
   store i32 %inc, i32* %j, align 4, !dbg !55
   br label %for.cond1, !dbg !56, !llvm.loop !57
 
 for.end:                                          ; preds = %for.cond1
-  %9 = load float, float* %sum, align 4, !dbg !59
-  %conv9 = fpext float %9 to double, !dbg !59
-  %10 = load i32, i32* %i, align 4, !dbg !60
-  %idxprom10 = sext i32 %10 to i64, !dbg !61
+  call void @__dp_loop_exit(i32 16448, i32 1)
+  %23 = ptrtoint float* %sum to i64
+  call void @__dp_read(i32 16448, i64 %23, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
+  %24 = load float, float* %sum, align 4, !dbg !59
+  %conv9 = fpext float %24 to double, !dbg !59
+  %25 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16448, i64 %25, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %26 = load i32, i32* %i, align 4, !dbg !60
+  %idxprom10 = sext i32 %26 to i64, !dbg !61
   %arrayidx11 = getelementptr inbounds [1000 x double], [1000 x double]* @v_out, i64 0, i64 %idxprom10, !dbg !61
+  %27 = ptrtoint double* %arrayidx11 to i64
+  call void @__dp_write(i32 16448, i64 %27, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.5, i32 0, i32 0))
   store double %conv9, double* %arrayidx11, align 8, !dbg !62
   br label %for.inc12, !dbg !63
 
 for.inc12:                                        ; preds = %for.end
-  %11 = load i32, i32* %i, align 4, !dbg !64
-  %inc13 = add nsw i32 %11, 1, !dbg !64
+  %28 = ptrtoint i32* %i to i64
+  call void @__dp_read(i32 16440, i64 %28, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
+  %29 = load i32, i32* %i, align 4, !dbg !64
+  %inc13 = add nsw i32 %29, 1, !dbg !64
+  %30 = ptrtoint i32* %i to i64
+  call void @__dp_write(i32 16440, i64 %30, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0))
   store i32 %inc13, i32* %i, align 4, !dbg !64
   br label %for.cond, !dbg !65, !llvm.loop !66
 
 for.end14:                                        ; preds = %for.cond
+  call void @__dp_loop_exit(i32 16450, i32 0)
+  call void @__dp_func_exit(i32 16450, i32 0), !dbg !68
   ret void, !dbg !68
 }
 
@@ -85,11 +136,34 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @main() #0 !dbg !69 {
 entry:
+  call void @__dp_func_entry(i32 16452, i32 1)
   %retval = alloca i32, align 4
+  %0 = ptrtoint i32* %retval to i64
+  call void @__dp_write(i32 16452, i64 %0, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.6, i32 0, i32 0))
   store i32 0, i32* %retval, align 4
+  call void @__dp_call(i32 16454), !dbg !72
   call void @mv(), !dbg !72
+  call void @__dp_finalize(i32 16455), !dbg !73
   ret i32 0, !dbg !73
 }
+
+declare void @__dp_init(i32, i32, i32)
+
+declare void @__dp_finalize(i32)
+
+declare void @__dp_read(i32, i64, i8*)
+
+declare void @__dp_write(i32, i64, i8*)
+
+declare void @__dp_call(i32)
+
+declare void @__dp_func_entry(i32, i32)
+
+declare void @__dp_func_exit(i32, i32)
+
+declare void @__dp_loop_entry(i32, i32)
+
+declare void @__dp_loop_exit(i32, i32)
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable willreturn }

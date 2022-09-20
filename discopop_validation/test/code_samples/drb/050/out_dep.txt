@@ -6,6 +6,6 @@ START 1:62
 1:56 NOM  INIT *|o1 RAW 1:50|o1 RAW 1:54|i RAW 1:55|volnew_o8
 1:55 NOM  INIT *|volnew_o8 RAW 1:50|c RAW 1:54|i WAR 1:56|volnew_o8
 1:50 NOM  INIT *|c INIT *|len INIT *|o1
-1:54 NOM  INIT *|i RAW 1:50|len RAW 1:54|i WAR 1:54|i
+1:54 NOM  IIRAW 1:54|i INIT *|i RAW 1:50|len RAW 1:54|i WAR 1:54|i
 1:62 NOM  INIT *|retval
 1:65 END program

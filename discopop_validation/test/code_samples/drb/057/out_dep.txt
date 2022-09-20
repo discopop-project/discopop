@@ -1,18 +1,1 @@
 START 1:81
-1:70 BGN loop 200
-1:78 END loop
-1:69 BGN loop 200
-1:79 END loop
-1:83 BGN func 1:60
-1:79 END func
-1:76 NOM  RAW 1:72|xx RAW 1:73|yy
-1:75 NOM  INIT *|f RAW 1:69|i RAW 1:70|j RAW 1:72|xx RAW 1:73|yy
-1:74 NOM  INIT *|u RAW 1:69|i RAW 1:70|j
-1:73 NOM  INIT *|yy RAW 1:65|dy RAW 1:70|j WAR 1:76|yy
-1:72 NOM  INIT *|xx RAW 1:64|dx RAW 1:69|i WAR 1:76|xx
-1:69 NOM  INIT *|i RAW 1:69|i WAR 1:69|i
-1:64 NOM  INIT *|dx
-1:70 NOM  INIT *|j RAW 1:70|j WAR 1:70|j
-1:65 NOM  INIT *|dy
-1:81 NOM  INIT *|retval
-1:84 END program

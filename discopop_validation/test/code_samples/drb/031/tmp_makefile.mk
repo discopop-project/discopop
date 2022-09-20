@@ -3,6 +3,7 @@ all: 0 2
 0: -1
 	cd /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031 && cp simple.c simple.c.last_profiled;
 1:
-	cd /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031 && clang simple.c -c -g -O0 -S -emit-llvm -fno-discard-value-names -Xclang -load -Xclang /home/lukas/git/discopop/build//libi/LLVMDPReduction.so -mllvm -fm-path -mllvm /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031/FileMapping.txt -o simple.ll;
+	cd /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031 && clang simple.c -c -g -O0 -S -emit-llvm -fno-discard-value-names -Xclang -load -Xclang /home/lukas/git/discopop/build//libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031/FileMapping.txt -o simple.ll;
 2: 1
 	cd /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031 && clang++ simple.ll -o out -L/home/lukas/git/discopop/build//rtlib -lDiscoPoP_RT -lpthread;
+	cd /home/lukas/git/discopop/discopop_validation/test/code_samples/drb/031 && llvm-link -S -o out_dp_inst.ll simple.ll;
