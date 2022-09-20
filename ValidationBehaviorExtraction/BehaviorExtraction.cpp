@@ -445,54 +445,57 @@ list<sharedVarAccess> BehaviorExtraction::getSharedVarAccesses(BasicBlock &BB, F
                 else if (ci->getCalledFunction()->getName().equals("__dp_call")) {
                     // next instruction is a function call
                     // check if recursive of regular function call
-                    CallInst *call = cast<CallInst>(ci->getNextNode());
-                    if(call->getCalledFunction()){
-                        // iterate over call arguments
-                        int position = 0;
+                    Instruction* tmpInst = ci->getNextNode();
+                    if(isa<CallInst>(tmpInst)) {
+                        CallInst *call = cast<CallInst>(tmpInst);
+                        if (call->getCalledFunction()) {
+                            // iterate over call arguments
+                            int position = 0;
 
-                        for(auto arg = call->arg_begin(); arg != call->arg_end(); ++arg){
-                            string argName;
-                            // exclude constants
-                            if(isa<Constant>(arg->get())){
-                                // constant used as argument
-                                argName = "##UNKNOWN##";
-                            }
-                            else{
-                                // argument is not a constant
-                                argName = determineVarName(cast<Instruction>(arg->get()), false);
-                            }
-                            if(argName.compare("##UNKNOWN##") != 0){
-                                // argument has a known name
-                                // errs() << "\tArg " << position <<" : " << argName << "\n";
-                                list<sharedVarAccess> accessesFromCall;
-                                // check if recursive function call
-                                if(call->getCalledFunction() == &F){
-                                    // recursion
-                                    // check if already inside recursion
-                                    if(!currentlyInsideRecursion){
-                                        // go into recursion
-                                        accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, true);
+                            for (auto arg = call->arg_begin(); arg != call->arg_end(); ++arg) {
+                                string argName;
+                                // exclude constants
+                                if (isa<Constant>(arg->get())) {
+                                    // constant used as argument
+                                    argName = "##UNKNOWN##";
+                                } else {
+                                    // argument is not a constant
+                                    argName = determineVarName(cast<Instruction>(arg->get()), false);
+                                }
+                                if (argName.compare("##UNKNOWN##") != 0) {
+                                    // argument has a known name
+                                    // errs() << "\tArg " << position <<" : " << argName << "\n";
+                                    list <sharedVarAccess> accessesFromCall;
+                                    // check if recursive function call
+                                    if (call->getCalledFunction() == &F) {
+                                        // recursion
+                                        // check if already inside recursion
+                                        if (!currentlyInsideRecursion) {
+                                            // go into recursion
+                                            accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(),
+                                                                                             position, F, true);
+                                        }
+                                        // else: ignore recursive call
+
+                                    } else {
+                                        // no recursion
+                                        accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(),
+                                                                                         position, F, false);
                                     }
-                                    // else: ignore recursive call
-
+                                    // append gathered accesses to result List, effectively inlining the called functions' results
+                                    for (sharedVarAccess sva: accessesFromCall) {
+                                        // overwrite argument name from withing called function with var name used in the function call
+                                        // this step also resolves: var.addr to var
+                                        // errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
+                                        // errs() << "\t\t\tmode: " << sva.mode << "\n";
+                                        sva.name = argName;
+                                        // overwrite code location with location of function call
+                                        sva.codeLocation = getClosestCodeLocation(ci, 0, 0);
+                                        resultList.push_back(sva);
+                                    }
                                 }
-                                else {
-                                    // no recursion
-                                    accessesFromCall = getVarAccessesForFunctionCall(call->getCalledFunction(), position, F, false);
-                                }
-                                // append gathered accesses to result List, effectively inlining the called functions' results
-                                for(sharedVarAccess sva : accessesFromCall){
-                                    // overwrite argument name from withing called function with var name used in the function call
-                                    // this step also resolves: var.addr to var
-                                    // errs() << "\t\tmatching: " << sva.name << " -> " << argName << "\n";
-                                    // errs() << "\t\t\tmode: " << sva.mode << "\n";
-                                    sva.name = argName;
-                                    // overwrite code location with location of function call
-                                    sva.codeLocation = getClosestCodeLocation(ci, 0, 0);
-                                    resultList.push_back(sva);
-                                }
+                                position++;
                             }
-                            position++;
                         }
                     }
                 }
