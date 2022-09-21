@@ -75,7 +75,7 @@ def check_reachability(pet: PETGraphX, target: CUNode,
             if pet.node_at(e[0]) == source:
                 return True
             else:
-                if e[0] not in visited:
+                if e[0] not in visited and pet.node_at(e[0]) not in queue:
                     queue.append(pet.node_at(e[0]))
     return False
 

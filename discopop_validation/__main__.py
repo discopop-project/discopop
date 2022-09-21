@@ -5,7 +5,8 @@ Usage:
 [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
 [--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] \
-[--pet-dump-file <path>]
+[--pet-dump-file <path>] [--cu-xml <path>] [--dep-file <path>] [--loop-counter-file <path>] [--target-profiling-not-allowed <bool>] \
+[--only-supplied-suggestions <bool>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -26,6 +27,11 @@ Options:
     --dp-profiling-executable=<path>   Path to an executable which is able to automatically execute the discopop profiling.
     --pet-dump-file=<path>      Path to the PET dump file. If existing, cu-xml, dep-file and loop-counter are not necessary.
                                 The dump file will be overwritten if a modification in the source code has been detected!
+    --cu-xml=<path>             Path to the CU-xml file. Either this or --pet-dump-file is required. [default: Data.xml]
+    --dep-file=<path>           Path to the dependencies file. [default: out_dep.txt]
+    --loop-counter-file=<path>  Path to the loop counter file. [default: loop_counter_output.txt]
+    --target-profiling-not-allowed=<bool>   If True, the re-profiling of the target code in case of modifications will be supressed. [default: False]
+    --only-supplied-suggestions=<bool>      If True, no pragmas will be extracted from the code. Only pragmas supplied via the --json flag are considered. [default: False]
     -h --help                   Show this screen
 """
 import os
@@ -74,6 +80,11 @@ docopt_schema = Schema({
     '--thread-count': Use(str),
     '--dp-profiling-executable': Use(str),
     '--pet-dump-file': Use(str),
+    '--cu-xml': Use(str),
+    '--dep-file': Use(str),
+    '--loop-counter-file': Use(str),
+    '--target-profiling-not-allowed': Use(str),
+    '--only-supplied-suggestions': Use(str),
 })
 
 
@@ -107,22 +118,29 @@ def main():
     thread_count = arguments["--thread-count"]
     dp_profiling_executable = arguments["--dp-profiling-executable"]
     pet_dump_file = arguments["--pet-dump-file"]
+    cu_xml_file = arguments["--cu-xml"]
+    dep_file = arguments["--dep-file"]
+    loop_counter_file = arguments["--loop-counter-file"]
+    target_profiling_not_allowed = arguments['--target-profiling-not-allowed']
+    only_supplied_suggestions = arguments['--only-supplied-suggestions']
     if thread_count == "None":
         thread_count = 1
     else:
         thread_count = int(thread_count)
     if data_race_output_path != "None":
         data_race_output_path = get_path(path, data_race_output_path)
-    for file in [reduction_file, ll_file, pet_dump_file]:
+    for file in [reduction_file, ll_file]:
         if not os.path.isfile(file):
             print(f"File not found: \"{file}\"")
             sys.exit()
+
     plugins = [] if arguments['--plugins'] == 'None' else arguments['--plugins'].split(' ')
 
     run_configuration = Configuration(path, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
                                       validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
-                                      arguments)
+                                      cu_xml_file, dep_file, loop_counter_file, target_profiling_not_allowed,
+                                      only_supplied_suggestions, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")

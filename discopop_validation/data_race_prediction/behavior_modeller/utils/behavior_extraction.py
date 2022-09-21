@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 try:
     from discopop_explorer import DetectionResult
@@ -12,11 +12,20 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph 
 
 def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str]],
                                 file_mapping: str, ll_file_path: str, dp_build_path: str) \
-        -> BBGraph:
+        -> Optional[BBGraph]:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")
     os.mkdir("tmp_behavior_extraction")
     os.chdir("tmp_behavior_extraction")
+    # check if target code sections mention any variables:
+    variable_contained = False
+    for tcs in target_code_sections:
+        if tcs[3] != ",":
+            variable_contained = True
+    if not variable_contained:
+        os.chdir("..")
+        return None
+
     # create file mapping dict
     file_mapping_dict: Dict[str, str] = {}
     with open(file_mapping, "r") as file_mapping_file:
@@ -28,10 +37,14 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
     # create input file for behavior extraction
     with open("input.txt", "w+") as input_file:
         for section_id, file_id, target_lines, var_names, suggestion_type in target_code_sections:
-            # replace file ids with path
-            file_path = file_mapping_dict[file_id]
-            input_file.write(
-                file_path + ";" + file_id + ";" + section_id + ";" + target_lines + ";" + var_names + ";" + suggestion_type + ";\n")
+            # if file_id is unknown, skip the target code section as it is malformed
+            try:
+                # replace file ids with path
+                file_path = file_mapping_dict[file_id]
+                input_file.write(
+                    file_path + ";" + file_id + ";" + section_id + ";" + target_lines + ";" + var_names + ";" + suggestion_type + ";\n")
+            except KeyError:
+                continue
     # create output file for behavior extraction
     open("output.txt", "a+").close()
     # execute behavior extraction
@@ -46,6 +59,7 @@ def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, 
 
     command = opt_executable + " < " + ll_file_path + " -load " + behavior_extraction_so + " -BehaviorExtraction" + \
               " -inputFile " + input_file_path + " -outputFile " + output_file_path + " > /dev/null"
+    print("CMD: ", command)
     os.system(command)
     os.chdir("..")
     # construct BBGraph

@@ -28,18 +28,21 @@ def __extract_behavior_models(run_configuration: Configuration, pet, tcs, pragma
                               omp_pragmas: List[OmpPragma]) -> List[BehaviorModel]:
     if run_configuration.verbose_mode:
         print("extracting BB Graph...")
-    bb_graph = execute_bb_graph_extraction([tcs], run_configuration.file_mapping, run_configuration.ll_file,
+    opt_bb_graph = execute_bb_graph_extraction([tcs], run_configuration.file_mapping, run_configuration.ll_file,
                                            run_configuration.dp_build_path)
     if run_configuration.verbose_mode:
         print("insering critical sections into BB Graph...")
-    insert_critical_sections(bb_graph, omp_pragmas)
-    unmodified_behavior_models: List[BehaviorModel] = get_unmodified_behavior_models(run_configuration, bb_graph)
+    insert_critical_sections(opt_bb_graph, omp_pragmas)
+    unmodified_behavior_models: List[BehaviorModel] = get_unmodified_behavior_models(run_configuration, opt_bb_graph)
     modified_behavior_models: List[BehaviorModel] = modify_behavior_models(unmodified_behavior_models, tcs, pragma,
                                                                            omp_pragmas, run_configuration)
     return modified_behavior_models
 
 
-def get_unmodified_behavior_models(run_configuration: Configuration, bb_graph) -> List[BehaviorModel]:
+def get_unmodified_behavior_models(run_configuration: Configuration, opt_bb_graph) -> List[BehaviorModel]:
+    if opt_bb_graph is None:
+        return []
+    bb_graph = opt_bb_graph
     paths = get_paths(bb_graph)
     # convert paths to read/write sequences
     behavior_models: List[BehaviorModel] = []
