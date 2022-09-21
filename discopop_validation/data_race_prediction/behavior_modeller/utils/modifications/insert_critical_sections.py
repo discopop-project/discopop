@@ -2,6 +2,8 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.Operatio
 
 
 def insert_critical_sections(bb_graph, parallelization_suggestions):
+    if bb_graph is None:
+        return
     # insert critical sections (locking statements to random hash values) into bb_graph
     if "critical_section" in parallelization_suggestions:
         for critical_section in parallelization_suggestions["critical_section"]:

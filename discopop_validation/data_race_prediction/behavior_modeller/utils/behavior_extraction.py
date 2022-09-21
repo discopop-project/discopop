@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 try:
     from discopop_explorer import DetectionResult
@@ -12,11 +12,20 @@ from discopop_validation.data_race_prediction.behavior_modeller.classes.BBGraph 
 
 def execute_bb_graph_extraction(target_code_sections: List[Tuple[str, str, str, str, str]],
                                 file_mapping: str, ll_file_path: str, dp_build_path: str) \
-        -> BBGraph:
+        -> Optional[BBGraph]:
     if os.path.exists("tmp_behavior_extraction"):
         shutil.rmtree("tmp_behavior_extraction")
     os.mkdir("tmp_behavior_extraction")
     os.chdir("tmp_behavior_extraction")
+    # check if target code sections mention any variables:
+    variable_contained = False
+    for tcs in target_code_sections:
+        if tcs[3] != ",":
+            variable_contained = True
+    if not variable_contained:
+        os.chdir("..")
+        return None
+
     # create file mapping dict
     file_mapping_dict: Dict[str, str] = {}
     with open(file_mapping, "r") as file_mapping_file:
