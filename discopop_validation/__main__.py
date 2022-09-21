@@ -5,7 +5,8 @@ Usage:
 [--reduction <reduction>] [--fmap <fmap>] [--ll-file <llfile>] [--json <jsonfile] \
 [--profiling <value>] [--call-graph <value>] [--verbose <value>] [--data-race-output <path>] [--dp-build-path <path>] \
 [--validation-time-limit <seconds>] [--thread-count <threads>] [--dp-profiling-executable <path>] \
-[--pet-dump-file <path>] [--cu-xml <path>] [--dep-file <path>] [--loop-counter-file <path>] [--target-profiling-not-allowed <bool>]
+[--pet-dump-file <path>] [--cu-xml <path>] [--dep-file <path>] [--loop-counter-file <path>] [--target-profiling-not-allowed <bool>] \
+[--only-supplied-suggestions <bool>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -30,6 +31,7 @@ Options:
     --dep-file=<path>           Path to the dependencies file. [default: out_dep.txt]
     --loop-counter-file=<path>  Path to the loop counter file. [default: loop_counter_output.txt]
     --target-profiling-not-allowed=<bool>   If True, the re-profiling of the target code in case of modifications will be supressed. [default: False]
+    --only-supplied-suggestions=<bool>      If True, no pragmas will be extracted from the code. Only pragmas supplied via the --json flag are considered. [default: False]
     -h --help                   Show this screen
 """
 import os
@@ -82,6 +84,7 @@ docopt_schema = Schema({
     '--dep-file': Use(str),
     '--loop-counter-file': Use(str),
     '--target-profiling-not-allowed': Use(str),
+    '--only-supplied-suggestions': Use(str),
 })
 
 
@@ -119,6 +122,7 @@ def main():
     dep_file = arguments["--dep-file"]
     loop_counter_file = arguments["--loop-counter-file"]
     target_profiling_not_allowed = arguments['--target-profiling-not-allowed']
+    only_supplied_suggestions = arguments['--only-supplied-suggestions']
     if thread_count == "None":
         thread_count = 1
     else:
@@ -135,7 +139,8 @@ def main():
     run_configuration = Configuration(path, reduction_file, json_file,
                                       file_mapping, ll_file, verbose_mode, data_race_output_path, dp_build_path,
                                       validation_time_limit, thread_count, dp_profiling_executable, pet_dump_file,
-                                      cu_xml_file, dep_file, loop_counter_file, target_profiling_not_allowed, arguments)
+                                      cu_xml_file, dep_file, loop_counter_file, target_profiling_not_allowed,
+                                      only_supplied_suggestions, arguments)
 
     if arguments["--call-graph"] != "None":
         print("call graph creation enabled...")

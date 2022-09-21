@@ -5,7 +5,7 @@ class Configuration(object):
     def __init__(self, path, reduction_file, json_file, file_mapping,
                  ll_file, verbose_mode, data_race_output_path, dp_build_path, validation_time_limit, thread_count,
                  dp_profiling_executable, pet_dump_file, cu_xml_file, dep_file, loop_counter_file,
-                 target_profiling_not_allowed, arguments):
+                 target_profiling_not_allowed, only_supplied_suggestions, arguments):
         self.path = path
         self.reduction_file = reduction_file
         self.json_file = json_file
@@ -25,6 +25,7 @@ class Configuration(object):
         self.dep_file = dep_file
         self.loop_counter_file = loop_counter_file
         self.target_profiling_not_allowed = target_profiling_not_allowed
+        self.only_supplied_suggestions = only_supplied_suggestions
 
     def save_line_mapping(self, line_mapping: Dict[str, str]):
         self.line_mapping = line_mapping

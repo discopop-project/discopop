@@ -169,7 +169,8 @@ def __get_omp_pragmas(run_configuration: Configuration, pet: PETGraphX):
             parallelization_suggestions = json.load(f)
             omp_pragma_list += get_omp_pragmas_from_dp_suggestions(parallelization_suggestions)
 
-    omp_pragma_list += get_omp_pragmas_from_filemapping(run_configuration, pet)
+    if run_configuration.only_supplied_suggestions != "True":
+        omp_pragma_list += get_omp_pragmas_from_filemapping(run_configuration, pet)
 
     return omp_pragma_list
 
