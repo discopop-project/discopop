@@ -56,7 +56,7 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                         known_variables.append((global_var.name, global_var.defLine))
                     known_variables = list(dict.fromkeys(known_variables))
                     for child in pet.direct_children(current):
-                        if child not in visited:
+                        if child not in visited and child not in queue:
                             queue.append(child)
                 # mark those variables which are defined outside the parallel region as shared
                 shared_defined_outside = []
@@ -85,6 +85,8 @@ def __extract_data_sharing_clauses_from_pet(pet, omp_pragma_list):
                     loops_start_lines.append(v.start_position())
                 for child in pet.direct_children(pet.node_at(pragma_to_cuid[pragma])):
                     for var_name in shared_defined_outside:
+                        if var_name is None:
+                            continue
                         if var_name in loop_indices_to_remove:
                             continue
                         if pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(pet.node_at(pragma_to_cuid[pragma]), NodeType.CU)):

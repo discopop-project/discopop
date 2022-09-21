@@ -422,8 +422,9 @@ class PETGraphX(object):
         if root.type == type or type is None:
             res.append(root)
         for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.__subtree_of_type_rec(
-                self.node_at(t), type, visited))
+            if self.node_at(t) not in visited:
+                res.extend(self.__subtree_of_type_rec(
+                    self.node_at(t), type, visited))
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
