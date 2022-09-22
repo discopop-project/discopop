@@ -126,8 +126,8 @@ namespace __dp
 
         size_t getHashValue(){
             size_t hashVal = ((((hash<int32_t>()(funcLevel)
-                                 ^ (hash<int32_t>()(loopID) << 1)) >> 1)
-                               ^ (hash<int32_t>()(count) << 1)) >> 1)
+                                 ^ (hash<int32_t>()(loopID) << 1)) >> 1)))
+//                               ^ (hash<int32_t>()(count) << 1)) >> 1)
                              ^ (hash<LID>()(begin) << 1);
             return hashVal;
         }

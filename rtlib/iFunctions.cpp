@@ -89,6 +89,12 @@ namespace __dp
 
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_READ;
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_WRITE;
+    unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
+    unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
+    //vector<tuple<string, char*, size_t, int32_t, ADDR>> loopAccessPatternData_LIST;
+    //vector<string> loopAccessPatternData_LIST;
+
+    ofstream *loopAccessPatternData;
      /******* Helper functions *******/
 
      void addDep(depType type, LID curr, LID depOn, char *var)
@@ -213,6 +219,7 @@ namespace __dp
                *out << endl;
           }
      }
+
      // End HA
 
      // void outputDeps()
@@ -524,6 +531,28 @@ namespace __dp
         cout << tmp3 << " " << tmp2 << " " << tmp1 << " " << tmp0;
     }
 
+    void outputLoopPatternData(){
+        // detect and output loop access patterns
+        // unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
+        for(auto KVPair1 : loopAccessPatternData_WRITE){
+            auto varName = KVPair1.first;
+            cout << "varName: " << varName << endl;
+            for(auto KVPair2 : KVPair1.second){
+                size_t loopHash = KVPair2.first;
+                cout << "\tLoophash: " << loopHash << endl;
+                for(auto KVPair3 : KVPair2.second){
+                    int32_t loopIteration = KVPair3.first;
+                    cout << "\t\tIteration: ";
+                    prettyPrintLoopCount(loopIteration);
+                    cout << endl;
+                    for(auto addr : KVPair3.second){
+                        cout << "\t\t\t" << addr << endl;
+                    }
+                }
+            }
+        }
+    }
+
      void *analyzeDeps(void *arg)
      {
           int64_t id = (int64_t)arg;
@@ -565,23 +594,33 @@ namespace __dp
                     {
                          access = accesses[i];
 
+                      if(access.var == 0){
+                          access.var = "NULL";
+                      }
+
                         // add access information to addrToLoopIterationsMap_READ and addrToLoopIterationsMap_WRITE
                         if(access.isRead) {
-                            addrToLoopIterationsMap_READ[access.addr].insert(access.loopIteration);
-                            cout << "Read size: " << addrToLoopIterationsMap_READ[access.addr].size() << endl;
+                            //vector<tuple<string, char*, size_t, int32_t, ADDR>> loopAccessPatternData_LIST;
+//                            std::stringstream ss;
+//                            ss << "R" << ";" << access.var << ";" << access.loopHash << ";" << access.loopIteration
+//                               << ";" << access.addr;
+//                            loopAccessPatternData_LIST.push_back(ss.str());
+
+                            loopAccessPatternData_READ[access.var][access.loopHash][access.loopIteration].insert(access.addr);
+//                            cout << "Read size: " << addrToLoopIterationsMap_READ[access.addr].size() << endl;
                         }
                         else{
-                            addrToLoopIterationsMap_WRITE[access.addr].insert(access.loopIteration);
-                            cout << "Write size: " << addrToLoopIterationsMap_WRITE[access.addr].size() << endl;
+//                            cout << "ADDR: " << access.addr << endl;
+                            loopAccessPatternData_WRITE[access.var][access.loopHash][access.loopIteration].insert(access.addr);
+//                            std::stringstream ss;
+//                            ss << "W" << ";" << access.var << ";" << access.loopHash << ";" << access.loopIteration
+//                               << ";" << access.addr;
+//                            loopAccessPatternData_LIST.push_back(ss.str());
+//                            addrToLoopIterationsMap_WRITE[access.addr].insert(access.loopIteration);
+//                            cout << "Write size: " << addrToLoopIterationsMap_WRITE[access.addr].size() << endl;
                         }
 
-                        cout << "LoopCount: ";
-                        access.prettyPrintLoopCount();
-                        cout << endl;
-                        cout << "Var: " << access.var << endl;
-                        cout << "ADDR: " << access.addr << endl;
-//                      cout << "LID: " << access.lid << endl;
-                        cout << "isRead: " << access.isRead << endl;
+
 /*
                         cout << "skip: " << access.skip << endl;
                         cout << "CurrentHash: " << access.loopHash << endl;
@@ -596,7 +635,7 @@ namespace __dp
                             cout << "\t" << lastWriteLog[access.addr][i].first << "@" << lastWriteLog[access.addr][i].second << " ";
                         }
 */
-                        cout << endl << endl;
+//                        cout << endl << endl;
 
 
                          if (access.isRead)
@@ -1045,6 +1084,8 @@ namespace __dp
                generateStringDepMap();
                // End HA
                outputDeps();
+               // Output data for Loop pattern detection
+               outputLoopPatternData();
 
                delete loopStack;
                delete endFuncs;
@@ -1069,6 +1110,9 @@ namespace __dp
                *out << decodeLID(lid) << " END program" << endl;
                out->flush();
                out->close();
+
+               loopAccessPatternData->flush();
+               loopAccessPatternData->close();
 
                delete out;
                targetTerminated = true; // mark the target program has returned from main()
@@ -1141,6 +1185,9 @@ namespace __dp
                     bbList = new ReportedBBSet();
                     // End HA
 
+                    // loop access patterns
+                    loopAccessPatternData = new ofstream();
+
 #ifdef __linux__
                     // try to get an output file name w.r.t. the target application
                     // if it is not available, fall back to "Output.txt"
@@ -1154,11 +1201,14 @@ namespace __dp
                               out->open("Output.txt", ios::out);
                          }
                          out->open(string(selfPath) + "_dep.txt", ios::out);
+                         loopAccessPatternData->open(string(selfPath) + "_loopAccessPatternData.txt", ios::out);
                     }
 #else
                     out->open("Output.txt", ios::out);
+                    loopAccessPatternData->open("loopAccessPatternData.txt", ios::out);
 #endif
                     assert(out->is_open() && "Cannot open a file to output dependences.\n");
+                    assert(loopAccessPatternData->is_open() && "Cannot open a file to output loop access pattern data.\n");
 
                     if (DP_DEBUG)
                     {
