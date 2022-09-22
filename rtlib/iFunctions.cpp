@@ -87,6 +87,8 @@ namespace __dp
     unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastReadLog;
     unordered_map<ADDR, pair<size_t, LID>[BUFFERLENGTH]> lastWriteLog;
 
+    unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_READ;
+    unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_WRITE;
      /******* Helper functions *******/
 
      void addDep(depType type, LID curr, LID depOn, char *var)
@@ -393,6 +395,7 @@ namespace __dp
           current.var = var;
           current.addr = addr;
           current.loopHash = loopStack->getHashValue();
+          current.loopIteration = loopStack->getLoopIteration();
 
           if (tempAddrCount[workerID] == CHUNK_SIZE)
           {
@@ -508,6 +511,19 @@ namespace __dp
         return true;
     }
 
+    void prettyPrintLoopCount(int32_t loopIteration){
+        uint8_t ct3, ct2, ct1, ct0;
+        ct3 = (loopIteration & 0xff000000) >> 24;
+        ct2 = (loopIteration & 0x00ff0000) >> 16;
+        ct1 = (loopIteration & 0x0000ff00) >> 8;
+        ct0 = loopIteration & 0x000000ff;
+        int32_t tmp3 = ct3;
+        int32_t tmp2 = ct2;
+        int32_t tmp1 = ct1;
+        int32_t tmp0 = ct0;
+        cout << tmp3 << " " << tmp2 << " " << tmp1 << " " << tmp0;
+    }
+
      void *analyzeDeps(void *arg)
      {
           int64_t id = (int64_t)arg;
@@ -549,10 +565,24 @@ namespace __dp
                     {
                          access = accesses[i];
 
+                        // add access information to addrToLoopIterationsMap_READ and addrToLoopIterationsMap_WRITE
+                        if(access.isRead) {
+                            addrToLoopIterationsMap_READ[access.addr].insert(access.loopIteration);
+                            cout << "Read size: " << addrToLoopIterationsMap_READ[access.addr].size() << endl;
+                        }
+                        else{
+                            addrToLoopIterationsMap_WRITE[access.addr].insert(access.loopIteration);
+                            cout << "Write size: " << addrToLoopIterationsMap_WRITE[access.addr].size() << endl;
+                        }
+
+                        cout << "LoopCount: ";
+                        access.prettyPrintLoopCount();
+                        cout << endl;
                         cout << "Var: " << access.var << endl;
                         cout << "ADDR: " << access.addr << endl;
-                        cout << "LID: " << access.lid << endl;
+//                      cout << "LID: " << access.lid << endl;
                         cout << "isRead: " << access.isRead << endl;
+/*
                         cout << "skip: " << access.skip << endl;
                         cout << "CurrentHash: " << access.loopHash << endl;
                         cout << "lastReadHashes: " << endl;
@@ -565,22 +595,9 @@ namespace __dp
                         for(int i = 0; i < BUFFERLENGTH; i++){
                             cout << "\t" << lastWriteLog[access.addr][i].first << "@" << lastWriteLog[access.addr][i].second << " ";
                         }
+*/
                         cout << endl << endl;
 
-
-/*                        cout << "IIRAW: " << checkInterIterationAccess(access.addr,
-                                                                       lastReadLog,
-                                                                       access.addr,
-                                                                       lastWriteLog) << endl;
-                        cout << "IIWAR: " << checkInterIterationAccess(access.addr,
-                                                                       lastWriteLog,
-                                                                       access.addr,
-                                                                       lastReadLog) << endl;
-                        cout << "IIWAW: " << checkInterIterationAccess(access.loopHash,
-                                                                       lastWriteLog[access.addr].first,
-                                                                       access.lid,
-                                                                       lastWriteLog[access.addr].second) << endl << endl;
-*/
 
                          if (access.isRead)
                          {
@@ -807,6 +824,7 @@ namespace __dp
                current.var = var;
                current.addr = addr;
                current.loopHash = loopStack->getHashValue();
+               current.loopIteration = loopStack->getLoopIteration();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -860,6 +878,7 @@ namespace __dp
                current.var = var;
                current.addr = addr;
                current.loopHash = loopStack->getHashValue();
+               current.loopIteration = loopStack->getLoopIteration();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -914,6 +933,7 @@ namespace __dp
                current.addr = addr;
                current.skip = true;
                current.loopHash = loopStack->getHashValue();
+               current.loopIteration = loopStack->getLoopIteration();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {
@@ -968,6 +988,7 @@ namespace __dp
                current.addr = addr;
                current.skip = true;
                current.loopHash = loopStack->getHashValue();
+               current.loopIteration = loopStack->getLoopIteration();
 
                if (tempAddrCount[workerID] == CHUNK_SIZE)
                {

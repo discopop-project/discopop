@@ -59,7 +59,20 @@ namespace __dp
         char *var;
         ADDR addr;
         size_t loopHash;
+        int32_t loopIteration;
 
+        void prettyPrintLoopCount(){
+            uint8_t ct3, ct2, ct1, ct0;
+            ct3 = (loopIteration & 0xff000000) >> 24;
+            ct2 = (loopIteration & 0x00ff0000) >> 16;
+            ct1 = (loopIteration & 0x0000ff00) >> 8;
+            ct0 = loopIteration & 0x000000ff;
+            int32_t tmp3 = ct3;
+            int32_t tmp2 = ct2;
+            int32_t tmp1 = ct1;
+            int32_t tmp0 = ct0;
+            cout << tmp3 << " " << tmp2 << " " << tmp1 << " " << tmp0;
+        }
     };
 
     // For runtime dependency merging
@@ -151,6 +164,38 @@ namespace __dp
 //            if(hashValueStack.size() == 0)
  //               return 0;
  //           return hashValueStack.top();
+        }
+
+        int32_t getLoopIteration(){
+            // loop iterations are encoded as 8-bit unsigned integers
+            int32_t loopIterations = 0;
+            // loop iteration 0 is regarded as invalid
+            if(elements.size() == 0){
+                return loopIterations;
+            }
+            // only 4 nested loops are considered
+            if(elements.size() > 4){
+                return loopIterations;
+            }
+            // first loop iteration which is considered is 1.
+            // last loop iteration which is considered is 255
+            uint8_t buffer = 0;
+            int i;
+            for(i=0;i<elements.size(); i++){
+                LoopTableEntry lte_buffer = elements[i];
+                if(lte_buffer.count > 255){
+                    buffer = 0;
+                }
+                else{
+                    buffer = lte_buffer.count;
+                }
+                loopIterations |= buffer;
+                if( i+1 != elements.size()) {
+                    // do not shift when encountering the last element of the vector
+                    loopIterations = loopIterations << 8;
+                }
+            }
+            return loopIterations;
         }
 
     };
