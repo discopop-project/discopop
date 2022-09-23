@@ -564,6 +564,38 @@ namespace __dp
         return false;
     }
 
+    bool checkPattern_STATIC_BWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(lastAccessed == currentlyAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_SEQ_BWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(lastAccessed == currentlyAccessed + 8){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_SEQ_BWD_K(ADDR lastAccessed, ADDR currentlyAccessed, int& pK){
+        if(pK == 0){
+            pK = lastAccessed - currentlyAccessed;
+            return true;
+        }
+        if(currentlyAccessed + pK == lastAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_RANDOM_BWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(lastAccessed >= currentlyAccessed){
+            return true;
+        }
+        return false;
+    }
+
     bool checkPattern(LoopAccessPattern pattern, ADDR lastAccessed, ADDR currentlyAccessed, int& pK){
         switch(pattern.patternType){
             case(0):
@@ -576,8 +608,16 @@ namespace __dp
                 return checkPattern_SEQ_FWD_K(lastAccessed, currentlyAccessed, pK);
             case(1):
                 return checkPattern_RANDOM_FWD(lastAccessed, currentlyAccessed);
+            case(-4):
+                return checkPattern_STATIC_BWD(lastAccessed, currentlyAccessed);
+            case(-3):
+                return checkPattern_SEQ_BWD(lastAccessed, currentlyAccessed);
+            case(-2):
+                return checkPattern_SEQ_BWD_K(lastAccessed, currentlyAccessed, pK);
+            case(-1):
+                return checkPattern_RANDOM_BWD(lastAccessed, currentlyAccessed);
             default:
-                cout << "DEFAULTING at pattern check" << endl;
+                cout << "DEFAULTING to FALSE at pattern check" << endl;
                 return false;
         }
 
