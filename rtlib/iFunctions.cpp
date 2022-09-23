@@ -89,7 +89,7 @@ namespace __dp
 
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_READ;
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_WRITE;
-    unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
+    unordered_map<string, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
     unordered_map<string, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
     vector<LoopAccessPattern> loopAccessPatterns;
     //vector<tuple<string, char*, size_t, int32_t, ADDR>> loopAccessPatternData_LIST;
@@ -552,7 +552,7 @@ namespace __dp
             pK = currentlyAccessed - lastAccessed;
             return true;
         }
-        if(lastAccessed + pK == currentlyAccessed){
+        if(lastAccessed + pK == currentlyAccessed && pK > 0){
             return true;
         }
         return false;
@@ -584,7 +584,7 @@ namespace __dp
             pK = lastAccessed - currentlyAccessed;
             return true;
         }
-        if(currentlyAccessed + pK == lastAccessed){
+        if(currentlyAccessed + pK == lastAccessed && pK > 0){
             return true;
         }
         return false;
@@ -633,6 +633,11 @@ namespace __dp
             int K = 0;
             for(auto KVPair3 : KVPair2->second){
                 uint32_t iteration = KVPair3.first;  // todo get random iteration
+                // ignore iteration 255 255 255 255, as it is used to store all accesses which do not occur inside a loop
+                if(iteration == 0xFFFFFFFF){
+
+                    continue;
+                }
                 for(auto addr : KVPair3.second){
                     if(lastAccessed == 0){
                         lastAccessed = addr;
@@ -661,7 +666,6 @@ namespace __dp
         // unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
         for(auto KVPair1 : loopAccessPatternData_WRITE){
             string varName = KVPair1.first;
-            cout << "VN: " << varName << endl;
             for(auto KVPair2 : KVPair1.second){
                 // todo repeat procedure for backwards pattern detection
                 size_t loopId = KVPair2.first;
@@ -707,6 +711,7 @@ namespace __dp
                 default:
                     break;
             }
+            cout << (pattern.isReadPattern ? "R" : "W") << ";" << pattern.varName  << ";" << patternTypeString << endl;
             *loopAccessPatternData << (pattern.isReadPattern ? "R" : "W") << ";" << pattern.varName  << ";" << patternTypeString << endl;
         }
     }
@@ -758,25 +763,12 @@ namespace __dp
 
                         // add access information to addrToLoopIterationsMap_READ and addrToLoopIterationsMap_WRITE
                         if(access.isRead) {
-                            //vector<tuple<string, char*, size_t, int32_t, ADDR>> loopAccessPatternData_LIST;
-//                            std::stringstream ss;
-//                            ss << "R" << ";" << access.var << ";" << access.loopHash << ";" << access.loopIteration
-//                               << ";" << access.addr;
-//                            loopAccessPatternData_LIST.push_back(ss.str());
-
-                            loopAccessPatternData_READ[access.var][access.loopHash][access.loopIteration].insert(access.addr);
-//                            cout << "Read size: " << addrToLoopIterationsMap_READ[access.addr].size() << endl;
+                            string read_target = "" + string(access.var) + "@" + decodeLID(access.lid);
+                            loopAccessPatternData_READ[read_target][access.loopHash][access.loopIteration].insert(access.addr);
                         }
                         else{
-                            //char write_target[strlen(access.var)+1+decodeLID(access.lid).size()];
                             string write_target = "" + string(access.var) + "@" + decodeLID(access.lid);
                             loopAccessPatternData_WRITE[write_target][access.loopHash][access.loopIteration].insert(access.addr);
-//                            std::stringstream ss;
-//                            ss << "W" << ";" << access.var << ";" << access.loopHash << ";" << access.loopIteration
-//                               << ";" << access.addr;
-//                            loopAccessPatternData_LIST.push_back(ss.str());
-//                            addrToLoopIterationsMap_WRITE[access.addr].insert(access.loopIteration);
-//                            cout << "Write size: " << addrToLoopIterationsMap_WRITE[access.addr].size() << endl;
                         }
 
 
