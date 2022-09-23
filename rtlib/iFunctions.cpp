@@ -532,10 +532,61 @@ namespace __dp
         cout << tmp3 << " " << tmp2 << " " << tmp1 << " " << tmp0;
     }
 
+    bool checkPattern_STATIC_FWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(lastAccessed == currentlyAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_SEQ_FWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(lastAccessed + 8 == currentlyAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_SEQ_FWD_K(ADDR lastAccessed, ADDR currentlyAccessed, int& pK){
+        if(pK == 0){
+            pK = currentlyAccessed - lastAccessed;
+            return true;
+        }
+        if(lastAccessed + pK == currentlyAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern_RANDOM_FWD(ADDR lastAccessed, ADDR currentlyAccessed){
+        if(currentlyAccessed >= lastAccessed){
+            return true;
+        }
+        return false;
+    }
+
+    bool checkPattern(LoopAccessPattern pattern, ADDR lastAccessed, ADDR currentlyAccessed, int& pK){
+        switch(pattern.patternType){
+            case(0):
+                return true;
+            case(4):
+                 return checkPattern_STATIC_FWD(lastAccessed, currentlyAccessed);
+            case(3):
+                return checkPattern_SEQ_FWD(lastAccessed, currentlyAccessed);
+            case(2):
+                return checkPattern_SEQ_FWD_K(lastAccessed, currentlyAccessed, pK);
+            case(1):
+                return checkPattern_RANDOM_FWD(lastAccessed, currentlyAccessed);
+            default:
+                cout << "DEFAULTING at pattern check" << endl;
+                return false;
+        }
+
+    }
+
     void outputLoopPatternData(){
         // detect and output loop access patterns
         // unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
-        for(auto KVPair1 : loopAccessPatternData_WRITE){
+/*        for(auto KVPair1 : loopAccessPatternData_WRITE){
             auto varName = KVPair1.first;
             cout << "varName: " << varName << endl;
             for(auto KVPair2 : KVPair1.second){
@@ -552,7 +603,7 @@ namespace __dp
                 }
             }
         }
-/*
+*/
         // check write accesses for patterns
         // unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
         for(auto KVPair1 : loopAccessPatternData_WRITE){
@@ -562,34 +613,44 @@ namespace __dp
                 // todo repeat procedure for backwards pattern detection
                 size_t loopId = KVPair2.first;
                 cout << "\tLoopID: " << loopId << endl;
-                LoopAccessPattern pattern(STATIC_BWD);
+                LoopAccessPattern pattern(STATIC_FWD);
                 cout << "\t\tPattern: " << pattern.patternType << endl;
 
                 while(pattern.patternType != RANDOM){
                     ADDR lastAccessed = 0;
+                    bool patternIsValid = true;
+                    int K = 0;
                     for(auto KVPair3 : KVPair2.second){
                         uint32_t iteration = KVPair3.first;  // todo get random iteration
-
                         cout << "\t\t\tIteration: ";
                         prettyPrintLoopCount(iteration);
                         cout << endl;
                         for(auto addr : KVPair3.second){
-                            cout << "\t\t\t\t" << addr << endl;
+                            if(lastAccessed == 0){
+                                lastAccessed = addr;
+                                continue;
+                            }
+                            cout << "checking: " << pattern.patternType << " - " << lastAccessed << " - " << addr << endl;
+                            patternIsValid = patternIsValid && checkPattern(pattern, lastAccessed, addr, K);
+                            lastAccessed = addr;
+                            cout << "\tPattern valid: " << patternIsValid << endl;
                         }
-                        bool patternIsValid = false; //checkPattern(randomIteration);
-
                         if(! patternIsValid){
-                            pattern.transition();
+                            break;
                         }
-                    }
 
-                    cout << "\t\tPattern: " << pattern.patternType << endl;
+                    }
+                    if(! patternIsValid){
+                        pattern.transition();
+                    }
+                    else{
+                        break;  // found a valid pattern
+                    }
                 }
                 cout << "\t\tPattern: " << pattern.patternType << endl;
             }
 
         }
-        */
     }
 
      void *analyzeDeps(void *arg)
