@@ -89,8 +89,8 @@ namespace __dp
 
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_READ;
     unordered_map<ADDR, unordered_set<int32_t>> addrToLoopIterationsMap_WRITE;
-    unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
-    unordered_map<char*, map<size_t, map<int32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
+    unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_READ;
+    unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
     //vector<tuple<string, char*, size_t, int32_t, ADDR>> loopAccessPatternData_LIST;
     //vector<string> loopAccessPatternData_LIST;
 
@@ -404,6 +404,7 @@ namespace __dp
           current.loopHash = loopStack->getHashValue();
           current.loopIteration = loopStack->getLoopIteration();
 
+
           if (tempAddrCount[workerID] == CHUNK_SIZE)
           {
                pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -518,16 +519,16 @@ namespace __dp
         return true;
     }
 
-    void prettyPrintLoopCount(int32_t loopIteration){
+    void prettyPrintLoopCount(uint32_t loopIteration){
         uint8_t ct3, ct2, ct1, ct0;
         ct3 = (loopIteration & 0xff000000) >> 24;
         ct2 = (loopIteration & 0x00ff0000) >> 16;
         ct1 = (loopIteration & 0x0000ff00) >> 8;
         ct0 = loopIteration & 0x000000ff;
-        int32_t tmp3 = ct3;
-        int32_t tmp2 = ct2;
-        int32_t tmp1 = ct1;
-        int32_t tmp0 = ct0;
+        uint32_t tmp3 = ct3;
+        uint32_t tmp2 = ct2;
+        uint32_t tmp1 = ct1;
+        uint32_t tmp0 = ct0;
         cout << tmp3 << " " << tmp2 << " " << tmp1 << " " << tmp0;
     }
 
@@ -551,6 +552,44 @@ namespace __dp
                 }
             }
         }
+/*
+        // check write accesses for patterns
+        // unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
+        for(auto KVPair1 : loopAccessPatternData_WRITE){
+            char* varName = KVPair1.first;
+            cout << "varName: " << varName << endl;
+            for(auto KVPair2 : KVPair1.second){
+                // todo repeat procedure for backwards pattern detection
+                size_t loopId = KVPair2.first;
+                cout << "\tLoopID: " << loopId << endl;
+                LoopAccessPattern pattern(STATIC_BWD);
+                cout << "\t\tPattern: " << pattern.patternType << endl;
+
+                while(pattern.patternType != RANDOM){
+                    ADDR lastAccessed = 0;
+                    for(auto KVPair3 : KVPair2.second){
+                        uint32_t iteration = KVPair3.first;  // todo get random iteration
+
+                        cout << "\t\t\tIteration: ";
+                        prettyPrintLoopCount(iteration);
+                        cout << endl;
+                        for(auto addr : KVPair3.second){
+                            cout << "\t\t\t\t" << addr << endl;
+                        }
+                        bool patternIsValid = false; //checkPattern(randomIteration);
+
+                        if(! patternIsValid){
+                            pattern.transition();
+                        }
+                    }
+
+                    cout << "\t\tPattern: " << pattern.patternType << endl;
+                }
+                cout << "\t\tPattern: " << pattern.patternType << endl;
+            }
+
+        }
+        */
     }
 
      void *analyzeDeps(void *arg)
