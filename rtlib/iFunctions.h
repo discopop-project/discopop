@@ -60,9 +60,12 @@ namespace __dp
 
     struct LoopAccessPattern
     {
-        LoopAccessPattern(LoopAccessPatternType basePattern) : patternType(basePattern){}
+        LoopAccessPattern(string varName, LoopAccessPatternType basePattern, bool isReadPattern) :
+            varName(varName), patternType(basePattern), isReadPattern(isReadPattern){}
 
+        string varName;
         LoopAccessPatternType patternType;
+        bool isReadPattern;
 
         void transition(){
             // perform transition towards RANDOM pattern.
