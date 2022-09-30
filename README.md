@@ -9,7 +9,7 @@ In a nutshell, DiscoPoP performs the following steps:
 
 DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code which can be transferred into the LLVM IR.
 
-A more comprehensive overview of DiscoPoP can be found on our [project website](http://www.discopop.org/).
+A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Getting started
 ### Pre-requisites
