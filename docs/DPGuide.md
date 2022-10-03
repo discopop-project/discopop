@@ -18,7 +18,7 @@ The output is an XML file that contains all the CU nodes and their connections. 
 3) To obtain data dependences, we need to instrument the application and run it. 
 ```
     clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c SimplePipeline.c -o out.o
-    clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
+    clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread -o out
     ./out
 ```
 The output is a text file that contains all the dependences. You should be able to obtain a CU graph as in [`dp_run_dep.txt`](/test/simple_pipeline/data/dp_run_dep.txt).
@@ -28,7 +28,7 @@ A data dependence is represented as a triple `<sink, type, source>`. `type` deno
 4) Although there is no reduction pattern in SimplePipeline, we strongly suggest that you run the reduction analysis to avoid missing any pattern and obtain necessary loop information. This pass instruments the target application and analyzes its loops to identify their iteration counts and obtain the list of potential reduction operations. Running the instrumented application will result in a text file that containins all the reductions located in the working directory.
 ```
     clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPReduction.so -mllvm -fm-path -mllvm ./FileMapping.txt -c SimplePipeline.c -o out.o
-    clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
+    clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread -o out
     ./out
 ```
 Besides the list of reduction loops, this step generates two important files named `loop_counter_output.txt` and `loop_meta.txt`. The pattern analysis in the next step requires these files along with CU graph and dependences.
