@@ -134,7 +134,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result = []
+    result : List[PipelineInfo] = []
     children_cache: Dict[CUNode, List[CUNode]] = dict()
     dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):

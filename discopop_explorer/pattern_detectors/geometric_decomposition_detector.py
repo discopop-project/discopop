@@ -81,7 +81,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result = []
+    result : List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
     for node in pet.all_nodes(NodeType.FUNC):
