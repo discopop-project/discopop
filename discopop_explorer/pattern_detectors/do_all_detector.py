@@ -50,7 +50,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result = []
+    result : List[DoAllInfo] = []
     for node in pet.all_nodes(NodeType.LOOP):        # t1 = time.time()
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
