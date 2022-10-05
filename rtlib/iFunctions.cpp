@@ -626,7 +626,10 @@ namespace __dp
 
     LoopAccessPattern getAccessPattern(string varName, bool isReadPattern, LoopAccessPatternType initialType,
                                        pair<const size_t, map<uint32_t, unordered_set<ADDR>>>* KVPair2){
-        LoopAccessPattern pattern(varName, initialType, isReadPattern);
+        LoopAccessPattern pattern(varName, initialType, isReadPattern, false);
+        bool directionalAccessOccurred = false;
+
+        // todo: only consider structures, ignore regular variables due to constant memory location
         while(pattern.patternType != RANDOM){
             ADDR lastAccessed = 0;
             bool patternIsValid = true;
@@ -643,6 +646,16 @@ namespace __dp
                         lastAccessed = addr;
                         continue;
                     }
+                    // check if access in the given direction (backwards, forwards) occurred
+                    if(initialType == STATIC_FWD){
+                        // check for forward access
+                        directionalAccessOccurred = directionalAccessOccurred || (lastAccessed < addr);
+                    }
+                    else{
+                        // check for backwards access
+                        directionalAccessOccurred = directionalAccessOccurred || (lastAccessed > addr);
+                    }
+
                     patternIsValid = patternIsValid && checkPattern(pattern, lastAccessed, addr, K);
                     lastAccessed = addr;
                 }
@@ -657,6 +670,12 @@ namespace __dp
                 break;  // found a valid pattern
             }
         }
+        // only report pattern if it is static or a directional access occured
+        if(pattern.patternType == STATIC_FWD || pattern.patternType == STATIC_BWD ||
+                (pattern.patternType > 0 && directionalAccessOccurred) ||
+                (pattern.patternType < 0 && directionalAccessOccurred)){
+            pattern.isValid = true;
+        }
         return pattern;
     }
 
@@ -667,12 +686,17 @@ namespace __dp
         for(auto KVPair1 : loopAccessPatternData_WRITE){
             string varName = KVPair1.first;
             for(auto KVPair2 : KVPair1.second){
-                // todo repeat procedure for backwards pattern detection
                 size_t loopId = KVPair2.first;
                 // forwards pattern detection
-                loopAccessPatterns.push_back(getAccessPattern(varName, false, STATIC_FWD, &KVPair2));
+                LoopAccessPattern fwdPattern = getAccessPattern(varName, false, STATIC_FWD, &KVPair2);
+                if(fwdPattern.isValid) {
+                    loopAccessPatterns.push_back(fwdPattern);
+                }
                 // backwards pattern detection
-                loopAccessPatterns.push_back(getAccessPattern(varName, false, STATIC_BWD, &KVPair2));
+                LoopAccessPattern bwdPattern = getAccessPattern(varName, false, STATIC_BWD, &KVPair2);
+                if(bwdPattern.isValid){
+                    loopAccessPatterns.push_back(bwdPattern);
+                }
             }
         }
         // todo access patterns for writes
