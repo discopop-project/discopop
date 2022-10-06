@@ -25,13 +25,13 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
   string bbDepString;
 
   for(Function &F: M){
-    bool Debug = false;
+    // bool Debug = false;
     if (F.getInstructionCount() == 0)
       continue;
-    if(F.getName() == "fbdev_read_packet")
-      Debug = true;
+    // if(F.getName() == "fbdev_read_packet")
+    //   continue;
 
-      if (Debug)
+      if (DP_DEBUG)
         errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
       DebugLoc dl;
@@ -62,7 +62,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
             std::set<Value*>::iterator it = staticallyPredictableValues.find(V);
             if(it != staticallyPredictableValues.end()){
               staticallyPredictableValues.erase(V);
-              if(Debug) errs() << VNF->getVarName(V) << "\n";
+              if(DP_DEBUG) errs() << VNF->getVarName(V) << "\n";
             }
             // for(Value *w: staticallyPredictableValues){
               // for (auto w = staticallyPredictableValues.begin(); w != staticallyPredictableValues.end(); ) {
@@ -89,7 +89,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       }
     }}
 
-    if(Debug){
+    if(DP_DEBUG){
       errs() << "--- Local Values ---\n";
       for(auto V: staticallyPredictableValues){
         errs() << VNF->getVarName(V) << "\n";
@@ -215,7 +215,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       DG.dumpToDot(fileName + "_" + string(F.getName()) + ".DG.dot");
     }
     
-    if(Debug){
+    if(DP_DEBUG){
       errs() << "--- Conditional BB Dependences:\n";
       for(auto pair : conditionalBBDepMap){
         errs() << pair.first->getName() << ":\n";
@@ -235,7 +235,7 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
       }
     }
   
-    if(Debug){
+    if(DP_DEBUG){
       errs() << "--- Program Instructions:\n";
       for (BasicBlock& BB: F){ for(Instruction& I: BB){
         if(!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) continue;
@@ -271,11 +271,13 @@ bool DPInstrumentationOmission::runOnModule(Module &M) {
         }
       }
     }
-    if(Debug) errs() << "Done with function " << F.getName() << ":\n";
+    if(DP_DEBUG) errs() << "Done with function " << F.getName() << ":\n";
   }
 
   // Find __dp_finalize call and add a call to __dp_add_bb_deps before it
   for(Function &F : M){
+    // if(F.getName() == "fbdev_read_packet")
+    //   continue;
     if(!F.hasName() || F.getName() != "main") continue;
     for(BasicBlock &BB : F){
       for(Instruction &I: BB){

@@ -4,6 +4,7 @@
 #include "llvm/Support/Debug.h"
 #include <string>
 #include "Graph.hpp"
+#include <llvm/Support/raw_ostream.h>
 
 #include "DPUtils.h"
 

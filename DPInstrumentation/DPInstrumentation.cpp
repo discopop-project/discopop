@@ -313,11 +313,16 @@ void DiscoPoP::getTrueVarNamesFromMetadata(Function &F)
         for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
             // search for call instructions to @llvm.dbg.declare
             if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
                 CallInst* call = cast<CallInst>(instruction);
                 // check if @llvm.dbg.declare is called
-                std::string dbg_declare = "llvm.dbg.declare";
-                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
-                if(cmp_res == 0){
+                // std::string dbg_declare = "llvm.dbg.declare";
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
                     // call to @llvm.dbg.declare found
 
                     // extract original and working variable name
@@ -342,6 +347,7 @@ void DiscoPoP::getTrueVarNamesFromMetadata(Function &F)
                       trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
                     }
                 }
+            }
             }
         }
     }

@@ -11,7 +11,7 @@ from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
-from ..utils import correlation_coefficient, classify_task_vars
+from ..utils import correlation_coefficient, classify_task_vars, contains
 
 __pipeline_threshold = 0.9
 
@@ -134,11 +134,11 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result = []
+    result : List[PipelineInfo] = []
     children_cache: Dict[CUNode, List[CUNode]] = dict()
     dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):
-        if node.do_all == False and node.reduction == False:
+        if not contains(result, lambda x: x.node_id == node.id) and node.do_all == False and node.reduction == False:
             node.pipeline = __detect_pipeline(pet, node)
             if node.pipeline > __pipeline_threshold:
                 result.append(PipelineInfo(pet, node))

@@ -295,18 +295,19 @@ void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, st
         for(BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction){
             // search for call instructions to @llvm.dbg.declare
             if(isa<CallInst>(instruction)){
-                CallInst* call = cast<CallInst>(instruction);
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                        CallInst* call = cast<CallInst>(instruction);
                 // check if @llvm.dbg.declare is called
-                std::string dbg_declare = "llvm.dbg.declare";
-                int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
-                if(cmp_res == 0){
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
                     // call to @llvm.dbg.declare found
-
                     // extract original and working variable name
                     string SRCVarName;
                     string IRVarName;
-
-                    
 
                     Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
                     if (isa<ValueAsMetadata>(Meta)){
@@ -326,6 +327,7 @@ void CUGeneration::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, st
                       (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
                     }
                 }
+            }
             }
         }
     }
@@ -758,8 +760,8 @@ void CUGeneration::printNode(Node *root, bool isRoot)
 
             // *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
             // *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">" << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
-            // *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
-            // *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
+            *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
+            *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
             *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
@@ -1002,8 +1004,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                     // if(globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
                     {
                         suspiciousVariables.insert(varName);
-                        // if (lid > 0)
-                        //     cu->writePhaseLineNumbers.insert(lid);
+                        if (lid > 0)
+                            cu->writePhaseLineNumbers.insert(lid);
                     }
                 }
                 else if (isa<LoadInst>(instruction))
@@ -1021,8 +1023,8 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         //it is a load instruction which read the value of a global variable.
                         // This global variable has already been stored previously.
                         // A new CU should be created here.
-                        // cu->readPhaseLineNumbers.erase(lid);
-                        // cu->writePhaseLineNumbers.erase(lid);
+                        cu->readPhaseLineNumbers.erase(lid);
+                        cu->writePhaseLineNumbers.erase(lid);
                         cu->instructionsLineNumbers.erase(lid);
                         // cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty())
@@ -1051,18 +1053,18 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                         BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
                         if (lid > 0)
                         {
-                            // cu->readPhaseLineNumbers.insert(lid);
+                            cu->readPhaseLineNumbers.insert(lid);
                             cu->instructionsLineNumbers.insert(lid);
                         }
                     }
-                    // else
-                    // {
-                    //     if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
-                    //     {
-                    //         if (lid > 0)
-                    //             cu->readPhaseLineNumbers.insert(lid);
-                    //     }
-                    // }
+                    else
+                    {
+                        if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName))
+                        {
+                            if (lid > 0)
+                                cu->readPhaseLineNumbers.insert(lid);
+                        }
+                    }
                 }
             }
         }

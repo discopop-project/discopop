@@ -1,6 +1,8 @@
 #include "InstructionCFG.h"
 
 InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): VNF(_VNF){
+	// if(F.getName() == "fbdev_read_packet")
+	// 	return;
 	entry = Graph::addNode((Instruction*)ENTRY);
 	exit = Graph::addNode((Instruction*)EXIT);
 	Instruction *previousInstruction;
@@ -34,24 +36,65 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): V
 
 void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction* previousInstruction) {
 	// bool hasSuccessors = false;
-	if(BB == nullptr)
-		return;
-	for (BasicBlock *S : successors(BB)) {
+	// if(BB == nullptr)
+	// 	return;
+	// if(BB->getParent()->getName() == "fbdev_read_packet"){
+			
+	// 		errs() << "----- " << BB->getName() << "\n";
+	// }
+	for (succ_iterator SI = succ_begin(BB), SE = succ_end(BB); SI != SE; ++SI) {
+		
+	// for (BasicBlock *S : successors(BB)) {
 		// hasSuccessors = true;
-		for (Instruction &I : *S){
-			if(&I == nullptr) continue;
-			if(isa<llvm::StoreInst>(I) || isa<llvm::LoadInst>(I)){
-				Graph::addEdge(previousInstruction, &I);
-				goto next;
-			}else if(isa<AllocaInst>(&I)){
-				Graph::addEdge(previousInstruction, &I);
-				goto next;
-			}else if(isa<ReturnInst>(&I)){
-				Graph::addEdge(Graph::getNode(previousInstruction), exit);
-			}
+	BasicBlock *S = *SI;
+	if(S != BB)
+		break;
+	// if(S->getParent()->getName() == "fbdev_read_packet"){
+	// 		errs() << "++++++ " << S->getName() << "\n";
+	// }
+	// if (S->empty())
+	// 	continue;
+	bool foundRelInst = false;
+	for (llvm::Instruction &I : *S)
+	{
+		// if (&I == nullptr)
+		// 	continue;
+
+		if (isa<llvm::StoreInst>(I) || isa<llvm::LoadInst>(I))
+		{
+			// if(I.getParent()->getParent()->getName() == "fbdev_read_packet"){
+			// 	errs() << I << "\n";
+			// }
+			Graph::addEdge(previousInstruction, &I);
+			foundRelInst = true;
+			// goto next;
+			break;
 		}
+		else if (isa<llvm::AllocaInst>(I))
+		{
+			Graph::addEdge(previousInstruction, &I);
+			// goto next;
+			foundRelInst = true;
+			break;
+		}
+		else if (isa<llvm::ReturnInst>(I))
+		{
+			Graph::addEdge(Graph::getNode(previousInstruction), exit);
+			foundRelInst = true;
+			break;
+		}
+	}
+	if(foundRelInst) {
+		if(previousInstruction->getParent() == S) // a self loop is found and we should return
+			return;
+		else
+			continue;
+	}
+	else{
 		if(S != BB) findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction);
-		next:;
+	}
+	// if(S != BB) findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction);
+	// next:;
 	}
 }
 
