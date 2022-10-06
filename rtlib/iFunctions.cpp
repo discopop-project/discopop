@@ -698,8 +698,8 @@ namespace __dp
         for(auto KVPair1 : loopAccessPatternData_WRITE){
             string varName = KVPair1.first;
             // todo remove
-            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0 && false;
-            bool enableDebugPrint = true;
+            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0;
+            bool enableDebugPrint = false;
             for(auto KVPair2 : KVPair1.second){
                 size_t loopId = KVPair2.first;
                 // forwards pattern detection
@@ -718,8 +718,8 @@ namespace __dp
         for(auto KVPair1 : loopAccessPatternData_READ){
             string varName = KVPair1.first;
             // todo remove
-            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0 && false;
-            bool enableDebugPrint = true;
+            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0;
+            bool enableDebugPrint = false;
             for(auto KVPair2 : KVPair1.second){
                 size_t loopId = KVPair2.first;
                 // forwards pattern detection
