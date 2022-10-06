@@ -41,13 +41,13 @@ def __parse_xml_input(xml_fd):
     for node in parsed_cu.Node:
         node.childrenNodes = str(node.childrenNodes).split(
             ',') if node.childrenNodes else []
-        # if node.get('type') == '0':
-        #     for instruction_id in str(node.instructionLines).split(','):
-        #         lineToCUIdMap[instruction_id].add(node.get('id'))
-        #     for instruction_id in str(node.writePhaseLines).split(','):
-        #         writelineToCUIdMap[instruction_id].add(node.get('id'))
-        #     for instruction_id in str(node.readPhaseLines).split(','):
-        #         readlineToCUIdMap[instruction_id].add(node.get('id'))
+        if node.get('type') == '0':
+            # for instruction_id in str(node.instructionLines).split(','):
+            #     lineToCUIdMap[instruction_id].add(node.get('id'))
+            for instruction_id in str(node.writePhaseLines).split(','):
+                writelineToCUIdMap[instruction_id].add(node.get('id'))
+            for instruction_id in str(node.readPhaseLines).split(','):
+                readlineToCUIdMap[instruction_id].add(node.get('id'))
 
         cu_dict[node.get('id')] = node
 
@@ -167,7 +167,7 @@ def is_reduction(reduction_line, fmap_lines):
     # print("file_line: " + str(file_line))
 
     filepath = get_filepath(file_id, fmap_lines)
-    print("filepath: " + filepath)
+    # print("filepath: " + filepath)
     src_file = open(filepath)
     src_lines = src_file.read().splitlines()
     src_file.close()
@@ -205,7 +205,7 @@ def possible_reduction(line, src_lines):
 
     array_indices = find_array_indices(array_name, src_line[pos:len(src_line)])
     for index in array_indices:
-        print("index, array_index: " + index + " " + array_index)
+        # print("index, array_index: " + index + " " + array_index)
         if index == array_index:
             return False
 
