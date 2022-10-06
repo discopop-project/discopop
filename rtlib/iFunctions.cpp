@@ -625,8 +625,8 @@ namespace __dp
     }
 
     LoopAccessPattern getAccessPattern(string varName, bool isReadPattern, LoopAccessPatternType initialType,
-                                       pair<const size_t, map<uint32_t, unordered_set<ADDR>>>* KVPair2){
-        LoopAccessPattern pattern(varName, initialType, isReadPattern, false);
+                                       pair<const size_t, map<uint32_t, unordered_set<ADDR>>>* KVPair2, bool debugPrintFlag){
+        LoopAccessPattern pattern(varName, initialType, isReadPattern, false, true);
         bool directionalAccessOccurred = false;
 
         // todo: only consider structures, ignore regular variables due to constant memory location
@@ -638,13 +638,20 @@ namespace __dp
                 uint32_t iteration = KVPair3.first;  // todo get random iteration
                 // ignore iteration 255 255 255 255, as it is used to store all accesses which do not occur inside a loop
                 if(iteration == 0xFFFFFFFF){
-
                     continue;
+                }
+                if(debugPrintFlag){
+                    cout << (isReadPattern ? "R " : "W ") << "pattern: " << pattern.patternType << "  \tIt: ";
+                    prettyPrintLoopCount(iteration);
+                    cout << endl;
                 }
                 for(auto addr : KVPair3.second){
                     if(lastAccessed == 0){
                         lastAccessed = addr;
                         continue;
+                    }
+                    if(debugPrintFlag){
+                        cout << "\t\t\t\tAddress: " << addr << endl;
                     }
                     // check if access in the given direction (backwards, forwards) occurred
                     if(initialType == STATIC_FWD){
@@ -654,6 +661,11 @@ namespace __dp
                     else{
                         // check for backwards access
                         directionalAccessOccurred = directionalAccessOccurred || (lastAccessed > addr);
+                    }
+
+                    // check if pattern can be strict
+                    if(lastAccessed == addr){
+                        pattern.isStrict = false;
                     }
 
                     patternIsValid = patternIsValid && checkPattern(pattern, lastAccessed, addr, K);
@@ -685,15 +697,18 @@ namespace __dp
         // unordered_map<char*, map<size_t, map<uint32_t, unordered_set<ADDR>>>> loopAccessPatternData_WRITE;
         for(auto KVPair1 : loopAccessPatternData_WRITE){
             string varName = KVPair1.first;
+            // todo remove
+            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0 && false;
+            bool enableDebugPrint = true;
             for(auto KVPair2 : KVPair1.second){
                 size_t loopId = KVPair2.first;
                 // forwards pattern detection
-                LoopAccessPattern fwdPattern = getAccessPattern(varName, false, STATIC_FWD, &KVPair2);
+                LoopAccessPattern fwdPattern = getAccessPattern(varName, false, STATIC_FWD, &KVPair2, enableDebugPrint);
                 if(fwdPattern.isValid) {
                     loopAccessPatterns.push_back(fwdPattern);
                 }
                 // backwards pattern detection
-                LoopAccessPattern bwdPattern = getAccessPattern(varName, false, STATIC_BWD, &KVPair2);
+                LoopAccessPattern bwdPattern = getAccessPattern(varName, false, STATIC_BWD, &KVPair2, enableDebugPrint);
                 if(bwdPattern.isValid){
                     loopAccessPatterns.push_back(bwdPattern);
                 }
@@ -702,15 +717,18 @@ namespace __dp
         // check read access patterns
         for(auto KVPair1 : loopAccessPatternData_READ){
             string varName = KVPair1.first;
+            // todo remove
+            bool debug_varNameIsB = varName.substr(0, 1).compare("b") == 0 && false;
+            bool enableDebugPrint = true;
             for(auto KVPair2 : KVPair1.second){
                 size_t loopId = KVPair2.first;
                 // forwards pattern detection
-                LoopAccessPattern fwdPattern = getAccessPattern(varName, true, STATIC_FWD, &KVPair2);
+                LoopAccessPattern fwdPattern = getAccessPattern(varName, true, STATIC_FWD, &KVPair2, enableDebugPrint);
                 if(fwdPattern.isValid) {
                     loopAccessPatterns.push_back(fwdPattern);
                 }
                 // backwards pattern detection
-                LoopAccessPattern bwdPattern = getAccessPattern(varName, true, STATIC_BWD, &KVPair2);
+                LoopAccessPattern bwdPattern = getAccessPattern(varName, true, STATIC_BWD, &KVPair2, enableDebugPrint);
                 if(bwdPattern.isValid){
                     loopAccessPatterns.push_back(bwdPattern);
                 }
@@ -751,6 +769,7 @@ namespace __dp
                 default:
                     break;
             }
+            patternTypeString = (pattern.isStrict ? "strict " : "") + patternTypeString;
             cout << (pattern.isReadPattern ? "R" : "W") << ";" << pattern.varName  << ";" << patternTypeString << endl;
             *loopAccessPatternData << (pattern.isReadPattern ? "R" : "W") << ";" << pattern.varName  << ";" << patternTypeString << endl;
         }

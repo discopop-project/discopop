@@ -60,13 +60,14 @@ namespace __dp
 
     struct LoopAccessPattern
     {
-        LoopAccessPattern(string varName, LoopAccessPatternType basePattern, bool isReadPattern, bool isValid) :
-            varName(varName), patternType(basePattern), isReadPattern(isReadPattern), isValid(isValid){}
+        LoopAccessPattern(string varName, LoopAccessPatternType basePattern, bool isReadPattern, bool isValid, bool isStrict) :
+            varName(varName), patternType(basePattern), isReadPattern(isReadPattern), isValid(isValid), isStrict(isStrict){}
 
         string varName;
         LoopAccessPatternType patternType;
         bool isReadPattern;
         bool isValid;
+        bool isStrict;  // a strict pattern indicates that the same memory address may not be accessed again
 
         void transition(){
             // perform transition towards RANDOM pattern.
