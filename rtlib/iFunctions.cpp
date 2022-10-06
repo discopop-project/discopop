@@ -699,7 +699,23 @@ namespace __dp
                 }
             }
         }
-        // todo access patterns for writes
+        // check read access patterns
+        for(auto KVPair1 : loopAccessPatternData_READ){
+            string varName = KVPair1.first;
+            for(auto KVPair2 : KVPair1.second){
+                size_t loopId = KVPair2.first;
+                // forwards pattern detection
+                LoopAccessPattern fwdPattern = getAccessPattern(varName, true, STATIC_FWD, &KVPair2);
+                if(fwdPattern.isValid) {
+                    loopAccessPatterns.push_back(fwdPattern);
+                }
+                // backwards pattern detection
+                LoopAccessPattern bwdPattern = getAccessPattern(varName, true, STATIC_BWD, &KVPair2);
+                if(bwdPattern.isValid){
+                    loopAccessPatterns.push_back(bwdPattern);
+                }
+            }
+        }
 
         // output identified access patterns to file
         for(LoopAccessPattern pattern : loopAccessPatterns){
