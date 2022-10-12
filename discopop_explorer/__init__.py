@@ -83,16 +83,17 @@ def run(
     # print("\nnumber of detected patterns: " + str(len(gpu_patterns)))
     # print("-------------------------------------------------------------------------------")
 
-    regions = GPURegions()
-    regions.pet = pet
-    regions.setGPULoops(gpu_patterns)
+    regions = GPURegions(pet, gpu_patterns)
+
     for i in gpu_patterns:
         i.setCollapseClause(i.node_id)
         # print("id: " + i.node_id + " start: " +
         #       i.start_line + " COLLAPSE: " + str(i.collapse))
 
     regions.identifyGPURegions()
-    regions.mapData()
+    #regions.old_mapData()
+    regions.determineDataMapping()
+
     # print("-------------------------------------------------------------------------------")
 
     for plugin_name in plugins:

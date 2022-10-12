@@ -51,6 +51,7 @@ class EdgeType(Enum):
     SUCCESSOR = 1
     DATA = 2
     CALLSNODE = 3
+    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -351,29 +352,16 @@ class PETGraphX(object):
             labels[n] = str(self.g.nodes[n]["data"])
         nx.draw_networkx_labels(self.g, pos, labels, font_size=7)
 
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CHILD],
-        )
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edge_color="green",
-            edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.SUCCESSOR],
-        )
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edge_color="red",
-            edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.DATA],
-        )
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edge_color="yellow",
-            edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
-        )
+        nx.draw_networkx_edges(self.g, pos,
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.CHILD])
+        nx.draw_networkx_edges(self.g, pos, edge_color='green',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.SUCCESSOR])
+        nx.draw_networkx_edges(self.g, pos, edge_color='red',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.DATA])
+        nx.draw_networkx_edges(self.g, pos, edge_color='yellow',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.CALLSNODE])
+        nx.draw_networkx_edges(self.g, pos, edge_color='orange',
+                               edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.PRODUCE_CONSUME])
 
         plt.show()
         plt.savefig("graphX.svg")
@@ -910,3 +898,42 @@ class PETGraphX(object):
             if rv["loop_line"] == line and rv["name"] == name:
                 return rv["operation"]
         return ""
+
+    def dump_to_pickled_json(self) -> str:
+        """Encodes and returns the entire Object into a pickled json string.
+        The encoded string can be reconstructed into an object by using:
+        jsonpickle.decode(json_str)
+
+        :return: encoded string
+        """
+        return jsonpickle.encode(self)
+
+    def check_reachability(self, target: CUNode,
+                           source: CUNode, edge_types: List[EdgeType]) -> bool:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True
+        visited: List[str] = []
+        queue = [target]
+        while len(queue) > 0:
+            cur_node = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [(s, t, e) for s, t, e in self.in_edges(cur_node.id)
+                        if s not in visited and
+                        e.etype in edge_types]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True
+                else:
+                    if e[0] not in visited:
+                        queue.append(self.node_at(e[0]))
+        return False
+

@@ -268,8 +268,7 @@ class GPULoopPattern(PatternInfo):
         vars = pet.get_undefined_variables_inside_loop(loop)
 
         for var in vars:
-
-            if is_scalar_val(var):
+            if is_scalar_val(var) and var.accessMode == "R":
                 continue
             if is_loop_index2(pet, loop, var.name):
                 continue
@@ -278,6 +277,7 @@ class GPULoopPattern(PatternInfo):
                     loop.start_position(), var.name)
                 reduction.append(var)
             # TODO grouping
+
             if (is_written_in_subtree(var.name, raw, waw, lst)
                     or is_func_arg(pet, var.name, loop)):
                 if is_readonly(var.name, war, waw, rev_raw):
@@ -340,7 +340,7 @@ class GPULoopPattern(PatternInfo):
 
         for cn_id in self.pet.direct_children(n):
             if cn_id.type == 2:
-                if cn_id.end_line == n.end_line:
+                if cn_id.end_line <= n.end_line:  # todo not true if loop bodies are terminated by braces
                     self.collapse += 1
                     self.setCollapseClause(cn_id.id)
 

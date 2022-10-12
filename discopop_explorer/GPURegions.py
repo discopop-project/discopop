@@ -1,8 +1,9 @@
 from numpy import long  # type: ignore
 from typing import List, Set, Optional, cast
-from .PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
+from .PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
+from .utils import is_loop_index2
 from .variable import Variable
 
 
@@ -10,16 +11,16 @@ class GPURegions:
     cascadingLoopsInRegions: List[List[str]]
     gpu_loop_patterns: List[GPULoopPattern]
     loopsInRegion: List[str]
-    startLine: long
-    endLine: long
     pet: PETGraphX
     numRegions: int
 
-    def __init__(self):
+    def __init__(self, pet, gpu_patterns):
         self.loopsInRegion = []
-        self.gpu_loop_patterns = []
+        self.gpu_loop_patterns = gpu_patterns
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
+        self.pet = pet
+
 
     def findGPULoop(self, nodeID: str) -> Optional[GPULoopPattern]:
         """
@@ -83,7 +84,56 @@ class GPURegions:
 
         self.numRegions = regionNum + 1
 
-    def mapData(self) -> None:
+    def determineDataMapping(self) -> None:
+        """determine data mapping for each GPU Region and their contained GPU Loops."""
+
+        for region in self.cascadingLoopsInRegions:
+            print("GPU Region:", region)
+            # determine CUs which belong to the region (= which are located inside the region)
+            region_cus: List[CUNode] = []
+            for loop_id in region:
+                loop_node: CUNode = self.pet.node_at(loop_id)
+                gpu_lp: GPULoopPattern = [p for p in self.gpu_loop_patterns if p.parentLoop == loop_id][0]
+                region_cus += [cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus]
+            # determine start and end line of region
+            region_start_line = min([cu.start_line for cu in region_cus])
+            region_end_line = max([cu.end_line for cu in region_cus])
+
+
+            # determine variables which are written outside the region and read inside
+            consumed_vars: List[str] = []
+            for cu in region_cus:
+                in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
+                # var is consumed, if incoming RAW dep exists
+                for sink_cu_id, source_cu_id, dep in in_dep_edges:
+                    # unpack dep for sake of clarity
+                    sink_line = dep.sink
+                    source_line = dep.source
+                    var_name = dep.var_name
+                    if self.pet.node_at(source_cu_id) not in region_cus:
+                        if dep.dtype == DepType.RAW:
+                            if dep.var_name not in consumed_vars:
+                                consumed_vars.append(dep.var_name)
+            print("Consumed vars: ", consumed_vars)
+
+            # determine variables which are read afterwards and written in the region
+            produced_vars: List[str] = []
+            for cu in region_cus:
+                out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
+                # var is produced, if outgoing RAW or WAW dep exists
+                for sink_cu_id, source_cu_id, dep in out_dep_edges:
+                    # unpack dep for sake of clarity
+                    sink_line = dep.sink
+                    source_line = dep.source
+                    var_name = dep.var_name
+                    if self.pet.node_at(sink_cu_id) not in region_cus:
+                        if dep.dtype in [DepType.RAW, DepType.WAW]:
+                            if dep.var_name not in produced_vars:
+                                produced_vars.append(dep.var_name)
+            print("Produced vars: ", produced_vars)
+
+
+    def old_mapData(self) -> None:
         """
         :return:
         """
@@ -109,16 +159,19 @@ class GPURegions:
             visitedVars: Set[Variable] = set()
             while t >= 0:
                 tmp_result = self.findGPULoop(
-                    self.cascadingLoopsInRegions[i][t])
+                    self.cascadingLoopsInRegions[i][t])  # tmp_result contains GPU loops inside the parent region
+
                 if tmp_result is None:
                     t -= 1
                     continue
+
                 loopIter: GPULoopPattern = cast(GPULoopPattern, tmp_result)
                 varis: Set[Variable] = set([])
                 varis.update(loopIter.map_type_alloc)
                 varis.update(loopIter.map_type_to)
                 varis.update(loopIter.map_type_from)
                 varis.update(loopIter.map_type_tofrom)
+                # loopIter.printGPULoop()
                 for v in varis:
                     if loopIter.findMappedVar("from", v):
                         if v in visitedVars:
@@ -167,7 +220,10 @@ class GPURegions:
                             gpuRegionLoop.map_type_alloc.append(v)
                             visitedVars.add(v)
                 t -= 1
-            gpuRegionLoop.printGPULoop()
+
+            # gpuRegionLoop.printGPULoop()  # only prints first loop of the region.
+                                            # first loop of the region is used to store the map_to behavior
+                                            # last loop if the region should be used to store the map_from behavior
 
     def findNextLoop(self) -> None:
         """
@@ -198,15 +254,6 @@ class GPURegions:
                 self.gpu_loop_patterns[skip].nextLoop = self.gpu_loop_patterns[i + 1].node_id
 
             i += 1
-
-    def setGPULoops(self, gpu_loops: List[GPULoopPattern]) -> None:
-        """
-
-        :param gpu_loops:
-        :return:
-        """
-        for i in gpu_loops:
-            self.gpu_loop_patterns.append(i)
 
     def getParentLoop(self, node: CUNode) -> bool:
         """
