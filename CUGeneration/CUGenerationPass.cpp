@@ -56,6 +56,7 @@
 #include "DPUtils.h"
 
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <utility>
 #include <iomanip>
@@ -157,6 +158,7 @@ namespace
         set<int> readPhaseLineNumbers;
         set<int> writePhaseLineNumbers;
         set<int> returnInstructions;
+        unordered_map<const char*, int> containedInstructions;
 
         set<Variable> localVariableNames;
         set<Variable> globalVariableNames;
@@ -763,6 +765,11 @@ void CUGeneration::printNode(Node *root, bool isRoot)
             *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
             *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">" << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
             *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">" << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
+            *outCUs << "\t\t<workloadInstructionsCount>";
+            for (auto kvPair : cu->containedInstructions){
+                *outCUs << kvPair.first << ":" << kvPair.second << ",";
+            }
+            *outCUs << "</workloadInstructionsCount>" << endl;
             *outCUs << "\t\t<successors>" << endl;
             for (auto sucCUi : cu->successorCUs)
             {
@@ -957,6 +964,12 @@ void CUGeneration::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
         for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction)
         {
+            // count instructions for workload calculation
+            if(cu->containedInstructions.find(instruction->getOpcodeName()) == cu->containedInstructions.end()){
+                cu->containedInstructions[instruction->getOpcodeName()] = 0;
+            }
+            cu->containedInstructions[instruction->getOpcodeName()] += 1;
+
             //NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName().str();
