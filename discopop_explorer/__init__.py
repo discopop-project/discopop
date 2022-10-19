@@ -19,6 +19,8 @@ from .GPULoop import GPULoopPattern
 from .GPURegions import GPURegions
 import time
 
+from .variable import Variable
+
 
 def sort_by_nodeID(e: GPULoopPattern):
     """ used to sort a list of gpu patterns by their node ids
@@ -73,8 +75,12 @@ def run(
 
     for node in pet.all_nodes(NodeType.LOOP):
         if any(node.id == d.node_id for d in res.do_all) or any(node.id == r.node_id for r in res.reduction):
+            reduction_vars: List[Variable] = []
+            if node.id in [r.node_id for r in res.reduction]:
+                parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
+                reduction_vars = parent_reduction.reduction
             gpulp = GPULoopPattern(pet, node.id, node.start_line, node.end_line,
-                                   node.loop_iterations)
+                                   node.loop_iterations, reduction_vars)
             gpulp.getNestedLoops(node.id)
             gpulp.setParentLoop(node.id)
             gpulp.classifyLoopVars(pet, node)
@@ -93,6 +99,9 @@ def run(
     regions.identifyGPURegions()
     #regions.old_mapData()
     regions.determineDataMapping()
+
+    for loop_patterns in regions.gpu_loop_patterns:
+        print(loop_patterns.toJson())
 
     # print("-------------------------------------------------------------------------------")
 

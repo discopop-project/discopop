@@ -1,5 +1,5 @@
 from numpy import long  # type: ignore
-from typing import List, Set
+from typing import List, Set, Optional
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from .PETGraphX import PETGraphX, CUNode, NodeType, parse_id, DepType
@@ -99,7 +99,7 @@ class GPULoopPattern(PatternInfo):
     scheduling: str
 
     def __init__(self, pet: PETGraphX, nodeID: str, startLine, endLine,
-                 iterationCount: int):
+                 iterationCount: int, reduction_vars: Optional[List[Variable]]=None):
         node = map_node(pet, nodeID)
         super().__init__(node)  # PatternInfo(node)
         PatternInfo.iterations_count = iterationCount
@@ -119,8 +119,12 @@ class GPULoopPattern(PatternInfo):
         # should also be done with all others? probably
         self.nestedLoops = set()
         self.called_functions = set()
-        self.reduction_vars_str = []
-        self.reduction_vars_ids = []
+        if reduction_vars is None:
+            self.reduction_vars_str: List[str] = []
+            self.reduction_vars_ids: List[Variable] = []
+        else:
+            self.reduction_vars_str: List[str] = [v.operation + ":" + v.name for v in reduction_vars]
+            self.reduction_vars_ids: List[Variable] = reduction_vars
         self.iteration_count = 0
         self.nextLoop = ""
         self.parentLoop = ""
@@ -208,7 +212,7 @@ class GPULoopPattern(PatternInfo):
         # The string begins with the type, the LID and the number of iterations.
         fileID = parse_id(self.nodeID)
         ss: str = str(fileID[0]) + ":"
-        ss += self.startLine + " "
+        ss += str(self.startLine) + " "
         ss += "0" if not self.reduction_vars_str else "1"
         ss += " " + str(self.iteration_count) + " "
 
@@ -269,6 +273,7 @@ class GPULoopPattern(PatternInfo):
 
         for var in vars:
             if is_scalar_val(var) and var.accessMode == "R":
+                # will be implicitly mapped as firstprivate
                 continue
             if is_loop_index2(pet, loop, var.name):
                 continue
