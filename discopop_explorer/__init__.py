@@ -11,10 +11,11 @@ from typing import List, Optional
 
 from pluginbase import PluginBase  # type:ignore
 
-from .PETGraphX import PETGraphX
+from .PETGraphX import PETGraphX, NodeType
 from ._version import __version__
 from .parser import parse_inputs
 from .pattern_detection import DetectionResult, PatternDetectorX
+import time
 
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str],
@@ -22,9 +23,13 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
         llvm_cxxfilt_path: Optional[str] = None, discopop_build_path: Optional[str] = None,
         enable_task_pattern: bool = False) -> DetectionResult:
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file,
-                                                    loop_counter_file, reduction_file))
+                                                    loop_counter_file, reduction_file, file_mapping))
     # TODO add visualization
-    # pet.show()
+    # t1 = time.time()
+    # print(f"parsing time: {t1-t0}")
+    # pet.show() # not useful for large programs
+    # t2 = time.time()
+    # print(f"visualization: {t2-t1}")
 
     plugin_base = PluginBase(package='plugins')
 

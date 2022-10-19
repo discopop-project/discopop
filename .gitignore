@@ -3,6 +3,9 @@ data*/
 # our test data
 !/test/*/data/
 
+# discopop temporary files
+discopop-tmp/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -10,6 +13,9 @@ __pycache__/
 
 # PyCharm
 .idea/
+
+# Visual Studio Code
+.vscode/
 
 # Distribution / packaging
 .Python

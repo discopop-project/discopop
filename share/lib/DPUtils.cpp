@@ -10,7 +10,7 @@
  */
 
 #include "DPUtils.h"
-
+#define DP_DEBUG_TYPE "dputils"
 using namespace std;
 
 cl::opt<string> FileMappingPath("fm-path", cl::init(""),
@@ -47,21 +47,15 @@ int32_t getFileID(string fileMapping, string fullPathName) {
 int32_t getLID(Instruction* BI, int32_t& fileID)
 {
     int32_t lid = 0;
-    int32_t lno;
+    int32_t lno = 0;
 
     const DebugLoc &location = BI->getDebugLoc();
     if (location)
     {
         lno = BI->getDebugLoc().getLine();
-    }
-    else
-    {
-        lno = 0;
-    }
-
-
-    if (lno == 0)
-    {
+    }else if(isa<AllocaInst>(BI) || isa<StoreInst>(BI)){
+        lno = BI->getFunction()->getSubprogram()->getLine();
+    }else{
         return 0;
     }
 
@@ -167,8 +161,8 @@ void determineFileID(Function &F, int32_t& fileID)
             }
         }
     }
-    if(fileID == 0)
-        errs() << "------------ " << F.getName() << "\n";
+    // if(fileID == 0)
+    //     errs() << "------------ " << F.getName() << "\n";
 }
 
 string get_exe_dir() {
@@ -181,6 +175,136 @@ string get_exe_dir() {
     } else {
 		return "";     
     }
+}
+
+VariableNameFinder::VariableNameFinder(Module &M){
+    DebugInfoFinder DIF;
+    DIF.processModule(M);
+    for (auto DI: DIF.types()) {
+        if(auto CT = dyn_cast<DICompositeType>(DI)){
+            vector<string> v;
+            for(auto E: CT->getElements()){
+                if(auto DT = dyn_cast<DIDerivedType>(E)){
+                    v.push_back(DT->getName().str());
+                }
+            }
+            StructMemberMap.insert({CT->getName().str(), v});
+        }
+    }
+}
+
+string VariableNameFinder::getVarName(Value const *V){
+    if(const Instruction *I = dyn_cast<Instruction>(V)){
+        if(auto GEPI = dyn_cast<GetElementPtrInst>(I)){
+            Type *srcElemT = GEPI->getSourceElementType();
+            string r = getVarName(GEPI->getOperand(0));
+
+            if(GEPI->getNumOperands() == 2){
+                // return r + "[" + getVarName(GEPI->getOperand(1)) + "]";
+                return r;
+            }
+
+            if(dyn_cast<ConstantInt>(GEPI->getOperand(1))->getSExtValue() > 0){
+                // r += "[" + getVarName(GEPI->getOperand(1)) + "]";
+                r += "";
+            }
+
+            if(isa<ArrayType>(srcElemT) || isa<IntegerType>(srcElemT)){
+                // return r + "[" + getVarName(GEPI->getOperand(2)) + "]";
+                return r;
+            }else if(StructType *st = dyn_cast<StructType>(srcElemT)){
+                // int64_t offset = dyn_cast<ConstantInt>(GEPI->getOperand(2))->getSExtValue();
+                if(st->hasName()){
+                    string structTypeName = st->getName().str();
+                    if(structTypeName.find("struct.") != string::npos){
+                        structTypeName = structTypeName.erase(0,7);
+                    }
+                    if(structTypeName.find("class.") != string::npos){
+                        structTypeName = structTypeName.erase(0,6);
+                    }
+                    if(StructMemberMap.count(structTypeName) > 0){
+                        // return r + "." + StructMemberMap[structTypeName][offset];
+                        return r;
+                    }
+                }
+            }
+            return r;
+        }
+
+        if(isa<SExtInst>(I)){
+            return getVarName(I->getOperand(0));
+        }
+
+        if(const BinaryOperator* binop = dyn_cast<BinaryOperator>(I)){
+            string op;
+            switch(binop->getOpcode()){
+                #define DP_DPUTILS_DEBUG 1
+                case Instruction::BinaryOps::Add:   op = "+"; break;
+                case Instruction::BinaryOps::FAdd:  op = "+"; break;
+                case Instruction::BinaryOps::Sub:   op = "-"; break;
+                case Instruction::BinaryOps::FSub:  op = "-"; break;
+                case Instruction::BinaryOps::Mul:   op = "*"; break;
+                case Instruction::BinaryOps::FMul:  op = "*"; break;
+                case Instruction::BinaryOps::UDiv:  op = "/"; break;
+                case Instruction::BinaryOps::SDiv:  op = "/"; break;
+                case Instruction::BinaryOps::FDiv:  op = "/"; break;
+                case Instruction::BinaryOps::URem:  op = "%"; break;
+                case Instruction::BinaryOps::SRem:  op = "%"; break;
+                case Instruction::BinaryOps::FRem:  op = "%"; break;
+                case Instruction::BinaryOps::Shl:   op = "<<"; break;
+                case Instruction::BinaryOps::LShr:  op = ">>"; break;
+                case Instruction::BinaryOps::AShr:  op = ">>"; break;
+                case Instruction::BinaryOps::And:   op = "&&"; break;
+                case Instruction::BinaryOps::Or:    op = "||"; break;
+                case Instruction::BinaryOps::Xor:   op = "^^"; break;
+                
+                // robust solution to API changes (e.g. llvm adds more instruction types)
+                // case Instruction::BinaryOps::BinaryOpsEnd: // fall through
+                default:
+                    #ifdef DP_DEBUG_TYPE
+                    errs() << "DPUTils VariableNameFinder::getVarName:  did not consider enum value in switch on BinaryOperator";
+                    #endif
+                    break;
+
+
+            }
+            return getVarName(I->getOperand(0)) + op + getVarName(I->getOperand(1));
+        }
+
+        if(isa<StoreInst>(I) || isa<LoadInst>(I)){
+            Value* v = I->getOperand((isa<StoreInst>(I) ? 1 : 0));
+            if(isa<LoadInst>(v)) return "*" + getVarName(v);
+            return getVarName(v);
+        }
+    }
+    
+    if (const GEPOperator* gepo = dyn_cast<GEPOperator>(V)){
+        if (const GlobalVariable* gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())){
+            string r = gv->getGlobalIdentifier();
+            Type *st = gepo->getSourceElementType();
+            if(StructType *ct = dyn_cast<StructType>(st)){
+                string structTypeName = ct->getName().str().erase(0,7);
+                // int64_t offset = dyn_cast<ConstantInt>(gepo->getOperand(2))->getSExtValue();
+                // r += "." + StructMemberMap[structTypeName][offset];
+                r += "";
+                return r;
+            }
+        }
+    }
+    
+    if(const ConstantInt* CI = dyn_cast<ConstantInt>(V)){
+        return to_string(CI->getSExtValue());
+    }
+    
+    if(V->hasName()){
+        string r = V->getName().str();
+        std::size_t found = r.find(".addr");
+        if(found != string::npos){
+            return r.erase(found);
+        }
+        return r;
+    }
+    return "!";
 }
 
 }//namespace

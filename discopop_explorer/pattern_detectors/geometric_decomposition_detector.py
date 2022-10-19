@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
-from ..utils import classify_task_vars, get_child_loops
+from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
 __loop_iterations: Dict[str, int] = {}
@@ -29,7 +29,8 @@ class GDInfo(PatternInfo):
         """
         PatternInfo.__init__(self, node)
 
-        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
+        self.do_all_children, self.reduction_children = get_child_loops(
+            pet, node)
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
@@ -47,8 +48,9 @@ class GDInfo(PatternInfo):
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List = []
-        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
-        fp.append(Variable('int', 'i'))
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(
+            pet, node, "GeometricDecomposition", [], [])
+        fp.append(Variable('int', 'i', ''))
 
         self.first_private = fp
         self.private = p
@@ -79,11 +81,11 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result = []
+    result : List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
     for node in pet.all_nodes(NodeType.FUNC):
-        if __detect_geometric_decomposition(pet, node):
+        if not contains(result, lambda x: x.node_id == node.id) and __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test and min_iter is not None:
@@ -109,7 +111,8 @@ def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> Tuple[bool, Optional[int
         children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
 
     for child in children:
-        inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
+        inner_loop_iter[child.start_position(
+        )] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
         if min_iterations_count is None or v < min_iterations_count:

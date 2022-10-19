@@ -85,9 +85,9 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         __set_parent_copy_childrennodes(parent_copy)
 
                         # Preprocessor Step 4
-                        __remove_overlapping_start_and_end_lines(parent_copy, parent.instructionLines)
-                        __remove_overlapping_start_and_end_lines(parent_copy, parent.readPhaseLines)
-                        __remove_overlapping_start_and_end_lines(parent_copy, parent.writePhaseLines)
+                        # __remove_overlapping_start_and_end_lines(parent_copy, parent.instructionLines)
+                        # __remove_overlapping_start_and_end_lines(parent_copy, parent.readPhaseLines)
+                        # __remove_overlapping_start_and_end_lines(parent_copy, parent.writePhaseLines)
 
                         separator_line = parent.get("startsAtLine")
                         # select smallest recursive function call line >= separator_line + 1
@@ -123,20 +123,20 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parent_copy.set("endsAtLine", separator_line)
 
                         # update instruction/readPhase/writePhase lines
-                        __filter_rwi_lines(parent_copy, parent_copy.instructionLines)
-                        __filter_rwi_lines(parent_copy, parent_copy.readPhaseLines)
-                        __filter_rwi_lines(parent_copy, parent_copy.writePhaseLines)
+                        # __filter_rwi_lines(parent_copy, parent_copy.instructionLines)
+                        # __filter_rwi_lines(parent_copy, parent_copy.readPhaseLines)
+                        # __filter_rwi_lines(parent_copy, parent_copy.writePhaseLines)
 
                         # insert separator line to parent_copys instruction,
                         # read and writePhaseLines if not already present
-                        __insert_separator_line(parent_copy, parent_copy.instructionLines)
-                        __insert_separator_line(parent_copy, parent_copy.readPhaseLines)
-                        __insert_separator_line(parent_copy, parent_copy.writePhaseLines)
+                        # __insert_separator_line(parent_copy, parent_copy.instructionLines)
+                        # __insert_separator_line(parent_copy, parent_copy.readPhaseLines)
+                        # __insert_separator_line(parent_copy, parent_copy.writePhaseLines)
 
                         # insert all lines contained in parent to instruction, read and writePhaseLines
-                        __insert_missing_rwi_lines(parent, parent.instructionLines)
-                        __insert_missing_rwi_lines(parent, parent.readPhaseLines)
-                        __insert_missing_rwi_lines(parent, parent.writePhaseLines)
+                        # __insert_missing_rwi_lines(parent, parent.instructionLines)
+                        # __insert_missing_rwi_lines(parent, parent.readPhaseLines)
+                        # __insert_missing_rwi_lines(parent, parent.writePhaseLines)
 
                         # remove returnInstructions if they are not part of the cus anymore
                         __remove_unnecessary_return_instructions(parent_copy)

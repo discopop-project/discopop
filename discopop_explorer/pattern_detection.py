@@ -68,10 +68,19 @@ class PatternDetectorX(object):
         res = DetectionResult()
 
         # reduction before doall!
+        # t1 = time.time()
         res.reduction = detect_reduction(self.pet)
+        # t2 = time.time()
+        # print(f"reduction detection: {t2-t1}")
         res.do_all = detect_do_all(self.pet)
+        # t3 = time.time()
+        # print(f"do_all detection: {t3-t2}")
         res.pipeline = detect_pipeline(self.pet)
+        # t4 = time.time()
+        # print(f"pipeline detection: {t4-t3}")
         res.geometric_decomposition = detect_gd(self.pet)
+        # t5 = time.time()
+        # print(f"geometric_decomposition detection: {t5-t4}")
 
         # check if task pattern should be enabled
         if enable_task_pattern:

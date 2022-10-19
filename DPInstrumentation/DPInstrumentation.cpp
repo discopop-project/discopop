@@ -9,7 +9,7 @@
  *
  */
 
-#define DEBUG_TYPE "dpop"
+//#define DP_DEBUG_TYPE "dpop"
 //#define SKIP_DUP_INSTR 1
 
 #include "llvm/Transforms/Instrumentation.h"
@@ -34,12 +34,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 
@@ -64,14 +63,14 @@ namespace
     class DiscoPoP : public FunctionPass
     {
     public:
-        DiscoPoP() : FunctionPass(ID), uniqueNum(1) {};
+        DiscoPoP() : FunctionPass(ID) {};
         ~DiscoPoP();
 
-        StringRef getPassName() const;
-        bool runOnFunction(Function &F);
+        StringRef getPassName() const override;
+        bool runOnFunction(Function &F) override;
         void runOnBasicBlock(BasicBlock &BB);
-        bool doInitialization(Module &M);
-        void getAnalysisUsage(AnalysisUsage &Info) const;
+        bool doInitialization(Module &M) override;
+        void getAnalysisUsage(AnalysisUsage &Info) const override;
 
         static char ID; // Pass identification, replacement for typeid
 
@@ -90,6 +89,8 @@ namespace
         Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         Type *pointsToStruct(PointerType *PTy);
         Value *determineVarName(Instruction *const I);
+        //26.08.2022 Lukas
+        void getTrueVarNamesFromMetadata(Function &F);
 
         // Control flow analysis
         void CFA(Function &F, LoopInfo &LI);
@@ -104,14 +105,12 @@ namespace
         void instrumentLoopEntry(BasicBlock *bb, int32_t id);
         void instrumentLoopExit(BasicBlock *bb, int32_t id);
 
-        int64_t uniqueNum;
-
         // Callbacks to run-time library
-        Function *DpInit, *DpFinalize;
-        Function *DpRead, *DpWrite;
-        Function *DpCallOrInvoke;
-        Function *DpFuncEntry, *DpFuncExit;
-        Function *DpLoopEntry, *DpLoopExit;
+        FunctionCallee DpInit, DpFinalize;
+        FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpCallOrInvoke;
+        FunctionCallee DpFuncEntry, DpFuncExit;
+        FunctionCallee DpLoopEntry, DpLoopExit;
 
         // Basic types
         Type *Void;
@@ -132,6 +131,9 @@ namespace
         map<string, Value *> VarNames;
         set<DIGlobalVariable *> GlobalVars;
         map<string, MDNode *> Structs;
+
+        // Lukas 26.08.2022
+        map<string, string> trueVarNamesFromMetadataMap;
     };
 }  // namespace
 
@@ -179,51 +181,51 @@ void DiscoPoP::setupCallbacks()
      * arg types
      * NULL
      */
-    DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
+    DpInit = ThisModule->getOrInsertFunction("__dp_init",
                             Void,
-                            Int32, Int32, Int32));
+                            Int32, Int32, Int32);
 
-    DpFinalize = cast<Function>(ThisModule->getOrInsertFunction("__dp_finalize",
-                                Void,
-                                Int32));
+    DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize",
+                            Void,
+                            Int32);
 
-    DpRead = cast<Function>(ThisModule->getOrInsertFunction("__dp_read",
+    DpRead = ThisModule->getOrInsertFunction("__dp_read",
                             Void,
 #ifdef SKIP_DUP_INSTR
                             Int32, Int64, CharPtr, Int64, Int64
 #else
                             Int32, Int64, CharPtr
 #endif
-                            ));
+                            );
 
-    DpWrite = cast<Function>(ThisModule->getOrInsertFunction("__dp_write",
-                             Void,
+    DpWrite = ThisModule->getOrInsertFunction("__dp_write",
+                            Void,
 #ifdef SKIP_DUP_INSTR
-                             Int32, Int64, CharPtr, Int64, Int64
+                            Int32, Int64, CharPtr, Int64, Int64
 #else
-                             Int32, Int64, CharPtr
+                            Int32, Int64, CharPtr
 #endif
-                             ));
+                            );
 
-    DpCallOrInvoke = cast<Function>(ThisModule->getOrInsertFunction("__dp_call",
-                                    Void,
-                                    Int32));
+    DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
+                            Void,
+                            Int32);
 
-    DpFuncEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_entry",
-                                 Void,
-                                 Int32, Int32));
+    DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry",
+                            Void,
+                            Int32, Int32);
 
-    DpFuncExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_exit",
-                                Void,
-                                Int32, Int32));
+    DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit",
+                            Void,
+                            Int32, Int32);
 
-    DpLoopEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_entry",
-                                 Void,
-                                 Int32, Int32));
+    DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry",
+                            Void,
+                            Int32, Int32);
 
-    DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
-                                Void,
-                                Int32, Int32));
+    DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit",
+                            Void,
+                            Int32, Int32);
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -298,8 +300,57 @@ bool DiscoPoP::sanityCheck(BasicBlock *BB)
             return true;
         }
     }
-    errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
+}
+
+void DiscoPoP::getTrueVarNamesFromMetadata(Function &F)
+{
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI)
+    {
+        BasicBlock &BB = *FI;
+
+        for(BasicBlock::iterator instruction = BB.begin(); instruction != BB.end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                CallInst* call = cast<CallInst>(instruction);
+                // check if @llvm.dbg.declare is called
+                // std::string dbg_declare = "llvm.dbg.declare";
+                // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                // if(cmp_res == 0){
+                    // call to @llvm.dbg.declare found
+
+                    // extract original and working variable name
+                    string SRCVarName;
+                    string IRVarName;
+
+                    Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                    if (isa<ValueAsMetadata>(Meta)){
+                      Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                      IRVarName = V->getName().str();
+                    }
+                    DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                    SRCVarName = V->getName().str();
+
+                    // add to trueVarNamesFromMetadataMap
+                    // overwrite entry if already existing
+                    if (trueVarNamesFromMetadataMap.find(IRVarName) == trueVarNamesFromMetadataMap.end()) {
+                      // not found
+                      trueVarNamesFromMetadataMap.insert(std::pair<string, string>(IRVarName, SRCVarName));
+                    } else {
+                      // found
+                      trueVarNamesFromMetadataMap[IRVarName] = SRCVarName;
+                    }
+                }
+            }
+            }
+        }
+    }
 }
 
 // Control-flow analysis functions
@@ -339,7 +390,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI)
 
             if (ExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
                 continue;
             }
 
@@ -395,7 +446,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI)
             //assert((RealExitBlocks.size() == 1) && "Loop has more than one real exit block!");
             if (RealExitBlocks.size() == 0)
             {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
+                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
                 continue;
             }
 
@@ -475,6 +526,8 @@ bool DiscoPoP::runOnFunction(Function &F)
         CFA(F, LI);
     }
 
+    getTrueVarNamesFromMetadata(F);
+
     // Instrument the entry of the function.
     // Each function entry is instrumented, and the first
     // executed function will initialize shadow memory.
@@ -529,6 +582,15 @@ DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v)
 
 Value *DiscoPoP::getOrInsertVarName(string varName, IRBuilder<> &builder)
 {
+    // 26.08.2022 Lukas
+    // update varName with original varName from Metadata
+    if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
+        // not found, do nothing
+    } else {
+        // found, update varName
+        varName = trueVarNamesFromMetadataMap[varName];
+    }
+
     Value *vName = NULL;
     map<string, Value *>:: iterator pair = VarNames.find(varName);
     if (pair == VarNames.end())
@@ -554,7 +616,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
+            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
     return NULL;
 }
@@ -567,7 +629,7 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy)
     {
         while(structType->getTypeID() == Type::PointerTyID)
         {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointerElementType();
         }
     }
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
@@ -628,7 +690,7 @@ Value *DiscoPoP::determineVarName(Instruction *const I)
             }
 
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
                 return determineVarName((Instruction *)ptrOperand);
             }
@@ -654,7 +716,7 @@ void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNo
     // sometimes it's impossible to get the list of struct members (e.g badref)
     if (structNode->getNumOperands() <= 10 || structNode->getOperand(10) == NULL)
     {
-        errs() << "cannot process member list of this struct: \n";
+        // errs() << "cannot process member list of this struct: \n";
         structNode->dump();
         return;
     }
@@ -752,7 +814,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
                 {
                     while(structType->getTypeID() == Type::PointerTyID)
                     {
-                        structType = cast<PointerType>(structType)->getElementType();
+                        structType = cast<PointerType>(structType)->getPointerElementType();
                         ++depth;
                     }
                 }
@@ -828,7 +890,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB)
         // call and invoke
         else if (isaCallOrInvoke(&*BI))
         {
-            Function *F;
+            Function *F = nullptr;
             if (isa<CallInst>(BI))
                 F = (cast<CallInst>(BI))->getCalledFunction();
             else if (isa<InvokeInst>(BI))
@@ -1113,6 +1175,8 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id)
         if (isa<CallInst>(BI))
         {
             Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
+            if(!tmpF)
+                continue;
             StringRef tmpFn = tmpF->getName();
             if (tmpFn.find("__dp_loop_exit") != string::npos)
                 continue;

@@ -197,43 +197,44 @@ def check_neighbours(first: Task, second: Task):
     return fel == ssl or fel + 1 == ssl or fel + 2 == ssl
 
 
-def merge_tasks(pet: PETGraphX, task: Task):
-    """Merges the tasks into having required workload.
-
-    :param pet: PET graph
-    :param task: task node
-    """
-    for i in range(len(task.child_tasks)):
-        child_task: Task = task.child_tasks[i]
-        if child_task.workload < __workloadThreshold:
-            if i > 0:
-                pred: Task = task.child_tasks[i - 1]
-                if check_neighbours(pred, child_task):
-                    pred.aggregate(child_task)
-                    pred.child_tasks.remove(child_task)
-                    merge_tasks(pet, task)
-                    return
-            if i + 1 < len(task.child_tasks) - 1:
-                succ: Task = task.child_tasks[i + 1]
-                if check_neighbours(child_task, succ):
-                    child_task.aggregate(succ)
-                    task.child_tasks.remove(succ)
-                    merge_tasks(pet, task)
-                    return
-            task.child_tasks.remove(child_task)
-            merge_tasks(pet, task)
-            return
-
-    if task.child_tasks and len(task.child_tasks) < __minParallelism:
-        max_workload_task = max(task.child_tasks, key=lambda t: t.workload)
-        task.child_tasks.extend(max_workload_task.child_tasks)
-        task.child_tasks.remove(max_workload_task)
-        merge_tasks(pet, task)
-        return
-
-    for child in task.child_tasks:
-        if child.nodes[0].type == NodeType.LOOP:
-            pass
+# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+#def merge_tasks(pet: PETGraphX, task: Task):
+#    """Merges the tasks into having required workload.
+#
+#    :param pet: PET graph
+#    :param task: task node
+#    """
+#    for i in range(len(task.child_tasks)):
+#        child_task: Task = task.child_tasks[i]
+#        if child_task.workload < __workloadThreshold:
+#            if i > 0:
+#                pred: Task = task.child_tasks[i - 1]
+#                if check_neighbours(pred, child_task):
+#                    pred.aggregate(child_task)
+#                    pred.child_tasks.remove(child_task)
+#                    merge_tasks(pet, task)
+#                    return
+#            if i + 1 < len(task.child_tasks) - 1:
+#                succ: Task = task.child_tasks[i + 1]
+#                if check_neighbours(child_task, succ):
+#                    child_task.aggregate(succ)
+#                    task.child_tasks.remove(succ)
+#                    merge_tasks(pet, task)
+#                    return
+#            task.child_tasks.remove(child_task)
+#            merge_tasks(pet, task)
+#            return
+#
+#    if task.child_tasks and len(task.child_tasks) < __minParallelism:
+#        max_workload_task = max(task.child_tasks, key=lambda t: t.workload)
+#        task.child_tasks.extend(max_workload_task.child_tasks)
+#        task.child_tasks.remove(max_workload_task)
+#        merge_tasks(pet, task)
+#        return
+#
+#    for child in task.child_tasks:
+#        if child.nodes[0].type == NodeType.LOOP:
+#            pass
 
 
 def create_task_tree(pet: PETGraphX, root: CUNode):

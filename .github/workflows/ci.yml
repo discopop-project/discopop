@@ -31,7 +31,7 @@ jobs:
       - name: "Run tests"
         run: python -m unittest -v
       - name: "Run MyPy Type Checker"
-        run: python -m mypy --warn-unused-ignores -p discopop_explorer -p discopop_profiler
+        run: python -m mypy -p discopop_explorer -p discopop_profiler
       - name: "Check formatting of discopop_profiler"
         run: python -m black -l 100 --check discopop_profiler
 
@@ -43,8 +43,11 @@ jobs:
         uses: actions/checkout@v2
       - name: "Install Dependencies"
         run: |
-          sudo apt-get remove clang-10 clang-9 clang-11
-          sudo apt-get install libclang-8-dev clang-8 llvm-8
+          sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+          sudo apt-get update
+          sudo apt-get install libclang-11-dev clang-11 llvm-11
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
@@ -56,4 +59,116 @@ jobs:
         with:
           python-version: 3.6
       - name: "Run DiscoPoP Profiler on test/ Targets"
-        run: .github/workflows/discopop_profiler/test.sh
+        run: |
+          chmod +x .github/workflows/discopop_profiler/test.sh
+          .github/workflows/discopop_profiler/test.sh
+
+#  differential_test_llvm_8_vs_11:
+#    name: "Differential test: LLVM 8 vs. 11"
+#    runs-on: ubuntu-20.04
+#    steps:
+#      - name: "Checkout Repository"
+#        uses: actions/checkout@v2
+#      - name: "Install cmake"
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y cmake
+#      - name: "Install LLVM 11"
+#        run: |
+#          sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
+#          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+#          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+#          sudo apt-get update
+#          sudo apt-get install -y libclang-11-dev clang-11 llvm-11
+#          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+#          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+#          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+#          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+#      - name: "Build DiscoPoP Profiler"
+#        run: |
+#          mkdir build
+#          cd build
+#          cmake -DCMAKE_BUILD_TYPE=Debug ..
+#          make -j3
+#      - name: "Create Filemapping"
+#        run: |
+#          cp scripts/dp-fmap test/differential_mergesort
+#          cd test/differential_mergesort
+#          ./dp-fmap
+#      - name: "Execute DiscoPoP using LLVM 11"
+#        run: |
+#          cd test/differential_mergesort
+#          ./execute_dp.sh
+#      - name: "Store Results: LLVM 11"
+#        run: |
+#          mkdir ../dp_output_llvm_11
+#          mv test/differential_mergesort/out_dep.txt ../dp_output_llvm_11
+#          mv test/differential_mergesort/Data.xml ../dp_output_llvm_11
+#          mv test/differential_mergesort/loop_counter_output.txt ../dp_output_llvm_11
+#          mv test/differential_mergesort/reduction.txt ../dp_output_llvm_11
+#      - name: "Cleanup"
+#        run: |
+#          cd test/differential_mergesort
+#          rm *.txt
+#          rm out
+#      - name: "Install LLVM 8"
+#        run: |
+#          sudo apt-get remove -y clang-10 clang-9 clang-12 clang-11
+#          sudo apt-get install -y libclang-8-dev clang-8 llvm-8
+#          sudo rm /usr/bin/clang
+#          sudo rm /usr/bin/clang++
+#          sudo rm /usr/bin/llvm-link
+#          sudo rm /usr/bin/opt
+#          sudo ln -s /usr/bin/clang-8 /usr/bin/clang
+#          sudo ln -s /usr/bin/clang++-8 /usr/bin/clang++
+#          sudo ln -s /usr/bin/llvm-link-8 /usr/bin/llvm-link
+#          sudo ln -s /usr/bin/opt-8 /usr/bin/opt
+#      - name: "Remove DiscoPoP build folder created using LLVM 11"
+#        run: rm -r build
+#      - name: "Checkout Repository"
+#        uses: actions/checkout@v2
+#      - name: "Checkout commit using LLVM 8"
+#        run: |
+#          git fetch
+#          git checkout c005800d4a44df2c39446786fb8ecb1841308e5a
+#      - name: "Build DiscoPoP Profiler"
+#        run: |
+#          mkdir build
+#          cd build
+#          cmake -DCMAKE_BUILD_TYPE=Debug ..
+#          make -j3
+#      - name: "Create Filemapping"
+#        run: |
+#          cp scripts/dp-fmap test/differential_mergesort
+#          cd test/differential_mergesort
+#          ./dp-fmap
+#      - name: "Execute DiscoPoP using LLVM 8"
+#        run: |
+#          cd test/differential_mergesort
+#          ./execute_dp.sh
+#      - name: "Store Results: LLVM 8"
+#        run: |
+#          mkdir ../dp_output_llvm_8
+#          mv test/differential_mergesort/out_dep.txt ../dp_output_llvm_8
+#          mv test/differential_mergesort/Data.xml ../dp_output_llvm_8
+#          mv test/differential_mergesort/loop_counter_output.txt ../dp_output_llvm_8
+#          mv test/differential_mergesort/reduction.txt ../dp_output_llvm_8
+#      - name: "Sort results for sake of comparability"
+#        run: |
+#          sort ../dp_output_llvm_11/loop_counter_output.txt >> ../dp_output_llvm_11/loop_counter_output.sorted
+#          sort ../dp_output_llvm_11/Data.xml >> ../dp_output_llvm_11/Data.sorted
+#          sort ../dp_output_llvm_11/reduction.txt >> ../dp_output_llvm_11/reduction.sorted
+#          sort ../dp_output_llvm_11/out_dep.txt >> ../dp_output_llvm_11/out_dep.sorted
+#          sort ../dp_output_llvm_8/loop_counter_output.txt >> ../dp_output_llvm_8/loop_counter_output.sorted
+#          sort ../dp_output_llvm_8/Data.xml >> ../dp_output_llvm_8/Data.sorted
+#          sort ../dp_output_llvm_8/reduction.txt >> ../dp_output_llvm_8/reduction.sorted
+#          sort ../dp_output_llvm_8/out_dep.txt >> ../dp_output_llvm_8/out_dep.sorted
+#
+#      - name: "Compare results"
+#        run: |
+#          # || used for error handling
+#          cmp ../dp_output_llvm_11/loop_counter_output.sorted ../dp_output_llvm_8/loop_counter_output.sorted || diff ../dp_output_llvm_11/loop_counter_output.sorted ../dp_output_llvm_8/loop_counter_output.sorted
+#          cmp ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted || diff ../dp_output_llvm_11/Data.sorted ../dp_output_llvm_8/Data.sorted
+#          cmp ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted || diff ../dp_output_llvm_11/reduction.sorted ../dp_output_llvm_8/reduction.sorted
+#          cmp ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted || diff ../dp_output_llvm_11/out_dep.sorted ../dp_output_llvm_8/out_dep.sorted
+#
