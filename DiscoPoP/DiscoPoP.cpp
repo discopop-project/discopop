@@ -393,7 +393,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
     for (BasicBlock::iterator instruction = (*bb)->begin();
          instruction != (*bb)->end(); ++instruction) {
       if (isa<StoreInst>(instruction)) {
-        string varName = determineVariableName(&*instruction)->getName();
+        string varName = determineVariableName(&*instruction)->getName().str();
         size_t pos = varName.find("retval");
         if (pos != varName.npos) {
           lid = getLID(&*instruction, fileID);
@@ -410,7 +410,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
 string DiscoPoP::determineVariableDefLine(Instruction *I) {
   string varDefLine{"LineNotFound"};
 
-  string varName = determineVariableName(&*I)->getName();
+  string varName = determineVariableName(&*I)->getName().str();
   // varName = refineVarName(varName);
   varName = (varName.find(".addr") == varName.npos)
                 ? varName
@@ -448,10 +448,10 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
               if (AI) {
                 for (User *U : AI->users()) {
                   if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-                    vn = determineVariableName(&*SI)->getName();
+                    vn = determineVariableName(&*SI)->getName().str();
                     break;
                   } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-                    vn = determineVariableName(&*LI)->getName();
+                    vn = determineVariableName(&*LI)->getName().str();
                     break;
                   }
                 }
@@ -518,7 +518,7 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
         // string varName = refineVarName(determineVariableName(instruction,
         // isGlobalVariable));
         // NOTE: changed 'instruction' to '&*instruction'
-        string varName = determineVariableName(&*instruction, isGlobalVariable)->getName();
+        string varName = determineVariableName(&*instruction, isGlobalVariable)->getName().str();
 
         if (isGlobalVariable) // add it if it is a global variable in the
                               // program
@@ -621,7 +621,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     if (bb->getName().size() == 0)
       bb->setName(cu->ID);
 
-    cu->BBID = bb->getName();
+    cu->BBID = bb->getName().str();
     cu->BB = *bb; // Mohammad 23.12.2020
     currentNode->childrenNodes.push_back(cu);
     vector<CU *> basicBlockCUVector;
@@ -633,7 +633,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
          instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
       lid = getLID(&*instruction, fileID);
-      basicBlockName = bb->getName();
+      basicBlockName = bb->getName().str();
       if (lid > 0) {
         cu->instructionsLineNumbers.insert(lid);
         cu->instructionsCount++;
@@ -667,7 +667,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->writeDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction)->getName();
+          varName = determineVariableName(&*instruction)->getName().str();
           varType = determineVariableType(&*instruction);
           // if(globalVariablesSet.count(varName) ||
           // programGlobalVariablesSet.count(varName))
@@ -683,7 +683,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->readDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction)->getName();
+          varName = determineVariableName(&*instruction)->getName().str();
           if (suspiciousVariables.count(varName)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global
@@ -709,7 +709,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 cu; // keep current CU to make a reference to the successor CU
             cu = new CU;
 
-            cu->BBID = bb->getName();
+            cu->BBID = bb->getName().str();
             cu->BB = *bb; // Mohammad 23.12.2020
             // errs() << "bb->Name: "  << bb->getName() << " , " << "cu->ID: "
             // << cu->ID  << " , " << "node->ID: " << currentNode->ID << "\n";
@@ -789,7 +789,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           // getCalledFunction() method returns NULL.
           // Also, getName() returns NULL if this is an indirect function call.
           if (f) {
-            n->name = f->getName();
+            n->name = f->getName().str();
 
             // @Zia: This for loop appeared after the else part. For some
             // function calls, the value of f is null. I guess that is why you
@@ -856,7 +856,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
     TInst = bb->getTerminator();
     for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i) {
       // get the name of successor basicBlock
-      successorBB = TInst->getSuccessor(i)->getName();
+      successorBB = TInst->getSuccessor(i)->getName().str();
       // get the first CU of the successor basicBlock and record its ID in
       // current CU's successorCUs
       lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
@@ -1170,7 +1170,7 @@ bool DiscoPoP::runOnFunction(Function &F)
 {
       /********************* Initialize root values ***************************/
   Node *root = new Node;
-  root->name = F.getName();
+  root->name = F.getName().str();
   root->type = nodeTypes::func;
 
   // Get list of arguments for this function and store them in root.
@@ -1489,7 +1489,7 @@ bool DiscoPoP::runOnFunction(Function &F)
       if(!DP_Instrumentation) continue;
       if(CallInst* call_inst = dyn_cast<CallInst>(DP_Instrumentation)){
         if(Function* Fun = call_inst->getCalledFunction()){
-          string fn = Fun->getName();
+          string fn = Fun->getName().str();
           if(fn == "__dp_write" || fn == "__dp_read" || fn == "__dp_alloca"){
             DP_Instrumentation->eraseFromParent();
             ++removedInstrumentations;
@@ -1562,7 +1562,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
+            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
     return NULL;
 }

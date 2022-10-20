@@ -27,8 +27,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
