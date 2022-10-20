@@ -46,7 +46,7 @@
 // #include "llvm/IR/LegacyPassManager.h"
 
 // #include "DPUtils.h"
-#include "discopop.h"
+#include "DiscoPoP.h"
 // #include "DPInstrumentationOmission.h"
 
 // #include <set>
