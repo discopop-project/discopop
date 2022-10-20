@@ -190,51 +190,51 @@ void DiscoPoP::setupCallbacks()
      * arg types
      * NULL
      */
-    DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
+    DpInit = ThisModule->getOrInsertFunction("__dp_init",
                             Void,
-                            Int32, Int32, Int32));
+                            Int32, Int32, Int32);
 
-    DpFinalize = cast<Function>(ThisModule->getOrInsertFunction("__dp_finalize",
+    DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize",
                                 Void,
-                                Int32));
+                                Int32);
 
-    DpRead = cast<Function>(ThisModule->getOrInsertFunction("__dp_read",
+    DpRead = ThisModule->getOrInsertFunction("__dp_read",
                             Void,
 #ifdef SKIP_DUP_INSTR
                             Int32, Int64, CharPtr, Int64, Int64
 #else
                             Int32, Int64, CharPtr
 #endif
-                            ));
+                            );
 
-    DpWrite = cast<Function>(ThisModule->getOrInsertFunction("__dp_write",
+    DpWrite = ThisModule->getOrInsertFunction("__dp_write",
                              Void,
 #ifdef SKIP_DUP_INSTR
                              Int32, Int64, CharPtr, Int64, Int64
 #else
                              Int32, Int64, CharPtr
 #endif
-                             ));
+                             );
 
-    DpCallOrInvoke = cast<Function>(ThisModule->getOrInsertFunction("__dp_call",
+    DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                     Void,
-                                    Int32));
+                                    Int32);
 
-    DpFuncEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_entry",
+    DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32);
 
-    DpFuncExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_exit",
+    DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32);
 
-    DpLoopEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_entry",
+    DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32);
 
-    DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
+    DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32);
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -306,19 +306,16 @@ CUIDCounter = 0;
 {
   int bbDepCount = 0;
 
-  ReportBB = cast<Function>(M.getOrInsertFunction(
+  ReportBB = M.getOrInsertFunction(
       "__dp_report_bb", 
       Void,
       Int32
-    )
   );
-  ReportBBPair = cast<Function>(
-    M.getOrInsertFunction(
+  ReportBBPair = M.getOrInsertFunction(
       "__dp_report_bb_pair", 
       Void,
       Int32, 
       Int32
-    )
   );
   VNF = new dputil::VariableNameFinder(M);
 }
@@ -349,7 +346,7 @@ bool DiscoPoP::doFinalization(Module &M) {
               IRBuilder<> builder(call_inst);
               Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
               CallInst::Create(
-                cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr)),
+                F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr),
                 V, "", call_inst
               );
             }
@@ -716,7 +713,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
             currentNode->childrenNodes.push_back(cu);
             temp->successorCUs.push_back(cu->ID);
-            BBIDToCUIDsMap[bb->getName()].push_back(cu);
+            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
             if (lid > 0) {
               cu->readPhaseLineNumbers.insert(lid);
               cu->instructionsLineNumbers.insert(lid);
@@ -806,10 +803,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             }
           } else // get name of the indirect function which is called
           {
-            Value *v = (cast<CallInst>(instruction))->getCalledValue();
+            Value *v = (cast<CallInst>(instruction))->getCalledOperand();
             Value *sv = v->stripPointerCasts();
-            StringRef fname = sv->getName();
-            n->name = fname;
+            n->name = sv->getName().str();
           }
 
           // Recursive functions (Mo 5.11.2019)
@@ -820,7 +816,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 n->name + " " + dputil::decodeLID(lid) + ",";
           }
 
-          vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
+          vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
           // locate the CU where this function call belongs
           for (auto i : BBCUsVector) {
             int lid = getLID(&*instruction, fileID);
@@ -850,7 +846,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
   for (Region::block_iterator bb = TopRegion->block_begin();
        bb != TopRegion->block_end(); ++bb) {
-    CU *lastCU = BBIDToCUIDsMap[bb->getName()]
+    CU *lastCU = BBIDToCUIDsMap[bb->getName().str()]
                      .back(); // get the last CU in the basic block
     // get all successor basic blocks for bb
     TInst = bb->getTerminator();
@@ -862,7 +858,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
       lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
     }
 
-    auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
+    auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
     for (BasicBlock::iterator instruction = (*bb)->begin();
          instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
@@ -872,7 +868,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
           continue;
         // varName = refineVarName(determineVariableName(instruction));
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-        varName = determineVariableName(&*instruction)->getName();
+        varName = determineVariableName(&*instruction)->getName().str();
         varType = determineVariableType(&*instruction);
         varDefLine = determineVariableDefLine(&*instruction);
 
@@ -1193,7 +1189,7 @@ bool DiscoPoP::runOnFunction(Function &F)
     raw_string_ostream rso(type_str);
     (it->getType())->print(rso);
 
-    Variable v(it->getName(), rso.str(), to_string(fileID) + ":" + lid);
+    Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
     root->argumentsList.push_back(v);
   }
   /********************* End of initialize root values
@@ -1410,7 +1406,7 @@ bool DiscoPoP::runOnFunction(Function &F)
         if(isa<ReturnInst>(pair2.first->getTerminator()))
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       
-        auto LI = new LoadInst(AI, Twine(""), false, insertionPoint);
+        auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint);
         ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, bbDepCount)});
         CallInst::Create(
           ReportBBPair,

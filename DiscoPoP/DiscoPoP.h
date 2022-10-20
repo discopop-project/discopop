@@ -232,11 +232,11 @@ private:
         int64_t uniqueNum;
 
         // Callbacks to run-time library
-        Function *DpInit, *DpFinalize;
-        Function *DpRead, *DpWrite;
-        Function *DpCallOrInvoke;
-        Function *DpFuncEntry, *DpFuncExit;
-        Function *DpLoopEntry, *DpLoopExit;
+        FunctionCallee DpInit, DpFinalize;
+        FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpCallOrInvoke;
+        FunctionCallee DpFuncEntry, DpFuncExit;
+        FunctionCallee DpLoopEntry, DpLoopExit;
 
         // Basic types
         Type *Void;
@@ -264,7 +264,7 @@ private:
         string bbDepString;
         string fileName;
         int32_t fid;
-        Function *ReportBB, *ReportBBPair;
+        FunctionCallee ReportBB, ReportBBPair;
         dputil::VariableNameFinder *VNF;
 // DPInstrumentationOmission end
 
