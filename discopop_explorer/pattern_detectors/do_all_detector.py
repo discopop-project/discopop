@@ -56,6 +56,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
             node.do_all = True
             if not node.reduction and node.loop_iterations >= 0:
                 result.append(DoAllInfo(pet, node))
+            print(f"{node.start_line}")
         # t2 = time.time()
         # print(f"ended Loop {node.start_line}: {t2 - t1} ")
 

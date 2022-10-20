@@ -15,7 +15,18 @@ from .PETGraphX import PETGraphX, NodeType
 from ._version import __version__
 from .parser import parse_inputs
 from .pattern_detection import DetectionResult, PatternDetectorX
+from .GPULoop import GPULoopPattern
+from .GPURegions import GPURegions
 import time
+
+
+def sort_by_nodeID(e: GPULoopPattern):
+    """ used to sort a list of gpu patterns by their node ids
+
+    :return:
+    :param e:
+    """
+    return e.nodeID
 
 
 def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, plugins: List[str],
@@ -47,9 +58,35 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
                                                             file_mapping, cu_inst_result_file, llvm_cxxfilt_path,
                                                             discopop_build_path, enable_task_pattern)
 
+    gpu_patterns: List[GPULoopPattern] = []
+
+    for node in pet.all_nodes(NodeType.LOOP):
+        if any(node.id == d.node_id for d in res.do_all) or any(node.id == r.node_id for r in res.reduction):
+            gpulp = GPULoopPattern(pet, node.id, node.start_line, node.end_line,
+                                   node.loop_iterations)
+            gpulp.getNestedLoops(node.id)
+            gpulp.setParentLoop(node.id)
+            gpulp.classifyLoopVars(pet, node)
+            gpu_patterns.append(gpulp)
+
+    # print("\nnumber of detected patterns: " + str(len(gpu_patterns)))
+    # print("-------------------------------------------------------------------------------")
+
+    regions = GPURegions()
+    regions.pet = pet
+    regions.setGPULoops(gpu_patterns)
+    for i in gpu_patterns:
+        i.setCollapseClause(i.node_id)
+        # print("id: " + i.node_id + " start: " +
+        #       i.start_line + " COLLAPSE: " + str(i.collapse))
+
+    regions.identifyGPURegions()
+    regions.mapData()
+    # print("-------------------------------------------------------------------------------")
+
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin after: " + plugin_name)
+        # print("executing plugin after: " + plugin_name)
         pet = p.run_after(pet)
 
     return res

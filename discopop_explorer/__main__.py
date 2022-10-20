@@ -122,11 +122,11 @@ def main():
 
     end = time.time()
 
-    if arguments['--json'] == 'None':
-        print(str(res))
-    else:
-        with open(arguments['--json'], 'w') as f:
-            json.dump(res, f, indent=2, cls=PatternInfoSerializer)
+    # if arguments['--json'] == 'None':
+    #     print(str(res))
+    # else:
+    #     with open(arguments['--json'], 'w') as f:
+    #         json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     print("Time taken for pattern detection: {0}".format(end - start))
 
