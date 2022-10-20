@@ -27,8 +27,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
@@ -39,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 #include "InstructionDG.h"
@@ -234,11 +233,11 @@ private:
         int64_t uniqueNum;
 
         // Callbacks to run-time library
-        Function *DpInit, *DpFinalize;
-        Function *DpRead, *DpWrite;
-        Function *DpCallOrInvoke;
-        Function *DpFuncEntry, *DpFuncExit;
-        Function *DpLoopEntry, *DpLoopExit;
+        FunctionCallee DpInit, DpFinalize;
+        FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpCallOrInvoke;
+        FunctionCallee DpFuncEntry, DpFuncExit;
+        FunctionCallee DpLoopEntry, DpLoopExit;
 
         // Basic types
         Type *Void;
@@ -266,7 +265,7 @@ private:
         string bbDepString;
         string fileName;
         int32_t fid;
-        Function *ReportBB, *ReportBBPair;
+        FunctionCallee ReportBB, ReportBBPair;
         dputil::VariableNameFinder *VNF;
 // DPInstrumentationOmission end
 

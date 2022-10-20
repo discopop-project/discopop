@@ -190,51 +190,51 @@ void DiscoPoP::setupCallbacks()
      * arg types
      * NULL
      */
-    DpInit = cast<Function>(ThisModule->getOrInsertFunction("__dp_init",
+    DpInit = ThisModule->getOrInsertFunction("__dp_init",
                             Void,
-                            Int32, Int32, Int32));
+                            Int32, Int32, Int32);
 
-    DpFinalize = cast<Function>(ThisModule->getOrInsertFunction("__dp_finalize",
+    DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize",
                                 Void,
-                                Int32));
+                                Int32);
 
-    DpRead = cast<Function>(ThisModule->getOrInsertFunction("__dp_read",
+    DpRead = ThisModule->getOrInsertFunction("__dp_read",
                             Void,
 #ifdef SKIP_DUP_INSTR
                             Int32, Int64, CharPtr, Int64, Int64
 #else
                             Int32, Int64, CharPtr
 #endif
-                            ));
+                            );
 
-    DpWrite = cast<Function>(ThisModule->getOrInsertFunction("__dp_write",
+    DpWrite = ThisModule->getOrInsertFunction("__dp_write",
                              Void,
 #ifdef SKIP_DUP_INSTR
                              Int32, Int64, CharPtr, Int64, Int64
 #else
                              Int32, Int64, CharPtr
 #endif
-                             ));
+                             );
 
-    DpCallOrInvoke = cast<Function>(ThisModule->getOrInsertFunction("__dp_call",
+    DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                     Void,
-                                    Int32));
+                                    Int32);
 
-    DpFuncEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_entry",
+    DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32);
 
-    DpFuncExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_func_exit",
+    DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32);
 
-    DpLoopEntry = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_entry",
+    DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry",
                                  Void,
-                                 Int32, Int32));
+                                 Int32, Int32);
 
-    DpLoopExit = cast<Function>(ThisModule->getOrInsertFunction("__dp_loop_exit",
+    DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit",
                                 Void,
-                                Int32, Int32));
+                                Int32, Int32);
 }
 
 bool DiscoPoP::doInitialization(Module &M)
@@ -306,19 +306,16 @@ CUIDCounter = 0;
 {
   int bbDepCount = 0;
 
-  ReportBB = cast<Function>(M.getOrInsertFunction(
+  ReportBB = M.getOrInsertFunction(
       "__dp_report_bb", 
       Void,
       Int32
-    )
   );
-  ReportBBPair = cast<Function>(
-    M.getOrInsertFunction(
+  ReportBBPair = M.getOrInsertFunction(
       "__dp_report_bb_pair", 
       Void,
       Int32, 
       Int32
-    )
   );
   VNF = new dputil::VariableNameFinder(M);
 }
@@ -349,7 +346,7 @@ bool DiscoPoP::doFinalization(Module &M) {
               IRBuilder<> builder(call_inst);
               Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
               CallInst::Create(
-                cast<Function>(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr)),
+                F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr),
                 V, "", call_inst
               );
             }
@@ -393,7 +390,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
     for (BasicBlock::iterator instruction = (*bb)->begin();
          instruction != (*bb)->end(); ++instruction) {
       if (isa<StoreInst>(instruction)) {
-        string varName = determineVariableName(&*instruction)->getName();
+        string varName = determineVariableName(&*instruction)->getName().str();
         size_t pos = varName.find("retval");
         if (pos != varName.npos) {
           lid = getLID(&*instruction, fileID);
@@ -410,7 +407,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
 string DiscoPoP::determineVariableDefLine(Instruction *I) {
   string varDefLine{"LineNotFound"};
 
-  string varName = determineVariableName(&*I)->getName();
+  string varName = determineVariableName(&*I)->getName().str();
   // varName = refineVarName(varName);
   varName = (varName.find(".addr") == varName.npos)
                 ? varName
@@ -448,10 +445,10 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
               if (AI) {
                 for (User *U : AI->users()) {
                   if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-                    vn = determineVariableName(&*SI)->getName();
+                    vn = determineVariableName(&*SI)->getName().str();
                     break;
                   } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-                    vn = determineVariableName(&*LI)->getName();
+                    vn = determineVariableName(&*LI)->getName().str();
                     break;
                   }
                 }
@@ -518,7 +515,7 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
         // string varName = refineVarName(determineVariableName(instruction,
         // isGlobalVariable));
         // NOTE: changed 'instruction' to '&*instruction'
-        string varName = determineVariableName(&*instruction, isGlobalVariable)->getName();
+        string varName = determineVariableName(&*instruction, isGlobalVariable)->getName().str();
 
         if (isGlobalVariable) // add it if it is a global variable in the
                               // program
@@ -621,7 +618,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     if (bb->getName().size() == 0)
       bb->setName(cu->ID);
 
-    cu->BBID = bb->getName();
+    cu->BBID = bb->getName().str();
     cu->BB = *bb; // Mohammad 23.12.2020
     currentNode->childrenNodes.push_back(cu);
     vector<CU *> basicBlockCUVector;
@@ -633,7 +630,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
          instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
       lid = getLID(&*instruction, fileID);
-      basicBlockName = bb->getName();
+      basicBlockName = bb->getName().str();
       if (lid > 0) {
         cu->instructionsLineNumbers.insert(lid);
         cu->instructionsCount++;
@@ -667,7 +664,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->writeDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction)->getName();
+          varName = determineVariableName(&*instruction)->getName().str();
           varType = determineVariableType(&*instruction);
           // if(globalVariablesSet.count(varName) ||
           // programGlobalVariablesSet.count(varName))
@@ -683,7 +680,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->readDataSize += u;
           // varName = refineVarName(determineVariableName(instruction));
-          varName = determineVariableName(&*instruction)->getName();
+          varName = determineVariableName(&*instruction)->getName().str();
           if (suspiciousVariables.count(varName)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global
@@ -709,14 +706,14 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 cu; // keep current CU to make a reference to the successor CU
             cu = new CU;
 
-            cu->BBID = bb->getName();
+            cu->BBID = bb->getName().str();
             cu->BB = *bb; // Mohammad 23.12.2020
             // errs() << "bb->Name: "  << bb->getName() << " , " << "cu->ID: "
             // << cu->ID  << " , " << "node->ID: " << currentNode->ID << "\n";
 
             currentNode->childrenNodes.push_back(cu);
             temp->successorCUs.push_back(cu->ID);
-            BBIDToCUIDsMap[bb->getName()].push_back(cu);
+            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
             if (lid > 0) {
               cu->readPhaseLineNumbers.insert(lid);
               cu->instructionsLineNumbers.insert(lid);
@@ -789,7 +786,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           // getCalledFunction() method returns NULL.
           // Also, getName() returns NULL if this is an indirect function call.
           if (f) {
-            n->name = f->getName();
+            n->name = f->getName().str();
 
             // @Zia: This for loop appeared after the else part. For some
             // function calls, the value of f is null. I guess that is why you
@@ -806,10 +803,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             }
           } else // get name of the indirect function which is called
           {
-            Value *v = (cast<CallInst>(instruction))->getCalledValue();
+            Value *v = (cast<CallInst>(instruction))->getCalledOperand();
             Value *sv = v->stripPointerCasts();
-            StringRef fname = sv->getName();
-            n->name = fname;
+            n->name = sv->getName().str();
           }
 
           // Recursive functions (Mo 5.11.2019)
@@ -820,7 +816,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
                 n->name + " " + dputil::decodeLID(lid) + ",";
           }
 
-          vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName()];
+          vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
           // locate the CU where this function call belongs
           for (auto i : BBCUsVector) {
             int lid = getLID(&*instruction, fileID);
@@ -850,19 +846,19 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
   for (Region::block_iterator bb = TopRegion->block_begin();
        bb != TopRegion->block_end(); ++bb) {
-    CU *lastCU = BBIDToCUIDsMap[bb->getName()]
+    CU *lastCU = BBIDToCUIDsMap[bb->getName().str()]
                      .back(); // get the last CU in the basic block
     // get all successor basic blocks for bb
     TInst = bb->getTerminator();
     for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i) {
       // get the name of successor basicBlock
-      successorBB = TInst->getSuccessor(i)->getName();
+      successorBB = TInst->getSuccessor(i)->getName().str();
       // get the first CU of the successor basicBlock and record its ID in
       // current CU's successorCUs
       lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
     }
 
-    auto bbCU = BBIDToCUIDsMap[bb->getName()].begin();
+    auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
     for (BasicBlock::iterator instruction = (*bb)->begin();
          instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
@@ -872,7 +868,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
           continue;
         // varName = refineVarName(determineVariableName(instruction));
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-        varName = determineVariableName(&*instruction)->getName();
+        varName = determineVariableName(&*instruction)->getName().str();
         varType = determineVariableType(&*instruction);
         varDefLine = determineVariableDefLine(&*instruction);
 
@@ -1170,7 +1166,7 @@ bool DiscoPoP::runOnFunction(Function &F)
 {
       /********************* Initialize root values ***************************/
   Node *root = new Node;
-  root->name = F.getName();
+  root->name = F.getName().str();
   root->type = nodeTypes::func;
 
   // Get list of arguments for this function and store them in root.
@@ -1193,7 +1189,7 @@ bool DiscoPoP::runOnFunction(Function &F)
     raw_string_ostream rso(type_str);
     (it->getType())->print(rso);
 
-    Variable v(it->getName(), rso.str(), to_string(fileID) + ":" + lid);
+    Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
     root->argumentsList.push_back(v);
   }
   /********************* End of initialize root values
@@ -1410,7 +1406,7 @@ bool DiscoPoP::runOnFunction(Function &F)
         if(isa<ReturnInst>(pair2.first->getTerminator()))
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       
-        auto LI = new LoadInst(AI, Twine(""), false, insertionPoint);
+        auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint);
         ArrayRef< Value * > arguments({LI, ConstantInt::get(Int32, bbDepCount)});
         CallInst::Create(
           ReportBBPair,
@@ -1489,7 +1485,7 @@ bool DiscoPoP::runOnFunction(Function &F)
       if(!DP_Instrumentation) continue;
       if(CallInst* call_inst = dyn_cast<CallInst>(DP_Instrumentation)){
         if(Function* Fun = call_inst->getCalledFunction()){
-          string fn = Fun->getName();
+          string fn = Fun->getName().str();
           if(fn == "__dp_write" || fn == "__dp_read" || fn == "__dp_alloca"){
             DP_Instrumentation->eraseFromParent();
             ++removedInstrumentations;
@@ -1562,7 +1558,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
         if (member->getOperand(3))
-            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString(), builder);
+            return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
     return NULL;
 }
