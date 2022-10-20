@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
 #include "InstructionDG.h"
