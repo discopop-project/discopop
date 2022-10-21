@@ -59,6 +59,7 @@
 
 #define DP_DEBUG false
 #define DP_hybrid_DEBUG false
+#define DP_hybrid_SKIP true  //todo re-enable and / or add parameter
 
 using namespace llvm;
 using namespace std;
@@ -1260,6 +1261,7 @@ bool DiscoPoP::runOnFunction(Function &F)
   // string bbDepString;
 {
     if(F.getInstructionCount() == 0) return false;
+    if(DP_hybrid_SKIP) return true;
     if(DP_hybrid_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
     DebugLoc dl;
