@@ -246,7 +246,6 @@ private:
 
         // Control flow analysis
         int32_t loopID;
-        int32_t fileID;
 
         // Output streams
         ofstream ocfg;
