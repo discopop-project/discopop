@@ -59,7 +59,7 @@
 
 #define DP_DEBUG false
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP true  //todo re-enable and / or add parameter
+#define DP_hybrid_SKIP true  //todo re-enable and / or add parameter. As of right now, the hybrid analysis removes all dependencies
 
 using namespace llvm;
 using namespace std;
