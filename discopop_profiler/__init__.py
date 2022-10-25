@@ -23,13 +23,11 @@ class DiscopopCpp:
         cugeneration: bool,
         dpinstrumentation: bool,
         dpreduction: bool,
-        discopop: bool,
         clang_path: str,
     ):
         self.cugeneration = cugeneration
         self.dpinstrumentation = dpinstrumentation
         self.dpreduction = dpreduction
-        self.discopop = discopop
         self.clang_path = clang_path
 
     def update_filemapping(self):
@@ -73,8 +71,6 @@ class DiscopopCpp:
                     #   -Xclang ${DISCOPOP_INSTALL}/libi/LLVMDPReduction.so \
                     #   -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
                     args += ["-Xclang", "-load", "-Xclang", get_library("LLVMDPReduction.so")]
-                if self.discopop:
-                    args += ["-Xclang", "-load", "-Xclang", get_library("LLVMDiscoPoP.so")]
                 args += ["-mllvm", "-fm-path", "-mllvm", "./FileMapping.txt"]
         args += clang_args
         if is_link(clang_args):

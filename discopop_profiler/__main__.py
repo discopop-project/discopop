@@ -17,7 +17,7 @@ from . import DiscopopCpp, __version__
 PROG = "discopop_profiler"
 
 USAGE = f"""{PROG} [--verbose] [--clang CLANG]
-       {'':{len(PROG)}} (--CUGeneration | --DPInstrumentation | --DPReduction | --DiscoPoP)
+       {'':{len(PROG)}} (--CUGeneration | --DPInstrumentation | --DPReduction)
        {'':{len(PROG)}} <clang++ arguments>
 """
 
@@ -58,12 +58,6 @@ def main(args=None):
         action="store_true",
         help="Instrument the target application to obtain the list of reduction operations.",
     )
-    action.add_argument(
-        "--DiscoPoP",
-        "--discopop",
-        action="store_true",
-        help="Instrument and analyze the target application using the DiscoPoP pipeline."
-    )
     parameters, clang_args = parser.parse_known_args(args)
 
     logging.basicConfig(
@@ -71,10 +65,10 @@ def main(args=None):
         level=logging.INFO if parameters.verbose else logging.WARNING,
     )
 
-    if not any([parameters.CUGeneration, parameters.DPInstrumentation, parameters.DPReduction, parameters.DiscoPoP]):
+    if not any([parameters.CUGeneration, parameters.DPInstrumentation, parameters.DPReduction]):
         logging.warning(
             "Warning: Not using any DiscoPoP LLVM pass (specify either --CUGeneration, "
-            "--DPInstrumentation, --DPReduction or --DiscoPoP).",
+            "--DPInstrumentation or --DPReduction).",
         )
     clang_path = parameters.clang or shutil.which("clang++-8") or shutil.which("clang++")
     if not clang_path:
@@ -86,7 +80,6 @@ def main(args=None):
         cugeneration=parameters.CUGeneration,
         dpinstrumentation=parameters.DPInstrumentation,
         dpreduction=parameters.DPReduction,
-        discopop=parameters.DiscoPoP,
         clang_path=clang_path,
     ).invoke(clang_args)
     if clang_proc.returncode != 0:
