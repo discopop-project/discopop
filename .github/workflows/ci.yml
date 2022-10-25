@@ -43,11 +43,16 @@ jobs:
         uses: actions/checkout@v2
       - name: "Install Dependencies"
         run: |
+          sudo apt-get update
           sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
           sudo apt-get update
-          sudo apt-get install libclang-11-dev clang-11 llvm-11
+          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
       - name: "Build DiscoPoP Profiler"
         run: |
           mkdir build
