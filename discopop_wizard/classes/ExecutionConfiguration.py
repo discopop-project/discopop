@@ -1,6 +1,9 @@
 import jsons
 from typing import List
 
+from pytermgui import Collapsible, Container, Splitter, Window, Button
+import pytermgui as ptg
+
 
 class ExecutionConfiguration(object):
     label: str
@@ -15,8 +18,39 @@ class ExecutionConfiguration(object):
     threads: str
     notes: str
 
-    def get_as_widget(self):
-        return self.label + " " + self.threads
+    def get_as_widget(self, manager: ptg.WindowManager):
+        widget = Collapsible(self.label + ": " + self.description)
+
+        details = Container(
+            "Label: " + self.label,
+            "Description: " + self.description,
+            "Executable name: " + self.executable_name,
+            "Executable arguments: " + self.executable_arguments,
+            "Available threads: " + self.threads,
+            "Project base path: " + self.project_base_path,
+            "Project source path: " + self.project_source,
+            "Project build path: " + self.project_build,
+            "Project configure options: " + self.project_configure_options,
+            "Project linker flags: " + self.linker_flags,
+            "Additional notes: " + self.notes
+        )
+        widget.lazy_add(details)
+        button = Button(label="Execute", onclick=lambda *_: manager.stop())
+        button.on_hover(None)
+        options = Container(
+            button,
+            "",
+            ["Edit"],
+            "",
+            ["Delete"],
+            "",
+            ["Copy"],
+            "",
+            ["Exit", lambda *_: manager.stop()]
+        )
+        widget.lazy_add(options)
+        return widget
+
 
     def init_from_dict(self, loaded: dict):
         for key in loaded:

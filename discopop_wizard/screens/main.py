@@ -36,6 +36,7 @@ def initialize_screen(config_dir: str):
         loader.load(CONFIG)
 
     with ptg.WindowManager() as manager:
+        manager.layout = ptg.Layout()
         show_main_screen(manager, config_dir)
 
 
@@ -44,10 +45,11 @@ def show_main_screen(manager: ptg.WindowManager, config_dir: str):
         ptg.Window(
             "",
             "Execution configurations",
-            display_execution_configurations(config_dir),
+            display_execution_configurations(manager, config_dir),
             ["Add Configuration", lambda *_: show_add_configuration_screen(manager, config_dir)],
             ["Exit", lambda *_: exit_program(manager)],
             width=120,
+            height=24,
             box="DOUBLE",
         )
         .set_title("[210 bold]DiscoPoP execution wizard")
@@ -56,12 +58,12 @@ def show_main_screen(manager: ptg.WindowManager, config_dir: str):
     manager.add(window)
 
 
-def display_execution_configurations(config_dir: str) -> ptg.Container:
+def display_execution_configurations(manager: ptg.WindowManager, config_dir: str) -> ptg.Container:
     # load configuration options
     configs: List[ExecutionConfiguration] = load_execution_configurations(config_dir)
     container = ptg.Container()
     for config in configs:
-        container.lazy_add(config.get_as_widget())
+        container.lazy_add(config.get_as_widget(manager))
     return container
 
 
