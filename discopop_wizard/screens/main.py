@@ -1,0 +1,79 @@
+import json
+import os.path
+from typing import List
+
+import jsons
+import pytermgui as ptg
+
+from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
+from discopop_wizard.screens.add_configuration import show_add_configuration_screen
+from discopop_wizard.screens.utils import submit, exit_program
+
+
+def initialize_screen(config_dir: str):
+    CONFIG = """
+            config:
+                InputField:
+                    styles:
+                        prompt: dim italic
+                        cursor: '@72'
+                Label:
+                    styles:
+                        value: dim bold
+
+                Window:
+                    styles:
+                        border: '60'
+                        corner: '60'
+
+                Container:
+                    styles:
+                        border: '96'
+                        corner: '96'
+            """
+
+    with ptg.YamlLoader() as loader:
+        loader.load(CONFIG)
+
+    with ptg.WindowManager() as manager:
+        window = (ptg.Window("", width=80, box="DOUBLE").set_title("[210 bold]DiscoPoP execution wizard").center())
+        manager.add(window)
+        show_main_screen(manager, window, config_dir)
+
+
+def show_main_screen(manager: ptg.WindowManager, window: ptg.Window, config_dir: str):
+    window.close()
+    window = (
+        ptg.Window(
+            "",
+            "Execution configurations",
+            display_execution_configurations(config_dir),
+            ["Add Configuration", lambda *_: show_add_configuration_screen(manager, window)],
+            ["Exit", lambda *_: exit_program(manager)],
+            width=80,
+            box="DOUBLE",
+        )
+        .set_title("[210 bold]DiscoPoP execution wizard")
+        .center()
+    )
+    manager.add(window)
+
+
+def display_execution_configurations(config_dir: str) -> ptg.Container:
+    # load configuration options
+    configs: List[ExecutionConfiguration] = load_execution_configurations(config_dir)
+    container = ptg.Container()
+    for config in configs:
+        container.lazy_add(config.get_as_widget())
+    return container
+
+
+def load_execution_configurations(config_dir: str) -> List[ExecutionConfiguration]:
+    execution_configs: List[ExecutionConfiguration] = []
+    file_contents = open(os.path.join(config_dir, "run_configurations.txt")).read()
+    loaded_dicts: List[dict] = jsons.loads(file_contents)
+    for config in loaded_dicts:
+        exec_config = ExecutionConfiguration()
+        exec_config.init_from_dict(config)
+        execution_configs.append(exec_config)
+    return execution_configs

@@ -13,36 +13,6 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 
 ## Getting started
 ### Pre-requisites
-Before doing anything, you need a basic development setup. We have tested DiscoPoP on Ubuntu, and the prerequisite packages should be installed using the first of the following commands.
-<br>
-Additionally, you need to install LLVM on your system. Currently, DiscoPoP only supports LLVM versions between 8.0 and 11.1. Due to API changes, which lead to compilation failures, it does not support lower and higher versions. Please follow the [installation tutorial](https://llvm.org/docs/GettingStarted.html), or install LLVM 11 via a package manager as shown in the following snippet, if you have not installed LLVM yet.
-<br>
-If you intend to use the setup script to install all required Python dependencies, you will need a working installation of `pip3` aswell.
-
-```	
-sudo apt-get install git build-essential cmake
-sudo apt-get install libclang-11-dev clang-11 llvm-11
-sudo apt-get install python3-pip
-```
-
-### Install python dependencies
-The necessary Python dependencies can be simply installed using `pip` py executing the setup:
-```
-pip install .
-```
-
-### Setup and execution wizard
-If all prerequisites are installed, it is recommended to proceed by executing the setup and execution wizard.
-```
-python -m discopop_wizard
-```
-If it is executed for the first time, a hidden configuration folder will be created.
-This folder is used to store DiscoPoP configuration options as well as execution configurations.
-It is not recommended to modify the files manually since hard assumptions regarding the format of the files are made.
-
-
-## OLD Getting started
-### Pre-requisites
 Before doing anything, you need a basic development setup. We have tested DiscoPoP on Ubuntu, and the prerequisite packages should be installed using the following command:
 
 	sudo apt-get install git build-essential cmake
