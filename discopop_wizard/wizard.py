@@ -15,6 +15,7 @@ def main():
     # check if config exists, if not, initialize config folder and files
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
+    if not os.path.exists(os.path.join(config_dir, "run_configurations.txt")):
         # create run_configurations.txt
         with open(os.path.join(config_dir, "run_configurations.txt"), "w+"):
             pass

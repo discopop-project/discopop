@@ -36,21 +36,18 @@ def initialize_screen(config_dir: str):
         loader.load(CONFIG)
 
     with ptg.WindowManager() as manager:
-        window = (ptg.Window("", width=80, box="DOUBLE").set_title("[210 bold]DiscoPoP execution wizard").center())
-        manager.add(window)
-        show_main_screen(manager, window, config_dir)
+        show_main_screen(manager, config_dir)
 
 
-def show_main_screen(manager: ptg.WindowManager, window: ptg.Window, config_dir: str):
-    window.close()
+def show_main_screen(manager: ptg.WindowManager, config_dir: str):
     window = (
         ptg.Window(
             "",
             "Execution configurations",
             display_execution_configurations(config_dir),
-            ["Add Configuration", lambda *_: show_add_configuration_screen(manager, window)],
+            ["Add Configuration", lambda *_: show_add_configuration_screen(manager, config_dir)],
             ["Exit", lambda *_: exit_program(manager)],
-            width=80,
+            width=120,
             box="DOUBLE",
         )
         .set_title("[210 bold]DiscoPoP execution wizard")
@@ -70,8 +67,11 @@ def display_execution_configurations(config_dir: str) -> ptg.Container:
 
 def load_execution_configurations(config_dir: str) -> List[ExecutionConfiguration]:
     execution_configs: List[ExecutionConfiguration] = []
-    file_contents = open(os.path.join(config_dir, "run_configurations.txt")).read()
-    loaded_dicts: List[dict] = jsons.loads(file_contents)
+    with open(os.path.join(config_dir, "run_configurations.txt"), "r") as f:
+        file_contents = f.read()
+    loaded_dicts: List[dict] = []
+    if len(file_contents) > 0:
+        loaded_dicts = jsons.loads(file_contents)
     for config in loaded_dicts:
         exec_config = ExecutionConfiguration()
         exec_config.init_from_dict(config)
