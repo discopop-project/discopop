@@ -35,17 +35,11 @@ class ExecutionConfiguration(object):
             "Additional notes: " + self.notes
         )
         widget.lazy_add(details)
-        button = Button(label="Execute", onclick=lambda *_: manager.stop())
-        button.on_hover(None)
         options = Container(
-            button,
-            "",
+            Button(label="Execute", onclick=lambda *_: manager.stop()),
             ["Edit"],
-            "",
             ["Delete"],
-            "",
             ["Copy"],
-            "",
             ["Exit", lambda *_: manager.stop()]
         )
         widget.lazy_add(options)
