@@ -1205,6 +1205,8 @@ bool DiscoPoP::runOnFunction(Function &F)
   RI = &(RIpass->getRegionInfo());
   Region *TopRegion = RI->getTopLevelRegion();
 
+  getTrueVarNamesFromMetadata(TopRegion, root, &trueVarNamesFromMetadataMap);
+
   getFunctionReturnLines(TopRegion, root);
 
   populateGlobalVariablesSet(TopRegion, globalVariablesSet);
