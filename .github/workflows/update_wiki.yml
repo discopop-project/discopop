@@ -10,6 +10,8 @@ jobs:
     update-wiki:
         runs-on: ubuntu-latest
         steps:
+          - name: Set Safe directory
+            run: git config --global --add safe.directory /wiki
           - uses: actions/checkout@master
           - name: Sync Wiki
             uses: joeizzard/action-wiki-sync@master
