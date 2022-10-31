@@ -1604,7 +1604,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
             DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
             if (gv != NULL)
             {
-                return getOrInsertVarName(string (gv->getDisplayName().data()), builder);
+                // check if metadata for name exists
+                string varName = string (gv->getDisplayName().data());
+                if (trueVarNamesFromMetadataMap.find(varName) != trueVarNamesFromMetadataMap.end()) {
+                    varName = trueVarNamesFromMetadataMap[varName];  // found
+                }
+                return getOrInsertVarName(varName, builder);
             }
         }
         if (isa<GetElementPtrInst>(*operand))
@@ -1625,7 +1630,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
 
                     StructType *STy = cast<StructType>(structType);
                     if(!STy ->isLiteral()){
-                        string strName(structType->getStructName().data());
+                        // check if name is overwritten by metadata
+                        string strName = structType->getStructName().data();
+                        if (trueVarNamesFromMetadataMap.find(strName) != trueVarNamesFromMetadataMap.end()) {
+                            strName = trueVarNamesFromMetadataMap[strName];  // found
+                        }
+
                         map<string, MDNode *>::iterator it = Structs.find(strName);
                         if (it != Structs.end())
                         {
@@ -1644,7 +1654,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
             }
             return determineVariableName((Instruction *)gep, isGlobalVariable);
         }
-        return getOrInsertVarName(string(operand->getName().data()), builder);
+        // check if name is overwritten by metadata
+        string varName = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap.find(varName) != trueVarNamesFromMetadataMap.end()) {
+            varName = trueVarNamesFromMetadataMap[varName];  // found
+        }
+        return getOrInsertVarName(varName, builder);
     }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
