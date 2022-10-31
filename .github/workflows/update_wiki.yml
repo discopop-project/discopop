@@ -10,7 +10,7 @@ jobs:
     update-wiki:
         runs-on: ubuntu-latest
         steps:
-          - uses: actions/checkout@develop
+          - uses: actions/checkout@master
           - name: Sync Wiki
             uses: joeizzard/action-wiki-sync@master
             with:
