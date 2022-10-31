@@ -3,10 +3,10 @@ name: "Update Wiki"
 on:
     push:
         branches:
-            - wiki_automatic_update
+            - master
     pull_request:
         branches:
-            - wiki_automatic_update
+            - master
 jobs:
   update-wiki:
     runs-on: ubuntu-latest
