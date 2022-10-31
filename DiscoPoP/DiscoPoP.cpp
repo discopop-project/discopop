@@ -1205,6 +1205,8 @@ bool DiscoPoP::runOnFunction(Function &F)
   RI = &(RIpass->getRegionInfo());
   Region *TopRegion = RI->getTopLevelRegion();
 
+  getTrueVarNamesFromMetadata(TopRegion, root, &trueVarNamesFromMetadataMap);
+
   getFunctionReturnLines(TopRegion, root);
 
   populateGlobalVariablesSet(TopRegion, globalVariablesSet);
@@ -1602,7 +1604,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
             DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
             if (gv != NULL)
             {
-                return getOrInsertVarName(string (gv->getDisplayName().data()), builder);
+                // check if metadata for name exists
+                string varName = string (gv->getDisplayName().data());
+                if (trueVarNamesFromMetadataMap.find(varName) != trueVarNamesFromMetadataMap.end()) {
+                    varName = trueVarNamesFromMetadataMap[varName];  // found
+                }
+                return getOrInsertVarName(varName, builder);
             }
         }
         if (isa<GetElementPtrInst>(*operand))
@@ -1623,7 +1630,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
 
                     StructType *STy = cast<StructType>(structType);
                     if(!STy ->isLiteral()){
-                        string strName(structType->getStructName().data());
+                        // check if name is overwritten by metadata
+                        string strName = structType->getStructName().data();
+                        if (trueVarNamesFromMetadataMap.find(strName) != trueVarNamesFromMetadataMap.end()) {
+                            strName = trueVarNamesFromMetadataMap[strName];  // found
+                        }
+
                         map<string, MDNode *>::iterator it = Structs.find(strName);
                         if (it != Structs.end())
                         {
@@ -1642,7 +1654,12 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
             }
             return determineVariableName((Instruction *)gep, isGlobalVariable);
         }
-        return getOrInsertVarName(string(operand->getName().data()), builder);
+        // check if name is overwritten by metadata
+        string varName = string(operand->getName().data());
+        if (trueVarNamesFromMetadataMap.find(varName) != trueVarNamesFromMetadataMap.end()) {
+            varName = trueVarNamesFromMetadataMap[varName];  // found
+        }
+        return getOrInsertVarName(varName, builder);
     }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
@@ -1651,6 +1668,51 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
     }
     // if we cannot determine the name, then return *
     return getOrInsertVarName("*", builder);
+}
+
+void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap)
+{
+    int lid = 0;
+    for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb){
+        for(BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                        CallInst* call = cast<CallInst>(instruction);
+                        // check if @llvm.dbg.declare is called
+                        // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                        // if(cmp_res == 0){
+                        // call to @llvm.dbg.declare found
+                        // extract original and working variable name
+                        string SRCVarName;
+                        string IRVarName;
+
+                        Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                        if (isa<ValueAsMetadata>(Meta)){
+                            Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                            IRVarName = V->getName().str();
+                        }
+                        DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                        SRCVarName = V->getName().str();
+
+                        // add to trueVarNamesFromMetadataMap
+                        // overwrite entry if already existing
+                        if (trueVarNamesFromMetadataMap->find(IRVarName) == trueVarNamesFromMetadataMap->end()) {
+                            // not found
+                            trueVarNamesFromMetadataMap->insert(std::pair<string, string>(IRVarName, SRCVarName));
+                        } else {
+                            // found
+                            (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode)

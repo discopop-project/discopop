@@ -195,6 +195,7 @@ private:
   // used to get variable names. Originally appeared in DiscoPoP code!
   // map<string, MDNode *> Structs;
   // map<string, Value *> VarNames;
+  map<string, string> trueVarNamesFromMetadataMap;
 
   RegionInfoPass *RIpass;
   RegionInfo *RI;
@@ -216,6 +217,8 @@ private:
         Type *pointsToStruct(PointerType *PTy);
         Value *determineVariableName(Instruction *const I,
                         bool &isGlobalVariable = defaultIsGlobalVariableValue);
+        void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
+                                         std::map<string, string>* trueVarNamesFromMetadataMap);
 
         // Control flow analysis
         void CFA(Function &F, LoopInfo &LI);
