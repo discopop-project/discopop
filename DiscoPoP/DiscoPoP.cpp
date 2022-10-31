@@ -1653,6 +1653,51 @@ Value *DiscoPoP::determineVariableName(Instruction *const I,
     return getOrInsertVarName("*", builder);
 }
 
+void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root, std::map<string, string>* trueVarNamesFromMetadataMap)
+{
+    int lid = 0;
+    for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb){
+        for(BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction){
+            // search for call instructions to @llvm.dbg.declare
+            if(isa<CallInst>(instruction)){
+                Function *f = (cast<CallInst>(instruction))->getCalledFunction();
+                if(f){
+                    StringRef funcName = f->getName();
+                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    {
+                        CallInst* call = cast<CallInst>(instruction);
+                        // check if @llvm.dbg.declare is called
+                        // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
+                        // if(cmp_res == 0){
+                        // call to @llvm.dbg.declare found
+                        // extract original and working variable name
+                        string SRCVarName;
+                        string IRVarName;
+
+                        Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+                        if (isa<ValueAsMetadata>(Meta)){
+                            Value *V = cast <ValueAsMetadata>(Meta)->getValue();
+                            IRVarName = V->getName().str();
+                        }
+                        DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+                        SRCVarName = V->getName().str();
+
+                        // add to trueVarNamesFromMetadataMap
+                        // overwrite entry if already existing
+                        if (trueVarNamesFromMetadataMap->find(IRVarName) == trueVarNamesFromMetadataMap->end()) {
+                            // not found
+                            trueVarNamesFromMetadataMap->insert(std::pair<string, string>(IRVarName, SRCVarName));
+                        } else {
+                            // found
+                            (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode)
 {
     assert(structNode && "structNode cannot be NULL");
