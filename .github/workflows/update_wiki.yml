@@ -30,7 +30,7 @@ jobs:
           git config --global user.email "discopop[at]lists.parallel.informatik.tu-darmstadt.de"
           git config --global user.name "DiscoPoP CI"
           git add *
-          git commit -m "Automatic update of wiki"
+          git diff-index --quiet HEAD || git commit -m 'Automatic update of wiki'
       - name: "Push to wiki"
         run: |
           cd discopop.wiki
