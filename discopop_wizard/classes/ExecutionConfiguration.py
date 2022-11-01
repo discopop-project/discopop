@@ -270,14 +270,16 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
 
     # assemble command for execution
     command = "echo 'THIS IS MY CALLSTRING ID: " + execution_configuration.id + "'"
+    command = "sleep 5 && echo 'Done'"
     # output to console
-    wizard.print_to_console(manager, "Executing command: " + command)
+    wizard.print_to_console(manager, "Executing command: " + str(command.split(" ")))
 
     # execute command
     import subprocess
-    process = subprocess.Popen(command.split(" "),
+    process = subprocess.Popen(command,
                                stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+                               stderr=subprocess.PIPE,
+                               shell=True)
     stdout, stderr = process.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
