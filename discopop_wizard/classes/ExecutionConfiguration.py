@@ -40,7 +40,6 @@ class ExecutionConfiguration(object):
             ["Edit"],
             ["Delete"],
             ["Copy"],
-            ["Exit", lambda *_: manager.stop()]
         )
         widget.lazy_add(options)
         return widget

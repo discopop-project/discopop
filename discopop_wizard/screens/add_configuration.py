@@ -8,8 +8,8 @@ from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguratio
 from discopop_wizard.screens.utils import exit_program
 
 
-def show_add_configuration_screen(manager: ptg.WindowManager, config_dir: str):
-    window = (
+def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, wizard):
+    body = (
         ptg.Window(
             "",
             "Create a new execution configuration",
@@ -31,19 +31,21 @@ def show_add_configuration_screen(manager: ptg.WindowManager, config_dir: str):
                 ),
                 box="EMPTY_VERTICAL",
             ),
-            ["Save", lambda *_: save_configuration(manager, window, config_dir)],
-            ["Back", lambda *_: manager.remove(window)],
-            ["Exit", lambda *_: exit_program(manager)],
-            width=120,
             box="DOUBLE",
         )
         .set_title("[210 bold]Create execution configuration")
-        .center()
     )
-    manager.add(window)
+    manager.add(body, assign="body")
+    wizard.push_body_window(body)
+
+    buttons = (ptg.Window(
+        ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
+    ))
+    manager.add(buttons, assign="body_buttons")
+    wizard.push_body_buttons(buttons)
 
 
-def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str):
+def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard):
     # TODO: overwrite run_configurations.txt
     execution_configs: List[ExecutionConfiguration] = []
     values = dict()
@@ -76,11 +78,10 @@ def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     os.remove(os.path.join(config_dir, "run_configurations.txt"))
     with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
         f.write(json_dump_str)
-
-
-
-
-
+    # restart Wizard to load new execution configurations
+    manager.stop()
+    wizard.clear_window_stacks()
+    wizard.initialize_screen(config_dir)
 
 
 def submit(manager: ptg.WindowManager, window: ptg.Window, values: dict) -> None:

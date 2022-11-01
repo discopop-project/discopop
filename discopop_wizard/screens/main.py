@@ -1,4 +1,3 @@
-import json
 import os.path
 from typing import List
 
@@ -6,56 +5,31 @@ import jsons
 import pytermgui as ptg
 
 from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
-from discopop_wizard.screens.add_configuration import show_add_configuration_screen
-from discopop_wizard.screens.utils import submit, exit_program
+from discopop_wizard.screens.add_configuration import push_add_configuration_screen
+from discopop_wizard.screens.utils import exit_program
 
 
-def initialize_screen(config_dir: str):
-    CONFIG = """
-            config:
-                InputField:
-                    styles:
-                        prompt: dim italic
-                        cursor: '@72'
-                Label:
-                    styles:
-                        value: dim bold
-
-                Window:
-                    styles:
-                        border: '60'
-                        corner: '60'
-
-                Container:
-                    styles:
-                        border: '96'
-                        corner: '96'
-            """
-
-    with ptg.YamlLoader() as loader:
-        loader.load(CONFIG)
-
-    with ptg.WindowManager() as manager:
-        manager.layout = ptg.Layout()
-        show_main_screen(manager, config_dir)
-
-
-def show_main_screen(manager: ptg.WindowManager, config_dir: str):
-    window = (
+def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
+    body = (
         ptg.Window(
             "",
             "Execution configurations",
             display_execution_configurations(manager, config_dir),
-            ["Add Configuration", lambda *_: show_add_configuration_screen(manager, config_dir)],
-            ["Exit", lambda *_: exit_program(manager)],
-            width=120,
-            height=24,
             box="DOUBLE",
         )
         .set_title("[210 bold]DiscoPoP execution wizard")
-        .center()
     )
-    manager.add(window)
+    manager.add(body, assign="body")
+    wizard.push_body_window(body)
+
+    buttons = (ptg.Window(
+        ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)],
+        )
+        .set_title("[210 bold]Screen specific options")
+    )
+
+    manager.add(buttons, assign="body_buttons")
+    wizard.push_body_buttons(buttons)
 
 
 def display_execution_configurations(manager: ptg.WindowManager, config_dir: str) -> ptg.Container:
@@ -79,3 +53,4 @@ def load_execution_configurations(config_dir: str) -> List[ExecutionConfiguratio
         exec_config.init_from_dict(config)
         execution_configs.append(exec_config)
     return execution_configs
+
