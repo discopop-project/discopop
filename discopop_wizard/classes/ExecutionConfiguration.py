@@ -1,4 +1,6 @@
 import os
+import random
+import string
 
 import jsons
 from typing import List
@@ -93,8 +95,22 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     wizard.push_body_window(body)
 
     buttons = (ptg.Window(
-        ["Save", lambda *_: save_changes(manager, body, config_dir, wizard, execution_configuration)],
+        ptg.Label(value="[orange bold]Warning:"),
         ""
+        "Only 'Save' results in an",
+        "overwritten configuration.",
+        "",
+        "",
+        ["Save", lambda *_: save_changes(manager, body, config_dir, wizard, execution_configuration)],
+        "",
+        ["Execute"],
+        "",
+        ["Copy", lambda *_: copy_configuration(manager, body, config_dir, wizard, execution_configuration)],
+        "",
+        "Saves the currently inserted values into a copy of the configuration.",
+        "",
+        "",
+        ["Delete", lambda *_: delete_configuration(manager, body, config_dir, wizard, execution_configuration)]
     ))
     manager.add(buttons, assign="body_buttons")
     wizard.push_body_buttons(buttons)
@@ -129,6 +145,89 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
         if exec_config.id == execution_configuration.id:
             # add updated execution_configuration instead of loaded version
             execution_configs.append(execution_configuration)
+        else:
+            # add loaded exec_config
+            execution_configs.append(exec_config)
+    # overwrite configs file
+    json_dump_str = jsons.dumps(execution_configs)
+
+    if not os.path.isfile(os.path.join(config_dir, "run_configurations.txt")):
+        raise ValueError(os.path.join(config_dir, "run_configurations.txt"))
+    os.remove(os.path.join(config_dir, "run_configurations.txt"))
+    with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
+        f.write(json_dump_str)
+    # restart Wizard to load new execution configurations
+    manager.stop()
+    wizard.clear_window_stacks()
+    wizard.initialize_screen(config_dir)
+
+
+def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+    execution_configs: List[ExecutionConfiguration] = []
+    values = dict()
+    values["ID"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    for widget in window:
+        if isinstance(widget, ptg.InputField):
+            values[widget.prompt] = widget.value
+            continue
+
+        if isinstance(widget, ptg.Container):
+            label, field = iter(widget)
+            values[label.value] = field.value
+    values["Label: "] = "Copy of " + values["Label: "]
+    new_config = ExecutionConfiguration()
+    new_config.init_from_values(values)
+    execution_configs.append(new_config)
+    # load old configs
+    with open(os.path.join(config_dir, "run_configurations.txt"), "r") as f:
+        file_contents = f.read()
+    loaded_dicts: List[dict] = []
+    if len(file_contents) > 0:
+        loaded_dicts = jsons.loads(file_contents)
+    for config in loaded_dicts:
+        exec_config = ExecutionConfiguration()
+        exec_config.init_from_dict(config)
+        execution_configs.append(exec_config)
+    # overwrite configs file
+    json_dump_str = jsons.dumps(execution_configs)
+
+    if not os.path.isfile(os.path.join(config_dir, "run_configurations.txt")):
+        raise ValueError(os.path.join(config_dir, "run_configurations.txt"))
+    os.remove(os.path.join(config_dir, "run_configurations.txt"))
+    with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
+        f.write(json_dump_str)
+    # restart Wizard to load new execution configurations
+    manager.stop()
+    wizard.clear_window_stacks()
+    wizard.initialize_screen(config_dir)
+
+def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+    execution_configs = []
+    values = dict()
+    # update execution_configuration
+    for widget in window:
+        if isinstance(widget, ptg.InputField):
+            values[widget.prompt] = widget.value
+            continue
+
+        if isinstance(widget, ptg.Container):
+            label, field = iter(widget)
+            values[label.value] = field.value
+    values["ID"] = execution_configuration.id
+    execution_configuration.init_from_values(values)
+    # load old configs and overwrite the modified config
+    with open(os.path.join(config_dir, "run_configurations.txt"), "r") as f:
+        file_contents = f.read()
+    loaded_dicts: List[dict] = []
+    if len(file_contents) > 0:
+        loaded_dicts = jsons.loads(file_contents)
+    for config in loaded_dicts:
+        exec_config = ExecutionConfiguration()
+        exec_config.init_from_dict(config)
+        if exec_config.id == execution_configuration.id:
+            # do not add execution_configuration to execution_configs
+            # this results in a deletion of the configuration, since it is not written to the configuration file
+            pass
         else:
             # add loaded exec_config
             execution_configs.append(exec_config)

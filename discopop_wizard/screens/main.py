@@ -23,12 +23,7 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
     wizard.push_body_window(body)
 
     buttons = (ptg.Window(
-        ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)],
-        "",
-#        ptg.Button(label="Execute", onclick= lambda * _: manager.stop()),
-#        ["Edit"],
-#        ["Delete"],
-#        ["Copy"],
+        ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)]
         )
         .set_title("[210 bold]Screen specific options")
     )
