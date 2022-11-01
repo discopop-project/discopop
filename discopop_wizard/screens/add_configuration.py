@@ -1,4 +1,6 @@
 import os
+import string
+import random
 from typing import List
 
 import jsons
@@ -46,9 +48,9 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
 
 
 def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard):
-    # TODO: overwrite run_configurations.txt
     execution_configs: List[ExecutionConfiguration] = []
     values = dict()
+    values["ID"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     for widget in window:
         if isinstance(widget, ptg.InputField):
             values[widget.prompt] = widget.value

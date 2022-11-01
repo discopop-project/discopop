@@ -14,7 +14,7 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
         ptg.Window(
             "",
             "Execution configurations",
-            display_execution_configurations(manager, config_dir),
+            display_execution_configurations(manager, config_dir, wizard),
             box="DOUBLE",
         )
         .set_title("[210 bold]DiscoPoP execution wizard")
@@ -24,6 +24,11 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
 
     buttons = (ptg.Window(
         ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)],
+        "",
+#        ptg.Button(label="Execute", onclick= lambda * _: manager.stop()),
+#        ["Edit"],
+#        ["Delete"],
+#        ["Copy"],
         )
         .set_title("[210 bold]Screen specific options")
     )
@@ -32,12 +37,12 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
     wizard.push_body_buttons(buttons)
 
 
-def display_execution_configurations(manager: ptg.WindowManager, config_dir: str) -> ptg.Container:
+def display_execution_configurations(manager: ptg.WindowManager, config_dir: str, wizard) -> ptg.Container:
     # load configuration options
     configs: List[ExecutionConfiguration] = load_execution_configurations(config_dir)
     container = ptg.Container()
     for config in configs:
-        container.lazy_add(config.get_as_widget(manager))
+        container.lazy_add(config.get_as_widget(manager, config_dir, wizard))
     return container
 
 
