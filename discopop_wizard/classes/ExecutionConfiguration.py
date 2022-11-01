@@ -97,13 +97,12 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     buttons = (ptg.Window(
         ptg.Label(value="[orange bold]Warning:"),
         ""
-        "Only 'Save' results in an",
-        "overwritten configuration.",
+        "Execute will overwrite the current configuration and execute the modified version.",
         "",
         "",
         ["Save", lambda *_: save_changes(manager, body, config_dir, wizard, execution_configuration)],
         "",
-        ["Execute"],
+        ["Execute", lambda *_: execute_configuration(manager, body, config_dir, wizard, execution_configuration)],
         "",
         ["Copy", lambda *_: copy_configuration(manager, body, config_dir, wizard, execution_configuration)],
         "",
@@ -243,3 +242,31 @@ def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_
     manager.stop()
     wizard.clear_window_stacks()
     wizard.initialize_screen(config_dir)
+
+def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+    # read values from updates
+    values = dict()
+    # update execution_configuration
+    for widget in window:
+        if isinstance(widget, ptg.InputField):
+            values[widget.prompt] = widget.value
+            continue
+        if isinstance(widget, ptg.Container):
+            label, field = iter(widget)
+            values[label.value] = field.value
+    values["ID"] = execution_configuration.id
+
+    save_changes(manager, window, config_dir, wizard, execution_configuration)
+
+    execution_configuration.init_from_values(values)
+
+    # assemble command for execution
+    command = "echo 'THIS IS MY CALLSTRING ID: " + execution_configuration.id + "'"
+
+    # execute command
+    import subprocess
+    process = subprocess.Popen(["echo", execution_configuration.id],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    print(stdout, stderr)
