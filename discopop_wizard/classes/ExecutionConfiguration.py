@@ -270,26 +270,20 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
 
     # assemble command for execution
     command = "echo 'THIS IS MY CALLSTRING ID: " + execution_configuration.id + "'"
-    command = "sleep 5 && echo 'Done'"
+    command = "sleep 0.1 && echo 0.1 && sleep 0.1 && echo 2 && sleep 1 && echo 3 && sleep 1 && echo 4 && sleep 0.1 && echo 5 && 1"
     # output to console
     wizard.print_to_console(manager, "Executing command: " + str(command.split(" ")))
 
-    # execute command
     import subprocess
-    process = subprocess.Popen(command,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               shell=True)
-    stdout, stderr = process.communicate()
-    stdout = stdout.decode('utf-8')
-    stderr = stderr.decode('utf-8')
-
-    print(stdout, stderr)
-    wizard.print_to_console(manager, "STDERR:")
-    wizard.print_to_console(manager, stderr)
-    wizard.print_to_console(manager, "STDOUT:")
-    wizard.print_to_console(manager, stdout)
-
+    with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+        for line in p.stdout:
+            line = line.replace("\n", "")
+            wizard.print_to_console(manager, line)
+    if p.returncode != 0:
+        wizard.print_to_console(manager, "An error occurred during the execution!", style=3)  # style 3 --> Error message
+        for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
+            line = line.replace("\n", "")
+            wizard.print_to_console(manager, line)
 
     # restart Wizard to load new execution configurations
     manager.stop()

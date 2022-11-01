@@ -1,6 +1,7 @@
 import os
+from enum import IntEnum
 from os.path import dirname
-from typing import List
+from typing import List, Tuple
 
 import pytermgui as ptg
 
@@ -26,11 +27,16 @@ def main():
     wizard = DiscoPoPWizard(config_dir)
     print()
 
+class ConsoleStyles(IntEnum):
+    NORMAL = 1
+    WARNING = 2
+    ERROR = 3
+
 
 class DiscoPoPWizard(object):
     body_window_stack: List[ptg.Window] = []
     body_button_stack: List[ptg.Window] = []
-    console_log: List[str] = ["Welcome to the DiscoPoP execution Wizard."]
+    console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP execution Wizard.", ConsoleStyles.NORMAL)]
     console_window = None
 
     def __init__(self, config_dir: str):
@@ -132,13 +138,18 @@ class DiscoPoPWizard(object):
             exit_program(manager)
 
     def __fill_console(self, container: ptg.Container):
-        for line in self.console_log:
-            container.lazy_add(ptg.Label(line))
+        for line, style in self.console_log:
+            if style == ConsoleStyles.NORMAL:
+                container.lazy_add(ptg.Label(line))
+            elif style == ConsoleStyles.WARNING:
+                container.lazy_add(ptg.Label("[orange]"+line))
+            elif style == ConsoleStyles.ERROR:
+                container.lazy_add(ptg.Label("[red bold]"+line))
             container.get_lines()
             container.scroll(1)
 
-    def print_to_console(self, manager: ptg.WindowManager, output: str):
-        self.console_log.append(output)
+    def print_to_console(self, manager: ptg.WindowManager, output: str, style=ConsoleStyles.NORMAL):
+        self.console_log.append((output, style))
         self.__show_output_console(manager)
 
 
