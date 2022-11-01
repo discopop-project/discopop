@@ -80,10 +80,13 @@ def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     os.remove(os.path.join(config_dir, "run_configurations.txt"))
     with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
         f.write(json_dump_str)
+    # output to console
+    wizard.print_to_console(manager, "Created configuration " + values["ID"])
     # restart Wizard to load new execution configurations
     manager.stop()
     wizard.clear_window_stacks()
     wizard.initialize_screen(config_dir)
+
 
 
 def submit(manager: ptg.WindowManager, window: ptg.Window, values: dict) -> None:

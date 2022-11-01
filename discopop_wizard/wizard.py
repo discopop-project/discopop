@@ -30,6 +30,8 @@ def main():
 class DiscoPoPWizard(object):
     body_window_stack: List[ptg.Window] = []
     body_button_stack: List[ptg.Window] = []
+    console_log: List[str] = ["Welcome to the DiscoPoP execution Wizard."]
+    console_window = None
 
     def __init__(self, config_dir: str):
         self.initialize_screen(config_dir)
@@ -67,16 +69,19 @@ class DiscoPoPWizard(object):
             manager.layout.add_slot("Body")
             # A slot in the same row as body, using the full non-occupied height and
             # 20% of the terminal's height.
-            manager.layout.add_slot("body_buttons", width=0.2, height=0.9)
+            manager.layout.add_slot("body_buttons", width=0.2, height=0.7)
             manager.layout.add_break()
-            # A footer with a static height of 1
-            manager.layout.add_slot("footer_left", height=0.1)
-            manager.layout.add_slot("footer_right", height=0.1)
+            manager.layout.add_slot("console", height=0.2)
+            manager.layout.add_break()
+            # A footer with a static height of 10%
+            manager.layout.add_slot("footer_left", height=3)
+            manager.layout.add_slot("footer_right", height=3)
 
-            self.show_footer_buttons(manager)
+            self.__show_footer_buttons(manager)
+            self.__show_output_console(manager)
             push_main_screen(manager, config_dir, self)
 
-    def show_footer_buttons(self, manager: ptg.WindowManager):
+    def __show_footer_buttons(self, manager: ptg.WindowManager):
         window = ptg.Window(
             ["Back", lambda *_: self.action_back(manager)]
         )
@@ -85,6 +90,26 @@ class DiscoPoPWizard(object):
             ["Exit", lambda *_: exit_program(manager)]
         )
         manager.add(window, assign="footer_right")
+
+    def __show_output_console(self, manager: ptg.WindowManager):
+        if self.console_window is not None:
+            self.console_window.close()
+        window = (ptg.Window(
+        )
+                  .set_title("[210 bold]Output console")
+        )
+        container = ptg.Container()
+
+        container.overflow = ptg.Overflow.SCROLL
+        self.__fill_console(container)
+        window.lazy_add(container)
+        # get heigt from slot
+        for slot in manager.layout.slots:
+            if slot.name == "console":
+                container.height = slot.height.value.real - 2
+                break
+        manager.add(window, assign="console")
+        self.console_window = window
 
     def push_body_window(self, window: ptg.Window):
         self.body_window_stack.append(window)
@@ -102,8 +127,20 @@ class DiscoPoPWizard(object):
         if len(self.body_window_stack) > 1:
             self.body_window_stack[-1].close()
             self.body_button_stack[-1].close()
+            self.__show_output_console(manager)
         else:
             exit_program(manager)
+
+    def __fill_console(self, container: ptg.Container):
+        for line in self.console_log:
+            container.lazy_add(ptg.Label(line))
+            container.get_lines()
+            container.scroll(1)
+
+    def print_to_console(self, manager: ptg.WindowManager, output: str):
+        self.console_log.append(output)
+        self.__show_output_console(manager)
+
 
 
 

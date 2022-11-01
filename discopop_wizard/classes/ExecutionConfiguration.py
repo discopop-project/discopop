@@ -115,7 +115,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     wizard.push_body_buttons(buttons)
 
 
-def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration, restart_wizard=True):
     execution_configs = []
     values = dict()
     # update execution_configuration
@@ -155,10 +155,14 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
     os.remove(os.path.join(config_dir, "run_configurations.txt"))
     with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
         f.write(json_dump_str)
+    # output to console
+    wizard.print_to_console(manager, "Saved configuration " + values["ID"])
     # restart Wizard to load new execution configurations
-    manager.stop()
-    wizard.clear_window_stacks()
-    wizard.initialize_screen(config_dir)
+
+    if restart_wizard:
+        manager.stop()
+        wizard.clear_window_stacks()
+        wizard.initialize_screen(config_dir)
 
 
 def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
@@ -195,6 +199,8 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     os.remove(os.path.join(config_dir, "run_configurations.txt"))
     with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
         f.write(json_dump_str)
+    # output to console
+    wizard.print_to_console(manager, "Created copied configuration " + values["ID"])
     # restart Wizard to load new execution configurations
     manager.stop()
     wizard.clear_window_stacks()
@@ -238,6 +244,8 @@ def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_
     os.remove(os.path.join(config_dir, "run_configurations.txt"))
     with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
         f.write(json_dump_str)
+    # output to console
+    wizard.print_to_console(manager, "Deleted configuration " + values["ID"])
     # restart Wizard to load new execution configurations
     manager.stop()
     wizard.clear_window_stacks()
@@ -256,17 +264,32 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
             values[label.value] = field.value
     values["ID"] = execution_configuration.id
 
-    save_changes(manager, window, config_dir, wizard, execution_configuration)
+    save_changes(manager, window, config_dir, wizard, execution_configuration, restart_wizard=False)
 
     execution_configuration.init_from_values(values)
 
     # assemble command for execution
     command = "echo 'THIS IS MY CALLSTRING ID: " + execution_configuration.id + "'"
+    # output to console
+    wizard.print_to_console(manager, "Executing command: " + command)
 
     # execute command
     import subprocess
-    process = subprocess.Popen(["echo", execution_configuration.id],
+    process = subprocess.Popen(command.split(" "),
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
+    stdout = stdout.decode('utf-8')
+    stderr = stderr.decode('utf-8')
+
     print(stdout, stderr)
+    wizard.print_to_console(manager, "STDERR:")
+    wizard.print_to_console(manager, stderr)
+    wizard.print_to_console(manager, "STDOUT:")
+    wizard.print_to_console(manager, stdout)
+
+
+    # restart Wizard to load new execution configurations
+    manager.stop()
+    wizard.clear_window_stacks()
+    wizard.initialize_screen(config_dir)
