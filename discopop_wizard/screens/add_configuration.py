@@ -11,6 +11,7 @@ from discopop_wizard.screens.utils import exit_program
 
 
 def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, wizard):
+    wizard.print_to_console(manager, str(manager.layout.slots))
     body = (
         ptg.Window(
             "",
@@ -37,14 +38,19 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
         )
         .set_title("[210 bold]Create execution configuration")
     )
-    manager.add(body, assign="body")
-    wizard.push_body_window(body)
-
+    dp_options = (ptg.Window(
+        "Enable debug output",
+        ptg.Checkbox(),
+        "",
+        "Enable hybrid dependency profiling",
+        ptg.Checkbox()
+    )
+                  .set_title("DiscoPoP Options")
+                  )
     buttons = (ptg.Window(
         ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
     ))
-    manager.add(buttons, assign="body_buttons")
-    wizard.push_body_buttons(buttons)
+    wizard.show_body_windows(manager, [(body, 0.6), (dp_options, 0.2), (buttons, 0.2)])
 
 
 def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard):
@@ -88,7 +94,6 @@ def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     wizard.initialize_screen(config_dir)
 
 
-
 def submit(manager: ptg.WindowManager, window: ptg.Window, values: dict) -> None:
     for widget in window:
         if isinstance(widget, ptg.InputField):
@@ -99,4 +104,3 @@ def submit(manager: ptg.WindowManager, window: ptg.Window, values: dict) -> None
             label, field = iter(widget)
             values[label.value] = field.value
     manager.stop()
-

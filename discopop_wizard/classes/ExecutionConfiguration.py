@@ -91,8 +91,6 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
         )
         .set_title("[210 bold]Show execution configuration")
     )
-    manager.add(body, assign="body")
-    wizard.push_body_window(body)
 
     buttons = (ptg.Window(
         ptg.Label(value="[orange bold]Warning:"),
@@ -111,8 +109,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
         "",
         ["Delete", lambda *_: delete_configuration(manager, body, config_dir, wizard, execution_configuration)]
     ))
-    manager.add(buttons, assign="body_buttons")
-    wizard.push_body_buttons(buttons)
+    wizard.show_body_windows(manager, [(body, 0.8), (buttons, 0.2)])
 
 
 def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration, restart_wizard=True):

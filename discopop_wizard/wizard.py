@@ -1,9 +1,10 @@
 import os
 from enum import IntEnum
 from os.path import dirname
-from typing import List, Tuple
+from typing import List, Tuple, cast, Optional
 
 import pytermgui as ptg
+from pytermgui.window_manager.layouts import Relative, Static, Auto, Slot
 
 from discopop_wizard.screens.main import push_main_screen
 # todo add command line option to list available run configurations
@@ -34,8 +35,8 @@ class ConsoleStyles(IntEnum):
 
 
 class DiscoPoPWizard(object):
-    body_window_stack: List[ptg.Window] = []
-    body_button_stack: List[ptg.Window] = []
+    body_window_stack: List[List[Tuple[ptg.WindowManager, float]]] = []
+    body_width_stack: List[Tuple[float, float]] = []  # (body_left width, body_right width)
     console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP execution Wizard.", ConsoleStyles.NORMAL)]
     console_window = None
 
@@ -72,10 +73,15 @@ class DiscoPoPWizard(object):
             manager.layout.add_slot("Header", height=1)
             manager.layout.add_break()
             # A body slot that will fill the entire width, and the height is remaining
-            manager.layout.add_slot("Body")
+            # width of body slots can be resized by each view
+            manager.layout.add_slot("body_0", width=0.0, height=0.7)
+            manager.layout.add_slot("body_1", width=0.0, height=0.7)
+            manager.layout.add_slot("body_2", width=0.0, height=0.7)
+            manager.layout.add_slot("body_3", width=0.0, height=0.7)
+            manager.layout.add_slot("body_4", width=0.0, height=0.7)
             # A slot in the same row as body, using the full non-occupied height and
             # 20% of the terminal's height.
-            manager.layout.add_slot("body_buttons", width=0.2, height=0.7)
+            manager.layout.add_slot("body_5", width=0.2, height=0.7)
             manager.layout.add_break()
             manager.layout.add_slot("console", height=0.2)
             manager.layout.add_break()
@@ -117,25 +123,104 @@ class DiscoPoPWizard(object):
         manager.add(window, assign="console")
         self.console_window = window
 
-    def push_body_window(self, window: ptg.Window):
-        self.body_window_stack.append(window)
+    def show_body_windows(self, manager: ptg.WindowManager, windows: List[Tuple[ptg.WindowManager, float]],
+                          push_to_stack=True):  # [(window, width)]
+        if len(windows) > 5:
+            raise ValueError("Maximum of 5 windows can be displayed in Body!")
+        # close old windows
+        for slot in manager.layout.slots:
+            if slot.name in ["body_0", "body_1", "body_2", "body_3", "body_4", "body_5"]:
+                if type(slot.content) == ptg.Window:
+                    slot.content.close()
 
-    def push_body_buttons(self, window: ptg.Window):
-        self.body_button_stack.append(window)
+        # resize slots according to windows
+        for idx, (window, width) in enumerate(windows):
+            for slot in manager.layout.slots:
+                if slot.name == "body_" + str(idx):
+                    slot = cast(Slot, slot)
+                    if not isinstance(slot.width, Relative):
+                        raise ValueError("Width must be relative!")
+                    cast(Relative, slot.width).scale = width
+
+        # add windows to manager
+        for idx, (window, width) in enumerate(windows):
+            window.width = width
+            manager.add(window, assign="body_"+str(idx))
+
+        # add windows to stack
+        if push_to_stack:
+            self.body_window_stack.append(windows)
 
     def clear_window_stacks(self):
         self.body_window_stack = []
-        self.body_button_stack = []
+        self.body_width_stack = []
 
     def action_back(self, manager: ptg.WindowManager):
         """Pops one element from the window and button stack of the body.
         If the stack contains only a single element, close the application"""
         if len(self.body_window_stack) > 1:
-            self.body_window_stack[-1].close()
-            self.body_button_stack[-1].close()
+            self.body_window_stack.pop()
+            self.show_body_windows(manager, self.body_window_stack[-1], push_to_stack=False)
             self.__show_output_console(manager)
         else:
             exit_program(manager)
+
+#    def push_body_widths(self, manager: ptg.WindowManager, left_width: float, right_width: float):
+#        if type(left_width) != float or type(right_width) != float:
+#            raise TypeError("left_width and right_width must be of type float!")
+#        self.body_width_stack.append((left_width, right_width))
+#        for slot in manager.layout.slots:
+#            if slot.name == "body_left":
+#                if isinstance(slot.width, Relative):
+#                    self.print_to_console(manager, "WIDTH: " + str(cast(Relative, slot.width)))
+#                    cast(Relative, slot.width).scale = left_width
+#                else:
+#                    raise ValueError("slot.width must be defined relative!")
+#            if slot.name == "body_right":
+#                if isinstance(slot.width, Relative):
+#                    self.print_to_console(manager, "WIDTH: " + str(cast(Relative, slot.width)))
+#                    cast(Relative, slot.width).scale = right_width
+#                else:
+#                    raise ValueError("slot.width must be defined relative!")
+#        manager.layout.apply()
+
+#    def pop_body_widths(self, manager: ptg.WindowManager):
+#        self.body_width_stack.pop()
+#        self.print_to_console(manager, "Set widht to : " + str(self.body_width_stack[-1][0]))
+#        for slot in manager.layout.slots:
+#            if slot.name == "body_left":
+#                if isinstance(slot.width, Relative):
+#                    self.print_to_console(manager, "WIDTH LEFT: " + str(cast(Relative, slot.width)))
+#                    cast(Relative, slot.width).scale = self.body_width_stack[-1][0]
+#                    self.print_to_console(manager, "POST LEFT: " + str(cast(Relative, slot.width)))
+#                    if isinstance(slot.content, ptg.Window):#
+#                        cast(ptg.Window, slot.content).width = cast(Relative, slot.width).value
+#                        slot.content.is_dirty = True
+#                        slot.content.close()
+#                        manager.add(slot.content, assign="body_left")
+#                        manager.compositor.redraw()
+#                else:
+#                    raise ValueError("slot.width must be defined relative!")
+#                self.print_to_console(manager, "Content: " + str(slot.content))
+#            if slot.name == "body_right":
+#                if isinstance(slot.width, Relative):
+#                    self.print_to_console(manager, "WIDTH RIGHT: " + str(cast(Relative, slot.width)))
+#                    cast(Relative, slot.width).scale = self.body_width_stack[-1][1]
+#
+#                    self.print_to_console(manager, "POST RIGHT: " + str(cast(Relative, slot.width)))
+#                    if isinstance(slot.content, ptg.Window):
+#                        cast(ptg.Window, slot.content).width = cast(Relative, slot.width).value
+#                        slot.content.is_dirty = True
+#                        slot.content.close()
+#                        manager.add(slot.content, assign="body_right")
+#                        manager.compositor.redraw()
+#
+#                else:
+#                    raise ValueError("slot.width must be defined relative!")
+#
+#        manager.layout.apply()
+#        self.print_to_console(manager, str(manager.layout.slots))
+
 
     def __fill_console(self, container: ptg.Container):
         for line, style in self.console_log:
