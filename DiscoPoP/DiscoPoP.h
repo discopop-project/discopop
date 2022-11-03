@@ -327,12 +327,6 @@ public:
   void printTree(Node *node, bool isRoot);
   void printNode(Node *node, bool isRoot);
   void closeOutputFiles();
-
-  // virtual bool runOnFunction(Function &F);
-  // changed const char * to Stringref
-  // StringRef getPassName() const;
-  // void getAnalysisUsage(AnalysisUsage &Info) const;
-
 // CUGeneration end
   // static char ID;
   // DiscoPoP() : FunctionPass(ID) {}
