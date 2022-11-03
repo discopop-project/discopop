@@ -11,26 +11,25 @@ from discopop_wizard.screens.utils import exit_program
 
 
 def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, wizard):
-    wizard.print_to_console(manager, str(manager.layout.slots))
     body = (
         ptg.Window(
             "",
             "Create a new execution configuration",
             "",
-            ptg.InputField("<text>", prompt="Label: "),
-            ptg.InputField("<text>", prompt="Description: "),
-            ptg.InputField("<text>", prompt="Executable name: "),
-            ptg.InputField("<text>", prompt="Executable arguments: "),
-            ptg.InputField("<int>", prompt="Available threads: "),
-            ptg.InputField("<path>", prompt="Project base path: "),
-            ptg.InputField("<path>", prompt="Project source path: "),
-            ptg.InputField("<path>", prompt="Project build path: "),
-            ptg.InputField("<text>", prompt="Project configure options: "),
-            ptg.InputField("<text>", prompt="Project linker flags: "),
+            ptg.InputField("text", prompt="Label: "),
+            ptg.InputField("text", prompt="Description: "),
+            ptg.InputField("text", prompt="Executable name: "),
+            ptg.InputField("text", prompt="Executable arguments: "),
+            ptg.InputField("int", prompt="Available threads: "),
+            ptg.InputField("path", prompt="Project base path: "),
+            ptg.InputField("path", prompt="Project source path: "),
+            ptg.InputField("path", prompt="Project build path: "),
+            ptg.InputField("text", prompt="Project configure options: "),
+            ptg.InputField("text", prompt="Project linker flags: "),
             ptg.Container(
                 "Additional notes:",
                 ptg.InputField(
-                    "<text>", multiline=True
+                    "text", multiline=True
                 ),
                 box="EMPTY_VERTICAL",
             ),
@@ -54,7 +53,6 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
 
 
 def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard):
-    execution_configs: List[ExecutionConfiguration] = []
     values = dict()
     values["ID"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     for widget in window:
@@ -67,25 +65,15 @@ def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
             values[label.value] = field.value
     new_config = ExecutionConfiguration()
     new_config.init_from_values(values)
-    execution_configs.append(new_config)
-    # load old configs
-    with open(os.path.join(config_dir, "run_configurations.txt"), "r") as f:
-        file_contents = f.read()
-    loaded_dicts: List[dict] = []
-    if len(file_contents) > 0:
-        loaded_dicts = jsons.loads(file_contents)
-    for config in loaded_dicts:
-        exec_config = ExecutionConfiguration()
-        exec_config.init_from_dict(config)
-        execution_configs.append(exec_config)
-    # overwrite configs file
-    json_dump_str = jsons.dumps(execution_configs)
 
-    if not os.path.isfile(os.path.join(config_dir, "run_configurations.txt")):
-        raise ValueError(os.path.join(config_dir, "run_configurations.txt"))
-    os.remove(os.path.join(config_dir, "run_configurations.txt"))
-    with open(os.path.join(config_dir, "run_configurations.txt"), "w+") as f:
-        f.write(json_dump_str)
+    config_path = os.path.join(config_dir, new_config.id + "_" + new_config.label + ".sh")
+    # remove old config if present
+    if os.path.exists(config_path):
+        os.remove(config_path)
+    # write config to file
+    with open(config_path, "w+") as f:
+        f.write(new_config.get_as_executable_script())
+
     # output to console
     wizard.print_to_console(manager, "Created configuration " + values["ID"])
     # restart Wizard to load new execution configurations

@@ -20,13 +20,10 @@ def main():
     # check if config exists, if not, initialize config folder and files
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
-    if not os.path.exists(os.path.join(config_dir, "run_configurations.txt")):
-        # create run_configurations.txt
-        with open(os.path.join(config_dir, "run_configurations.txt"), "w+"):
-            pass
 
     wizard = DiscoPoPWizard(config_dir)
     print()
+
 
 class ConsoleStyles(IntEnum):
     NORMAL = 1
@@ -109,13 +106,13 @@ class DiscoPoPWizard(object):
         window = (ptg.Window(
         )
                   .set_title("[210 bold]Output console")
-        )
+                  )
         container = ptg.Container()
 
         container.overflow = ptg.Overflow.SCROLL
         self.__fill_console(container)
         window.lazy_add(container)
-        # get heigt from slot
+        # get height from slot
         for slot in manager.layout.slots:
             if slot.name == "console":
                 container.height = slot.height.value.real - 2
@@ -145,7 +142,7 @@ class DiscoPoPWizard(object):
         # add windows to manager
         for idx, (window, width) in enumerate(windows):
             window.width = width
-            manager.add(window, assign="body_"+str(idx))
+            manager.add(window, assign="body_" + str(idx))
 
         # add windows to stack
         if push_to_stack:
@@ -165,78 +162,17 @@ class DiscoPoPWizard(object):
         else:
             exit_program(manager)
 
-#    def push_body_widths(self, manager: ptg.WindowManager, left_width: float, right_width: float):
-#        if type(left_width) != float or type(right_width) != float:
-#            raise TypeError("left_width and right_width must be of type float!")
-#        self.body_width_stack.append((left_width, right_width))
-#        for slot in manager.layout.slots:
-#            if slot.name == "body_left":
-#                if isinstance(slot.width, Relative):
-#                    self.print_to_console(manager, "WIDTH: " + str(cast(Relative, slot.width)))
-#                    cast(Relative, slot.width).scale = left_width
-#                else:
-#                    raise ValueError("slot.width must be defined relative!")
-#            if slot.name == "body_right":
-#                if isinstance(slot.width, Relative):
-#                    self.print_to_console(manager, "WIDTH: " + str(cast(Relative, slot.width)))
-#                    cast(Relative, slot.width).scale = right_width
-#                else:
-#                    raise ValueError("slot.width must be defined relative!")
-#        manager.layout.apply()
-
-#    def pop_body_widths(self, manager: ptg.WindowManager):
-#        self.body_width_stack.pop()
-#        self.print_to_console(manager, "Set widht to : " + str(self.body_width_stack[-1][0]))
-#        for slot in manager.layout.slots:
-#            if slot.name == "body_left":
-#                if isinstance(slot.width, Relative):
-#                    self.print_to_console(manager, "WIDTH LEFT: " + str(cast(Relative, slot.width)))
-#                    cast(Relative, slot.width).scale = self.body_width_stack[-1][0]
-#                    self.print_to_console(manager, "POST LEFT: " + str(cast(Relative, slot.width)))
-#                    if isinstance(slot.content, ptg.Window):#
-#                        cast(ptg.Window, slot.content).width = cast(Relative, slot.width).value
-#                        slot.content.is_dirty = True
-#                        slot.content.close()
-#                        manager.add(slot.content, assign="body_left")
-#                        manager.compositor.redraw()
-#                else:
-#                    raise ValueError("slot.width must be defined relative!")
-#                self.print_to_console(manager, "Content: " + str(slot.content))
-#            if slot.name == "body_right":
-#                if isinstance(slot.width, Relative):
-#                    self.print_to_console(manager, "WIDTH RIGHT: " + str(cast(Relative, slot.width)))
-#                    cast(Relative, slot.width).scale = self.body_width_stack[-1][1]
-#
-#                    self.print_to_console(manager, "POST RIGHT: " + str(cast(Relative, slot.width)))
-#                    if isinstance(slot.content, ptg.Window):
-#                        cast(ptg.Window, slot.content).width = cast(Relative, slot.width).value
-#                        slot.content.is_dirty = True
-#                        slot.content.close()
-#                        manager.add(slot.content, assign="body_right")
-#                        manager.compositor.redraw()
-#
-#                else:
-#                    raise ValueError("slot.width must be defined relative!")
-#
-#        manager.layout.apply()
-#        self.print_to_console(manager, str(manager.layout.slots))
-
-
     def __fill_console(self, container: ptg.Container):
         for line, style in self.console_log:
             if style == ConsoleStyles.NORMAL:
                 container.lazy_add(ptg.Label(line))
             elif style == ConsoleStyles.WARNING:
-                container.lazy_add(ptg.Label("[orange]"+line))
+                container.lazy_add(ptg.Label("[orange]" + line))
             elif style == ConsoleStyles.ERROR:
-                container.lazy_add(ptg.Label("[red bold]"+line))
+                container.lazy_add(ptg.Label("[red bold]" + line))
             container.get_lines()
-            container.scroll(1)
+            container.scroll(1 + line.count("\n"))
 
     def print_to_console(self, manager: ptg.WindowManager, output: str, style=ConsoleStyles.NORMAL):
         self.console_log.append((output, style))
         self.__show_output_console(manager)
-
-
-
-

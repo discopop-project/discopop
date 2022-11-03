@@ -41,14 +41,9 @@ def display_execution_configurations(manager: ptg.WindowManager, config_dir: str
 
 def load_execution_configurations(config_dir: str) -> List[ExecutionConfiguration]:
     execution_configs: List[ExecutionConfiguration] = []
-    with open(os.path.join(config_dir, "run_configurations.txt"), "r") as f:
-        file_contents = f.read()
-    loaded_dicts: List[dict] = []
-    if len(file_contents) > 0:
-        loaded_dicts = jsons.loads(file_contents)
-    for config in loaded_dicts:
-        exec_config = ExecutionConfiguration()
-        exec_config.init_from_dict(config)
-        execution_configs.append(exec_config)
+    for filename in os.listdir(config_dir):
+        with open(os.path.join(config_dir, filename), 'r') as script:
+            config = ExecutionConfiguration()
+            config.init_from_script(script)
+            execution_configs.append(config)
     return execution_configs
-
