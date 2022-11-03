@@ -16,46 +16,7 @@
 // STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
 // STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
 
-// #include "llvm/Transforms/Instrumentation.h"
-// #include "llvm/ADT/Statistic.h"
-// #include "llvm/ADT/StringRef.h"
-// #include "llvm/ADT/SmallVector.h"
-// #include "llvm/ADT/APInt.h"
-// #include "llvm/IR/GlobalVariable.h"
-// #include "llvm/IR/Function.h"
-// #include "llvm/IR/Module.h"
-// #include "llvm/IR/Value.h"
-// #include "llvm/IR/Type.h"
-// #include "llvm/IR/IntrinsicInst.h"
-// #include "llvm/IR/Metadata.h"
-// #include "llvm/IR/IRBuilder.h"
-// #include "llvm/IR/CFG.h"
-// #include "llvm/IR/Dominators.h"
-// #include "llvm/IR/DebugInfo.h"
-// #include "llvm/IR/DebugInfoMetadata.h"
-// #include "llvm/Analysis/LoopInfo.h"
-// #include "llvm/Support/Debug.h"
-// #include "llvm/Support/CommandLine.h"
-// #include "llvm/Support/raw_ostream.h"
-// #include "llvm/Pass.h"
-// #include "llvm/PassAnalysisSupport.h"
-// #include "llvm/PassSupport.h"
-// #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-// #include "llvm/PassRegistry.h"
-// #include "llvm/IR/PassManager.h"
-// #include "llvm/IR/LegacyPassManager.h"
-
-// #include "DPUtils.h"
 #include "DiscoPoP.h"
-// #include "DPInstrumentationOmission.h"
-
-// #include <set>
-// #include <map>
-// #include <cstdlib>
-// #include <algorithm>
-// #include <iomanip>
-// #include <string.h>
-// #include <utility>
 
 #define DP_DEBUG false
 #define DP_hybrid_DEBUG false
