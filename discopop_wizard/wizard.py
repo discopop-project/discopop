@@ -14,8 +14,8 @@ from discopop_wizard.screens.utils import exit_program
 
 def main():
     print("starting DiscoPoP Wizard...\n")
-    discopop_dir = dirname(dirname(os.path.abspath(__file__)))
-    config_dir = os.path.join(discopop_dir, ".config")
+    source_dir = dirname(os.path.abspath(__file__))  # source_dir: discopop/discopop_wizard
+    config_dir = os.path.join(source_dir, ".config")
 
     # check if config exists, if not, initialize config folder and files
     if not os.path.exists(config_dir):
