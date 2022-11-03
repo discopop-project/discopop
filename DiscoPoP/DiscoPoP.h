@@ -169,13 +169,6 @@ typedef struct CU_struct : Node_struct {
   }
 
 } CU;
-
-// CUGeneration end
-
-// DPInstrumentation
-
-// DPInstrumentation end
-
 class DiscoPoP : public ModulePass {
 private:
 
