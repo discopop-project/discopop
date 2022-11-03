@@ -192,7 +192,7 @@ private:
 
   RegionInfoPass *RIpass;
   RegionInfo *RI;
-// CUGeneration
+// CUGeneration end
 
 // DPInstrumentation
   // Initializations
