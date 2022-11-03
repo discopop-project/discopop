@@ -334,13 +334,6 @@ public:
   // void getAnalysisUsage(AnalysisUsage &Info) const;
 
 // CUGeneration end
-
-// DPInstrumentation
-
-
-
-// DPInstrumentation end
-
   // static char ID;
   // DiscoPoP() : FunctionPass(ID) {}
 }; // end of class DiscoPoP
