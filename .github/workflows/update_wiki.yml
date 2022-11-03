@@ -1,0 +1,34 @@
+name: "Update Wiki"
+
+on:
+    push:
+        branches:
+            - master
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    name: Update wiki
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+
+      - name: Check out wiki
+        uses: actions/checkout@v2
+        with:
+            repository: 'discopop-project/discopop.wiki'
+            ref: 'master'
+            path: 'discopop.wiki'
+      - name: "overwrite wiki contents"
+        run: |
+          cp -r wiki/* discopop.wiki
+      - name: "Commit to wiki"
+        run: |
+          cd discopop.wiki
+          git config --global user.email "discopop[at]lists.parallel.informatik.tu-darmstadt.de"
+          git config --global user.name "DiscoPoP CI"
+          git add *
+          git diff-index --quiet HEAD || git commit -m 'Automatic update of wiki'
+      - name: "Push to wiki"
+        run: |
+          cd discopop.wiki
+          git push
