@@ -9,7 +9,7 @@
  *
  */
 
-#include "iFunctions.h"
+#include "iFunctions.hpp"
 #include "perfect_shadow.h"
 #include "shadow.h"
 #include "signature.h"
