@@ -9,7 +9,7 @@
  *
  */
 
-#include "loop_counter.h"
+#include "loop_counter.hpp"
 
 #include <fstream>
 #include <iomanip>
