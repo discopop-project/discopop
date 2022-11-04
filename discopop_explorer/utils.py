@@ -55,12 +55,9 @@ def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     """
     if source == target:
         return False
-    # target_nodes = pet.get_left_right_subtree(target, True)
     target_nodes = pet.subtree_of_type(target, None)
 
-    # for node in pet.get_left_right_subtree(source, True):
     for node in pet.subtree_of_type(source, NodeType.CU):
-        # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
         for target in [pet.node_at(target_id) for source_id, target_id, dependence in
                        pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
             if target in target_nodes:
@@ -81,20 +78,7 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
 
 
-# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-#def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
-#    """Calculates total number of the instructions in the subtree of a given node
-#
-#    :param pet: PET graph
-#    :param root: root node
-#    :return: number of instructions
-#    """
-#    res = 0
-#    for node in pet.get_left_right_subtree(root, True):
-#        res += node.instructions_count
-#    return res
-
-
+# NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
 #def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
 #    """Calculates workload for a given node
@@ -202,9 +186,6 @@ def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
     :param tree: subtree
     :return: true if is written
     """
-    # for i in tree:
-    #     if i.start_line >= 900 and i.start_line <= 1000:
-    #         print(f"----------{i.start_line} {i.end_line}")
     for e in itertools.chain(raw, waw):
         if e[2].var_name == var_name and any([n.id == e[1] for n in tree]):
             return True
@@ -471,8 +452,6 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
     last_private = []
     shared = []
     reduction = []
-    # start1 = time.time()
-    # print(f"{loop.start_line}")
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
     sub = pet.subtree_of_type(loop, NodeType.CU)
@@ -489,17 +468,13 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     vars = pet.get_undefined_variables_inside_loop(loop)
-    # start = time.time()
-    # print(f"-- {loop.start_line} {start - start1}")
     for var in vars:
-        # print(f"Variable: {var.name}")
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
             var.operation = pet.get_reduction_sign(
                 loop.start_position(), var.name)
             reduction.append(var)
-            # TODO grouping
         elif (is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
               and is_scalar_val(var)):
             if is_readonly(var.name, war, waw, rev_raw):
@@ -514,7 +489,6 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     shared.append(var)
 
         elif is_first_written(var.name, raw, war, sub):
-            # TODO simplify
             if is_read_in_subtree(var.name, rev_raw, rst):
                 if is_scalar_val(var):
                     last_private.append(var)
@@ -525,8 +499,6 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     private.append(var)
                 else:
                     shared.append(var)
-    # end = time.time()
-    # print(f"end {loop.start_line}: {end - start}")
     return first_private, private, last_private, shared, reduction
 
 
@@ -583,7 +555,6 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     reverse_raw_deps_on = set()
     reverse_war_deps_on = set()
     reverse_waw_deps_on = set()
-    # init = []  # set<String>
 
     for sub_node in subtree:
         # insert all entries from child_cu.RAW_deps_on into RAW_deps_on etc.

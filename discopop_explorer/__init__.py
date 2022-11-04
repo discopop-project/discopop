@@ -25,11 +25,6 @@ def run(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file,
                                                     loop_counter_file, reduction_file, file_mapping))
     # TODO add visualization
-    # t1 = time.time()
-    # print(f"parsing time: {t1-t0}")
-    # pet.show() # not useful for large programs
-    # t2 = time.time()
-    # print(f"visualization: {t2-t1}")
 
     plugin_base = PluginBase(package='plugins')
 
