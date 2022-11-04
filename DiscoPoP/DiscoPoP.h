@@ -103,9 +103,6 @@ typedef struct Node_struct {
   nodeTypes type;
   int startLine;
   int endLine;
-
-
-
   BasicBlock *BB;
 
   // Only for func type
