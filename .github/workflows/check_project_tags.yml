@@ -23,9 +23,9 @@ jobs:
           do
             FILE_ERROR=""
             head -n 20 ${FILE} | grep -q "DiscoPoP software" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
-            [-z "$FILE_ERROR"] || continue
+            [ -z "$FILE_ERROR" ] || continue
             head -n 20 ${FILE} | grep -q "Technische Universitaet Darmstadt, Germany" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
-            [-z "$FILE_ERROR"] || continue
+            [ -z "$FILE_ERROR" ] || continue
             head -n 20 ${FILE} | grep -q "3-Clause BSD License" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
           done
           # Report error (1), if license tags are missing
