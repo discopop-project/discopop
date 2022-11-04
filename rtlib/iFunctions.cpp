@@ -1135,15 +1135,15 @@ namespace __dp
                     // regular one.
 
                     // Note: keep, as i may be necessary in the future?
-                    // if (lid < loop->second->end)
-                    // {
+                    if (lid < loop->second->end)
+                    {
                          //    loop->second->end = lid;
-                    // } else
+                    } 
 
                     // New loop exit found and it's bigger than before. This can
                     // happen when the previous exit is a break inside the loop.
                     // In this case we update the loop exit to the bigger one.
-                    if (lid > loop->second->end)
+                    else if (lid > loop->second->end)
                     {
                          loop->second->end = lid;
                     }
