@@ -4,7 +4,6 @@
 
 InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid): VNF(_VNF), CFG(_CFG), fid(_fid){
 	for(auto edge: CFG->getInEdges(CFG->getExit()))
-	if(edge->getSrc())
 		recursiveDepFinder(new set<Instruction*>(), edge->getSrc()->getItem());
 }
 
@@ -31,7 +30,7 @@ void InstructionDG::recursiveDepChecker(set<Instruction*>* checkedInstructions, 
 void InstructionDG::recursiveDepFinder(set<Instruction*>* checkedInstructions, Instruction* I){
 	if(CFG->isEntryOrExit(I) || checkedInstructions->find(I) != checkedInstructions->end()) return;
 	checkedInstructions->insert(I);
-	if(isa<StoreInst>(I) || isa<LoadInst>(I)) Graph::addNode(I);
+	if(isa<StoreInst>(I) || isa<LoadInst>(I)) Graph::addInstructionNode(I);
 	for(auto edge: CFG->getInEdges(I)){
 		if(isa<StoreInst>(I) || isa<LoadInst>(I)){
 			recursiveDepChecker(new set<Instruction*>(), I, edge->getSrc()->getItem());
@@ -40,8 +39,8 @@ void InstructionDG::recursiveDepFinder(set<Instruction*>* checkedInstructions, I
 	}
 }
 
-void InstructionDG::highlightNode(Instruction *instr){
-	highlightedNodes.insert(instr);
+void InstructionDG::highlightInstructionNode(Instruction *instr){
+	highlightedInstructionNodes.insert(instr);
 }
 
 string getInstructionLine(Instruction* I){
@@ -92,10 +91,10 @@ void InstructionDG::dumpToDot(const string targetPath)
 	
 	dotStream << "digraph g {\n";
 	// Create all nodes in DOT format
-	for (auto node : getNodes())
+	for (auto instNode : getInstructionNodes())
 	{
-		string label = "label=\"" + to_string(Graph::getNodeIndex(node)) + "\\n";
-		Instruction* instr = node->getItem();
+		string label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
+		Instruction* instr = instNode->getItem();
 		if(isa<StoreInst>(instr)){
 			if(DebugLoc dl = instr->getDebugLoc())
 				label += "write(";
@@ -112,15 +111,15 @@ void InstructionDG::dumpToDot(const string targetPath)
 			label += ", ";
 			label += to_string(dl.getCol());
 		}else if(isa<StoreInst>(instr)){
-			label += std::to_string(instr->getFunction()->getSubprogram()->getLine()) + "\n";
+			label += instr->getFunction()->getSubprogram()->getLine() + "\n";
 		}
 		label += "\"";
-		if(highlightedNodes.find(instr) != highlightedNodes.end()){
+		if(highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()){
 			label += ",fillcolor=cyan,style=filled";
 		}
 
-		// printNode:
-		dotStream << "\t\"" << getNodeIndex(node) 
+		printInstructionNode:
+		dotStream << "\t\"" << getInstructionNodeIndex(instNode) 
 			<< "\" [" << label << "];\n"
 		;
 
@@ -130,8 +129,8 @@ void InstructionDG::dumpToDot(const string targetPath)
 	// Now print all outgoing edges and their labels
 	for (auto e : getEdges())
 	{	
-		dotStream << "\t\"" << getNodeIndex(e->getSrc())
-			<< "\" -> \"" << getNodeIndex(e->getDst()) 
+		dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc())
+			<< "\" -> \"" << getInstructionNodeIndex(e->getDst()) 
 			<< "\";\n"
 		;
 	}

@@ -90,8 +90,8 @@ unsigned get_file_id(llvm::Function* func) {
     if (it != path_to_id_.end()) {
       file_id = it->second;
     } else {
-      llvm::errs() << "could not find the path '" << abs_path
-                   << "' in the fmap file\n";
+      // llvm::errs() << "could not find the path '" << abs_path
+                  //  << "' in the fmap file\n";
     }
   }
 

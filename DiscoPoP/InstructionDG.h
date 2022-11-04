@@ -8,7 +8,7 @@ class InstructionDG : public Graph<Instruction*>
 private:
 	dputil::VariableNameFinder *VNF;
 	InstructionCFG *CFG;
-	set<Instruction*> highlightedNodes;
+	set<Instruction*> highlightedInstructionNodes;
 	int32_t fid;
 
 	void recursiveDepChecker(set<Instruction*>* checkedInstructions, Instruction* I, Instruction* C);
@@ -19,7 +19,7 @@ public:
 
 	string edgeToDPDep(Edge<Instruction*> *e);
 
-	void highlightNode(Instruction *instr);
+	void highlightInstructionNode(Instruction *instr);
 	void dumpToDot(const string targetPath);
 
 };

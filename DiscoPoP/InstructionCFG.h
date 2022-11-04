@@ -15,10 +15,10 @@ class InstructionCFG : public Graph<Instruction*>
 {
 	
 private:
-	Node<Instruction*> *entry;
-	Node<Instruction*> *exit;
+	InstructionNode<Instruction*> *entry;
+	InstructionNode<Instruction*> *exit;
 	dputil::VariableNameFinder *VNF;
-	set<Instruction*> highlightedNodes;
+	set<Instruction*> highlightedInstructionNodes;
 	void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction* previousInstruction);
     
 public:
@@ -26,12 +26,12 @@ public:
 	
 	set<Instruction*> findBoundaryInstructions(uint startLine, uint endLine);
 	
-	Node<Instruction*> *getEntry() { return entry; }
-	Node<Instruction*> *getExit() { return exit; }
+	InstructionNode<Instruction*> *getEntry() { return entry; }
+	InstructionNode<Instruction*> *getExit() { return exit; }
 
-	bool isEntryOrExit(Instruction * I) { return Graph::getNode(I) == entry || Graph::getNode(I) == exit;}
+	bool isEntryOrExit(Instruction * I) { return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;}
 
-	void highlightNode(Instruction *instr);
+	void highlightInstructionNode(Instruction *instr);
 
 	void dumpToDot(const string targetPath);
 
