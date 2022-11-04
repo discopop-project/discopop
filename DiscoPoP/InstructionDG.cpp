@@ -9,7 +9,7 @@
  *
  */
 
-#include "InstructionDG.h"
+#include "InstructionDG.hpp"
 
 #include "DPUtils.h"
 

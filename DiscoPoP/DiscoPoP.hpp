@@ -47,7 +47,7 @@
 #include "llvm/InitializePasses.h"
 
 #include "DPUtils.h"
-#include "InstructionDG.h"
+#include "InstructionDG.hpp"
 
 #include <cstdlib>
 #include <algorithm>
