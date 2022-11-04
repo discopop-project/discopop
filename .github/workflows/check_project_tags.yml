@@ -29,4 +29,5 @@ jobs:
             [ -z "$ERROR" ] && ERROR_FILES="${ERROR_FILES};${FILE}"
           done
           # Report missing license tags
-          [ -z "$ERROR_FILES" ] && echo "Error files:\n${ERROR_FILES}" && exit 1
+          [ -z "$ERROR_FILES" ] && echo "Error files:\n${ERROR_FILES}"
+          [ -z "$ERROR_FILES" ] && exit 1
