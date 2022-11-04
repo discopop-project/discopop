@@ -85,7 +85,6 @@ namespace dputil
             }
             fileMap.close();
         }
-
         return index;
     }
 

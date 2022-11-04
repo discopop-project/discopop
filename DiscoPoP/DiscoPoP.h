@@ -1,10 +1,6 @@
 #ifndef DISCOPOP_H
 #define DISCOPOP_H
 
-
-#define DEBUG_TYPE "dpop"
-//#define SKIP_DUP_INSTR 1
-
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -107,9 +103,6 @@ typedef struct Node_struct {
   nodeTypes type;
   int startLine;
   int endLine;
-
-
-
   BasicBlock *BB;
 
   // Only for func type
@@ -133,8 +126,6 @@ typedef struct Node_struct {
 typedef struct CU_struct : Node_struct {
 
   string BBID; // BasicBlock Id where the CU appears in
-
-  // BasicBlock *BB;
 
   unsigned readDataSize;  // number of bytes read from memory by the cu
   unsigned writeDataSize; // number of bytes written into memory during the cu
@@ -181,13 +172,8 @@ private:
   map<string, string> loopStartLines;
 
   // structures to get list of global variables
-  // Module *ThisModule;
   set<string> programGlobalVariablesSet;
-  // set<string> originalVariablesSet;
-
-  // used to get variable names. Originally appeared in DiscoPoP code!
-  // map<string, MDNode *> Structs;
-  // map<string, Value *> VarNames;
+  // structures to get actual variable names from llvm replacements
   map<string, string> trueVarNamesFromMetadataMap;
 
   RegionInfoPass *RIpass;
@@ -196,72 +182,72 @@ private:
 
 // DPInstrumentation
   // Initializations
-        void setupDataTypes();
-        void setupCallbacks();
+  void setupDataTypes();
+  void setupCallbacks();
 
-        // Helper functions
-        bool isaCallOrInvoke(Instruction *BI);
-        bool sanityCheck(BasicBlock *BB);
-        void collectDebugInfo();
-        void processStructTypes(string const &fullStructName, MDNode *structNode);
-        DIGlobalVariable *findDbgGlobalDeclare(GlobalVariable *V);
-        Value *getOrInsertVarName(string varName, IRBuilder<> &builder);
-        Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
-        Type *pointsToStruct(PointerType *PTy);
-        Value *determineVariableName(Instruction *const I,
-                        bool &isGlobalVariable = defaultIsGlobalVariableValue);
-        void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
-                                         std::map<string, string>* trueVarNamesFromMetadataMap);
+  // Helper functions
+  bool isaCallOrInvoke(Instruction *BI);
+  bool sanityCheck(BasicBlock *BB);
+  void collectDebugInfo();
+  void processStructTypes(string const &fullStructName, MDNode *structNode);
+  DIGlobalVariable *findDbgGlobalDeclare(GlobalVariable *V);
+  Value *getOrInsertVarName(string varName, IRBuilder<> &builder);
+  Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+  Type *pointsToStruct(PointerType *PTy);
+  Value *determineVariableName(Instruction *const I,
+                  bool &isGlobalVariable = defaultIsGlobalVariableValue);
+  void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
+                                    std::map<string, string>* trueVarNamesFromMetadataMap);
 
-        // Control flow analysis
-        void CFA(Function &F, LoopInfo &LI);
+  // Control flow analysis
+  void CFA(Function &F, LoopInfo &LI);
 
-        // Callback Inserters
-        //void insertDpInit(const vector<Value*> &args, Instruction *before);
-        //void insertDpFinalize(Instruction *before);
-        void instrumentStore(StoreInst *toInstrument);
-        void instrumentLoad(LoadInst *toInstrument);
-        void insertDpFinalize(Instruction *before);
-        void instrumentFuncEntry(Function &F);
-        void instrumentLoopEntry(BasicBlock *bb, int32_t id);
-        void instrumentLoopExit(BasicBlock *bb, int32_t id);
+  // Callback Inserters
+  //void insertDpInit(const vector<Value*> &args, Instruction *before);
+  //void insertDpFinalize(Instruction *before);
+  void instrumentStore(StoreInst *toInstrument);
+  void instrumentLoad(LoadInst *toInstrument);
+  void insertDpFinalize(Instruction *before);
+  void instrumentFuncEntry(Function &F);
+  void instrumentLoopEntry(BasicBlock *bb, int32_t id);
+  void instrumentLoopExit(BasicBlock *bb, int32_t id);
 
-        int64_t uniqueNum;
+  int64_t uniqueNum;
 
-        // Callbacks to run-time library
-        FunctionCallee DpInit, DpFinalize;
-        FunctionCallee DpRead, DpWrite;
-        FunctionCallee DpCallOrInvoke;
-        FunctionCallee DpFuncEntry, DpFuncExit;
-        FunctionCallee DpLoopEntry, DpLoopExit;
+  // Callbacks to run-time library
+  FunctionCallee DpInit, DpFinalize;
+  FunctionCallee DpRead, DpWrite;
+  FunctionCallee DpCallOrInvoke;
+  FunctionCallee DpFuncEntry, DpFuncExit;
+  FunctionCallee DpLoopEntry, DpLoopExit;
 
-        // Basic types
-        Type *Void;
-        IntegerType *Int32, *Int64;
-        PointerType *CharPtr;
+  // Basic types
+  Type *Void;
+  IntegerType *Int32, *Int64;
+  PointerType *CharPtr;
 
-        // Control flow analysis
-        int32_t loopID;
+  // Control flow analysis
+  int32_t loopID;
 
-        // Output streams
-        ofstream ocfg;
+  // Output streams
+  ofstream ocfg;
 
-        // Export Module M from runOnModule() to the whole structure space
-        Module *ThisModule;
-        LLVMContext *ThisModuleContext;
+  // Export Module M from runOnModule() to the whole structure space
+  Module *ThisModule;
+  LLVMContext *ThisModuleContext;
 
-        map<string, Value *> VarNames;
-        set<DIGlobalVariable *> GlobalVars;
-        map<string, MDNode *> Structs;
+  map<string, Value *> VarNames;
+  set<DIGlobalVariable *> GlobalVars;
+  map<string, MDNode *> Structs;
 // DPInstrumentation end
 
 // DPInstrumentationOmission
-        int bbDepCount;
-        string bbDepString;
-        string fileName;
-        int32_t fid;
-        FunctionCallee ReportBB, ReportBBPair;
-        dputil::VariableNameFinder *VNF;
+  int bbDepCount;
+  string bbDepString;
+  string fileName;
+  int32_t fid;
+  FunctionCallee ReportBB, ReportBBPair;
+  dputil::VariableNameFinder *VNF;
 // DPInstrumentationOmission end
 
 public:
@@ -282,21 +268,10 @@ public:
 
   // DiscoPoP Functions
   string determineVariableType(Instruction *I);
-  // string  determineVariableName(Instruction *I,
-                        // bool &isGlobalVariable = defaultIsGlobalVariableValue);
-  // Type *pointsToStruct(PointerType *PTy);
-  // string getOrInsertVarName(string varName, IRBuilder<> &builder);
-  // string findStructMemberName(MDNode *structNode, unsigned idx,
-                              // IRBuilder<> &builder);
-  // DIGlobalVariable* findDbgGlobalDeclare(GlobalVariable *v);
-
-  // 29.6.2020 Mohammad
   string determineVariableDefLine(Instruction *I);
   void getFunctionReturnLines(Region *TopRegion, Node *root);
 
   // functions to get list of global variables
-  // bool doInitialization(Module &ThisModule);
-  // bool doFinalization(Module &M);
   void collectGlobalVariables();
 
   // functions to get recursive functions (Mo 5.11.2019)
@@ -309,7 +284,6 @@ public:
                  vector<CU *> &CUVector,
                  map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root,
                  LoopInfo &LI);
-  // string refineVarName(string varName);
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet,
                        vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
@@ -328,8 +302,7 @@ public:
   void printNode(Node *node, bool isRoot);
   void closeOutputFiles();
 // CUGeneration end
-  // static char ID;
-  // DiscoPoP() : FunctionPass(ID) {}
+
 }; // end of class DiscoPoP
 } // namespace
 
@@ -339,7 +312,6 @@ static RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential paralle
 
 static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM)
 {
-    // PM.add(new DominatorTreeWrapperPass());
     PM.add(new LoopInfoWrapperPass());
     PM.add(new DiscoPoP());
 }
@@ -353,7 +325,6 @@ ModulePass *createDiscoPoPPass()
     {
         errs() << "create DiscoPoP \n";
     }
-    // initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     return new DiscoPoP();
 }

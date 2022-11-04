@@ -155,7 +155,6 @@ namespace __dp
                          }
 
                          dep += " " + decodeLID(d.depOn);
-                         //if (d.type != INIT)
                          dep += "|" + string(d.var);
                          lineDeps.insert(dep);
                     }
@@ -168,7 +167,6 @@ namespace __dp
                     {
                          (*outPutDeps)[lid].insert(lineDeps.begin(), lineDeps.end());
                     }
-
                     delete dline.second;
                }
           }
@@ -187,44 +185,6 @@ namespace __dp
           }
      }
      // End HA
-
-     // void outputDeps()
-     // {
-     //     // print out all dps
-     //     for (auto &dline : allDeps)
-     //     {
-     //         if (dline.first)
-     //         {
-     //             *out << decodeLID(dline.first) << " NOM ";
-     //             for(auto &d : * (dline.second))
-     //             {
-     //                 *out << " ";
-     //                 switch(d.type)
-     //                 {
-     //                 case RAW:
-     //                     *out << "RAW";
-     //                     break;
-     //                 case WAR:
-     //                     *out << "WAR";
-     //                     break;
-     //                 case WAW:
-     //                     *out << "WAW";
-     //                     break;
-     //                 case INIT:
-     //                     *out << "INIT";
-     //                     break;
-     //                 default:
-     //                     break;
-     //                 }
-     //                 *out << " " << decodeLID(d.depOn);
-     //                 //if (d.type != INIT)
-     //                 *out << "|" << d.var;
-     //             }
-     //             *out << endl;
-     //             delete dline.second;
-     //         }
-     //     }
-     // }
 
      void outputLoops()
      {
@@ -496,7 +456,6 @@ namespace __dp
                               }
                          }
                     }
-
                     // delete the current chunk at the end
                     if(accesses)
                          delete[] accesses;
@@ -611,7 +570,6 @@ namespace __dp
 #ifdef SKIP_DUP_INSTR
                if (lastaddr == addr && count >= 2)
                {
-                    //cout << "Returning early from load instr\n";
                     return;
                }
 #endif
@@ -662,7 +620,6 @@ namespace __dp
 #ifdef SKIP_DUP_INSTR
                if (lastaddr == addr && count >= 2)
                {
-                    //cout << "Returning early from store instr\n";
                     return;
                }
 #endif
@@ -675,7 +632,6 @@ namespace __dp
                     cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
-               //addAccessInfo(false, lid, var, addr);
                int64_t workerID = addr % NUM_WORKERS;
                AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
                current.isRead = false;
@@ -714,7 +670,6 @@ namespace __dp
 #ifdef SKIP_DUP_INSTR
                if (lastaddr == addr && count >= 2)
                {
-                    //cout << "Returning early from store instr\n";
                     return;
                }
 #endif
@@ -727,7 +682,6 @@ namespace __dp
                     cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
-               //addAccessInfo(false, lid, var, addr);
                int64_t workerID = addr % NUM_WORKERS;
                AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
                current.isRead = false;
@@ -767,7 +721,6 @@ namespace __dp
 #ifdef SKIP_DUP_INSTR
                if (lastaddr == addr && count >= 2)
                {
-                    //cout << "Returning early from store instr\n";
                     return;
                }
 #endif
@@ -780,7 +733,6 @@ namespace __dp
                     cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr << endl;
                }
 
-               //addAccessInfo(false, lid, var, addr);
                int64_t workerID = addr % NUM_WORKERS;
                AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
                current.isRead = false;
@@ -878,7 +830,6 @@ namespace __dp
                }
           }
 
-
           // hybrid analysis
           void __dp_add_bb_deps(char* depStringPtr){
                string depString(depStringPtr);
@@ -893,7 +844,6 @@ namespace __dp
                     
                    if(bbList->find(stoi(cond)) == bbList->end()){
                        depString = res0.suffix();
-                       // cout << "bb_deps: couldn't find " << cond << endl;
                        continue;
                    }
                    
@@ -910,7 +860,6 @@ namespace __dp
                            (*outPutDeps)[k] = depSet;
                        }
                        (*outPutDeps)[k].insert(v);
-                       // cout << "bb_deps: Adding " << k << ":" << v << endl;
                        line = res2.suffix();
                    }
                    depString = res0.suffix();
@@ -988,7 +937,6 @@ namespace __dp
                          cout << "Entering function LID " << std::dec << decodeLID(lid) << endl;
                          cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
                     }
-                    // cout << "+++++ " << syscall(__NR_gettid) << "\n";
                     BGNFuncList::iterator func = beginFuncs->find(lastCallOrInvoke);
                     if (func == beginFuncs->end())
                     {
@@ -1000,8 +948,6 @@ namespace __dp
                     {
                          func->second->insert(lid);
                     }
-
-                    //*out << decodeLID(lastCallOrInvoke) << " BGN func " << decodeLID(lid) << endl;
                }
 
                if (isStart)
@@ -1035,7 +981,6 @@ namespace __dp
                     // No way to get the real end line of loop. Use the line where
                     // function returns instead.
                     LoopRecords::iterator loop = loops->find(loopStack->top().begin);
-                    // cout << "---- " << decodeLID(loop->first) << "\n";
                     assert(loop != loops->end() && "A loop ends without its entry being recorded.");
                     if (loop->second->end == 0)
                     {
@@ -1043,11 +988,10 @@ namespace __dp
                     }
                     else
                     {
-                         //FIXME: loop end line > return line
+                         //TODO: FIXME: loop end line > return line
                     }
                     loop->second->total += loopStack->top().count;
                     ++loop->second->nEntered;
-                    //*out << decodeLID(lid) << " END loop " << std::dec << loopStack->top().count << endl;
 
                     if (DP_DEBUG)
                     {
@@ -1072,7 +1016,6 @@ namespace __dp
 
                if (isExit == 0)
                     endFuncs->insert(lid);
-               //*out << decodeLID(lid) << " END func" << endl;
 
                if (DP_DEBUG)
                {
@@ -1101,8 +1044,6 @@ namespace __dp
                     {
                          loops->insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
                     }
-                    //*out << decodeLID(lid) << " BGN loop" << endl;
-
                     if (DP_DEBUG)
                     {
                          cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID << " enters." << endl;
@@ -1179,8 +1120,6 @@ namespace __dp
                     }
                     loopStack->top().funcLevel = FuncStackLevel;
                }
-               //assert((loopStack->top().funcLevel == FuncStackLevel) &&
-               //        "Loop exit block does not match entry block!");
 
                LoopRecords::iterator loop = loops->find(loopStack->top().begin);
                assert(loop != loops->end() && "A loop ends without its entry being recorded.");
@@ -1195,6 +1134,7 @@ namespace __dp
                     // In this case we ignore the current exit point and keep the
                     // regular one.
 
+                    // Note: keep, as i may be necessary in the future?
                     if (lid < loop->second->end)
                     {
                          //    loop->second->end = lid;
@@ -1210,7 +1150,6 @@ namespace __dp
                }
                loop->second->total += loopStack->top().count;
                ++loop->second->nEntered;
-               //*out << decodeLID(lid) << " END loop " << std::dec << loopStack->top().count << endl;
 
                if (DP_DEBUG)
                {
