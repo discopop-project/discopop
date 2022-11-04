@@ -75,7 +75,6 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
-    # t1 = time.time()
     arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:

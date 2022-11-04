@@ -218,16 +218,11 @@ class PETGraphX(object):
     def from_parsed_input(cls, cu_dict: Dict[str, ObjectifiedElement], dependencies_list: List[DependenceItem],
                           loop_data: Dict[str, int], reduction_vars: List[Dict[str, str]]):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
-        # t1 = time.time()
         g = nx.MultiDiGraph()
-        # t2 = time.time()
-        # print(f"MultiDiGraph: {t2-t1}")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
-        # t3 = time.time()
-        # print(f"for id, node in cu_dict.items(): {t3-t2}")
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -243,7 +238,6 @@ class PETGraphX(object):
                     g.add_edge(source, successor,
                                data=Dependency(EdgeType.SUCCESSOR))
 
-            # 28.02.2022 as a merge conflict to ClassificationBug added
             if 'callsNode' in dir(node) and 'nodeCalled' in dir(node.callsNode):
                 for nodeCalled in [n.text for n in node.callsNode.nodeCalled]:
                     if nodeCalled not in g:
@@ -251,14 +245,9 @@ class PETGraphX(object):
                     g.add_edge(source, nodeCalled,
                                data=Dependency(EdgeType.CALLSNODE))
 
-        # t4 = time.time()
-        # print(f"for node_id, node in cu_dict.items(): {t4-t3}")
-
         for _, node in g.nodes(data='data'):
             if node.type == NodeType.LOOP:
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
-        # t5 = time.time()
-        # print(f"for _, node in g.nodes(data='data'): {t5-t4}")
 
         # calculate position before dependencies affect them
         try:
@@ -267,11 +256,8 @@ class PETGraphX(object):
             try:
                 # fallback layouts
                 pos = nx.shell_layout(g)  # maybe
-                # pos = nx.kamada_kawai_layout(g)  # maybe tooo slow
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        # t6 = time.time()
-        # print(f"try: {t6-t5}")
         for dep in dependencies_list:
             if dep.type == 'INIT':
                 sink = readlineToCUIdMap[dep.sink]
@@ -285,13 +271,6 @@ class PETGraphX(object):
             for sink_cu_id in sink_cu_ids:
                 for source_cu_id in source_cu_ids:
 
-                    # 28.02.2022: Removed as a merge conflict with ClassificationBug
-                    # if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
-                    #    continue
-                    # elif sink_cu_id and source_cu_id:
-                    #    g.add_edge(sink_cu_id, source_cu_id,
-                    #               data=parse_dependency(dep))
-
                     sink_node = g.nodes[sink_cu_id]['data']
                     source_node = g.nodes[source_cu_id]['data']
                     vars_in_sink_node = set()
@@ -304,13 +283,9 @@ class PETGraphX(object):
                     if(dep.var_name not in vars_in_sink_node and
                             dep.var_name not in vars_in_source_node):
                         continue
-                        # if sink_cu_id == source_cu_id and (dep.type == 'WAR' or dep.type == 'WAW'):
-                        #     continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id,
                                    data=parse_dependency(dep))
-        # t7 = time.time()
-        # print(f"for dep in dependencies_list: {t7-t6}")
         return cls(g, reduction_vars, pos)
 
     def show(self):
@@ -348,8 +323,6 @@ class PETGraphX(object):
         nx.draw_networkx_edges(self.g, pos, edge_color='yellow',
                                edgelist=[e for e in self.g.edges(data='data') if e[2].etype == EdgeType.CALLSNODE])
 
-        # plt.figure(figsize=(12, 12))
-        # nx.spring_layout(self.g, k=0.1, iterations=20)
         plt.show()
         plt.savefig('graphX.svg')
 
@@ -515,13 +488,6 @@ class PETGraphX(object):
             root_loop, NodeType.CU)]
         children = self.subtree_of_type(node, NodeType.CU)
 
-        # 28.02.2022: Removed as a merge conflict with ClassificationBug
-        # loops_start_lines = [v.start_position()
-        #                     for v in self.subtree_of_type(root_loop, NodeType.LOOP)]
-
-        # for v in children:
-        #    for t, d in [(t, d) for s, t, d in self.out_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW and self.is_inside_node(d, root_loop)]:
-
         for v in self.subtree_of_type(root_loop, NodeType.LOOP):
             loops_start_lines.append(v.start_position())
 
@@ -541,9 +507,6 @@ class PETGraphX(object):
                 # which is written first in the loop, ignore it
                 if d.var_name in firstWrittenVarsInLoop:
                     continue
-                # if(self.is_first_written_in_loop(d, root_loop)):
-                #     # if (self.is_scalar_val(allVars, d.var_name)):
-                #     continue
                 # if the dependence is not inside the loop, ignore it
                 if s not in loop_node_ids or t not in loop_node_ids:
                     continue
@@ -552,15 +515,6 @@ class PETGraphX(object):
                 dep_set.add(self.node_at(t))
 
         return dep_set
-
-    # 28.02.2022: Removed as a merge conflict with ClassificationBug
-    # def is_inside_node(self, d: Dependency, tmpNode: node) -> bool:
-    #    sink = int(d.sink.split(":")[1])
-    #    source = int(d.source.split(":")[1])
-    #    if sink >= tmpNode.start_line and sink <= tmpNode.end_line and source >= tmpNode.start_line and source <= tmpNode.end_line:
-    #        return True
-    #    else:
-    #        return False
 
     def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
         sub = self.subtree_of_type(root_loop, NodeType.CU)

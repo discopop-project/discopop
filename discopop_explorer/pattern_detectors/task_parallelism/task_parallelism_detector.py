@@ -110,8 +110,6 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     __forks.clear()
     create_task_tree(pet, pet.main)
 
-    # ct = [graph.vp.id[v] for v in pet.graph.vp.childrenTasks[main_node]]
-    # ctt = [graph.vp.id[v] for v in forks]
     fs = [f for f in __forks if f.node_id == '130:0']
 
     for fork in fs:

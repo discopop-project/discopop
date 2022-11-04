@@ -51,13 +51,11 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :return: List of detected pattern info
     """
     result : List[DoAllInfo] = []
-    for node in pet.all_nodes(NodeType.LOOP):        # t1 = time.time()
+    for node in pet.all_nodes(NodeType.LOOP):
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
             if not node.reduction and node.loop_iterations >= 0:
                 result.append(DoAllInfo(pet, node))
-        # t2 = time.time()
-        # print(f"ended Loop {node.start_line}: {t2 - t1} ")
 
     return result
 

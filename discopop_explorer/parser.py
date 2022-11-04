@@ -42,8 +42,6 @@ def __parse_xml_input(xml_fd):
         node.childrenNodes = str(node.childrenNodes).split(
             ',') if node.childrenNodes else []
         if node.get('type') == '0':
-            # for instruction_id in str(node.instructionLines).split(','):
-            #     lineToCUIdMap[instruction_id].add(node.get('id'))
             for instruction_id in str(node.writePhaseLines).split(','):
                 writelineToCUIdMap[instruction_id].add(node.get('id'))
             for instruction_id in str(node.readPhaseLines).split(','):
@@ -124,7 +122,6 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
             content = f.readlines()
         for line in content:
             s = line.split(' ')
-            # line = FileId + LineNr
             loop_data[s[0] + ':' + s[1]] = int(s[2])
     else:
         loop_data = None
@@ -164,10 +161,8 @@ def is_reduction(reduction_line, fmap_lines):
     res = rex.search(reduction_line)
     file_id = int(res.group(1))
     file_line = int(res.group(2))
-    # print("file_line: " + str(file_line))
 
     filepath = get_filepath(file_id, fmap_lines)
-    # print("filepath: " + filepath)
     src_file = open(filepath)
     src_lines = src_file.read().splitlines()
     src_file.close()
@@ -201,11 +196,9 @@ def possible_reduction(line, src_lines):
 
     array_name = rex_search_res[1]
     array_index = src_line[(bracket_a + 1): bracket_b]
-    # print('"{} {}"'.format(array_name, array_index))
 
     array_indices = find_array_indices(array_name, src_line[pos:len(src_line)])
     for index in array_indices:
-        # print("index, array_index: " + index + " " + array_index)
         if index == array_index:
             return False
 
@@ -234,7 +227,6 @@ def find_array_indices(array_name, src_line):
     indices = []
     uses = list(re.finditer(array_name, src_line))
     for use in uses:
-        # print(use.end())
         if src_line[use.end()] == '[':
             indices.append(get_enclosed_str(
                 src_line[(use.end() + 1): len(src_line)]))

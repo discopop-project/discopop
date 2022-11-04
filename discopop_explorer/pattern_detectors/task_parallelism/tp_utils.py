@@ -197,6 +197,7 @@ def check_neighbours(first: Task, second: Task):
     return fel == ssl or fel + 1 == ssl or fel + 2 == ssl
 
 
+# NOTE: left, as it may become relevant in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
 #def merge_tasks(pet: PETGraphX, task: Task):
 #    """Merges the tasks into having required workload.

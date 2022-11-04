@@ -19,9 +19,7 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
-add_subdirectory(CUGeneration)
-add_subdirectory(CUInstantiation)
-add_subdirectory(DPInstrumentation)
+add_subdirectory(DiscoPoP)
 add_subdirectory(DPReduction)
-add_subdirectory(DPInstrumentationOmission)
+
 add_subdirectory(rtlib)

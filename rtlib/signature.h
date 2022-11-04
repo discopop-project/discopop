@@ -66,7 +66,6 @@ namespace __dp
 
         uint32_t hash(int64_t value)
         {
-            //cout << "hash: " << std::hex << value << ", " << std::dec << numSlot << endl;
             return (uint32_t)((value >> 8) + value) % numSlot;
         }
     };

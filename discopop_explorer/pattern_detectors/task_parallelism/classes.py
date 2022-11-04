@@ -28,7 +28,10 @@ class Task(object):
         self.end_line = node.end_position()
         self.mw_type = node.mw_type
 
-        # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+        # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg),
+        # the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a 
+        # hotspot detection algorithm (TODO: Bertin) with the parallelism discovery.
+        # Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
 #        self.instruction_count = total_instructions_count(pet, node)
 #        self.workload = calculate_workload(pet, node)
         self.instruction_count = 0

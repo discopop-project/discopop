@@ -16,21 +16,18 @@ DISCOPOP_INSTALL="$(pwd)/build"
 export PYTHONPATH=${DISCOPOP_SRC}
 export DISCOPOP_INSTALL
 
-tests="cu dependence reduction"
+tests="discopopPass reductionPass"
 
-function test_cu {
-  # CU Generation
-  python -m discopop_profiler -v --CUGeneration -c "$1" || return 1
+function test_discopopPass {
+  cp ${DISCOPOP_SRC}/scripts/dp-fmap .
+  ./dp-fmap
+  clang++ -g -c -O0 -S -emit-llvm -fno-discard-value-names "$1" -o out.ll || return 1
+  opt-11 -S -load=${DISCOPOP_INSTALL}/libi/LLVMDiscoPoP.so --DiscoPoP out.ll -o out_dp.ll --fm-path FileMapping.txt || return 1
+  clang++ out_dp.ll -o out_prof -L${DISCOPOP_INSTALL}/rtlib -lDiscoPoP_RT -lpthread || return 1
+  ./out_prof || return 1
 }
 
-function test_dependence {
-  # Dependence Profiling
-  python -m discopop_profiler -v --DPInstrumentation -c "$1" -o out.o || return 1
-  python -m discopop_profiler -v --DPInstrumentation out.o || return 1
-  ./a.out || return 1
-}
-
-function test_reduction {
+function test_reductionPass {
   # Identifying Reduction Operations
   python -m discopop_profiler -v --DPReduction -c "$1" -o out.o || return 1
   python -m discopop_profiler -v --DPReduction out.o || return 1
