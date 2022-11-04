@@ -16,9 +16,9 @@ DISCOPOP_INSTALL="$(pwd)/build"
 export PYTHONPATH=${DISCOPOP_SRC}
 export DISCOPOP_INSTALL
 
-tests="discopop reduction"
+tests="discopopPass reductionPass"
 
-function test_discopop {
+function test_discopopPass {
   cp ${DISCOPOP_SRC}/scripts/dp-fmap .
   ./dp-fmap
   clang++ -g -c -O0 -S -emit-llvm -fno-discard-value-names "$1" -o out.ll || return 1
@@ -27,7 +27,7 @@ function test_discopop {
   ./out_prof || return 1
 }
 
-function test_reduction {
+function test_reductionPass {
   # Identifying Reduction Operations
   python -m discopop_profiler -v --DPReduction -c "$1" -o out.o || return 1
   python -m discopop_profiler -v --DPReduction out.o || return 1
