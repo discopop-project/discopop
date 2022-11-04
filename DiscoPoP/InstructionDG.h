@@ -10,7 +10,7 @@
  */
 
 #include <string>
-#include "InstructionCFG.h"
+#include "InstructionCFG.hpp"
 #include "DPUtils.h"
 
 class InstructionDG : public Graph<Instruction*>
