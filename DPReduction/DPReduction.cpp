@@ -38,7 +38,7 @@
 #include "llvm/InitializePasses.h"
 
 #include "Utils.hpp"
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 
 using namespace llvm;
 using namespace std;

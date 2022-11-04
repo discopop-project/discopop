@@ -11,7 +11,7 @@
 
 #include <string>
 #include "InstructionCFG.hpp"
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 
 class InstructionDG : public Graph<Instruction*>
 {

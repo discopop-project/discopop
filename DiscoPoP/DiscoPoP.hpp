@@ -46,7 +46,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/InitializePasses.h"
 
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 #include "InstructionDG.hpp"
 
 #include <cstdlib>
