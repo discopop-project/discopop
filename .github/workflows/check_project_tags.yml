@@ -21,9 +21,9 @@ jobs:
           ERROR=0
           for FILE in $(find . -type f -not -path "**/.git/**" -not -path "**/test/**")
           do
-            head -n 20 ${FILE} | grep "DiscoPoP software" || echo "Missing License tag at: ${FILE}" || ERROR=1
-            head -n 20 ${FILE} | grep "Technische Universitaet Darmstadt, Germany" || echo "Missing License tag at: ${FILE}" || ERROR=1
-            head -n 20 ${FILE} | grep "3-Clause BSD License" || echo "Missing License tag at: ${FILE}" || ERROR=1
+            head -n 20 ${FILE} | grep -q "DiscoPoP software" || echo "Missing License tag at: ${FILE}" || ERROR=1
+            head -n 20 ${FILE} | grep -q "Technische Universitaet Darmstadt, Germany" || echo "Missing License tag at: ${FILE}" || ERROR=1
+            head -n 20 ${FILE} | grep -q "3-Clause BSD License" || echo "Missing License tag at: ${FILE}" || ERROR=1
           done
           exit $ERROR
 
