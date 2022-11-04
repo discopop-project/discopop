@@ -171,10 +171,6 @@ void LoopCounter::update_ptr(int var_id, int instr_type, long long addr)
 #else
   if (instr_type == 1)
   {
-    // std::cout << "mem_addr_: " << var_counters_[var_id].mem_addr_
-    //           << " addr: " << addr
-    //           << " valid_: " << var_counters_[var_id].valid_
-    //           << std::endl;
     if (var_counters_[var_id].mem_addr_ != addr)
     {
       var_counters_[var_id].valid_ = false;

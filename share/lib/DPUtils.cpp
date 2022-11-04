@@ -70,10 +70,6 @@ int32_t getLID(Instruction* BI, int32_t& fileID)
             // No metadata is attached to BI.
             return 0;
         }
-        // NOTE: Replace  next 3 lines with next 3 lines
-        // DILocation Loc(N);
-        // File = Loc.getFilename();
-        // Dir = Loc.getDirectory();
         const DebugLoc &location = BI->getDebugLoc();
         const DILocation *Loc = location.get();
         File = Loc->getFilename();
@@ -95,7 +91,6 @@ int32_t getLID(Instruction* BI, int32_t& fileID)
 
     }
     lid = (fileID << LIDSIZE) + lno;
-    //ofmap << lid << std::endl;
     return lid;
 }
 
@@ -135,10 +130,6 @@ void determineFileID(Function &F, int32_t& fileID)
                     if (N)
                     {
                         StringRef File = "", Dir = "";
-                        // NOTE: Replace  next 3 lines with next 3 lines
-                        // DILocation Loc(N);
-                        // File = Loc.getFilename();
-                        // Dir = Loc.getDirectory();
                         const DILocation *Loc = location.get();
                         File = Loc->getFilename();
                         Dir = Loc->getDirectory();
@@ -161,8 +152,6 @@ void determineFileID(Function &F, int32_t& fileID)
             }
         }
     }
-    // if(fileID == 0)
-    //     errs() << "------------ " << F.getName() << "\n";
 }
 
 string get_exe_dir() {
@@ -200,20 +189,16 @@ string VariableNameFinder::getVarName(Value const *V){
             string r = getVarName(GEPI->getOperand(0));
 
             if(GEPI->getNumOperands() == 2){
-                // return r + "[" + getVarName(GEPI->getOperand(1)) + "]";
                 return r;
             }
 
             if(dyn_cast<ConstantInt>(GEPI->getOperand(1))->getSExtValue() > 0){
-                // r += "[" + getVarName(GEPI->getOperand(1)) + "]";
                 r += "";
             }
 
             if(isa<ArrayType>(srcElemT) || isa<IntegerType>(srcElemT)){
-                // return r + "[" + getVarName(GEPI->getOperand(2)) + "]";
                 return r;
             }else if(StructType *st = dyn_cast<StructType>(srcElemT)){
-                // int64_t offset = dyn_cast<ConstantInt>(GEPI->getOperand(2))->getSExtValue();
                 if(st->hasName()){
                     string structTypeName = st->getName().str();
                     if(structTypeName.find("struct.") != string::npos){
@@ -223,7 +208,6 @@ string VariableNameFinder::getVarName(Value const *V){
                         structTypeName = structTypeName.erase(0,6);
                     }
                     if(StructMemberMap.count(structTypeName) > 0){
-                        // return r + "." + StructMemberMap[structTypeName][offset];
                         return r;
                     }
                 }
@@ -284,8 +268,6 @@ string VariableNameFinder::getVarName(Value const *V){
             Type *st = gepo->getSourceElementType();
             if(StructType *ct = dyn_cast<StructType>(st)){
                 string structTypeName = ct->getName().str().erase(0,7);
-                // int64_t offset = dyn_cast<ConstantInt>(gepo->getOperand(2))->getSExtValue();
-                // r += "." + StructMemberMap[structTypeName][offset];
                 r += "";
                 return r;
             }
