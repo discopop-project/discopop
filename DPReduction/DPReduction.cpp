@@ -58,7 +58,6 @@ struct loop_info_t {
   unsigned int line_nr_;
   int file_id_;
   llvm::Instruction* first_body_instr_;
-  //Mohammad 4.3.2021
   std::string start_line;
   std::string end_line;
   std::string function_name;
@@ -78,7 +77,6 @@ struct DPReduction : public llvm::ModulePass {
 
   bool inlinedFunction(Function *F);
 
-  //Mohammad 4.3.2021
   std::string CFA(Function &F, llvm::Loop* loop, int file_id);
   bool sanityCheck(BasicBlock *BB, int file_id);
   int32_t getLID(Instruction* BI, int32_t& fileID);
@@ -88,7 +86,7 @@ struct DPReduction : public llvm::ModulePass {
   string getOrInsertVarName(string varName, IRBuilder<> &builder);
   string findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
   void getTrueVarNamesFromMetadata(Module &M, map<string, string>* trueVarNamesFromMetadataMap);
-  // static bool defaultIsGlobalVariableValue;
+
   map<string, MDNode *> Structs;
   map<string, Value *> VarNames;
   std::ofstream *out_file;
@@ -101,7 +99,6 @@ struct DPReduction : public llvm::ModulePass {
   std::vector<instr_info_t> instructions_;
   std::map<int, llvm::Instruction*> loop_to_instr_;
   std::vector<loop_info_t> loops_;
-    // Lukas 26.08.2022
   std::map<string, string> trueVarNamesFromMetadataMap;
 
   llvm::Function* add_instr_fn_;
@@ -121,7 +118,6 @@ static llvm::RegisterPass<DPReduction> X("DPReduction", "Identify reduction vari
 static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM)
 {
     PM.add(new LoopInfoWrapperPass());
-    //PM.add(new RegionInfoPass());
     PM.add(new DPReduction());
 }
 
@@ -147,44 +143,6 @@ static llvm::cl::opt<std::string> fmap_file(
 
 // == Implementation ===========================================================
 
-// Creates the bindings for the functions that should be insterted to instrument
-// the variable accesses.
-// void DPReduction::create_function_bindings() {
-
-//   // add_instr_rec
-//   llvm::Type* type_array[4];
-//   type_array[0] = llvm::Type::getInt32Ty(*ctx_);  // loop line number
-//   type_array[1] = llvm::Type::getInt64Ty(*ctx_);  // variable address
-//   type_array[2] = llvm::Type::getInt32Ty(*ctx_);  // instruction type
-//   llvm::ArrayRef<llvm::Type*> fn_args(type_array, 3);
-//   llvm::FunctionType* fn_type =
-//       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), fn_args, false);
-//   add_instr_fn_ = llvm::dyn_cast<llvm::Function>(
-//       module_->getOrInsertFunction("add_instr_rec", fn_type));
-
-//   // add_ptr_instr
-//   type_array[3] = llvm::Type::getInt64Ty(*ctx_);  // pointer address
-//   llvm::ArrayRef<llvm::Type*> ptr_fn_args(type_array, 4);
-//   llvm::FunctionType* ptr_fn_type =
-//       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), ptr_fn_args, false);
-//   add_ptr_instr_fn_ = llvm::dyn_cast<llvm::Function>(
-//       module_->getOrInsertFunction("add_ptr_instr_rec", ptr_fn_type));
-
-//   // incr_loop_counter
-//   llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
-//   llvm::ArrayRef<llvm::Type*> loop_incr_fn_args(loop_incr_fn_arg_type);
-//   llvm::FunctionType* loop_incr_fn_type = llvm::FunctionType::get(
-//       llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
-//   loop_incr_fn_ = llvm::dyn_cast<llvm::Function>(
-//       module_->getOrInsertFunction("incr_loop_counter", loop_incr_fn_type));
-
-//   // loop_counter_output
-//   llvm::FunctionType* output_fn_type =
-//       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
-//   output_fn_ = llvm::dyn_cast<llvm::Function>(
-//       module_->getOrInsertFunction("loop_counter_output", output_fn_type));
-// }
-
 void DPReduction::getTrueVarNamesFromMetadata(Module &M, map<string, string>* trueVarNamesFromMetadataMap)
 {
     for (Function &F: M) {
@@ -199,13 +157,7 @@ void DPReduction::getTrueVarNamesFromMetadata(Module &M, map<string, string>* tr
                     StringRef funcName = f->getName();
                     if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
                     {
-                    CallInst *call = cast<CallInst>(instruction);
-                    // check if @llvm.dbg.declare is called
-                    // std::string dbg_declare = "llvm.dbg.declare";
-                    // int cmp_res = dbg_declare.compare(call->getCalledFunction()->getName().str());
-                    // if (cmp_res == 0) {
-                        // call to @llvm.dbg.declare found
-
+                        CallInst *call = cast<CallInst>(instruction);
                         // extract original and working variable name
                         string SRCVarName;
                         string IRVarName;
@@ -246,8 +198,6 @@ string DPReduction::findStructMemberName(MDNode *structNode, unsigned idx, IRBui
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
         if (member->getOperand(3))
         {
-            //getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
-            //return string(member->getOperand(3)->getName().data());
             getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
             return dyn_cast<MDString>(member->getOperand(3))->getString().str();
         }
@@ -278,7 +228,6 @@ string DPReduction::getOrInsertVarName(string varName, IRBuilder<> &builder)
     if (pair == VarNames.end())
     {
         valName = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
-
         VarNames[varName] = valName;
     }
     else
@@ -350,7 +299,6 @@ string DPReduction::determineVariableName(Instruction *I, map<string, string>* t
         //// we've found a global variable
         if (isa<GlobalVariable>(*operand))
         {
-            //MOHAMMAD ADDED THIS FOR CHECKING
             string retVal = string(operand->getName());
             if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                 return retVal;  // not found
@@ -396,7 +344,6 @@ string DPReduction::determineVariableName(Instruction *I, map<string, string>* t
                                     return (*trueVarNamesFromMetadataMap)[retVal];  // found
                                 }
                             }
-                            //return ret;
                         }
                     }
                 }
@@ -415,15 +362,14 @@ string DPReduction::determineVariableName(Instruction *I, map<string, string>* t
         } else {
             return (*trueVarNamesFromMetadataMap)[retVal];  // found
         }
-        //return getOrInsertVarName(string(operand->getName().data()), builder);
     }
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
         return determineVariableName((Instruction *)(operand), trueVarNamesFromMetadataMap);
     }
-    // if we cannot determine the name, then return *
-    return ""; //getOrInsertVarName("*", builder);
+    // if we cannot determine the name, then return * / nothing
+    return "";
 }
 
 
@@ -438,7 +384,6 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
 
         // Get the closest loop where tmpBB lives in.
         // (L == NULL) if tmpBB is not in any loop.
-        // Loop *L = LI.getLoopFor(tmpBB);
 
         // Check if tmpBB is the loop header (.cond) block.
         if (L != NULL )
@@ -459,8 +404,6 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
 
             if (ExitBlocks.size() == 0)
             {
-              // if(F.getName() == "draw_axis_yuv")
-                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
                 continue;
             }
 
@@ -498,10 +441,8 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
                 }
             }
             
-            //assert((RealExitBlocks.size() == 1) && "Loop has more than one real exit block!");
             if (RealExitBlocks.size() == 0)
             {
-                // errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
                 continue;
             }
 
@@ -553,10 +494,7 @@ std::string DPReduction::CFA(Function &F, llvm::Loop* L, int file_id)
               } else{
                 foundEnd = true;
               }
-              // errs() << "+++++ " << file_id << " " << DebugLoc(DIL)->getLine() << "\n";
             }
-            // else
-              // errs() << "----- " << file_id << " " << Start->getLine() << " " << DebugLoc(DIL)->getLine() << "\n";
           }
         }
 
@@ -577,7 +515,6 @@ bool DPReduction::sanityCheck(BasicBlock *BB, int file_id)
             return true;
         }
     }
-    // errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
     return false;
 }
 
@@ -609,12 +546,8 @@ int32_t DPReduction::getLID(Instruction* BI, int32_t& fileID)
 void DPReduction::insert_functions() {
 
   // insert function calls to monitor the variable's load and store operations
-  // int instr_id = 1;
   for (auto const& instruction : instructions_) {
-    // int loop_id = instruction.loop_line_nr_;
-    // Metadata *Meta = cast<MetadataAsValue>(instruction.store_inst_->getOperand(1))->getMetadata();
     int store_line = instruction.store_inst_->getDebugLoc().getLine();
-    // errs() << instruction.file_id_ << " " << instruction.loop_line_nr_ << " " << to_string(store_line) << " " << instruction.var_name_ << " " << instruction.operation_ << "\n";
     
     // output information about the reduction variables
     *out_file << " FileID : " << instruction.file_id_;
@@ -622,95 +555,19 @@ void DPReduction::insert_functions() {
     *out_file << " Reduction Line Number : " << to_string(store_line);
     *out_file << " Variable Name : " << instruction.var_name_;
     *out_file << " Operation Name : " << instruction.operation_ << "\n";
-
-    // 31.03.2021 Mohammad dynamic to static analysis
-    // llvm::Value* args[4];
-    // args[0] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
-    // args[1] = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*ctx_), instr_id);
-
-    // if (llvm::isa<llvm::GetElementPtrInst>(
-    //         instruction.store_inst_->getOperand(1))) {
-    //   if (!llvm::isa<llvm::GetElementPtrInst>(
-    //           instruction.load_inst_->getOperand(0))) {
-    //     // llvm::errs() << "==== load instr is not a GetElementPtrInst ====\n";
-    //     continue;
-    //   }
-    //   llvm::ArrayRef<llvm::Value*> args_ref(args, 4);
-
-    //   args[2] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 1);
-    //   args[3] = llvm::PtrToIntInst::CreatePointerCast(
-    //       instruction.store_inst_->getPointerOperand(),
-    //       llvm::Type::getInt64Ty(*ctx_), "", instruction.store_inst_);
-    //   llvm::CallInst::Create(add_ptr_instr_fn_, args_ref, "",
-    //                          instruction.store_inst_);
-
-    //   args[2] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0);
-    //   args[3] = llvm::PtrToIntInst::CreatePointerCast(
-    //       instruction.load_inst_->getPointerOperand(),
-    //       llvm::Type::getInt64Ty(*ctx_), "", instruction.load_inst_);
-    //   llvm::CallInst::Create(add_ptr_instr_fn_, args_ref, "",
-    //                          instruction.load_inst_);
-    // } else {
-    //   llvm::ArrayRef<llvm::Value*> args_ref(args, 3);
-
-    //   args[2] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 1);
-    //   llvm::CallInst::Create(add_instr_fn_, args_ref, "",
-    //                          instruction.store_inst_);
-
-    //   args[2] = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0);
-    //   llvm::CallInst::Create(add_instr_fn_, args_ref, "",
-    //                          instruction.load_inst_);
-    // }                                         
-
-    // out_file << instruction.file_id_ << " ";
-    // out_file << instr_id++ << " ";
-    // out_file << instruction.var_name_ << " ";
-    // out_file << loop_id << " ";
-    // out_file << store_line << " ";
-    // out_file << instruction.operation_ << "\n";
-
   }
 
   // insert function calls to monitor loop iterations
   std::ofstream ofile;
   ofile.open("loop_counter_output.txt");
-  // int loop_id = 1;
   for (auto const& loop_info : loops_) {
-
-    // 31.03.2021 Mohammad dynamic to static analysis
-    // llvm::Value* val =
-    //     llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
-    // llvm::ArrayRef<llvm::Value*> args(val);
-    // llvm::CallInst::Create(loop_incr_fn_, args, "",
-    //                        loop_info.first_body_instr_);
-    // out_file << loop_info.file_id_ << " ";
-    // out_file << loop_id++ << " ";
-    // out_file << loop_info.line_nr_ << "\n";
-
     ofile << loop_info.file_id_ << " ";
     ofile << loop_info.line_nr_ << " ";
-    // ofile << lc.loop_counters_[i] << "\n";
     // TODO: Replace 1000 with actual loop iterations
     // TODO: Check if number of load and store instructions on a 
     //       reduction variable is the same
     ofile << "1000" << "\n";
   }
-
-  // 31.03.2021 Mohammad dynamic to static analysis
-  // add a function to output the final data
-  // llvm::Function* main_fn = module_->getFunction("main");
-  // if (main_fn) {
-  //   for (auto it = llvm::inst_begin(main_fn); it != llvm::inst_end(main_fn);
-  //        ++it) {
-  //     if (llvm::isa<llvm::ReturnInst>(&(*it))) {
-  //       llvm::IRBuilder<> ir_builder(&(*it));
-  //       ir_builder.CreateCall(output_fn_);
-  //       break;
-  //     }
-  //   }
-  // } else {
-  //   // llvm::errs() << "Error : Could not find a main function\n";
-  // }
 
 }
 
@@ -720,7 +577,6 @@ llvm::Instruction* get_load_instr(llvm::Value* load_val,
                                   llvm::Instruction* cur_instr,
                                   std::vector<char>& reduction_operations) {
   if (!load_val || !cur_instr) return nullptr;
-// errs()<< "***********\n";
   if (llvm::isa<llvm::LoadInst>(cur_instr)) {
     // Does the current instruction already load the value from the correct
     // address? If that is the case, return it.
@@ -824,7 +680,6 @@ llvm::Instruction* DPReduction::get_reduction_instr(
   llvm::Instruction* reduction_instr =
       find_reduction_instr(store_instr->getOperand(0));
   if (!reduction_instr) {
-    // errs()<< "-0-0-0-0-0\n";
     return nullptr;
   }
   // Now find the destination address of the store instruction.
@@ -835,8 +690,6 @@ llvm::Instruction* DPReduction::get_reduction_instr(
     std::vector<char> reduction_operations;
     *load_instr =
         get_load_instr(store_dst, reduction_instr, reduction_operations);
-        // if(*load_instr)
-        // errs()<< "***** " << reduction_operations.size() << "\n";
     // { *, / } > { +, - } > { & } > { ^ } > { | }
     if (reduction_operations.size() > 1) {
       int order = get_op_order(reduction_operations[0]);
@@ -877,7 +730,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
   loop_info.line_nr_ = loc.getLine();
   loop_info.file_id_ = file_id;
   loop_info.first_body_instr_ = &(*basic_blocks[1]->begin());
-  //Mohammad 4.3.2021
+
   std::string loopEndLine = CFA(F, loop, file_id);
   loop_info.end_line = loopEndLine;
   loop_info.function_name = string((basic_blocks[1]->getParent()->getName()));
@@ -960,7 +813,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
         errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName() << " Start line: " << loop_info.start_line << "\n";
         continue;
       }
-        // errs() << F.getName() << " " << loop_info.start_line << " " << loop_info.line_nr_ << " " << loop_info.end_line << "\n";
       if (loop_info.line_nr_ > std::stoul(loop_info.end_line))
         continue;
 
@@ -971,12 +823,9 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
       if (it->first->hasName()) {
         instr_info_t info;
         info.var_name_ = determineVariableName(it->second, trueVarNamesFromMetadataMap);
-        // errs() << "-----: " << info.var_name_ << "\n";
-        // info.var_name_ = it->first->getName().str();
         info.loop_line_nr_ = loop_info.line_nr_;
         info.file_id_ = file_id;
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
-        //17.03.2021 Mohammad
         info.load_inst_ = llvm::dyn_cast<llvm::LoadInst>(it->second);
 
         candidates.push_back(info);
@@ -984,7 +833,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
     }
   }
 
-  // 31.03.2021 Mohammad dynamic to static analysis
   // now check if the variables are part of a reduction operation
   for (auto candidate : candidates) {
 
@@ -995,13 +843,11 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
 
       varNameLoad = determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
       varTypeLoad = determineVariableType(candidate.load_inst_);
-      // errs() << "+++++: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
 
       if(llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))){
         if (varTypeLoad.find("ARRAY,") == std::string::npos || 
           varNameLoad.find(".addr") == std::string::npos ||
           varTypeLoad.find("**") != std::string::npos){
-          // errs() << "---0: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << " " << candidate.operation_ << "\n";
           continue;
         }
         else if (varTypeLoad.find("ARRAY,") != std::string::npos || 
@@ -1014,10 +860,8 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
           if (instr) {
             candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
             candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
-            // errs() << "1: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << " " << candidate.operation_ << "\n";
           }
           else {
-            // errs() << "---1: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
             continue;
           } 
         } 
@@ -1032,12 +876,10 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
           if (instr) {
             candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
             candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
-            // errs() << "2: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
           }
           else {
             // We should ignore store instructions that are not associated with a load
             // e.g., pbvc[i] = c1s; 
-            // errs() << "---2: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
             continue;
           }
         } else {
@@ -1047,7 +889,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
           if (instr) {
             candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
             candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
-            // errs() << "3: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
           } else {
             // We want to find max or min reduction operations
             // We want to find the basicblock that contains the load instruction
@@ -1055,17 +896,14 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
             BasicBlock *BB = (candidate.load_inst_)->getParent();
             string bbName = BB->getName().str();
 
-            // errs() << "------: " << bbName << "\n";
             // Ignore loops. Only look for conditional blocks
             if(bbName.find("if") != std::string::npos || 
                 bbName.find("for") != std::string::npos){
                 // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if ( dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  = indx ; }}" 
                 candidate.operation_ = '>';
-                // errs() << "4: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n";
             }
             else{
                 continue;
-                // errs() << "---4: " << varNameLoad << " " << varTypeLoad << " " << to_string(loc.getLine()) << " " << candidate.loop_line_nr_ << "\n"; 
             }
           }
         }
@@ -1077,7 +915,6 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop* loop, Lo
 // iterates over all loops in a function and calls 'instrument_loop' for each
 // one
 void DPReduction::instrument_function(llvm::Function* function, map<string, string>* trueVarNamesFromMetadataMap) {
-  // llvm::errs() << "instrument_function : " << function->getName() << "\n";
 
   // get the corresponding file id
   unsigned file_id = util::get_file_id(function);
@@ -1111,9 +948,6 @@ bool DPReduction::inlinedFunction(Function *F){
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
 void DPReduction::instrument_module(llvm::Module* module, map<string, string>* trueVarNamesFromMetadataMap) {
-  // llvm::errs() << "instrument_module : " << module->getModuleIdentifier()
-               // << "\n";
-
   for (llvm::Module::iterator func_it = module->begin();
        func_it != module->end(); ++func_it) {
     llvm::Function* func = &(*func_it);
@@ -1151,7 +985,6 @@ bool DPReduction::runOnModule(llvm::Module& M) {
 
   instrument_module(&M, &trueVarNamesFromMetadataMap);
 
-  // create_function_bindings();
   insert_functions();
 
   if (out_file != NULL && out_file->is_open())
