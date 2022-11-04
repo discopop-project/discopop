@@ -9,6 +9,8 @@
  *
  */
 
+#pragma once
+
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugInfoMetadata.h"

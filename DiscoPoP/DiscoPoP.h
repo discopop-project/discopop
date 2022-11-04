@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef DISCOPOP_H
-#define DISCOPOP_H
+#pragma once
 
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
@@ -339,6 +338,3 @@ ModulePass *createDiscoPoPPass()
     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     return new DiscoPoP();
 }
-
-
-#endif /*DISCOPOP_H*/
