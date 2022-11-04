@@ -65,8 +65,8 @@ jobs:
           python-version: 3.6
       - name: "Run DiscoPoP Profiler on test/ Targets"
         run: |
-          chmod +x .github/workflows/discopop_profiler/test.sh
-          .github/workflows/discopop_profiler/test.sh
+          chmod +x .github/workflows/tests/profiler.sh
+          .github/workflows/tests/profiler.sh
 
 #  differential_test_llvm_8_vs_11:
 #    name: "Differential test: LLVM 8 vs. 11"
