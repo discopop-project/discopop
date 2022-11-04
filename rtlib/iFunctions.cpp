@@ -10,9 +10,9 @@
  */
 
 #include "iFunctions.hpp"
-#include "perfect_shadow.h"
-#include "shadow.h"
-#include "signature.h"
+#include "perfect_shadow.hpp"
+#include "shadow.hpp"
+#include "signature.hpp"
 #include <string>
 #include <cstdio>
 

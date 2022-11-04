@@ -9,33 +9,30 @@
  *
  */
 
-#ifndef _DP_PERFECTSHADOW_H_
-#define _DP_PERFECTSHADOW_H_
+#ifndef _DP_SHADOW_H_
+#define _DP_SHADOW_H_
 
-#include "signature.h"
+#include "signature.hpp"
 #include "abstract_shadow.hpp"
 
 #include <stdint.h>
-#include <unordered_map>
 #include <iostream>
 
+using namespace std;
 
 namespace __dp
 {
 
-    class PerfectShadow : public Shadow
+    class ShadowMemory : public Shadow
     {
     public:
-        PerfectShadow(int slotSize, int size, int numHash)
-            : PerfectShadow() {}
-
-        PerfectShadow()
+        ShadowMemory(int slotSize, int size, int numHash)
         {
-            sigRead = new std::unordered_map<int64_t, sigElement>();
-            sigWrite = new std::unordered_map<int64_t, sigElement>();
+            sigRead = new Signature(slotSize, size, numHash);
+            sigWrite = new Signature(slotSize, size, numHash);
         }
 
-        ~PerfectShadow()
+        ~ShadowMemory()
         {
             delete sigRead;
             delete sigWrite;
@@ -43,51 +40,47 @@ namespace __dp
 
         inline sigElement testInRead(int64_t memAddr)
         {
-            return (*sigRead)[memAddr];
+            return sigRead->membershipCheck(memAddr);
         }
 
         inline sigElement testInWrite(int64_t memAddr)
         {
-            return (*sigWrite)[memAddr];
+            return sigWrite->membershipCheck(memAddr);
         }
 
         inline sigElement insertToRead(int64_t memAddr, sigElement value)
         {
-            sigElement oldValue = testInRead(memAddr);
-            (*sigRead)[memAddr] = value;
-            return oldValue;
+            return sigRead->insert(memAddr, value);
         }
 
         inline sigElement insertToWrite(int64_t memAddr, sigElement value)
         {
-            sigElement oldValue = testInWrite(memAddr);
-            (*sigWrite)[memAddr] = value;
-            return oldValue;
+            return sigWrite->insert(memAddr, value);
         }
 
         inline void updateInRead(int64_t memAddr, sigElement newValue)
         {
-            (*sigRead)[memAddr] = newValue;
+            sigRead->update(memAddr, newValue);
         }
 
         inline void updateInWrite(int64_t memAddr, sigElement newValue)
         {
-            (*sigWrite)[memAddr] = newValue;
+            sigWrite->update(memAddr, newValue);
         }
 
         inline void removeFromRead(int64_t memAddr)
         {
-            (*sigRead)[memAddr] = 0;
+            sigRead->remove(memAddr);
         }
 
         inline void removeFromWrite(int64_t memAddr)
         {
-            (*sigWrite)[memAddr] = 0;
+            sigWrite->remove(memAddr);
         }
 
     private:
-        std::unordered_map <int64_t, sigElement> *sigRead;
-        std::unordered_map <int64_t, sigElement> *sigWrite;
+        Signature *sigRead;
+        Signature *sigWrite;
     };
 
 } // namespace __dp
