@@ -1138,8 +1138,7 @@ namespace __dp
                     if (lid < loop->second->end)
                     {
                          //    loop->second->end = lid;
-                    } 
-
+                    }
                     // New loop exit found and it's bigger than before. This can
                     // happen when the previous exit is a break inside the loop.
                     // In this case we update the loop exit to the bigger one.
