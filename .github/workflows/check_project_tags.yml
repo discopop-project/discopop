@@ -29,6 +29,7 @@ jobs:
             head -n 20 ${FILE} | grep -q "3-Clause BSD License" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
           done
           # Report error (1), if license tags are missing
+          echo "ERROR: ${ERROR}"
           [ -z "$ERROR" ] || exit 1
           # else, finish without error
           exit 0
