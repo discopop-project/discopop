@@ -22,5 +22,6 @@ jobs:
           do
             echo "Hello from: ${FILE}"
           done
+          exit 1
 
         # head -n 20 setup.py | grep "DiscoPoP software\|Technische Universitaet Darmstadt, Germany\|3-Clause BSD License"
