@@ -352,13 +352,10 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) ||
                 isa<CallInst>(instruction)) {
 
-                // string varName = refineVarName(determineVariableName(instruction,
-                // isGlobalVariable));
                 // NOTE: changed 'instruction' to '&*instruction'
                 string varName = determineVariableName(&*instruction, isGlobalVariable)->getName().str();
 
-                if (isGlobalVariable) // add it if it is a global variable in the
-                    // program
+                if (isGlobalVariable) // add it if it is a global variable in the program
                 {
                     programGlobalVariablesSet.insert(varName);
                 }
@@ -372,7 +369,6 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
                 } else {
                     // record usage of the variable.
                     variableToBBMap.insert(pair<string, BasicBlock *>(varName, *bb));
-                    // errs() << varName << "\n";
                 }
             }
         }
@@ -383,8 +379,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                          vector<CU *> &CUVector,
                          map <string, vector<CU *>> &BBIDToCUIDsMap,
                          Node *root, LoopInfo &LI) {
-    // NOTE: changed 'ThisModule->getDataLayout()' to
-    // '&ThisModule->getDataLayout()'
     const DataLayout *DL =
             &ThisModule->getDataLayout(); // used to get data size of variables,
     // pointers, structs etc.
@@ -409,16 +403,10 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             // assign it to currentNode.
             if (loopToNodeMap.find(loop) != loopToNodeMap.end()) {
                 currentNode = loopToNodeMap[loop];
-                // errs() << "))))) " << dputil::decodeLID(currentNode->startLine) << "
-                // " << dputil::decodeLID(currentNode->endLine) << "\n";
             }
                 // else, create a new Node for the loop, add it as children of currentNode
                 // and add it to the map.
             else {
-                if (bb->getName().size() != 0) {
-                    // errs() << "Name: " << bb->getName() << "\n";
-                }
-
                 Node *n = new Node;
                 n->type = nodeTypes::loop;
                 n->parentNode = currentNode;
@@ -426,13 +414,8 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
 
                 loopToNodeMap[loop] = n;
                 currentNode = n;
-                // errs() << "--bb->Name: " << bb->getName() << " , " << "node->ID: " <<
-                // currentNode->ID << "\n";
             }
         } else {
-            if (bb->getName().size() != 0) {
-                // errs() << "bb Name: " << bb->getName() << "\n";
-            }
             // end of loops. go to the parent of the loop. may have to jump several
             // nodes in case of nested loops
             for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin();
@@ -451,15 +434,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
 
         cu = new CU;
 
-        // errs() << "==== " << bb->getName() << "\n"; //"cu->ID: " << cu->ID << " ,
-        // " << "node->ID: " << currentNode->ID << " , " << "tmpNode->ID: " <<
-        // tmpNode->ID << " , " << "bb->Name: " << bb->getName() << "\n";
-
         if (bb->getName().size() == 0)
             bb->setName(cu->ID);
 
         cu->BBID = bb->getName().str();
-        cu->BB = *bb; // Mohammad 23.12.2020
+        cu->BB = *bb;
         currentNode->childrenNodes.push_back(cu);
         vector < CU * > basicBlockCUVector;
         basicBlockCUVector.push_back(cu);
@@ -479,7 +458,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                     cu->returnInstructions.insert(lid);
                 }
                     // find branches to return instructions, i.e. return statements
-                    // Lukas 21.09.20
                 else if (isa<BranchInst>(instruction)) {
                     if ((cast<BranchInst>(instruction))->isUnconditional()) {
                         if ((cast<BranchInst>(instruction))->getNumSuccessors() == 1) {
@@ -495,31 +473,22 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         }
                     }
                 }
-                //}
                 if (isa<StoreInst>(instruction)) {
-
                     // get size of data written into memory by this store instruction
                     Value *operand = instruction->getOperand(1);
                     Type *Ty = operand->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
                     cu->writeDataSize += u;
-                    // varName = refineVarName(determineVariableName(instruction));
                     varName = determineVariableName(&*instruction)->getName().str();
                     varType = determineVariableType(&*instruction);
-                    // if(globalVariablesSet.count(varName) ||
-                    // programGlobalVariablesSet.count(varName))
-                    {
-                        suspiciousVariables.insert(varName);
-                        if (lid > 0)
-                            cu->writePhaseLineNumbers.insert(lid);
-                    }
+                    suspiciousVariables.insert(varName);
+                    if (lid > 0)
+                        cu->writePhaseLineNumbers.insert(lid);
                 } else if (isa<LoadInst>(instruction)) {
-
                     // get size of data read from memory by this load instruction
                     Type *Ty = instruction->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
                     cu->readDataSize += u;
-                    // varName = refineVarName(determineVariableName(instruction));
                     varName = determineVariableName(&*instruction)->getName().str();
                     if (suspiciousVariables.count(varName)) {
                         // VIOLATION OF CAUTIOUS PROPERTY
@@ -547,9 +516,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         cu = new CU;
 
                         cu->BBID = bb->getName().str();
-                        cu->BB = *bb; // Mohammad 23.12.2020
-                        // errs() << "bb->Name: "  << bb->getName() << " , " << "cu->ID: "
-                        // << cu->ID  << " , " << "node->ID: " << currentNode->ID << "\n";
+                        cu->BB = *bb;
 
                         currentNode->childrenNodes.push_back(cu);
                         temp->successorCUs.push_back(cu->ID);
@@ -584,16 +551,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         // check for call instructions in current basic block
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
-            // Mohammad 6.7.2020: Don't create nodes for library functions (c++/llvm).
+            // Note: Don't create nodes for library functions (c++/llvm).
             int32_t lid = getLID(&*instruction, fileID);
             if (lid > 0) {
-
                 if (isa<CallInst>(instruction)) {
-
                     Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                     // TODO: DO the same for Invoke inst
-
-                    // Mohammad 6.7.2020
                     Function::iterator FI = f->begin();
                     bool externalFunction = true;
                     string lid;
@@ -648,7 +611,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         n->name = sv->getName().str();
                     }
 
-                    // Recursive functions (Mo 5.11.2019)
+                    // Recursive functions
                     CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
                     if (isRecursive(*f, CGWP->getCallGraph())) {
                         int lid = getLID(&*instruction, fileID);
@@ -663,7 +626,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         if (lid >= i->startLine && lid <= i->endLine) {
                             i->instructionsLineNumbers.insert(lid);
                             i->childrenNodes.push_back(n);
-
                             i->callLineTofunctionMap[lid].push_back(n);
                             break;
                         }
@@ -706,7 +668,6 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 lid = getLID(&*instruction, fileID);
                 if (lid == 0)
                     continue;
-                // varName = refineVarName(determineVariableName(instruction));
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
                 varName = determineVariableName(&*instruction)->getName().str();
                 varType = determineVariableType(&*instruction);
@@ -719,18 +680,14 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                     varName = "ARRAY, " + varName;
                 }
 
-                // errs() << "Name: "  << varName << " " << "Type: " << varType << "\n";
-
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
                 }
                 if (globalVariablesSet.count(varName) ||
                     programGlobalVariablesSet.count(varName)) {
                     (*bbCU)->globalVariableNames.insert(v);
-                    // originalVariablesSet.insert(varName);
                 } else {
                     (*bbCU)->localVariableNames.insert(v);
-                    // originalVariablesSet.insert(varName);
                 }
             }
         }
@@ -782,7 +739,6 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
 
 void DiscoPoP::initializeCUIDCounter() {
     std::string CUCounterFile = "DP_CUIDCounter.txt";
-
     if (dputil::fexists(CUCounterFile)) {
         std::fstream inCUIDCounter(CUCounterFile, std::ios_base::in);;
         inCUIDCounter >> CUIDCounter;
@@ -796,7 +752,6 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
         if ((*callNode)[i]->getFunction() == &F)
             return true;
     }
-
     return false;
 }
 
@@ -924,7 +879,6 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-    // LoopInfo& LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     for (Function &F: M) {
         runOnFunction(F);
     }
@@ -981,9 +935,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         // Get list of arguments for this function and store them in root.
         // NOTE: changed the way we get the arguments
-        // for (Function::ArgumentListType::iterator it = F.getArgumentList().begin();
-        // it != F.getArgumentList().end(); it++) {
-
         BasicBlock *BB = &F.getEntryBlock();
         auto BI = BB->begin();
         string lid;
@@ -994,19 +945,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
         }
 
         for (Function::arg_iterator it = F.arg_begin(); it != F.arg_end(); it++) {
-
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-
             Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
          * ***************************/
-        // errs()<< "000---\n";
-        // NOTE: changed the pass name for loopinfo -- LoopInfo &LI =
-        // getAnalysis<LoopInfo>();
         LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
 
         // get the top level region
@@ -1065,8 +1011,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
     // DPInstrumentation end
 
     // DPInstrumentationOmission
-    // int bbDepCount = 0; moved to doInitialization
-    // string bbDepString;
     {
         if (F.getInstructionCount() == 0) return false;
         if (DP_hybrid_SKIP) return true;
@@ -1093,8 +1037,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
                             Fun->getName() == "__dp_alloca") {
                             ++totalInstrumentations;
                         }
-                        // if(DP_hybrid_DEBUG) errs() << " ----5 " << Fun->getName() << " " << call_inst->getNumOperands() << "\n";
-                        // if(dl = call_inst->getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
                         for (uint i = 0; i < call_inst->getNumOperands() - 1; ++i) {
                             V = call_inst->getArgOperand(i);
                             std::set<Value *>::iterator it = staticallyPredictableValues.find(V);
@@ -1102,13 +1044,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
                                 staticallyPredictableValues.erase(V);
                                 if (DP_hybrid_DEBUG) errs() << VNF->getVarName(V) << "\n";
                             }
-                            // for(Value *w: staticallyPredictableValues){
-                            // for (auto w = staticallyPredictableValues.begin(); w != staticallyPredictableValues.end(); ) {
-                            // if(w == V){
-                            // w = staticallyPredictableValues.erase(w);
-                            // if(DP_hybrid_DEBUG) errs() << VNF->getVarName(V) << "\n";
-                            // }
-                            // }
                         }
                     }
                 }
@@ -1148,7 +1083,8 @@ bool DiscoPoP::runOnFunction(Function &F) {
             V = Src->getOperand(isa<StoreInst>(Src) ? 1 : 0);
             if (isa<AllocaInst>(Dst)) V = dyn_cast<Value>(Dst);
 
-            if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end()) continue;
+            if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end())
+                continue;
 
             if (Src != Dst && DT.dominates(Dst, Src)) {
                 if (!conditionalBBDepMap.count(Src->getParent())) {
@@ -1195,11 +1131,13 @@ bool DiscoPoP::runOnFunction(Function &F) {
             );
 
             // ---- Insert deps into string ----
-            if (bbDepCount) bbDepString += "/";
+            if (bbDepCount)
+                bbDepString += "/";
             bool first = true;
             bbDepString += to_string(bbDepCount) + "=";
             for (auto dep: pair.second) {
-                if (!first) bbDepString += ",";
+                if (!first)
+                    bbDepString += ",";
                 bbDepString += dep;
                 first = false;
             }
@@ -1230,12 +1168,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
                 );
 
                 // ---- Insert deps into string ----
-                if (bbDepCount) bbDepString += "/";
+                if (bbDepCount)
+                    bbDepString += "/";
                 bbDepString += to_string(bbDepCount);
                 bbDepString += "=";
                 bool first = true;
                 for (auto dep: pair2.second) {
-                    if (!first) bbDepString += ",";
+                    if (!first)
+                        bbDepString += ",";
                     bbDepString += dep;
                     first = false;
                 }
@@ -1275,19 +1215,25 @@ bool DiscoPoP::runOnFunction(Function &F) {
             errs() << "--- Program Instructions:\n";
             for (BasicBlock &BB: F) {
                 for (Instruction &I: BB) {
-                    if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) continue;
+                    if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I))
+                        continue;
                     errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read "))
                            << " | ";
-                    if (dl = I.getDebugLoc()) errs() << dl.getLine() << "," << dl.getCol();
-                    else errs() << F.getSubprogram()->getLine() << ",*";
+                    if (dl = I.getDebugLoc()) {
+                        errs() << dl.getLine() << "," << dl.getCol();
+                    } else {
+                        errs() << F.getSubprogram()->getLine() << ",*";
+                    }
                     errs() << " | ";
                     V = I.getOperand(isa<StoreInst>(I) ? 1 : 0);
-                    if (isa<AllocaInst>(I)) V = dyn_cast<Value>(&I);
+                    if (isa<AllocaInst>(I)) {
+                        V = dyn_cast<Value>(&I);
+                    }
                     errs() << VNF->getVarName(V);
 
-                    if (omittableInstructions.find(&I) != omittableInstructions.end())
+                    if (omittableInstructions.find(&I) != omittableInstructions.end()) {
                         errs() << " | OMITTED";
-
+                    }
                     errs() << "\n";
                 }
             }
@@ -1296,10 +1242,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // Remove omittable instructions from profiling
         Instruction *DP_Instrumentation;
         for (Instruction *I: omittableInstructions) {
-            if (isa<AllocaInst>(I)) DP_Instrumentation = I->getNextNode()->getNextNode();
-            else DP_Instrumentation = I->getPrevNode();
+            if (isa<AllocaInst>(I)) {
+                DP_Instrumentation = I->getNextNode()->getNextNode();
+            } else {
+                DP_Instrumentation = I->getPrevNode();
+            }
 
-            if (!DP_Instrumentation) continue;
+            if (!DP_Instrumentation)
+                continue;
             if (CallInst * call_inst = dyn_cast<CallInst>(DP_Instrumentation)) {
                 if (Function * Fun = call_inst->getCalledFunction()) {
                     string fn = Fun->getName().str();
@@ -1320,7 +1270,6 @@ void DiscoPoP::collectDebugInfo() {
     if (NamedMDNode * CU_Nodes = ThisModule->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
             DICompileUnit *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
-            // DICompileUnit CU(CU_Nodes->getOperand(i));
             auto GVs = CU->getGlobalVariables();
             for (unsigned i = 0, e = GVs.size(); i < e; ++i) {
                 DIGlobalVariable *DIG = GVs[i]->getVariable();
@@ -1360,9 +1309,9 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
     if (idx < memberListNodes->getNumOperands()) {
         assert(memberListNodes->getOperand(idx));
         MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
-        //return getOrInsertVarName(string(member->getOperand(3)->getName().data()), builder);
-        if (member->getOperand(3))
+        if (member->getOperand(3)) {
             return getOrInsertVarName(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
+        }
     }
     return NULL;
 }
@@ -1466,7 +1415,7 @@ void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
                 Function *f = (cast<CallInst>(instruction))->getCalledFunction();
                 if (f) {
                     StringRef funcName = f->getName();
-                    if (funcName.find("llvm.dbg.declar") != string::npos) // llvm debug calls
+                    if (funcName.find("llvm.dbg.declare") != string::npos) // llvm debug calls
                     {
                         CallInst *call = cast<CallInst>(instruction);
                         // check if @llvm.dbg.declare is called
@@ -1504,7 +1453,6 @@ void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
 void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode) {
     assert(structNode && "structNode cannot be NULL");
     DIType *strDes = cast<DIType>(structNode);
-    // DIType strDes(structNode);
     assert(strDes->getTag() == dwarf::DW_TAG_structure_type);
     // sometimes it's impossible to get the list of struct members (e.g badref)
     if (structNode->getNumOperands() <= 10 || structNode->getOperand(10) == NULL) {
@@ -1631,17 +1579,15 @@ void DiscoPoP::printTree(Node *root, bool isRoot) {
 
     std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(),
                   [&](Node *node) {
-                      if (node->type == nodeTypes::func)
+                      if (node->type == nodeTypes::func) {
                           isRoot = false;
+                      }
                       printTree(node, isRoot);
                   });
 }
 
 void DiscoPoP::printNode(Node *root, bool isRoot) {
     if (root->name.find("llvm")) {
-        // if(dputil::decodeLID(root->endLine) == "1:560")
-        // errs() << "=-=-=-=-=-=-=-=-=-=-=-=- " <<
-        // dputil::decodeLID(root->startLine) << "\n";
         string start = "";
         if (root->type == nodeTypes::loop) {
             start = loopStartLines[root->ID];
@@ -1796,11 +1742,6 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
         if (DbgDeclareInst * DI = dyn_cast<DbgDeclareInst>(BI)) {
             assert(DI->getOperand(0));
-            //MDNode* node = cast<MDNode>(DI->getOperand(0));
-            // llvm.dbg.declare changes from LLVM 3.3 to 3.6.1:
-            // LLVM 3.6.1: call @llvm.dbg.declare(metadata %struct.x* %1, metadata !1, metadata !2)
-            // LLVM 3.3:   call @llvm.dbg.declare(metadata !{%struct.x* %1}, metadata !1, metadata !2)
-            // diff: operand 0 changes from MDNode* to Value*
             if (AllocaInst * alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
                 Type *type = alloc->getAllocatedType();
                 Type *structType = type;
@@ -1813,11 +1754,6 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
                 if (structType->getTypeID() == Type::StructTyID) {
                     assert(DI->getOperand(1));
-                    // LLVM 3.6.1:
-                    // DbgDeclareInst *DI->getOperand(1) ==> MDNode* getVariable()
-                    //                *DI->getOperand(2) ==> MDNode* getExpression()
-                    // Methods Metadata* getRawVariable() and Metadata* getRawExpression() are listed on
-                    // LLVM online document, but do not exist in source code of 3.6.1.
                     MDNode *varDesNode = DI->getVariable();
                     assert(varDesNode->getOperand(5));
                     MDNode *typeDesNode = cast<MDNode>(varDesNode->getOperand(5));
@@ -1835,14 +1771,12 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     // handle the case when we have pointer to struct (or pointer to pointer to struct ...)
                     if (strDes->getTag() == dwarf::DW_TAG_pointer_type) {
                         DINode *ptrDes = strDes;
-                        // DIDescriptor* ptrDes = &strDes;
                         do {
                             if (structNode->getNumOperands() < 10)
                                 break;
                             assert(structNode->getOperand(9));
                             structNode = cast<MDNode>(structNode->getOperand(9));
                             ptrDes = cast<DINode>(structNode);
-                            // ptrDes = new DIDescriptor(structNode);
                         } while (ptrDes->getTag() != dwarf::DW_TAG_structure_type);
                     }
 
@@ -1851,7 +1785,6 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                         structNode = cast<MDNode>(strDes->getOperand(9));
                     }
                     strDes = cast<DINode>(structNode);
-                    // strDes = DIDescriptor(structNode);
                     if (strDes->getTag() == dwarf::DW_TAG_structure_type) {
                         string strName(structType->getStructName().data());
                         if (Structs.find(strName) == Structs.end()) {
@@ -1959,7 +1892,8 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
     int32_t lid = getLID(toInstrument, fileID);
-    if (lid == 0) return;
+    if (lid == 0)
+        return;
 
     vector < Value * > args;
 
@@ -1972,10 +1906,6 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
     args.push_back(determineVariableName(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
-    //Value* loadAddr = args[1];
-    //Type* trackerType = v2->getType();
-
-    //cout << "Creating Load " << uniqueNum;
     Twine name = Twine("L").concat(Twine(uniqueNum));
 
     GlobalVariable *addrTracker =
@@ -2038,10 +1968,6 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
     args.push_back(determineVariableName(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
-    //Value* storeAddr = args[1];
-    //Type* trackerType = v2->getType();
-
-    //cout << "Creating Store " << uniqueNum;
     Twine name = Twine("S").concat(Twine(uniqueNum));
 
     GlobalVariable *addrTracker =
@@ -2166,5 +2092,4 @@ void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
             break;
         }
     }
-    //assert((lid > 0) && "Loop exit is not instrumented because LID are all invalid for the whole basic block.");
 }
