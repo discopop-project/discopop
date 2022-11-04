@@ -19,16 +19,23 @@ jobs:
       - name: "Check all files for DiscoPoP License tag"
         run: |
           ERROR=""
-          for FILE in $(find . -type f -not -path "**/.git/**" -not -path "**/test/**")
+          for FILE in $(find . -type f -not -path "**/.git/**" -not -path "**/test/**" -not -path "**/LICENSE" -not -path "./VERSION" -not -path "**/_version.py" -not -path "**.svg")
           do
             FILE_ERROR=""
-            head -n 20 ${FILE} | grep -q "DiscoPoP software" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
+            head -n 20 ${FILE} | grep -q "DiscoPoP software" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR"] || ERROR="yes"
+            [ -z "$FILE_ERROR"] || echo "Missing License tag at: ${FILE}" 
             [ -z "$FILE_ERROR" ] || continue
-            head -n 20 ${FILE} | grep -q "Technische Universitaet Darmstadt, Germany" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
+            head -n 20 ${FILE} | grep -q "Technische Universitaet Darmstadt, Germany" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR"] || ERROR="yes"
+            [ -z "$FILE_ERROR"] || echo "Missing License tag at: ${FILE}" 
             [ -z "$FILE_ERROR" ] || continue
-            head -n 20 ${FILE} | grep -q "3-Clause BSD License" || echo "Missing License tag at: ${FILE}" && FILE_ERROR="yes" && ERROR="yes"
+            head -n 20 ${FILE} | grep -q "3-Clause BSD License" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR"] || ERROR="yes"
+            [ -z "$FILE_ERROR"] || echo "Missing License tag at: ${FILE}" 
           done
           # Report error (1), if license tags are missing
+          echo "ERROR: ${ERROR}"
           [ -z "$ERROR" ] || exit 1
           # else, finish without error
           exit 0
