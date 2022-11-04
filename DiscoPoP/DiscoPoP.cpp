@@ -26,31 +26,6 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-// Command line options
-// static cl::opt<bool> ClCheckLoopPar("dp-loop-par", cl::init(true),
-//                                     cl::desc("Check loop parallelism"), cl::Hidden);
-// char DiscoPoP::ID = 0;
-
-// static RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential parallelism.", false, false);
-
-// static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM)
-// {
-//     PM.add(new LoopInfoWrapperPass());
-//     PM.add(new DiscoPoP());
-// }
-
-// static RegisterStandardPasses DiscoPoPLoader_Ox(PassManagerBuilder::EP_OptimizerLast, loadPass);
-// static RegisterStandardPasses DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
-
-// FunctionPass *createDiscoPoPPass()
-// {
-//     if (DP_DEBUG)
-//     {
-//         errs() << "create DiscoPoP \n";
-//     }
-//     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-//     return new DiscoPoP();
-// }
 
 StringRef DiscoPoP::getPassName() const
 {
