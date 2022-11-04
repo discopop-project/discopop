@@ -1,3 +1,16 @@
+<!-- 
+ /*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */ 
+ -->
+
 ## Getting started
 ### Pre-requisites
 Before doing anything, you need a basic development setup. We have tested DiscoPoP on Ubuntu, and the prerequisite packages should be installed using the following command:
