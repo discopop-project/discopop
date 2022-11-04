@@ -13,7 +13,7 @@ from discopop_wizard.screens.utils import exit_program
 
 
 def main():
-    print("starting DiscoPoP Wizard...\n")
+    print("starting DiscoPoP Wizard....\n")
     source_dir = dirname(os.path.abspath(__file__))  # source_dir: discopop/discopop_wizard
     config_dir = os.path.join(source_dir, ".config")
 
