@@ -13,7 +13,7 @@
 //#define SKIP_DUP_INSTR 1
 //#define DEBUG_TYPE "dp-omissions"
 
-#include "DiscoPoP.h"
+#include "DiscoPoP.hpp"
 
 #define DP_DEBUG false
 #define DP_hybrid_DEBUG false
