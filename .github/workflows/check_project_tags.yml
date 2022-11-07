@@ -19,7 +19,11 @@ jobs:
       - name: "Check all files for DiscoPoP License tag"
         run: |
           ERROR=""
-          for FILE in $(find . -type f -not -path "**/.git/**" -not -path "**/test/**" -not -path "**/LICENSE" -not -path "./VERSION" -not -path "**/_version.py" -not -path "**.svg")
+          for FILE in $(find . -type f  -not -path "**/.git/**" -not -path "**/test/**" 
+                                        -not -path "**/LICENSE" -not -path "./VERSION" 
+                                        -not -path "**/_version.py" -not -path "**.svg"
+                                        -not -path "**.png"
+                                        )
           do
             FILE_ERROR=""
             head -n 20 ${FILE} | grep -q "DiscoPoP software" || FILE_ERROR="yes"
