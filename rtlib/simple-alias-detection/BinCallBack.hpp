@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef BINMATCHER_BINCALLBACK_H
-#define BINMATCHER_BINCALLBACK_H
+#pragma once
 
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchersInternal.h>
@@ -29,5 +28,3 @@ public:
         llvm::outs() << "\n\n";
     }
 };
-
-#endif //BINMATCHER_BINCALLBACK_H

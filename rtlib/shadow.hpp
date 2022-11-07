@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_SHADOW_H_
-#define _DP_SHADOW_H_
+#pragma once
 
 #include "signature.hpp"
 #include "abstract_shadow.hpp"
@@ -84,4 +83,3 @@ namespace __dp
     };
 
 } // namespace __dp
-#endif

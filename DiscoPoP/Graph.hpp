@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef GRAPH_HPP
-#define GRAPH_HPP
+#pragma once
+
 // #define DEBUG_GRAPH_HPP
 
 //STL IMPORTS
@@ -206,5 +206,3 @@ public:
 
 	int size() const { return nextIntKey; }
 };
-
-#endif // GRAPH_HPP

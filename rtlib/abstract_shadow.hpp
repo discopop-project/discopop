@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_ASHADOW_H_
-#define _DP_ASHADOW_H_
+#pragma once
 
 #include "signature.hpp"
 
@@ -46,4 +45,3 @@ namespace __dp
     };
 
 } // namespace __dp
-#endif

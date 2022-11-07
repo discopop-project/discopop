@@ -9,6 +9,8 @@
  *
  */
 
+#pragma once 
+
 #include <string>
 #include "InstructionCFG.hpp"
 #include "DPUtils.hpp"

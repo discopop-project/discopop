@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_UTIL_H_
-#define _DP_UTIL_H_
+#pragma once
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -129,4 +128,3 @@ namespace dputil
     };
 
 } // namespace
-#endif
