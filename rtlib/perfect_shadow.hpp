@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "signature.h"
-#include "abstract_shadow.h"
+#include "signature.hpp"
+#include "abstract_shadow.hpp"
 
 #include <stdint.h>
 #include <unordered_map>

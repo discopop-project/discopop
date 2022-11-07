@@ -12,8 +12,8 @@
 #pragma once 
 
 #include <string>
-#include "InstructionCFG.h"
-#include "DPUtils.h"
+#include "InstructionCFG.hpp"
+#include "DPUtils.hpp"
 
 class InstructionDG : public Graph<Instruction*>
 {

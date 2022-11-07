@@ -19,7 +19,7 @@
 #include "Graph.hpp"
 #include <llvm/Support/raw_ostream.h>
 
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 
 #define ENTRY 1000000
 #define EXIT 2000000

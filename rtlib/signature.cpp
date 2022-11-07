@@ -9,7 +9,7 @@
  *
  */
 
-#include "signature.h"
+#include "signature.hpp"
 
 #include "stdint.h"
 #include <iostream>

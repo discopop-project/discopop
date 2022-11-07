@@ -9,9 +9,9 @@
  *
  */
 
-#include "InstructionDG.h"
+#include "InstructionDG.hpp"
 
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 
 InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid): VNF(_VNF), CFG(_CFG), fid(_fid){
 	for(auto edge: CFG->getInEdges(CFG->getExit()))
