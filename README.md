@@ -27,10 +27,18 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 ## Wiki
 Detailed information about each execution step, the setup as well as the functionality of DiscoPoP can be found on the [wiki page](https://discopop-project.github.io/discopop/).
 
-### Quick Links
+### Quick Links (OUTDATED INSTRUCTIONS)
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
 - [Example](https://discopop-project.github.io/discopop/Guide/)
 
+## TL;DR
+### Setup
+```
+	sudo apt-get install git build-essential cmake libclang-11-dev clang-11 llvm-11
+	git clone https://github.com/discopop-project/discopop.git
+	cd discopop && mkdir build && cd build
+	cmake .. && make
+```
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
