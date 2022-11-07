@@ -22,7 +22,7 @@ jobs:
           for FILE in $(find . -type f  -not -path "**/.git/**" -not -path "**/test/**" \
                                         -not -path "**/docs/**" \
                                         -not -path "**/LICENSE" -not -path "./VERSION" \
-                                        -not -path "**/_version.py" \
+                                        -not -path "**/_version.py" -not -path "**/__init__.py" \
                                         -not -path "**.png" -not -path "**.svg" \
                                         )
           do
