@@ -1,0 +1,32 @@
+title: DiscoPoP
+
+permalink: pretty
+
+remote_theme: just-the-docs/just-the-docs
+
+logo: "/docs/img/DiscoPoP-logo.png"
+
+callouts:
+  highlight:
+    color: yellow
+  important:
+    title: Important
+    color: blue
+  new:
+    title: New
+    color: green
+  note:
+    title: Note
+    color: purple
+  warning:
+    title: Warning
+    color: red
+
+mermaid:
+  version: "9.1.7"
+
+aux_links:
+  "DiscoPoP on GitHub":
+    - "//github.com/discopop-project/discopop"
+
+footer_content: "Copyright &copy; 2022, Technical University of Darmstadt."
