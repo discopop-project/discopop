@@ -15,12 +15,12 @@ on:
 jobs:
   update-wiki:
     runs-on: ubuntu-latest
-    name: Update wiki
+    name: "Update Wiki"
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
 
-      - name: Check out wiki
+      - name: "Check out wiki"
         uses: actions/checkout@v2
         with:
             repository: 'discopop-project/discopop.wiki'
@@ -29,7 +29,7 @@ jobs:
       - name: "overwrite wiki contents"
         run: |
           cp -r docs/* discopop.wiki
-      -name: "rename wiki/index.md to wiki/Home.md"
+      -name: "rename index.md to Home.md"
         run: |
           mv discopop.wiki/index.md discopop.wiki/Home.md
       - name: "Commit to wiki"
