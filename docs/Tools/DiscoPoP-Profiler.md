@@ -1,3 +1,13 @@
+---
+layout: default
+title: DiscoPoP Profiler
+parent: Tool Overview
+nav_order: 1
+---
+
+
+# DiscoPoP Profiler
+
 *Call clang++ with DiscoPoP LLVM passes.*
 
 The DiscoPoP profiler consists of multiple LLVM libraries (CUGeneration,

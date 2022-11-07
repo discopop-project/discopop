@@ -1,3 +1,10 @@
+---
+layout: default
+title: Troubleshooting
+---
+
+# Troubleshooting
+
 ### How to use DiscoPoP with projects which use CMake build system?
 To run DiscoPoP instrumentation on projects which use CMake, you need to use the following commands instead of the normal CMake.
 1. You first need to run CMake to just configure the project for compilation:

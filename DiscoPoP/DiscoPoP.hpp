@@ -1,5 +1,15 @@
-#ifndef DISCOPOP_H
-#define DISCOPOP_H
+/*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
+#pragma once
 
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
@@ -35,8 +45,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/InitializePasses.h"
 
-#include "DPUtils.h"
-#include "InstructionDG.h"
+#include "DPUtils.hpp"
+#include "InstructionDG.hpp"
 
 #include <cstdlib>
 #include <algorithm>
@@ -328,6 +338,3 @@ ModulePass *createDiscoPoPPass()
     initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     return new DiscoPoP();
 }
-
-
-#endif /*DISCOPOP_H*/

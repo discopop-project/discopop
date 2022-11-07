@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_SIGNATURE_H_
-#define _DP_SIGNATURE_H_
+#pragma once
 
 #include <stdint.h>
 #include <assert.h>
@@ -70,4 +69,3 @@ namespace __dp
         }
     };
 } // namespace __dp
-#endif

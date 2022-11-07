@@ -1,0 +1,40 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+title: DiscoPoP
+
+permalink: pretty
+
+remote_theme: just-the-docs/just-the-docs
+
+logo: "img/DiscoPoP-logo.png"
+
+callouts:
+  highlight:
+    color: yellow
+  important:
+    title: Important
+    color: blue
+  new:
+    title: New
+    color: green
+  note:
+    title: Note
+    color: purple
+  warning:
+    title: Warning
+    color: red
+
+mermaid:
+  version: "9.1.7"
+
+aux_links:
+  "DiscoPoP on GitHub":
+    - "//github.com/discopop-project/discopop"
+
+footer_content: "Copyright &copy; 2022, Technical University of Darmstadt."

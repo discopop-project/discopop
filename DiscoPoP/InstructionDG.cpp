@@ -1,6 +1,17 @@
-#include "InstructionDG.h"
+/*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
 
-#include "DPUtils.h"
+#include "InstructionDG.hpp"
+
+#include "DPUtils.hpp"
 
 InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid): VNF(_VNF), CFG(_CFG), fid(_fid){
 	for(auto edge: CFG->getInEdges(CFG->getExit()))

@@ -1,3 +1,9 @@
+---
+layout: default
+title: Setup
+nav_order: 2
+---
+
 ## Getting started
 ### Pre-requisites
 Before doing anything, you need a basic development setup. We have tested DiscoPoP on Ubuntu, and the prerequisite packages should be installed using the following command:

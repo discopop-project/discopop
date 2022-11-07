@@ -9,7 +9,7 @@
  *
  */
 
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 #define DP_DEBUG_TYPE "dputils"
 using namespace std;
 

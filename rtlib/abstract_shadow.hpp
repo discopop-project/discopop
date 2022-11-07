@@ -9,10 +9,9 @@
  *
  */
 
-#ifndef _DP_ASHADOW_H_
-#define _DP_ASHADOW_H_
+#pragma once
 
-#include "signature.h"
+#include "signature.hpp"
 
 #include <stdint.h>
 #include <map>
@@ -46,4 +45,3 @@ namespace __dp
     };
 
 } // namespace __dp
-#endif

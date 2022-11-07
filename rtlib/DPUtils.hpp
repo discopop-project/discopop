@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_UTIL_H_
-#define _DP_UTIL_H_
+#pragma once
 
 #include <stdint.h>
 #include <string>
@@ -115,4 +114,3 @@ namespace dputil
     }
 
 } // namespace
-#endif

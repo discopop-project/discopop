@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _DP_IFUNCTIONS_H_
-#define _DP_IFUNCTIONS_H_
+#pragma once
 
 //#define SKIP_DUP_INSTR 1
 
@@ -27,7 +26,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include "DPUtils.h"
+#include "DPUtils.hpp"
 // hybrid analysis
  #include <regex>
  // End HA
@@ -181,4 +180,3 @@ namespace __dp
         void __dp_loop_exit(LID lid, int32_t loopID);
     }
 } // namespace __dp
-#endif
