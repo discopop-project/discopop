@@ -14,7 +14,7 @@
 # Walk-through example
 The following walk-through example demonstrates how to use DiscoPoP to analyze a sequential sample application and identify its parallelization opportunities. In this example, we use the program `SimplePipeline`. As its name suggests, this program involves a pipeline pattern. We assume that you have successfully installed DiscoPoP. The following diagram depicts the whole workflow of obtaining the parallelization suggestions.
 
-![DiscoPoP workflow diagram](/docs/img/DPWorkflow.svg)
+![DiscoPoP workflow diagram](img/DPWorkflow.svg)
 
 First, switch to the `/test/simple_pipeline` folder that contains the program `SimplePipeline.c`. Then, please run the following commands step-by-step to obtain the desired results.
 
