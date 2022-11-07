@@ -11,7 +11,7 @@ name: "Update Wiki"
 on:
     push:
         branches:
-            - master
+            - 133-create-documentation-website-in-addition-to-wiki-tab
 jobs:
   update-wiki:
     runs-on: ubuntu-latest
@@ -28,7 +28,10 @@ jobs:
             path: 'discopop.wiki'
       - name: "overwrite wiki contents"
         run: |
-          cp -r wiki/* discopop.wiki
+          cp -r docs/* discopop.wiki
+      -name: "rename wiki/index.md to wiki/Home.md"
+        run: |
+          mv discopop.wiki/index.md discopop.wiki/Home.md
       - name: "Commit to wiki"
         run: |
           cd discopop.wiki

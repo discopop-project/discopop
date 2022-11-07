@@ -11,6 +11,12 @@
  */ 
  -->
 
+ ---
+layout: default
+title: Home
+nav_order: 1
+---
+
 # DiscoPoP - Discovery of Potential Parallelism
 DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University. 
 
