@@ -13,12 +13,12 @@ on:
     branches:
       - 133-create-documentation-website-in-addition-to-wiki-tab
 jobs:
-#  update-wiki:
-#    runs-on: ubuntu-latest
-#    name: "Update Wiki"
-#    steps:
-#      - name: "Checkout Repository"
-#        uses: actions/checkout@v2
+  update-wiki:
+    runs-on: ubuntu-latest
+    name: "Update Wiki"
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
 #
 #      - name: "Check out wiki"
 #        uses: actions/checkout@v2
