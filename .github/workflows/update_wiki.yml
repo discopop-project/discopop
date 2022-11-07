@@ -9,9 +9,9 @@
 name: "Update Wiki"
 
 on:
-    push:
-        branches:
-            - 133-create-documentation-website-in-addition-to-wiki-tab
+  push:
+    branches:
+      - 133-create-documentation-website-in-addition-to-wiki-tab
 jobs:
   update-wiki:
     runs-on: ubuntu-latest
