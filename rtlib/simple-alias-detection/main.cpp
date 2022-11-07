@@ -16,7 +16,7 @@
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include "clang/Frontend/TextDiagnostic.h"
 
-#include "BinCallBack.h"
+#include "BinCallBack.hpp"
 
 
 using namespace llvm;

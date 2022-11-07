@@ -12,7 +12,7 @@
 #ifndef _DP_ASHADOW_H_
 #define _DP_ASHADOW_H_
 
-#include "signature.h"
+#include "signature.hpp"
 
 #include <stdint.h>
 #include <map>

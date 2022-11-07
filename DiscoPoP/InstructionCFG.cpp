@@ -9,7 +9,7 @@
  *
  */
 
-#include "InstructionCFG.h"
+#include "InstructionCFG.hpp"
 
 InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F): VNF(_VNF){
 	entry = Graph::addInstructionNode((Instruction*)ENTRY);
