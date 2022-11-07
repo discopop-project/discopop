@@ -9,26 +9,28 @@
 name: "Update Wiki"
 
 on:
-    push:
-        branches:
-            - master
+  push:
+    branches:
+      - 133-create-documentation-website-in-addition-to-wiki-tab
 jobs:
   update-wiki:
     runs-on: ubuntu-latest
-    name: Update wiki
+    name: "Update Wiki"
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
-
-      - name: Check out wiki
+      - name: "Check out wiki"
         uses: actions/checkout@v2
         with:
             repository: 'discopop-project/discopop.wiki'
             ref: 'master'
             path: 'discopop.wiki'
-      - name: "overwrite wiki contents"
+      - name: "overwrite wiki contents"#
         run: |
-          cp -r wiki/* discopop.wiki
+          cp -r docs/* discopop.wiki
+      - name: "rename index.md to Home.md"
+        run: |
+          mv discopop.wiki/index.md discopop.wiki/Home.md
       - name: "Commit to wiki"
         run: |
           cd discopop.wiki

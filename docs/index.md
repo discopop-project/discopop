@@ -1,15 +1,8 @@
-<!-- 
- /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
- *
- * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
- *
- * This software may be modified and distributed under the terms of
- * the 3-Clause BSD License. See the LICENSE file in the package base
- * directory for details.
- *
- */ 
- -->
+---
+layout: default
+title: Home
+nav_order: 1
+---
 
 # DiscoPoP - Discovery of Potential Parallelism
 DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University. 
