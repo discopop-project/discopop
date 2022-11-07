@@ -1,14 +1,9 @@
-<!--
-# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
-#
-# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
-#
-# This software may be modified and distributed under the terms of
-# the 3-Clause BSD License. See the LICENSE file in the package base
-# directory for details.
--->
+---
+layout: default
+title: Tutorial
+---
 
-# DiscoPoP Tutorial
+# Tutorial
 
 In this example, we demonstrate how to use DiscoPoP to extract data dependencies, computational units, parallel patterns, and finally the parallelization suggestions. 
 
@@ -174,7 +169,7 @@ Figure 1 demonstrates a simplified view of the computational units and the relev
 
 Moreover, Figure 2 shows the analysis information for function compute in the test program. Unlike the function “initialize”, there is an inter-iteration dependence which can be resolved with the OpenMP reduction clause.  
 
-![A simplified view of the CUs, data dependences, parallel patterns and parallelization suggestions which are identified in function “compute” of our test program.](img/reduction1.svg)
+![A simplified view of the CUs, data dependences, parallel patterns and parallelization suggestions which are identified in function “compute” of our test program.](/img/reduction1.svg)
 *(Figure 2:  A simplified view of the CUs, data dependences, parallel patterns and parallelization suggestions which are identified in function “compute” of our test program. )*
 
 Please note that like many scientific applications which work on arrays or matrices, the suggestions do not change if we change the input size. Thus, it is possible to analyze the program with small inputs, obtain the parallelization suggestions and execute the parallelized version with larger inputs. However, this is a recommendation merely and it being applicable or not depends highly on the code.
@@ -194,4 +189,3 @@ You can execute the codes by inserting the parallelization suggestions into the 
 | node IDs in the `Data.xml` file start with 0 (e.g., id=”0:1”) | FileMapping is not generated fine. Remove it and regenerate it. |
 | -g: command not found | Path to clang is not set |
 | /libi/LLVMCUGeneration.so: cannot open shared object file: | Path to DiscoPoP build directory is not set correctly |
-
