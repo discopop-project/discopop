@@ -12,6 +12,6 @@ include_directories(
 
 add_llvm_library(LLVMDPReduction MODULE
         DPReduction.cpp
-        DPReductionUtils.cpp
+        ../DiscoPoP/DPReductionUtils.cpp
         )
 

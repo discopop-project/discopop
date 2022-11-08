@@ -47,6 +47,7 @@
 
 #include "DPUtils.hpp"
 #include "InstructionDG.hpp"
+#include "DPReductionUtils.hpp"
 
 #include <cstdlib>
 #include <algorithm>
@@ -70,6 +71,9 @@ static cl::opt<bool> DumpToDot(
         "dp-omissions-dump-dot", cl::init(false),
         cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden
 );
+
+static llvm::cl::opt <std::string> fmap_file(
+        "fm-path", llvm::cl::desc("<file mapping file>"), llvm::cl::Required);
 
 namespace {
 
@@ -353,6 +357,18 @@ namespace {
 
         void closeOutputFiles();
 // CUGeneration end
+
+// DPReduction
+
+        void instrument_module(llvm::Module *module, map <string, string> *trueVarNamesFromMetadataMap);
+        bool inlinedFunction(Function *F);
+
+        llvm::LLVMContext *ctx_;
+        llvm::Module *module_;
+        std::ofstream *reduction_file;
+        std::ofstream *loop_counter_file;
+
+// DPReduction end
 
     }; // end of class DiscoPoP
 } // namespace

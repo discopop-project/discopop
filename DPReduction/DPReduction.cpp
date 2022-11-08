@@ -37,7 +37,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 
-#include "DPReductionUtils.hpp"
+#include "../DiscoPoP/DPReductionUtils.hpp"
 #include "DPUtils.hpp"
 
 using namespace llvm;
@@ -72,7 +72,6 @@ struct DPReduction : public llvm::ModulePass {
 
     void getAnalysisUsage(llvm::AnalysisUsage &Info) const override;
 
-    void instrument_module(llvm::Module *module, map <string, string> *trueVarNamesFromMetadataMap);
 
     void instrument_function(llvm::Function *function, map <string, string> *trueVarNamesFromMetadataMap);
 
@@ -81,8 +80,6 @@ struct DPReduction : public llvm::ModulePass {
 
     llvm::Instruction *get_reduction_instr(llvm::Instruction *store_instr,
                                            llvm::Instruction **load_instr);
-
-    bool inlinedFunction(Function *F);
 
     std::string CFA(Function &F, llvm::Loop *loop, int file_id);
 
@@ -104,8 +101,7 @@ struct DPReduction : public llvm::ModulePass {
 
     map<string, MDNode *> Structs;
     map<string, Value *> VarNames;
-    std::ofstream *reduction_file;
-    std::ofstream *loop_counter_file;
+
 
     void create_function_bindings();
 
@@ -890,33 +886,7 @@ void DPReduction::instrument_function(llvm::Function *function, map <string, str
     }
 }
 
-bool DPReduction::inlinedFunction(Function *F) {
-    for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI) {
-        for (BasicBlock::iterator BI = FI->begin(), E = FI->end(); BI != E; ++BI) {
-            if (DbgDeclareInst * DI = dyn_cast<DbgDeclareInst>(BI)) {
-                if (DI->getDebugLoc()->getInlinedAt())
-                    return true;
-            }
-        }
-    }
-    return false;
-}
 
-// iterates over all functions in the module and calls 'instrument_function'
-// on suitable ones
-void DPReduction::instrument_module(llvm::Module *module, map <string, string> *trueVarNamesFromMetadataMap) {
-    for (llvm::Module::iterator func_it = module->begin();
-         func_it != module->end(); ++func_it) {
-        llvm::Function *func = &(*func_it);
-        std::string fn_name = func->getName().str();
-        if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
-            fn_name.find("llvm") != std::string::npos ||
-            inlinedFunction(func)) {
-            continue;
-        }
-        instrument_function(func, trueVarNamesFromMetadataMap);
-    }
-}
 
 void DPReduction::getAnalysisUsage(llvm::AnalysisUsage &Info) const {
     Info.addRequired<llvm::LoopInfoWrapperPass>();

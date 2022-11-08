@@ -757,6 +757,38 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
 
 // CUGeneration end
 
+// DPReduction
+
+// iterates over all functions in the module and calls 'instrument_function'
+// on suitable ones
+void DiscoPoP::instrument_module(llvm::Module *module, map <string, string> *trueVarNamesFromMetadataMap) {
+    for (llvm::Module::iterator func_it = module->begin();
+         func_it != module->end(); ++func_it) {
+        llvm::Function *func = &(*func_it);
+        std::string fn_name = func->getName().str();
+        if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
+            fn_name.find("llvm") != std::string::npos ||
+            inlinedFunction(func)) {
+            continue;
+        }
+        instrument_function(func, trueVarNamesFromMetadataMap);
+    }
+}
+
+bool DiscoPoP::inlinedFunction(Function *F) {
+    for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI) {
+        for (BasicBlock::iterator BI = FI->begin(), E = FI->end(); BI != E; ++BI) {
+            if (DbgDeclareInst * DI = dyn_cast<DbgDeclareInst>(BI)) {
+                if (DI->getDebugLoc()->getInlinedAt())
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
+// DPRediction end
+
 //Helper functions
 bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
     return (BI != NULL) && ((isa<CallInst>(BI) && (!isa<DbgDeclareInst>(BI))) || isa<InvokeInst>(BI));
@@ -882,6 +914,37 @@ bool DiscoPoP::runOnModule(Module &M) {
     for (Function &F: M) {
         runOnFunction(F);
     }
+
+    // DPReduction
+    module_ = &M;
+    ctx_ = &module_->getContext();
+
+    reduction_file = new std::ofstream();
+    reduction_file->open("reduction.txt", std::ios_base::app);
+
+    loop_counter_file = new std::ofstream();
+    loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
+
+    bool success = dp_reduction_utils::init_util(fmap_file);
+    if (!success) {
+        llvm::errs() << "could not find the FileMapping file\n";
+        return false;
+    }
+
+    instrument_module(&M, &trueVarNamesFromMetadataMap);
+
+    insert_functions();
+
+    if (reduction_file != NULL && reduction_file->is_open()) {
+        reduction_file->flush();
+        reduction_file->close();
+    }
+
+    if (loop_counter_file != NULL && loop_counter_file->is_open()) {
+        loop_counter_file->flush();
+        loop_counter_file->close();
+    }
+    // End DPReduction
 }
 
 bool DiscoPoP::runOnFunction(Function &F) {
