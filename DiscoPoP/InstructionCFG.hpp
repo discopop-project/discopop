@@ -24,28 +24,31 @@
 #define ENTRY 1000000
 #define EXIT 2000000
 
-class InstructionCFG : public Graph<Instruction*>
-{
-	
+class InstructionCFG : public Graph<Instruction *> {
+
 private:
-	InstructionNode<Instruction*> *entry;
-	InstructionNode<Instruction*> *exit;
-	dputil::VariableNameFinder *VNF;
-	set<Instruction*> highlightedInstructionNodes;
-	void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction* previousInstruction);
-    
+    InstructionNode<Instruction *> *entry;
+    InstructionNode<Instruction *> *exit;
+    dputil::VariableNameFinder *VNF;
+    set<Instruction *> highlightedInstructionNodes;
+
+    void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction);
+
 public:
-	InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
-	
-	set<Instruction*> findBoundaryInstructions(uint startLine, uint endLine);
-	
-	InstructionNode<Instruction*> *getEntry() { return entry; }
-	InstructionNode<Instruction*> *getExit() { return exit; }
+    InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
 
-	bool isEntryOrExit(Instruction * I) { return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;}
+    set<Instruction *> findBoundaryInstructions(uint startLine, uint endLine);
 
-	void highlightInstructionNode(Instruction *instr);
+    InstructionNode<Instruction *> *getEntry() { return entry; }
 
-	void dumpToDot(const string targetPath);
+    InstructionNode<Instruction *> *getExit() { return exit; }
+
+    bool isEntryOrExit(Instruction *I) {
+        return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;
+    }
+
+    void highlightInstructionNode(Instruction *instr);
+
+    void dumpToDot(const string targetPath);
 
 };

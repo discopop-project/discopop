@@ -9,30 +9,31 @@
  *
  */
 
-#pragma once 
+#pragma once
 
 #include <string>
 #include "InstructionCFG.hpp"
 #include "DPUtils.hpp"
 
-class InstructionDG : public Graph<Instruction*>
-{
-	
-private:
-	dputil::VariableNameFinder *VNF;
-	InstructionCFG *CFG;
-	set<Instruction*> highlightedInstructionNodes;
-	int32_t fid;
+class InstructionDG : public Graph<Instruction *> {
 
-	void recursiveDepChecker(set<Instruction*>* checkedInstructions, Instruction* I, Instruction* C);
-	void recursiveDepFinder(set<Instruction*>* checkedInstructions, Instruction* I);
+private:
+    dputil::VariableNameFinder *VNF;
+    InstructionCFG *CFG;
+    set<Instruction *> highlightedInstructionNodes;
+    int32_t fid;
+
+    void recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C);
+
+    void recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I);
 
 public:
-	InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
+    InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
 
-	string edgeToDPDep(Edge<Instruction*> *e);
+    string edgeToDPDep(Edge<Instruction *> *e);
 
-	void highlightInstructionNode(Instruction *instr);
-	void dumpToDot(const string targetPath);
+    void highlightInstructionNode(Instruction *instr);
+
+    void dumpToDot(const string targetPath);
 
 };
