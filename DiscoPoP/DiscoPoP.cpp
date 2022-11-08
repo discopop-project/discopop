@@ -822,6 +822,8 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
         return;
     }
 
+    errs() << "Do we have CANDIDATEs? \n";
+
     // add an entry to the 'loops_' vector
     loop_info_t loop_info;
     loop_info.line_nr_ = loc.getLine();
@@ -877,6 +879,9 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     if ((*map_ptr)[operand]) {
                         llvm::DebugLoc new_loc = instr->getDebugLoc();
                         llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
+
+                        errs() << "NewLoc exists: " << dp_reduction_utils::loc_exists(new_loc) << "\n";
+                        errs() << "OldLoc exists: " << dp_reduction_utils::loc_exists(old_loc) << "\n";
 
                         if (!dp_reduction_utils::loc_exists(new_loc) || !dp_reduction_utils::loc_exists(old_loc)) {
                             (*map_ptr)[operand] = nullptr;
@@ -936,7 +941,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
     // now check if the variables are part of a reduction operation
     for (auto candidate: candidates) {
-
+        errs() << "CANDIDATE \n";
         int index = isa<StoreInst>(candidate.load_inst_) ? 1 : 0;
         string varNameLoad = "LOAD";
         string varTypeLoad = "SCALAR";
