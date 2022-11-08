@@ -545,14 +545,14 @@ llvm::Instruction *get_load_instr(llvm::Value *load_val,
         // The current instruction does not load the value from the address of
         // 'load_val'. But it might load the value from a variable where 'load_val'
         // is stored in, so find the previous use of the source operand.
-        llvm::Instruction *prev_use = util::get_prev_use(cur_instr, val);
+        llvm::Instruction *prev_use = dp_reduction_utils::get_prev_use(cur_instr, val);
         if (prev_use) {
             if (llvm::isa<llvm::StoreInst>(prev_use)) {
                 return get_load_instr(load_val, prev_use, reduction_operations);
             } else if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
                 llvm::GetElementPtrInst *ptr_instr =
                         llvm::cast<llvm::GetElementPtrInst>(prev_use);
-                llvm::Value *points_to = util::points_to_var(ptr_instr);
+                llvm::Value *points_to = dp_reduction_utils::points_to_var(ptr_instr);
                 if (points_to == load_val) {
                     return cur_instr;
                 } else {
@@ -572,7 +572,7 @@ llvm::Instruction *get_load_instr(llvm::Value *load_val,
     }
 
     unsigned opcode = cur_instr->getOpcode();
-    char c = util::get_char_for_opcode(opcode);
+    char c = dp_reduction_utils::get_char_for_opcode(opcode);
     if (c != ' ') {
         reduction_operations.push_back(c);
     }
@@ -607,12 +607,12 @@ llvm::Instruction *find_reduction_instr(llvm::Value *val) {
     }
     llvm::Instruction *instr = llvm::cast<llvm::Instruction>(val);
     unsigned opcode = instr->getOpcode();
-    char c = util::get_char_for_opcode(opcode);
+    char c = dp_reduction_utils::get_char_for_opcode(opcode);
     if (c != ' ') {
         return instr;
     } else if (opcode == llvm::Instruction::Load) {
         llvm::Instruction *prev_use =
-                util::get_prev_use(instr, instr->getOperand(0));
+                dp_reduction_utils::get_prev_use(instr, instr->getOperand(0));
         return find_reduction_instr(prev_use);
     } else if (opcode == llvm::Instruction::Store) {
         return find_reduction_instr(instr->getOperand(0));
@@ -644,7 +644,7 @@ llvm::Instruction *DPReduction::get_reduction_instr(
     // Now find the destination address of the store instruction.
     // After that, search the load instruction that loads this value and store a
     // pointer to it in 'load_instr'.
-    llvm::Value *store_dst = util::get_var_rec(store_instr->getOperand(1));
+    llvm::Value *store_dst = dp_reduction_utils::get_var_rec(store_instr->getOperand(1));
     if (store_dst) {
         std::vector<char> reduction_operations;
         *load_instr =
@@ -676,7 +676,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
                                   map <string, string> *trueVarNamesFromMetadataMap) {
     llvm::BasicBlock *loop_header = loop->getHeader();
     auto loc = loop_header->begin()->getDebugLoc();
-    if (!util::loc_exists(loc)) {
+    if (!dp_reduction_utils::loc_exists(loc)) {
         return;
     }
 
@@ -731,7 +731,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
             // Add an entry to the corresponding map or invalidate an already
             // existing entry, if the same instruction is executed on multiple
             // lines.
-            llvm::Value *operand = util::get_var(instr);
+            llvm::Value *operand = dp_reduction_utils::get_var(instr);
             if (operand) {
                 std::map < llvm::Value * , llvm::Instruction * > *map_ptr =
                                                    (opcode == llvm::Instruction::Store) ? &store_instructions
@@ -741,7 +741,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
                         llvm::DebugLoc new_loc = instr->getDebugLoc();
                         llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
 
-                        if (!util::loc_exists(new_loc) || !util::loc_exists(old_loc)) {
+                        if (!dp_reduction_utils::loc_exists(new_loc) || !dp_reduction_utils::loc_exists(old_loc)) {
                             (*map_ptr)[operand] = nullptr;
                         } else if (new_loc.getLine() != old_loc.getLine()) {
                             (*map_ptr)[operand] = nullptr;
@@ -765,7 +765,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
         if (it2 != store_instructions.end() && it2->second) {
             llvm::DebugLoc load_loc = it->second->getDebugLoc();
             llvm::DebugLoc store_loc = it2->second->getDebugLoc();
-            if (!util::loc_exists(load_loc) || !util::loc_exists(store_loc)) continue;
+            if (!dp_reduction_utils::loc_exists(load_loc) || !dp_reduction_utils::loc_exists(store_loc)) continue;
             if (load_loc.getLine() > store_loc.getLine()) continue;
             if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) continue;
 
@@ -822,7 +822,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
                         get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_utils::get_char_for_opcode(instr->getOpcode());
                 } else {
                     continue;
                 }
@@ -837,7 +837,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
                         get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_utils::get_char_for_opcode(instr->getOpcode());
                 } else {
                     // We should ignore store instructions that are not associated with a load
                     // e.g., pbvc[i] = c1s;
@@ -849,7 +849,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
                         get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = util::get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_utils::get_char_for_opcode(instr->getOpcode());
                 } else {
                     // We want to find max or min reduction operations
                     // We want to find the basicblock that contains the load instruction
@@ -877,7 +877,7 @@ void DPReduction::instrument_loop(Function &F, int file_id, llvm::Loop *loop, Lo
 void DPReduction::instrument_function(llvm::Function *function, map <string, string> *trueVarNamesFromMetadataMap) {
 
     // get the corresponding file id
-    unsigned file_id = util::get_file_id(function);
+    unsigned file_id = dp_reduction_utils::get_file_id(function);
     if (file_id == 0) {
         return;
     }
@@ -932,7 +932,7 @@ bool DPReduction::runOnModule(llvm::Module &M) {
     ofile = new std::ofstream();
     ofile->open("loop_counter_output.txt", std::ios_base::app);
 
-    bool success = util::init_util(fmap_file);
+    bool success = dp_reduction_utils::init_util(fmap_file);
     if (!success) {
         llvm::errs() << "could not find the FileMapping file\n";
         return false;

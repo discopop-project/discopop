@@ -30,7 +30,7 @@
 
 #define OLD_CLANG_VER ((__clang_major__ < 4))
 
-namespace util {
+namespace dp_reduction_utils {
 
     bool init_util(std::string fmap_path);
 
