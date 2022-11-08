@@ -98,6 +98,7 @@ jobs:
       - name: "Run tests"          
         run: |
           echo "Test name: ${{ matrix.test_name }}"
+          python -m discopop_explorer --path=test/${{ matrix.test_name }}/data
 
   discopop_profiler:
     name: "Profiler"
