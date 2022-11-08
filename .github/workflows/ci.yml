@@ -95,7 +95,7 @@ jobs:
         run: |
           python -m pip install -r discopop_explorer/requirements.txt
           python -m pip install mypy data-science-types black
-      - name: "Run tests"          
+      - name: "Execute DiscoPoP Explorer"          
         run: |
           echo "Test name: ${{ matrix.test_name }}"
           python -m discopop_explorer --path=test/${{ matrix.test_name }}/data
