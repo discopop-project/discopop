@@ -32,21 +32,29 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if recursive call inside any loop body. False otherwise."""
     for tmp_cu in pet.all_nodes(NodeType.LOOP):
-        if __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""),
-                                      tmp_cu.start_position(), tmp_cu.end_position()):
+        if __line_contained_in_region(
+            recursive_function_call.split(" ")[-1].replace(",", ""),
+            tmp_cu.start_position(),
+            tmp_cu.end_position(),
+        ):
             return True
     return False
 
 
-def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, recursive_function_call: str) -> bool:
+def __recursive_function_called_multiple_times_inside_function(
+    pet: PETGraphX, recursive_function_call: str
+) -> bool:
     """checks if the given recursive function is called multiple times from within a functions body
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if multiple calls exists. False otherwise."""
     for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
         # 1. get parent function of recursive function call
-        if not __line_contained_in_region(recursive_function_call.split(" ")[-1].replace(",", ""),
-                                          tmp_func_cu.start_position(), tmp_func_cu.end_position()):
+        if not __line_contained_in_region(
+            recursive_function_call.split(" ")[-1].replace(",", ""),
+            tmp_func_cu.start_position(),
+            tmp_func_cu.end_position(),
+        ):
             continue
         # recursive function call contained in tmp_func_cu
         # 2. check if multiple calls to recursive function exist in tmp_func_cus body
@@ -56,10 +64,11 @@ def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, r
         contained_cus: List[CUNode] = []
         while len(queue) > 0:
             cur_cu = queue.pop(0)
-            if __line_contained_in_region(cur_cu.start_position(), tmp_func_cu.start_position(),
-                                          tmp_func_cu.end_position()) and \
-                    __line_contained_in_region(cur_cu.end_position(), tmp_func_cu.start_position(),
-                                               tmp_func_cu.end_position()):
+            if __line_contained_in_region(
+                cur_cu.start_position(), tmp_func_cu.start_position(), tmp_func_cu.end_position()
+            ) and __line_contained_in_region(
+                cur_cu.end_position(), tmp_func_cu.start_position(), tmp_func_cu.end_position()
+            ):
                 # cur_cu contained in tmp_func_cu's scope
                 if cur_cu not in contained_cus:
                     contained_cus.append(cur_cu)
@@ -81,8 +90,14 @@ def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, r
     return False
 
 
-def __output_dependencies_of_type(pet: PETGraphX, child_id: str, children_ids: List[str], output_file: TextIO,
-                                  dep_type: DepType, dep_identifier: str):
+def __output_dependencies_of_type(
+    pet: PETGraphX,
+    child_id: str,
+    children_ids: List[str],
+    output_file: TextIO,
+    dep_type: DepType,
+    dep_identifier: str,
+):
     """check for and output dependencies of the given type
     :param pet: PET Graph
     :param child_id: specific node id, taken from children_ids
@@ -99,8 +114,14 @@ def __output_dependencies_of_type(pet: PETGraphX, child_id: str, children_ids: L
         # check if the CUid of the dep exists in children_ids
         if dep[0] in children_ids:
             # CUid found in children_ids. So print the line numbers of this dependence
-            output_file.write(cast(str, dep[2].sink) + dep_identifier + cast(str, dep[2].source) + "|" + cast(str, dep[
-                2].var_name) + ",")
+            output_file.write(
+                cast(str, dep[2].sink)
+                + dep_identifier
+                + cast(str, dep[2].source)
+                + "|"
+                + cast(str, dep[2].var_name)
+                + ","
+            )
 
 
 def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
@@ -112,7 +133,9 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
         # check if recursive function call occurs inside loop (check if line contained in lines of any loop cu)
         contained_in_loop = __recursive_call_inside_loop(pet, recursive_function_call)
         # check if recursive function call is called multiple times
-        called_multiple_times = __recursive_function_called_multiple_times_inside_function(pet, recursive_function_call)
+        called_multiple_times = __recursive_function_called_multiple_times_inside_function(
+            pet, recursive_function_call
+        )
 
         # check if recursive function is called inside loop or multiple times
         if not (contained_in_loop or called_multiple_times):
@@ -130,9 +153,15 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
             # node type is not cu so goto next node
             if pet.node_at(child_id).type is not NodeType.CU:
                 continue
-            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|")
-            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.WAR, "|WAR|")
-            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.WAW, "|WAW|")
+            __output_dependencies_of_type(
+                pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|"
+            )
+            __output_dependencies_of_type(
+                pet, child_id, children_ids, output_file, DepType.WAR, "|WAR|"
+            )
+            __output_dependencies_of_type(
+                pet, child_id, children_ids, output_file, DepType.WAW, "|WAW|"
+            )
 
         output_file.write("\n")
 
@@ -143,8 +172,11 @@ def cu_instantiation_input_cpp(pet: PETGraphX, output_dir: str):
     :param pet: PET Graph
     :param output_dir: Path to storage location of generated Data_CUInst.txt"""
     output_dir = output_dir if output_dir.endswith("/") else output_dir + "/"
-    data_cu_inst_file = open(output_dir + "Data_CUInst.txt", "w+") if output_dir is not None else open(
-        "Data_CUInst.txt", "w+")
+    data_cu_inst_file = (
+        open(output_dir + "Data_CUInst.txt", "w+")
+        if output_dir is not None
+        else open("Data_CUInst.txt", "w+")
+    )
     for node in pet.all_nodes():
         __search_recursive_calls(pet, data_cu_inst_file, node)
     data_cu_inst_file.flush()
@@ -164,7 +196,9 @@ def get_path(base_path: str, file_name: str) -> str:
 def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
-    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
+    pet = PETGraphX.from_parsed_input(
+        *parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file)
+    )
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_dir)
 
@@ -183,7 +217,9 @@ def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -
     start_line_line = int(start_line.split(":")[1])
     end_line_file_id = int(end_line.split(":")[0])
     end_line_line = int(end_line.split(":")[1])
-    if test_line_file_id == start_line_file_id == end_line_file_id and \
-            start_line_line <= test_line_line <= end_line_line:
+    if (
+        test_line_file_id == start_line_file_id == end_line_file_id
+        and start_line_line <= test_line_line <= end_line_line
+    ):
         return True
     return False

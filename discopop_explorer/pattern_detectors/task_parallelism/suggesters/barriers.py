@@ -10,17 +10,20 @@ from typing import List, cast, Tuple, Any
 
 from discopop_explorer.PETGraphX import CUNode, EdgeType, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import ParallelRegionInfo, OmittableCuInfo, \
-    TaskParallelismInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
-    check_reachability, line_contained_in_region, get_predecessor_nodes
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    ParallelRegionInfo,
+    OmittableCuInfo,
+    TaskParallelismInfo,
+    TPIType,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
+    check_reachability,
+    line_contained_in_region,
+    get_predecessor_nodes,
+)
 
 
-
-
-
-def detect_barrier_suggestions(pet: PETGraphX,
-                               suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
@@ -55,62 +58,69 @@ def detect_barrier_suggestions(pet: PETGraphX,
         transformation_happened = False
         v = queue.pop(0)
         # check step 1
-        out_dep_edges = [(s, t, e) for s, t, e in pet.out_edges(v.id) if
-                         e.etype == EdgeType.DATA and
-                         pet.node_at(t) != v]
+        out_dep_edges = [
+            (s, t, e)
+            for s, t, e in pet.out_edges(v.id)
+            if e.etype == EdgeType.DATA and pet.node_at(t) != v
+        ]
         # ignore cyclic dependencies on the same variable
         to_remove = []
         for dep_edge in out_dep_edges:
-            targets_cyclic_dep_edges = [(s, t, e) for s, t, e in pet.out_edges(dep_edge[1]) if
-                                        e.etype == EdgeType.DATA and
-                                        t == dep_edge[0] and
-                                        e.var_name == dep_edge[2].var_name]
+            targets_cyclic_dep_edges = [
+                (s, t, e)
+                for s, t, e in pet.out_edges(dep_edge[1])
+                if e.etype == EdgeType.DATA
+                and t == dep_edge[0]
+                and e.var_name == dep_edge[2].var_name
+            ]
             if len(targets_cyclic_dep_edges) != 0:
                 to_remove.append(dep_edge)
         for e in to_remove:
             out_dep_edges.remove(e)
 
         v_first_line = v.start_position()
-        v_first_line = v_first_line[v_first_line.index(":") + 1:]
+        v_first_line = v_first_line[v_first_line.index(":") + 1 :]
 
-        task_count, barrier_count, omittable_count, normal_count = __count_adjacent_nodes(pet, suggestions,
-                                                                                          out_dep_edges, task_nodes,
-                                                                                          barrier_nodes,
-                                                                                          omittable_nodes)
+        task_count, barrier_count, omittable_count, normal_count = __count_adjacent_nodes(
+            pet, suggestions, out_dep_edges, task_nodes, barrier_nodes, omittable_nodes
+        )
         if task_count == 1 and barrier_count == 0:
             if not v.tp_omittable:
                 # actual change
                 v.tp_omittable = True
-                combine_with_node_list = [pet.node_at(e[1]) for e in out_dep_edges if
-                                          pet.node_at(e[1]) in task_nodes]
+                combine_with_node_list = [
+                    pet.node_at(e[1]) for e in out_dep_edges if pet.node_at(e[1]) in task_nodes
+                ]
                 if len(combine_with_node_list) < 1:
                     raise ValueError("length combine_with_node < 1!")
                 combine_with_node = combine_with_node_list[0]
                 omittable_nodes.append((v, [combine_with_node]))
-                suggestions.append(OmittableCuInfo(v,
-                                                   combine_with_node))
+                suggestions.append(OmittableCuInfo(v, combine_with_node))
                 transformation_happened = True
         elif barrier_count != 0 and task_count != 0:
             # check if child barrier(s) cover each child task
-            child_barriers = [e[1] for e in out_dep_edges if
-                              pet.node_at(e[1]).tp_contains_taskwait is True]
-            child_tasks = [pet.node_at(e[1]) for e in out_dep_edges if
-                           pet.node_at(e[1]).tp_contains_task is True]
+            child_barriers = [
+                e[1] for e in out_dep_edges if pet.node_at(e[1]).tp_contains_taskwait is True
+            ]
+            child_tasks = [
+                pet.node_at(e[1])
+                for e in out_dep_edges
+                if pet.node_at(e[1]).tp_contains_task is True
+            ]
             uncovered_task_exists = False
             for ct in child_tasks:
                 ct_start_line = ct.start_position()
-                ct_start_line = ct_start_line[ct_start_line.index(":") + 1:]
+                ct_start_line = ct_start_line[ct_start_line.index(":") + 1 :]
                 ct_end_line = ct.end_position()
-                ct_end_line = ct_end_line[ct_end_line.index(":") + 1:]
+                ct_end_line = ct_end_line[ct_end_line.index(":") + 1 :]
                 # check if ct covered by a barrier
                 for cb_id in child_barriers:
                     cb = pet.node_at(cb_id)
                     cb_start_line = cb.start_position()
-                    cb_start_line = cb_start_line[cb_start_line.index(":") + 1:]
+                    cb_start_line = cb_start_line[cb_start_line.index(":") + 1 :]
                     cb_end_line = cb.end_position()
-                    cb_end_line = cb_end_line[cb_end_line.index(":") + 1:]
-                    if not (cb_start_line > ct_start_line and
-                            cb_end_line > ct_end_line):
+                    cb_end_line = cb_end_line[cb_end_line.index(":") + 1 :]
+                    if not (cb_start_line > ct_start_line and cb_end_line > ct_end_line):
                         uncovered_task_exists = True
             if uncovered_task_exists:
                 # suggest barrier
@@ -119,26 +129,26 @@ def detect_barrier_suggestions(pet: PETGraphX,
                     v.tp_contains_taskwait = True
                     barrier_nodes.append(v)
                     transformation_happened = True
-                    tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
-                                                         v_first_line,
-                                                         [], [], [])
+                    tmp_suggestion = TaskParallelismInfo(
+                        v, TPIType.TASKWAIT, ["taskwait"], v_first_line, [], [], []
+                    )
                     suggestions.append(tmp_suggestion)
             else:
                 # no barrier needed
                 pass
-        elif omittable_count == 0 and task_count > 1:  # connected to at least two distinct task nodes
+        elif (
+            omittable_count == 0 and task_count > 1
+        ):  # connected to at least two distinct task nodes
             if v.tp_contains_taskwait is False:
                 # actual change
                 v.tp_contains_taskwait = True
                 barrier_nodes.append(v)
                 transformation_happened = True
-                tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"],
-                                                     v_first_line,
-                                                     [], [], [])
+                tmp_suggestion = TaskParallelismInfo(
+                    v, TPIType.TASKWAIT, ["taskwait"], v_first_line, [], [], []
+                )
                 suggestions.append(tmp_suggestion)
-        if omittable_count == 1 and \
-                v.tp_contains_task is False and \
-                v.tp_contains_taskwait is False:
+        if omittable_count == 1 and v.tp_contains_task is False and v.tp_contains_taskwait is False:
             # omittable node appended to prior omittable node
             # get parent task
             #            parent_task: Optional[CUNode] = None
@@ -163,15 +173,16 @@ def detect_barrier_suggestions(pet: PETGraphX,
                     # actual change
                     v.tp_omittable = True
                     omittable_nodes.append((v, [parent_task]))
-                    suggestions.append(OmittableCuInfo(v,
-                                                       parent_task))
+                    suggestions.append(OmittableCuInfo(v, parent_task))
                     transformation_happened = True
 
         # append neighbors of modified node to queue
         if transformation_happened:
-            in_dep_edges = [(s, t, e) for s, t, e in pet.in_edges(v.id) if
-                            e.etype == EdgeType.DATA and
-                            pet.node_at(s) != v]
+            in_dep_edges = [
+                (s, t, e)
+                for s, t, e in pet.in_edges(v.id)
+                if e.etype == EdgeType.DATA and pet.node_at(s) != v
+            ]
             for e in out_dep_edges:
                 queue.append(pet.node_at(e[1]))
             for e in in_dep_edges:
@@ -181,8 +192,14 @@ def detect_barrier_suggestions(pet: PETGraphX,
     return suggestions
 
 
-def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_dep_edges: List[Tuple[Any, Any, Any]], task_nodes: List,
-                           barrier_nodes: List, omittable_nodes: List) -> Tuple[int, int, int, int]:
+def __count_adjacent_nodes(
+    pet: PETGraphX,
+    suggestions: List[PatternInfo],
+    out_dep_edges: List[Tuple[Any, Any, Any]],
+    task_nodes: List,
+    barrier_nodes: List,
+    omittable_nodes: List,
+) -> Tuple[int, int, int, int]:
     """Checks the types of nodes pointed to by out_dep_edges and increments the respective counters.
     :param pet: PET Graph
     :param suggestions: List[TaskParallelismInfo]
@@ -216,11 +233,12 @@ def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_d
                 pass
         elif pet.node_at(e[1]) in [tmp[0] for tmp in omittable_nodes]:
             # treat omittable cus like their parent tasks
-            tmp_omit_suggestions: List[OmittableCuInfo] = cast(List[OmittableCuInfo],
-                                                               [s for s in suggestions
-                                                                if type(s) == OmittableCuInfo])
+            tmp_omit_suggestions: List[OmittableCuInfo] = cast(
+                List[OmittableCuInfo], [s for s in suggestions if type(s) == OmittableCuInfo]
+            )
             parent_task = [tos for tos in tmp_omit_suggestions if tos._node == pet.node_at(e[1])][
-                0].combine_with_node
+                0
+            ].combine_with_node
             if parent_task.id not in omittable_parent_buffer:
                 omittable_parent_buffer.append(parent_task.id)
                 omittable_count += 1
@@ -231,8 +249,9 @@ def __count_adjacent_nodes(pet: PETGraphX, suggestions: List[PatternInfo], out_d
     return task_count, barrier_count, omittable_count, normal_count
 
 
-def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]],
-                                         parent_task: CUNode, cur_cu: CUNode):
+def __check_dependences_and_predecessors(
+    pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]], parent_task: CUNode, cur_cu: CUNode
+):
     """Checks if only dependences to self, parent omittable node or path to target task exists.
     Checks if node is a direct successor of an omittable node or a task node.
     :param pet: PET Graph
@@ -253,8 +272,9 @@ def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tup
         else:
             violation = True
     # check if node is a direct successor of an omittable node or a task node
-    in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if
-                     e.etype == EdgeType.SUCCESSOR]
+    in_succ_edges = [
+        (s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if e.etype == EdgeType.SUCCESSOR
+    ]
     is_successor = False
     for e in in_succ_edges:
         if pet.node_at(e[0]).tp_omittable is True:
@@ -266,8 +286,12 @@ def __check_dependences_and_predecessors(pet: PETGraphX, out_dep_edges: List[Tup
     return violation
 
 
-def __split_suggestions(suggestions: List[PatternInfo], taskwait_suggestions: List[TaskParallelismInfo],
-                        task_suggestions: List[TaskParallelismInfo], omittable_suggestions: List[PatternInfo]):
+def __split_suggestions(
+    suggestions: List[PatternInfo],
+    taskwait_suggestions: List[TaskParallelismInfo],
+    task_suggestions: List[TaskParallelismInfo],
+    omittable_suggestions: List[PatternInfo],
+):
     """Split suggestions into taskwait, task and omittable suggestions.
     :param suggestions: list of suggestions to be split
     :param taskwait_suggestions: list to store taskwait suggestions
@@ -288,8 +312,9 @@ def __split_suggestions(suggestions: List[PatternInfo], taskwait_suggestions: Li
             raise TypeError("Unknown Type: ", type(single_suggestion))
 
 
-def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestions: List[PatternInfo]) \
-        -> List[PatternInfo]:
+def suggest_barriers_for_uncovered_tasks_before_return(
+    pet: PETGraphX, suggestions: List[PatternInfo]
+) -> List[PatternInfo]:
     """enforces taskwait or similar pragmas before return statements to ensure, that no unfinished tasks exist
     when the parent function returns.
     :param pet: PET graph
@@ -307,7 +332,9 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
         for tmp in suggestions:
             if type(tmp) == ParallelRegionInfo:
                 tmp = cast(ParallelRegionInfo, tmp)
-                if line_contained_in_region(suggestion.start_line, tmp.region_start_line, tmp.region_end_line):
+                if line_contained_in_region(
+                    suggestion.start_line, tmp.region_start_line, tmp.region_end_line
+                ):
                     covered_by_parallel_region = True
                     break
         if covered_by_parallel_region:
@@ -336,13 +363,14 @@ def suggest_barriers_for_uncovered_tasks_before_return(pet: PETGraphX, suggestio
             # actual change
             cu.tp_contains_taskwait = True
             pragma_line = cu.end_position()  # since return has to be the last statement in a CU
-            pragma_line = pragma_line[pragma_line.index(":") + 1:]
-            tmp_suggestion = TaskParallelismInfo(cu, TPIType.TASKWAIT,
-                                                 ["taskwait"],
-                                                 pragma_line,
-                                                 [], [], [])
-            print("TPDet:suggest_barriers_for_uncovered_tasks_before_return: added taskwait suggestion at line: ",
-                  cu.end_position())
+            pragma_line = pragma_line[pragma_line.index(":") + 1 :]
+            tmp_suggestion = TaskParallelismInfo(
+                cu, TPIType.TASKWAIT, ["taskwait"], pragma_line, [], [], []
+            )
+            print(
+                "TPDet:suggest_barriers_for_uncovered_tasks_before_return: added taskwait suggestion at line: ",
+                cu.end_position(),
+            )
             suggestions.append(tmp_suggestion)
     return suggestions
 
@@ -383,9 +411,11 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
             continue
 
         # create "path lists" for each incoming successor edge
-        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(bs._node.id) if
-                         e.etype == EdgeType.SUCCESSOR and
-                         pet.node_at(s) != bs._node]
+        in_succ_edges = [
+            (s, t, e)
+            for s, t, e in pet.in_edges(bs._node.id)
+            if e.etype == EdgeType.SUCCESSOR and pet.node_at(s) != bs._node
+        ]
         predecessors_dict = dict()
         for e in in_succ_edges:
             visited_nodes: List[CUNode] = []
@@ -393,9 +423,11 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
             predecessors_dict[e] = tmp
         # iterate over outgoing dependence edges and increase dependence counts
         # for those paths that contain the dependence target CU
-        out_dep_edges = [(s, t, e) for s, t, e in pet.out_edges(bs._node.id) if
-                         e.etype == EdgeType.DATA and
-                         pet.node_at(t) != bs._node]
+        out_dep_edges = [
+            (s, t, e)
+            for s, t, e in pet.out_edges(bs._node.id)
+            if e.etype == EdgeType.DATA and pet.node_at(t) != bs._node
+        ]
         dependence_count_dict = dict()
 
         for key in predecessors_dict:
@@ -420,7 +452,9 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
     return result
 
 
-def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def suggest_missing_barriers_for_global_vars(
+    pet: PETGraphX, suggestions: List[PatternInfo]
+) -> List[PatternInfo]:
     """Suggests a barrier if a node is a successor of a task CU
     which is not covered by an existing barrier and the set of global variables
     of the CU and the task are overlapping
@@ -436,8 +470,10 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
     taskwait_suggestions = []
     task_suggestions = []
     for single_suggestion in suggestions:
-        if type(single_suggestion) == ParallelRegionInfo or \
-                type(single_suggestion) == OmittableCuInfo:
+        if (
+            type(single_suggestion) == ParallelRegionInfo
+            or type(single_suggestion) == OmittableCuInfo
+        ):
             continue
         if type(single_suggestion) == TaskParallelismInfo:
             single_suggestion = cast(TaskParallelismInfo, single_suggestion)
@@ -451,9 +487,11 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
     # iterate over task suggestions
     for task_sug in task_suggestions:
         visited_nodes = [task_sug._node]
-        out_succ_edges = [(s, t, e) for s, t, e in pet.out_edges(task_sug._node.id) if
-                          e.etype == EdgeType.SUCCESSOR and
-                          pet.node_at(t) != task_sug._node]
+        out_succ_edges = [
+            (s, t, e)
+            for s, t, e in pet.out_edges(task_sug._node.id)
+            if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != task_sug._node
+        ]
         queue = out_succ_edges
         # iterate over queued successor-edges
         while len(queue) > 0:
@@ -466,9 +504,11 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
             if pet.node_at(succ_edge[1]).tp_contains_taskwait is True:
                 continue
             # if edge.target has common global variable with task
-            common_vars = [var for
-                           var in pet.node_at(succ_edge[1]).global_vars
-                           if var in task_sug._node.global_vars]
+            common_vars = [
+                var
+                for var in pet.node_at(succ_edge[1]).global_vars
+                if var in task_sug._node.global_vars
+            ]
             if len(common_vars) > 0:
                 # if cu is a task suggestion, continue
                 if pet.node_at(succ_edge[1]).tp_contains_task is True:
@@ -480,17 +520,23 @@ def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[P
                         # actual change
                         pet.node_at(succ_edge[1]).tp_contains_taskwait = True
                         first_line = pet.node_at(succ_edge[1]).start_position()
-                        first_line = first_line[first_line.index(":") + 1:]
-                        tmp_suggestion = TaskParallelismInfo(pet.node_at(succ_edge[1]),
-                                                             TPIType.TASKWAIT,
-                                                             ["taskwait"],
-                                                             first_line,
-                                                             [], [], [])
+                        first_line = first_line[first_line.index(":") + 1 :]
+                        tmp_suggestion = TaskParallelismInfo(
+                            pet.node_at(succ_edge[1]),
+                            TPIType.TASKWAIT,
+                            ["taskwait"],
+                            first_line,
+                            [],
+                            [],
+                            [],
+                        )
                         suggestions.append(tmp_suggestion)
                     continue
             # append current nodes outgoing successor edges to queue
-            target_out_succ_edges = [(s, t, e) for s, t, e in pet.out_edges(pet.node_at(succ_edge[1]).id) if
-                                     e.etype == EdgeType.SUCCESSOR and
-                                     pet.node_at(t) != pet.node_at(succ_edge[1])]
+            target_out_succ_edges = [
+                (s, t, e)
+                for s, t, e in pet.out_edges(pet.node_at(succ_edge[1]).id)
+                if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != pet.node_at(succ_edge[1])
+            ]
             queue = list(set(queue + target_out_succ_edges))
     return suggestions
