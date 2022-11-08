@@ -9,6 +9,12 @@
 name: "DiscoPoP CI"
 on: [push, pull_request]
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   check-project-tags:
     runs-on: ubuntu-latest
