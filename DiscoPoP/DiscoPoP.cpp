@@ -1611,7 +1611,7 @@ bool DiscoPoP::runOnModule(Module &M) {
     loop_counter_file = new std::ofstream();
     loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
 
-    bool success = dp_reduction_utils::init_util(fmap_file);
+    bool success = dp_reduction_utils::init_util(FileMappingPath);
     if (!success) {
         llvm::errs() << "could not find the FileMapping file\n";
         return false;
