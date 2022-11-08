@@ -57,6 +57,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ 3.6 ]
+        target_name: [discopop_profiler] # todo: add discopop_explorer
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
@@ -66,17 +67,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: "Install Dependencies"
         run: |
-          python -m pip install -r discopop_explorer/requirements.txt
+          python -m pip install -r ${{ matrix.target_name }}/requirements.txt
           python -m pip install mypy data-science-types black
       - name: "Run tests"
         run: python -m unittest -v
       - name: "Run MyPy Type Checker"
-        run: python -m mypy -p discopop_explorer -p discopop_profiler
-      - name: "Check formatting of discopop_profiler"
-        run: python -m black -l 100 --check discopop_profiler
-#      - name: "Check formatting of discopop_explorer"
-#        run: python -m black -l 100 --check discopop_explorer
-
+        run: python -m mypy -p ${{ matrix.target_name }}
+      - name: "Check formatting of ${{ matrix.target_name }}"
+        run: python -m black -l 100 --check ${{ matrix.target_name }}
 
   discopop_explorer:
     name: "Explorer"
