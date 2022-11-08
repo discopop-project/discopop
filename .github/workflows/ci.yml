@@ -57,7 +57,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ 3.6 ]
-        target_name: [discopop_profiler] # todo: add discopop_explorer
+        target_name: [discopop_profiler, discopop_explorer]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
