@@ -811,8 +811,8 @@ void DiscoPoP::instrument_function(llvm::Function *function, map <string, string
 // an entry is added to the 'instructions_' vector.
 void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
                                   map <string, string> *trueVarNamesFromMetadataMap) {
-    llvm::BasicBlock *loop_header = loop->getHeader();
-    auto loc = loop_header->begin()->getDebugLoc();
+
+    auto loc = loop->getStartLoc();
     if (!dp_reduction_utils::loc_exists(loc)) {
         return;
     }
@@ -1631,6 +1631,7 @@ bool DiscoPoP::runOnModule(Module &M) {
         loop_counter_file->close();
     }
     // End DPReduction
+    return true;
 }
 
 bool DiscoPoP::runOnFunction(Function &F) {
