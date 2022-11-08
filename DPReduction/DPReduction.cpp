@@ -37,7 +37,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 
-#include "Utils.hpp"
+#include "DPReductionUtils.hpp"
 #include "DPUtils.hpp"
 
 using namespace llvm;
