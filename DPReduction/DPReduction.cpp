@@ -104,8 +104,8 @@ struct DPReduction : public llvm::ModulePass {
 
     map<string, MDNode *> Structs;
     map<string, Value *> VarNames;
-    std::ofstream *out_file;
-    std::ofstream *ofile;
+    std::ofstream *reduction_file;
+    std::ofstream *loop_counter_file;
 
     void create_function_bindings();
 
@@ -509,23 +509,23 @@ void DPReduction::insert_functions() {
         int store_line = instruction.store_inst_->getDebugLoc().getLine();
 
         // output information about the reduction variables
-        *out_file << " FileID : " << instruction.file_id_;
-        *out_file << " Loop Line Number : " << instruction.loop_line_nr_;
-        *out_file << " Reduction Line Number : " << to_string(store_line);
-        *out_file << " Variable Name : " << instruction.var_name_;
-        *out_file << " Operation Name : " << instruction.operation_ << "\n";
+        *reduction_file << " FileID : " << instruction.file_id_;
+        *reduction_file << " Loop Line Number : " << instruction.loop_line_nr_;
+        *reduction_file << " Reduction Line Number : " << to_string(store_line);
+        *reduction_file << " Variable Name : " << instruction.var_name_;
+        *reduction_file << " Operation Name : " << instruction.operation_ << "\n";
     }
 
     // insert function calls to monitor loop iterations
-    std::ofstream ofile;
-    ofile.open("loop_counter_output.txt");
+    std::ofstream loop_counter_file;
+    loop_counter_file.open("loop_counter_output.txt");
     for (auto const &loop_info: loops_) {
-        ofile << loop_info.file_id_ << " ";
-        ofile << loop_info.line_nr_ << " ";
+        loop_counter_file << loop_info.file_id_ << " ";
+        loop_counter_file << loop_info.line_nr_ << " ";
         // TODO: Replace 1000 with actual loop iterations
         // TODO: Check if number of load and store instructions on a
         //       reduction variable is the same
-        ofile << "1000" << "\n";
+        loop_counter_file << "1000" << "\n";
     }
 
 }
@@ -926,11 +926,11 @@ bool DPReduction::runOnModule(llvm::Module &M) {
     module_ = &M;
     ctx_ = &module_->getContext();
 
-    out_file = new std::ofstream();
-    out_file->open("reduction.txt", std::ios_base::app);
+    reduction_file = new std::ofstream();
+    reduction_file->open("reduction.txt", std::ios_base::app);
 
-    ofile = new std::ofstream();
-    ofile->open("loop_counter_output.txt", std::ios_base::app);
+    loop_counter_file = new std::ofstream();
+    loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
 
     bool success = dp_reduction_utils::init_util(fmap_file);
     if (!success) {
@@ -944,14 +944,14 @@ bool DPReduction::runOnModule(llvm::Module &M) {
 
     insert_functions();
 
-    if (out_file != NULL && out_file->is_open()) {
-        out_file->flush();
-        out_file->close();
+    if (reduction_file != NULL && reduction_file->is_open()) {
+        reduction_file->flush();
+        reduction_file->close();
     }
 
-    if (ofile != NULL && ofile->is_open()) {
-        ofile->flush();
-        ofile->close();
+    if (loop_counter_file != NULL && loop_counter_file->is_open()) {
+        loop_counter_file->flush();
+        loop_counter_file->close();
     }
 
     return true;
