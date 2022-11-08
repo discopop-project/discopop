@@ -30,14 +30,16 @@ Detailed information about each execution step, the setup as well as the functio
 ### Quick Links (OUTDATED INSTRUCTIONS)
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
 - [Example](https://discopop-project.github.io/discopop/Guide/)
+- [Interpreting Parallelization Suggestions](https://discopop-project.github.io/discopop/Suggestions/)
 
 ## TL;DR
 ### Setup
 ```
-	sudo apt-get install git build-essential cmake libclang-11-dev clang-11 llvm-11
+	sudo apt-get install git build-essential cmake libclang-11-dev clang-11 llvm-11 python3-pip
 	git clone https://github.com/discopop-project/discopop.git
 	cd discopop && mkdir build && cd build
-	cmake .. && make
+	cmake .. && make && cd ..
+	pip install .
 ```
 
 ## License
