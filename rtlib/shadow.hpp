@@ -19,61 +19,49 @@
 
 using namespace std;
 
-namespace __dp
-{
+namespace __dp {
 
-    class ShadowMemory : public Shadow
-    {
+    class ShadowMemory : public Shadow {
     public:
-        ShadowMemory(int slotSize, int size, int numHash)
-        {
+        ShadowMemory(int slotSize, int size, int numHash) {
             sigRead = new Signature(slotSize, size, numHash);
             sigWrite = new Signature(slotSize, size, numHash);
         }
 
-        ~ShadowMemory()
-        {
+        ~ShadowMemory() {
             delete sigRead;
             delete sigWrite;
         }
 
-        inline sigElement testInRead(int64_t memAddr)
-        {
+        inline sigElement testInRead(int64_t memAddr) {
             return sigRead->membershipCheck(memAddr);
         }
 
-        inline sigElement testInWrite(int64_t memAddr)
-        {
+        inline sigElement testInWrite(int64_t memAddr) {
             return sigWrite->membershipCheck(memAddr);
         }
 
-        inline sigElement insertToRead(int64_t memAddr, sigElement value)
-        {
+        inline sigElement insertToRead(int64_t memAddr, sigElement value) {
             return sigRead->insert(memAddr, value);
         }
 
-        inline sigElement insertToWrite(int64_t memAddr, sigElement value)
-        {
+        inline sigElement insertToWrite(int64_t memAddr, sigElement value) {
             return sigWrite->insert(memAddr, value);
         }
 
-        inline void updateInRead(int64_t memAddr, sigElement newValue)
-        {
+        inline void updateInRead(int64_t memAddr, sigElement newValue) {
             sigRead->update(memAddr, newValue);
         }
 
-        inline void updateInWrite(int64_t memAddr, sigElement newValue)
-        {
+        inline void updateInWrite(int64_t memAddr, sigElement newValue) {
             sigWrite->update(memAddr, newValue);
         }
 
-        inline void removeFromRead(int64_t memAddr)
-        {
+        inline void removeFromRead(int64_t memAddr) {
             sigRead->remove(memAddr);
         }
 
-        inline void removeFromWrite(int64_t memAddr)
-        {
+        inline void removeFromWrite(int64_t memAddr) {
             sigWrite->remove(memAddr);
         }
 

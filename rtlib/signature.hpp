@@ -15,24 +15,21 @@
 #include <assert.h>
 
 #include <iostream>
-using namespace std;
-typedef  int32_t sigElement;
 
-namespace __dp
-{
-    class Signature
-    {
+using namespace std;
+typedef int32_t sigElement;
+
+namespace __dp {
+    class Signature {
     public:
         Signature(int32_t slotSize, int32_t size, int32_t numOfHash = 1) :
-            sigSlotSize(slotSize), numSlot(size), numHash(numOfHash)
-        {
+                sigSlotSize(slotSize), numSlot(size), numHash(numOfHash) {
             assert((slotSize % 8 == 0) && (slotSize <= 32 && slotSize >= 8) && "slotSize must be byte aligned!");
             sigSlotSizeInByte = sigSlotSize / 8;
             sigSizeInByte = sigSlotSizeInByte * numSlot;
 
             sigarray = new uint8_t[sigSizeInByte];
-            for (int i = 0; i < sigSizeInByte; ++i)
-            {
+            for (int i = 0; i < sigSizeInByte; ++i) {
                 sigarray[i] = 0;
             }
 
@@ -40,16 +37,20 @@ namespace __dp
             conflictElem = 0;
         }
 
-        ~Signature()
-        {
-            delete [] sigarray;
+        ~Signature() {
+            delete[] sigarray;
         }
 
         sigElement insert(int64_t elem, sigElement value);
+
         void update(int64_t elem, sigElement newValue);
+
         void remove(int64_t elem);
+
         sigElement membershipCheck(int64_t elem);
+
         bool intersect(Signature &other);
+
         double expectedFalsePositiveRate();
 
     private:
@@ -63,8 +64,7 @@ namespace __dp
         int32_t insertedElem;
         int32_t conflictElem;
 
-        uint32_t hash(int64_t value)
-        {
+        uint32_t hash(int64_t value) {
             return (uint32_t)((value >> 8) + value) % numSlot;
         }
     };
