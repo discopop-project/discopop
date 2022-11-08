@@ -51,13 +51,39 @@ jobs:
           # else, finish without error
           exit 0
 
-  discopop_explorer:
-    name: "Explorer"
+  python_code_checks:
+    name: "Code checks - Python"
     runs-on: ubuntu-20.04
-    needs: check-project-tags
     strategy:
       matrix:
         python-version: [ 3.6 ]
+        target_name: [discopop_profiler, discopop_explorer]
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install -r ${{ matrix.target_name }}/requirements.txt
+          python -m pip install mypy data-science-types black
+      - name: "Run tests"
+        run: python -m unittest -v
+      - name: "Run MyPy Type Checker"
+        run: python -m mypy -p ${{ matrix.target_name }}
+      - name: "Check formatting of ${{ matrix.target_name }}"
+        run: python -m black -l 100 --check ${{ matrix.target_name }}
+
+  discopop_explorer:
+    name: "Explorer"
+    runs-on: ubuntu-20.04
+    needs: [python_code_checks, check-project-tags]
+    strategy:
+      matrix:
+        python-version: [ 3.6 ]
+        test_name: [mergesort, reduction, simple_pipeline]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
@@ -69,17 +95,19 @@ jobs:
         run: |
           python -m pip install -r discopop_explorer/requirements.txt
           python -m pip install mypy data-science-types black
-      - name: "Run tests"
-        run: python -m unittest -v
-      - name: "Run MyPy Type Checker"
-        run: python -m mypy -p discopop_explorer -p discopop_profiler
-      - name: "Check formatting of discopop_profiler"
-        run: python -m black -l 100 --check discopop_profiler
+      - name: "Execute DiscoPoP Explorer"          
+        run: |
+          echo "Test name: ${{ matrix.test_name }}"
+          python -m discopop_explorer --path=test/${{ matrix.test_name }}/data
 
   discopop_profiler:
     name: "Profiler"
     runs-on: ubuntu-20.04
-    needs: check-project-tags
+    needs: [python_code_checks, check-project-tags]
+    strategy:
+      matrix:
+        pass_name: [discopopPass, reductionPass]
+        target_name: [differential_mergesort, mergesort, reduction, simple_pipeline]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
@@ -108,7 +136,7 @@ jobs:
       - name: "Run DiscoPoP Profiler on test/ Targets"
         run: |
           chmod +x .github/workflows/tests/profiler.sh
-          .github/workflows/tests/profiler.sh
+          .github/workflows/tests/profiler.sh ${{ matrix.target_name }} ${{ matrix.pass_name }}
 
   update_wiki-build:
     name: "Update Wiki - Build"

@@ -16,7 +16,10 @@ DISCOPOP_INSTALL="$(pwd)/build"
 export PYTHONPATH=${DISCOPOP_SRC}
 export DISCOPOP_INSTALL
 
-tests="discopopPass reductionPass"
+TARGET_NAME=$1
+PASS_NAME=$2
+
+#tests="discopopPass reductionPass"
 
 function test_discopopPass {
   cp ${DISCOPOP_SRC}/scripts/dp-fmap .
@@ -34,19 +37,20 @@ function test_reductionPass {
   ./a.out || return 1
 }
 
+CUR_DIR=$PWD
+
+cd ./test/${TARGET_NAME}
+
 exit_code=0
-for target in ./test/*/; do
-  pushd $target
-  for test in ${tests}; do
-    echo "###"
-    echo "### ${target} ${test}"
-    echo "###"
-    if ! test_$test "$(ls ./*.c ./*.cpp 2>/dev/null)"; then
-      exit_code=1
-      echo -e "\e[31m### ${target} ${test} failed.\e[0m"
-    fi
-  done
-  popd
-done
+
+echo "###"
+echo "### ${TARGET_NAME} ${PASS_NAME}"
+echo "###"
+if ! test_${PASS_NAME} "$(ls ./*.c ./*.cpp 2>/dev/null)"; then
+  exit_code=1
+  echo -e "\e[31m### ${TARGET_NAME} ${PASS_NAME} failed.\e[0m"
+fi
+
+cd ${CUR_DIR}
 
 exit $exit_code

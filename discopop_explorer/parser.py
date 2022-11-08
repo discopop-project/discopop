@@ -137,7 +137,7 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
         with open(reduction_file) as f:
             content = f.readlines()
         for line in content:
-            if is_reduction(line, fmap_lines):
+            if is_reduction(line, fmap_lines, file_mapping):
                 line = line.replace("\n", "")
                 s = line.split(' ')
                 var = {
@@ -153,7 +153,7 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
     return cu_dict, dependencies, loop_data, reduction_vars
 
 
-def is_reduction(reduction_line, fmap_lines):
+def is_reduction(reduction_line, fmap_lines, file_mapping):
     rex = re.compile(
         'FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line Number : ([0-9]*) ')
     if not rex:
@@ -162,7 +162,7 @@ def is_reduction(reduction_line, fmap_lines):
     file_id = int(res.group(1))
     file_line = int(res.group(2))
 
-    filepath = get_filepath(file_id, fmap_lines)
+    filepath = get_filepath(file_id, fmap_lines, file_mapping)
     src_file = open(filepath)
     src_lines = src_file.read().splitlines()
     src_file.close()
@@ -205,11 +205,14 @@ def possible_reduction(line, src_lines):
     return True
 
 
-def get_filepath(file_id, fmap_lines):
+def get_filepath(file_id, fmap_lines, file_mapping):
     assert file_id > 0 and file_id <= len(fmap_lines), 'invalid file id'
     line = fmap_lines[file_id - 1]
     tokens = line.split(sep='\t')
-    return tokens[1]
+    if tokens[1].startswith(".."):
+        return os.path.dirname(file_mapping) + "/" + tokens[1]
+    else:
+        return tokens[1]
 
 
 def get_enclosed_str(data):
