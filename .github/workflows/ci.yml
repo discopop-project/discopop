@@ -51,10 +51,9 @@ jobs:
           # else, finish without error
           exit 0
 
-  discopop_explorer:
-    name: "Explorer"
+  python_code_checks:
+    name: "Code checks - Python"
     runs-on: ubuntu-20.04
-    needs: check-project-tags
     strategy:
       matrix:
         python-version: [ 3.6 ]
@@ -75,11 +74,38 @@ jobs:
         run: python -m mypy -p discopop_explorer -p discopop_profiler
       - name: "Check formatting of discopop_profiler"
         run: python -m black -l 100 --check discopop_profiler
+      - name: "Check formatting of discopop_explorer"
+        run: python -m black -l 100 --check discopop_explorer
+
+
+  discopop_explorer:
+    name: "Explorer"
+    runs-on: ubuntu-20.04
+    needs: [python_code_checks, check-project-tags]
+    strategy:
+      matrix:
+        python-version: [ 3.6 ]
+        test_name: [mergesort, reduction, simple_pipeline]
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install -r discopop_explorer/requirements.txt
+          python -m pip install mypy data-science-types black
+      - name: "Run tests"
+        with:
+          test_name: ${{ matrix.test_name }}
+        run: echo "${test_name}"
 
   discopop_profiler:
     name: "Profiler"
     runs-on: ubuntu-20.04
-    needs: check-project-tags
+    needs: [python_code_checks, check-project-tags]
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v2
