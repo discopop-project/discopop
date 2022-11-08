@@ -72,9 +72,6 @@ static cl::opt<bool> DumpToDot(
         cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden
 );
 
-static llvm::cl::opt <std::string> fmap_file(
-        "fm-path", llvm::cl::desc("<file mapping file>"), llvm::cl::Required);
-
 namespace {
 
     STATISTIC(totalInstrumentations,
@@ -178,6 +175,29 @@ namespace {
         }
 
     } CU;
+
+// DPReduction
+
+    struct instr_info_t {
+        std::string var_name_;
+        std::string var_type_;
+        int loop_line_nr_;
+        int file_id_;
+        llvm::StoreInst *store_inst_;
+        llvm::LoadInst *load_inst_;
+        char operation_ = ' ';
+    };
+
+    struct loop_info_t {
+        unsigned int line_nr_;
+        int file_id_;
+        llvm::Instruction *first_body_instr_;
+        std::string start_line;
+        std::string end_line;
+        std::string function_name;
+    };
+
+// DPReduction end
 
     class DiscoPoP : public ModulePass {
     private:
@@ -362,11 +382,31 @@ namespace {
 
         void instrument_module(llvm::Module *module, map <string, string> *trueVarNamesFromMetadataMap);
         bool inlinedFunction(Function *F);
-
+        void instrument_function(llvm::Function *function, map <string, string> *trueVarNamesFromMetadataMap);
+        void instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
+                             map <string, string> *trueVarNamesFromMetadataMap);
+        std::string dp_reduction_CFA(Function &F, llvm::Loop *loop, int file_id);
+        string dp_reduction_determineVariableName(Instruction *I, map <string, string> *trueVarNamesFromMetadataMap);
+        string dp_reduction_determineVariableType(Instruction *I);
+        llvm::Instruction *dp_reduction_get_reduction_instr(llvm::Instruction *store_instr,
+                                                            llvm::Instruction **load_instr);
+        llvm::Instruction *dp_reduction_find_reduction_instr(llvm::Value *val);
+        llvm::Instruction *dp_reduction_get_load_instr(llvm::Value *load_val,
+                                                               llvm::Instruction *cur_instr,
+                                                               std::vector<char> &reduction_operations);
+        int dp_reduction_get_op_order(char c);
+        string dp_reduction_getOrInsertVarName(string varName, IRBuilder<> &builder);
+        Type *dp_reduction_pointsToStruct(PointerType *PTy);
+        string dp_reduction_findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+        bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
+        int32_t dp_reduction_getLID(Instruction *BI, int32_t &fileID);
+        void dp_reduction_insert_functions();
         llvm::LLVMContext *ctx_;
         llvm::Module *module_;
         std::ofstream *reduction_file;
         std::ofstream *loop_counter_file;
+        std::vector <loop_info_t> loops_;
+        std::vector <instr_info_t> instructions_;
 
 // DPReduction end
 
