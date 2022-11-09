@@ -138,10 +138,19 @@ jobs:
           chmod +x .github/workflows/tests/profiler.sh
           .github/workflows/tests/profiler.sh ${{ matrix.target_name }} ${{ matrix.pass_name }}
 
+  ci_successful:
+    name: "CI Tests Successful"
+    runs-on: ubuntu-latest
+    needs: [discopop_explorer, discopop_profiler]
+    steps:
+      - name: "Report success"
+        run: exit 0
+
+
   update_wiki-build:
     name: "Update Wiki - Build"
     runs-on: ubuntu-latest
-    needs: [discopop_explorer, discopop_profiler]
+    needs: ci_successful
     if: github.ref == 'refs/heads/develop'
     steps:
       - name: Checkout
