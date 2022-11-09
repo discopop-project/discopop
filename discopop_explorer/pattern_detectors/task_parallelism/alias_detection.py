@@ -14,7 +14,9 @@ from typing import Dict, List, Optional, Match, cast
 from lxml import objectify  # type: ignore
 
 
-def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: str) -> Optional[List[str]]:
+def __prune_statement(
+    stmt_copy: str, statement: str, var_name: str, var_type: str
+) -> Optional[List[str]]:
     """splits a statement and performs multiple alias analyses if necessary (more than one '=' contained
     in the given statement).
     :param stmt_copy: cleaned copy of the target statement
@@ -29,11 +31,11 @@ def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: s
     aliases: List[str] = []
     for idx, index in enumerate(indices):
         if idx == 0:
-            stmt = statement[:indices[idx]]
+            stmt = statement[: indices[idx]]
         elif idx == len(indices) - 1:
-            stmt = statement[indices[idx - 1] + 1:index + 1]
+            stmt = statement[indices[idx - 1] + 1 : index + 1]
         else:
-            stmt = statement[indices[idx - 1] + 1: indices[idx]]
+            stmt = statement[indices[idx - 1] + 1 : indices[idx]]
         tmp = __get_alias_from_statement(var_name, var_type, stmt)
         if tmp is not None:
             aliases += tmp
@@ -49,24 +51,28 @@ def __check_obvious_pointer_type(var_name: str, rhs: str) -> bool:
     :return: True, of None should be returned by __get_alias_statement. False, otherwise.
     """
     # var_name has index access?
-    if rhs.index(var_name) + len(var_name) < len(rhs) and \
-            rhs[rhs.index(var_name) + len(var_name)] == "[":
+    if (
+        rhs.index(var_name) + len(var_name) < len(rhs)
+        and rhs[rhs.index(var_name) + len(var_name)] == "["
+    ):
         return True
     # '*' prior to var_name?
-    if rhs.index(var_name) - 1 >= 0 and \
-            rhs[rhs.index(var_name) - 1] == "*":
+    if rhs.index(var_name) - 1 >= 0 and rhs[rhs.index(var_name) - 1] == "*":
         return True
     # '*' and '(' prior, no ')' prior to var_name?
-    if rhs.index(var_name) - 2 >= 0 and \
-            rhs[rhs.index(var_name) - 2] == "*" and \
-            rhs[rhs.index(var_name) - 1] == "(" and \
-            ")" not in rhs[
-                       rhs.index(var_name) - 2:rhs.index(var_name) + len(var_name)]:
+    if (
+        rhs.index(var_name) - 2 >= 0
+        and rhs[rhs.index(var_name) - 2] == "*"
+        and rhs[rhs.index(var_name) - 1] == "("
+        and ")" not in rhs[rhs.index(var_name) - 2 : rhs.index(var_name) + len(var_name)]
+    ):
         return True
     # '->' after var_name?
-    if rhs.index(var_name) + len(var_name) + 2 > len(rhs) and \
-            rhs[rhs.index(var_name) + len(var_name): rhs.index(var_name) + len(
-                var_name) + 1] == "->":
+    if (
+        rhs.index(var_name) + len(var_name) + 2 > len(rhs)
+        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1]
+        == "->"
+    ):
         return True
     return False
 
@@ -78,29 +84,35 @@ def __check_possible_pointer_type(var_name: str, rhs: str) -> bool:
     :return: True, of None should be returned by __get_alias_statement. False, otherwise.
     """
     # '&' prior to var_name?
-    if rhs.index(var_name) - 1 >= 0 and \
-            not rhs[rhs.index(var_name) - 1] == "&":
+    if rhs.index(var_name) - 1 >= 0 and not rhs[rhs.index(var_name) - 1] == "&":
         return True
     # var_name has index access?
-    if rhs.index(var_name) + len(var_name) < len(rhs) and \
-            rhs[rhs.index(var_name) + len(var_name)] == "[":
+    if (
+        rhs.index(var_name) + len(var_name) < len(rhs)
+        and rhs[rhs.index(var_name) + len(var_name)] == "["
+    ):
         return True
     # '*' prior to '&'?
-    if rhs.index(var_name) - 2 >= 0 and \
-            rhs[rhs.index(var_name) - 1] == "&" and \
-            rhs[rhs.index(var_name) - 2] == "*":
+    if (
+        rhs.index(var_name) - 2 >= 0
+        and rhs[rhs.index(var_name) - 1] == "&"
+        and rhs[rhs.index(var_name) - 2] == "*"
+    ):
         return True
     # '*' and '(' prior, no ')' prior to '&'?
-    if rhs.index(var_name) - 2 >= 0 and \
-            rhs[rhs.index(var_name) - 2] == "*" and \
-            rhs[rhs.index(var_name) - 1] == "(" and \
-            ")" not in rhs[
-                       rhs.index(var_name) - 2:rhs.index(var_name)]:
+    if (
+        rhs.index(var_name) - 2 >= 0
+        and rhs[rhs.index(var_name) - 2] == "*"
+        and rhs[rhs.index(var_name) - 1] == "("
+        and ")" not in rhs[rhs.index(var_name) - 2 : rhs.index(var_name)]
+    ):
         return True
     # '->' after var_name?
-    if rhs.index(var_name) + len(var_name) + 2 > len(rhs) and \
-            rhs[rhs.index(var_name) + len(var_name): rhs.index(var_name) + len(
-                var_name) + 1] == "->":
+    if (
+        rhs.index(var_name) + len(var_name) + 2 > len(rhs)
+        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1]
+        == "->"
+    ):
         return True
     return False
 
@@ -130,7 +142,7 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         var_name = var_name.replace(".addr", "")
     # prune statement
     if ":" in statement:
-        statement = statement[statement.rindex(":") + 1:]
+        statement = statement[statement.rindex(":") + 1 :]
     # var_name in statement?
     reg = r"\W" + re.escape(var_name) + r"\W"
     search_match = re.search(reg, statement)
@@ -142,9 +154,18 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         return None
     # operation is '=' ?
     stmt_copy = statement
-    stmt_copy = stmt_copy.replace("<=>", "  ").replace("<<=", "   ").replace(">>=", "   ").replace("==", "  ")
-    stmt_copy = stmt_copy.replace("!=", "  ").replace("+=", "  ").replace("-=", "  ").replace("*=", "  ")
-    stmt_copy = stmt_copy.replace("/=", "  ").replace("%=", "  ").replace("<=", "  ").replace(">=", "  ")
+    stmt_copy = (
+        stmt_copy.replace("<=>", "  ")
+        .replace("<<=", "   ")
+        .replace(">>=", "   ")
+        .replace("==", "  ")
+    )
+    stmt_copy = (
+        stmt_copy.replace("!=", "  ").replace("+=", "  ").replace("-=", "  ").replace("*=", "  ")
+    )
+    stmt_copy = (
+        stmt_copy.replace("/=", "  ").replace("%=", "  ").replace("<=", "  ").replace(">=", "  ")
+    )
     stmt_copy = stmt_copy.replace("&=", "  ").replace("^=", "  ").replace("|=", "  ")
     if "=" not in stmt_copy:
         return None
@@ -156,8 +177,8 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     if stmt_copy.index(var_name) < stmt_copy.index("="):
         return None
     # var_name contained in function call?
-    left_hand_side = statement[:stmt_copy.index("=")]
-    right_hand_side = statement[stmt_copy.index("=") + 1:]
+    left_hand_side = statement[: stmt_copy.index("=")]
+    right_hand_side = statement[stmt_copy.index("=") + 1 :]
     call_match = re.search(r"[\w]+(?=\().+\)", right_hand_side)
     try:
         call_string: Optional[str] = cast(Match[str], call_match)[0]
@@ -180,7 +201,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     return None
 
 
-def __add_alias_information(function_information_list: List[Dict], statements_file: str) -> List[Dict]:
+def __add_alias_information(
+    function_information_list: List[Dict], statements_file: str
+) -> List[Dict]:
     """Wrapper to gather and append alias information to the entries in function_information as a new field.
     Aliases can be found up to a depth of 2.
     Alias detection ignores scopes.
@@ -197,8 +220,8 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
         relevant_statements = []
         with open(statements_file, "r") as sf:
             for line in sf.readlines():
-                line_file_id = line[:line.index(":")]
-                line_code_line = line[line.index(":") + 1:]
+                line_file_id = line[: line.index(":")]
+                line_code_line = line[line.index(":") + 1 :]
                 line_code_line = line_code_line[: line_code_line.index(":")]
                 if file_id != line_file_id:
                     continue
@@ -218,20 +241,25 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
             aliases = []
             for statement in relevant_statements_strings:
                 # search for first-level aliases
-                statement_result = __get_alias_from_statement(arg_name, function_information["arg_types"][arg_idx],
-                                                              statement)
+                statement_result = __get_alias_from_statement(
+                    arg_name, function_information["arg_types"][arg_idx], statement
+                )
                 if statement_result is not None:
                     for state_res_entry in statement_result:
                         # first level alias found
                         # search for second level aliases
                         for inner_statement in relevant_statements_strings:
-                            statement_line = statement[statement.index(":") + 1:]
+                            statement_line = statement[statement.index(":") + 1 :]
                             statement_line = statement_line[: statement_line.index(":")]
-                            inner_statement_line = inner_statement[inner_statement.index(":") + 1:]
-                            inner_statement_line = inner_statement_line[: inner_statement_line.index(":")]
+                            inner_statement_line = inner_statement[inner_statement.index(":") + 1 :]
+                            inner_statement_line = inner_statement_line[
+                                : inner_statement_line.index(":")
+                            ]
                             if int(inner_statement_line) < int(statement_line):
                                 continue
-                            inner_statement_result = __get_alias_from_statement(state_res_entry, "*", inner_statement)
+                            inner_statement_result = __get_alias_from_statement(
+                                state_res_entry, "*", inner_statement
+                            )
                             if inner_statement_result is not None:
                                 # second level alias found
                                 aliases += inner_statement_result
@@ -249,25 +277,25 @@ def __get_function_information(cu_xml: str) -> List[Dict]:
     with open(cu_xml) as xml_fd:
         xml_content = ""
         for line in xml_fd.readlines():
-            if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+            if not (line.rstrip().endswith("</Nodes>") or line.rstrip().endswith("<Nodes>")):
                 xml_content = xml_content + line
     xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
     parsed_cu = objectify.fromstring(xml_content)
     function_information = []
     for node in parsed_cu.Node:
-        node.childrenNodes = str(node.childrenNodes).split(',') if node.childrenNodes else []
-        if node.get('type') == '1':
+        node.childrenNodes = str(node.childrenNodes).split(",") if node.childrenNodes else []
+        if node.get("type") == "1":
             entry = dict()
             entry["name"] = node.get("name")
             entry["startsAtLine"] = node.get("startsAtLine")
             entry["endsAtLine"] = node.get("endsAtLine")
             entry["id"] = node.get("id")
             entry["args"] = []
-            if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
+            if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
                 entry["args"] = [v.text for v in node.funcArguments.arg]
             entry["arg_types"] = []
-            if hasattr(node, 'funcArguments') and hasattr(node.funcArguments, 'arg'):
-                entry["arg_types"] = [v.get('type') for v in node.funcArguments.arg]
+            if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
+                entry["arg_types"] = [v.get("type") for v in node.funcArguments.arg]
             function_information.append(entry)
     return function_information
 
@@ -285,8 +313,12 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
             file_mapping_dict[split_line[1]] = split_line[0]
     # execute application for each file in file_mapping
     for file in file_mapping_dict:
-        process = subprocess.Popen(application_path + " " + file + " >> " + output_file, shell=True,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(
+            application_path + " " + file + " >> " + output_file,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         process.wait()
     # cleanup results and replace paths with file-ids
     if os.path.exists(output_file + "_tmp"):
@@ -297,10 +329,10 @@ def __create_statements_file(file_mapping: str, output_file: str, application_pa
                 line = line.replace("\n", "")
                 if len(line) == 0:
                     continue
-                left = line[:line.rfind(":")]
-                right = line[line.rfind(":"):]
+                left = line[: line.rfind(":")]
+                right = line[line.rfind(":") :]
                 left = re.sub(r"<.*>", "", left)
-                file_path = left[:left.find(":")]
+                file_path = left[: left.find(":")]
                 left = left.replace(file_path, file_mapping_dict[file_path])
                 line = left + right
                 while " :" in line or ": " in line:
@@ -324,9 +356,9 @@ def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_
         build_path = build_path[:-1]
 
     if not os.path.isfile(file_mapping):
-        raise ValueError(f"File not found: \"{file_mapping}\"")
+        raise ValueError(f'File not found: "{file_mapping}"')
     if not os.path.isfile(cu_xml):
-        raise ValueError(f"File not found: \"{cu_xml}\"")
+        raise ValueError(f'File not found: "{cu_xml}"')
 
     # remove output file if it already exists
     if os.path.exists(temp_file + "_statements"):
@@ -334,9 +366,11 @@ def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_
     if os.path.exists(temp_file):
         os.remove(temp_file)
     # create statements file
-    __create_statements_file(file_mapping, temp_file + "_statements",
-                             str(pathlib.Path(build_path).joinpath('rtlib', 'simple-alias-detection',
-                                                                   'getStatements')))
+    __create_statements_file(
+        file_mapping,
+        temp_file + "_statements",
+        str(pathlib.Path(build_path).joinpath("rtlib", "simple-alias-detection", "getStatements")),
+    )
     # get function information file
     function_information = __get_function_information(cu_xml)
     # add alias information to function_information
@@ -349,8 +383,16 @@ def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_
         for idx, alias_entry in enumerate(fn_info["aliases"]):
             if len(alias_entry) > 0:
                 for alias_name in alias_entry:
-                    alias_str += fn_info["id"] + ";" + fn_info["name"] + ";" \
-                                 + fn_info["args"][idx] + ";" + alias_name + "\n"
+                    alias_str += (
+                        fn_info["id"]
+                        + ";"
+                        + fn_info["name"]
+                        + ";"
+                        + fn_info["args"][idx]
+                        + ";"
+                        + alias_name
+                        + "\n"
+                    )
     # cleanup
     if os.path.exists(temp_file + "_statements"):
         os.remove(temp_file + "_statements")

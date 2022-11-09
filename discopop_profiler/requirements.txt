@@ -6,13 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-include_directories(
-        ../share/include
-)
-
-add_llvm_library(LLVMDiscoPoP MODULE
-        DiscoPoP.cpp
-        InstructionCFG.cpp
-        InstructionDG.cpp
-        ../share/lib/DPUtils.cpp
-        )
+matplotlib
+networkx
+pluginbase>=1.0.0
+contextlib2>=0.5.5
+docopt>=0.6.2
+lxml>=4.3.3
+numpy>=1.16.3
+schema>=0.7.0

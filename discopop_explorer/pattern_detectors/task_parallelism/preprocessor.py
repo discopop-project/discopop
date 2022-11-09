@@ -26,7 +26,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
     xml_fd = open(cu_xml)
     xml_content = ""
     for line in xml_fd.readlines():
-        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+        if not (line.rstrip().endswith("</Nodes>") or line.rstrip().endswith("<Nodes>")):
             xml_content = xml_content + line
 
     xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
@@ -46,20 +46,29 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
             while inner_iteration:
                 used_node_ids = list(set(used_node_ids + self_added_node_ids))
 
-                if node.get('type') == '0':  # iterate over CU nodes
+                if node.get("type") == "0":  # iterate over CU nodes
                     # find CU nodes with > 1 recursiveFunctionCalls in own code region
-                    if __preprocessor_cu_contains_at_least_two_recursive_calls(
-                            node) or remaining_recursive_call_in_parent:
+                    if (
+                        __preprocessor_cu_contains_at_least_two_recursive_calls(node)
+                        or remaining_recursive_call_in_parent
+                    ):
                         remaining_recursive_call_in_parent = False
                         # Preprocessor Step 1
                         tmp_cn_entry = None  # (recursiveFunctionCall, nodeCalled)
                         for cne_idx, calls_node_entry in enumerate(node.callsNode):
                             # get first matching entry of node.callsNode
                             try:
-                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
-                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                for rc_idx, rec_call in enumerate(
+                                    calls_node_entry.recursiveFunctionCall
+                                ):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get(
+                                        "atLine"
+                                    )
                                     if str(rec_call_line) in str(rec_call):
-                                        tmp_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        tmp_cn_entry = (
+                                            rec_call,
+                                            calls_node_entry.nodeCalled[rc_idx],
+                                        )
                                         break
                             except AttributeError:
                                 continue
@@ -73,7 +82,9 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         parsed_cu.insert(parsed_cu.index(parent), parent_copy)
 
                         # Preprocessor Step 2 - generate cu id for new element
-                        __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids)
+                        __generate_new_cu_id(
+                            parent, parent_copy, used_node_ids, self_added_node_ids
+                        )
 
                         # Preprocessor Step 3
                         parent_copy.callsNode.clear()
@@ -86,8 +97,12 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
 
                         # delete childrenNodes-entry from parent
                         tmp_cu_id = tmp_cn_entry[1].text
-                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id + ",", ""))
-                        parent.childrenNodes._setText(parent.childrenNodes.text.replace(tmp_cu_id, ""))
+                        parent.childrenNodes._setText(
+                            parent.childrenNodes.text.replace(tmp_cu_id + ",", "")
+                        )
+                        parent.childrenNodes._setText(
+                            parent.childrenNodes.text.replace(tmp_cu_id, "")
+                        )
 
                         # set parent_copy.childrenNodes
                         __set_parent_copy_childrennodes(parent_copy)
@@ -114,18 +129,24 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         for tmp in potential_lines:
                             if tmp == "":
                                 continue
-                            if int(tmp[tmp.find(":") + 1:]) >= int(separator_line[separator_line.find(":") + 1:]) + 1:
+                            if (
+                                int(tmp[tmp.find(":") + 1 :])
+                                >= int(separator_line[separator_line.find(":") + 1 :]) + 1
+                            ):
                                 if parent_new_start_line is None:
                                     parent_new_start_line = tmp
                                     continue
                                 # select smallest instruction line
-                                if int(tmp[tmp.find(":") + 1:]) < int(
-                                        parent_new_start_line[parent_new_start_line.find(":") + 1:]):
+                                if int(tmp[tmp.find(":") + 1 :]) < int(
+                                    parent_new_start_line[parent_new_start_line.find(":") + 1 :]
+                                ):
                                     parent_new_start_line = tmp
                         if not potential_lines or (potential_lines and not parent_new_start_line):
-                            parent_new_start_line = str(separator_line[:separator_line.index(":")])
+                            parent_new_start_line = str(separator_line[: separator_line.index(":")])
                             parent_new_start_line += ":"
-                            parent_new_start_line += str(int(separator_line[separator_line.index(":") + 1:]) + 1)
+                            parent_new_start_line += str(
+                                int(separator_line[separator_line.index(":") + 1 :]) + 1
+                            )
 
                         parent.set("startsAtLine", parent_new_start_line)
                         parent_copy.set("endsAtLine", separator_line)
@@ -158,10 +179,17 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
                         for cne_idx, calls_node_entry in enumerate(parent.callsNode):
                             # get first matching entry of node.callsNode
                             try:
-                                for rc_idx, rec_call in enumerate(calls_node_entry.recursiveFunctionCall):
-                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get("atLine")
+                                for rc_idx, rec_call in enumerate(
+                                    calls_node_entry.recursiveFunctionCall
+                                ):
+                                    rec_call_line = calls_node_entry.nodeCalled[rc_idx].get(
+                                        "atLine"
+                                    )
                                     if str(rec_call_line) in str(rec_call):
-                                        parent_further_cn_entry = (rec_call, calls_node_entry.nodeCalled[rc_idx])
+                                        parent_further_cn_entry = (
+                                            rec_call,
+                                            calls_node_entry.nodeCalled[rc_idx],
+                                        )
                                         break
                             except AttributeError:
                                 continue
@@ -203,10 +231,10 @@ def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids
     :param self_added_node_ids: list of added node id's"""
     # get next free id for specific tmp_file_id
     parent_copy_id = parent_copy.get("id")
-    tmp_file_id = parent_copy_id[:parent_copy_id.index(":")]
-    tmp_used_ids = [int(s[s.index(":") + 1:]) for s in
-                    used_node_ids if
-                    s.startswith(tmp_file_id + ":")]
+    tmp_file_id = parent_copy_id[: parent_copy_id.index(":")]
+    tmp_used_ids = [
+        int(s[s.index(":") + 1 :]) for s in used_node_ids if s.startswith(tmp_file_id + ":")
+    ]
     next_free_id = max(tmp_used_ids) + 1
     incremented_id = tmp_file_id + ":" + str(next_free_id)
     parent.set("id", incremented_id)
@@ -223,7 +251,8 @@ def __set_parent_copy_childrennodes(parent_copy):
                 try:
                     if node_call.text not in parent_copy.childrenNodes.text:
                         parent_copy.childrenNodes._setText(
-                            parent_copy.childrenNodes.text + "," + node_call.text)
+                            parent_copy.childrenNodes.text + "," + node_call.text
+                        )
                         if parent_copy.childrenNodes.text.startswith(","):
                             parent_copy.childrenNodes._setText(parent_copy.childrenNodes.text[1:])
                         if parent_copy.childrenNodes.text.endswith(","):
@@ -245,8 +274,12 @@ def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
     """
     try:
         if parent_copy.callsNode.nodeCalled.get("atLine") in target_list.text:
-            target_list._setText(target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", ""))
-            target_list._setText(target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), ""))
+            target_list._setText(
+                target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine") + ",", "")
+            )
+            target_list._setText(
+                target_list.text.replace(parent_copy.callsNode.nodeCalled.get("atLine"), "")
+            )
             target_list.set("count", str(int(target_list.get("count")) - 1))
     except TypeError:
         target_list._setText(parent_copy.callsNode.nodeCalled.get("atLine"))
@@ -260,7 +293,9 @@ def __filter_rwi_lines(parent_copy, target_list):
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
     try:
         for tmp_line in target_list.text.split(","):
-            if not line_contained_in_region(tmp_line, parent_copy.get("startsAtLine"), parent_copy.get("endsAtLine")):
+            if not line_contained_in_region(
+                tmp_line, parent_copy.get("startsAtLine"), parent_copy.get("endsAtLine")
+            ):
                 target_list._setText(target_list.text.replace(tmp_line + ",", ""))
                 target_list._setText(target_list.text.replace(tmp_line, ""))
                 if target_list.text.endswith(","):
@@ -276,12 +311,10 @@ def __insert_separator_line(parent_copy, target_list):
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
     try:
         if not parent_copy.get("endsAtLine") in target_list.text:
-            target_list._setText(
-                target_list.text + "," + parent_copy.get("endsAtLine"))
+            target_list._setText(target_list.text + "," + parent_copy.get("endsAtLine"))
             if target_list.text.startswith(","):
                 target_list._setText(target_list.text[1:])
-            target_list.set("count", str(
-                int(target_list.get("count")) + 1))
+            target_list.set("count", str(int(target_list.get("count")) + 1))
     except TypeError:
         target_list._setText(parent_copy.get("endsAtLine"))
         target_list.set("count", "1")
@@ -293,16 +326,16 @@ def __insert_missing_rwi_lines(parent, target_list):
     :param parent: cu node to be updated
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent"""
     cur_line = parent.get("startsAtLine")
-    while line_contained_in_region(cur_line, parent.get("startsAtLine"),
-                                   parent.get("endsAtLine")):
+    while line_contained_in_region(cur_line, parent.get("startsAtLine"), parent.get("endsAtLine")):
         if cur_line not in target_list.text:
             target_list._setText(cur_line + "," + target_list.text)
             if target_list.text.endswith(","):
                 target_list._setText(target_list.text[:-1])
             target_list.set("count", str(int(target_list.get("count")) + 1))
         # increment cur_line by one
-        cur_line = cur_line[0:cur_line.rfind(":") + 1] + str(
-            int(cur_line[cur_line.rfind(":") + 1:]) + 1)
+        cur_line = cur_line[0 : cur_line.rfind(":") + 1] + str(
+            int(cur_line[cur_line.rfind(":") + 1 :]) + 1
+        )
         continue
     target_list._setText(target_list.text.replace(",,", ","))
 
@@ -314,33 +347,38 @@ def __remove_unnecessary_return_instructions(target):
         entries = target.returnInstructions.text.split(",")
         new_entries = []
         for entry in entries:
-            if line_contained_in_region(entry, target.get("startsAtLine"),
-                                        target.get("endsAtLine")):
+            if line_contained_in_region(
+                entry, target.get("startsAtLine"), target.get("endsAtLine")
+            ):
                 new_entries.append(entry)
         target.returnInstructions._setText(",".join(new_entries))
         target.returnInstructions.set("count", str(len(new_entries)))
 
 
 def __add_parent_id_to_children(parsed_cu, parent):
-    """"Add parent.id to parent_function.childrenNodes
+    """ "Add parent.id to parent_function.childrenNodes
     :param: parsed_cu: parsed contents of cu_xml file
     :param parent: cu node to be added to parent_function's children
     """
     parent_function = None
     for tmp_node in parsed_cu.Node:
-        if tmp_node.get('type') == '1':
-            if line_contained_in_region(parent.get("startsAtLine"), tmp_node.get("startsAtLine"),
-                                        tmp_node.get("endsAtLine")):
-                if line_contained_in_region(parent.get("endsAtLine"),
-                                            tmp_node.get("startsAtLine"),
-                                            tmp_node.get("endsAtLine")):
+        if tmp_node.get("type") == "1":
+            if line_contained_in_region(
+                parent.get("startsAtLine"), tmp_node.get("startsAtLine"), tmp_node.get("endsAtLine")
+            ):
+                if line_contained_in_region(
+                    parent.get("endsAtLine"),
+                    tmp_node.get("startsAtLine"),
+                    tmp_node.get("endsAtLine"),
+                ):
                     parent_function = tmp_node
                     break
     if parent_function is None:
         print("No parent function found for cu node: ", parent.get("id"), ". Ignoring.")
     else:
         parent_function.childrenNodes._setText(
-            parent_function.childrenNodes.text + "," + parent.get("id"))
+            parent_function.childrenNodes.text + "," + parent.get("id")
+        )
         if parent_function.childrenNodes.text.startswith(","):
             parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
@@ -372,8 +410,7 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
                         rfc_file_id = rec_func_call.split(":")[0]
                         rfc_line = rec_func_call.split(":")[1]
                         # test if recursiveFunctionCall is inside CU region
-                        if rfc_file_id == file_id and \
-                                starts_at_line <= rfc_line <= ends_at_line:
+                        if rfc_file_id == file_id and starts_at_line <= rfc_line <= ends_at_line:
                             contained_recursive_calls += 1
         except AttributeError:
             pass
@@ -388,11 +425,15 @@ def check_loop_scopes(pet: PETGraphX):
     :param pet: PET graph"""
     for loop_cu in pet.all_nodes(NodeType.LOOP):
         for child in pet.direct_children(loop_cu):
-            if not line_contained_in_region(child.start_position(), loop_cu.start_position(), loop_cu.end_position()):
+            if not line_contained_in_region(
+                child.start_position(), loop_cu.start_position(), loop_cu.end_position()
+            ):
                 # expand loop_cu start_position upwards
                 if child.start_line < loop_cu.start_line and loop_cu.file_id == child.file_id:
                     loop_cu.start_line = child.start_line
-            if not line_contained_in_region(child.end_position(), loop_cu.start_position(), loop_cu.end_position()):
+            if not line_contained_in_region(
+                child.end_position(), loop_cu.start_position(), loop_cu.end_position()
+            ):
                 # expand loop_cu end_position downwards
                 if child.end_line > loop_cu.end_line and loop_cu.file_id == child.file_id:
                     loop_cu.end_line = child.end_line

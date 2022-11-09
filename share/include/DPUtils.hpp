@@ -71,40 +71,35 @@ typedef int64_t ADDR;
 using namespace std;
 using namespace llvm;
 
-extern cl::opt<string> FileMappingPath;
-namespace dputil
-{
+extern cl::opt <string> FileMappingPath;
+namespace dputil {
 
-    inline string decodeLID(int32_t lid)
-    {
+    inline string decodeLID(int32_t lid) {
         if (lid == 0)
             return "*";
 
         stringstream ss;
-        uint32_t ulid = (uint32_t)lid;
+        uint32_t ulid = (uint32_t) lid;
         ss << (ulid >> LIDSIZE) << ":" << ulid % MAXLNO;
         return ss.str();
     }
 
-    inline vector<string> *split(string input, char delim)
-    {
-        vector<string> *substrings = new vector<string>();
+    inline vector <string> *split(string input, char delim) {
+        vector <string> *substrings = new vector<string>();
         istringstream inputStringStream(input);
         string sub;
 
-        while(getline(inputStringStream, sub, delim))
-        {
+        while (getline(inputStringStream, sub, delim)) {
             substrings->push_back(sub);
         }
 
         return substrings;
     }
 
-    inline bool fexists(const string &filename)
-    {
+    inline bool fexists(const string &filename) {
         ifstream ifile(filename.c_str());
 
-        if(ifile.fail())
+        if (ifile.fail())
             return false;
         else
             return true;
@@ -118,13 +113,13 @@ namespace dputil
 
     string get_exe_dir();
 
-    class VariableNameFinder{
-        private:
-            map<string, vector<string>> StructMemberMap;
-        public:
-            VariableNameFinder(Module &M);
-    
-            string getVarName(Value const *V);
+    class VariableNameFinder {
+    private:
+        map <string, vector<string>> StructMemberMap;
+    public:
+        VariableNameFinder(Module &M);
+
+        string getVarName(Value const *V);
     };
 
 } // namespace

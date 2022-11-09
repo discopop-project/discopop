@@ -7,11 +7,11 @@
 # directory for details.
 
 include_directories(
-    ../share/include
-    )
+        ../share/include
+)
 
 add_llvm_library(LLVMDPReduction MODULE
-	DPReduction.cpp
-	Utils.cpp
-    )
+        DPReduction.cpp
+        Utils.cpp
+        )
 

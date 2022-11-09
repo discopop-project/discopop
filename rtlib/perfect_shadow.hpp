@@ -19,68 +19,56 @@
 #include <iostream>
 
 
-namespace __dp
-{
+namespace __dp {
 
-    class PerfectShadow : public Shadow
-    {
+    class PerfectShadow : public Shadow {
     public:
         PerfectShadow(int slotSize, int size, int numHash)
-            : PerfectShadow() {}
+                : PerfectShadow() {}
 
-        PerfectShadow()
-        {
+        PerfectShadow() {
             sigRead = new std::unordered_map<int64_t, sigElement>();
             sigWrite = new std::unordered_map<int64_t, sigElement>();
         }
 
-        ~PerfectShadow()
-        {
+        ~PerfectShadow() {
             delete sigRead;
             delete sigWrite;
         }
 
-        inline sigElement testInRead(int64_t memAddr)
-        {
+        inline sigElement testInRead(int64_t memAddr) {
             return (*sigRead)[memAddr];
         }
 
-        inline sigElement testInWrite(int64_t memAddr)
-        {
+        inline sigElement testInWrite(int64_t memAddr) {
             return (*sigWrite)[memAddr];
         }
 
-        inline sigElement insertToRead(int64_t memAddr, sigElement value)
-        {
+        inline sigElement insertToRead(int64_t memAddr, sigElement value) {
             sigElement oldValue = testInRead(memAddr);
             (*sigRead)[memAddr] = value;
             return oldValue;
         }
 
-        inline sigElement insertToWrite(int64_t memAddr, sigElement value)
-        {
+        inline sigElement insertToWrite(int64_t memAddr, sigElement value) {
             sigElement oldValue = testInWrite(memAddr);
             (*sigWrite)[memAddr] = value;
             return oldValue;
         }
 
-        inline void updateInRead(int64_t memAddr, sigElement newValue)
-        {
+        inline void updateInRead(int64_t memAddr, sigElement newValue) {
             (*sigRead)[memAddr] = newValue;
         }
 
-        inline void updateInWrite(int64_t memAddr, sigElement newValue)
-        {
+        inline void updateInWrite(int64_t memAddr, sigElement newValue) {
             (*sigWrite)[memAddr] = newValue;
         }
 
-        inline void removeFromRead(int64_t memAddr)
-        {
+        inline void removeFromRead(int64_t memAddr) {
             (*sigRead)[memAddr] = 0;
         }
 
-        inline void removeFromWrite(int64_t memAddr)
-        {
+        inline void removeFromWrite(int64_t memAddr) {
             (*sigWrite)[memAddr] = 0;
         }
 

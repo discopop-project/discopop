@@ -14,32 +14,68 @@ from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
 from discopop_explorer.pattern_detectors.reduction_detector import run_detection as detect_reduction
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.filter import filter_data_sharing_clauses, \
-    remove_useless_barrier_suggestions, remove_duplicate_data_sharing_clauses, filter_data_depend_clauses, \
-    remove_duplicates
-from discopop_explorer.pattern_detectors.task_parallelism.postprocessor import group_task_suggestions, sort_output
-from discopop_explorer.pattern_detectors.task_parallelism.preprocessor import cu_xml_preprocessing, check_loop_scopes
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.barriers import detect_barrier_suggestions, \
-    suggest_barriers_for_uncovered_tasks_before_return, validate_barriers, suggest_missing_barriers_for_global_vars
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.data_sharing_clauses import \
-    suggest_shared_clauses_for_all_tasks_in_function_body
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.dependency_clauses import \
-    detect_dependency_clauses_alias_based
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.tasks import detect_task_suggestions, \
-    correct_task_suggestions_in_loop_body
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.auxiliary import suggest_parallel_regions, \
-    set_task_contained_lines, detect_taskloop_reduction, combine_omittable_cus
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import create_task_tree, __forks, \
-    set_global_llvm_cxxfilt_path, detect_mw_types, get_var_definition_line_dict
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    TaskParallelismInfo,
+    TPIType,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.filter import (
+    filter_data_sharing_clauses,
+    remove_useless_barrier_suggestions,
+    remove_duplicate_data_sharing_clauses,
+    filter_data_depend_clauses,
+    remove_duplicates,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.postprocessor import (
+    group_task_suggestions,
+    sort_output,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.preprocessor import (
+    cu_xml_preprocessing,
+    check_loop_scopes,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.barriers import (
+    detect_barrier_suggestions,
+    suggest_barriers_for_uncovered_tasks_before_return,
+    validate_barriers,
+    suggest_missing_barriers_for_global_vars,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.data_sharing_clauses import (
+    suggest_shared_clauses_for_all_tasks_in_function_body,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.dependency_clauses import (
+    detect_dependency_clauses_alias_based,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.tasks import (
+    detect_task_suggestions,
+    correct_task_suggestions_in_loop_body,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.auxiliary import (
+    suggest_parallel_regions,
+    set_task_contained_lines,
+    detect_taskloop_reduction,
+    combine_omittable_cus,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
+    create_task_tree,
+    __forks,
+    set_global_llvm_cxxfilt_path,
+    detect_mw_types,
+    get_var_definition_line_dict,
+)
 
 __global_llvm_cxxfilt_path: str = ""
 
 
-def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str,
-                                               file_mapping: str, cu_inst_result_file: str,
-                                               llvm_cxxfilt_path: Optional[str], discopop_build_path: Optional[str]) \
-        -> List[PatternInfo]:
+def build_preprocessed_graph_and_run_detection(
+    cu_xml: str,
+    dep_file: str,
+    loop_counter_file: str,
+    reduction_file: str,
+    file_mapping: str,
+    cu_inst_result_file: str,
+    llvm_cxxfilt_path: Optional[str],
+    discopop_build_path: Optional[str],
+) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
     :param cu_xml: Path (string) to the CU xml file to be used
@@ -61,22 +97,36 @@ def build_preprocessed_graph_and_run_detection(cu_xml: str, dep_file: str, loop_
         raise ValueError("Path to DiscoPoP build directory not specified!")
     set_global_llvm_cxxfilt_path(__global_llvm_cxxfilt_path)
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
-    preprocessed_graph = PETGraphX.from_parsed_input(*parse_inputs(preprocessed_cu_xml, dep_file,
-                                                                   loop_counter_file, reduction_file, file_mapping))
+    preprocessed_graph = PETGraphX.from_parsed_input(
+        *parse_inputs(
+            preprocessed_cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping
+        )
+    )
 
     # execute reduction detector to enable taskloop-reduction-detection
     detect_reduction(preprocessed_graph)
     detect_do_all(preprocessed_graph)
 
-    suggestions = run_detection(preprocessed_graph, preprocessed_cu_xml, file_mapping, dep_file, cu_inst_result_file,
-                                cast(str, discopop_build_path))
+    suggestions = run_detection(
+        preprocessed_graph,
+        preprocessed_cu_xml,
+        file_mapping,
+        dep_file,
+        cu_inst_result_file,
+        cast(str, discopop_build_path),
+    )
 
     return suggestions
 
 
-def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str, cu_ist_result_file: str,
-                  discopop_build_path: str) \
-        -> List[PatternInfo]:
+def run_detection(
+    pet: PETGraphX,
+    cu_xml: str,
+    file_mapping: str,
+    dep_file: str,
+    cu_ist_result_file: str,
+    discopop_build_path: str,
+) -> List[PatternInfo]:
     """Computes the Task Parallelism Pattern for a node:
     (Automatic Parallel Pattern Detection in the Algorithm Structure Design Space p.46)
     1.) first merge all children of the node -> all children nodes get the dependencies
@@ -110,23 +160,33 @@ def run_detection(pet: PETGraphX, cu_xml: str, file_mapping: str, dep_file: str,
     __forks.clear()
     create_task_tree(pet, pet.main)
 
-    fs = [f for f in __forks if f.node_id == '130:0']
+    fs = [f for f in __forks if f.node_id == "130:0"]
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], []))
+            result.append(
+                TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], [])
+            )
     # Preprocessing
     check_loop_scopes(pet)
     # Suggestion generation
     result += detect_task_suggestions(pet)
     result += suggest_parallel_regions(pet, cast(List[TaskParallelismInfo], result))
-    result = cast(List[PatternInfo], set_task_contained_lines(cast(List[TaskParallelismInfo], result)))
-    result = cast(List[PatternInfo], detect_taskloop_reduction(pet, cast(List[TaskParallelismInfo], result)))
-    result = cast(List[PatternInfo], remove_useless_barrier_suggestions(pet, cast(List[TaskParallelismInfo], result)))
+    result = cast(
+        List[PatternInfo], set_task_contained_lines(cast(List[TaskParallelismInfo], result))
+    )
+    result = cast(
+        List[PatternInfo], detect_taskloop_reduction(pet, cast(List[TaskParallelismInfo], result))
+    )
+    result = cast(
+        List[PatternInfo],
+        remove_useless_barrier_suggestions(pet, cast(List[TaskParallelismInfo], result)),
+    )
     result = detect_barrier_suggestions(pet, result)
     result = validate_barriers(pet, result)
-    result = detect_dependency_clauses_alias_based(pet, result, file_mapping, cu_xml, dep_file,
-                                                   cu_ist_result_file, discopop_build_path)
+    result = detect_dependency_clauses_alias_based(
+        pet, result, file_mapping, cu_xml, dep_file, cu_ist_result_file, discopop_build_path
+    )
     result = suggest_missing_barriers_for_global_vars(pet, result)
     result = combine_omittable_cus(pet, result)
     result = suggest_barriers_for_uncovered_tasks_before_return(pet, result)

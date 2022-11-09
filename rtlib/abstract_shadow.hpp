@@ -18,11 +18,9 @@
 #include <iostream>
 
 
-namespace __dp
-{
+namespace __dp {
 
-    class Shadow
-    {
+    class Shadow {
     public:
         virtual ~Shadow() {}
 

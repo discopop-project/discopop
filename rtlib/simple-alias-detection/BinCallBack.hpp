@@ -17,11 +17,11 @@
 using namespace clang::ast_matchers;
 using namespace clang;
 
-class BinCallBack: public MatchFinder::MatchCallback {
+class BinCallBack : public MatchFinder::MatchCallback {
 public:
     void run(const MatchFinder::MatchResult &r) override {
-        const clang::Stmt* simpleStatement = r.Nodes.getNodeAs<Stmt>("simpleStatement");
-        ASTContext* ctx = r.Context;
+        const clang::Stmt *simpleStatement = r.Nodes.getNodeAs<Stmt>("simpleStatement");
+        ASTContext *ctx = r.Context;
         simpleStatement->getSourceRange().getBegin().print(llvm::outs(), ctx->getSourceManager());
         llvm::outs() << ": ";
         simpleStatement->printPretty(llvm::outs(), nullptr, ctx->getPrintingPolicy());

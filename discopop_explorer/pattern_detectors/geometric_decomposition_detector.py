@@ -19,8 +19,7 @@ __loop_iterations: Dict[str, int] = {}
 
 
 class GDInfo(PatternInfo):
-    """Class, that contains geometric decomposition detection result
-    """
+    """Class, that contains geometric decomposition detection result"""
 
     def __init__(self, pet: PETGraphX, node: CUNode, min_iter: int):
         """
@@ -29,8 +28,7 @@ class GDInfo(PatternInfo):
         """
         PatternInfo.__init__(self, node)
 
-        self.do_all_children, self.reduction_children = get_child_loops(
-            pet, node)
+        self.do_all_children, self.reduction_children = get_child_loops(pet, node)
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
@@ -49,8 +47,9 @@ class GDInfo(PatternInfo):
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List = []
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(
-            pet, node, "GeometricDecomposition", [], [])
-        fp.append(Variable('int', 'i', ''))
+            pet, node, "GeometricDecomposition", [], []
+        )
+        fp.append(Variable("int", "i", ""))
 
         self.first_private = fp
         self.private = p
@@ -59,20 +58,22 @@ class GDInfo(PatternInfo):
         self.reduction = r
 
     def __str__(self):
-        return f'Geometric decomposition at: {self.node_id}\n' \
-               f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}\n' \
-               f'Type: Geometric Decomposition Pattern\n' \
-               f'Do-All loops: {[n.id for n in self.do_all_children]}\n' \
-               f'Reduction loops: {[n.id for n in self.reduction_children]}\n' \
-               f'\tNumber of tasks: {self.num_tasks}\n' \
-               f'\tChunk limits: {self.min_iter_number}\n' \
-               f'\tpragma: {self.pragma}]\n' \
-               f'\tprivate: {[v.name for v in self.private]}\n' \
-               f'\tshared: {[v.name for v in self.shared]}\n' \
-               f'\tfirst private: {[v.name for v in self.first_private]}\n' \
-               f'\treduction: {[v for v in self.reduction]}\n' \
-               f'\tlast private: {[v.name for v in self.last_private]}'
+        return (
+            f"Geometric decomposition at: {self.node_id}\n"
+            f"Start line: {self.start_line}\n"
+            f"End line: {self.end_line}\n"
+            f"Type: Geometric Decomposition Pattern\n"
+            f"Do-All loops: {[n.id for n in self.do_all_children]}\n"
+            f"Reduction loops: {[n.id for n in self.reduction_children]}\n"
+            f"\tNumber of tasks: {self.num_tasks}\n"
+            f"\tChunk limits: {self.min_iter_number}\n"
+            f"\tpragma: {self.pragma}]\n"
+            f"\tprivate: {[v.name for v in self.private]}\n"
+            f"\tshared: {[v.name for v in self.shared]}\n"
+            f"\tfirst private: {[v.name for v in self.first_private]}\n"
+            f"\treduction: {[v for v in self.reduction]}\n"
+            f"\tlast private: {[v.name for v in self.last_private]}"
+        )
 
 
 def run_detection(pet: PETGraphX) -> List[GDInfo]:
@@ -81,11 +82,13 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result : List[GDInfo] = []
+    result: List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
     for node in pet.all_nodes(NodeType.FUNC):
-        if not contains(result, lambda x: x.node_id == node.id) and __detect_geometric_decomposition(pet, node):
+        if not contains(
+            result, lambda x: x.node_id == node.id
+        ) and __detect_geometric_decomposition(pet, node):
             node.geometric_decomposition = True
             test, min_iter = __test_chunk_limit(pet, node)
             if test and min_iter is not None:
@@ -111,13 +114,15 @@ def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> Tuple[bool, Optional[int
         children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
 
     for child in children:
-        inner_loop_iter[child.start_position(
-        )] = __iterations_count(pet, child)
+        inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
 
     for k, v in inner_loop_iter.items():
         if min_iterations_count is None or v < min_iterations_count:
             min_iterations_count = v
-    return bool(inner_loop_iter) and (min_iterations_count is None or min_iterations_count > 0), min_iterations_count
+    return (
+        bool(inner_loop_iter) and (min_iterations_count is None or min_iterations_count > 0),
+        min_iterations_count,
+    )
 
 
 def __iterations_count(pet: PETGraphX, node: CUNode) -> int:

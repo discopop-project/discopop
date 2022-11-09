@@ -15,8 +15,7 @@ from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
 class ReductionInfo(PatternInfo):
-    """Class, that contains reduction detection result
-    """
+    """Class, that contains reduction detection result"""
 
     def __init__(self, pet: PETGraphX, node: CUNode):
         """
@@ -34,15 +33,17 @@ class ReductionInfo(PatternInfo):
         self.reduction = r
 
     def __str__(self):
-        return f'Reduction at: {self.node_id}\n' \
-               f'Start line: {self.start_line}\n' \
-               f'End line: {self.end_line}\n' \
-               f'pragma: {self.pragma}\n' \
-               f'private: {[v.name for v in self.private]}\n' \
-               f'shared: {[v.name for v in self.shared]}\n' \
-               f'first private: {[v.name for v in self.first_private]}\n' \
-               f'reduction: {[v.operation + ":" + v.name for v in self.reduction]}\n' \
-               f'last private: {[v.name for v in self.last_private]}'
+        return (
+            f"Reduction at: {self.node_id}\n"
+            f"Start line: {self.start_line}\n"
+            f"End line: {self.end_line}\n"
+            f"pragma: {self.pragma}\n"
+            f"private: {[v.name for v in self.private]}\n"
+            f"shared: {[v.name for v in self.shared]}\n"
+            f"first private: {[v.name for v in self.first_private]}\n"
+            f'reduction: {[v.operation + ":" + v.name for v in self.reduction]}\n'
+            f"last private: {[v.name for v in self.last_private]}"
+        )
 
 
 def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
@@ -51,7 +52,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    result : List[ReductionInfo] = []
+    result: List[ReductionInfo] = []
 
     for node in pet.all_nodes(NodeType.LOOP):
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
@@ -74,4 +75,6 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
-    return bool([v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)])
+    return bool(
+        [v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)]
+    )

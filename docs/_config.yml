@@ -12,7 +12,7 @@ permalink: pretty
 
 remote_theme: just-the-docs/just-the-docs
 
-logo: "img/DiscoPoP-logo.png"
+logo: "img/discoPoP_RGB_no_border.svg"
 
 callouts:
   highlight:

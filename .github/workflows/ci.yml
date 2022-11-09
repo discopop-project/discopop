@@ -9,13 +9,20 @@
 name: "DiscoPoP CI"
 on: [push, pull_request]
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  check-project-tags:
+  execute_tests:
     runs-on: ubuntu-latest
-    name: Check for DiscoPoP project tags
+    name: Execute CI Tests
     steps:
-      - name: "Checkout Repository"
+      - name: Checkout Repository
         uses: actions/checkout@v2
+
       - name: "Check all files for DiscoPoP License tag"
         run: |
           ERROR=""
@@ -40,44 +47,44 @@ jobs:
             [ -z "$FILE_ERROR" ] || echo "Missing License tag at: ${FILE}" 
           done
           # Report error (1), if license tags are missing
-          echo "ERROR: ${ERROR}"
           [ -z "$ERROR" ] || exit 1
-          # else, finish without error
-          exit 0
 
-  discopop_explorer:
-    name: "Explorer"
-    runs-on: ubuntu-20.04
-    needs: check-project-tags
-    strategy:
-      matrix:
-        python-version: [ 3.6 ]
-    steps:
-      - name: "Checkout Repository"
-        uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: "Install Dependencies"
+          python-version: 3.6
+
+      - name: Install Python dependencies
         run: |
           python -m pip install -r discopop_explorer/requirements.txt
+          python -m pip install -r discopop_profiler/requirements.txt
           python -m pip install mypy data-science-types black
-      - name: "Run tests"
+
+      - name: Python Unit-tests
         run: python -m unittest -v
-      - name: "Run MyPy Type Checker"
-        run: python -m mypy -p discopop_explorer -p discopop_profiler
-      - name: "Check formatting of discopop_profiler"
+
+      - name: "Run MyPy Type Checker - DiscoPoP Explorer"
+        run: python -m mypy -p discopop_explorer
+
+      - name: "Run MyPy Type Checker - DiscoPoP Profiler"
+        run: python -m mypy -p discopop_profiler
+
+      - name: "Check formatting of DiscoPoP Explorer"
+        run: python -m black -l 100 --check discopop_explorer
+
+      - name: "Check formatting of DiscoPoP Profiler"
         run: python -m black -l 100 --check discopop_profiler
 
-  discopop_profiler:
-    name: "Profiler"
-    runs-on: ubuntu-20.04
-    needs: check-project-tags
-    steps:
-      - name: "Checkout Repository"
-        uses: actions/checkout@v2
-      - name: "Install Dependencies"
+      - name: Test DiscoPop Explorer - mergesort
+        run: python -m discopop_explorer --path=test/mergesort/data
+
+      - name: Test DiscoPop Explorer - reduction
+        run: python -m discopop_explorer --path=test/reduction/data
+
+      - name: Test DiscoPop Explorer - simple_pipeline
+        run: python -m discopop_explorer --path=test/simple_pipeline/data
+
+      - name: Setup DiscoPoP Profiler - Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
@@ -89,17 +96,71 @@ jobs:
           sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
           sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-      - name: "Build DiscoPoP Profiler"
+
+      - name: "Setup DiscoPoP Profiler - Build"
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           make -j3
-      - name: "Setup Python"
-        uses: actions/setup-python@v2
+
+      - name: "Setup DiscoPoP Profiler - Create executable"
+        run: chmod +x .github/workflows/tests/profiler.sh
+
+      - name: "Execute DiscoPoP Profiler - mergesort - discopopPass"
+        run: .github/workflows/tests/profiler.sh mergesort discopopPass
+
+      - name: "Execute DiscoPoP Profiler - mergesort - reductionPass"
+        run: .github/workflows/tests/profiler.sh mergesort reductionPass
+
+      - name: "Execute DiscoPoP Profiler - reduction - discopopPass"
+        run: .github/workflows/tests/profiler.sh reduction discopopPass
+
+      - name: "Execute DiscoPoP Profiler - reduction - reductionPass"
+        run: .github/workflows/tests/profiler.sh reduction reductionPass
+
+      - name: "Execute DiscoPoP Profiler - simple_pipeline - discopopPass"
+        run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
+
+      - name: "Execute DiscoPoP Profiler - simple_pipeline - reductionPass"
+        run: .github/workflows/tests/profiler.sh simple_pipeline reductionPass
+
+  ci_successful:
+    name: "CI Tests Successful"
+    runs-on: ubuntu-latest
+    needs: execute_tests
+    steps:
+      - name: "Report success"
+        run: exit 0
+
+
+  update_wiki-build:
+    name: "Update Wiki - Build"
+    runs-on: ubuntu-latest
+    needs: ci_successful
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
         with:
-          python-version: 3.6
-      - name: "Run DiscoPoP Profiler on test/ Targets"
-        run: |
-          chmod +x .github/workflows/tests/profiler.sh
-          .github/workflows/tests/profiler.sh
+          source: ./docs/
+          destination: ./_site
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+
+  update_wiki-deploy:
+    name: "Update Wiki - Deploy"
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: update_wiki-build
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
