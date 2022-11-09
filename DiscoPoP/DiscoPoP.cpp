@@ -822,8 +822,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
         return;
     }
 
-    errs() << "Do we have CANDIDATEs? \n";
-
     // add an entry to the 'loops_' vector
     loop_info_t loop_info;
     loop_info.line_nr_ = loc.getLine();
@@ -880,9 +878,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         llvm::DebugLoc new_loc = instr->getDebugLoc();
                         llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
 
-                        errs() << "NewLoc exists: " << dp_reduction_utils::loc_exists(new_loc) << "\n";
-                        errs() << "OldLoc exists: " << dp_reduction_utils::loc_exists(old_loc) << "\n";
-
                         if (!dp_reduction_utils::loc_exists(new_loc) || !dp_reduction_utils::loc_exists(old_loc)) {
                             (*map_ptr)[operand] = nullptr;
                         } else if (new_loc.getLine() != old_loc.getLine()) {
@@ -902,43 +897,31 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     for (auto it = load_instructions.begin(); it != load_instructions.end();
          ++it) {
         if (!it->second) continue;
-        errs() << "Inside outer if\n";
 
         auto it2 = store_instructions.find(it->first);
         if (it2 != store_instructions.end() && it2->second) {
-            errs() << "Inside inner if\n";
             llvm::DebugLoc load_loc = it->second->getDebugLoc();
             llvm::DebugLoc store_loc = it2->second->getDebugLoc();
             if (!dp_reduction_utils::loc_exists(load_loc) || !dp_reduction_utils::loc_exists(store_loc)) continue;
-            errs() << "After continue 1\n";
             if (load_loc.getLine() > store_loc.getLine()) continue;
-            errs() << "After continue 2\n";
             if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) continue;
-            errs() << "After continue 3\n";
 
             if (loop_info.end_line == "LOOPENDNOTFOUND") {
                 errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName()
                        << " Start line: " << loop_info.start_line << "\n";
                 continue;
             }
-            errs() << "After continue 4\n";
-            errs() << "line_nr: " << loop_info.line_nr_ << "\n";
-            errs() << "end_line: " << loop_info.end_line << "\n";
             if (loop_info.line_nr_ > std::stoul(loop_info.end_line))
                 continue;
-            errs() << "After continue 5\n";
 
             //Check if both load and store insts belong to the loop
             if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line))
                 continue;
-            errs() << "After continue 6\n";
             if (store_loc.getLine() < loop_info.line_nr_ ||
                 store_loc.getLine() > std::stoul(loop_info.end_line))
                 continue;
-            errs() << "After continue 7\n";
 
             if (it->first->hasName()) {
-                errs() << "Inside hasName\n";
                 instr_info_t info;
                 info.var_name_ = dp_reduction_determineVariableName(it->second, trueVarNamesFromMetadataMap);
                 info.loop_line_nr_ = loop_info.line_nr_;
@@ -953,7 +936,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
     // now check if the variables are part of a reduction operation
     for (auto candidate: candidates) {
-        errs() << "CANDIDATE \n";
         int index = isa<StoreInst>(candidate.load_inst_) ? 1 : 0;
         string varNameLoad = "LOAD";
         string varTypeLoad = "SCALAR";
@@ -1395,12 +1377,8 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
                     int32_t lid = 0;
 
                     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
-                        errs() << "CFA: UPDATE LID\n";
                         lid = dp_reduction_getLID(&*BI, file_id);
-                        errs() << "\tlid: " << lid << "\n";
                         uint32_t ulid = (uint32_t) lid;
-                        errs() << "\tulid: " << ulid << "\n";
-                        errs() << "\tslid: " << to_string(ulid % 16384) << "\n";
                         if(ulid != 0){
                             return to_string(ulid % 16384);
                         }
@@ -1440,14 +1418,11 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
 // This is needed to support multiple files in a project.
 int32_t DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
     int32_t lno;
-    errs() << "dp_reduction_getLID: BI has Metadata: " << BI->hasMetadata() << "\n";
 
     const DebugLoc &location = BI->getDebugLoc();
     if (location) {
-        errs() << "dp_reduction_getLID: got location: " << BI->getDebugLoc().getLine() << "\n";
         lno = BI->getDebugLoc().getLine();
     } else {
-        errs() << "dp_reduction_getLID: NO location\n";
         lno = 0;
     }
 
