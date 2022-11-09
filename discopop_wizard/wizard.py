@@ -132,6 +132,8 @@ class DiscoPoPWizard(object):
                           push_to_stack=True):  # [(window, width)]
         if len(windows) > 5:
             raise ValueError("Maximum of 5 windows can be displayed in Body!")
+        while len(windows) < 5:
+            windows.append([ptg.Window(), 0.0])
         # close old windows
         for slot in manager.layout.slots:
             if slot.name in ["body_0", "body_1", "body_2", "body_3", "body_4", "body_5"]:
