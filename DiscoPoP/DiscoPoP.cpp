@@ -810,7 +810,7 @@ void DiscoPoP::instrument_function(llvm::Function *function, map <string, string
 // An entry is added to the 'loops_' vector and for each suitable instruction,
 // an entry is added to the 'instructions_' vector.
 void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
-                                  map <string, string> *trueVarNamesFromMetadataMap) {
+                               map <string, string> *trueVarNamesFromMetadataMap) {
 
     auto loc = loop->getStartLoc();
     if (!dp_reduction_utils::loc_exists(loc)) {
@@ -1099,8 +1099,8 @@ string DiscoPoP::dp_reduction_getOrInsertVarName(string varName, IRBuilder<> &bu
 // Finds the load instruction that actually loads the value from the address
 // 'load_val'.
 llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
-                                               llvm::Instruction *cur_instr,
-                                               std::vector<char> &reduction_operations) {
+                                                         llvm::Instruction *cur_instr,
+                                                         std::vector<char> &reduction_operations) {
     if (!load_val || !cur_instr) return nullptr;
     if (llvm::isa<llvm::LoadInst>(cur_instr)) {
         // Does the current instruction already load the value from the correct
@@ -1379,7 +1379,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
                     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
                         lid = dp_reduction_getLID(&*BI, file_id);
                         uint32_t ulid = (uint32_t) lid;
-                        if(ulid != 0){
+                        if (ulid != 0) {
                             return to_string(ulid % 16384);
                         }
                     }
