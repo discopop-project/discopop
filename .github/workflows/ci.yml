@@ -108,22 +108,22 @@ jobs:
         run: chmod +x .github/workflows/tests/profiler.sh
 
       - name: "Execute DiscoPoP Profiler - mergesort - discopopPass"
-      run: .github/workflows/tests/profiler.sh mergesort discopopPass
+        run: .github/workflows/tests/profiler.sh mergesort discopopPass
 
       - name: "Execute DiscoPoP Profiler - mergesort - reductionPass"
-      run: .github/workflows/tests/profiler.sh mergesort reductionPass
+        run: .github/workflows/tests/profiler.sh mergesort reductionPass
 
       - name: "Execute DiscoPoP Profiler - reduction - discopopPass"
-      run: .github/workflows/tests/profiler.sh reduction discopopPass
+        run: .github/workflows/tests/profiler.sh reduction discopopPass
 
       - name: "Execute DiscoPoP Profiler - reduction - reductionPass"
-      run: .github/workflows/tests/profiler.sh reduction reductionPass
+        run: .github/workflows/tests/profiler.sh reduction reductionPass
 
       - name: "Execute DiscoPoP Profiler - simple_pipeline - discopopPass"
-      run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
+        run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
 
       - name: "Execute DiscoPoP Profiler - simple_pipeline - reductionPass"
-      run: .github/workflows/tests/profiler.sh simple_pipeline reductionPass
+        run: .github/workflows/tests/profiler.sh simple_pipeline reductionPass
 
   ci_successful:
     name: "CI Tests Successful"
