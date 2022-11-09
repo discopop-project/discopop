@@ -274,8 +274,7 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
     execution_configuration.init_from_values(values)
 
     # assemble command for execution
-    command = "echo 'THIS IS MY CALLSTRING ID: " + execution_configuration.id + "'"
-    command = "sleep 0.1 && echo 0.1 && sleep 0.1 && echo 2 && sleep 1 && echo 3 && sleep 1 && echo 4 && sleep 0.1 && echo 5 && 1"
+    command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
     # output to console
     wizard.print_to_console(manager, "Executing command: " + str(command.split(" ")))
 
