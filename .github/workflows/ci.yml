@@ -16,12 +16,26 @@ permissions:
   id-token: write
 
 jobs:
+  checkout-repository:
+    runs-on: ubunut-latest
+    name: "Checkout repository"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
   check-project-tags:
     runs-on: ubuntu-latest
     name: Check for DiscoPoP project tags
+    needs: checkout-repository
     steps:
+      - name: LS PRE CHECKOUT
+        run: ls
       - name: "Checkout Repository"
         uses: actions/checkout@v2
+      - name: LS POST CHECKOUT
+        run: ls
+      - name: EXIT
+        run: exit 1
       - name: "Check all files for DiscoPoP License tag"
         run: |
           ERROR=""
