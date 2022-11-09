@@ -106,7 +106,7 @@ jobs:
     needs: [python_code_checks, check-project-tags]
     strategy:
       matrix:
-        pass_name: [discopopPass, reductionPass]
+        pass_name: [discopopPass]
         target_name: [differential_mergesort, mergesort, reduction, simple_pipeline]
     steps:
       - name: "Checkout Repository"
