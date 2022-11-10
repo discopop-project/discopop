@@ -1,7 +1,7 @@
 ---
 layout: default
 title: DiscoPoP Profiler
-parent: Tool Overview
+parent: Profiling
 nav_order: 1
 ---
 
