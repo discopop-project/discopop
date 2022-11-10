@@ -1,4 +1,11 @@
-# TL;DR - Setup
+---
+layout: default
+title: Setup
+parent: Quickstart
+nav_order: 1
+---
+
+# Quickstart - Setup
 A detailed explanation of the Setup can be found on the [setup](../Setup.md) page
 
 ```

@@ -1,8 +1,8 @@
 ---
 layout: default
 title: DiscoPoP Explorer
-parent: Tool Overview
-nav_order: 2
+parent: Pattern_Detection
+nav_order: 1
 ---
 
 
