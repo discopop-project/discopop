@@ -1,7 +1,7 @@
 ---
 layout: default
 title: DiscoPoP Profiler - Invalid
-parent: Profiling
+parent: Old Documentation
 nav_order: 1
 ---
 

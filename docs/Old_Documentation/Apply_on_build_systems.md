@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Apply DiscoPoP on Projects using build systems - HIDDEN
+parent: Old Documentation
 ---
 
 # Apply DiscoPoP on Projects using build systems
