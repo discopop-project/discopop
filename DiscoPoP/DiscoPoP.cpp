@@ -1410,7 +1410,6 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
 
         }
     }
-    errs() << "CFA: Return lid\n";
     return lid;
 }
 
