@@ -1,7 +1,7 @@
 ---
 layout: default
 title: DiscoPoP Explorer
-parent: Pattern_Detection
+parent: Pattern Detection
 nav_order: 1
 ---
 
