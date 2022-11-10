@@ -25,7 +25,7 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
             display_execution_configurations(manager, config_dir, wizard),
             box="DOUBLE",
         )
-        .set_title("[210 bold]DiscoPoP execution wizard")
+        .set_title("[210 bold]DiscoPoP Configuration Wizard")
     )
     #manager.add(body, assign="body_left")
 
@@ -35,7 +35,7 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
         .set_title("[210 bold]Screen specific options")
     )
 
-    wizard.show_body_windows(manager, [(body, 0.8), (buttons, 0.2)])
+    wizard.show_body_windows(manager, [(body, 0.75), (buttons, 0.2)])
 
 
 def display_execution_configurations(manager: ptg.WindowManager, config_dir: str, wizard) -> ptg.Container:

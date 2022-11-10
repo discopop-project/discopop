@@ -29,7 +29,7 @@ def main():
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
 
-    wizard = DiscoPoPWizard(config_dir)
+    wizard = DiscoPoPConfigurationWizard(config_dir)
     print()
 
 
@@ -39,10 +39,10 @@ class ConsoleStyles(IntEnum):
     ERROR = 3
 
 
-class DiscoPoPWizard(object):
+class DiscoPoPConfigurationWizard(object):
     body_window_stack: List[List[Tuple[ptg.WindowManager, float]]] = []
     body_width_stack: List[Tuple[float, float]] = []  # (body_left width, body_right width)
-    console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP execution Wizard.", ConsoleStyles.NORMAL)]
+    console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
     console_window = None
 
     def __init__(self, config_dir: str):
@@ -133,7 +133,7 @@ class DiscoPoPWizard(object):
         if len(windows) > 5:
             raise ValueError("Maximum of 5 windows can be displayed in Body!")
         while len(windows) < 5:
-            windows.append([ptg.Window(), 0.0])
+            windows.append((ptg.Window(), 0.0))
         # close old windows
         for slot in manager.layout.slots:
             if slot.name in ["body_0", "body_1", "body_2", "body_3", "body_4", "body_5"]:

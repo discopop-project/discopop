@@ -178,7 +178,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
         "",
         ["Delete", lambda *_: delete_configuration(manager, body, config_dir, wizard, execution_configuration)]
     ))
-    wizard.show_body_windows(manager, [(body, 0.8), (buttons, 0.2)])
+    wizard.show_body_windows(manager, [(body, 0.75), (buttons, 0.2)])
 
 
 def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration, restart_wizard=True):

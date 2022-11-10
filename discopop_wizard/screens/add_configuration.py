@@ -57,7 +57,7 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
     buttons = (ptg.Window(
         ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
     ))
-    wizard.show_body_windows(manager, [(body, 0.6), (dp_options, 0.2), (buttons, 0.2)])
+    wizard.show_body_windows(manager, [(body, 0.6), (dp_options, 0.15), (buttons, 0.2)])
 
 
 def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard):
