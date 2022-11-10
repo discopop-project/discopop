@@ -27,6 +27,7 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
         )
         .set_title("[210 bold]DiscoPoP Configuration Wizard")
     )
+    body.overflow = ptg.Overflow.SCROLL
     #manager.add(body, assign="body_left")
 
     buttons = (ptg.Window(
