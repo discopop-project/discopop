@@ -1,3 +1,8 @@
+---
+layout: default
+title: Running DiscoPoP - INVALID
+---
+
 ### Running DiscoPoP
 DiscoPoP contains different tools for analyzing the target sequential application, namely CUGeneration, DPInstrumentation, and DPReduction. In the following, we will explain how to run each of them. However, before executing anything, please run the `dp-fmap` script in the root folder of the target application to obtain the list of files. The output will be written in a file named `FileMapping.txt`.
 

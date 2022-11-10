@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Guide
+title: Guide - Invalid
 ---
 
 # Walk-through example
