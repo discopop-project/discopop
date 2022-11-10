@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Pattern Interpretation
+title: Pattern Interpretation - TODO
 parent: Pattern Detection
 nav_order: 2
 ---

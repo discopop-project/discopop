@@ -33,6 +33,6 @@ If you have installed LLVM <b>using the package manager</b>, specifying this var
 
 	cmake ..
 
-Once the configuration process is successfully finished, compile the DiscoPoP libraries using `make`. All the shared objects will be stored in the build directory and can be found inside a folder named `libi/`.
+Once the configuration process is successfully finished, compile the DiscoPoP libraries using `make`. All created shared objects will be stored in the build directory and can be found inside a folder named `libi/`.
 
 	make
