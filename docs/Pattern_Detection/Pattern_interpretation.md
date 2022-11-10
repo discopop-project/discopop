@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Pattern Interpretation
-parent: Pattern_Detection
+parent: Pattern Detection
 nav_order: 2
 ---
 
