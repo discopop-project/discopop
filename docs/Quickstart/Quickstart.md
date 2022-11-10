@@ -3,6 +3,7 @@ layout: default
 title: Quickstart
 has_children: true
 permalink: /Quickstart
+nav_order: 3
 ---
 
 # Quickstart
