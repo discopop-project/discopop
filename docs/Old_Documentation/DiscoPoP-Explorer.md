@@ -1,7 +1,7 @@
 ---
 layout: default
 title: DiscoPoP Explorer - TODO
-parent: Pattern Detection
+parent: Old Documentation
 nav_order: 1
 ---
 

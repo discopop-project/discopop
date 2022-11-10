@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Running DiscoPoP - INVALID
+parent: Old Documentation
 ---
 
 ### Running DiscoPoP
