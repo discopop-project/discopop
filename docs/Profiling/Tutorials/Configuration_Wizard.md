@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Configuration Wizard
-parent: /Profiling/Tutorials
+parent: Tutorials
+grand_parent: Profiling
 nav_order: 1
 ---
 

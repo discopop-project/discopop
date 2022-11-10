@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Manual instrumentation and execution
-parent: /Profiling/Tutorials
+parent: Tutorials
+grand_parent: Profiling
 nav_order: 3
 ---
 

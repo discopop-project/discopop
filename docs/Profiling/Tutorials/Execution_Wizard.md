@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Execution Wizard
-parent: /Profiling/Tutorials
+parent: Tutorials
+grand_parent: Profiling
 nav_order: 2
 ---
 
