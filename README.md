@@ -27,10 +27,9 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 ## Wiki
 Detailed information about each execution step, the setup as well as the functionality of DiscoPoP and how to contribute can be found on the [wiki page](https://discopop-project.github.io/discopop/).
 
-### Quick Links (OUTDATED INSTRUCTIONS)
+### Quick Links
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
-- [Example](https://discopop-project.github.io/discopop/Guide/)
-- [Interpreting Parallelization Suggestions](https://discopop-project.github.io/discopop/Suggestions/)
+- [Walk-through Example](https://discopop-project.github.io/discopop/Quickstart/Example/)
 
 ## TL;DR
 ### Setup
