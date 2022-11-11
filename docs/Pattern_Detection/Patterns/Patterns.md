@@ -5,3 +5,5 @@ parent: Pattern Detection
 has_children: true
 permalink: /Pattern_Detection/Patterns
 ---
+
+# Parallel Patterns
