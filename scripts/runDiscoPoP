@@ -14,7 +14,7 @@
 #   Use this script to analyze a project with DiscoPoP, that is built using Makefiles
 #####################################################################################
 
-# TODO improve the help text
+# TODO improve the help text (add descriptions of options)
 HELPTEXT="*** DiscoPoP Execution Wizard ***
 
 Use this tool to analyze a project that is built using Makefiles
@@ -22,7 +22,13 @@ Use --help or -h to show this text and exit.
 Use -v or --verbose to show more help / get more console output during execution.
 
 REQUIRED ARGUMENTS: Please use absolut paths!
- --llvm <path>
+ --llvm-clang <path>
+ --llvm-clang++ <path>
+ --llvm-ar <path>
+ --llvm-link <path>
+ --llvm-dis <path>
+ --llvm-opt <path>
+ --llvm-llc <path>
  --gllvm <path>
  --project <path>
  --linker-flags <flags>
@@ -86,8 +92,43 @@ while [[ $# -gt 0 ]]; do
       COLORS=true
       shift # past argument
       ;;
-    --llvm) # TODO maybe split this into all the needed executable names clang, clang++, ...
-      LLVM="$2"
+    #--llvm) # TODO optionally allow --llvm <path/to/llvm/build> instead of individual flags
+    #  LLVM="$2"
+    #  shift # past argument
+    #  shift # past value
+    #  ;;
+    --llvm-clang)
+      LLVM_CLANG=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-clang++)
+      LLVM_CLANGPP=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-ar)
+      LLVM_AR=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-link)
+      LLVM_LINK=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-dis)
+      LLVM_DIS=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-opt)
+      LLVM_OPT=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-llc)
+      LLVM_LLC=$2
       shift # past argument
       shift # past value
       ;;
@@ -209,29 +250,48 @@ log () {
 
  log -i \
   "CONFIGURATION:
-  llvm:       $LLVM
+  llvm-clang  $LLVM_CLANG
+  llvm-clang++ $LLVM_CLANGPP
+  llvm-ar     $LLVM_AR
+  llvm-link   $LLVM_LINK
+  llvm-dis    $LLVM_DIS
+  llvm-opt    $LLVM_OPT
+  llvm-llc    $LLVM_LLC
   gllvm:      $GLLVM
   project:    $PROJECT
   ldFlags:    $LINKER_FLAGS
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
   threads:    $THREADS
-
   discoPoP:   $DP
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG"
 
+log -d "VERSIONS:"
+log -d "clang:    $($LLVM_CLANG --version | grep version)"
+log -d "clang++:  $($LLVM_CLANGPP --version | grep version)"
+log -d "llvm-ar:  $($LLVM_AR --version | grep version)"
+log -d "llvm-link:$($LLVM_LINK --version | grep version)"
+log -d "llvm-dis: $($LLVM_DIS --version | grep version)"
+log -d "opt:      $($LLVM_OPT --version | grep version)"
+log -d "llc:      $($LLVM_LLC --version | grep version)"
 
 #####
 # configure gllvm
 #####
 
-export LLVM_COMPILER_PATH=$LLVM/bin
+#export LLVM_COMPILER_PATH=$LLVM/bin
+export LLVM_CC_NAME=$LLVM_CLANG
+export LLVM_CXX_NAME=$LLVM_CLANGPP
+export LLVM_AR_NAME=$LLVM_AR
+export LLVM_LINK_NAME=$LLVM_LINK
 export WLLVM_OUTPUT_LEVEL="AUDIT"  # can be used to more easily determine flags needed during the link step
 export WLLVM_OUTPUT_FILE=$GLLVM_LOG
 export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names" # TODO we could run the dp pass right here?
 # export LLVM_LINK_FLAGS=""
 
+log -d "GLLVM SANITY CHECK:
+$($GLLVM/gsanity-check)" 
 
 #####
 # create FileMapping.txt,
@@ -247,14 +307,14 @@ $DP/scripts/dp-fmap
 
 # build using gllvm as compiler
 log -i "Building your application..."
-# TODO command line option for makefile options
 log -d $(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)
+# TODO command line option for custom makefile options
 
 # create single .bc and .ll from the executable
 $GLLVM/get-bc -b -m -v $EXECUTABLE_NAME # &> /dev/null
 
 # optionally convert to .ll 
-$LLVM/bin/llvm-dis ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
+$LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 #####
 # apply instrumentation and run
@@ -262,16 +322,18 @@ $LLVM/bin/llvm-dis ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 # Run DiscoPoP Pass
 log -i "Running DiscoPoP Pass to analyze and instrument your application..."
-${LLVM}/bin/opt -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt
-#$LLVM/bin/clang++ ${EXECUTABLE_NAME}_dp.ll -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt
 
-# another way to get the executable from the .ll file:
-$LLVM/bin/llc -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o
-$LLVM/bin/clang++ ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
+log -i "Creating Executable..."
+$LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o
+$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
+
+# another way to get the executable from the .ll file without going via the .o object file:
+#$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.ll -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
 
 # Run DPReduction Pass
 log -i "Running DiscoPoP Reduction Analysis Pass to detect reduction operations..."
-${LLVM}/bin/opt -S -load ${DP_BUILD}/libi/LLVMDPReduction.so -DPReduction ${EXECUTABLE_NAME}.ll -disable-output -fm-path FileMapping.txt
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDPReduction.so -DPReduction ${EXECUTABLE_NAME}.ll -disable-output -fm-path FileMapping.txt
 
 # Run the instrumented application
 log -i "Running instrumented application to detect data dependencies..."
@@ -281,7 +343,7 @@ log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
 # run discopop_profiler to get parallelization suggestions
 #####
 
-log -i "Looking for parallelization opportunities"
+log -i "Looking for parallelization opportunities..."
 PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt)
 
 # write patterns to file #TODO command line option for filename
