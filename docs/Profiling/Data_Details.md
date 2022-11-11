@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Gathered Data - Detailed - TODO
+title: Gathered Data - Detailed
 parent: Profiling
 nav_order: 2
 ---
@@ -47,7 +47,7 @@ DiscoPoP uses a signature to store data dependences. You can configure the setti
 - `USE_PERFECT`: When it is set to one, DiscoPoP uses a perfect signature. The default value is one.
 
 To find parallelization opportunities, we need to extract data dependencies inside the program. For that, we need to instrument the memory accesses, link the program with DiscoPoP run-time libraries, and finally execute the program with several representative inputs. The necessary steps are described [here](Tutorials/Tutorials.md).
-After executing the instrumented program, you find a text file which ends with “{ExecutableName}_dep.txt” which contains the data dependences identified using the provided input. 
+After executing the instrumented program, you find a text file which ends with `_dep.txt` which contains the data dependences identified using the provided input. 
 A data dependence is represented as a triple `<sink, type, source>`. `type` denotes the dependence type and can be any of `RAW`, `WAR` or `WAW`. Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region.
 
 ## Loop Counters
