@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Configuration Wizard - TODO
+title: Configuration Wizard - GUI - TODO
 parent: Tutorials
 grand_parent: Profiling
 nav_order: 1

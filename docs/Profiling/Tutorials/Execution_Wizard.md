@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Execution Wizard - TODO
+title: Execution Wizard - Script - TODO
 parent: Tutorials
 grand_parent: Profiling
 nav_order: 2
