@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Gathered Data - Detailed
+title: Gathered Data - Details
 parent: Profiling
 nav_order: 2
 ---
