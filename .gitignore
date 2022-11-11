@@ -10,6 +10,8 @@
 data*/
 # our test data
 !/test/*/data/
+# our example data
+!/example/Makefile
 
 # discopop temporary files
 discopop-tmp/*
