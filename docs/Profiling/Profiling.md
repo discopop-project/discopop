@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Profiling
+title: DiscoPoP Profiler
 has_children: true
 permalink: /Profiling
 nav_order: 4
