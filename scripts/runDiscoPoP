@@ -14,12 +14,11 @@
 #   Use this script to analyze a project with DiscoPoP, that is built using Makefiles
 #####################################################################################
 
-# TODO improve the help text (add descriptions of options)
 HELPTEXT="*** DiscoPoP Execution Wizard ***
 
 Use this tool to analyze a project that is built using Makefiles
 Use --help or -h to show this text and exit.
-Use -v or --verbose to show more help / get more console output during execution.
+Use -v or --verbose to get more information than you want.
 
 REQUIRED ARGUMENTS: Please use absolut paths!
  --llvm-clang <path>
@@ -37,33 +36,8 @@ REQUIRED ARGUMENTS: Please use absolut paths!
  --build-threads <number>
 
 OPTIONAL ARGUMENTS:
- --make-clean-before-build
  --make-target <target>
 "
-
-HELPTEXT_V="
-OPTONAL ARGUMENTS TO INFLUENCE DISCOPOP BEHAVIOUR
- --dp-hybrid <true|false> (default: true)
- --dp-debug
-
-OPTIONAL ARGUMENTS TO INFLUENCE THE PIPELINE:
- --pipeline-stop-after-filemapping
- --pipeline-stop-after-build
- --pipeline-stop-after-passes
- --pipeline-stop-after-instrumentation
- --pipeline-no-reduction
-"
-
-# TODO more options:
-#  --ll (to toggle between .bc and .ll files)
-#  -s|--make-silent (to deactivate make output using -s flag) or --make-flags (to allow for more flags)
-#  --log-level <level> 
-#  --measure-execution-times
-
-# TODO implement optional arguments
-# TODO implement other build systems  --build-type <cmake|makefile|autotools>
-# TODO support multiple executables created by the same build
-
 
 #####
 # Parse Arguments
@@ -92,11 +66,6 @@ while [[ $# -gt 0 ]]; do
       COLORS=true
       shift # past argument
       ;;
-    #--llvm) # TODO optionally allow --llvm <path/to/llvm/build> instead of individual flags
-    #  LLVM="$2"
-    #  shift # past argument
-    #  shift # past value
-    #  ;;
     --llvm-clang)
       LLVM_CLANG=$2
       shift # past argument
@@ -200,10 +169,6 @@ GLLVM_LOG=$PROJECT/gllvm_log.txt
 # show helptext
 if [ "$HELP" = true ]; then
     echo "$HELPTEXT"
-    if [ "$VERBOSE" = true ]
-    then
-        echo "$HELPTEXT_V"
-    fi
     exit 0
 fi
 
@@ -248,15 +213,22 @@ log () {
 # show configuration
 #####
 
- log -i \
+log -i \
   "CONFIGURATION:
   llvm-clang  $LLVM_CLANG
+      $($LLVM_CLANG --version | grep version)
   llvm-clang++ $LLVM_CLANGPP
+      $($LLVM_CLANGPP --version | grep version)
   llvm-ar     $LLVM_AR
+      $($LLVM_AR --version | grep version)
   llvm-link   $LLVM_LINK
+      $($LLVM_LINK --version | grep version)
   llvm-dis    $LLVM_DIS
+      $($LLVM_DIS --version | grep version)
   llvm-opt    $LLVM_OPT
+      $($LLVM_OPT --version | grep version)
   llvm-llc    $LLVM_LLC
+      $($LLVM_LLC --version | grep version)
   gllvm:      $GLLVM
   project:    $PROJECT
   ldFlags:    $LINKER_FLAGS
@@ -267,28 +239,19 @@ log () {
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG"
 
-log -d "VERSIONS:"
-log -d "clang:    $($LLVM_CLANG --version | grep version)"
-log -d "clang++:  $($LLVM_CLANGPP --version | grep version)"
-log -d "llvm-ar:  $($LLVM_AR --version | grep version)"
-log -d "llvm-link:$($LLVM_LINK --version | grep version)"
-log -d "llvm-dis: $($LLVM_DIS --version | grep version)"
-log -d "opt:      $($LLVM_OPT --version | grep version)"
-log -d "llc:      $($LLVM_LLC --version | grep version)"
-
 #####
 # configure gllvm
 #####
 
-#export LLVM_COMPILER_PATH=$LLVM/bin
+#export LLVM_COMPILER_PATH="<path/to/llvm/build>"
 export LLVM_CC_NAME=$LLVM_CLANG
 export LLVM_CXX_NAME=$LLVM_CLANGPP
 export LLVM_AR_NAME=$LLVM_AR
 export LLVM_LINK_NAME=$LLVM_LINK
 export WLLVM_OUTPUT_LEVEL="AUDIT"  # can be used to more easily determine flags needed during the link step
 export WLLVM_OUTPUT_FILE=$GLLVM_LOG
-export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names" # TODO we could run the dp pass right here?
-# export LLVM_LINK_FLAGS=""
+export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names"
+#export LLVM_LINK_FLAGS=""
 
 log -d "GLLVM SANITY CHECK:
 $($GLLVM/gsanity-check)" 
@@ -308,12 +271,9 @@ $DP/scripts/dp-fmap
 # build using gllvm as compiler
 log -i "Building your application..."
 log -d $(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)
-# TODO command line option for custom makefile options
 
 # create single .bc and .ll from the executable
-$GLLVM/get-bc -b -m -v $EXECUTABLE_NAME # &> /dev/null
-
-# optionally convert to .ll 
+log -d $($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME)
 $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 #####
@@ -346,7 +306,7 @@ log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
 log -i "Looking for parallelization opportunities..."
 PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt)
 
-# write patterns to file #TODO command line option for filename
+# write patterns to file
 echo "$PATTERNS" > patterns.txt
 
 # log patterns to console
