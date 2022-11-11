@@ -16,6 +16,8 @@ from typing import List, TextIO
 from pytermgui import Collapsible, Container, Splitter, Window, Button
 import pytermgui as ptg
 
+from tkinter import filedialog
+
 
 class ExecutionConfiguration(object):
     id: str
@@ -133,32 +135,73 @@ class ExecutionConfiguration(object):
 
 def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: str,
                                         execution_configuration, wizard):
-    body = (
-        ptg.Window(
-            "",
-            "Show saved Configuration - " + execution_configuration.id,
-            "",
-            ptg.InputField(execution_configuration.label, prompt="Label: "),
-            ptg.InputField(execution_configuration.description, prompt="Description: "),
-            ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
-            ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
-            ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
-            ptg.InputField(execution_configuration.project_base_path, prompt="Project base path: "),
-            ptg.InputField(execution_configuration.project_source, prompt="Project source path: "),
-            ptg.InputField(execution_configuration.project_build, prompt="Project build path: "),
-            ptg.InputField(execution_configuration.project_configure_options, prompt="Project configure options: "),
-            ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
-            ptg.Container(
-                "Additional notes:",
-                ptg.InputField(
-                    execution_configuration.notes, multiline=True
+    if wizard.arguments.no_gui:
+        # show terminal input fields
+        body = (
+            ptg.Window(
+                "",
+                "Show saved Configuration - " + execution_configuration.id,
+                "",
+                ptg.InputField(execution_configuration.label, prompt="Label: "),
+                ptg.InputField(execution_configuration.description, prompt="Description: "),
+                ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
+                ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
+                ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
+                ptg.InputField(execution_configuration.project_base_path, prompt="Project base path: "),
+                ptg.InputField(execution_configuration.project_source, prompt="Project source path: "),
+                ptg.InputField(execution_configuration.project_build, prompt="Project build path: "),
+                ptg.InputField(execution_configuration.project_configure_options, prompt="Project configure options: "),
+                ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
+                ptg.Container(
+                    "Additional notes:",
+                    ptg.InputField(
+                        execution_configuration.notes, multiline=True
+                    ),
+                    box="EMPTY_VERTICAL",
                 ),
-                box="EMPTY_VERTICAL",
-            ),
-            box="DOUBLE",
+                box="DOUBLE",
+            )
+            .set_title("[210 bold]Show execution configuration")
         )
-        .set_title("[210 bold]Show execution configuration")
-    )
+    else:
+        # show GUI prompts
+        # define selectors
+        selector_1 = ptg.Button(label="Project base path: " + execution_configuration.project_base_path)
+        selector_1.onclick = lambda *_: file_selector(selector_1, "Project base path: ")
+        selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_2 = ptg.Button(label="Project source path: " + execution_configuration.project_source)
+        selector_2.onclick = lambda *_: file_selector(selector_2, "Project source path: ")
+        selector_2.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_3 = ptg.Button(label="Project build path: " + execution_configuration.project_build)
+        selector_3.onclick = lambda *_: file_selector(selector_3, "Project build path: ")
+        selector_3.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        # create assemble body
+        body = (
+            ptg.Window(
+                "",
+                "Show saved Configuration - " + execution_configuration.id,
+                "",
+                ptg.InputField(execution_configuration.label, prompt="Label: "),
+                ptg.InputField(execution_configuration.description, prompt="Description: "),
+                ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
+                ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
+                ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
+                selector_1,
+                selector_2,
+                selector_3,
+                ptg.InputField(execution_configuration.project_configure_options, prompt="Project configure options: "),
+                ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
+                ptg.Container(
+                    "Additional notes:",
+                    ptg.InputField(
+                        execution_configuration.notes, multiline=True
+                    ),
+                    box="EMPTY_VERTICAL",
+                ),
+                box="DOUBLE",
+            )
+            .set_title("[210 bold]Show execution configuration")
+        )
 
     buttons = (ptg.Window(
         ptg.Label(value="[orange bold]Warning:"),
@@ -181,12 +224,25 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     wizard.show_body_windows(manager, [(body, 0.75), (buttons, 0.2)])
 
 
+def file_selector(button_obj, prompt_str):
+    selected_dir = filedialog.askdirectory()
+    if type(selected_dir) != str:
+        return
+    button_obj.label = prompt_str + selected_dir
+
+
 def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration, restart_wizard=True):
     values = dict()
     # update execution_configuration
     for widget in window:
         if isinstance(widget, ptg.InputField):
             values[widget.prompt] = widget.value
+            continue
+
+        if isinstance(widget, ptg.Button):
+            key = widget.label[0 : widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2 : ]
+            values[key] = value
             continue
 
         if isinstance(widget, ptg.Container):
@@ -218,6 +274,12 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     for widget in window:
         if isinstance(widget, ptg.InputField):
             values[widget.prompt] = widget.value
+            continue
+
+        if isinstance(widget, ptg.Button):
+            key = widget.label[0 : widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2 : ]
+            values[key] = value
             continue
 
         if isinstance(widget, ptg.Container):
@@ -264,6 +326,13 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
         if isinstance(widget, ptg.InputField):
             values[widget.prompt] = widget.value
             continue
+
+        if isinstance(widget, ptg.Button):
+            key = widget.label[0 : widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2 : ]
+            values[key] = value
+            continue
+
         if isinstance(widget, ptg.Container):
             label, field = iter(widget)
             values[label.value] = field.value

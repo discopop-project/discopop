@@ -30,7 +30,7 @@ def main(arguments: Arguments):
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
 
-    wizard = DiscoPoPConfigurationWizard(config_dir)
+    wizard = DiscoPoPConfigurationWizard(config_dir, arguments)
     print()
 
 
@@ -45,9 +45,13 @@ class DiscoPoPConfigurationWizard(object):
     body_width_stack: List[Tuple[float, float]] = []  # (body_left width, body_right width)
     console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
     console_window = None
+    arguments: Arguments
 
-    def __init__(self, config_dir: str):
+    def __init__(self, config_dir: str, arguments: Arguments):
+        self.arguments = arguments
+
         self.initialize_screen(config_dir)
+
 
     def initialize_screen(self, config_dir: str):
         CONFIG = """
