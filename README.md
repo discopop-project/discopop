@@ -31,15 +31,5 @@ Detailed information about each execution step, the setup as well as the functio
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
 - [Walk-through Example](https://discopop-project.github.io/discopop/Quickstart/Example/)
 
-## TL;DR
-### Setup
-```
-	sudo apt-get install git build-essential cmake libclang-11-dev clang-11 llvm-11 python3-pip
-	git clone https://github.com/discopop-project/discopop.git
-	cd discopop && mkdir build && cd build
-	cmake .. && make && cd ..
-	pip install .
-```
-
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
