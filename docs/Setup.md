@@ -14,6 +14,10 @@ Additionally, you need to install LLVM on your system. Currently, DiscoPoP only 
 
     sudo apt-get install libclang-11-dev clang-11 llvm-11
 
+If you want to make use of the [Configuration](Profiling/Tutorials/Configuration_Wizard.md) or [Execution Wizard](Profiling/Tutorials/Execution_Wizard.md) for a simplified analysis of your project, you additionally need a working installation of [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
+
+
+
 ## DiscoPoP profiler installation
 First, clone the source code into a designated folder. 
 
@@ -36,3 +40,28 @@ If you have installed LLVM <b>using the package manager</b>, specifying this var
 Once the configuration process is successfully finished, compile the DiscoPoP libraries using `make`. All created shared objects will be stored in the build directory and can be found inside a folder named `libi/`.
 
 	make
+
+
+## Installation of Python Modules
+The included Python modules `discopop_explorer` and `discopop_wizard` can be installed using `pip` by executing the following command in the base directory of DiscoPoP:
+
+	pip install .
+
+Installing the modules allows the simple invocation of those via
+
+	discopop_explorer
+
+and
+
+	discopop_wizard
+
+respectively. The [quickstart example](Quickstart/Example.md) will assume this kind of installation.
+However, if you do not want to install the modules, they can be invoked using:
+
+	python3 -m discopop_explorer
+
+and
+
+	python3 -m discopop_wizard
+
+respectively.

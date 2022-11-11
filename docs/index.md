@@ -23,7 +23,7 @@ A short summary of the necessary steps can be found on the [quickstart setup](Qu
 
 ## Running the DiscoPoP Profiler
 After completing the setup, an instrumented Version of your code needs to be executed in order to gather the necessary information.
-The included analyses and generated data are described [here](Profiling/Analyses_and_data.md).
+The included analyses and generated data are described [here](Profiling/Profiling.md).
 The instrumentation and execution can be done [manually](Profiling/Tutorials/Manual.md).
 However, to simplify the process we suggest to use one of the provided tools (GUI: [Configuration Wizard](Profiling/Tutorials/Configuration_Wizard.md), Script: [Execution Wizard](Profiling/Tutorials/Execution_Wizard.md)), if your project fulfills the following criteria:
 	- Build system: Make

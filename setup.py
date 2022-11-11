@@ -39,7 +39,7 @@ setup(
     description="DiscoPoP is a tool that helps software developers parallelize their "
                 "programs with threads. It discovers potential parallelism in a "
                 "sequential program and makes recommendations on how to exploit it.",
-    long_description=open(SRC / "README.md").read(),
+#long_description=open(SRC / "README.md").read(),
     long_description_content_type="text/markdown",
     install_requires=get_requirements(),
     python_requires=">=3.6",
