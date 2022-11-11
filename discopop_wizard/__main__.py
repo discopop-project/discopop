@@ -6,7 +6,24 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.wizard import main
+import argparse
+
+
+def convert_args(namespace_args: argparse.Namespace) -> Arguments:
+    """Stores args into an Arguments object."""
+    return_arg = Arguments()
+    return_arg.no_gui = namespace_args.no_gui
+    return return_arg
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='DiscoPoP Configuration Wizard')
+
+    parser.add_argument('--no-gui', action='store_true',
+                        help='Disable GUI prompts, used for headless environments.')
+
+    args = parser.parse_args()
+
+    main(convert_args(args))

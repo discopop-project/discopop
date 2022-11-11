@@ -14,13 +14,14 @@ from typing import List, Tuple, cast, Optional
 import pytermgui as ptg
 from pytermgui.window_manager.layouts import Relative, Static, Auto, Slot
 
+from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.screens.main import push_main_screen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
 from discopop_wizard.screens.utils import exit_program
 
 
-def main():
+def main(arguments: Arguments):
     print("starting DiscoPoP Wizard...\n")
     source_dir = dirname(os.path.abspath(__file__))  # source_dir: discopop/discopop_wizard
     config_dir = os.path.join(source_dir, ".config")
