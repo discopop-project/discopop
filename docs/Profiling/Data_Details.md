@@ -1,11 +1,11 @@
 ---
 layout: default
-title: Gathered Data - Details
+title: Gathered Data
 parent: Profiling
 nav_order: 2
 ---
 
-# Gathered Data - Detailed Explanation
+# Gathered Data
 
 ## Computational Units (CUs)
 

@@ -12,13 +12,6 @@ This data is gathered using a mixture of static and dynamic code analyses.
 The static code analyses as well as the instrumentation of the target code for the dynamic analyses are conveniently bundled into a single `DiscoPoP` optimizer pass.
 Detailed instructions on how to apply the pass can be found at the [Tutorials](Tutorials/Tutorials.md) pages.
 
-## Static Analyses
-
-## Dynamic Analyses
-
-## Gathered Data
-TODO: Brief overview of the gathered data.
-
-A detailed explanation of the gathered data, in particular the used formats can be found [here](Data_Details.md).
+A detailed explanation of the gathered data, and in particular the used formats can be found [here](Data_Details.md).
 
 
