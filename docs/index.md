@@ -19,7 +19,7 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 
 ## Getting started
 For detailed instructions regarding the initial setup, please refer to the [initial setup](Setup.md) page.
-A short summary of the necessary steps can be found on the [TL;DR setup](TLDR/Setup.md) page.
+A short summary of the necessary steps can be found on the [quickstart setup](Quickstart/Setup.md) page.
 
 ## Running the DiscoPoP Profiler
 After completing the setup, an instrumented Version of your code needs to be executed in order to gather the necessary information.
