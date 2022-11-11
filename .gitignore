@@ -10,8 +10,6 @@
 data*/
 # our test data
 !/test/*/data/
-# our example data
-!/example/Makefile
 
 # discopop temporary files
 discopop-tmp/*
@@ -146,3 +144,6 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+# do not ignore our example data
+!/example/*
