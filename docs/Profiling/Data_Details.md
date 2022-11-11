@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Gathered Data
-parent: Profiling
+parent: DiscoPoP Profiler
 nav_order: 2
 ---
 

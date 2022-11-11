@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Tutorials
-parent: Profiling
+parent: DiscoPoP Profiler
 has_children: true
 permalink: /Profiling/Tutorials
 ---

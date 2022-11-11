@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Example - TODO
+title: Example
 parent: Quickstart
 nav_order: 3
 ---
@@ -87,4 +87,4 @@ One important thing to note is, however, that the second `Do-all` suggestion men
 Nevertheless, both are reported as `Do-all` patterns due to their similarities with regard to the OpenMP code used in order to implement the suggestions.
 
 <br>
-<i>Note: This behavior will be fixed in the near future to further increase the readability of the created suggestions without tool support.</i>
+<i>Note: This potentially unclear reporting of `Do-all` and `Reduction` patterns will be fixed in the near future to further increase the readability of the created suggestions without tool support.</i>
