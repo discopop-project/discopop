@@ -146,4 +146,6 @@ CTestTestfile.cmake
 _deps
 
 # do not ignore our example data
-!/example/*
+/example/*
+!/example/Makefile
+!/example/example.cpp
