@@ -11,7 +11,6 @@ import string
 import random
 from typing import List
 
-import jsons
 import pytermgui as ptg
 
 from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration

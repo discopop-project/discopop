@@ -10,7 +10,6 @@ import os
 import random
 import string
 
-import jsons
 from typing import List, TextIO
 
 from pytermgui import Collapsible, Container, Splitter, Window, Button
