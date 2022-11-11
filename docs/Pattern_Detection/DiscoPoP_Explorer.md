@@ -1,6 +1,6 @@
 ---
 layout: default
-title: DiscoPoP Explorer - TODO
+title: DiscoPoP Explorer
 parent: Pattern Detection
 nav_order: 1
 ---
