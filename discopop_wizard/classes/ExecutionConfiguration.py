@@ -27,7 +27,7 @@ class ExecutionConfiguration(object):
     executable_arguments: str
     project_path: str
     linker_flags: str
-    threads: str
+    build_threads: str
     # optional
     notes: str
     make_target: str
@@ -61,10 +61,10 @@ class ExecutionConfiguration(object):
                 self.executable_name = line[line.index("=")+1:]
             if line.startswith("EXE_ARGS="):
                 self.executable_arguments = line[line.index("=")+1:]
-            if line.startswith("THREAD_NUM="):
-                self.threads = line[line.index("=")+1:]
+            if line.startswith("BUILD_THREAD_NUM="):
+                self.build_threads = line[line.index("=") + 1:]
             if line.startswith("PROJECT_PATH="):
-                self.project_base_path = line[line.index("=")+1:]
+                self.project_path = line[line.index("=") + 1:]
             if line.startswith("PROJECT_LINKER_FLAGS="):
                 self.linker_flags = line[line.index("=")+1:]
             if line.startswith("MAKE_TARGET="):
@@ -81,8 +81,8 @@ class ExecutionConfiguration(object):
         self.description = values["Description: "]
         self.executable_name = values["Executable name: "]
         self.executable_arguments = values["Executable arguments: "]
-        self.threads = values["Available threads: "]
-        self.project_base_path = values["Project path: "]
+        self.build_threads = values["Build threads: "]
+        self.project_path = values["Project path: "]
         self.linker_flags = values["Project linker flags: "]
         self.notes = values["Additional notes:"]
         self.make_target = values["Make target: "]
@@ -97,8 +97,8 @@ class ExecutionConfiguration(object):
         config_str += "DESCRIPTION=" + self.description + "\n"
         config_str += "EXE_NAME=" + self.executable_name + "\n"
         config_str += "EXE_ARGS=" + self.executable_arguments + "\n"
-        config_str += "THREAD_NUM=" + self.threads + "\n"
-        config_str += "PROJECT_PATH=" + self.project_base_path + "\n"
+        config_str += "BUILD_THREAD_NUM=" + self.build_threads + "\n"
+        config_str += "PROJECT_PATH=" + self.project_path + "\n"
         config_str += "PROJECT_LINKER_FLAGS=" + self.linker_flags + "\n"
         config_str += "MAKE_TARGET=" + self.make_target + "\n"
         config_str += "NOTES=" + self.notes + "\n"
@@ -129,8 +129,8 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
                 ptg.InputField(execution_configuration.description, prompt="Description: "),
                 ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
                 ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
-                ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
-                ptg.InputField(execution_configuration.project_base_path, prompt="Project path: "),
+                ptg.InputField(execution_configuration.build_threads, prompt="Build threads: "),
+                ptg.InputField(execution_configuration.project_path, prompt="Project path: "),
                 ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
                 ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
                 ptg.Container(
@@ -147,7 +147,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_base_path)
+        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_path)
         selector_1.onclick = lambda *_: file_selector(selector_1, "Project path: ")
         selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
         # create assemble body
@@ -160,7 +160,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
                 ptg.InputField(execution_configuration.description, prompt="Description: "),
                 ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
                 ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
-                ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
+                ptg.InputField(execution_configuration.build_threads, prompt="Build threads: "),
                 selector_1,
                 ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
                 ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
@@ -316,7 +316,24 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
     execution_configuration.init_from_values(values)
 
     # assemble command for execution
-    command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
+    #test_command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
+    # settings
+    command = wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
+    command += "--llvm-clang " + wizard.settings.clang + " "
+    command += "--llvm-clang++ " + wizard.settings.clangpp + " "
+    command += "--llvm-ar " + wizard.settings.llvm_ar + " "
+    command += "--llvm-link " + wizard.settings.llvm_link + " "
+    command += "--llvm-dis " + wizard.settings.llvm_dis + " "
+    command += "--llvm-opt " + wizard.settings.llvm_opt + " "
+    command += "--llvm-llc " + wizard.settings.llvm_llc + " "
+    command += "--gllvm " + wizard.settings.go_bin + " "
+    # execution configuration
+    command += "--project " + execution_configuration.project_path + " "
+    command += "--linker-flags " + execution_configuration.linker_flags + " "
+    command += "--executable-name " + execution_configuration.executable_name + " "
+    command += "--executable-arguments " + execution_configuration.executable_arguments + " "
+    command += "--build-threads " + execution_configuration.build_threads + " "
+
     # output to console
     wizard.print_to_console(manager, "Executing command: " + str(command.split(" ")))
 
