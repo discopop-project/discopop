@@ -13,6 +13,7 @@ import pytermgui as ptg
 
 from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
 from discopop_wizard.screens.add_configuration import push_add_configuration_screen
+from discopop_wizard.screens.settings import push_settings_screen
 from discopop_wizard.screens.utils import exit_program
 
 
@@ -30,7 +31,10 @@ def push_main_screen(manager: ptg.WindowManager, config_dir: str, wizard):
     #manager.add(body, assign="body_left")
 
     buttons = (ptg.Window(
-        ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)]
+        ["Add Configuration", lambda *_: push_add_configuration_screen(manager, config_dir, wizard)],
+        "",
+        "",
+        ["Settings", lambda *_: push_settings_screen(manager, config_dir, wizard)],
         )
         .set_title("[210 bold]Screen specific options")
     )
@@ -49,8 +53,8 @@ def display_execution_configurations(manager: ptg.WindowManager, config_dir: str
 
 def load_execution_configurations(config_dir: str) -> List[ExecutionConfiguration]:
     execution_configs: List[ExecutionConfiguration] = []
-    for filename in os.listdir(config_dir):
-        with open(os.path.join(config_dir, filename), 'r') as script:
+    for filename in os.listdir(os.path.join(config_dir, "execution_configurations")):
+        with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), 'r') as script:
             config = ExecutionConfiguration()
             config.init_from_script(script)
             execution_configs.append(config)

@@ -30,6 +30,11 @@ def main(arguments: Arguments):
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
 
+    # check if CONFIG file exists. if not, create it.
+    if not os.path.exists(os.path.join(config_dir, "CONFIG.txt")):
+        with open(os.path.join(config_dir, "CONFIG.txt"), "w+"):
+            pass
+
     wizard = DiscoPoPConfigurationWizard(config_dir, arguments)
     print()
 

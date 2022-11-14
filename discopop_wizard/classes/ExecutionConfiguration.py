@@ -250,7 +250,7 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
     values["ID"] = execution_configuration.id
     execution_configuration.init_from_values(values)
 
-    config_path = os.path.join(config_dir, execution_configuration.id + "_" + execution_configuration.label + ".sh")
+    config_path = os.path.join(config_dir, "execution_configurations", execution_configuration.id + "_" + execution_configuration.label + ".sh")
     # remove old config if present
     if os.path.exists(config_path):
         os.remove(config_path)
@@ -287,7 +287,7 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     values["Label: "] = "Copy of " + values["Label: "]
     new_config = ExecutionConfiguration()
     new_config.init_from_values(values)
-    config_path = os.path.join(config_dir, new_config.id + "_" + new_config.label + ".sh")
+    config_path = os.path.join(config_dir, "execution_configurations", new_config.id + "_" + new_config.label + ".sh")
     # remove old config if present
     if os.path.exists(config_path):
         os.remove(config_path)
@@ -305,7 +305,7 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
 def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
 
     # delete configuration file if it exists
-    config_path = os.path.join(config_dir, execution_configuration.id + "_" + execution_configuration.label + ".sh")
+    config_path = os.path.join(config_dir, "execution_configurations", execution_configuration.id + "_" + execution_configuration.label + ".sh")
     if os.path.exists(config_path):
         os.remove(config_path)
 
