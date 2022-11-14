@@ -21,6 +21,8 @@ def push_settings_screen(manager: ptg.WindowManager, config_dir: str, wizard):
                 "",
                 "Specify paths to the following executables and directories.",
                 "",
+                ptg.InputField(wizard.settings.discopop_dir, prompt="DiscoPoP directory: "),
+                ptg.InputField(wizard.settings.discopop_build_dir, prompt="DiscoPoP build: "),
                 ptg.InputField(wizard.settings.clang, prompt="clang (exe): "),
                 ptg.InputField(wizard.settings.clangpp, prompt="clang++ (exe): "),
                 ptg.InputField(wizard.settings.llvm_ar, prompt="llvm-ar (exe): "),
@@ -60,12 +62,21 @@ def push_settings_screen(manager: ptg.WindowManager, config_dir: str, wizard):
         selector_8 = ptg.Button(label="go (bin directory): " + wizard.settings.go_bin)
         selector_8.onclick = lambda *_: directory_selector(selector_8, "go (bin directory): ")
         selector_8.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_9 = ptg.Button(label="DiscoPoP directory: " + wizard.settings.discopop_dir)
+        selector_9.onclick = lambda *_: directory_selector(selector_9, "DiscoPoP directory: ")
+        selector_9.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_10 = ptg.Button(label="DiscoPoP build: " + wizard.settings.discopop_build_dir)
+        selector_10.onclick = lambda *_: directory_selector(selector_10, "DiscoPoP build: ")
+        selector_10.parent_align = ptg.enums.HorizontalAlignment.LEFT
+
         # create assemble body
         body = (
             ptg.Window(
                 "",
                 "Specify paths to the following executables and directories.",
                 "",
+                selector_9,
+                selector_10,
                 selector_1,
                 selector_2,
                 selector_3,
