@@ -38,36 +38,44 @@ def push_settings_screen(manager: ptg.WindowManager, config_dir: str, wizard):
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="clang (exe): " + wizard.settings.clang)
-        selector_1.onclick = lambda *_: file_selector(selector_1, "clang (exe): ")
-        selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_2 = ptg.Button(label="clang++ (exe): " + wizard.settings.clangpp)
-        selector_2.onclick = lambda *_: file_selector(selector_2, "clang++ (exe): ")
-        selector_2.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_3 = ptg.Button(label="llvm-ar (exe): " + wizard.settings.llvm_ar)
-        selector_3.onclick = lambda *_: file_selector(selector_3, "llvm-ar (exe): ")
-        selector_3.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_4 = ptg.Button(label="llvm-link (exe): " + wizard.settings.llvm_link)
-        selector_4.onclick = lambda *_: file_selector(selector_4, "llvm-link (exe): ")
-        selector_4.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_5 = ptg.Button(label="llvm-dis (exe): " + wizard.settings.llvm_dis)
-        selector_5.onclick = lambda *_: file_selector(selector_5, "llvm-dis (exe): ")
-        selector_5.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_6 = ptg.Button(label="llvm-opt (exe): " + wizard.settings.llvm_opt)
-        selector_6.onclick = lambda *_: file_selector(selector_6, "llvm-opt (exe): ")
-        selector_6.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_7 = ptg.Button(label="llvm-llc (exe): " + wizard.settings.llvm_llc)
-        selector_7.onclick = lambda *_: file_selector(selector_7, "llvm-llc (exe): ")
-        selector_7.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_8 = ptg.Button(label="go (bin directory): " + wizard.settings.go_bin)
-        selector_8.onclick = lambda *_: directory_selector(selector_8, "go (bin directory): ")
-        selector_8.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_9 = ptg.Button(label="DiscoPoP directory: " + wizard.settings.discopop_dir)
-        selector_9.onclick = lambda *_: directory_selector(selector_9, "DiscoPoP directory: ")
-        selector_9.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_10 = ptg.Button(label="DiscoPoP build: " + wizard.settings.discopop_build_dir)
-        selector_10.onclick = lambda *_: directory_selector(selector_10, "DiscoPoP build: ")
-        selector_10.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_1 = ptg.Button(label="clang (exe): " + wizard.settings.clang,
+                                onclick=lambda *_: file_selector(selector_1, "clang (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_2 = ptg.Button(label="clang++ (exe): " + wizard.settings.clangpp,
+                                onclick=lambda *_: file_selector(selector_2, "clang++ (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+        selector_3 = ptg.Button(label="llvm-ar (exe): " + wizard.settings.llvm_ar,
+                                onclick=lambda *_: file_selector(selector_3, "llvm-ar (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_4 = ptg.Button(label="llvm-link (exe): " + wizard.settings.llvm_link,
+                                onclick=lambda *_: file_selector(selector_4, "llvm-link (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_5 = ptg.Button(label="llvm-dis (exe): " + wizard.settings.llvm_dis,
+                                onclick=lambda *_: file_selector(selector_5, "llvm-dis (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_6 = ptg.Button(label="llvm-opt (exe): " + wizard.settings.llvm_opt,
+                                onclick=lambda *_: file_selector(selector_6, "llvm-opt (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_7 = ptg.Button(label="llvm-llc (exe): " + wizard.settings.llvm_llc,
+                                onclick=lambda *_: file_selector(selector_7, "llvm-llc (exe): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_8 = ptg.Button(label="go (bin directory): " + wizard.settings.go_bin,
+                                onclick=lambda *_: directory_selector(selector_8, "go (bin directory): "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_9 = ptg.Button(label="DiscoPoP directory: " + wizard.settings.discopop_dir,
+                                onclick=lambda *_: directory_selector(selector_9, "DiscoPoP directory: "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
+        selector_10 = ptg.Button(label="DiscoPoP build: " + wizard.settings.discopop_build_dir,
+                                 onclick=lambda *_: directory_selector(selector_10, "DiscoPoP build: "),
+                                 parent_align=ptg.enums.HorizontalAlignment.LEFT)
 
         # create assemble body
         body = (
@@ -103,8 +111,8 @@ def save_settings(manager: ptg.WindowManager, window: ptg.Window, config_dir: st
             continue
 
         if isinstance(widget, ptg.Button):
-            key = widget.label[0 : widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2 : ]
+            key = widget.label[0: widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2:]
             values[key] = value
             continue
 
@@ -134,6 +142,7 @@ def save_settings(manager: ptg.WindowManager, window: ptg.Window, config_dir: st
         manager.stop()
         wizard.clear_window_stacks()
         wizard.initialize_screen(config_dir)
+
 
 def __check_values(values: dict, wizard, manager) -> bool:
     """returns true, if all settings have valid values.
