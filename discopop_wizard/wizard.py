@@ -16,6 +16,7 @@ from pytermgui.window_manager.layouts import Relative, Static, Auto, Slot
 
 from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
+from discopop_wizard.screens.full_log import push_full_log_screen
 from discopop_wizard.screens.main import push_main_screen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
@@ -53,6 +54,7 @@ class DiscoPoPConfigurationWizard(object):
     body_window_stack: List[List[Tuple[ptg.WindowManager, float]]] = []
     body_width_stack: List[Tuple[float, float]] = []  # (body_left width, body_right width)
     console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
+    full_log: List[str] = ["Welcome to the DiscoPoP Configuration Wizard."]
     console_window = None
     arguments: Arguments
     settings: Optional[Settings]
@@ -110,7 +112,8 @@ class DiscoPoPConfigurationWizard(object):
             # 20% of the terminal's height.
             manager.layout.add_slot("body_5", width=0.2, height=0.7)
             manager.layout.add_break()
-            manager.layout.add_slot("console", height=0.2)
+            manager.layout.add_slot("console", width=0.85, height=0.2)
+            manager.layout.add_slot("console_buttons", width=0.1, height=0.2)
             manager.layout.add_break()
             # A footer with a static height of 10%
             manager.layout.add_slot("footer_left", height=3)
@@ -156,6 +159,11 @@ class DiscoPoPConfigurationWizard(object):
                 break
         manager.add(window, assign="console")
         self.console_window = window
+
+        buttons = (ptg.Window(
+            ptg.Button(label="Full log", onclick=lambda *_: push_full_log_screen(manager, wizard=self))
+        ))
+        manager.add(buttons, assign="console_buttons")
 
     def show_body_windows(self, manager: ptg.WindowManager, windows: List[Tuple[ptg.WindowManager, float]],
                           push_to_stack=True):  # [(window, width)]
@@ -204,14 +212,19 @@ class DiscoPoPConfigurationWizard(object):
     def __fill_console(self, container: ptg.Container):
         for line, style in self.console_log:
             if style == ConsoleStyles.NORMAL:
-                container.lazy_add(ptg.Label(line))
+                label = ptg.Label(line)
             elif style == ConsoleStyles.WARNING:
-                container.lazy_add(ptg.Label("[orange]" + line))
+                label = ptg.Label("[orange]" + line)
             elif style == ConsoleStyles.ERROR:
-                container.lazy_add(ptg.Label("[red bold]" + line))
+                label = ptg.Label("[red bold]" + line)
+            label.parent_align = ptg.enums.HorizontalAlignment.LEFT
+            container.lazy_add(label)
             container.get_lines()
             container.scroll(1 + line.count("\n"))
 
     def print_to_console(self, manager: ptg.WindowManager, output: str, style=ConsoleStyles.NORMAL):
         self.console_log.append((output, style))
+        self.full_log.append(output)
+        if len(self.console_log) > 10:  # limit console log to last 10 lines for performance reasons
+            del self.console_log[0]
         self.__show_output_console(manager)
