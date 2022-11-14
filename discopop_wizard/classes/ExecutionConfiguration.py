@@ -19,18 +19,19 @@ from tkinter import filedialog
 
 
 class ExecutionConfiguration(object):
+    # required
     id: str
     label: str
     description: str
     executable_name: str
     executable_arguments: str
-    project_base_path: str
-    project_source: str
-    project_build: str
-    project_configure_options: str
+    project_path: str
     linker_flags: str
     threads: str
+    # optional
     notes: str
+    make_target: str
+
 
     def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard):
 #        widget = Collapsible(self.label + ": " + self.description)
@@ -38,15 +39,6 @@ class ExecutionConfiguration(object):
         details = ptg.Button(
             label="Label: " + self.label + "    " + "Description: " + self.description,
             onclick=lambda *_: push_execution_configuration_screen(manager, config_dir, self, wizard)
-#            "Executable name: " + self.executable_name,
-#            "Executable arguments: " + self.executable_arguments,
-#            "Available threads: " + self.threads,
-#            "Project base path: " + self.project_base_path,
-#            "Project source path: " + self.project_source,
-#            "Project build path: " + self.project_build,
-#            "Project configure options: " + self.project_configure_options,
-#            "Project linker flags: " + self.linker_flags,
-#            "Additional notes: " + self.notes
         )
         widget.lazy_add(details)
         return widget
@@ -71,16 +63,12 @@ class ExecutionConfiguration(object):
                 self.executable_arguments = line[line.index("=")+1:]
             if line.startswith("THREAD_NUM="):
                 self.threads = line[line.index("=")+1:]
-            if line.startswith("PROJECT_BASE="):
+            if line.startswith("PROJECT_PATH="):
                 self.project_base_path = line[line.index("=")+1:]
-            if line.startswith("PROJECT_SOURCE="):
-                self.project_source = line[line.index("=")+1:]
-            if line.startswith("PROJECT_BUILD="):
-                self.project_build = line[line.index("=")+1:]
-            if line.startswith("PROJECT_CONFIGURE_OPTIONS="):
-                self.project_configure_options = line[line.index("=")+1:]
             if line.startswith("PROJECT_LINKER_FLAGS="):
                 self.linker_flags = line[line.index("=")+1:]
+            if line.startswith("MAKE_TARGET="):
+                self.make_target = line[line.index("=")+1:]
             if line.startswith("NOTES="):
                 self.notes = line[line.index("=")+1:]
 
@@ -94,12 +82,10 @@ class ExecutionConfiguration(object):
         self.executable_name = values["Executable name: "]
         self.executable_arguments = values["Executable arguments: "]
         self.threads = values["Available threads: "]
-        self.project_base_path = values["Project base path: "]
-        self.project_source = values["Project source path: "]
-        self.project_build = values["Project build path: "]
-        self.project_configure_options = values["Project configure options: "]
+        self.project_base_path = values["Project path: "]
         self.linker_flags = values["Project linker flags: "]
         self.notes = values["Additional notes:"]
+        self.make_target = values["Make target: "]
 
     def get_as_executable_script(self) -> str:
         """returns a representation of the configuration which will be stored in a script file
@@ -112,11 +98,9 @@ class ExecutionConfiguration(object):
         config_str += "EXE_NAME=" + self.executable_name + "\n"
         config_str += "EXE_ARGS=" + self.executable_arguments + "\n"
         config_str += "THREAD_NUM=" + self.threads + "\n"
-        config_str += "PROJECT_BASE=" + self.project_base_path + "\n"
-        config_str += "PROJECT_SOURCE=" + self.project_source + "\n"
-        config_str += "PROJECT_BUILD=" + self.project_build + "\n"
-        config_str += "PROJECT_CONFIGURE_OPTIONS=" + self.project_configure_options + "\n"
+        config_str += "PROJECT_PATH=" + self.project_base_path + "\n"
         config_str += "PROJECT_LINKER_FLAGS=" + self.linker_flags + "\n"
+        config_str += "MAKE_TARGET=" + self.make_target + "\n"
         config_str += "NOTES=" + self.notes + "\n"
         config_str += "### END CONFIG ###\n\n"
 
@@ -146,11 +130,9 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
                 ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
                 ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
                 ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
-                ptg.InputField(execution_configuration.project_base_path, prompt="Project base path: "),
-                ptg.InputField(execution_configuration.project_source, prompt="Project source path: "),
-                ptg.InputField(execution_configuration.project_build, prompt="Project build path: "),
-                ptg.InputField(execution_configuration.project_configure_options, prompt="Project configure options: "),
+                ptg.InputField(execution_configuration.project_base_path, prompt="Project path: "),
                 ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
+                ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
                 ptg.Container(
                     "Additional notes:",
                     ptg.InputField(
@@ -165,15 +147,9 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="Project base path: " + execution_configuration.project_base_path)
-        selector_1.onclick = lambda *_: file_selector(selector_1, "Project base path: ")
+        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_base_path)
+        selector_1.onclick = lambda *_: file_selector(selector_1, "Project path: ")
         selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_2 = ptg.Button(label="Project source path: " + execution_configuration.project_source)
-        selector_2.onclick = lambda *_: file_selector(selector_2, "Project source path: ")
-        selector_2.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_3 = ptg.Button(label="Project build path: " + execution_configuration.project_build)
-        selector_3.onclick = lambda *_: file_selector(selector_3, "Project build path: ")
-        selector_3.parent_align = ptg.enums.HorizontalAlignment.LEFT
         # create assemble body
         body = (
             ptg.Window(
@@ -186,10 +162,8 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
                 ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
                 ptg.InputField(execution_configuration.threads, prompt="Available threads: "),
                 selector_1,
-                selector_2,
-                selector_3,
-                ptg.InputField(execution_configuration.project_configure_options, prompt="Project configure options: "),
                 ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
+                ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
                 ptg.Container(
                     "Additional notes:",
                     ptg.InputField(

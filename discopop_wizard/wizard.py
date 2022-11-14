@@ -31,6 +31,8 @@ def main(arguments: Arguments):
     # check if config exists, if not, initialize config folder and files
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
+    if not os.path.exists(os.path.join(config_dir, "execution_configurations")):
+        os.mkdir(os.path.join(config_dir, "execution_configurations"))
 
     # check if SETTINGS file exists. if not, create it.
     if not os.path.exists(os.path.join(config_dir, "SETTINGS.txt")):

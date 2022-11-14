@@ -32,11 +32,9 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
                 ptg.InputField("text", prompt="Executable name: "),
                 ptg.InputField("text", prompt="Executable arguments: "),
                 ptg.InputField("int", prompt="Available threads: "),
-                ptg.InputField("path", prompt="Project base path: "),
-                ptg.InputField("path", prompt="Project source path: "),
-                ptg.InputField("path", prompt="Project build path: "),
-                ptg.InputField("text", prompt="Project configure options: "),
+                ptg.InputField("path", prompt="Project path: "),
                 ptg.InputField("text", prompt="Project linker flags: "),
+                ptg.InputField("text", prompt="Make target: "),
                 ptg.Container(
                     "Additional notes:",
                     ptg.InputField(
@@ -51,15 +49,9 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="Project base path: select")
-        selector_1.onclick = lambda *_: file_selector(selector_1, "Project base path: ")
+        selector_1 = ptg.Button(label="Project path: select")
+        selector_1.onclick = lambda *_: file_selector(selector_1, "Project path: ")
         selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_2 = ptg.Button(label="Project source path: ")
-        selector_2.onclick = lambda *_: file_selector(selector_2, "Project source path: ")
-        selector_2.parent_align = ptg.enums.HorizontalAlignment.LEFT
-        selector_3 = ptg.Button(label="Project build path: ")
-        selector_3.onclick = lambda *_: file_selector(selector_3, "Project build path: ")
-        selector_3.parent_align = ptg.enums.HorizontalAlignment.LEFT
         # create assemble body
         body = (
             ptg.Window(
@@ -72,10 +64,8 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
                 ptg.InputField("text", prompt="Executable arguments: "),
                 ptg.InputField("int", prompt="Available threads: "),
                 selector_1,
-                selector_2,
-                selector_3,
-                ptg.InputField("text", prompt="Project configure options: "),
                 ptg.InputField("text", prompt="Project linker flags: "),
+                ptg.InputField("text", prompt="Make target: "),
                 ptg.Container(
                     "Additional notes:",
                     ptg.InputField(
