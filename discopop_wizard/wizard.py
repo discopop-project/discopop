@@ -15,9 +15,11 @@ import pytermgui as ptg
 from pytermgui.window_manager.layouts import Relative, Static, Auto, Slot
 
 from discopop_wizard.classes.Arguments import Arguments
+from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.main import push_main_screen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
+from discopop_wizard.screens.settings import push_settings_screen
 from discopop_wizard.screens.utils import exit_program
 
 
@@ -30,9 +32,9 @@ def main(arguments: Arguments):
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
 
-    # check if CONFIG file exists. if not, create it.
-    if not os.path.exists(os.path.join(config_dir, "CONFIG.txt")):
-        with open(os.path.join(config_dir, "CONFIG.txt"), "w+"):
+    # check if SETTINGS file exists. if not, create it.
+    if not os.path.exists(os.path.join(config_dir, "SETTINGS.txt")):
+        with open(os.path.join(config_dir, "SETTINGS.txt"), "w+"):
             pass
 
     wizard = DiscoPoPConfigurationWizard(config_dir, arguments)
@@ -51,9 +53,17 @@ class DiscoPoPConfigurationWizard(object):
     console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
     console_window = None
     arguments: Arguments
+    settings: Optional[Settings]
 
     def __init__(self, config_dir: str, arguments: Arguments):
         self.arguments = arguments
+        # check if settings exist
+        if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
+            # no settings exist
+            self.settings = Settings()
+        else:
+            # load settings
+            self.settings = load_from_config_file(config_dir)
 
         self.initialize_screen(config_dir)
 
@@ -106,7 +116,14 @@ class DiscoPoPConfigurationWizard(object):
 
             self.__show_footer_buttons(manager)
             self.__show_output_console(manager)
+
             push_main_screen(manager, config_dir, self)
+
+            # show settings screen if first start
+            if not self.settings.initialized:
+                push_settings_screen(manager, config_dir, self)
+
+
 
     def __show_footer_buttons(self, manager: ptg.WindowManager):
         window = ptg.Window(
