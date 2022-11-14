@@ -38,7 +38,6 @@ class Settings(object):
 
     def get_as_json_string(self) -> str:
         """returns a representation of the settings which will be stored in a configuration file."""
-        import jsons
         return jsons.dumps(self)
 
 
