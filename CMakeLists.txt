@@ -28,6 +28,5 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
 add_subdirectory(DiscoPoP)
-add_subdirectory(DPReduction)
 
 add_subdirectory(rtlib)
