@@ -13,6 +13,8 @@ import jsons
 
 class Settings(object):
     initialized = False
+    discopop_dir: str = ""
+    discopop_build_dir: str = ""
     clang: str = ""
     clangpp: str = ""
     llvm_ar: str = ""
@@ -26,6 +28,8 @@ class Settings(object):
         """values stems from reading the 'add_configuration' form."""
         for key in values:
             values[key] = values[key].replace("\n", ";;")
+        self.discopop_dir = values["DiscoPoP directory: "]
+        self.discopop_build_dir = values["DiscoPoP build: "]
         self.clang = values["clang (exe): "]
         self.clangpp = values["clang++ (exe): "]
         self.llvm_ar = values["llvm-ar (exe): "]
@@ -48,6 +52,8 @@ def load_from_config_file(config_dir: str) -> Settings:
             json_str += line
     value_dict = jsons.loads(json_str)
     settings = Settings()
+    settings.discopop_dir = value_dict["discopop_dir"]
+    settings.discopop_build_dir = value_dict["discopop_build_dir"]
     settings.clang = value_dict["clang"]
     settings.clangpp = value_dict["clangpp"]
     settings.llvm_ar = value_dict["llvm_ar"]
