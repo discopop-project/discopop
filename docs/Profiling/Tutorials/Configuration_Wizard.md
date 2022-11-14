@@ -62,6 +62,7 @@ However, it is possible to display the full log after the execution has finished
 
 ## Results
 As of right now, the created [parallelization suggestions](../../Pattern_Detection/Patterns) will be printed to the console and thus be visible in the `Full log`.
+Additionally, a file named `patterns.txt` will be created in the project folder, which stores the same information. 
 This is not an ideal solution and will be improved in the future.
 
 ## Data Storage
