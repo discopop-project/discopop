@@ -1,0 +1,314 @@
+#!/bin/bash
+
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License. See the LICENSE file in the package base
+# directory for details.
+#####################################################################################
+# DiscoPoP Execution Wizard
+# author: initial version by Bertin Görlich, November 2022
+# description: 
+#   Use this script to analyze a project with DiscoPoP, that is built using Makefiles
+#####################################################################################
+
+HELPTEXT="*** DiscoPoP Execution Wizard ***
+
+Use this tool to analyze a project that is built using Makefiles
+Use --help or -h to show this text and exit.
+Use -v or --verbose to get more information than you want.
+
+REQUIRED ARGUMENTS: Please use absolut paths!
+ --llvm-clang <path>
+ --llvm-clang++ <path>
+ --llvm-ar <path>
+ --llvm-link <path>
+ --llvm-dis <path>
+ --llvm-opt <path>
+ --llvm-llc <path>
+ --gllvm <path>
+ --project <path>
+ --linker-flags <flags>
+ --executable-name <name>
+ --executable-arguments <arguments>
+ --build-threads <number>
+
+OPTIONAL ARGUMENTS:
+ --make-target <target>
+"
+
+#####
+# Parse Arguments
+# based on https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+#####
+
+# Default Values for optional Arguments
+HELP=false
+VERBOSE=false
+COLORS=false
+MAKFILE_TARGET=""
+
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      HELP=true
+      shift # past argument
+      ;;
+    -v|--verbose)
+      VERBOSE=true
+      shift # past argument
+      ;;
+    -c|--color)
+      COLORS=true
+      shift # past argument
+      ;;
+    --llvm-clang)
+      LLVM_CLANG=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-clang++)
+      LLVM_CLANGPP=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-ar)
+      LLVM_AR=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-link)
+      LLVM_LINK=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-dis)
+      LLVM_DIS=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-opt)
+      LLVM_OPT=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --llvm-llc)
+      LLVM_LLC=$2
+      shift # past argument
+      shift # past value
+      ;;
+    --gllvm)
+      GLLVM="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --project)
+      PROJECT="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --linker-flags)
+      LINKER_FLAGS="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --executable-name)
+      EXECUTABLE_NAME="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --executable-arguments)
+      EXECUTABLE_ARGUMENTS="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --build-threads)
+      THREADS="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --make-target)
+      MAKFILE_TARGET="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+# this tool should not receive any positional arguments
+if [[ -n $1 ]]; then
+    echo "There should not be any positional arguments:"
+    echo "positional argument: $1"
+    exit 1
+fi
+
+#####
+# other variables
+#####
+
+# TODO make this more robust
+# (currently breaks if script is moved or DP is built somewhere else)
+DP="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+DP_BUILD=$DP/build
+GLLVM_LOG=$PROJECT/gllvm_log.txt
+
+# show helptext
+if [ "$HELP" = true ]; then
+    echo "$HELPTEXT"
+    exit 0
+fi
+
+#####
+# function to log with different levels and colorful output e.g.
+# log -i "some info"
+#####
+if [ "$COLORS" = true ]; then
+  DEF='\033[0m'     # no color / default
+  CYA='\033[0;36m'  # cyan
+  GRE='\033[0;32m'  # green
+  YEL='\033[1;33m'  # yellow
+  RED='\033[0;31m'  # red
+fi
+log () {
+  case "$1" in
+    -d|--dbug|--debug|--bug)
+      shift
+      echo -e "${CYA}DP_DBUG:${DEF} $*"
+      ;; # same code in default case *)
+    -i|--info|-l|--log)
+      shift
+      echo -e "${CYA}DP_INFO:${GRE} $*${DEF}"
+      ;;
+    -w|--warn)
+      shift
+      echo -e "${CYA}DP_WARN:${YEL} $*${DEF}"
+      ;;
+    -e|--err|--error)
+      shift
+      echo -e "${CYA}DP_ERRO:${RED} $*${DEF}"
+      ;;
+    # if no log level is specified, use debug level
+    *)
+      echo -e "${CYA}DP_DBUG:${DEF} $*"
+      ;;
+  esac
+}
+
+
+#####
+# show configuration
+#####
+
+log -i \
+  "CONFIGURATION:
+  llvm-clang  $LLVM_CLANG
+      $($LLVM_CLANG --version | grep version)
+  llvm-clang++ $LLVM_CLANGPP
+      $($LLVM_CLANGPP --version | grep version)
+  llvm-ar     $LLVM_AR
+      $($LLVM_AR --version | grep version)
+  llvm-link   $LLVM_LINK
+      $($LLVM_LINK --version | grep version)
+  llvm-dis    $LLVM_DIS
+      $($LLVM_DIS --version | grep version)
+  llvm-opt    $LLVM_OPT
+      $($LLVM_OPT --version | grep version)
+  llvm-llc    $LLVM_LLC
+      $($LLVM_LLC --version | grep version)
+  gllvm:      $GLLVM
+  project:    $PROJECT
+  ldFlags:    $LINKER_FLAGS
+  execName:   $EXECUTABLE_NAME
+  execArgs:   $EXECUTABLE_ARGUMENTS
+  threads:    $THREADS
+  discoPoP:   $DP
+  dp_build:   $DP_BUILD
+  gllvmLog:   $GLLVM_LOG"
+
+#####
+# configure gllvm
+#####
+
+#export LLVM_COMPILER_PATH="<path/to/llvm/build>"
+export LLVM_CC_NAME=$LLVM_CLANG
+export LLVM_CXX_NAME=$LLVM_CLANGPP
+export LLVM_AR_NAME=$LLVM_AR
+export LLVM_LINK_NAME=$LLVM_LINK
+export WLLVM_OUTPUT_LEVEL="AUDIT"  # can be used to more easily determine flags needed during the link step
+export WLLVM_OUTPUT_FILE=$GLLVM_LOG
+export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names"
+#export LLVM_LINK_FLAGS=""
+
+log -d "GLLVM SANITY CHECK:
+$($GLLVM/gsanity-check)" 
+
+#####
+# create FileMapping.txt,
+# build with gllvm,
+# create single .bc and .ll from the executable
+#####
+
+cd $PROJECT
+
+# create FileMapping.txt
+rm -f FileMapping.txt
+$DP/scripts/dp-fmap
+
+# build using gllvm as compiler
+log -i "Building your application..."
+log -d $(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)
+
+# create single .bc and .ll from the executable
+log -d $($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME)
+$LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
+
+#####
+# apply instrumentation and run
+#####
+
+# Run DiscoPoP Pass
+log -i "Running DiscoPoP Pass to analyze and instrument your application..."
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt
+
+log -i "Creating Executable..."
+$LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o
+$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
+
+# another way to get the executable from the .ll file without going via the .o object file:
+#$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.ll -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
+
+# Run DPReduction Pass
+log -i "Running DiscoPoP Reduction Analysis Pass to detect reduction operations..."
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDPReduction.so -DPReduction ${EXECUTABLE_NAME}.ll -disable-output -fm-path FileMapping.txt
+
+# Run the instrumented application
+log -i "Running instrumented application to detect data dependencies..."
+log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
+
+#####
+# run discopop_profiler to get parallelization suggestions
+#####
+
+log -i "Looking for parallelization opportunities..."
+PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt)
+
+# write patterns to file
+echo "$PATTERNS" > patterns.txt
+
+# log patterns to console
+PATTERNS=$(echo "$PATTERNS" | sed 's/^/  /')
+log -d "Detected Patterns:\n$PATTERNS"
