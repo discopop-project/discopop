@@ -32,9 +32,8 @@ class ExecutionConfiguration(object):
     notes: str
     make_target: str
 
-
     def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard):
-#        widget = Collapsible(self.label + ": " + self.description)
+        #        widget = Collapsible(self.label + ": " + self.description)
         widget = ptg.Container()
         details = ptg.Button(
             label="Label: " + self.label + "    " + "Description: " + self.description,
@@ -42,7 +41,6 @@ class ExecutionConfiguration(object):
         )
         widget.lazy_add(details)
         return widget
-
 
     def init_from_dict(self, loaded: dict):
         for key in loaded:
@@ -52,25 +50,25 @@ class ExecutionConfiguration(object):
         for line in script.readlines():
             line = line.replace("\n", "")
             if line.startswith("ID="):
-                self.id = line[line.index("=")+1:]
+                self.id = line[line.index("=") + 1:]
             if line.startswith("LABEL="):
-                self.label = line[line.index("=")+1:]
+                self.label = line[line.index("=") + 1:]
             if line.startswith("DESCRIPTION="):
-                self.description = line[line.index("=")+1:]
+                self.description = line[line.index("=") + 1:]
             if line.startswith("EXE_NAME="):
-                self.executable_name = line[line.index("=")+1:]
+                self.executable_name = line[line.index("=") + 1:]
             if line.startswith("EXE_ARGS="):
-                self.executable_arguments = line[line.index("=")+1:]
+                self.executable_arguments = line[line.index("=") + 1:]
             if line.startswith("BUILD_THREAD_NUM="):
                 self.build_threads = line[line.index("=") + 1:]
             if line.startswith("PROJECT_PATH="):
                 self.project_path = line[line.index("=") + 1:]
             if line.startswith("PROJECT_LINKER_FLAGS="):
-                self.linker_flags = line[line.index("=")+1:]
+                self.linker_flags = line[line.index("=") + 1:]
             if line.startswith("MAKE_TARGET="):
-                self.make_target = line[line.index("=")+1:]
+                self.make_target = line[line.index("=") + 1:]
             if line.startswith("NOTES="):
-                self.notes = line[line.index("=")+1:]
+                self.notes = line[line.index("=") + 1:]
 
     def init_from_values(self, values: dict):
         """values stems from reading the 'add_configuration' form."""
@@ -115,7 +113,6 @@ class ExecutionConfiguration(object):
         return script_str
 
 
-
 def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: str,
                                         execution_configuration, wizard):
     if wizard.arguments.no_gui:
@@ -147,9 +144,10 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_path)
-        selector_1.onclick = lambda *_: file_selector(selector_1, "Project path: ")
-        selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_path,
+                                onclick=lambda *_: file_selector(selector_1, "Project path: "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+
         # create assemble body
         body = (
             ptg.Window(
@@ -204,7 +202,8 @@ def file_selector(button_obj, prompt_str):
     button_obj.label = prompt_str + selected_dir
 
 
-def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration, restart_wizard=True):
+def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration,
+                 restart_wizard=True):
     values = dict()
     # update execution_configuration
     for widget in window:
@@ -213,8 +212,8 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
             continue
 
         if isinstance(widget, ptg.Button):
-            key = widget.label[0 : widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2 : ]
+            key = widget.label[0: widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2:]
             values[key] = value
             continue
 
@@ -224,7 +223,8 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
     values["ID"] = execution_configuration.id
     execution_configuration.init_from_values(values)
 
-    config_path = os.path.join(config_dir, "execution_configurations", execution_configuration.id + "_" + execution_configuration.label + ".sh")
+    config_path = os.path.join(config_dir, "execution_configurations",
+                               execution_configuration.id + "_" + execution_configuration.label + ".sh")
     # remove old config if present
     if os.path.exists(config_path):
         os.remove(config_path)
@@ -240,7 +240,8 @@ def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str
         wizard.initialize_screen(config_dir)
 
 
-def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
+                       execution_configuration):
     execution_configs: List[ExecutionConfiguration] = []
     values = dict()
     values["ID"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -250,8 +251,8 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
             continue
 
         if isinstance(widget, ptg.Button):
-            key = widget.label[0 : widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2 : ]
+            key = widget.label[0: widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2:]
             values[key] = value
             continue
 
@@ -276,10 +277,11 @@ def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
     wizard.initialize_screen(config_dir)
 
 
-def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
-
+def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
+                         execution_configuration):
     # delete configuration file if it exists
-    config_path = os.path.join(config_dir, "execution_configurations", execution_configuration.id + "_" + execution_configuration.label + ".sh")
+    config_path = os.path.join(config_dir, "execution_configurations",
+                               execution_configuration.id + "_" + execution_configuration.label + ".sh")
     if os.path.exists(config_path):
         os.remove(config_path)
 
@@ -291,7 +293,8 @@ def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_
     wizard.initialize_screen(config_dir)
 
 
-def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration):
+def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
+                          execution_configuration):
     # read values from updates
     values = dict()
     # update execution_configuration
@@ -301,8 +304,8 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
             continue
 
         if isinstance(widget, ptg.Button):
-            key = widget.label[0 : widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2 : ]
+            key = widget.label[0: widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2:]
             values[key] = value
             continue
 
@@ -316,7 +319,7 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
     execution_configuration.init_from_values(values)
 
     # assemble command for execution
-    #test_command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
+    # test_command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
     # settings
     command = wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
     command += "--llvm-clang \"" + wizard.settings.clang + "\" "
@@ -343,7 +346,8 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
             line = line.replace("\n", "")
             wizard.print_to_console(manager, line)
     if p.returncode != 0:
-        wizard.print_to_console(manager, "An error occurred during the execution!", style=3)  # style 3 --> Error message
+        wizard.print_to_console(manager, "An error occurred during the execution!",
+                                style=3)  # style 3 --> Error message
         for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
             line = line.replace("\n", "")
             wizard.print_to_console(manager, line)

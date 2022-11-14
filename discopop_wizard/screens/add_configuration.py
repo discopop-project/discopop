@@ -49,16 +49,16 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
     else:
         # show GUI prompts
         # define selectors
-        selector_1 = ptg.Button(label="Project path: select")
-        selector_1.onclick = lambda *_: file_selector(selector_1, "Project path: ")
-        selector_1.parent_align = ptg.enums.HorizontalAlignment.LEFT
+        selector_1 = ptg.Button(label="Project path: select",
+                                onclick=lambda *_: file_selector(selector_1, "Project path: "),
+                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
         # create assemble body
         body = (
             ptg.Window(
                 "",
                 "Create a new execution configuration",
                 "",
-                ptg.InputField("text", prompt="Label: ",),
+                ptg.InputField("text", prompt="Label: ", ),
                 ptg.InputField("text", prompt="Description: "),
                 ptg.InputField("text", prompt="Executable name: "),
                 ptg.InputField("text", prompt="Executable arguments: "),
@@ -109,8 +109,8 @@ def save_configuration(manager: ptg.WindowManager, window: ptg.Window, config_di
             continue
 
         if isinstance(widget, ptg.Button):
-            key = widget.label[0 : widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2 : ]
+            key = widget.label[0: widget.label.index(":") + 2]
+            value = widget.label[widget.label.index(":") + 2:]
             values[key] = value
             continue
 

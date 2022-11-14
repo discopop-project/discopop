@@ -119,26 +119,37 @@ class DiscoPoPConfigurationWizard(object):
             manager.layout.add_slot("footer_left", height=3)
             manager.layout.add_slot("footer_right", height=3)
 
-            self.__show_footer_buttons(manager)
+            window_button_back, _ = self.__show_footer_buttons(manager)
             self.__show_output_console(manager)
 
             push_main_screen(manager, config_dir, self)
 
             # show settings screen if first start
             if not self.settings.initialized:
+
                 push_settings_screen(manager, config_dir, self)
+                # remove back button for this screen
+                for slot in manager.layout.slots:
+                    if slot.name == "footer_left":
+                        self.print_to_console(manager, slot.name)
+                        slot.content.close()
 
 
 
-    def __show_footer_buttons(self, manager: ptg.WindowManager):
-        window = ptg.Window(
+
+
+
+    def __show_footer_buttons(self, manager: ptg.WindowManager) -> Tuple[ptg.Window, ptg.Window]:
+        window_left = ptg.Window(
             ["Back", lambda *_: self.action_back(manager)]
         )
-        manager.add(window, assign="footer_left")
-        window = ptg.Window(
+        manager.add(window_left, assign="footer_left")
+        window_right = ptg.Window(
             ["Exit", lambda *_: exit_program(manager)]
         )
-        manager.add(window, assign="footer_right")
+        manager.add(window_right, assign="footer_right")
+
+        return window_left, window_right
 
     def __show_output_console(self, manager: ptg.WindowManager):
         if self.console_window is not None:
