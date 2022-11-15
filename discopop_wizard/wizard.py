@@ -131,7 +131,6 @@ class DiscoPoPConfigurationWizard(object):
                 # remove back button for this screen
                 for slot in manager.layout.slots:
                     if slot.name == "footer_left":
-                        self.print_to_console(manager, slot.name)
                         slot.content.close()
 
 
