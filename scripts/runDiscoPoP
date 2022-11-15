@@ -291,10 +291,6 @@ $LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABL
 # another way to get the executable from the .ll file without going via the .o object file:
 #$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.ll -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
 
-# Run DPReduction Pass
-log -i "Running DiscoPoP Reduction Analysis Pass to detect reduction operations..."
-$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDPReduction.so -DPReduction ${EXECUTABLE_NAME}.ll -disable-output -fm-path FileMapping.txt
-
 # Run the instrumented application
 log -i "Running instrumented application to detect data dependencies..."
 log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
