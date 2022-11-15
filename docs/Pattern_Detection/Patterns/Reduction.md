@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Reduction - TODO
+title: Reduction
 parent: Patterns
 grand_parent: Pattern Detection
 ---

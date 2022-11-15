@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Do-All Loop - TODO
+title: Do-All Loop
 parent: Patterns
 grand_parent: Pattern Detection
 ---
