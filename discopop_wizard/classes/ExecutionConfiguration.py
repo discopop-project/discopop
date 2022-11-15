@@ -33,7 +33,6 @@ class ExecutionConfiguration(object):
     make_target: str
 
     def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard):
-        #        widget = Collapsible(self.label + ": " + self.description)
         widget = ptg.Container()
         details = ptg.Button(
             label="Label: " + self.label + "    " + "Description: " + self.description,
