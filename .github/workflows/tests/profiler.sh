@@ -19,8 +19,6 @@ export DISCOPOP_INSTALL
 TARGET_NAME=$1
 PASS_NAME=$2
 
-#tests="discopopPass reductionPass"
-
 function test_discopopPass {
   cp ${DISCOPOP_SRC}/scripts/dp-fmap .
   ./dp-fmap
@@ -28,13 +26,6 @@ function test_discopopPass {
   opt-11 -S -load=${DISCOPOP_INSTALL}/libi/LLVMDiscoPoP.so --DiscoPoP out.ll -o out_dp.ll --fm-path FileMapping.txt || return 1
   clang++ out_dp.ll -o out_prof -L${DISCOPOP_INSTALL}/rtlib -lDiscoPoP_RT -lpthread || return 1
   ./out_prof || return 1
-}
-
-function test_reductionPass {
-  # Identifying Reduction Operations
-  python -m discopop_profiler -v --DPReduction -c "$1" -o out.o || return 1
-  python -m discopop_profiler -v --DPReduction out.o || return 1
-  ./a.out || return 1
 }
 
 CUR_DIR=$PWD
