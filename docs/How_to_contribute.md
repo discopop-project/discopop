@@ -33,3 +33,15 @@ Execute the following steps in order to create a new DiscoPoP release:
     - Release title: `Version 1.2.3`
     - Description should contain a summary of the most relevant changes
 - If everything is fine, create the new release
+
+### Determining the Version Number
+Lets assume a current version number `1.2.3`.
+A new version number shall be determined as follows:
+* Release only contains Bugfixes and minor improvements (e.g. code cleanup, stability fixes etc.).
+    * ==> Increase the last digit by `1`
+* Release adds / modifies features with only a relatively minor impact (e.g. adding a new flag), <b>while ensuring full compatibility</b> with the previous version.
+    * ==> Increase middle digit by `1`.
+    * ==> Set last digit to `0`.
+* Release adds a major new feature or modifies any interface (for example by modifying the format of input or output data) in such a way that it is <b>not fully compatible</b> with the previous version anymore.
+    * ==> Increase first digit by `1`.
+    * ==> Set remaining digits to `0`.
