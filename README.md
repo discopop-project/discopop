@@ -25,22 +25,11 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Wiki
-Detailed information about each execution step, the setup as well as the functionality of DiscoPoP can be found on the [wiki page](https://discopop-project.github.io/discopop/).
+Detailed information about each execution step, the setup as well as the functionality of DiscoPoP and how to contribute can be found on the [wiki page](https://discopop-project.github.io/discopop/).
 
-### Quick Links (OUTDATED INSTRUCTIONS)
+### Quick Links
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
-- [Example](https://discopop-project.github.io/discopop/Guide/)
-- [Interpreting Parallelization Suggestions](https://discopop-project.github.io/discopop/Suggestions/)
-
-## TL;DR
-### Setup
-```
-	sudo apt-get install git build-essential cmake libclang-11-dev clang-11 llvm-11 python3-pip
-	git clone https://github.com/discopop-project/discopop.git
-	cd discopop && mkdir build && cd build
-	cmake .. && make && cd ..
-	pip install .
-```
+- [Walk-through Example](https://discopop-project.github.io/discopop/Quickstart/Example/)
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
