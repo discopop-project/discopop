@@ -1,26 +1,16 @@
 ---
 layout: default
-title: Manual instrumentation and execution - TODO
+title: Manual Instrumentation
 parent: Tutorials
 grand_parent: DiscoPoP Profiler
 nav_order: 3
 ---
 
-# DiscoPoP Profiler - Manual instrumentation and execution
+# DiscoPoP Profiler - Manual Instrumentation and Execution
 
-## Assigning IDs to different files in the program
-
-DiscoPoP can analyze projects containing multiple files scattered in different directories. We have developed a script (`scripts/dp-fmap`) that assigns a unique ID to each file in the project. You can find the script in the scripts directory under the DiscoPoP root directory. Currently, we support the following file types:
-
-```
-c|cc|cpp|h|hpp
-```
-
-However, it might be the case that you have c/c++ files which have a different file extension (e.g., “.C”). In this case, you can add the desired extension by changing the content of the `dp-fmap` file.
-
-Executing the `dp-fmap` script in the target directory will result in a file named `FileMapping.txt`.
-Each line of this file assigns a unique id to a file located in the project using the format shown in the following example:
-
-```
-1    /home/user/project_source/sample.c
-```
+The core of the DiscoPoP Profiler is the `DiscoPoP` optimizer pass.
+In order to execute the profiling for an arbitrary target project, first create a `FileMapping.txt` file, which serves as an overview of all files in the project and is required by the optimizer pass.
+The optimizer pass then just needs to be loaded during optimization in order to perform the static analysis and create the instrumented source code.
+Afterwards compile and link the instrumented source code.
+Executing the created executable will result in the creation of the data files described [here](../Data_Details.md).
+For a more detailed explanation of the individual steps required to execute the profiling, please refer to the [quickstart example](../../Quickstart/Example.md).
