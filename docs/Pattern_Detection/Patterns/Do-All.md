@@ -69,10 +69,7 @@ last private: []
 
 After interpreting and implementing the suggestion, the resulting, now parallel, source code could look as follows:
 
-    #pragma omp parallel for \
-        private(i1) \
-        firstprivate(global_array) \   
-        reduction(*:local_var)
+    #pragma omp parallel for private(i1) firstprivate(global_array) reduction(*:local_var)
     for (int i = 0; i < N; i++) {
         local_var *= global_array[i];
     } 
