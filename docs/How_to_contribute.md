@@ -37,7 +37,7 @@ Execute the following steps in order to create a new DiscoPoP release:
 ### Determining the Version Number
 Lets assume a current version number `1.2.3`.
 A new version number shall be determined as follows:
-* Release only contains Bugfixes and minor improvements (e.g. code cleanup, stability fixes etc.).
+* Release only contains Bugfixes and minor improvements (e.g. code cleanup, stability fixes etc.) or documentation updates.
     * ==> Increase the last digit by `1`
 * Release adds / modifies features with only a relatively minor impact (e.g. adding a new flag), <b>while ensuring full compatibility</b> with the previous version.
     * ==> Increase middle digit by `1`.
