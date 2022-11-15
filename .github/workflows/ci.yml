@@ -16,9 +16,119 @@ permissions:
   id-token: write
 
 jobs:
+  execute_tests:
+    runs-on: ubuntu-latest
+    name: Execute CI Tests
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: "Check all files for DiscoPoP License tag"
+        run: |
+          ERROR=""
+          for FILE in $(find . -type f  -not -path "**/.git/**" -not -path "**/test/**" \
+                                        -not -path "**/docs/**" \
+                                        -not -path "**/LICENSE" -not -path "./VERSION" \
+                                        -not -path "**/_version.py" -not -path "**/__init__.py" \
+                                        -not -path "**.png" -not -path "**.svg" \
+                                        )
+          do
+            FILE_ERROR=""
+            head -n 20 ${FILE} | grep -q "DiscoPoP software" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR" ] || ERROR="yes"
+            [ -z "$FILE_ERROR" ] || echo "Missing License tag at: ${FILE}" 
+            [ -z "$FILE_ERROR" ] || continue
+            head -n 20 ${FILE} | grep -q "Technische Universitaet Darmstadt, Germany" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR" ] || ERROR="yes"
+            [ -z "$FILE_ERROR" ] || echo "Missing License tag at: ${FILE}" 
+            [ -z "$FILE_ERROR" ] || continue
+            head -n 20 ${FILE} | grep -q "3-Clause BSD License" || FILE_ERROR="yes"
+            [ -z "$FILE_ERROR" ] || ERROR="yes"
+            [ -z "$FILE_ERROR" ] || echo "Missing License tag at: ${FILE}" 
+          done
+          # Report error (1), if license tags are missing
+          [ -z "$ERROR" ] || exit 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -r discopop_explorer/requirements.txt
+          python -m pip install -r discopop_profiler/requirements.txt
+          python -m pip install mypy data-science-types black
+
+      - name: Python Unit-tests
+        run: python -m unittest -v
+
+      - name: "Run MyPy Type Checker - DiscoPoP Explorer"
+        run: python -m mypy -p discopop_explorer
+
+      - name: "Run MyPy Type Checker - DiscoPoP Profiler"
+        run: python -m mypy -p discopop_profiler
+
+      - name: "Check formatting of DiscoPoP Explorer"
+        run: python -m black -l 100 --check discopop_explorer
+
+      - name: "Check formatting of DiscoPoP Profiler"
+        run: python -m black -l 100 --check discopop_profiler
+
+      - name: Test DiscoPop Explorer - mergesort
+        run: python -m discopop_explorer --path=test/mergesort/data
+
+      - name: Test DiscoPop Explorer - reduction
+        run: python -m discopop_explorer --path=test/reduction/data
+
+      - name: Test DiscoPop Explorer - simple_pipeline
+        run: python -m discopop_explorer --path=test/simple_pipeline/data
+
+      - name: Setup DiscoPoP Profiler - Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get remove clang-8 clang-10 clang-9 clang-12 clang-11
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+          sudo apt-get update
+          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+
+      - name: "Setup DiscoPoP Profiler - Build"
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          make -j3
+
+      - name: "Setup DiscoPoP Profiler - Create executable"
+        run: chmod +x .github/workflows/tests/profiler.sh
+
+      - name: "Execute DiscoPoP Profiler - mergesort - discopopPass"
+        run: .github/workflows/tests/profiler.sh mergesort discopopPass
+
+      - name: "Execute DiscoPoP Profiler - mergesort - reductionPass"
+        run: .github/workflows/tests/profiler.sh mergesort reductionPass
+
+      - name: "Execute DiscoPoP Profiler - reduction - discopopPass"
+        run: .github/workflows/tests/profiler.sh reduction discopopPass
+
+      - name: "Execute DiscoPoP Profiler - reduction - reductionPass"
+        run: .github/workflows/tests/profiler.sh reduction reductionPass
+
+      - name: "Execute DiscoPoP Profiler - simple_pipeline - discopopPass"
+        run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
+
+      - name: "Execute DiscoPoP Profiler - simple_pipeline - reductionPass"
+        run: .github/workflows/tests/profiler.sh simple_pipeline reductionPass
+
   ci_successful:
     name: "CI Tests Successful"
     runs-on: ubuntu-latest
+    needs: execute_tests
     steps:
       - name: "Report success"
         run: exit 0
@@ -28,7 +138,7 @@ jobs:
     name: "Update Wiki - Build"
     runs-on: ubuntu-latest
     needs: ci_successful
-    if: github.ref == 'refs/heads/update_wiki'
+    if: github.ref == 'refs/heads/develop'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -49,7 +159,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: update_wiki-build
-    if: github.ref == 'refs/heads/update_wiki'
+    if: github.ref == 'refs/heads/develop'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
