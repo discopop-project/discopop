@@ -11,8 +11,9 @@ data*/
 # our test data
 !/test/*/data/
 
-# discopop temporary files
+# discopop temporary files and configuration data
 discopop-tmp/*
+.config/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

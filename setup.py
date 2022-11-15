@@ -22,8 +22,14 @@ def get_version():
 
 
 def get_requirements():
+    requirements = []
+    # add discopop_explorer requirements
     with open(SRC / "requirements.txt") as f:
-        return [line.rstrip() for line in f]
+        requirements += [line.rstrip() for line in f]
+    # add discopop_wizard requirements
+    with open(Path("discopop_wizard") / "requirements.txt") as f:
+        requirements += [line.rstrip() for line in f]
+    return requirements
 
 
 if sys.version_info < (3, 6):
@@ -47,6 +53,7 @@ setup(
         "console_scripts": [
             "discopop_explorer=discopop_explorer.__main__:main",
             "discopop_profiler=discopop_profiler.__main__:main",
+            "discopop_wizard=discopop_wizard.__main__:main",
         ]
     },
     zip_safe=True,
