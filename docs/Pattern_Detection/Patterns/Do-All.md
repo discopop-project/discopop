@@ -60,7 +60,7 @@ As an example, we will analyze the following code snippet for parallelization po
 Analyzing this code snippet results in the following parallelization suggestion:
 ```
 pragma: "#pragma omp parallel for"
-private: ["i1"]
+private: ["i"]
 shared: []
 first private: ["global_array"]
 reduction: ["*:local_var"]
@@ -69,7 +69,7 @@ last private: []
 
 After interpreting and implementing the suggestion, the resulting, now parallel, source code could look as follows:
 
-    #pragma omp parallel for private(i1) firstprivate(global_array) reduction(*:local_var)
+    #pragma omp parallel for private(i) firstprivate(global_array) reduction(*:local_var)
     for (int i = 0; i < N; i++) {
         local_var *= global_array[i];
     } 
