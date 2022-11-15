@@ -9,7 +9,7 @@
  *
  */
 
-#include "Utils.hpp"
+#include "DPReductionUtils.hpp"
 
 #include <fstream>
 #include <map>
@@ -34,7 +34,7 @@
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
 
-namespace util {
+namespace dp_reduction_utils {
 
     std::map<std::string, int> path_to_id_;
 
@@ -182,4 +182,4 @@ namespace util {
         return points_to;
     }
 
-}  // namespace util
+}  // namespace dp_reduction_utils
