@@ -147,7 +147,7 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
                                 onclick=lambda *_: file_selector(selector_1, "Project path: "),
                                 parent_align=ptg.enums.HorizontalAlignment.LEFT)
 
-        # create assemble body
+        # create and assemble body
         body = (
             ptg.Window(
                 "",
