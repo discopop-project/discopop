@@ -77,7 +77,7 @@ def push_settings_screen(manager: ptg.WindowManager, config_dir: str, wizard):
                                  onclick=lambda *_: directory_selector(selector_10, "DiscoPoP build: "),
                                  parent_align=ptg.enums.HorizontalAlignment.LEFT)
 
-        # create assemble body
+        # create and assemble body
         body = (
             ptg.Window(
                 "",
