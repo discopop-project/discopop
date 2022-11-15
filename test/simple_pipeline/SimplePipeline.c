@@ -26,12 +26,12 @@ int delta(int in, int d){
 int main( void)
 {
     int i;
-    int d = 20,a=22, b=44,c=90;
+    int d=20,a=22, b=44,c=90;
     for (i=0; i<100; i++) {
         a = foo(i, d);
         b = bar(a, d);
         c = delta(b, d);
     }
-    a= b;
+    a = b;
     return 0;
 }

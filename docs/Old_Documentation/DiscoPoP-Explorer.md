@@ -1,12 +1,12 @@
 ---
 layout: default
-title: DiscoPoP Explorer
-parent: Tool Overview
-nav_order: 2
+title: DiscoPoP Explorer - TODO
+parent: Old Documentation
+nav_order: 1
 ---
 
 
-# DiscoPoP graph analyzer
+# DiscoPoP Explorer
 DiscoPoP profiler is accompanied by a Python framework, specifically designed to analyze the profiler output files, generate a CU graph, detect potential parallel patterns, and suggest OpenMP parallelizations.
 Currently, the following five patterns can be detected:
 * Reduction

@@ -1,6 +1,7 @@
 ---
 layout: default
-title: Guide
+title: Guide - Invalid
+parent: Old Documentation
 ---
 
 # Walk-through example
