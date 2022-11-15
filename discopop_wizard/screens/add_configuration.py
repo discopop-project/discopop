@@ -78,19 +78,10 @@ def push_add_configuration_screen(manager: ptg.WindowManager, config_dir: str, w
             .set_title("[210 bold]Create execution configuration")
         )
 
-    dp_options = (ptg.Window(
-        "Enable debug output",
-        ptg.Checkbox(),
-        "",
-        "Enable hybrid dependency profiling",
-        ptg.Checkbox()
-    )
-                  .set_title("DiscoPoP Options")
-                  )
     buttons = (ptg.Window(
         ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
     ))
-    wizard.show_body_windows(manager, [(body, 0.6), (dp_options, 0.15), (buttons, 0.2)])
+    wizard.show_body_windows(manager, [(body, 0.75), (buttons, 0.2)])
 
 
 def file_selector(button_obj, prompt_str):
