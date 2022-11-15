@@ -7,7 +7,7 @@
 # directory for details.
 
 from discopop_wizard.classes.Arguments import Arguments
-from discopop_wizard.wizard import main
+from discopop_wizard.wizard import main as wizard_main
 import argparse
 
 
@@ -18,7 +18,7 @@ def convert_args(namespace_args: argparse.Namespace) -> Arguments:
     return return_arg
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='DiscoPoP Configuration Wizard')
 
     parser.add_argument('--no-gui', action='store_true',
@@ -26,4 +26,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(convert_args(args))
+    wizard_main(convert_args(args))
+
+
+
+if __name__ == "__main__":
+    main()
