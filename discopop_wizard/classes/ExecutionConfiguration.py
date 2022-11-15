@@ -318,7 +318,6 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
     execution_configuration.init_from_values(values)
 
     # assemble command for execution
-    # test_command = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/test_executable.sh"
     # settings
     command = wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
     command += "--llvm-clang \"" + wizard.settings.clang + "\" "
