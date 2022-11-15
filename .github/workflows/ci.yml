@@ -28,7 +28,7 @@ jobs:
     name: "Update Wiki - Build"
     runs-on: ubuntu-latest
     needs: ci_successful
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/update_wiki'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -49,7 +49,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: update_wiki-build
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/update_wiki'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
