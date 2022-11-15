@@ -17,8 +17,6 @@
 HELPTEXT="*** DiscoPoP Execution Wizard ***
 
 Use this tool to analyze a project that is built using Makefiles
-Use --help or -h to show this text and exit.
-Use -v or --verbose to get more information than you want.
 
 REQUIRED ARGUMENTS: Please use absolut paths!
  --llvm-clang <path>
@@ -37,6 +35,8 @@ REQUIRED ARGUMENTS: Please use absolut paths!
 
 OPTIONAL ARGUMENTS:
  --make-target <target>
+ --help or -h to show this text and exit.
+ --verbose or -v to show verbose output.
 "
 
 #####
