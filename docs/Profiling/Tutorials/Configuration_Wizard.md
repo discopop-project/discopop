@@ -72,3 +72,34 @@ Execution configurations are stored as executable scripts named `<ID>_<Label>.sh
 The stored scripts can be executed without using the `Configuration Wizard`, as they contain all the necessary information.
 They are located in a folder named `.config/execution_configurations`.
 Since we make hard assumptions regarding the format of the mentioned files, please ensure that you maintain the predefined format in the case that you modify any of the mentioned files manually.
+
+# Walk-through Example
+This example will demonstrate all the required steps to setup the Configuration Wizard and analyze the provided example code for parallelization potential.
+
+## Step 1: Execute the Wizard
+Following a successful [setup](../../Setup.md), the Wizard module can be started using:
+
+    discopop_wizard
+
+## Step 2: Settings
+At the first start you have to specify a set of required paths and save your changes using the `Save` button.
+![Configuration Wizard - Initial Setup](../../img/wizard_initial_setup.png)
+
+## Step 3: Create a Execution Configuration
+Use the `Add Configuration` button to create a new configuration.
+Use the shown values (except for `project path`) for the provided example:
+![Configuration Wizard - Add Configuration](../../img/wizard_add_configuration.png)
+
+## Step 4: Open the created Configuration
+After saving, the created configuration will be visible in the main menu.
+Klick on the respective entry to show the detailed view again:
+![Configuration Wizard - Main Menu](../../img/wizard_main_menu.png)
+
+## Step 5: Execute
+The configuration can be executed by simply clicking the `Execute` button.
+The results of the executed analysis are printed to the console (the full console log is accessible via the `Full log` button) and stored in a file named `patterns.txt` inside the specified `project path`, in this case `discopop/example`.
+![Configuration Wizard - Detailed view](../../img/wizard_detailed_view.png)
+
+## Step 6: Interpret and Implement
+As a last step, the generated parallelization suggestions need to be interpreted and implement according to the respective [descriptions](../../Pattern_Detection/Patterns/Patterns.md).
+
