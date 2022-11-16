@@ -367,7 +367,6 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
                     // this var has already once recordded. check for bb id
                     if (variableToBBMap[varName] != *bb) {
                         // global variable found. Insert into the globalVariablesSet
-                        errs() << "INSERTING VARNAME: " << varName << "\n";
                         globalVariablesSet.insert(varName);
                     }
                 } else {
