@@ -236,14 +236,17 @@ namespace {
 
         DIGlobalVariable *findDbgGlobalDeclare(GlobalVariable *V);
 
-        Value *getOrInsertVarName(string varName, IRBuilder<> &builder);
+        Value *getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder);
+
+        string getOrInsertVarName_static(string varName, IRBuilder<> &builder);
 
         Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
 
         Type *pointsToStruct(PointerType *PTy);
 
-        Value *determineVariableName(Instruction *const I,
-                                     bool &isGlobalVariable = defaultIsGlobalVariableValue);
+        Value *determineVariableName_dynamic(Instruction *const I);
+        
+        string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/);
 
         void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
                                          std::map <string, string> *trueVarNamesFromMetadataMap);
@@ -395,9 +398,8 @@ namespace {
                                                                llvm::Instruction *cur_instr,
                                                                std::vector<char> &reduction_operations);
         int dp_reduction_get_op_order(char c);
-        string dp_reduction_getOrInsertVarName(string varName, IRBuilder<> &builder);
         Type *dp_reduction_pointsToStruct(PointerType *PTy);
-        string dp_reduction_findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+        string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
         int32_t dp_reduction_getLID(Instruction *BI, int32_t &fileID);
         void dp_reduction_insert_functions();
