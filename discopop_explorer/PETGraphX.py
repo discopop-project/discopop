@@ -695,7 +695,7 @@ class PETGraphX(object):
                 return False
         raise ValueError("allVars must not be empty.")
 
-    def __get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
+    def get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
         """Gets all variables in nodes
 
         :param nodes: nodes
@@ -712,7 +712,7 @@ class PETGraphX(object):
     def get_undefined_variables_inside_loop(self, root_loop: CUNode) -> List[Variable]:
 
         sub = self.subtree_of_type(root_loop, NodeType.CU)
-        vars = list(self.__get_variables(sub))
+        vars = list(self.get_variables(sub))
         dummyVariables = []
         definedVarsInLoop = []
         definedVarsInCalledFunctions = []

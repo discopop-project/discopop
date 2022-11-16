@@ -520,7 +520,9 @@ def classify_loop_variables(
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    vars = pet.get_undefined_variables_inside_loop(loop)
+    #vars = pet.get_undefined_variables_inside_loop(loop)
+    sub = pet.subtree_of_type(loop, NodeType.CU)
+    vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
