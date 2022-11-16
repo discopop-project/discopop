@@ -537,6 +537,12 @@ class PETGraphX(object):
         for dep in dependencies:
             if dep in children:
                 return True
+
+        # check if dependence between source and target exists
+        if source.id in [cuid for _, cuid, _ in self.out_edges(target.id, EdgeType.DATA)]:
+            # dependence exists
+            return True
+
         return False
 
     def get_all_dependencies(self, node: CUNode, root_loop: CUNode) -> Set[CUNode]:
