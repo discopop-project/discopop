@@ -35,6 +35,7 @@ REQUIRED ARGUMENTS: Please use absolut paths!
 
 OPTIONAL ARGUMENTS:
  --make-target <target>
+ --explorer-flags <flags>, will be passed through to the DiscoPoP Explorer.
  --help or -h to show this text and exit.
  --verbose or -v to show verbose output.
 "
@@ -132,7 +133,12 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     --make-target)
-      MAKFILE_TARGET="$2"
+      MAKEFILE_TARGET="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --explorer-flags)
+      EXPLORER_FLAGS="$2"
       shift # past argument
       shift # past value
       ;;
@@ -300,7 +306,7 @@ log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
 #####
 
 log -i "Looking for parallelization opportunities..."
-PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt)
+PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
 
 # write patterns to file
 echo "$PATTERNS" > patterns.txt
