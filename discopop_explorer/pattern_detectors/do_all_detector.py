@@ -82,6 +82,9 @@ def __detect_do_all(pet: PETGraphX, root: CUNode) -> bool:
                 children_cache=children_cache,
                 dep_cache=dependency_cache,
             ):
+                # ignore cyclic dependencies
+                if subnodes[i] == subnodes[j]:
+                    continue
                 return False
 
     return True
