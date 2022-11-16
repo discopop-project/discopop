@@ -1267,8 +1267,8 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map <string,
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
         return dp_reduction_determineVariableName((Instruction * )(operand), trueVarNamesFromMetadataMap);
     }
-    // if we cannot determine the name, then return * / nothing
-    return "";
+    // if we cannot determine the name, then return *
+    return "*";
 }
 
 string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
