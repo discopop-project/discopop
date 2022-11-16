@@ -231,15 +231,10 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
          bb != TopRegion->block_end(); ++bb) {
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
-            if (isa<StoreInst>(instruction)) {
-                bool isGlobal = false;
-                string varName = determineVariableName_static(&*instruction, isGlobal);
-                size_t pos = varName.find("retval");
-                if (pos != varName.npos) {
-                    lid = getLID(&*instruction, fileID);
-                    if (lid > 0)
-                        root->returnLines.insert(lid);
-                }
+            if (isa<ReturnInst>(instruction)){
+                lid = getLID(&*instruction, fileID);
+                if (lid > 0)
+                    root->returnLines.insert(lid);
             }
         }
     }
