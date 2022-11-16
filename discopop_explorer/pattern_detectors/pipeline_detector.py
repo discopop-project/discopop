@@ -156,11 +156,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     children_cache: Dict[CUNode, List[CUNode]] = dict()
     dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):
-        if (
-            not contains(result, lambda x: x.node_id == node.id)
-            and node.do_all == False
-            and node.reduction == False
-        ):
+        if not contains(result, lambda x: x.node_id == node.id):
             node.pipeline = __detect_pipeline(pet, node)
             if node.pipeline > __pipeline_threshold:
                 result.append(PipelineInfo(pet, node))
