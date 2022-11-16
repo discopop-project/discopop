@@ -929,7 +929,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
             if (it->first->hasName()) {
                 instr_info_t info;
                 info.var_name_ = dp_reduction_determineVariableName(it->second, trueVarNamesFromMetadataMap);
-                errs() << "DPRED VARNAME: " << info.var_name_ << "\n";
                 info.loop_line_nr_ = loop_info.line_nr_;
                 info.file_id_ = file_id;
                 info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
