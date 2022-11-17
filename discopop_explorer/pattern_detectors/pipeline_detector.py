@@ -201,13 +201,7 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cac
     min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if pet.depends_ignore_readonly(
-                loop_subnodes[i],
-                loop_subnodes[j],
-                root,
-                children_cache=children_cache,
-                dep_cache=dep_cache,
-            ):
+            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:
