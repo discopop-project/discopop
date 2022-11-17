@@ -541,12 +541,6 @@ class PETGraphX(object):
             if len(overlap) > 0:
                 # if so, a RAW dependency exists
                 return True
-
-        # check if dependence between source and target exists
-        if source.id in [cuid for _, cuid, _ in self.out_edges(target.id, EdgeType.DATA)]:
-            # dependence exists
-            return True
-
         return False
 
     def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
