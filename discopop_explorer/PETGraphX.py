@@ -497,96 +497,51 @@ class PETGraphX(object):
             rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name
         )
 
-    def depends_ignore_readonly(
-        self,
-        source: CUNode,
-        target: CUNode,
-        root_loop: CUNode,
-        children_cache: Dict[CUNode, List[CUNode]] = None,
-        dep_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = None,
-    ) -> bool:
+    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
-        The loop index and readonly variables are ignored
+        The loop index and readonly variables are ignored.
 
-        :param source: source node for dependency detection
-        :param target: target of dependency
+        :param source: source node for dependency detection (later occurrence in the source code)
+        :param target: target of dependency (prior occurrence in the source code)
         :param root_loop: root loop
-        :param children_cache: option to allow caching of found children, used for do-all-detection
-        :param dep_cache: option to allow caching of found dependencies, used for do-all-detection
-        :return: true, if there is RAW dependency
-        """
-        if children_cache is not None:
-            if target in children_cache:
-                children = children_cache[target]
-            else:
-                children = self.subtree_of_type(target, NodeType.CU)
-                children_cache[target] = children
-        else:
-            children = self.subtree_of_type(target, NodeType.CU)
-        # TODO children.append(target)
+        :return: true, if there is RAW dependency"""
+        if source == target:
+            return False
 
-        if dep_cache is not None:
-            if (source, root_loop) in dep_cache:
-                dependencies = dep_cache[(source, root_loop)]
-            else:
-                dependencies = self.get_all_dependencies(source, root_loop)
-                dep_cache[(source, root_loop)] = dependencies
-        else:
-            dependencies = self.get_all_dependencies(source, root_loop)
+        # get recursive children of source and target
+        source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
+        target_children_ids = [node.id for node in self.subtree_of_type(target, NodeType.CU)]
 
-        for dep in dependencies:
-            if dep in children:
+        # get required metadata
+        loop_start_lines: List[str] = []
+        for v in self.subtree_of_type(root_loop, NodeType.LOOP):
+            loop_start_lines.append(v.start_position())
+
+        # check for RAW dependencies between any of source_children and any of target_children
+        for source_child_id in source_children_ids:
+            # get a list of filtered dependencies, outgoing from source_child
+            out_deps = self.out_edges(source_child_id, EdgeType.DATA)
+            out_raw_deps = [dep for dep in out_deps if dep[2].dtype == DepType.RAW]
+            filtered_deps = [
+                elem
+                for elem in out_raw_deps
+                if not self.is_readonly_inside_loop_body(elem[2], root_loop)
+            ]
+            filtered_deps = [
+                elem
+                for elem in filtered_deps
+                if not self.is_loop_index(
+                    elem[2].var_name, loop_start_lines, self.subtree_of_type(root_loop, NodeType.CU)
+                )
+            ]
+            # get a list of dependency targets
+            dep_targets = [t for _, t, _ in filtered_deps]
+            # check if overlap between dependency targets and target_children exists.
+            overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
+            if len(overlap) > 0:
+                # if so, a RAW dependency exists
                 return True
         return False
-
-    def get_all_dependencies(self, node: CUNode, root_loop: CUNode) -> Set[CUNode]:
-        """Returns all data dependencies of the node and it's children
-        This method ignores loop index and read only variables
-
-        :param node: node
-        :param root_loop: root loop
-        :return: list of all RAW dependencies of the node
-        """
-        dep_set = set()
-        loops_start_lines = []
-        undefinedVarsInLoop = []
-        firstWrittenVarsInLoop: Set[Variable] = set()
-
-        loop_node_ids = [n.id for n in self.subtree_of_type(root_loop, NodeType.CU)]
-        children = self.subtree_of_type(node, NodeType.CU)
-
-        for v in self.subtree_of_type(root_loop, NodeType.LOOP):
-            loops_start_lines.append(v.start_position())
-
-        allVars = self.get_undefined_variables_inside_loop(root_loop)
-        undefinedVarsInLoop = [var.name for var in allVars]
-        firstWrittenVarsInLoop = self.get_first_written_vars_in_loop(
-            undefinedVarsInLoop, node, root_loop
-        )
-
-        for v in children:
-            for s, t, d in [
-                (s, t, d)
-                for s, t, d in self.out_edges(v.id, EdgeType.DATA)
-                if d.dtype == DepType.RAW and d.var_name in undefinedVarsInLoop
-            ]:
-                if self.is_loop_index(
-                    d.var_name, loops_start_lines, self.subtree_of_type(root_loop, NodeType.CU)
-                ) or self.is_readonly_inside_loop_body(d, root_loop):
-                    continue
-                # TODO:
-                # if the dependence is by a variable
-                # which is written first in the loop, ignore it
-                if d.var_name in firstWrittenVarsInLoop:
-                    continue
-                # if the dependence is not inside the loop, ignore it
-                if s not in loop_node_ids or t not in loop_node_ids:
-                    continue
-                # check if the var name of the dep appears in either of the CU nodes.
-                # Otherwise, it should be a false pos/neg dep.
-                dep_set.add(self.node_at(t))
-
-        return dep_set
 
     def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
         sub = self.subtree_of_type(root_loop, NodeType.CU)

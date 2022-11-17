@@ -156,11 +156,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     children_cache: Dict[CUNode, List[CUNode]] = dict()
     dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
     for node in pet.all_nodes(NodeType.LOOP):
-        if (
-            not contains(result, lambda x: x.node_id == node.id)
-            and node.do_all == False
-            and node.reduction == False
-        ):
+        if not contains(result, lambda x: x.node_id == node.id):
             node.pipeline = __detect_pipeline(pet, node)
             if node.pipeline > __pipeline_threshold:
                 result.append(PipelineInfo(pet, node))
@@ -205,13 +201,7 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cac
     min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if pet.depends_ignore_readonly(
-                loop_subnodes[i],
-                loop_subnodes[j],
-                root,
-                children_cache=children_cache,
-                dep_cache=dep_cache,
-            ):
+            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:
