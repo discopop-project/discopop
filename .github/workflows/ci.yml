@@ -88,7 +88,7 @@ jobs:
               ACTUAL=$(echo "$(cat test/${target}/data/result_${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
               EXPECTED=$(echo "$(cat test/${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
               if [ "$ACTUAL" != "$EXPECTED" ]; then
-                echo "WARNING: ${pattern}: Amount of mentioned node ids in identified suggestions not equal! Expected: $EXPECTED, Actual: ${ACTUAL}"
+                echo "::warning:: ${pattern}: Amount of mentioned node ids in identified suggestions not equal! Expected: $EXPECTED, Actual: ${ACTUAL}"
               fi
             done
             echo ""
