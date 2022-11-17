@@ -10,7 +10,7 @@ If you have encountered a bug or would like to request or propose a new feature,
 
 ## Implementing a requested feature or fixing a known bug
 If you want to fix a known bug or implement a new feature, please first create a fork of the repository.
-After you have implemented your changes, you can propose them for inclusion in the project by creating a pull request from your fork.
+After you have implemented your changes, you can propose them for inclusion in the project by creating a pull request from your fork into the `master` branch.
 Please link the issue of the implemented feature or the fixed bug in the pull request for clearness, or add the respective [keywords](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword#linking-a-pull-request-to-an-issue-using-a-keyword).
 
 # Contributing as a project member
