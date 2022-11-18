@@ -75,7 +75,7 @@ jobs:
       - name: "Check formatting of DiscoPoP Profiler"
         run: python -m black -l 100 --check discopop_profiler
 
-      - name: Test DiscoPop Explorer - Warns only!
+      - name: Test DiscoPop Explorer
         run: |
           TARGETS="mergesort reduction simple_pipeline"
           PATTERNS="do_all reduction"
