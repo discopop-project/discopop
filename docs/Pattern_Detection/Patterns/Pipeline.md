@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Pipeline - TODO
+title: Pipeline
 parent: Patterns
 grand_parent: Pattern Detection
 ---
