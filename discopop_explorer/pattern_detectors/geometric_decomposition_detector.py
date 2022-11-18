@@ -62,7 +62,6 @@ class GDInfo(PatternInfo):
             f"Geometric decomposition at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
-            f"Type: Geometric Decomposition Pattern\n"
             f"Do-All loops: {[n.id for n in self.do_all_children]}\n"
             f"Reduction loops: {[n.id for n in self.reduction_children]}\n"
             f"\tNumber of tasks: {self.num_tasks}\n"
