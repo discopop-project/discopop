@@ -17,7 +17,7 @@ You can use the provided `dp-fmap` script for this. Simply run it from the direc
 
 * **Compile the source code and run the DiscoPoP optimizer pass:**<br/>
 The optimizer pass performs the static analysis and adds runtime instrumentation to the program. <br/>
-Add the `-O0 -g -fno-discard-value-names` flags during compilation to get debug information like source code lines and variable names! Also add the `-S -emit-llvm` flags to get the readable LLVM-IR form.<br/>
+Add the mandatory `-O0 -g -fno-discard-value-names` flags during compilation to get debug information like source code lines and variable names! Also add the `-S -emit-llvm` flags to get the readable LLVM-IR form.<br/>
 Compiling and Optimizing can be done in one step or separately.
 
 * **Linking**<br/>
