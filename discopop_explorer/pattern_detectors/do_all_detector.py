@@ -34,9 +34,9 @@ class DoAllInfo(PatternInfo):
             f"Do-all at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
-            f"iterations: {self.iterations_count}\n"
-            f"instructions: {self.instructions_count}\n"
-            f"workload: {self.workload}\n"
+#            f"iterations: {self.iterations_count}\n"
+#            f"instructions: {self.instructions_count}\n"
+#            f"workload: {self.workload}\n"
             f'pragma: "#pragma omp parallel for"\n'
             f"private: {[v.name for v in self.private]}\n"
             f"shared: {[v.name for v in self.shared]}\n"
