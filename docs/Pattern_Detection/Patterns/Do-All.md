@@ -38,7 +38,7 @@ Note: Disabled, since these values are not determined correctly at the moment. V
     * `shared`
     * `first_private`
     * `last_private`
-* `reduction: [<operation>:<var>]` specifies a set of identified reduction  operations and variables. For pure `Do-All` suggestions, this list is empty. If it is not empty, the suggestion describes a [reduction loop](Reduction.md).
+* `reduction: [<operation>:<var>]` specifies a set of identified reduction  operations and variables. For `Do-All` suggestions, this list is always empty.
 
 ## Implementation
 In order to implement a suggestion, first open the source code file corresponding to `file_id` and navigate to line `Start line -> <line_num>`.
@@ -53,23 +53,23 @@ In order to ensure a valid parallelization, you need to add the following clause
 ### Example
 As an example, we will analyze the following code snippet for parallelization potential. All location and meta data will be ignored for the sake of simplicity.
 
-    for (int i = 0; i < N; i++) {
-        local_var *= global_array[i];
+    for (int i = 0; i < 10; ++i) {
+        local_array[i] += 1;
     }
 
 Analyzing this code snippet results in the following parallelization suggestion:
-```
-pragma: "#pragma omp parallel for"
-private: ["i"]
-shared: []
-first private: ["global_array"]
-reduction: ["*:local_var"]
-last private: []
-```
+
+    pragma: "#pragma omp parallel for"
+    private: ["i"]
+    shared: ["local_array"]
+    first private: []
+    reduction: []
+    last private: []
+
 
 After interpreting and implementing the suggestion, the resulting, now parallel, source code could look as follows:
 
-    #pragma omp parallel for private(i) firstprivate(global_array) reduction(*:local_var)
-    for (int i = 0; i < N; i++) {
-        local_var *= global_array[i];
-    } 
+    #pragma omp parallel for private(i) shared(local_array)
+    for (int i = 0; i < 10; ++i) {
+        local_array[i] += 1;
+    }
