@@ -74,7 +74,7 @@ log () {
       shift
       echo -e "${CYA}DP_DBUG:${DEF} $*"
       ;;
-    v|--verbose|--verb)
+    -v|--verbose|--verb)
       shift
       if [ "$VERBOSE" = true ]; then
         echo -e "${CYA}DP_VERBOSE:${DEF} $*"
