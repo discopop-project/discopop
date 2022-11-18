@@ -31,5 +31,77 @@ Detailed information about each execution step, the setup as well as the functio
 - [Setup](https://discopop-project.github.io/discopop/Setup/)
 - [Walk-through Example](https://discopop-project.github.io/discopop/Quickstart/Example/)
 
+## Example
+DiscoPoP creates parallelization suggestions for sequential source code.
+Implementing these suggestions results in a parallel program.
+A simple example for the results of the assisted parallelization on the basis of the created parallelization suggestions can be found below.
+
+### Original Source Code
+Let's assume the original source code looks as follows:
+
+    int foo(int in, int d){
+        return in * d;
+    }
+
+    int bar(int in, int d){
+        return in + d;
+    }
+
+    int delta(int in, int d){
+        return in -d;
+    }
+
+    int main( void)
+    {
+        int i;
+        int d=20,a=22, b=44,c=90;
+        for (i=0; i<100; i++) {
+            a = foo(i, d);
+            b = bar(a, d);
+            c = delta(b, d);
+        }
+        a = b;
+        return 0;
+    }
+
+Applying DiscoPop to this program will result in a set of parallelization suggestions.
+
+### Parallel Source Code
+For demonstration purposes we have applied the identified and suggested [pipeline pattern](https://discopop-project.github.io/discopop/Pattern_Detection/Patterns/Pipeline/) to the original source code, which resulted in the following parallel source code.
+Please refer to the [parallel patterns](https://discopop-project.github.io/discopop/Pattern_Detection/Patterns) page of the [DiscoPoP wiki](https://discopop-project.github.io/discopop/) for a complete overview of the supported parallel patterns.
+
+    int foo(int in, int d){
+        return in * d;
+    }
+
+    int bar(int in, int d){
+        return in + d;
+    }
+
+    int delta(int in, int d){
+        return in -d;
+    }
+
+    int main( void)
+    {
+        int i;
+        int d=20,a=22, b=44,c=90;
+        for (i=0; i<100; i++) {
+            #pragma omp task firsprivate(i) shared(d, in) depend(out:a)
+            a = foo(i, d);
+            #pragma omp task shared(d, in) depend(in:a) depend(out:b)
+            b = bar(a, d);
+            #pragma omp task private(c) shared(d, in) depend(in: b)
+            c = delta(b, d);
+        }
+        a = b;
+        return 0;
+    }
+
+
+
+
+
+
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
