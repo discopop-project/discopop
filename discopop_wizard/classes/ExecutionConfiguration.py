@@ -11,6 +11,7 @@ import random
 import string
 
 from typing import List, TextIO
+from discopop_wizard.screens.suggestions.overview import push_suggestion_overview_screen
 
 from pytermgui import Collapsible, Container, Splitter, Window, Button
 import pytermgui as ptg
@@ -32,7 +33,7 @@ class ExecutionConfiguration(object):
     notes: str
     make_target: str
 
-    def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard):
+    def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard) -> ptg.Container:
         widget = ptg.Container()
         details = ptg.Button(
             label="Label: " + self.label + "    " + "Description: " + self.description,
@@ -183,6 +184,8 @@ def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: 
         ["Save", lambda *_: save_changes(manager, body, config_dir, wizard, execution_configuration)],
         "",
         ["Execute", lambda *_: execute_configuration(manager, body, config_dir, wizard, execution_configuration)],
+        "",
+        ["Show Suggestions", lambda *_: push_suggestion_overview_screen(manager, config_dir, wizard, execution_configuration)] if os.path.exists(os.path.join(execution_configuration.project_path, "patterns.txt")) else "",
         "",
         ["Copy", lambda *_: copy_configuration(manager, body, config_dir, wizard, execution_configuration)],
         "",
@@ -349,8 +352,12 @@ def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config
         for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
             line = line.replace("\n", "")
             wizard.print_to_console(manager, line)
+        
+    # show suggestions
+    # suggestions are stored in project_path/patterns.txt
+    push_suggestion_overview_screen(manager, config_dir, wizard, execution_configuration)
 
-    # restart Wizard to load new execution configurations
-    manager.stop()
-    wizard.clear_window_stacks()
-    wizard.initialize_screen(config_dir)
+#    # restart Wizard to load new execution configurations
+#    manager.stop()
+#    wizard.clear_window_stacks()
+#    wizard.initialize_screen(config_dir)
