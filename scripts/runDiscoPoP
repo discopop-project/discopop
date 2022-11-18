@@ -19,26 +19,69 @@ HELPTEXT="*** DiscoPoP Execution Wizard ***
 Use this tool to analyze a project that is built using Makefiles
 
 REQUIRED ARGUMENTS: Please use absolut paths!
- --llvm-clang <path>
- --llvm-clang++ <path>
- --llvm-ar <path>
- --llvm-link <path>
- --llvm-dis <path>
- --llvm-opt <path>
- --llvm-llc <path>
- --gllvm <path>
- --project <path>
- --linker-flags <flags>
- --executable-name <name>
- --executable-arguments <arguments>
- --build-threads <number>
+ --llvm-clang <path>    path to clang executable
+ --llvm-clang++ <path>  path to clang++ executable
+ --llvm-ar <path>       path to llvm-ar executable
+ --llvm-link <path>     path to llvm-link executable
+ --llvm-dis <path>      path to llvm-dis executable
+ --llvm-opt <path>      path to opt executable
+ --llvm-llc <path>      path to llc executable
+ --gllvm <path>         path to a directory with gllvm executables
+                        (gclang, gclang++, get-bc, gsanity-check)
+ --project <path>       path to the directory that contains your makefile
+ --executable-name <name> the name of the executable that is built and analyzed
 
 OPTIONAL ARGUMENTS:
- --make-target <target>
- --explorer-flags <flags>, will be passed through to the DiscoPoP Explorer.
- --help or -h to show this text and exit.
- --verbose or -v to show verbose output.
+ --executable-arguments <args>
+                          run your application with these arguments
+ --linker-flags <flags>   if your build requires to link other libraries
+                          please provide the necessary linker flags. e.g. -lm
+ --make-target <target>   specify a specific Make target to be built,
+                          if not specified the default make target is used.
+ --build-threads <number> you can build your application in parallel,
+                          but this will mess up some logs.
+ --explorer-flags <flags> will be passed through to the DiscoPoP Explorer.
+ --help or -h,            show this text and exit.
+ --verbose or -v,         show verbose output.
 "
+
+#####
+# function to log with different levels and colorful output e.g.
+# log -i "some info"
+#####
+log () {
+  if [ "$COLORS" = true ]; then
+    DEF='\033[0m'     # no color / default
+    CYA='\033[0;36m'  # cyan
+    GRE='\033[0;32m'  # green
+    YEL='\033[1;33m'  # yellow
+    RED='\033[0;31m'  # red
+  fi
+  case "$1" in
+    -e|--err|--error)
+      shift
+      echo -e "${CYA}DP_ERROR:${RED} $*${DEF}"
+      ;;
+    -w|--warn)
+      shift
+      echo -e "${CYA}DP_WARN:${YEL} $*${DEF}"
+      ;;
+    -i|--info|-l|--log)
+      shift
+      echo -e "${CYA}DP_INFO:${GRE} $*${DEF}"
+      ;;
+    -d|--dbug|--debug|--bug)
+      shift
+      echo -e "${CYA}DP_DBUG:${DEF} $*"
+      ;;
+    v|--verbose|--verb)
+      shift
+      if [ "$VERBOSE" = true ]; then
+        echo -e "${CYA}DP_VERBOSE:${DEF} $*"
+      fi
+      ;;
+  esac
+}
 
 #####
 # Parse Arguments
@@ -52,6 +95,7 @@ COLORS=false
 MAKFILE_TARGET=""
 
 POSITIONAL_ARGS=()
+requiredArgCount=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -69,81 +113,76 @@ while [[ $# -gt 0 ]]; do
       ;;
     --llvm-clang)
       LLVM_CLANG=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-clang++)
       LLVM_CLANGPP=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-ar)
       LLVM_AR=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-link)
       LLVM_LINK=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-dis)
       LLVM_DIS=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-opt)
       LLVM_OPT=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --llvm-llc)
       LLVM_LLC=$2
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --gllvm)
       GLLVM="$2"
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --project)
       PROJECT="$2"
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --linker-flags)
       LINKER_FLAGS="$2"
-      shift # past argument
-      shift # past value
+      shift; shift # past argument and value
       ;;
     --executable-name)
       EXECUTABLE_NAME="$2"
-      shift # past argument
-      shift # past value
+      ((requiredArgCount++))
+      shift; shift # past argument and value
       ;;
     --executable-arguments)
       EXECUTABLE_ARGUMENTS="$2"
-      shift # past argument
-      shift # past value
+      shift; shift # past argument and value
       ;;
     --build-threads)
       THREADS="$2"
-      shift # past argument
-      shift # past value
+      shift; shift # past argument and value
       ;;
     --make-target)
       MAKEFILE_TARGET="$2"
-      shift # past argument
-      shift # past value
+      shift; shift # past argument and value
       ;;
     --explorer-flags)
       EXPLORER_FLAGS="$2"
-      shift # past argument
-      shift # past value
+      shift; shift # past argument and value
       ;;
     -*|--*)
-      echo "Unknown option $1"
+      log -e "Unknown option $1"
       exit 1
       ;;
     *)
@@ -157,9 +196,15 @@ set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
 # this tool should not receive any positional arguments
 if [[ -n $1 ]]; then
-    echo "There should not be any positional arguments:"
-    echo "positional argument: $1"
-    exit 1
+  log -e "There should not be any positional arguments:"
+  log -e "positional argument: $1"
+  exit 1
+fi
+
+# check for required arguments
+if [ $requiredArgCount -ne 10 ]; then
+  log -e "Please provide all required arguments exactly once. Use --help or -h to view them."
+  exit 1
 fi
 
 #####
@@ -168,6 +213,7 @@ fi
 
 # TODO make this more robust
 # (currently breaks if script is moved or DP is built somewhere else)
+# idea: during discoPoP build move this script to the build directory and configure this and other variables
 DP="$(dirname "$(dirname "$(readlink -fm "$0")")")"
 DP_BUILD=$DP/build
 GLLVM_LOG=$PROJECT/gllvm_log.txt
@@ -177,43 +223,6 @@ if [ "$HELP" = true ]; then
     echo "$HELPTEXT"
     exit 0
 fi
-
-#####
-# function to log with different levels and colorful output e.g.
-# log -i "some info"
-#####
-if [ "$COLORS" = true ]; then
-  DEF='\033[0m'     # no color / default
-  CYA='\033[0;36m'  # cyan
-  GRE='\033[0;32m'  # green
-  YEL='\033[1;33m'  # yellow
-  RED='\033[0;31m'  # red
-fi
-log () {
-  case "$1" in
-    -d|--dbug|--debug|--bug)
-      shift
-      echo -e "${CYA}DP_DBUG:${DEF} $*"
-      ;; # same code in default case *)
-    -i|--info|-l|--log)
-      shift
-      echo -e "${CYA}DP_INFO:${GRE} $*${DEF}"
-      ;;
-    -w|--warn)
-      shift
-      echo -e "${CYA}DP_WARN:${YEL} $*${DEF}"
-      ;;
-    -e|--err|--error)
-      shift
-      echo -e "${CYA}DP_ERRO:${RED} $*${DEF}"
-      ;;
-    # if no log level is specified, use debug level
-    *)
-      echo -e "${CYA}DP_DBUG:${DEF} $*"
-      ;;
-  esac
-}
-
 
 #####
 # show configuration
@@ -259,7 +268,7 @@ export WLLVM_OUTPUT_FILE=$GLLVM_LOG
 export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names"
 #export LLVM_LINK_FLAGS=""
 
-log -d "GLLVM SANITY CHECK:
+log -v "GLLVM SANITY CHECK:
 $($GLLVM/gsanity-check)" 
 
 #####
@@ -276,10 +285,10 @@ $DP/scripts/dp-fmap
 
 # build using gllvm as compiler
 log -i "Building your application..."
-log -d $(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)
+log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)"
 
 # create single .bc and .ll from the executable
-log -d $($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME)
+log -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"
 $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 #####
@@ -299,7 +308,8 @@ $LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABL
 
 # Run the instrumented application
 log -i "Running instrumented application to detect data dependencies..."
-log -d $(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})
+tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
+[ ! -z "$var" ] && log -d "$tmp"
 
 #####
 # run discopop_profiler to get parallelization suggestions
@@ -310,7 +320,8 @@ PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_N
 
 # write patterns to file
 echo "$PATTERNS" > patterns.txt
+log -i "Wrote parallelization opportunities to patterns.txt"
 
 # log patterns to console
 PATTERNS=$(echo "$PATTERNS" | sed 's/^/  /')
-log -d "Detected Patterns:\n$PATTERNS"
+log -v "Detected Patterns:\n$PATTERNS"
