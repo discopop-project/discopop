@@ -10,12 +10,17 @@ nav_order: 3
 ## Prerequisites
 We assume that you have finished the [setup](../Setup.md) already.
 In order to follow the example, please make sure you know the paths to the following executables, files and folders. 
-Occurrences of names in capital letters (e.g. `DP_SOURCE`) should just be replaced by the respective (absolute) paths.
-    - From installation of prerequisites:
-        - `clang` / `clang++`
-    - From DiscoPoP Profiler installation:
-        - `DP_SOURCE`: Path to the DiscoPoP source folder
-        - `DP_BUILD`: Path to the DiscoPoP build folder
+Occurrences of names in capital letters (e.g. `DP_SOURCE`) should be replaced by the respective (absolute) paths.
+
+- From installation of prerequisites:
+    - `clang` / `clang++`
+- From DiscoPoP Profiler installation:
+    - `DP_SOURCE`: Path to the DiscoPoP source folder
+    - `DP_BUILD`: Path to the DiscoPoP build folder
+
+## Important Note
+For the sake of simplicity, this example only shows the process to profile a single file manually.
+In case you want to analyse a more complex project, please refer to the respective tutorial pages for detailed instructions regarding the [manual profiling](../Profiling/Tutorials/Manual.md), the assisted profiling using the [Execution Wizard script](../Profiling/Tutorials/Execution_Wizard.md) or the assisted profiling via the [graphical Configuration Wizard](../Profiling/Tutorials/Configuration_Wizard.md).
 
 
 <!--
@@ -33,10 +38,6 @@ As a first step, please change your working directory to the `DP_SOURCE/example`
     cd DP_SOURCE/example
 
 ## Step 1: Profiling
-
-### Important Note
-For the sake of simplicity, this example only shows the process to profile a single file manually.
-In case you want to analyse a more complex project, please refer to the respective tutorial pages for detailed instructions regarding the [manual profiling](../Profiling/Tutorials/Manual.md), the assisted profiling using the [Execution Wizard script](../Profiling/Tutorials/Execution_Wizard.md) or the assisted profiling via the [graphical Configuration Wizard](../Profiling/Tutorials/Configuration_Wizard.md).
 
 ### Step 1.1: Create File Mapping
 DiscoPoP requires an overview of the files in the target project (`FileMapping.txt`). This file can be created by simply executing the `dp-fmap` script located in the `DP_SOURCE/scripts` folder:
@@ -57,8 +58,8 @@ After creating the LLVM-IR representation of our target source code, the `DiscoP
 
 In this process, the static analyses are executed and the instrumented version of `example.ll`, named `example_dp.ll` is created in order to prepare the dynamic profiling step.
 
-### Step 1.4: Compiling and Linking
-In order to execute the profiled version of the target source code, we have to compile and link it into an executable, in this case named `out_prof`.
+### Step 1.4: Linking
+In order to execute the profiled version of the target source code, we have to link it into an executable, in this case named `out_prof`.
 Specifically, we have to link the DiscoPoP Runtime libraries in order to allow the profiling.
 
     clang++ example_dp.ll -o out_prof -LDP_BUILD/rtlib -lDiscoPoP_RT -lpthread
