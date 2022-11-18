@@ -4,7 +4,7 @@
 		<childrenNodes>1:1,1:2,1:6,1:7,1:11,1:12,1:16,1:17,1:21,1:22,1:26,1:27,1:31,1:32,1:36,1:37,1:41,1:42,1:46,1:47,1:51,1:52,1:56,1:57,1:62,1:63,1:68,1:69,1:74,1:75,1:79,1:80,1:84,1:85,1:94,1:95,1:104,1:105,1:114,1:115,1:124,1:125,1:129,1:130,1:135,1:136,1:141,1:142,1:146,1:147,1:151,1:152,1:156,1:157,1:161,1:162,1:166</childrenNodes>
 		<funcArguments>
 		</funcArguments>
-		<funcReturnLines></funcReturnLines>
+		<funcReturnLines>1:144, </funcReturnLines>
 	</Node>
 
 	<Node id="1:1" type="0" name="" startsAtLine = "1:21" endsAtLine = "1:30">
@@ -23,7 +23,10 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="float*" defLine="1:26">local_var_f</global>
+			<global type="double*" defLine="1:27">local_var_f2</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -50,7 +53,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -70,10 +73,11 @@
 			<CU>1:5</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -95,7 +99,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -117,7 +121,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -144,7 +148,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -164,10 +168,11 @@
 			<CU>1:10</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -189,7 +194,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -211,7 +216,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -238,7 +243,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -258,10 +263,11 @@
 			<CU>1:15</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -283,7 +289,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -305,7 +311,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -332,7 +338,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -352,10 +358,11 @@
 			<CU>1:20</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -377,7 +384,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -399,7 +406,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -426,7 +433,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -446,10 +453,11 @@
 			<CU>1:25</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -471,7 +479,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -493,7 +501,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -520,7 +528,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -540,10 +548,11 @@
 			<CU>1:30</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -565,7 +574,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -587,7 +596,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -614,7 +623,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -634,10 +643,11 @@
 			<CU>1:35</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -659,7 +669,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -681,7 +691,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -708,7 +718,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -728,10 +738,11 @@
 			<CU>1:40</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="GlobalVar">global_var</global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -753,7 +764,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -775,7 +786,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -802,7 +813,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -822,10 +833,11 @@
 			<CU>1:45</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -847,7 +859,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -869,7 +881,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -896,7 +908,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -916,10 +928,11 @@
 			<CU>1:50</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="GlobalVar">global_var</global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -941,7 +954,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -963,7 +976,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -990,7 +1003,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1010,10 +1023,11 @@
 			<CU>1:55</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="GlobalVar">reduction.static_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1035,7 +1049,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1057,7 +1071,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1084,7 +1098,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1106,7 +1120,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1128,7 +1143,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1150,7 +1166,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1172,7 +1188,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1199,7 +1215,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1221,7 +1237,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1243,7 +1260,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1265,7 +1283,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1287,7 +1305,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1314,7 +1332,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1334,10 +1352,12 @@
 			<CU>1:72</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1359,7 +1379,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:25">local_var</global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1381,7 +1402,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1403,7 +1424,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1430,7 +1451,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1450,10 +1471,11 @@
 			<CU>1:78</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="float*" defLine="1:26">local_var_f</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1475,7 +1497,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1497,7 +1519,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1524,7 +1546,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1544,10 +1566,11 @@
 			<CU>1:83</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="double*" defLine="1:27">local_var_f2</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1569,7 +1592,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1591,7 +1614,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1618,7 +1641,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1640,7 +1663,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1667,7 +1690,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1687,10 +1710,12 @@
 			<CU>1:91</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:109">j</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1712,7 +1737,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1755,7 +1780,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1777,7 +1802,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1804,7 +1829,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1824,10 +1849,12 @@
 			<CU>1:99</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="GlobalVar">global_var</global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1854,7 +1881,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1874,10 +1901,12 @@
 			<CU>1:101</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:109">j</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1899,7 +1928,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1942,7 +1971,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1964,7 +1993,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -1991,7 +2020,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2013,7 +2042,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2040,7 +2069,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2060,10 +2089,12 @@
 			<CU>1:111</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:109">j</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2085,7 +2116,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2105,10 +2136,11 @@
 			<CU>1:113</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="GlobalVar">global_var</global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2130,7 +2162,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2152,7 +2184,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2179,7 +2211,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2201,7 +2233,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2228,7 +2260,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2248,10 +2280,12 @@
 			<CU>1:121</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:24">local_multi_dim_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:109">j</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2273,7 +2307,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:109">j</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2316,7 +2350,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2338,7 +2372,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2365,7 +2399,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2385,7 +2419,7 @@
 			<CU>1:128</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
 		</globalVariables>
@@ -2409,7 +2443,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2431,7 +2465,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2458,7 +2492,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2480,7 +2514,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2500,10 +2534,10 @@
 			<CU>1:134</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:119">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2525,7 +2559,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2547,7 +2581,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2574,7 +2608,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2594,10 +2628,10 @@
 			<CU>1:139</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:123">tmp_var_38</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2617,10 +2651,10 @@
 			<CU>1:140</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:123">tmp_var_38</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2642,7 +2676,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2664,7 +2698,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2691,7 +2725,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2711,7 +2745,7 @@
 			<CU>1:145</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
 		</globalVariables>
@@ -2735,7 +2769,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2757,7 +2791,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2784,7 +2818,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2804,7 +2838,7 @@
 			<CU>1:150</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:24">local_multi_dim_array</local>
 		</localVariables>
 		<globalVariables>
 		</globalVariables>
@@ -2828,7 +2862,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2850,7 +2884,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2877,7 +2911,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2897,10 +2931,10 @@
 			<CU>1:155</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2922,7 +2956,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2944,7 +2978,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2971,7 +3005,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -2991,10 +3025,11 @@
 			<CU>1:160</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3016,7 +3051,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3038,7 +3073,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3065,7 +3100,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3085,10 +3120,11 @@
 			<CU>1:165</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:23">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
+			<global type="i32*" defLine="1:25">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3110,7 +3146,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:141"></global>
+			<global type="i32*" defLine="1:141">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3145,7 +3181,7 @@
 		<childrenNodes>1:168,1:169,1:174,1:175,1:179,1:180,1:187,1:188,1:193,1:194,1:199,1:200,1:204,1:205,1:209,1:210,1:214,1:215,1:218,1:219,1:223,1:224,1:228</childrenNodes>
 		<funcArguments>
 		</funcArguments>
-		<funcReturnLines></funcReturnLines>
+		<funcReturnLines>1:207, </funcReturnLines>
 	</Node>
 
 	<Node id="1:168" type="0" name="" startsAtLine = "1:146" endsAtLine = "1:152">
@@ -3164,7 +3200,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3191,7 +3228,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3211,10 +3248,11 @@
 			<CU>1:172</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3236,7 +3274,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:147">local_var</global>
+			<global type="i32*" defLine="1:177">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3258,7 +3297,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3280,7 +3319,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3307,7 +3346,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3327,10 +3366,11 @@
 			<CU>1:178</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3352,7 +3392,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3374,7 +3414,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3401,7 +3441,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3424,7 +3464,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3444,10 +3484,11 @@
 			<CU>1:184</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3490,7 +3531,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3512,7 +3553,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:147">local_var</global>
+			<global type="i32*" defLine="1:177">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3534,7 +3576,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3561,7 +3603,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3581,10 +3623,11 @@
 			<CU>1:191</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3606,7 +3649,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3628,7 +3671,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3650,7 +3693,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3677,7 +3720,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3699,7 +3742,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:147">local_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3721,7 +3764,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:147">local_var</global>
+			<global type="i32*" defLine="1:177">tmp_var</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3743,7 +3787,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3765,7 +3809,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3792,7 +3836,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3812,10 +3856,10 @@
 			<CU>1:203</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:148">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3837,7 +3881,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3859,7 +3903,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3886,7 +3930,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3906,7 +3950,7 @@
 			<CU>1:208</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:148">local_array</local>
 		</localVariables>
 		<globalVariables>
 		</globalVariables>
@@ -3930,7 +3974,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3952,7 +3996,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -3979,7 +4023,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4001,7 +4045,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="STRUCT,i32*" defLine="GlobalVar"></global>
+			<global type="STRUCT,i32*" defLine="1:149">local_struct</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4023,7 +4067,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4045,7 +4089,8 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:194">counter</global>
+			<global type="i32*" defLine="1:193">test_x</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4072,7 +4117,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:194">counter</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4094,7 +4139,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:193">test_x</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4116,7 +4161,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4143,7 +4188,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4163,10 +4208,10 @@
 			<CU>1:222</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:148">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4188,7 +4233,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4210,7 +4255,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4237,7 +4282,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4257,10 +4302,11 @@
 			<CU>1:227</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="1:148">local_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
+			<global type="i32*" defLine="1:193">test_x</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4282,7 +4328,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:204"></global>
+			<global type="i32*" defLine="1:204">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4319,7 +4365,7 @@
 			<arg type="i32" defLine="1:209">argc</arg>
 			<arg type="i8**" defLine="1:209">argv</arg>
 		</funcArguments>
-		<funcReturnLines></funcReturnLines>
+		<funcReturnLines>1:215, </funcReturnLines>
 	</Node>
 
 	<Node id="1:230" type="0" name="" startsAtLine = "1:209" endsAtLine = "1:210">
@@ -4336,9 +4382,12 @@
 			<CU>1:232</CU>
 		</successors>
 		<localVariables>
+			<local type="i32*" defLine="1:209">argc</local>
+			<local type="i8***" defLine="1:209">argv</local>
+			<local type="i32*" defLine="LineNotFound">retval</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:209"></global>
+			<global type="i32*" defLine="1:210">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4365,7 +4414,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:209"></global>
+			<global type="i32*" defLine="1:210">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4385,10 +4434,10 @@
 			<CU>1:234</CU>
 		</successors>
 		<localVariables>
-			<local type="ARRAY,i32*" defLine="GlobalVar"></local>
+			<local type="ARRAY,i32*" defLine="GlobalVar">global_array</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:209"></global>
+			<global type="i32*" defLine="1:210">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -4410,7 +4459,7 @@
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:209"></global>
+			<global type="i32*" defLine="1:210">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>

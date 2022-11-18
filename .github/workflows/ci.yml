@@ -75,14 +75,25 @@ jobs:
       - name: "Check formatting of DiscoPoP Profiler"
         run: python -m black -l 100 --check discopop_profiler
 
-      - name: Test DiscoPop Explorer - mergesort
-        run: python -m discopop_explorer --path=test/mergesort/data
-
-      - name: Test DiscoPop Explorer - reduction
-        run: python -m discopop_explorer --path=test/reduction/data
-
-      - name: Test DiscoPop Explorer - simple_pipeline
-        run: python -m discopop_explorer --path=test/simple_pipeline/data
+      - name: Test DiscoPop Explorer
+        run: |
+          TARGETS="mergesort reduction simple_pipeline"
+          PATTERNS="do_all reduction"
+          for target in $TARGETS; do
+            echo "checking target: ${target}"
+            python -m discopop_explorer --path=test/${target}/data --json=test/${target}/data/result_${target}.json
+            # count different suggestions and check against test data
+            for pattern in $PATTERNS; do
+              echo "checking pattern: ${pattern}"
+              ACTUAL=$(echo "$(cat test/${target}/data/result_${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
+              EXPECTED=$(echo "$(cat test/${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
+              if [ "$ACTUAL" != "$EXPECTED" ]; then
+                echo "::error:: ${pattern}: Amount of mentioned node ids in identified suggestions not equal! Expected: $EXPECTED, Actual: ${ACTUAL}"
+                exit 1
+              fi
+            done
+            echo ""
+          done
 
       - name: Setup DiscoPoP Profiler - Install Dependencies
         run: |
