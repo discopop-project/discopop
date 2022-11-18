@@ -116,7 +116,7 @@ class PipelineInfo(PatternInfo):
         s = "\n\n".join([str(s) for s in self.stages])
         return (
             f"Pipeline at: {self.node_id}\n"
-            f"Coefficient: {round(self.coefficient, 3)}\n"
+            # f"Coefficient: {round(self.coefficient, 3)}\n"
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
             f"Stages:\n{s}"
