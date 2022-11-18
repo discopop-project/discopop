@@ -24,14 +24,13 @@ def filter_members(d: dict) -> dict:
     """
     keys = [k for k in d.keys()]
     for key in keys:
-        if key.startswith('_'):
+        if key.startswith("_"):
             del d[key]
     return d
 
 
 class PatternInfoSerializer(JSONEncoder):
-    """Json Encoder for Pattern Info
-    """
+    """Json Encoder for Pattern Info"""
 
     def default(self, o):
         try:
@@ -42,8 +41,8 @@ class PatternInfoSerializer(JSONEncoder):
             return list(iterable)
 
         if isinstance(o, Variable):
-            if o.operation is not None and o.operation != '':
-                return f'{o.operation}:{o.name}'
+            if o.operation is not None and o.operation != "":
+                return f"{o.operation}:{o.name}"
             return o.name
         if isinstance(o, PatternInfo):
             return filter_members(o.__dict__)

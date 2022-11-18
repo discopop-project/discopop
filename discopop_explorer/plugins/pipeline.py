@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from copy import deepcopy
 from typing import List
 
@@ -17,7 +25,7 @@ def run_after(pet: PETGraphX):
     for node in pet.all_nodes(NodeType.LOOP):
         check_pipeline(pet, node)
 
-    print(f'Total: {total}')
+    print(f"Total: {total}")
     print(" ".join([str(x) for x in before]))
     print(" ".join([str(x) for x in after]))
     return pet
@@ -38,8 +46,11 @@ def check_pipeline(pet: PETGraphX, root: CUNode):
 
     children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
 
-    loop_subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
-                     if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)]
+    loop_subnodes = [
+        pet.node_at(t)
+        for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+        if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
+    ]
 
     if len(loop_subnodes) < 3:
         return
@@ -122,7 +133,9 @@ def get_matrix(pet, root, loop_subnodes):
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
-            res[i].append(int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root)))
+            res[i].append(
+                int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root))
+            )
     return res
 
 
@@ -164,6 +177,11 @@ def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: Lis
     r_end = root.end_position()
     c_start = current.start_position()
     c_end = current.end_position()
-    return not (c_start == r_start and c_end == r_start
-                or c_start == r_end and c_end == r_end
-                or c_start == c_end and c_start in children_start_lines)
+    return not (
+        c_start == r_start
+        and c_end == r_start
+        or c_start == r_end
+        and c_end == r_end
+        or c_start == c_end
+        and c_start in children_start_lines
+    )

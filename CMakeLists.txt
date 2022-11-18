@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 cmake_minimum_required(VERSION 3.4.3)
 project(DiscoPoP)
 
@@ -19,9 +27,6 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
-add_subdirectory(CUGeneration)
-add_subdirectory(CUInstantiation)
-add_subdirectory(DPInstrumentation)
-add_subdirectory(DPReduction)
-add_subdirectory(DPInstrumentationOmission)
+add_subdirectory(DiscoPoP)
+
 add_subdirectory(rtlib)

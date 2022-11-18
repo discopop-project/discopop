@@ -9,14 +9,14 @@
  *
  */
 
-#include "signature.h"
+#include "signature.hpp"
 
 #include "stdint.h"
 #include <iostream>
+
 using namespace std;
 
-namespace __dp
-{
+namespace __dp {
     // Byte wise signature
 
 
@@ -35,17 +35,15 @@ namespace __dp
     // the value is still inserted, which means the old
     // value is overwritten. Meanwhile, conflictElem is
     // increased by 1.
-    sigElement Signature::insert(int64_t elem, sigElement value)
-    {
+    sigElement Signature::insert(int64_t elem, sigElement value) {
         int32_t begin = hash(elem) * sigSlotSizeInByte;
         int32_t end = begin + sigSlotSizeInByte - 1;
         sigElement oldValue = 0;
         sigElement temp = 0;
-        for (int i = end; i >= begin; --i)
-        {
+        for (int i = end; i >= begin; --i) {
             temp = sigarray[i];
             oldValue += temp << (end - i) * 8;
-            sigarray[i] = (uint8_t)value;
+            sigarray[i] = (uint8_t) value;
             value >>= 8;
         }
         return oldValue;
@@ -53,25 +51,21 @@ namespace __dp
 
     // update the value of elem to newValue
     // For update the conflict detection is not necessary.
-    void Signature::update(int64_t elem, sigElement newValue)
-    {
+    void Signature::update(int64_t elem, sigElement newValue) {
         int32_t begin = hash(elem) * sigSlotSizeInByte;
         int32_t end = begin + sigSlotSizeInByte - 1;
-        for (int i = end; i >= begin; --i)
-        {
-            sigarray[i] = (int8_t)newValue;
+        for (int i = end; i >= begin; --i) {
+            sigarray[i] = (int8_t) newValue;
             newValue >>= 8;
         }
     }
 
     // remove elem from sigarray
     // should be checked.
-    void Signature::remove(int64_t elem)
-    {
+    void Signature::remove(int64_t elem) {
         int32_t begin = hash(elem) * sigSlotSizeInByte;
         int32_t end = begin + sigSlotSizeInByte - 1;
-        for (int i = begin; i <= end; ++i)
-        {
+        for (int i = begin; i <= end; ++i) {
             sigarray[i] = 0;
         }
     }
@@ -79,25 +73,21 @@ namespace __dp
     // test if elem is already exist in sigarray
     // see comments for Signature::insert()
     // for data layout information
-    sigElement Signature::membershipCheck(int64_t elem)
-    {
+    sigElement Signature::membershipCheck(int64_t elem) {
         sigElement res = 0;
         int32_t begin = hash(elem) * sigSlotSizeInByte;
         int32_t end = begin + sigSlotSizeInByte - 1;
-        for (int i = begin; i <= end; ++i)
-        {
+        for (int i = begin; i <= end; ++i) {
             res = (res << 8) + sigarray[i];
         }
         return res;
     }
 
-    bool Signature::intersect(Signature &other)
-    {
+    bool Signature::intersect(Signature &other) {
         return false;
     }
 
-    double Signature::expectedFalsePositiveRate()
-    {
+    double Signature::expectedFalsePositiveRate() {
         double result = 0.0;
         return result;
     }

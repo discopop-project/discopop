@@ -1,9 +1,20 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from typing import List, cast, Dict, Optional, Tuple
 
 from discopop_explorer.PETGraphX import CUNode, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
-    TPIType
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    TaskParallelismInfo,
+    ParallelRegionInfo,
+    TPIType,
+)
 
 
 def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
@@ -19,18 +30,28 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
     :param pet: PET Graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
-    task_suggestions = [s for s in
-                        [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.type is TPIType.TASK]
-    taskwait_suggestions = [s for s in
-                            [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                            if s.type is TPIType.TASKWAIT]
+    task_suggestions = [
+        s
+        for s in [
+            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
+        ]
+        if s.type is TPIType.TASK
+    ]
+    taskwait_suggestions = [
+        s
+        for s in [
+            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
+        ]
+        if s.type is TPIType.TASKWAIT
+    ]
     # mark preceeding suggestions for each taskwait suggestion
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
         relatives: List[CUNode] = [tws._node]
-        queue: List[CUNode] = [pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]
+        queue: List[CUNode] = [
+            pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)
+        ]
         while len(queue) > 0:
             cur = queue.pop(0)
             if cur.tp_contains_taskwait:
@@ -74,7 +95,10 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
                     break
     # execute replacement
     for sug in task_suggestions + taskwait_suggestions:
-        sug.task_group = [replacements[tg_elem] if tg_elem in replacements else tg_elem for tg_elem in sug.task_group]
+        sug.task_group = [
+            replacements[tg_elem] if tg_elem in replacements else tg_elem
+            for tg_elem in sug.task_group
+        ]
         # validate and combine results
         # valid, if all entries in sug.task_group are equal. Replace by single entry if valid.
         value: Optional[int] = None
@@ -84,8 +108,12 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
                 continue
             if tg_elem != value:
                 # not valid, raise exception
-                raise ValueError("Task Group creation led to erroneous results: NodeId:", sug._node.id,
-                                 "  Task Group: ", sug.task_group)
+                raise ValueError(
+                    "Task Group creation led to erroneous results: NodeId:",
+                    sug._node.id,
+                    "  Task Group: ",
+                    sug.task_group,
+                )
         # valid, overwrite sug.task_group if value is not None
         if value is not None:
             sug.task_group = [cast(int, value)]
@@ -108,11 +136,11 @@ def sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
             # get start_line and file_id for sug
             if ":" not in sug_par.region_start_line:
                 start_line = sug_par.region_start_line
-                file_id = sug_par.start_line[0:sug_par.start_line.index(":")]
+                file_id = sug_par.start_line[0 : sug_par.start_line.index(":")]
             else:
                 start_line = sug_par.region_start_line
-                file_id = start_line[0:start_line.index(":")]
-                start_line = start_line[start_line.index(":") + 1:]
+                file_id = start_line[0 : start_line.index(":")]
+                start_line = start_line[start_line.index(":") + 1 :]
             # split suggestions by file-id
             if file_id not in tmp_dict:
                 tmp_dict[file_id] = []
@@ -123,11 +151,11 @@ def sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
             # get start_line and file_id for sug
             if ":" not in sug_task.region_start_line:
                 start_line = sug_task.region_start_line
-                file_id = sug_task.start_line[0:sug_task.start_line.index(":")]
+                file_id = sug_task.start_line[0 : sug_task.start_line.index(":")]
             else:
                 start_line = sug_task.region_start_line
-                file_id = start_line[0:start_line.index(":")]
-                start_line = start_line[start_line.index(":") + 1:]
+                file_id = start_line[0 : start_line.index(":")]
+                start_line = start_line[start_line.index(":") + 1 :]
             # split suggestions by file-id
             if file_id not in tmp_dict:
                 tmp_dict[file_id] = []
@@ -136,7 +164,10 @@ def sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
             continue
     # sort suggestions by line-number (descending)
     for key in tmp_dict:
-        sorted_list = cast(List[Tuple[str, PatternInfo]], sorted(tmp_dict[key], key=lambda x: int(x[0]), reverse=True))
+        sorted_list = cast(
+            List[Tuple[str, PatternInfo]],
+            sorted(tmp_dict[key], key=lambda x: int(x[0]), reverse=True),
+        )
         sorted_list_pruned = cast(List[PatternInfo], [elem[1] for elem in sorted_list])
         sorted_suggestions += sorted_list_pruned
     return sorted_suggestions

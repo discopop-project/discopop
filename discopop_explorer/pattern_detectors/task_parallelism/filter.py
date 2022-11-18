@@ -1,16 +1,32 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from typing import List, Dict, cast, Optional, Union
 
 from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
-    TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import \
-    line_contained_in_region, get_parent_of_type, get_cus_inside_function, check_reachability
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    TaskParallelismInfo,
+    ParallelRegionInfo,
+    TPIType,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
+    line_contained_in_region,
+    get_parent_of_type,
+    get_cus_inside_function,
+    check_reachability,
+)
 from discopop_explorer.utils import is_loop_index2
 
 
-def filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
-                                var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def filter_data_sharing_clauses(
+    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+) -> List[PatternInfo]:
     """Wrapper to filter data sharing clauses according to the included steps.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -22,7 +38,9 @@ def filter_data_sharing_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
     return suggestions
 
 
-def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(
+    pet: PETGraphX, suggestions: List[PatternInfo]
+):
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -35,13 +53,18 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sug
         if suggestion.type is not TPIType.TASK:
             continue
         # get parent loops of suggestion
-        parent_loops_plus_last_node = get_parent_of_type(pet, suggestion._node,
-                                                         NodeType.LOOP, EdgeType.CHILD, True)
+        parent_loops_plus_last_node = get_parent_of_type(
+            pet, suggestion._node, NodeType.LOOP, EdgeType.CHILD, True
+        )
         parent_loops = [e[0] for e in parent_loops_plus_last_node]
         # consider only loops which enclose the suggestion
-        parent_loops = [loop for loop in parent_loops if line_contained_in_region(suggestion._node.start_position(),
-                                                                                  loop.start_position(),
-                                                                                  loop.end_position())]
+        parent_loops = [
+            loop
+            for loop in parent_loops
+            if line_contained_in_region(
+                suggestion._node.start_position(), loop.start_position(), loop.end_position()
+            )
+        ]
         to_be_removed = []
         for var in suggestion.shared:
             for parent_loop in parent_loops:
@@ -52,8 +75,9 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sug
     return suggestions
 
 
-def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[PatternInfo],
-                                              var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_data_sharing_clauses_by_function(
+    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
     Removes .addr suffix from variable names
@@ -72,7 +96,9 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
         if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
             continue
         # get function containing the task cu
-        parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+        parent_function, last_node = get_parent_of_type(
+            pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
+        )[0]
         # filter firstprivate
         __filter_firstprivate_clauses(suggestion, parent_function, var_def_line_dict)
         # filter private
@@ -83,7 +109,9 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
         # remove duplicates and .addr suffix from variable names
         suggestion.shared = list(set([v.replace(".addr", "") for v in suggestion.shared]))
         suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
-        suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
+        suggestion.first_private = list(
+            set([v.replace(".addr", "") for v in suggestion.first_private])
+        )
 
         # remove duplicates (variable occurring in different classes)
         remove_from_first_private = []
@@ -98,14 +126,19 @@ def __filter_data_sharing_clauses_by_function(pet: PETGraphX, suggestions: List[
                 remove_from_first_private.append(var)
         remove_from_first_private = list(set(remove_from_first_private))
         remove_from_private = list(set(remove_from_private))
-        remove_from_private = [var for var in remove_from_private if var not in remove_from_first_private]
+        remove_from_private = [
+            var for var in remove_from_private if var not in remove_from_first_private
+        ]
         suggestion.private = [var for var in suggestion.private if var not in remove_from_private]
-        suggestion.first_private = [var for var in suggestion.first_private if var not in remove_from_first_private]
+        suggestion.first_private = [
+            var for var in suggestion.first_private if var not in remove_from_first_private
+        ]
     return suggestions
 
 
-def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function,
-                            var_def_line_dict: Dict[str, List[str]]):
+def __filter_shared_clauses(
+    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
+):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters shared clauses.
     :param suggestion: Suggestion to be checked
@@ -125,8 +158,9 @@ def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function,
                 if def_line is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(def_line, parent_function.start_position(),
-                                            parent_function.end_position()):
+                if line_contained_in_region(
+                    def_line, parent_function.start_position(), parent_function.end_position()
+                ):
                     is_valid = True
                 else:
                     pass
@@ -136,11 +170,14 @@ def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function,
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
+    suggestion.shared = [
+        v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed
+    ]
 
 
-def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function,
-                             var_def_line_dict: Dict[str, List[str]]):
+def __filter_private_clauses(
+    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
+):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters private clauses.
     :param suggestion: Suggestion to be checked
@@ -163,8 +200,9 @@ def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function,
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                elif line_contained_in_region(defLine, parent_function.start_position(),
-                                              parent_function.end_position()):
+                elif line_contained_in_region(
+                    defLine, parent_function.start_position(), parent_function.end_position()
+                ):
                     is_valid = True
                 else:
                     pass
@@ -173,11 +211,14 @@ def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function,
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
+    suggestion.private = [
+        v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed
+    ]
 
 
-def __filter_firstprivate_clauses(suggestion: TaskParallelismInfo, parent_function,
-                                  var_def_line_dict: Dict[str, List[str]]):
+def __filter_firstprivate_clauses(
+    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
+):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters firstprivate clauses.
     :param suggestion: Suggestion to be checked
@@ -194,8 +235,9 @@ def __filter_firstprivate_clauses(suggestion: TaskParallelismInfo, parent_functi
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(defLine, parent_function.start_position(),
-                                            parent_function.end_position()):
+                if line_contained_in_region(
+                    defLine, parent_function.start_position(), parent_function.end_position()
+                ):
                     is_valid = True
                 else:
                     pass
@@ -204,11 +246,14 @@ def __filter_firstprivate_clauses(suggestion: TaskParallelismInfo, parent_functi
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
+    suggestion.first_private = [
+        v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed
+    ]
 
 
-def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: CUNode, target: CUNode,
-                                    breaker_cu: CUNode, visited: List[CUNode]):
+def __reverse_reachable_w_o_breaker(
+    pet: PETGraphX, root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]
+):
     """Helper function for filter_data_sharing_clauses_by_scope.
     Checks if target is reachable by traversing the successor graph in reverse, starting from root,
     without visiting breaker_cu.
@@ -229,13 +274,14 @@ def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: CUNode, target: CUNode
     # start recursion for each incoming edge
     for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
         recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
-            pet, pet.node_at(tmp_e[0]),
-            target, breaker_cu, visited)
+            pet, pet.node_at(tmp_e[0]), target, breaker_cu, visited
+        )
     return recursion_result
 
 
-def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[PatternInfo],
-                                           var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def __filter_data_sharing_clauses_by_scope(
+    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+) -> List[PatternInfo]:
     """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
     suggestion.
     Idea (per shared variable / suggestion):
@@ -260,8 +306,9 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
         if suggestion.type is not TPIType.TASK:
             continue
         # get function containing the task cu
-        parent_function_cu, last_node = \
-            get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+        parent_function_cu, last_node = get_parent_of_type(
+            pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
+        )[0]
         # filter firstprivate
         __filter_sharing_clause(pet, suggestion, var_def_line_dict, parent_function_cu, "FP")
         # filter private
@@ -271,8 +318,13 @@ def __filter_data_sharing_clauses_by_scope(pet: PETGraphX, suggestions: List[Pat
     return suggestions
 
 
-def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
-                            parent_function_cu, target_clause_list: str):
+def __filter_sharing_clause(
+    pet: PETGraphX,
+    suggestion: TaskParallelismInfo,
+    var_def_line_dict: Dict[str, List[str]],
+    parent_function_cu,
+    target_clause_list: str,
+):
     """Helper function for filter_data_sharing_clauses_by_scope.
     Filters a given suggestions private, firstprivate or shared variables list,
     depending on the specific value of target_clause_list.
@@ -297,14 +349,17 @@ def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var
             # get CU which contains var_def_line
             optional_var_def_cu: Optional[CUNode] = None
             for child_cu in get_cus_inside_function(pet, parent_function_cu):
-                if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
+                if line_contained_in_region(
+                    var_def_line, child_cu.start_position(), child_cu.end_position()
+                ):
                     optional_var_def_cu = child_cu
             if optional_var_def_cu is None:
                 continue
             var_def_cu = cast(CUNode, optional_var_def_cu)
             # 1. check control flow (reverse BFS from suggestion._node to parent_function
-            if __reverse_reachable_w_o_breaker(pet, pet.node_at(suggestion.node_id),
-                                               parent_function_cu, var_def_cu, []):
+            if __reverse_reachable_w_o_breaker(
+                pet, pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []
+            ):
                 # remove var as it may not be known
                 to_be_removed.append(var)
                 continue
@@ -316,15 +371,18 @@ def __filter_sharing_clause(pet: PETGraphX, suggestion: TaskParallelismInfo, var
                     to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
         if target_clause_list == "FP":
-            suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
+            suggestion.first_private = [
+                v for v in suggestion.first_private if v not in to_be_removed
+            ]
         elif target_clause_list == "PR":
             suggestion.private = [v for v in suggestion.private if v not in to_be_removed]
         else:
             suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
 
 
-def remove_useless_barrier_suggestions(pet: PETGraphX,
-                                       suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
+def remove_useless_barrier_suggestions(
+    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
+) -> List[TaskParallelismInfo]:
     """remove suggested barriers which are not contained in the same
     function body with at least one suggested task.
     Returns the filtered version of the list given as a parameter.
@@ -348,7 +406,9 @@ def remove_useless_barrier_suggestions(pet: PETGraphX,
     relevant_function_bodies: Dict[CUNode, List[str]] = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent: CUNode = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][0]
+        parent: CUNode = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][
+            0
+        ]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
@@ -357,7 +417,7 @@ def remove_useless_barrier_suggestions(pet: PETGraphX,
     result_suggestions += task_suggestions
     for tws in taskwait_suggestions:
         tws_line_number = tws.pragma_line
-        tws_line_number = tws_line_number[tws_line_number.index(":") + 1:]
+        tws_line_number = tws_line_number[tws_line_number.index(":") + 1 :]
         for rel_func_body in relevant_function_bodies.keys():
             if check_reachability(pet, tws._node, rel_func_body, [EdgeType.CHILD]):
                 # remove suggested barriers where line number smaller than
@@ -389,8 +449,13 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
     return result
 
 
-def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
-                             parent_function: CUNode, out_dep_vars: Dict[str, List[str]]) -> bool:
+def __filter_in_dependencies(
+    pet: PETGraphX,
+    suggestion: TaskParallelismInfo,
+    var_def_line_dict: Dict[str, List[str]],
+    parent_function: CUNode,
+    out_dep_vars: Dict[str, List[str]],
+) -> bool:
     """Helper function for filter_data_depend_clauses.
     Filters in-dependencies of the given suggestion.
     :param pet: PET Graph
@@ -410,8 +475,9 @@ def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, va
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(defLine, parent_function.start_position(),
-                                            parent_function.end_position()):
+                if line_contained_in_region(
+                    defLine, parent_function.start_position(), parent_function.end_position()
+                ):
                     # check if var is contained in out_dep_vars and a previous out_dep exists
                     if var in out_dep_vars:
                         for line_num in out_dep_vars[var]:
@@ -426,12 +492,17 @@ def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, va
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
-                                if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                cu_node.end_position()):
+                                if not line_contained_in_region(
+                                    test_line, cu_node.start_position(), cu_node.end_position()
+                                ):
                                     continue
                                 # check if path from cu_node to suggestion._node exists
-                                if check_reachability(pet, suggestion._node, cu_node,
-                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                if check_reachability(
+                                    pet,
+                                    suggestion._node,
+                                    cu_node,
+                                    [EdgeType.SUCCESSOR, EdgeType.CHILD],
+                                ):
                                     is_valid = True
                 else:
                     pass
@@ -441,12 +512,19 @@ def __filter_in_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, va
             modification_found = True
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
+    suggestion.in_dep = [
+        v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed
+    ]
     return modification_found
 
 
-def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, var_def_line_dict: Dict[str, List[str]],
-                              parent_function: CUNode, in_dep_vars: Dict[str, List[str]]) -> bool:
+def __filter_out_dependencies(
+    pet: PETGraphX,
+    suggestion: TaskParallelismInfo,
+    var_def_line_dict: Dict[str, List[str]],
+    parent_function: CUNode,
+    in_dep_vars: Dict[str, List[str]],
+) -> bool:
     """Helper function for filter_data_depend_clauses.
     Filters out-dependencies of the given suggestion.
     :param pet: PET Graph
@@ -466,8 +544,9 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(defLine, parent_function.start_position(),
-                                            parent_function.end_position()):
+                if line_contained_in_region(
+                    defLine, parent_function.start_position(), parent_function.end_position()
+                ):
                     # check if var is contained in in_dep_vars and a successive in_dep exists
                     if var in in_dep_vars:
                         for line_num in in_dep_vars[var]:
@@ -482,12 +561,17 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
-                                if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                cu_node.end_position()):
+                                if not line_contained_in_region(
+                                    test_line, cu_node.start_position(), cu_node.end_position()
+                                ):
                                     continue
                                 # check if path from suggestion._node to cu_node exists
-                                if check_reachability(pet, cu_node, suggestion._node,
-                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                if check_reachability(
+                                    pet,
+                                    cu_node,
+                                    suggestion._node,
+                                    [EdgeType.SUCCESSOR, EdgeType.CHILD],
+                                ):
                                     is_valid = True
                 else:
                     pass
@@ -497,14 +581,20 @@ def __filter_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo, v
             to_be_removed.append(var)
             modification_found = True
     to_be_removed = list(set(to_be_removed))
-    suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
+    suggestion.out_dep = [
+        v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed
+    ]
     return modification_found
 
 
-def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo,
-                                 var_def_line_dict: Dict[str, List[str]],
-                                 parent_function: CUNode, in_dep_vars: Dict[str, List[str]],
-                                 out_dep_vars: Dict[str, List[str]]) -> bool:
+def __filter_in_out_dependencies(
+    pet: PETGraphX,
+    suggestion: TaskParallelismInfo,
+    var_def_line_dict: Dict[str, List[str]],
+    parent_function: CUNode,
+    in_dep_vars: Dict[str, List[str]],
+    out_dep_vars: Dict[str, List[str]],
+) -> bool:
     """Helper function for filter_data_depend_clauses.
     Filters in_out-dependencies of the given suggestion.
     :param pet: PET Graph
@@ -525,8 +615,9 @@ def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(defLine, parent_function.start_position(),
-                                            parent_function.end_position()):
+                if line_contained_in_region(
+                    defLine, parent_function.start_position(), parent_function.end_position()
+                ):
                     # check if var occurs more than once as in or out, i.e. at least an actual in or out
                     # dependency exists
                     if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
@@ -545,12 +636,17 @@ def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
-                                if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                cu_node.end_position()):
+                                if not line_contained_in_region(
+                                    test_line, cu_node.start_position(), cu_node.end_position()
+                                ):
                                     continue
                                 # check if path from cu_node to suggestion._node exists
-                                if check_reachability(pet, suggestion._node, cu_node,
-                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                if check_reachability(
+                                    pet,
+                                    suggestion._node,
+                                    cu_node,
+                                    [EdgeType.SUCCESSOR, EdgeType.CHILD],
+                                ):
                                     prior_out_exists = True
                         for line_num in in_dep_vars[var]:
                             line_num = str(line_num)
@@ -564,12 +660,17 @@ def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
-                                if not line_contained_in_region(test_line, cu_node.start_position(),
-                                                                cu_node.end_position()):
+                                if not line_contained_in_region(
+                                    test_line, cu_node.start_position(), cu_node.end_position()
+                                ):
                                     continue
                                 # check if path from suggestion._node to cu_node exists
-                                if check_reachability(pet, cu_node, suggestion._node,
-                                                      [EdgeType.SUCCESSOR, EdgeType.CHILD]):
+                                if check_reachability(
+                                    pet,
+                                    cu_node,
+                                    suggestion._node,
+                                    [EdgeType.SUCCESSOR, EdgeType.CHILD],
+                                ):
                                     successive_in_exists = True
                         # check and treat conditions
                         if prior_out_exists and successive_in_exists:
@@ -591,12 +692,15 @@ def __filter_in_out_dependencies(pet: PETGraphX, suggestion: TaskParallelismInfo
             to_be_removed.append(var)
             modification_found = True
     to_be_removed = list(set(to_be_removed))
-    suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
+    suggestion.in_out_dep = [
+        v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed
+    ]
     return modification_found
 
 
-def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
-                               var_def_line_dict: Dict[str, List[str]]) -> List[PatternInfo]:
+def filter_data_depend_clauses(
+    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+) -> List[PatternInfo]:
     """Removes superfluous variables from the data depend clauses
     of task suggestions.
     :param pet: PET graph
@@ -642,20 +746,21 @@ def filter_data_depend_clauses(pet: PETGraphX, suggestions: List[PatternInfo],
             if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             # get function containing the task cu
-            parent_function, last_node = \
-                get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
+            parent_function, last_node = get_parent_of_type(
+                pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
+            )[0]
             # filter in_dep
-            modification_found = modification_found or __filter_in_dependencies(pet, suggestion,
-                                                                                var_def_line_dict, parent_function,
-                                                                                out_dep_vars)
+            modification_found = modification_found or __filter_in_dependencies(
+                pet, suggestion, var_def_line_dict, parent_function, out_dep_vars
+            )
             # filter out_dep
-            modification_found = modification_found or __filter_out_dependencies(pet, suggestion,
-                                                                                 var_def_line_dict, parent_function,
-                                                                                 in_dep_vars)
+            modification_found = modification_found or __filter_out_dependencies(
+                pet, suggestion, var_def_line_dict, parent_function, in_dep_vars
+            )
             # filter in_out_dep
-            modification_found = modification_found or __filter_in_out_dependencies(pet, suggestion,
-                                                                                    var_def_line_dict, parent_function,
-                                                                                    in_dep_vars, out_dep_vars)
+            modification_found = modification_found or __filter_in_out_dependencies(
+                pet, suggestion, var_def_line_dict, parent_function, in_dep_vars, out_dep_vars
+            )
 
             # correct in_out_vars (find in_out vars if not already detected)
             overlap = [v for v in suggestion.in_dep if v in suggestion.out_dep]
@@ -697,9 +802,7 @@ def remove_duplicates(suggestions: List[PatternInfo]) -> List[PatternInfo]:
             sug_tmp = cast(Union[TaskParallelismInfo, ParallelRegionInfo], sug)
         else:
             continue
-        representing_tuple = (sug_tmp.region_start_line,
-                              sug_tmp.region_end_line,
-                              sug_tmp.pragma)
+        representing_tuple = (sug_tmp.region_start_line, sug_tmp.region_end_line, sug_tmp.pragma)
         if representing_tuple in buffer:
             continue
         else:
