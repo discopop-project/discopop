@@ -84,7 +84,7 @@ class Suggestion(object):
             ptg.Window(
                 content,
             )
-            .set_title("[210 bold]Source Code")
+            .set_title("[210 bold]" + source_code_path)
         )
         code_window.overflow = ptg.Overflow.SCROLL
 
