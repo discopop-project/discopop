@@ -283,6 +283,14 @@ cd $PROJECT
 rm -f FileMapping.txt
 $DP/scripts/dp-fmap
 
+# cleanup
+rm -f $PROJECT/Data.xml
+rm -f $PROJECT/loop_counter_output.xml
+rm -f $PROJECT/reduction.txt
+rm -f $PROJECT/DP_CUIDCounter.txt
+rm -f $PROJECT/patterns.txt
+rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
+
 # build using gllvm as compiler
 log -i "Building your application..."
 log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)"
