@@ -38,7 +38,7 @@ def push_suggestion_overview_screen(manager: ptg.WindowManager, config_dir: str,
 
     collabsible_patterns = (
         ptg.Window(
-            get_suggestion_view(manager, suggestions_path, wizard),
+            get_suggestion_view(manager, suggestions_path, wizard, exec_config_obj),
             box="DOUBLE",
         )
         .set_title("[210 bold]Suggestions by Type")
@@ -51,7 +51,7 @@ def push_suggestion_overview_screen(manager: ptg.WindowManager, config_dir: str,
 #    ))
     wizard.show_body_windows(manager, [(collabsible_patterns, 0.2), (details_section, 0.2), (code_section, 0.55)])
 
-def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizard) -> ptg.Container:
+def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizard, exec_config_obj) -> ptg.Container:
     container = ptg.Container()
 
     # todo load json or python objects instead
@@ -71,7 +71,7 @@ def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizar
         suggestion_objects.append(Suggestion(idx, suggestion))
 
     for suggestion in suggestion_objects:
-        container.lazy_add(suggestion.get_as_collapsible(manager, wizard))
+        container.lazy_add(suggestion.get_as_collapsible(manager, wizard, exec_config_obj))
     return container
 
 
