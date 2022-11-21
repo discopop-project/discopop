@@ -150,3 +150,5 @@ _deps
 /example/*
 !/example/Makefile
 !/example/example.cpp
+!/example/solution1.cpp
+!/example/solution2.cpp

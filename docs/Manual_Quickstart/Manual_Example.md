@@ -81,11 +81,48 @@ In order to generate parallelization suggestions from the [gathered data](../Pro
 
 By default, the DiscoPoP Explorer outputs parallelization suggestions to the console.
 It should show three different suggestions in total.
-The first should be a `Do-all` with the `Start line 1:8`.
-The second should be a `Do-all` with the `Start line 1:12` and the third should be a `Geometric Decomposition`.
-For detailed information on how to interpret and implement the created suggestions, please refer to their respective [pages](../Pattern_Detection/Patterns/Patterns.md).
-One important thing to note is, however, that the second `Do-all` suggestion mentions a `reduction` variable (`sum`), which shows that the underlying identified parallel patterns for both `Do-all` suggestions are different.
-Nevertheless, both are reported as `Do-all` patterns due to their similarities with regard to the OpenMP code used in order to implement the suggestions.
+* The first should be a `Do-all` with the `Start line 1:19`.
+* The second should be  `Reduction` with the `Start line 1:23`.
+* The third should be a `Geometric Decomposition`.
 
-<br>
-<i>Note: This potentially unclear reporting of `Do-all` and `Reduction` patterns will be fixed in the near future to further increase the readability of the created suggestions without tool support.</i>
+## Step 3: Interpreting and Implementing the Suggestions
+For detailed information on how to interpret and implement the created suggestions, please refer to the [pattern wiki](../Pattern_Detection/Patterns/Patterns.md).
+
+Looking at the created suggestions there are two ways that the code can be parallelized (the parallelized code can be found inside the example directory as `solution1.cpp` and `solution2.cpp`):
+
+* **Implementing the Do-All and Reduction Patterns**<br/> To implement the `Do-All` and `Reduction` patterns all we have to do is to add the suggested pragma before each loop. Make sure to add the `reduction` clause when implementing Reductions! The DiscoPoP Explorer also suggests variable classification for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
+  - To implement the `Do-All` suggestion we add the following line before the corresponding loop.
+      
+        #pragma omp parallel for shared(Arr,N)
+
+  - To implement the `Reduction` suggestion we add the folling line before the corresponding loop.
+    
+        # pragma omp parallel for reduction(+:sum) shared(Arr,N)
+
+  - When we implement both patterns it is better to open only one parallel region with `#pragma omp parallel` and use the `pragma omp for` before each loop:
+
+        #pragma omp parallel  shared(Arr,N)
+        {
+            #pragma omp for
+            for(...) {...} // first loop
+            #pragma omp for reduction(+:sum)
+            for(...) {...} // second loop
+        }
+
+* **Implementing the geometric decomposition**<br/> The Geometric Decomposition Pattern requires some code rewriting. A more in-depth example with explanation of the Geometric Decomposition Pattern interpretation can be found in the [pattern wiki](../Pattern_Detection/Patterns/Patterns.md).
+A possible solution is provided in `solution2.cpp` in the example directory.
+
+Please note that it is not possible to implement both the Geometric Decomposition together with one of the other suggestions at the same time.
+
+## Step 4: Compile the parallelized application
+After changing the source recompile the edited source code with the `-fopenmp` flag to enable openMP.
+We provide example solutions on how to parallelize The patterns in the files `solution1.cpp` and `solution2.cpp`. You can compile them using:
+    
+    clang++ solution1.cpp -fopenmp -o solution1
+    clang++ solution2.cpp -fopenmp -o solution2
+
+## Final Remarks
+
+- When using openMP library functions (like `omp_get_thread_num()` in the Geometric Decomposition) make sure to include the `omp.h` header.
+- Make sure to check the correctness of each suggestion! The approach of DiscoPoP can find a lot more opportunities than most tools that use only regular static analysis. However there is the possibility of false positives. These advantages and disadvantages are due to the fact that data dependencies are recorded during an instrumented run of the application. Usually the data dependencies do not change much if a representative input is selected during the instrumentation but it depends on the application!
+- DiscoPoP analyzes data dependencies, not expected speedup. This means that some suggestions - especially for small problem sizes - are in fact likely to cause a slowdown due to the overhead of parallelization.

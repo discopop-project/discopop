@@ -16,11 +16,16 @@ int main(){
     long sum = 0;
     int Arr[N];
 
-    for(int i = 0; i < N; i++){
-        Arr[i] = i % 13;
-    }
+    #pragma omp parallel shared(Arr,N)
+    {
+        #pragma omp for 
+        for(int i = 0; i < N; i++){
+            Arr[i] = i % 13;
+        }
 
-    for(int i = 0; i < N; i++){
-        sum += Arr[i];
-    }
+        #pragma omp for reduction(+:sum)
+        for(int i = 0; i < N; i++){
+            sum += Arr[i];
+        }
+    } // end of parallel region
 }
