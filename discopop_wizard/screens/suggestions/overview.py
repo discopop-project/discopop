@@ -79,7 +79,7 @@ def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizar
         suggestion_objects.append(Suggestion(idx, suggestion))
 
     for suggestion in suggestion_objects:
-        container.lazy_add(suggestion.get_as_collapsible(manager, wizard, exec_config_obj))
+        container.lazy_add(suggestion.get_as_button(manager, wizard, exec_config_obj))
     return container
 
 

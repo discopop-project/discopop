@@ -20,7 +20,7 @@ class Suggestion(object):
         self.suggestion = suggestion
         self.id = id
 
-    def get_as_collapsible(self, manager: ptg.WindowManager, wizard, execution_configuration):
+    def get_as_button(self, manager: ptg.WindowManager, wizard, execution_configuration):
         return ptg.Button(label=self.suggestion.split("\n")[0],
                           onclick=lambda *_: self.__show_details_and_code(manager, wizard, execution_configuration))
 
