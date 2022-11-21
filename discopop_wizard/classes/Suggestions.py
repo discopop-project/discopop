@@ -84,9 +84,6 @@ class Suggestion(object):
             content.lazy_add(ptg.Label(style + str(idx) + "    " + line, parent_align=ptg.enums.HorizontalAlignment.LEFT))
             file_length = idx
 
-        content.lazy_add("Jump to line: " + self.suggestion.split("\n")[1].split(":")[2])
-        content.lazy_add("Highlight until line: " + self.suggestion.split("\n")[2].split(":")[2])
-
         # create new code window
         code_window = (
             ptg.Window(
