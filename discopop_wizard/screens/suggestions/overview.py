@@ -53,11 +53,7 @@ def push_suggestion_overview_screen(manager: ptg.WindowManager, config_dir: str,
     )
     collabsible_patterns.overflow = ptg.Overflow.SCROLL;
 
-
-#    buttons = (ptg.Window(
-#        ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
-#    ))
-    wizard.show_body_windows(manager, [(collabsible_patterns, 0.2), (details_section, 0.2), (code_section, 0.55)])
+    wizard.show_body_windows(manager, [(collabsible_patterns, 0.4), (code_section, 0.55)])
 
 def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizard, exec_config_obj) -> ptg.Container:
     container = ptg.Container()
@@ -78,8 +74,11 @@ def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizar
     for idx, suggestion in enumerate(suggestions):
         suggestion_objects.append(Suggestion(idx, suggestion))
 
+
+    all_collapsibles: List[ptg.Collapsible] = []
     for suggestion in suggestion_objects:
-        container.lazy_add(suggestion.get_as_button(manager, wizard, exec_config_obj))
+        #container.lazy_add(suggestion.get_as_button(manager, wizard, exec_config_obj))
+        container.lazy_add(suggestion.get_as_collapsible(manager, wizard, exec_config_obj, all_collapsibles))
     return container
 
 

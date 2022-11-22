@@ -7,6 +7,7 @@
 # directory for details.
 
 import os
+from typing import List
 
 import pytermgui as ptg
 
@@ -19,6 +20,20 @@ class Suggestion(object):
         suggestion = suggestion.replace("\t", "    ")
         self.suggestion = suggestion
         self.id = id
+
+    def get_as_collapsible(self, manager: ptg.WindowManager, wizard, execution_configuration,
+                           all_collapsibles: List[ptg.Collapsible]):
+        collapsible = ptg.Collapsible(self.suggestion.split("\n")[0], parent_align=ptg.enums.HorizontalAlignment.LEFT)
+        collapsible.lazy_add(ptg.Label(self.suggestion,
+                                        parent_align=ptg.enums.HorizontalAlignment.LEFT,
+                                        ))
+        collapsible.lazy_add(ptg.Button("Show",
+                                        parent_align=ptg.enums.HorizontalAlignment.LEFT,
+                                        onclick=lambda *_: self.__show_code_section(manager, wizard, execution_configuration),
+                                        ))
+        collapsible.lazy_add(ptg.Label(""))
+        all_collapsibles.append(collapsible)
+        return collapsible
 
     def get_as_button(self, manager: ptg.WindowManager, wizard, execution_configuration):
         return ptg.Button(label=self.suggestion.split("\n")[0],
@@ -33,7 +48,7 @@ class Suggestion(object):
     def __show_details_section(self, manager: ptg.WindowManager, wizard):
         # close window
         for slot in manager.layout.slots:
-            if slot.name == "body_1":
+            if slot.name == "body_2":
                 slot.content.close()
 
         # create new details window
@@ -44,13 +59,13 @@ class Suggestion(object):
             .set_title("[210 bold]Details")
         )
         details_window.overflow = ptg.Overflow.SCROLL
-        manager.add(details_window, assign="body_1")
+        manager.add(details_window, assign="body_2")
 
 
     def __show_code_section(self, manager: ptg.WindowManager, wizard, execution_configuration):
         # close window
         for slot in manager.layout.slots:
-            if slot.name == "body_2":
+            if slot.name == "body_1":
                 slot.content.close()
 
         content = ptg.Container()
@@ -98,5 +113,5 @@ class Suggestion(object):
         code_window._max_scroll = file_length  # required to allow scrolling, since window only contains one element
         code_window.scroll(start_line)
 
-        manager.add(code_window, assign="body_2")
+        manager.add(code_window, assign="body_1")
 
