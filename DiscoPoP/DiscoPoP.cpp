@@ -325,9 +325,21 @@ string DiscoPoP::determineVariableType(Instruction *I) {
             if (structType && gep->getNumOperands() > 2) {
                 s = "STRUCT,";
             }
+
             // we've found an array
-            if (PTy->getElementType()->getTypeID() == Type::ArrayTyID) {
+            if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID)
+            {
                 s = "ARRAY,";
+            }
+            else{
+                // check if previous instruction is a GEP as well. If so, an Array has been found (e.g. double**)
+                Value* prevInst = cast<Instruction>(gep)->getOperand(0);
+                if(isa<GetElementPtrInst>(prevInst)){
+                    s = "ARRAY,";
+                }
+                else if(prevInst->getType()->isPointerTy()){
+                    s = "ARRAY,";
+                }
             }
         }
     }
@@ -675,14 +687,9 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
                 Variable v(varName, varType, varDefLine);
 
-                std::string prefix("ARRAY");
-                if (!varType.compare(0, prefix.size(), prefix)) {
-                    varName = "ARRAY, " + varName;
-                }
-
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
-                }
+                }            
                 if (globalVariablesSet.count(varName) ||
                     programGlobalVariablesSet.count(varName)) {
                     (*bbCU)->globalVariableNames.insert(v);
@@ -1280,6 +1287,16 @@ string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
             // we've found an array
             if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID) {
                 s = "ARRAY,";
+            }
+            else{
+                // check if previous instruction is a GEP aswell. If so, an Array has been found (e.g. double**)
+                Value* prevInst = cast<Instruction>(gep)->getOperand(0);
+                if(isa<GetElementPtrInst>(prevInst)){
+                    s = "ARRAY,";
+                }
+                else if(prevInst->getType()->isPointerTy()){
+                    s = "ARRAY,";
+                }
             }
         }
     }

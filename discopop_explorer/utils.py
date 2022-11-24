@@ -279,7 +279,7 @@ def is_global(var: str, tree: List[CUNode]) -> bool:
             for gv in node.global_vars:
                 if gv.name == var:
                     # TODO from tmp global vars
-                    return False
+                    return True
     return False
 
 
@@ -543,6 +543,10 @@ def classify_loop_variables(
                 if is_scalar_val(var):
                     last_private.append(var)
                 else:
+                    shared.append(var)
+            else:
+                if not is_scalar_val(var):
+                    # array type variable is written
                     shared.append(var)
 
         elif is_first_written(var.name, raw, war, sub):
