@@ -7,6 +7,7 @@
 # directory for details.
 
 import os
+import pathlib
 import tkinter as tk
 from enum import IntEnum
 from os.path import dirname
@@ -74,6 +75,11 @@ class DiscoPoPConfigurationWizard(object):
 
         self.window = tk.Tk()
         self.window.title("DiscoPoP Wizard")
+
+        photo = tk.PhotoImage(
+            file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
+        self.window.iconphoto(False, photo)
+
         # set window to full screen
         self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth(), self.window.winfo_screenheight()))
         self.window.columnconfigure(1, weight=1)
