@@ -15,15 +15,15 @@ from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
 
 
-def show_suggestions_overview_screen(execution_obj):
+def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_configuration_obj):
     # close elements on details_frame
-    for c in execution_obj.details_frame.winfo_children():
+    for c in details_frame.winfo_children():
         c.destroy()
     # load suggestions from execution
-    suggestions = __get_suggestion_objects(execution_obj)
+    suggestions = get_suggestion_objects(execution_configuration_obj)
 
     # create horizontally split frames (scrollable list of suggestions + code preview)
-    horizontal_paned_window = ttk.PanedWindow(execution_obj.details_frame, orient="horizontal")
+    horizontal_paned_window = ttk.PanedWindow(details_frame, orient="horizontal")
     horizontal_paned_window.pack(fill=tk.BOTH, expand=True)
     scrollable_list_frame = tk.Frame(horizontal_paned_window)
     horizontal_paned_window.add(scrollable_list_frame, weight=1)
@@ -44,22 +44,22 @@ def show_suggestions_overview_screen(execution_obj):
     canvas.configure(yscrollcommand=scrollbar.set)
     for row, suggestion in enumerate(suggestions):
         # create button to load code preview
-        button = suggestion.get_as_button(canvas, code_preview_frame, execution_obj.execution_configuration)
+        button = suggestion.get_as_button(canvas, code_preview_frame, execution_configuration_obj)
 
         button.grid(row=row)
         # register hover message (suggestion details)
         create_tool_tip(button, text=suggestion.suggestion)
 
     # add label of execution configuration for overview purposes
-    tk.Label(scrollable_list_frame, text=execution_obj.execution_configuration.label,
-             font=execution_obj.wizard.style_font_bold).pack(side="top", pady=10)
+    tk.Label(scrollable_list_frame, text=execution_configuration_obj.label,
+             font=wizard.style_font_bold).pack(side="top", pady=10)
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
 
 
-def __get_suggestion_objects(execution_obj) -> List[Suggestion]:
-    suggestions_path = os.path.join(execution_obj.execution_configuration.project_path, "patterns.txt")
+def get_suggestion_objects(execution_configuration_obj) -> List[Suggestion]:
+    suggestions_path = os.path.join(execution_configuration_obj.project_path, "patterns.txt")
 
     # todo load json or python objects instead
     suggestions: List[str] = []
