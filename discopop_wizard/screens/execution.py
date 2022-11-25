@@ -50,7 +50,7 @@ class ExecutionView(object):
         command += "--linker-flags \"" + self.execution_configuration.linker_flags + "\" "
         command += "--executable-name \"" + self.execution_configuration.executable_name + "\" "
         command += "--executable-arguments \"" + self.execution_configuration.executable_arguments + "\" "
-        command += "--build-threads " + self.execution_configuration.build_threads + " "
+        command += "--make-flags \"" + self.execution_configuration.make_flags + "\" "
 
         return command
 

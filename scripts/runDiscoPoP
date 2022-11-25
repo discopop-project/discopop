@@ -38,8 +38,7 @@ OPTIONAL ARGUMENTS:
                           please provide the necessary linker flags. e.g. -lm
  --make-target <target>   specify a specific Make target to be built,
                           if not specified the default make target is used.
- --build-threads <number> you can build your application in parallel,
-                          but this will mess up some logs.
+ --make-flags <flags>     specify flags which will be passed through to make.
  --explorer-flags <flags> will be passed through to the DiscoPoP Explorer.
  --help or -h,            show this text and exit.
  --verbose or -v,         show verbose output.
@@ -169,8 +168,8 @@ while [[ $# -gt 0 ]]; do
       EXECUTABLE_ARGUMENTS="$2"
       shift; shift # past argument and value
       ;;
-    --build-threads)
-      THREADS="$2"
+    --make-flags)
+      MAKE_FLAGS="$2"
       shift; shift # past argument and value
       ;;
     --make-target)
@@ -249,7 +248,7 @@ log -i \
   ldFlags:    $LINKER_FLAGS
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
-  threads:    $THREADS
+  makeFlags:  $MAKE_FLAGS
   discoPoP:   $DP
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG"
@@ -293,7 +292,7 @@ rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
 
 # build using gllvm as compiler
 log -i "Building your application..."
-log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ -j$THREADS $MAKFILE_TARGET)"
+log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
 
 # create single .bc and .ll from the executable
 log -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"

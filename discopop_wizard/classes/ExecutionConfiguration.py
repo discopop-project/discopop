@@ -26,7 +26,7 @@ class ExecutionConfiguration(object):
     executable_arguments: str = ""
     project_path: str = ""
     linker_flags: str = ""
-    build_threads: str = ""
+    make_flags: str = ""
     # optional
     notes: str = ""
     make_target: str = ""
@@ -56,8 +56,8 @@ class ExecutionConfiguration(object):
                 self.executable_name = line[line.index("=") + 1:]
             if line.startswith("EXE_ARGS="):
                 self.executable_arguments = line[line.index("=") + 1:]
-            if line.startswith("BUILD_THREAD_NUM="):
-                self.build_threads = line[line.index("=") + 1:]
+            if line.startswith("MAKE_FLAGS="):
+                self.make_flags = line[line.index("=") + 1:]
             if line.startswith("PROJECT_PATH="):
                 self.project_path = line[line.index("=") + 1:]
             if line.startswith("PROJECT_LINKER_FLAGS="):
@@ -76,7 +76,7 @@ class ExecutionConfiguration(object):
         self.description = values["Description: "]
         self.executable_name = values["Executable name: "]
         self.executable_arguments = values["Executable arguments: "]
-        self.build_threads = values["Build threads: "]
+        self.make_flags = values["Make flags: "]
         self.project_path = values["Project path: "]
         self.linker_flags = values["Project linker flags: "]
         self.notes = values["Additional notes:"]
@@ -92,7 +92,7 @@ class ExecutionConfiguration(object):
         config_str += "DESCRIPTION=" + self.description + "\n"
         config_str += "EXE_NAME=" + self.executable_name + "\n"
         config_str += "EXE_ARGS=" + self.executable_arguments + "\n"
-        config_str += "BUILD_THREAD_NUM=" + self.build_threads + "\n"
+        config_str += "MAKE_FLAGS=" + self.make_flags + "\n"
         config_str += "PROJECT_PATH=" + self.project_path + "\n"
         config_str += "PROJECT_LINKER_FLAGS=" + self.linker_flags + "\n"
         config_str += "MAKE_TARGET=" + self.make_target + "\n"
@@ -100,6 +100,7 @@ class ExecutionConfiguration(object):
         config_str += "### END CONFIG ###\n\n"
 
         # define invocation string
+        # todo proper invocation string
         invocation_str = 'echo "HELLO WORLD FROM CONFIGURATION: ${LABEL}"\n'
 
         # add configuration to resulting string
@@ -125,7 +126,7 @@ class ExecutionConfiguration(object):
         tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky='ew')
         tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e").grid(row=3, column=1, sticky='ew')
         tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky='ew')
-        tk.Label(canvas, text="Build threads:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky='ew')
+        tk.Label(canvas, text="Make flags:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky='ew')
         tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e").grid(row=6, column=1, sticky='ew')
         tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky='ew')
         tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky='ew')
@@ -144,9 +145,9 @@ class ExecutionConfiguration(object):
         executable_args = tk.Entry(canvas)
         executable_args.grid(row=4, column=2, sticky='ew')
         executable_args.insert(tk.END, self.executable_arguments)
-        build_threads = tk.Entry(canvas)
-        build_threads.grid(row=5, column=2, sticky='ew')
-        build_threads.insert(tk.END, str(self.build_threads))
+        make_flags = tk.Entry(canvas)
+        make_flags.grid(row=5, column=2, sticky='ew')
+        make_flags.insert(tk.END, str(self.make_flags))
         project_path = tk.Entry(canvas)
         project_path.grid(row=6, column=2, sticky='ew')
         project_path.insert(tk.END, self.project_path)
@@ -176,7 +177,7 @@ class ExecutionConfiguration(object):
         save_button = tk.Button(button_canvas, text="Save",
                                 command=lambda: self.save_changes(wizard, main_screen_obj, label,
                                                                   description, executable_name,
-                                                                  executable_args, build_threads,
+                                                                  executable_args, make_flags,
                                                                   project_path, project_linker_flags, make_target,
                                                                   additional_notes))
         save_button.grid(row=1, column=1)
@@ -187,7 +188,7 @@ class ExecutionConfiguration(object):
         execute_button = tk.Button(button_canvas, text="Execute",
                                    command=lambda: self.execute_configuration(wizard, main_screen_obj, label,
                                                                               description, executable_name,
-                                                                              executable_args, build_threads,
+                                                                              executable_args, make_flags,
                                                                               project_path, project_linker_flags,
                                                                               make_target,
                                                                               additional_notes))
@@ -209,7 +210,7 @@ class ExecutionConfiguration(object):
 
     def save_changes(self, wizard, main_screen_obj,
                      label: tk.Entry, description: tk.Entry, executable_name: tk.Entry, executable_args: tk.Entry,
-                     build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
+                     make_flags: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
                      make_target: tk.Entry, additional_notes: tk.Entry):
 
         # update execution_configuration
@@ -217,7 +218,7 @@ class ExecutionConfiguration(object):
         self.description = description.get()
         self.executable_name = executable_name.get()
         self.executable_arguments = executable_args.get()
-        self.build_threads = build_threads.get()
+        self.make_flags = make_flags.get()
         self.project_path = project_path.get()
         self.linker_flags = project_linker_flags.get()
         self.make_target = make_target.get()
@@ -251,11 +252,11 @@ class ExecutionConfiguration(object):
     def execute_configuration(self, wizard, main_screen_obj,
                               label: tk.Entry, description: tk.Entry, executable_name: tk.Entry,
                               executable_args: tk.Entry,
-                              build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
+                              make_flags: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
                               make_target: tk.Entry, additional_notes: tk.Entry):
         # save changes
         self.save_changes(wizard, main_screen_obj, label, description, executable_name,
-                          executable_args, build_threads,
+                          executable_args, make_flags,
                           project_path, project_linker_flags, make_target,
                           additional_notes)
 
