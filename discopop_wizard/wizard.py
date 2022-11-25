@@ -17,11 +17,12 @@ from pytermgui.window_manager.layouts import Relative, Static, Auto, Slot
 from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.full_log import push_full_log_screen
-from discopop_wizard.screens.main import push_main_screen
+from discopop_wizard.screens.main import MainScreen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
-from discopop_wizard.screens.settings import push_settings_screen
+from discopop_wizard.screens.settings import show_settings_screen
 from discopop_wizard.screens.utils import exit_program
+import tkinter as tk
 
 
 def main(arguments: Arguments):
@@ -51,16 +52,28 @@ class ConsoleStyles(IntEnum):
 
 
 class DiscoPoPConfigurationWizard(object):
+    # OLD FIELDS
     body_window_stack: List[List[Tuple[ptg.WindowManager, float]]] = []
     body_width_stack: List[Tuple[float, float]] = []  # (body_left width, body_right width)
-    console_log: List[Tuple[str, ConsoleStyles]] = [("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
+    console_log: List[Tuple[str, ConsoleStyles]] = [
+        ("Welcome to the DiscoPoP Configuration Wizard.", ConsoleStyles.NORMAL)]
     full_log: List[str] = ["Welcome to the DiscoPoP Configuration Wizard."]
     console_window = None
     arguments: Arguments
+
+    ## NEW FIELDS
     settings: Optional[Settings]
+    window: tk.Tk
+    window_frame: tk.Frame
+    config_dir: str
+    menubar: tk.Menu
+
+    ## font styles
+    style_font_bold: str = "Helvetica 12 bold"
 
     def __init__(self, config_dir: str, arguments: Arguments):
         self.arguments = arguments
+        self.config_dir = config_dir
         # check if settings exist
         if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
             # no settings exist
@@ -71,72 +84,50 @@ class DiscoPoPConfigurationWizard(object):
 
         self.initialize_screen(config_dir)
 
-
     def initialize_screen(self, config_dir: str):
-        CONFIG = """
-                config:
-                    InputField:
-                        styles:
-                            prompt: dim italic
-                            cursor: '@72'
-                    Label:
-                        styles:
-                            value: dim bold
-    
-                    Window:
-                        styles:
-                            border: '60'
-                            corner: '60'
-    
-                    Container:
-                        styles:
-                            border: '96'
-                            corner: '96'
-                """
 
-        with ptg.YamlLoader() as loader:
-            loader.load(CONFIG)
+        self.window = tk.Tk()
+        self.window.title("DiscoPoP Wizard")
+        # set window to full screen
+        self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth(), self.window.winfo_screenheight()))
+        self.window.columnconfigure(1, weight=1)
+        self.window.rowconfigure(1, weight=1)
 
-        with ptg.WindowManager() as manager:
-            manager.layout = ptg.Layout()
-            manager.layout.add_slot("Header", height=1)
-            manager.layout.add_break()
-            # A body slot that will fill the entire width, and the height is remaining
-            # width of body slots can be resized by each view
-            manager.layout.add_slot("body_0", width=0.0, height=0.7)
-            manager.layout.add_slot("body_1", width=0.0, height=0.7)
-            manager.layout.add_slot("body_2", width=0.0, height=0.7)
-            manager.layout.add_slot("body_3", width=0.0, height=0.7)
-            manager.layout.add_slot("body_4", width=0.0, height=0.7)
-            # A slot in the same row as body, using the full non-occupied height and
-            # 20% of the terminal's height.
-            manager.layout.add_slot("body_5", width=0.2, height=0.7)
-            manager.layout.add_break()
-            manager.layout.add_slot("console", width=0.85, height=0.2)
-            manager.layout.add_slot("console_buttons", width=0.1, height=0.2)
-            manager.layout.add_break()
-            # A footer with a static height of 10%
-            manager.layout.add_slot("footer_left", height=3)
-            manager.layout.add_slot("footer_right", height=3)
+        # create content frame
+        self.window_frame = tk.Frame(self.window)
+        self.window_frame.grid(row=1, column=1, sticky="nsew")
+        self.window_frame.columnconfigure(1, weight=1)
+        self.window_frame.rowconfigure(1, weight=1)
 
-            window_button_back, _ = self.__show_footer_buttons(manager)
-            self.__show_output_console(manager)
+        # create menu bar
+        self.menubar = tk.Menu(self.window)
+        self.window.config(menu=self.menubar)
 
-            push_main_screen(manager, config_dir, self)
+        MainScreen(self, self.window_frame, config_dir)
 
-            # show settings screen if first start
-            if not self.settings.initialized:
-
-                push_settings_screen(manager, config_dir, self)
-                # remove back button for this screen
-                for slot in manager.layout.slots:
-                    if slot.name == "footer_left":
-                        slot.content.close()
+        #        # show settings screen if first start
+        if not self.settings.initialized:
+            show_settings_screen(self)
+        #            # remove back button for this screen
+        self.window.mainloop()
 
 
+#    def update_configurations(self, window: tk.Tk, parent_frame: tk.Frame, config_dir: str):
+#        """refreshes the list of execution configurations"""
+#        display_execution_configurations(self, window, parent_frame, config_dir)
 
+    def close_frame_contents(self):
+        # close current frame contents
+        for c in self.window_frame.winfo_children():
+            c.destroy()
+        # create empty menu bar
+        self.menubar.destroy()
+        self.menubar = tk.Menu(self.window)
+        self.window.config(menu=self.menubar)
 
-
+    def show_main_screen(self):
+        self.close_frame_contents()
+        MainScreen(self, self.window_frame, self.config_dir)
 
     def __show_footer_buttons(self, manager: ptg.WindowManager) -> Tuple[ptg.Window, ptg.Window]:
         window_left = ptg.Window(

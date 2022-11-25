@@ -67,4 +67,6 @@ setup(
         "Topic :: Software Development",
     ],
     license_files=["LICENSE"],
+    package_data={'': ['discopop_wizard/assets/discoPoP_128x128.ico']},
+    include_package_data=True,
 )

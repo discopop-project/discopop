@@ -11,27 +11,32 @@ import random
 import string
 
 from typing import List, TextIO
-from discopop_wizard.screens.suggestions.overview import push_suggestion_overview_screen
+
+from discopop_wizard.screens.execution import ExecutionView
 
 from pytermgui import Collapsible, Container, Splitter, Window, Button
 import pytermgui as ptg
 
 from tkinter import filedialog
+import tkinter as tk
 
 
 class ExecutionConfiguration(object):
     # required
-    id: str
-    label: str
-    description: str
-    executable_name: str
-    executable_arguments: str
-    project_path: str
-    linker_flags: str
-    build_threads: str
+    id: str = ""
+    label: str = ""
+    description: str = ""
+    executable_name: str = ""
+    executable_arguments: str = ""
+    project_path: str = ""
+    linker_flags: str = ""
+    build_threads: str = ""
     # optional
-    notes: str
-    make_target: str
+    notes: str = ""
+    make_target: str = ""
+
+    def __init__(self):
+        self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
     def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard) -> ptg.Container:
         widget = ptg.Container()
@@ -41,6 +46,12 @@ class ExecutionConfiguration(object):
         )
         widget.lazy_add(details)
         return widget
+
+    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame,
+                      config_dir: str) -> tk.Button:
+        button = tk.Button(parent_frame, text=self.label,
+                           command=lambda: self.show_details_screen(wizard, main_screen_obj, config_dir))
+        return button
 
     def init_from_dict(self, loaded: dict):
         for key in loaded:
@@ -112,252 +123,142 @@ class ExecutionConfiguration(object):
         script_str += invocation_str
         return script_str
 
+    def show_details_screen(self, wizard, main_screen_obj, config_dir: str) -> tk.Frame:
+        # delete previous frame contents
+        for c in main_screen_obj.details_frame.winfo_children():
+            c.destroy()
 
-def push_execution_configuration_screen(manager: ptg.WindowManager, config_dir: str,
-                                        execution_configuration, wizard):
-    if wizard.arguments.no_gui:
-        # show terminal input fields
-        body = (
-            ptg.Window(
-                "",
-                "Show saved Configuration - " + execution_configuration.id,
-                "",
-                ptg.InputField(execution_configuration.label, prompt="Label: "),
-                ptg.InputField(execution_configuration.description, prompt="Description: "),
-                ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
-                ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
-                ptg.InputField(execution_configuration.build_threads, prompt="Build threads: "),
-                ptg.InputField(execution_configuration.project_path, prompt="Project path: "),
-                ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
-                ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
-                ptg.Container(
-                    "Additional notes:",
-                    ptg.InputField(
-                        execution_configuration.notes, multiline=True
-                    ),
-                    box="EMPTY_VERTICAL",
-                ),
-                box="DOUBLE",
-            )
-            .set_title("[210 bold]Show execution configuration")
-        )
-    else:
-        # show GUI prompts
-        # define selectors
-        selector_1 = ptg.Button(label="Project path: " + execution_configuration.project_path,
-                                onclick=lambda *_: file_selector(selector_1, "Project path: "),
-                                parent_align=ptg.enums.HorizontalAlignment.LEFT)
+        frame = tk.Frame(main_screen_obj.details_frame)
+        frame.grid(row=1, column=2)
+        #frame.pack()
 
-        # create and assemble body
-        body = (
-            ptg.Window(
-                "",
-                "Show saved Configuration - " + execution_configuration.id,
-                "",
-                ptg.InputField(execution_configuration.label, prompt="Label: "),
-                ptg.InputField(execution_configuration.description, prompt="Description: "),
-                ptg.InputField(execution_configuration.executable_name, prompt="Executable name: "),
-                ptg.InputField(execution_configuration.executable_arguments, prompt="Executable arguments: "),
-                ptg.InputField(execution_configuration.build_threads, prompt="Build threads: "),
-                selector_1,
-                ptg.InputField(execution_configuration.linker_flags, prompt="Project linker flags: "),
-                ptg.InputField(execution_configuration.make_target, prompt="Make target: "),
-                ptg.Container(
-                    "Additional notes:",
-                    ptg.InputField(
-                        execution_configuration.notes, multiline=True
-                    ),
-                    box="EMPTY_VERTICAL",
-                ),
-                box="DOUBLE",
-            )
-            .set_title("[210 bold]Show execution configuration")
-        )
+        canvas = tk.Canvas(frame)
+        canvas.grid(row=1)
 
-    buttons = (ptg.Window(
-        ptg.Label(value="[orange bold]Warning:"),
-        ""
-        "Execute will overwrite the current configuration and execute the modified version.",
-        "If the label has been modified, Save will result in a newly created run configuration.",
-        "",
-        "",
-        ["Save", lambda *_: save_changes(manager, body, config_dir, wizard, execution_configuration)],
-        "",
-        ["Execute", lambda *_: execute_configuration(manager, body, config_dir, wizard, execution_configuration)],
-        "",
-        ["Show Suggestions", lambda *_: push_suggestion_overview_screen(manager, config_dir, wizard, execution_configuration)] if os.path.exists(os.path.join(execution_configuration.project_path, "patterns.txt")) else "",
-        "",
-        ["Copy", lambda *_: copy_configuration(manager, body, config_dir, wizard, execution_configuration)],
-        "",
-        "Saves the currently inserted values into a copy of the configuration.",
-        "",
-        "",
-        ["Delete", lambda *_: delete_configuration(manager, body, config_dir, wizard, execution_configuration)]
-    ))
-    wizard.show_body_windows(manager, [(body, 0.75), (buttons, 0.2)])
+        # show labels
+        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e").grid(row=1, column=1, sticky='ew')
+        tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky='ew')
+        tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e").grid(row=3, column=1, sticky='ew')
+        tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky='ew')
+        tk.Label(canvas, text="Build threads:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky='ew')
+        tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e").grid(row=6, column=1, sticky='ew')
+        tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky='ew')
+        tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky='ew')
+        tk.Label(canvas, text="Additional notes:", justify=tk.RIGHT, anchor="e").grid(row=9, column=1, sticky='ew')
 
+        # show input fields
+        label = tk.Entry(canvas)
+        label.grid(row=1, column=2, sticky='ew')
+        label.insert(tk.END, self.label)
+        description = tk.Entry(canvas)
+        description.grid(row=2, column=2, sticky='ew')
+        description.insert(tk.END, self.description)
+        executable_name = tk.Entry(canvas)
+        executable_name.insert(tk.END, self.executable_name)
+        executable_name.grid(row=3, column=2, sticky='ew')
+        executable_args = tk.Entry(canvas)
+        executable_args.grid(row=4, column=2, sticky='ew')
+        executable_args.insert(tk.END, self.executable_arguments)
+        build_threads = tk.Entry(canvas)
+        build_threads.grid(row=5, column=2, sticky='ew')
+        build_threads.insert(tk.END, str(self.build_threads))
+        project_path = tk.Entry(canvas)
+        project_path.grid(row=6, column=2, sticky='ew')
+        project_path.insert(tk.END, self.project_path)
 
-def file_selector(button_obj, prompt_str):
-    selected_dir = filedialog.askdirectory()
-    if type(selected_dir) != str:
-        return
-    button_obj.label = prompt_str + selected_dir
+        def overwrite_with_selection(target: tk.Entry):
+            prompt_result = tk.filedialog.askdirectory()
+            if len(prompt_result) != 0:
+                target.delete(0, tk.END)
+                target.insert(0, prompt_result)
 
+        project_path_selector = tk.Button(canvas, text="Select", command=lambda: overwrite_with_selection(project_path))
+        project_path_selector.grid(row=6, column=3)
 
-def save_changes(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard, execution_configuration,
-                 restart_wizard=True):
-    values = dict()
-    # update execution_configuration
-    for widget in window:
-        if isinstance(widget, ptg.InputField):
-            values[widget.prompt] = widget.value
-            continue
+        project_linker_flags = tk.Entry(canvas)
+        project_linker_flags.grid(row=7, column=2, sticky='ew')
+        project_linker_flags.insert(tk.END, self.linker_flags)
+        make_target = tk.Entry(canvas)
+        make_target.grid(row=8, column=2, sticky='ew')
+        make_target.insert(tk.END, self.make_target)
+        additional_notes = tk.Text(canvas, height=10)
+        additional_notes.grid(row=9, column=2, sticky='ew')
+        additional_notes.insert(tk.END, self.notes)
 
-        if isinstance(widget, ptg.Button):
-            key = widget.label[0: widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2:]
-            values[key] = value
-            continue
+        # show buttons
+        button_canvas = tk.Canvas(frame)
+        button_canvas.grid(row=2)
+        save_button = tk.Button(button_canvas, text="Save",
+                                command=lambda: self.save_changes(wizard, main_screen_obj, config_dir, label,
+                                                                  description, executable_name,
+                                                                  executable_args, build_threads,
+                                                                  project_path, project_linker_flags, make_target,
+                                                                  additional_notes))
+        save_button.grid(row=1, column=1)
+        delete_button = tk.Button(button_canvas, text="Delete",
+                                  command=lambda: self.delete_configuration(wizard, main_screen_obj,
+                                                                            config_dir, frame))
+        delete_button.grid(row=1, column=2)
 
-        if isinstance(widget, ptg.Container):
-            label, field = iter(widget)
-            values[label.value] = field.value
-    values["ID"] = execution_configuration.id
-    execution_configuration.init_from_values(values)
+        execute_button = tk.Button(button_canvas, text="Execute",
+                                   command=lambda: self.execute_configuration(wizard, main_screen_obj, config_dir,
+                                                                      label, description, executable_name,
+                                                                      executable_args, build_threads,
+                                                                      project_path, project_linker_flags, make_target,
+                                                                      additional_notes))
+        execute_button.grid(row=1, column=3)
 
-    config_path = os.path.join(config_dir, "execution_configurations",
-                               execution_configuration.id + "_" + execution_configuration.label + ".sh")
-    # remove old config if present
-    if os.path.exists(config_path):
-        os.remove(config_path)
-    # write config to file
-    with open(config_path, "w+") as f:
-        f.write(execution_configuration.get_as_executable_script())
-    # output to console
-    wizard.print_to_console(manager, "Saved configuration " + values["ID"])
-    # restart Wizard to load new execution configurations
-    if restart_wizard:
-        manager.stop()
-        wizard.clear_window_stacks()
-        wizard.initialize_screen(config_dir)
+    def save_changes(self, wizard, main_screen_obj, config_dir: str,
+                     label: tk.Entry, description: tk.Entry, executable_name: tk.Entry, executable_args: tk.Entry,
+                     build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
+                     make_target: tk.Entry, additional_notes: tk.Entry):
 
+        # update execution_configuration
+        self.label = label.get()
+        self.description = description.get()
+        self.executable_name = executable_name.get()
+        self.executable_arguments = executable_args.get()
+        self.build_threads = build_threads.get()
+        self.project_path = project_path.get()
+        self.linker_flags = project_linker_flags.get()
+        self.make_target = make_target.get()
+        self.notes = additional_notes.get("1.0", tk.END)
 
-def copy_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
-                       execution_configuration):
-    execution_configs: List[ExecutionConfiguration] = []
-    values = dict()
-    values["ID"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    for widget in window:
-        if isinstance(widget, ptg.InputField):
-            values[widget.prompt] = widget.value
-            continue
+        config_path = os.path.join(config_dir, "execution_configurations",
+                                   str(self.id) + "_" + self.label + ".sh")
+        # remove old config if present
+        if os.path.exists(config_path):
+            os.remove(config_path)
+        # write config to file
+        with open(config_path, "w+") as f:
+            f.write(self.get_as_executable_script())
 
-        if isinstance(widget, ptg.Button):
-            key = widget.label[0: widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2:]
-            values[key] = value
-            continue
+        main_screen_obj.build_configurations_frame(wizard, config_dir)
+        print("Saved configuration")
 
-        if isinstance(widget, ptg.Container):
-            label, field = iter(widget)
-            values[label.value] = field.value
-    values["Label: "] = "Copy of " + values["Label: "]
-    new_config = ExecutionConfiguration()
-    new_config.init_from_values(values)
-    config_path = os.path.join(config_dir, "execution_configurations", new_config.id + "_" + new_config.label + ".sh")
-    # remove old config if present
-    if os.path.exists(config_path):
-        os.remove(config_path)
-    # write config to file
-    with open(config_path, "w+") as f:
-        f.write(new_config.get_as_executable_script())
-    # output to console
-    wizard.print_to_console(manager, "Created copied configuration " + values["ID"])
-    # restart Wizard to load new execution configurations
-    manager.stop()
-    wizard.clear_window_stacks()
-    wizard.initialize_screen(config_dir)
+    def delete_configuration(self, wizard, main_screen_obj, config_dir: str,
+                             details_frame: tk.Frame):
+        # delete configuration file if it exists
+        config_path = os.path.join(config_dir, "execution_configurations",
+                                   self.id + "_" + self.label + ".sh")
+        if os.path.exists(config_path):
+            os.remove(config_path)
 
+        main_screen_obj.build_configurations_frame(wizard, config_dir)
+        # remove details view
+        for c in details_frame.winfo_children():
+            c.destroy()
 
-def delete_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
-                         execution_configuration):
-    # delete configuration file if it exists
-    config_path = os.path.join(config_dir, "execution_configurations",
-                               execution_configuration.id + "_" + execution_configuration.label + ".sh")
-    if os.path.exists(config_path):
-        os.remove(config_path)
+    def execute_configuration(self, wizard, main_screen_obj, config_dir: str,
+                              label: tk.Entry, description: tk.Entry, executable_name: tk.Entry,
+                              executable_args: tk.Entry,
+                              build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
+                              make_target: tk.Entry, additional_notes: tk.Entry):
+        # save changes
+        self.save_changes(wizard, main_screen_obj, config_dir, label, description, executable_name,
+                          executable_args, build_threads,
+                          project_path, project_linker_flags, make_target,
+                          additional_notes)
 
-    # output to console
-    wizard.print_to_console(manager, "Deleted configuration " + execution_configuration.id)
-    # restart Wizard to load new execution configurations
-    manager.stop()
-    wizard.clear_window_stacks()
-    wizard.initialize_screen(config_dir)
-
-
-def execute_configuration(manager: ptg.WindowManager, window: ptg.Window, config_dir: str, wizard,
-                          execution_configuration):
-    # read values from updates
-    values = dict()
-    # update execution_configuration
-    for widget in window:
-        if isinstance(widget, ptg.InputField):
-            values[widget.prompt] = widget.value
-            continue
-
-        if isinstance(widget, ptg.Button):
-            key = widget.label[0: widget.label.index(":") + 2]
-            value = widget.label[widget.label.index(":") + 2:]
-            values[key] = value
-            continue
-
-        if isinstance(widget, ptg.Container):
-            label, field = iter(widget)
-            values[label.value] = field.value
-    values["ID"] = execution_configuration.id
-
-    save_changes(manager, window, config_dir, wizard, execution_configuration, restart_wizard=False)
-
-    execution_configuration.init_from_values(values)
-
-    # assemble command for execution
-    # settings
-    command = wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
-    command += "--llvm-clang \"" + wizard.settings.clang + "\" "
-    command += "--llvm-clang++ \"" + wizard.settings.clangpp + "\" "
-    command += "--llvm-ar \"" + wizard.settings.llvm_ar + "\" "
-    command += "--llvm-link \"" + wizard.settings.llvm_link + "\" "
-    command += "--llvm-dis \"" + wizard.settings.llvm_dis + "\" "
-    command += "--llvm-opt \"" + wizard.settings.llvm_opt + "\" "
-    command += "--llvm-llc \"" + wizard.settings.llvm_llc + "\" "
-    command += "--gllvm \"" + wizard.settings.go_bin + "\" "
-    # execution configuration
-    command += "--project \"" + execution_configuration.project_path + "\" "
-    command += "--linker-flags \"" + execution_configuration.linker_flags + "\" "
-    command += "--executable-name \"" + execution_configuration.executable_name + "\" "
-    command += "--executable-arguments \"" + execution_configuration.executable_arguments + "\" "
-    command += "--build-threads " + execution_configuration.build_threads + " "
-
-    # output to console
-    wizard.print_to_console(manager, "Executing command: " + str(command.split(" ")))
-
-    import subprocess
-    with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-        for line in p.stdout:
-            line = line.replace("\n", "")
-            wizard.print_to_console(manager, line)
-    if p.returncode != 0:
-        wizard.print_to_console(manager, "An error occurred during the execution!",
-                                style=3)  # style 3 --> Error message
-        for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
-            line = line.replace("\n", "")
-            wizard.print_to_console(manager, line)
-        
-    # show suggestions
-    # suggestions are stored in project_path/patterns.txt
-    push_suggestion_overview_screen(manager, config_dir, wizard, execution_configuration)
-
-#    # restart Wizard to load new execution configurations
-#    manager.stop()
-#    wizard.clear_window_stacks()
-#    wizard.initialize_screen(config_dir)
+        # create execution view
+        ExecutionView(self, wizard, main_screen_obj.details_frame)

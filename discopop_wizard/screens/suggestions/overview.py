@@ -6,71 +6,71 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import copy
 from typing import List
 
-import pytermgui as ptg
 import os
 
-from discopop_wizard.classes.Suggestions import Suggestion
+from discopop_wizard.classes.Suggestion import Suggestion
+import tkinter as tk
 
+from discopop_wizard.screens.utils import create_tool_tip
+from tkinter import ttk
 
-def push_suggestion_overview_screen(manager: ptg.WindowManager, config_dir: str, wizard, exec_config_obj):
-    # suggestions are stored in exec_config_obj.project_path/patterns.txt
-    suggestions_path = os.path.join(exec_config_obj.project_path, "patterns.txt")
+def show_suggestions_overview_screen(execution_obj):
+    # close elements on details_frame
+    for c in execution_obj.details_frame.winfo_children():
+        c.destroy()
+    # load suggestions from execution
+    suggestions = __get_suggestion_objects(execution_obj)
 
-    raw_patterns = (
-        ptg.Window(
-            "",
-            ptg.Label(open(suggestions_path, "r").read(), parent_align=ptg.enums.HorizontalAlignment.LEFT),
-            "",
-            box="DOUBLE",
+    # create horizontally split frames (scrollable list of suggestions + code preview)
+    horizontal_paned_window = ttk.PanedWindow(execution_obj.details_frame, orient="horizontal")
+    horizontal_paned_window.pack(fill=tk.BOTH, expand=True)
+    scrollable_list_frame = tk.Frame(horizontal_paned_window)
+    horizontal_paned_window.add(scrollable_list_frame, weight=1)
+    code_preview_frame = tk.Frame(horizontal_paned_window)
+    horizontal_paned_window.add(code_preview_frame, weight=5)
+
+    # create scrollable list of suggestions
+    canvas = tk.Canvas(scrollable_list_frame)
+    scrollbar = tk.Scrollbar(scrollable_list_frame, orient="vertical", command=canvas.yview)
+    scrollable_frame = tk.Frame(canvas)
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
         )
-        .set_title("[210 bold]Raw Parallelization Suggestions")
     )
-    raw_patterns.overflow = ptg.Overflow.SCROLL;
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+    for row, suggestion in enumerate(suggestions):
+        # create button to load code preview
+        button = suggestion.get_as_button(canvas, code_preview_frame, execution_obj.execution_configuration)
 
-    code_section = (
-        ptg.Window(
-            box="DOUBLE",
-        )
-        .set_title("Code Section")
-    )
+        button.grid(row=row)
+        # register hover message (suggestion details)
+        create_tool_tip(button, text=suggestion.suggestion)
 
-    details_section = (
-        ptg.Window(
-            box="DOUBLE"
-        )
-        .set_title("Details")
-    )
+    # add label of execution configuration for overview purposes
+    tk.Label(scrollable_list_frame, text=execution_obj.execution_configuration.label, font=execution_obj.wizard.style_font_bold).pack(side="top", pady=10)
 
-    collabsible_patterns = (
-        ptg.Window(
-            get_suggestion_view(manager, suggestions_path, wizard, exec_config_obj),
-            box="DOUBLE",
-        )
-        .set_title("[210 bold]Suggestions by Type")
-    )
-    collabsible_patterns.overflow = ptg.Overflow.SCROLL;
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
 
 
-#    buttons = (ptg.Window(
-#        ["Save", lambda *_: save_configuration(manager, body, config_dir, wizard)],
-#    ))
-    wizard.show_body_windows(manager, [(collabsible_patterns, 0.2), (details_section, 0.2), (code_section, 0.55)])
-
-def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizard, exec_config_obj) -> ptg.Container:
-    container = ptg.Container()
+def __get_suggestion_objects(execution_obj) -> List[Suggestion]:
+    suggestions_path = os.path.join(execution_obj.execution_configuration.project_path, "patterns.txt")
 
     # todo load json or python objects instead
     suggestions: List[str] = []
     current_suggestion: str = ""
-    for line in open(suggestions_path, "r").readlines():
-        if line.startswith("Pipeline at:") or line.startswith("Reduction at:") or \
-                line.startswith("Do-all at:") or line.startswith("Geometric decomposition at:"):
-            suggestions.append(current_suggestion)
-            current_suggestion = ""
-        current_suggestion += line
+    with open(suggestions_path, "r") as f:
+        for line in f.readlines():
+            if line.startswith("Pipeline at:") or line.startswith("Reduction at:") or \
+                    line.startswith("Do-all at:") or line.startswith("Geometric decomposition at:"):
+                suggestions.append(current_suggestion)
+                current_suggestion = ""
+            current_suggestion += line
     suggestions.append(current_suggestion)
     suggestions = [s for s in suggestions if len(s) > 0]
 
@@ -78,12 +78,6 @@ def get_suggestion_view(manager: ptg.WindowManager, suggestions_path: str, wizar
     for idx, suggestion in enumerate(suggestions):
         suggestion_objects.append(Suggestion(idx, suggestion))
 
-    for suggestion in suggestion_objects:
-        container.lazy_add(suggestion.get_as_button(manager, wizard, exec_config_obj))
-    return container
-
-
-
-
+    return suggestion_objects
 
 
