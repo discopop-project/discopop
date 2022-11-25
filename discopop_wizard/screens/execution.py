@@ -52,7 +52,7 @@ class ExecutionView(object):
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
         if p.returncode != 0:
-            self.__print_to_console("An error occurred during the execution!") # Error message
+            self.__print_to_console("An error occurred during the execution!")  # Error message
             for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
                 line = line.replace("\n", "")
                 self.__print_to_console(line)

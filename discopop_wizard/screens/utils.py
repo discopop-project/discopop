@@ -7,25 +7,6 @@
 # directory for details.
 import tkinter as tk
 
-import pytermgui as ptg
-import sys
-
-
-def submit(manager: ptg.WindowManager, window: ptg.Window, values: dict) -> None:
-    for widget in window:
-        if isinstance(widget, ptg.InputField):
-            values[widget.prompt] = widget.value
-            continue
-
-        if isinstance(widget, ptg.Container):
-            label, field = iter(widget)
-            values[label.value] = field.value
-    manager.stop()
-
-
-def exit_program(manager: ptg.WindowManager) -> None:
-    manager.stop()
-
 
 class ToolTip(object):
     # based on https://stackoverflow.com/questions/20399243/display-message-when-hovering-over-something-with-mouse-cursor-in-python

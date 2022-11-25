@@ -6,9 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import argparse
+
 from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.wizard import main as wizard_main
-import argparse
 
 
 def convert_args(namespace_args: argparse.Namespace) -> Arguments:
@@ -27,7 +28,6 @@ def main():
     args = parser.parse_args()
 
     wizard_main(convert_args(args))
-
 
 
 if __name__ == "__main__":

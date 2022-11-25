@@ -6,15 +6,14 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import os
+import tkinter as tk
+from tkinter import ttk
 from typing import List
 
-import os
-
 from discopop_wizard.classes.Suggestion import Suggestion
-import tkinter as tk
-
 from discopop_wizard.screens.utils import create_tool_tip
-from tkinter import ttk
+
 
 def show_suggestions_overview_screen(execution_obj):
     # close elements on details_frame
@@ -52,7 +51,8 @@ def show_suggestions_overview_screen(execution_obj):
         create_tool_tip(button, text=suggestion.suggestion)
 
     # add label of execution configuration for overview purposes
-    tk.Label(scrollable_list_frame, text=execution_obj.execution_configuration.label, font=execution_obj.wizard.style_font_bold).pack(side="top", pady=10)
+    tk.Label(scrollable_list_frame, text=execution_obj.execution_configuration.label,
+             font=execution_obj.wizard.style_font_bold).pack(side="top", pady=10)
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
@@ -79,5 +79,3 @@ def __get_suggestion_objects(execution_obj) -> List[Suggestion]:
         suggestion_objects.append(Suggestion(idx, suggestion))
 
     return suggestion_objects
-
-

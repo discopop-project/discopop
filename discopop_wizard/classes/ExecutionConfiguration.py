@@ -9,16 +9,11 @@
 import os
 import random
 import string
-
-from typing import List, TextIO
+import tkinter as tk
+from tkinter import filedialog
+from typing import TextIO
 
 from discopop_wizard.screens.execution import ExecutionView
-
-from pytermgui import Collapsible, Container, Splitter, Window, Button
-import pytermgui as ptg
-
-from tkinter import filedialog
-import tkinter as tk
 
 
 class ExecutionConfiguration(object):
@@ -38,19 +33,9 @@ class ExecutionConfiguration(object):
     def __init__(self):
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-    def get_as_widget(self, manager: ptg.WindowManager, config_dir: str, wizard) -> ptg.Container:
-        widget = ptg.Container()
-        details = ptg.Button(
-            label="Label: " + self.label + "    " + "Description: " + self.description,
-            onclick=lambda *_: push_execution_configuration_screen(manager, config_dir, self, wizard)
-        )
-        widget.lazy_add(details)
-        return widget
-
-    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame,
-                      config_dir: str) -> tk.Button:
+    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, ) -> tk.Button:
         button = tk.Button(parent_frame, text=self.label,
-                           command=lambda: self.show_details_screen(wizard, main_screen_obj, config_dir))
+                           command=lambda: self.show_details_screen(wizard, main_screen_obj))
         return button
 
     def init_from_dict(self, loaded: dict):
@@ -123,14 +108,13 @@ class ExecutionConfiguration(object):
         script_str += invocation_str
         return script_str
 
-    def show_details_screen(self, wizard, main_screen_obj, config_dir: str) -> tk.Frame:
+    def show_details_screen(self, wizard, main_screen_obj) -> tk.Frame:
         # delete previous frame contents
         for c in main_screen_obj.details_frame.winfo_children():
             c.destroy()
 
         frame = tk.Frame(main_screen_obj.details_frame)
         frame.grid(row=1, column=2)
-        #frame.pack()
 
         canvas = tk.Canvas(frame)
         canvas.grid(row=1)
@@ -189,26 +173,26 @@ class ExecutionConfiguration(object):
         button_canvas = tk.Canvas(frame)
         button_canvas.grid(row=2)
         save_button = tk.Button(button_canvas, text="Save",
-                                command=lambda: self.save_changes(wizard, main_screen_obj, config_dir, label,
+                                command=lambda: self.save_changes(wizard, main_screen_obj, label,
                                                                   description, executable_name,
                                                                   executable_args, build_threads,
                                                                   project_path, project_linker_flags, make_target,
                                                                   additional_notes))
         save_button.grid(row=1, column=1)
         delete_button = tk.Button(button_canvas, text="Delete",
-                                  command=lambda: self.delete_configuration(wizard, main_screen_obj,
-                                                                            config_dir, frame))
+                                  command=lambda: self.delete_configuration(wizard, main_screen_obj, frame))
         delete_button.grid(row=1, column=2)
 
         execute_button = tk.Button(button_canvas, text="Execute",
-                                   command=lambda: self.execute_configuration(wizard, main_screen_obj, config_dir,
-                                                                      label, description, executable_name,
-                                                                      executable_args, build_threads,
-                                                                      project_path, project_linker_flags, make_target,
-                                                                      additional_notes))
+                                   command=lambda: self.execute_configuration(wizard, main_screen_obj, label,
+                                                                              description, executable_name,
+                                                                              executable_args, build_threads,
+                                                                              project_path, project_linker_flags,
+                                                                              make_target,
+                                                                              additional_notes))
         execute_button.grid(row=1, column=3)
 
-    def save_changes(self, wizard, main_screen_obj, config_dir: str,
+    def save_changes(self, wizard, main_screen_obj,
                      label: tk.Entry, description: tk.Entry, executable_name: tk.Entry, executable_args: tk.Entry,
                      build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
                      make_target: tk.Entry, additional_notes: tk.Entry):
@@ -224,7 +208,7 @@ class ExecutionConfiguration(object):
         self.make_target = make_target.get()
         self.notes = additional_notes.get("1.0", tk.END)
 
-        config_path = os.path.join(config_dir, "execution_configurations",
+        config_path = os.path.join(wizard.config_dir, "execution_configurations",
                                    str(self.id) + "_" + self.label + ".sh")
         # remove old config if present
         if os.path.exists(config_path):
@@ -233,29 +217,29 @@ class ExecutionConfiguration(object):
         with open(config_path, "w+") as f:
             f.write(self.get_as_executable_script())
 
-        main_screen_obj.build_configurations_frame(wizard, config_dir)
+        main_screen_obj.build_configurations_frame(wizard)
         print("Saved configuration")
 
-    def delete_configuration(self, wizard, main_screen_obj, config_dir: str,
+    def delete_configuration(self, wizard, main_screen_obj,
                              details_frame: tk.Frame):
         # delete configuration file if it exists
-        config_path = os.path.join(config_dir, "execution_configurations",
+        config_path = os.path.join(wizard.config_dir, "execution_configurations",
                                    self.id + "_" + self.label + ".sh")
         if os.path.exists(config_path):
             os.remove(config_path)
 
-        main_screen_obj.build_configurations_frame(wizard, config_dir)
+        main_screen_obj.build_configurations_frame(wizard)
         # remove details view
         for c in details_frame.winfo_children():
             c.destroy()
 
-    def execute_configuration(self, wizard, main_screen_obj, config_dir: str,
+    def execute_configuration(self, wizard, main_screen_obj,
                               label: tk.Entry, description: tk.Entry, executable_name: tk.Entry,
                               executable_args: tk.Entry,
                               build_threads: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
                               make_target: tk.Entry, additional_notes: tk.Entry):
         # save changes
-        self.save_changes(wizard, main_screen_obj, config_dir, label, description, executable_name,
+        self.save_changes(wizard, main_screen_obj, label, description, executable_name,
                           executable_args, build_threads,
                           project_path, project_linker_flags, make_target,
                           additional_notes)

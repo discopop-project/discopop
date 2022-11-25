@@ -6,12 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import pytermgui as ptg
-from tkinter import filedialog
 import os
-
-from discopop_wizard.classes.Settings import Settings
 import tkinter as tk
+from tkinter import filedialog
 from tkinter import ttk
 
 
@@ -111,7 +108,6 @@ def __overwrite_with_selection(target: tk.Entry):
 def save_settings(wizard, discopop_source: tk.Entry, discopop_build: tk.Entry, go_bin_path: tk.Entry, clang: tk.Entry,
                   clangpp: tk.Entry, llvm_ar: tk.Entry, llvm_link: tk.Entry, llvm_dis: tk.Entry, llvm_opt: tk.Entry,
                   llvm_llc: tk.Entry):
-
     wizard.settings.discopop_dir = discopop_source.get()
     wizard.settings.discopop_build_dir = discopop_build.get()
     wizard.settings.go_bin = go_bin_path.get()
