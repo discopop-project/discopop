@@ -62,4 +62,4 @@ class ExecutionView(object):
         print(msg)
 
     def __show_suggestions(self):
-        show_suggestions_overview_screen(self)
+        show_suggestions_overview_screen(self.wizard, self.details_frame, self.execution_configuration)

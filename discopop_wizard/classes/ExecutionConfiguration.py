@@ -14,6 +14,7 @@ from tkinter import filedialog
 from typing import TextIO
 
 from discopop_wizard.screens.execution import ExecutionView
+from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen, get_suggestion_objects
 
 
 class ExecutionConfiguration(object):
@@ -191,6 +192,20 @@ class ExecutionConfiguration(object):
                                                                               make_target,
                                                                               additional_notes))
         execute_button.grid(row=1, column=3)
+
+        results_button = tk.Button(button_canvas, text="Show Results", state=self.__button_state_from_result_existence(),
+                                   command=lambda: show_suggestions_overview_screen(wizard, main_screen_obj.details_frame, self))
+        results_button.grid(row=1, column=4)
+
+
+    def __button_state_from_result_existence(self) -> str:
+        # check if suggestions can be loaded. If so, enable the button.
+        # Else, disable it.
+        try:
+            suggestions = get_suggestion_objects(self)
+        except FileNotFoundError:
+            return "disabled"
+        return "normal"
 
     def save_changes(self, wizard, main_screen_obj,
                      label: tk.Entry, description: tk.Entry, executable_name: tk.Entry, executable_args: tk.Entry,
