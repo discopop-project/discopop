@@ -210,6 +210,15 @@ fi
 # other variables
 #####
 
+# create a fresh working copy of the targeted source code
+cd $PROJECT
+rm -rf .discopop
+mkdir .discopop
+cp -r * .discopop
+# overwrite PROJECT to use working copy
+cd .discopop
+PROJECT=$PROJECT/.discopop
+
 # TODO make this more robust
 # (currently breaks if script is moved or DP is built somewhere else)
 # idea: during discoPoP build move this script to the build directory and configure this and other variables

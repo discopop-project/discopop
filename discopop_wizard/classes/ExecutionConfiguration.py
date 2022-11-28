@@ -26,6 +26,7 @@ class ExecutionConfiguration(object):
     executable_name: str = ""
     executable_arguments: str = ""
     project_path: str = ""
+    working_copy_path: str = ""
     linker_flags: str = ""
     make_flags: str = ""
     # optional
@@ -63,6 +64,7 @@ class ExecutionConfiguration(object):
                 self.make_flags = line[line.index("=") + 1:]
             if line.startswith("#PROJECT_PATH="):
                 self.project_path = line[line.index("=") + 1:]
+                self.working_copy_path = self.project_path + "/.discopop"
             if line.startswith("#PROJECT_LINKER_FLAGS="):
                 self.linker_flags = line[line.index("=") + 1:]
             if line.startswith("#MAKE_TARGET="):
@@ -81,6 +83,7 @@ class ExecutionConfiguration(object):
         self.executable_arguments = values["Executable arguments: "]
         self.make_flags = values["Make flags: "]
         self.project_path = values["Project path: "]
+        self.working_copy_path = self.project_path + "/.discopop"
         self.linker_flags = values["Project linker flags: "]
         self.notes = values["Additional notes:"]
         self.make_target = values["Make target: "]

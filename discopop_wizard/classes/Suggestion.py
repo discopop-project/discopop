@@ -54,7 +54,7 @@ class Suggestion(object):
 
         # load file mapping from project path
         file_mapping: dict[int, str] = dict()
-        with open(os.path.join(execution_configuration.project_path, "FileMapping.txt"), "r") as f:
+        with open(os.path.join(execution_configuration.working_copy_path, "FileMapping.txt"), "r") as f:
             for line in f.readlines():
                 line = line.replace("\n", "")
                 split_line = line.split("\t")
