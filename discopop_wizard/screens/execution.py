@@ -30,7 +30,6 @@ class ExecutionView(object):
             # show suggestions
             # suggestions are stored in project_path/patterns.txt
             self.__show_suggestions()
-            # push_suggestion_overview_screen(manager, config_dir, wizard, execution_configuration)
 
     def __assemble_command_string(self) -> str:
         # assemble command for execution
