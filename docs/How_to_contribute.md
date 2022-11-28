@@ -24,6 +24,7 @@ A good and easy option for this is to use the `Create a branch` link which can b
 
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
+- Update the version files in the repository
 - Create a branch of the `master` with the name `release/1.2.3`
 - Create a tag on the newly created branch with the name `v1.2.3`
     - Creating the tag triggers the automatic publication of the project to PyPi	
