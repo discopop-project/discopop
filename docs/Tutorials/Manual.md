@@ -2,7 +2,6 @@
 layout: default
 title: Manual Instrumentation
 parent: Tutorials
-grand_parent: DiscoPoP Profiler
 nav_order: 3
 ---
 

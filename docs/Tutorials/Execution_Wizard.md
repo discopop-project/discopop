@@ -2,7 +2,6 @@
 layout: default
 title: Execution Wizard - Script
 parent: Tutorials
-grand_parent: DiscoPoP Profiler
 nav_order: 2
 ---
 

@@ -2,7 +2,6 @@
 layout: default
 title: Configuration Wizard - GUI
 parent: Tutorials
-grand_parent: DiscoPoP Profiler
 nav_order: 1
 ---
 
