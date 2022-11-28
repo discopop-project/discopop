@@ -37,7 +37,7 @@ To learn more, please read the [pattern detection](Pattern_Detection/DiscoPoP_Ex
 ## Pattern interpretation
 After parallel patterns have been identified in the sequential source code, they need to be interpreted and implemented.
 A detailed explanation how to interpret and implement the identified parallel patterns can be found [here](Pattern_Detection/Patterns/Patterns.md).
-The previously mentioned pattern identification as well as the pattern interpretation can be simplified by using the [graphical Wizard](Tutorials/Configuration_Wizard.md).
+The previously mentioned pattern identification as well as the pattern interpretation can be simplified by using the [graphical wizard](Tutorials/Configuration_Wizard.md).
 
 ## Walk-through example
 As a starting point, we have included a simple sample program which you can use to familiarize yourself with the system.
