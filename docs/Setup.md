@@ -14,7 +14,7 @@ Additionally, you need to install LLVM on your system. Currently, DiscoPoP only 
 
     sudo apt-get install libclang-11-dev clang-11 llvm-11
 
-If you want to make use of the [Configuration](Profiling/Tutorials/Configuration_Wizard.md) or [Execution Wizard](Profiling/Tutorials/Execution_Wizard.md) for a simplified analysis of your project, you additionally need a working installation of [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
+If you want to make use of the [Configuration](Tutorials/Configuration_Wizard.md) or [Execution Wizard](Tutorials/Execution_Wizard.md) for a simplified analysis of your project, you additionally need a working installation of [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
 
 
 

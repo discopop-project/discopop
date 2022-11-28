@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Background
-nav_order: 6
+nav_order: 7
 ---
 
 # Background Information

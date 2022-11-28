@@ -1,9 +1,9 @@
 ---
 layout: default
 title: Tutorials
-parent: DiscoPoP Profiler
 has_children: true
-permalink: /Profiling/Tutorials
+permalink: /Tutorials
+nav_order: 6
 ---
 
 # Tutorials

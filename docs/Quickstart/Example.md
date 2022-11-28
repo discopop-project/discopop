@@ -20,7 +20,7 @@ Occurrences of names in capital letters (e.g. `DP_SOURCE`) should be replaced by
 
 ## Important Note
 For the sake of simplicity, this example only shows the process to profile a single file manually.
-In case you want to analyse a more complex project, please refer to the respective tutorial pages for detailed instructions regarding the [manual profiling](../Profiling/Tutorials/Manual.md), the assisted profiling using the [Execution Wizard script](../Profiling/Tutorials/Execution_Wizard.md) or the assisted profiling via the [graphical Configuration Wizard](../Profiling/Tutorials/Configuration_Wizard.md).
+In case you want to analyse a more complex project, please refer to the respective tutorial pages for detailed instructions regarding the [manual profiling](../Tutorials/Manual.md), the assisted profiling using the [Execution Wizard script](../Tutorials/Execution_Wizard.md) or the assisted profiling via the [graphical Configuration Wizard](../Tutorials/Configuration_Wizard.md).
 
 
 <!--

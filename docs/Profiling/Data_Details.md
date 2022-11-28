@@ -46,13 +46,13 @@ DiscoPoP uses a signature to store data dependences. You can configure the setti
 - `SIG_NUM_HASH`: Number of signatures. A value of two indicates that one signature is used for read accesses and one signature for write accesses.
 - `USE_PERFECT`: When it is set to one, DiscoPoP uses a perfect signature. The default value is one.
 
-To find parallelization opportunities, we need to extract data dependencies inside the program. For that, we need to instrument the memory accesses, link the program with DiscoPoP run-time libraries, and finally execute the program with several representative inputs. The necessary steps are described [here](Tutorials/Tutorials.md).
+To find parallelization opportunities, we need to extract data dependencies inside the program. For that, we need to instrument the memory accesses, link the program with DiscoPoP run-time libraries, and finally execute the program with several representative inputs. The necessary steps are described [here](../Tutorials/Tutorials.md).
 After executing the instrumented program, you find a text file which ends with `_dep.txt` which contains the data dependences identified using the provided input. 
 A data dependence is represented as a triple `<sink, type, source>`. `type` denotes the dependence type and can be any of `RAW`, `WAR` or `WAW`. Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region.
 
 ## Loop Counters
 DiscoPoP allows the optional instrumentation of loops with the purpose to count executed iterations per loop.
-This analysis can be enabled as described in one of the [tutorials](Tutorials/Tutorials.md).
+This analysis can be enabled as described in one of the [tutorials](../Tutorials/Tutorials.md).
 The gathered information will be stored in a file named `loop_counter_output.txt`.
 Each line of the file contains the summed count of iterations for the specified loop.
 The used format is as follows: `<file_id> <cu_id> <iteration_count>`.
