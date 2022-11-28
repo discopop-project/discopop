@@ -71,22 +71,3 @@ def get_suggestion_objects(execution_configuration_obj) -> List[Suggestion]:
             suggestions_list.append(Suggestion(suggestion_type, suggestion_values))
 
     return suggestions_list
-
-    # todo load json or python objects instead
-    suggestions: List[str] = []
-    current_suggestion: str = ""
-    with open(suggestions_path, "r") as f:
-        for line in f.readlines():
-            if line.startswith("Pipeline at:") or line.startswith("Reduction at:") or \
-                    line.startswith("Do-all at:") or line.startswith("Geometric decomposition at:"):
-                suggestions.append(current_suggestion)
-                current_suggestion = ""
-            current_suggestion += line
-    suggestions.append(current_suggestion)
-    suggestions = [s for s in suggestions if len(s) > 0]
-
-    suggestion_objects = []
-    for idx, suggestion in enumerate(suggestions):
-        suggestion_objects.append(Suggestion(idx, suggestion))
-
-    return suggestion_objects
