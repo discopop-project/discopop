@@ -12,3 +12,4 @@ In this step, a set of parallel patterns can be identified on the basis of the p
 In case that one or more parallel patterns have been identified, a potential parallel implementation is suggested via OpenMP pragmas.
 Both steps, the identification and the so called implementation of the parallel patterns are executed by the [DiscoPoP Explorer](DiscoPoP_Explorer.md), and are described in more detail on the linked page.
 An overview of the supported parallel patterns as well as detailed explanations how to interpret the respective suggestions can be found [here](Patterns/Patterns.md).
+To simplify the process, the [graphical interface](../Profiling/Tutorials/Configuration_Wizard.md) can be used to browse, highlight and preview the identified parallelization suggestions.
