@@ -20,6 +20,7 @@ class MainScreen(object):
     details_frame: tk.Frame
 
     def __init__(self, wizard, window_frame: tk.Frame):
+        self.wizard = wizard
         self.push_main_screen(wizard, window_frame)
 
     def push_main_screen(self, wizard, window_frame: tk.Frame):
@@ -50,7 +51,7 @@ class MainScreen(object):
         self.__display_configuration_buttons(wizard)
 
     def __create_new_execution_configuration(self, wizard):
-        execution_config = ExecutionConfiguration()
+        execution_config = ExecutionConfiguration(wizard)
         execution_config.show_details_screen(wizard, self)
 
     def __display_configuration_buttons(self, wizard):
@@ -93,7 +94,7 @@ class MainScreen(object):
         execution_configs: List[ExecutionConfiguration] = []
         for filename in os.listdir(os.path.join(config_dir, "execution_configurations")):
             with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), 'r') as script:
-                config = ExecutionConfiguration()
+                config = ExecutionConfiguration(self.wizard)
                 config.init_from_script(script)
                 execution_configs.append(config)
         return execution_configs

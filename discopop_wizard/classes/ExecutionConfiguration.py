@@ -31,8 +31,9 @@ class ExecutionConfiguration(object):
     notes: str = ""
     make_target: str = ""
 
-    def __init__(self):
+    def __init__(self, wizard):
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        self.wizard = wizard
 
     def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, ) -> tk.Button:
         button = tk.Button(parent_frame, text=self.label,
@@ -46,25 +47,25 @@ class ExecutionConfiguration(object):
     def init_from_script(self, script: TextIO):
         for line in script.readlines():
             line = line.replace("\n", "")
-            if line.startswith("ID="):
+            if line.startswith("#ID="):
                 self.id = line[line.index("=") + 1:]
-            if line.startswith("LABEL="):
+            if line.startswith("#LABEL="):
                 self.label = line[line.index("=") + 1:]
-            if line.startswith("DESCRIPTION="):
+            if line.startswith("#DESCRIPTION="):
                 self.description = line[line.index("=") + 1:]
-            if line.startswith("EXE_NAME="):
+            if line.startswith("#EXE_NAME="):
                 self.executable_name = line[line.index("=") + 1:]
-            if line.startswith("EXE_ARGS="):
+            if line.startswith("#EXE_ARGS="):
                 self.executable_arguments = line[line.index("=") + 1:]
-            if line.startswith("MAKE_FLAGS="):
+            if line.startswith("#MAKE_FLAGS="):
                 self.make_flags = line[line.index("=") + 1:]
-            if line.startswith("PROJECT_PATH="):
+            if line.startswith("#PROJECT_PATH="):
                 self.project_path = line[line.index("=") + 1:]
-            if line.startswith("PROJECT_LINKER_FLAGS="):
+            if line.startswith("#PROJECT_LINKER_FLAGS="):
                 self.linker_flags = line[line.index("=") + 1:]
-            if line.startswith("MAKE_TARGET="):
+            if line.startswith("#MAKE_TARGET="):
                 self.make_target = line[line.index("=") + 1:]
-            if line.startswith("NOTES="):
+            if line.startswith("#NOTES="):
                 self.notes = line[line.index("=") + 1:]
 
     def init_from_values(self, values: dict):
@@ -87,27 +88,42 @@ class ExecutionConfiguration(object):
          and thus can be executed by the wizard as well as via a regular invocation."""
         # define string representation of the current configuration
         config_str = "### BEGIN CONFIG ###\n"
-        config_str += "ID=" + self.id + "\n"
-        config_str += "LABEL=" + self.label + "\n"
-        config_str += "DESCRIPTION=" + self.description + "\n"
-        config_str += "EXE_NAME=" + self.executable_name + "\n"
-        config_str += "EXE_ARGS=" + self.executable_arguments + "\n"
-        config_str += "MAKE_FLAGS=" + self.make_flags + "\n"
-        config_str += "PROJECT_PATH=" + self.project_path + "\n"
-        config_str += "PROJECT_LINKER_FLAGS=" + self.linker_flags + "\n"
-        config_str += "MAKE_TARGET=" + self.make_target + "\n"
-        config_str += "NOTES=" + self.notes + "\n"
+        config_str += "#ID=" + self.id + "\n"
+        config_str += "#LABEL=" + self.label + "\n"
+        config_str += "#DESCRIPTION=" + self.description + "\n"
+        config_str += "#EXE_NAME=" + self.executable_name + "\n"
+        config_str += "#EXE_ARGS=" + self.executable_arguments + "\n"
+        config_str += "#MAKE_FLAGS=" + self.make_flags + "\n"
+        config_str += "#PROJECT_PATH=" + self.project_path + "\n"
+        config_str += "#PROJECT_LINKER_FLAGS=" + self.linker_flags + "\n"
+        config_str += "#MAKE_TARGET=" + self.make_target + "\n"
+        config_str += "#NOTES=" + self.notes + "\n"
         config_str += "### END CONFIG ###\n\n"
 
-        # define invocation string
-        # todo proper invocation string
-        invocation_str = 'echo "HELLO WORLD FROM CONFIGURATION: ${LABEL}"\n'
+        # assemble command for execution
+        command = ""
+        # settings
+        command = self.wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
+        command += "--llvm-clang \"" + self.wizard.settings.clang + "\" "
+        command += "--llvm-clang++ \"" + self.wizard.settings.clangpp + "\" "
+        command += "--llvm-ar \"" + self.wizard.settings.llvm_ar + "\" "
+        command += "--llvm-link \"" + self.wizard.settings.llvm_link + "\" "
+        command += "--llvm-dis \"" + self.wizard.settings.llvm_dis + "\" "
+        command += "--llvm-opt \"" + self.wizard.settings.llvm_opt + "\" "
+        command += "--llvm-llc \"" + self.wizard.settings.llvm_llc + "\" "
+        command += "--gllvm \"" + self.wizard.settings.go_bin + "\" "
+        # execution configuration
+        command += "--project \"" + self.project_path + "\" "
+        command += "--linker-flags \"" + self.linker_flags + "\" "
+        command += "--executable-name \"" + self.executable_name + "\" "
+        command += "--executable-arguments \"" + self.executable_arguments + "\" "
+        command += "--make-flags \"" + self.make_flags + "\" "
 
         # add configuration to resulting string
         script_str = ""
         script_str += config_str
         # add invocation of actual executable to resulting string
-        script_str += invocation_str
+        script_str += command
         return script_str
 
     def show_details_screen(self, wizard, main_screen_obj) -> tk.Frame:
