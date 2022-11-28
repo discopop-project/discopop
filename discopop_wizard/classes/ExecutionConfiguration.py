@@ -10,6 +10,7 @@ import os
 import random
 import string
 import tkinter as tk
+from json import JSONDecodeError
 from tkinter import filedialog
 from typing import TextIO
 
@@ -30,6 +31,7 @@ class ExecutionConfiguration(object):
     # optional
     notes: str = ""
     make_target: str = ""
+    explorer_flags: str = "--json=patterns.json"
 
     def __init__(self, wizard):
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -118,6 +120,7 @@ class ExecutionConfiguration(object):
         command += "--executable-name \"" + self.executable_name + "\" "
         command += "--executable-arguments \"" + self.executable_arguments + "\" "
         command += "--make-flags \"" + self.make_flags + "\" "
+        command += "--explorer-flags \"" + self.explorer_flags + "\" "
 
         # add configuration to resulting string
         script_str = ""
@@ -221,6 +224,8 @@ class ExecutionConfiguration(object):
         try:
             suggestions = get_suggestion_objects(self)
         except FileNotFoundError:
+            return "disabled"
+        except JSONDecodeError:
             return "disabled"
         return "normal"
 

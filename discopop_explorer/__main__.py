@@ -139,6 +139,7 @@ def main():
     if arguments["--json"] == "None":
         print(str(res))
     else:
+        print(str(res))
         with open(arguments["--json"], "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
