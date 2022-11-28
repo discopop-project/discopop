@@ -5,11 +5,13 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+import json
 import os
 import tkinter as tk
 from tkinter import ttk
 from typing import List
+
+import jsons
 
 from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
@@ -48,7 +50,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
         button.grid(row=row)
         # register hover message (suggestion details)
-        create_tool_tip(button, text=suggestion.suggestion)
+        create_tool_tip(button, text=suggestion.get_details())
 
     # add label of execution configuration for overview purposes
     tk.Label(scrollable_list_frame, text=execution_configuration_obj.label,
@@ -59,7 +61,16 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
 
 def get_suggestion_objects(execution_configuration_obj) -> List[Suggestion]:
-    suggestions_path = os.path.join(execution_configuration_obj.project_path, "patterns.txt")
+    suggestions_path = os.path.join(execution_configuration_obj.project_path, "patterns.json")
+
+    suggestions_list: List[Suggestion] = []
+    with open(suggestions_path, "r") as f:
+        suggestions_dict = json.load(f)
+    for suggestion_type in suggestions_dict:
+        for suggestion_values in suggestions_dict[suggestion_type]:
+            suggestions_list.append(Suggestion(suggestion_type, suggestion_values))
+
+    return suggestions_list
 
     # todo load json or python objects instead
     suggestions: List[str] = []

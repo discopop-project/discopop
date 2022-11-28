@@ -10,6 +10,7 @@ import os
 import random
 import string
 import tkinter as tk
+from json import JSONDecodeError
 from tkinter import filedialog
 from typing import TextIO
 
@@ -223,6 +224,8 @@ class ExecutionConfiguration(object):
         try:
             suggestions = get_suggestion_objects(self)
         except FileNotFoundError:
+            return "disabled"
+        except JSONDecodeError:
             return "disabled"
         return "normal"
 
