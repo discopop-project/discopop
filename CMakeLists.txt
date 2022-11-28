@@ -19,6 +19,9 @@ if(NOT ${LLVM_DIST_PATH} STREQUAL "")
     endif()
     set(LLVM_DIR ${LLVM_DIST_PATH}/lib/cmake/llvm)
     find_package(LLVM PATHS ${LLVM_DIR})
+elseif(NOT ${USE_LLVM_VERSION} STREQUAL "")
+    # search for specified llvm version
+    find_package(LLVM ${USE_LLVM_VERSION} REQUIRED)
 else()
     # search for llvm 11 installations
     find_package(LLVM 11.0 CONFIG QUIET)
