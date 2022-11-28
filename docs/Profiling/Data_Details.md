@@ -12,7 +12,7 @@ nav_order: 2
 When you apply the `DiscoPoP` optimizer pass, a file named `Data.xml` will be created.
 It contains the identified computational units of the specified target project.
 
-The xml file contains many information about the program. There are four types of nodes in the xml file including: functions, loops, CUs, and dummies. Each node has an ID (consisting of `file_id:cu_id`), a type, a name (some nodes have empty names) and the start and end line of the node in the source code.
+The xml file contains much information about the program. There are four types of nodes in the xml file including: functions, loops, CUs, and dummies. Each node has an ID (consisting of `file_id:cu_id`), a type, a name (some nodes have empty names) and the start and end line of the node in the source code.
 
 Function nodes which are represented by type 1 contain information about functions in each file of the source code. Function nodes contain children nodes which can be CUs, loop nodes, and dummies. Also, you can find the list of function arguments there.
 
