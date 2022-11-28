@@ -7,6 +7,7 @@
 # directory for details.
 
 import os
+import shutil
 
 import jsons
 
@@ -23,6 +24,16 @@ class Settings(object):
     llvm_opt: str = ""
     llvm_llc: str = ""
     go_bin: str = ""
+
+    def __init__(self) -> None:
+        # try and find default values for executables
+        self.clang = shutil.which("clang")
+        self.clangpp = shutil.which("clang++")
+        self.llvm_ar = shutil.which("llvm-ar-11")
+        self.llvm_link = shutil.which("llvm-link-11")
+        self.llvm_dis = shutil.which("llvm-dis-11")
+        self.llvm_opt = shutil.which("opt-11")
+        self.llvm_llc = shutil.which("llc-11")
 
     def init_from_values(self, values: dict):
         """values stems from reading the 'add_configuration' form."""
