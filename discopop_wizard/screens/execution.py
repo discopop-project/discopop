@@ -50,6 +50,7 @@ class ExecutionView(object):
         command += "--executable-name \"" + self.execution_configuration.executable_name + "\" "
         command += "--executable-arguments \"" + self.execution_configuration.executable_arguments + "\" "
         command += "--make-flags \"" + self.execution_configuration.make_flags + "\" "
+        command += "--explorer-flags \"" + self.execution_configuration.explorer_flags + "\" "
 
         return command
 
