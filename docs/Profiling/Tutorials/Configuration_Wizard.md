@@ -19,10 +19,6 @@ The Wizard is provided via a python module. After successfully following the [se
 
     discopop_wizard
 
-If you are using a headless machine or, for example, an SSH Terminal to execute DiscoPoP, please make use of the `--no-gui` flag to disable prompt windows:
-
-    discopop_wizard --no-gui
-
 
 ## Initial Setup
 When you first start the Wizard, the `Setup` will automatically be started.
@@ -32,8 +28,8 @@ You can modify the provided paths and settings at any time using the `Settings` 
 
 ## Execution Configurations
 The main menu provides an overview of the stored execution configurations.
-New ones can be created using the `Add Configuration` button.
-The menu to store, modify, delete, copy or execute configurations can be opened by simply clicking on a configuration.
+New ones can be created using the `New..` button.
+The menu to show execution results, modify, delete or execute configurations can be opened by simply clicking on a configuration.
 The following figure shows the opened menu for a sample configuration.
 A detailed explanation for the required settings can be found in the next section.
 
@@ -43,27 +39,29 @@ A detailed explanation for the required settings can be found in the next sectio
 #### Mandatory
 * `Label`: Name of the configuration. Used to distinguish configurations in the main menu.
 * `Executable name`: Name of the executable which is created when building the target project. The Name will be used to execute the configuration.
-* `Build threads`: Amount of threads to be used during the build process.
 * `Project path`: Path to the project which shall be analyzed for potential parallelism.
 * `Project linker flags`: Linker flags which need to be passed to the build system in order to create a valid executable.
 
 #### Optional
 * `Description`: Brief description of the configuration. Used to distinguish configurations in the main menu.
+* `Executable arguments`: Specify arguments which will be forwarded to the call of the created executable for the profiling.
+* `Make flags`: Specified flags will be forwarded to `Make` during the build of the target project.
 * `Make target`: TODO DESCRIPTION
 * `Additional notes`: Can be used to store notes regarding the configuration. This information will not be used during the execution of the configuration in any way.
 
 ## Executing the DiscoPop Pipeline
 When you have entered the necessary data, use the `Save` button in order to save your changes.
-The stored configuration can be executed by simply pressing the `Execution` button afterwards.
+The stored configuration can be executed by simply pressing the `Execute` button afterwards.
 In the background, a command to call the [Execution Wizard](Execution_Wizard.md) is assembled using the stored settings and the information stored in the current execution configuration.
-The output of the assembled command will be printed to the `Output Console`.
-Due to performance limitations in the interface framework, only a small amount of output lines can be shown at any point in time.
-However, it is possible to display the full log after the execution has finished using the `Full log` button.
 
 ## Results
-As of right now, the created [parallelization suggestions](../../Pattern_Detection/Patterns) will be printed to the console and thus be visible in the `Full log`.
-Additionally, a file named `patterns.txt` will be created in the project folder, which stores the same information. 
+As of right now, the created [parallelization suggestions](../../Pattern_Detection/Patterns) will be printed to a file named `patterns.txt` in the project folder.
 This is not an ideal solution and will be improved in the future.
+The DiscoPoP Wizard provides a simple overview of the identified suggestions. The respective view can be opened using the `Show Results` button of a configuration on the main screen and will be opened automatically after a execution has finished.
+The identified parallelization suggestions are shown via buttons in the middle column of the screen and allow to open a code preview, which highlights the target code section and shows the suggested OpenMP pragma.
+All details regarding the suggestion can be made visible by hovering over the respective buttons.
+An example for this view can be found in the following figure:
+![Parallelization Suggestions](../../img/discoPoP_results_screen.png)
 
 ## Data Storage
 All created metadata (settings and execution configurations) will be stored in a folder named `.config`, located within the installation directory of the `Configuration Wizard`.
@@ -86,20 +84,20 @@ At the first start you have to specify a set of required paths and save your cha
 ![Configuration Wizard - Initial Setup](../../img/wizard_initial_setup.png)
 
 ## Step 3: Create a Execution Configuration
-Use the `Add Configuration` button to create a new configuration.
+Use the `New..` button to create a new configuration.
 Use the shown values (except for `project path`) for the provided example:
 ![Configuration Wizard - Add Configuration](../../img/wizard_add_configuration.png)
 
-## Step 4: Open the created Configuration
-After saving, the created configuration will be visible in the main menu.
-Klick on the respective entry to show the detailed view again:
-![Configuration Wizard - Main Menu](../../img/wizard_main_menu.png)
-
-## Step 5: Execute
+## Step 4: Execute
 The configuration can be executed by simply clicking the `Execute` button.
-The results of the executed analysis are printed to the console (the full console log is accessible via the `Full log` button) and stored in a file named `patterns.txt` inside the specified `project path`, in this case `discopop/example`.
-![Configuration Wizard - Detailed view](../../img/wizard_detailed_view.png)
+The results of the executed analysis are printed to a file named `patterns.txt` inside the specified `project path`, in this case `discopop/example`.
+After the execution has finished, a screen showing the identified parallelization suggestions will open automatically.
 
-## Step 6: Interpret and Implement
-As a last step, the generated parallelization suggestions need to be interpreted and implement according to the respective [descriptions](../../Pattern_Detection/Patterns/Patterns.md).
+## Step 5: Interpret and Implement
+The created parallelization suggestions can be browsed and shown in a code preview:
+![results screen](../../img/discoPoP_results_screen.png)
+Note: Assembling the suggested OpenMP pragma for the preview is not supported yet (hence the `#pragma omp DUMMY`), but will be added soon.
+<br>
+Hovering over the suggestions will show all gathered information.
+Detailed explanations of the supported types of suggestions can be found [here](../../Pattern_Detection/Patterns/Patterns.md).
 
