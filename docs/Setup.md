@@ -29,6 +29,7 @@ Then, create a build directory, for example inside the source folder:
 	mkdir build; cd build;
 
 Next, configure the project using CMake. 
+
 If you have installed LLVM <b>from the source</b> please specify the preferred LLVM installation path for DiscoPoP. This can be done using the `-DLLVM_DIST_PATH=<PATH_TO_LLVM_BUILD_FOLDER>` CMake variable.
 
 	cmake -DLLVM_DIST_PATH=<PATH_TO_LLVM_BUILD_FOLDER> ..
@@ -36,6 +37,8 @@ If you have installed LLVM <b>from the source</b> please specify the preferred L
 If you have installed LLVM <b>using the package manager</b>, specifying this variable should not be necessary. In this case, please just use:
 
 	cmake ..
+
+Note: In case you want to use a specific Version of LLVM, it is possible to specify the `-DUSE_LLVM_VERSION=<version>` flag.
 
 Once the configuration process is successfully finished, compile the DiscoPoP libraries using `make`. All created shared objects will be stored in the build directory and can be found inside a folder named `libi/`.
 
