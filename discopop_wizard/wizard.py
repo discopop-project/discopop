@@ -100,7 +100,6 @@ class DiscoPoPConfigurationWizard(object):
         #        # show settings screen if first start
         if not self.settings.initialized:
             show_settings_screen(self)
-        #            # remove back button for this screen
         self.window.mainloop()
 
     def close_frame_contents(self):
