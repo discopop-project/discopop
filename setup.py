@@ -13,7 +13,8 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 os.chdir(Path(__file__).parent)
-SRC = Path("discopop_explorer")
+Explorer_SRC = Path("discopop_explorer")
+Wizard_SRC = Path("discopop_wizard")
 
 
 def get_version():
@@ -24,10 +25,10 @@ def get_version():
 def get_requirements():
     requirements = []
     # add discopop_explorer requirements
-    with open(SRC / "requirements.txt") as f:
+    with open(Explorer_SRC / "requirements.txt") as f:
         requirements += [line.rstrip() for line in f]
     # add discopop_wizard requirements
-    with open(Path("discopop_wizard") / "requirements.txt") as f:
+    with open(Wizard_SRC / "requirements.txt") as f:
         requirements += [line.rstrip() for line in f]
     return requirements
 
