@@ -13,3 +13,4 @@ include VERSION
 include discopop_explorer/requirements.txt
 
 include discopop_wizard/requirements.txt
+recursive-include discopop_wizard *
