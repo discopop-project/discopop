@@ -144,12 +144,12 @@ class ExecutionConfiguration(object):
         canvas.grid(row=1)
 
         # show labels
-        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e").grid(row=1, column=1, sticky='ew')
+        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=1, column=1, sticky='ew')
         tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky='ew')
-        tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e").grid(row=3, column=1, sticky='ew')
+        tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=3, column=1, sticky='ew')
         tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky='ew')
         tk.Label(canvas, text="Make flags:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky='ew')
-        tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e").grid(row=6, column=1, sticky='ew')
+        tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=6, column=1, sticky='ew')
         tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky='ew')
         tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky='ew')
         tk.Label(canvas, text="Additional notes:", justify=tk.RIGHT, anchor="e").grid(row=9, column=1, sticky='ew')

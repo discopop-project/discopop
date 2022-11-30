@@ -59,6 +59,8 @@ class DiscoPoPConfigurationWizard(object):
 
     ## font styles
     style_font_bold: str = "Helvetica 12 bold"
+    style_font_bold_small: str = "Helvetica 10 bold"
+
 
     def __init__(self, config_dir: str, arguments: Arguments):
         self.arguments = arguments
