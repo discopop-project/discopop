@@ -28,7 +28,6 @@ class Suggestion(object):
         self.start_line = int(self.values["start_line"].split(":")[1])
         self.end_line = int(self.values["end_line"].split(":")[1])
 
-
     def show_code_section(self, parent_frame: tk.Frame, execution_configuration):
 
         # close elements of parent_frame
@@ -93,7 +92,28 @@ class Suggestion(object):
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
 
     def __get_pragma(self) -> str:
-        return "#pragma omp DUMMY"
+        if self.type == "do_all" or self.type == "reduction":
+            pragma = "#pragma omp parallel for "
+            if len(self.values["first_private"]) > 0:
+                pragma += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
+            if len(self.values["private"]) > 0:
+                pragma += "private(" + ",".join(self.values["private"]) + ") "
+            if len(self.values["last_private"]) > 0:
+                pragma += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
+            if len(self.values["shared"]) > 0:
+                pragma += "shared(" + ",".join(self.values["shared"]) + ") "
+            if len(self.values["reduction"]) > 0:
+                reductions_dict = dict()
+                for entry in self.values["reduction"]:
+                    red_type = entry.split(":")[0]
+                    var = entry.split(":")[1]
+                    if red_type not in reductions_dict:
+                        reductions_dict[red_type] = []
+                    reductions_dict[red_type].append(var)
+                for red_type in reductions_dict:
+                    pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+            return pragma
+        return "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type
 
     def get_details(self) -> str:
         """Returns the details string which should be shown when hovering over the Suggestion button."""
