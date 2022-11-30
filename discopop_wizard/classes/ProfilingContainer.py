@@ -32,8 +32,8 @@ class ProfilingContainer(object):
         self.__execute_command("docker kill discopop_container")
         print("Done.")
 
-    def clean_project_folder(self):
-        self.__execute_command("docker exec -it discopop_container rm -rvf /project/*")
+    def remove_project_folder(self):
+        self.__execute_command("docker exec -it discopop_container rm -rvf /project")
 
     def remove_previous_results(self, target_folder):
         files = glob.glob(target_folder + "/*")
@@ -41,8 +41,8 @@ class ProfilingContainer(object):
             os.remove(f)
 
     def copy_project_folder_to_container(self, project_path: str):
-        self.clean_project_folder()
-        self.__execute_command("docker cp " + project_path + " discopop_container:/project/")
+        self.remove_project_folder()
+        self.__execute_command("docker cp " + project_path + " discopop_container:/project")
 
     def copy_results_from_container(self, target_path: str, execution_view):
         result_files = [
