@@ -14,6 +14,7 @@ from os.path import dirname
 from typing import Optional
 
 from discopop_wizard.classes.Arguments import Arguments
+from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.main import MainScreen
 # todo add command line option to list available run configurations
@@ -54,6 +55,7 @@ class DiscoPoPConfigurationWizard(object):
     window_frame: tk.Frame
     config_dir: str
     menubar: tk.Menu
+    profiling_container: Optional[ProfilingContainer] = None
 
     ## font styles
     style_font_bold: str = "Helvetica 12 bold"
@@ -97,10 +99,20 @@ class DiscoPoPConfigurationWizard(object):
 
         MainScreen(self, self.window_frame)
 
-        #        # show settings screen if first start
+        # create DiscoPoP profiling profiling_container if requested
+        if self.settings.use_docker_container_for_profiling:
+            self.profiling_container = ProfilingContainer()
+
+        # show settings screen if first start
         if not self.settings.initialized:
             show_settings_screen(self)
+
         self.window.mainloop()
+
+        # close DiscoPoP profiling profiling_container before exiting the application
+        if self.profiling_container is not None:
+            self.profiling_container.stop()
+
 
     def close_frame_contents(self):
         # close current frame contents

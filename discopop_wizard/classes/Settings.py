@@ -24,6 +24,7 @@ class Settings(object):
     llvm_opt: str = ""
     llvm_llc: str = ""
     go_bin: str = ""
+    use_docker_container_for_profiling: bool = True
 
     def __init__(self) -> None:
         # try and find default values for executables
@@ -73,5 +74,6 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.llvm_opt = value_dict["llvm_opt"]
     settings.llvm_llc = value_dict["llvm_llc"]
     settings.go_bin = value_dict["go_bin"]
+    settings.use_docker_container_for_profiling = value_dict["use_docker_container_for_profiling"]
     settings.initialized = True
     return settings
