@@ -18,8 +18,12 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Getting started
-For detailed instructions regarding the initial setup, please refer to the [initial setup](Setup.md) page.
-A short summary of the necessary steps can be found on the [quickstart setup](Quickstart/Setup.md) page.
+The simplest option to install and use DiscoPoP is provided by the [graphical user interface](Tutorials/Configuration_Wizard.md).
+For convenience, it provides the option to use a docker container to execute the profiling.
+As a result, no setup of the environment apart from installing `docker` is required.
+Please refer to the [Quickstart Guide - GUI](Quickstart.md) for further information.
+
+For detailed instructions regarding the manual setup and installation, please refer to the [manual setup](Manual_Quickstart/Manual_Setup.md) page.
 
 ## Running DiscoPoP
 After completing the setup, an instrumented Version of your code needs to be executed in order to gather the necessary information.
@@ -41,6 +45,7 @@ The previously mentioned pattern identification as well as the pattern interpret
 
 ## Walk-through example
 As a starting point, we have included a simple sample program which you can use to familiarize yourself with the system.
-In the [Quickstart example](Quickstart/Example.md) you can find instructions how to execute every necessary step to obtain parallelization suggestions for the sample program, and how to interpret and implement them.
+In the [manual Quickstart example](Manual_Quickstart/Manual_Example.md) you can find instructions how to execute every necessary step to obtain parallelization suggestions for the sample program, and how to interpret and implement them.
+In contrast, the GUI [quickstart example](Quickstart.md) provides an overview of the simplest way to set up and utilize DiscoPoP on the basis of the same example code.
 
 

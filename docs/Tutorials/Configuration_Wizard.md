@@ -14,14 +14,14 @@ The DiscoPop Configuration Wizard acts as a wrapper for the [Execution Wizard](E
 If you want to make use of the [Configuration](Configuration_Wizard.md) or [Execution Wizard](Execution_Wizard.md) for a simplified analysis of your project, you additionally need a working installation of [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
 
 ## Execution
-The Wizard is provided via a python module. After successfully following the [setup](../Setup.md) it can be executed by:
+The Wizard is provided via a python module. After successfully following the [manual setup](../Manual_Quickstart/Manual_Setup.md) it can be executed by:
 
     discopop_wizard
 
 
 ## Initial Setup
 When you first start the Wizard, the `Setup` will automatically be started.
-You will be prompted for paths to folders and executables which shall be known after completing the [setup](../Setup.md) and installing [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
+You will be prompted for paths to folders and executables which shall be known after completing the [manual setup](../Manual_Quickstart/Manual_Setup.md) and installing [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
 Use the `Save` button to save your changes and proceed to the main menu.
 You can modify the provided paths and settings at any time using the `Settings` button in the main menu.
 
@@ -74,7 +74,7 @@ Since we make hard assumptions regarding the format of the mentioned files, plea
 This example will demonstrate all the required steps to setup the Configuration Wizard and analyze the provided example code for parallelization potential.
 
 ## Step 1: Execute the Wizard
-Following a successful [setup](../Setup.md), the Wizard module can be started using:
+Following a successful [manual setup](../Manual_Quickstart/Manual_Setup.md), the Wizard module can be started using:
 
     discopop_wizard
 
