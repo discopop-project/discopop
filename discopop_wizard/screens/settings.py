@@ -11,6 +11,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 
+from discopop_wizard.screens.utils import create_tool_tip
+
 
 def show_settings_screen(wizard):
     # clear content frame
@@ -40,52 +42,67 @@ def show_settings_screen(wizard):
 
     ttk.Separator(frame, orient="horizontal").grid(row=14, column=1, sticky="ew", pady=10)
     tk.Label(frame, text="Options:", justify=tk.RIGHT, font=wizard.style_font_bold).grid(row=15, column=1)
-    tk.Label(frame, text="Use Docker profiling_container for profiling:", justify=tk.RIGHT, anchor="e").grid(row=16, column=1,
+    tk.Label(frame, text="Use Docker Container for profiling:", justify=tk.RIGHT, anchor="e").grid(row=16, column=1,
                                                                                                    sticky='ew')
+
+    def __get_field_state():
+        return tk.DISABLED if wizard.settings.use_docker_container_for_profiling else tk.NORMAL
 
     # show input fields
     discopop_source = tk.Entry(frame)
     discopop_source.grid(row=2, column=2, sticky="ew")
     discopop_source.insert(tk.END, wizard.settings.discopop_dir)
+    discopop_source.config(state=__get_field_state())
 
     discopop_build = tk.Entry(frame)
     discopop_build.grid(row=3, column=2, sticky="ew")
     discopop_build.insert(tk.END, wizard.settings.discopop_build_dir)
+    discopop_build.config(state=__get_field_state())
 
     go_bin_path = tk.Entry(frame)
     go_bin_path.grid(row=4, column=2, sticky="ew")
     go_bin_path.insert(tk.END, wizard.settings.go_bin)
+    go_bin_path.config(state=__get_field_state())
 
     clang = tk.Entry(frame, width=50)
     clang.grid(row=7, column=2, sticky="ew")
     clang.insert(tk.END, wizard.settings.clang)
+    clang.config(state=__get_field_state())
 
     clangpp = tk.Entry(frame)
     clangpp.grid(row=8, column=2, sticky="ew")
     clangpp.insert(tk.END, wizard.settings.clangpp)
+    clangpp.config(state=__get_field_state())
 
     llvm_ar = tk.Entry(frame)
     llvm_ar.grid(row=9, column=2, sticky="ew")
     llvm_ar.insert(tk.END, wizard.settings.llvm_ar)
+    llvm_ar.config(state=__get_field_state())
 
     llvm_link = tk.Entry(frame)
     llvm_link.grid(row=10, column=2, sticky="ew")
     llvm_link.insert(tk.END, wizard.settings.llvm_link)
+    llvm_link.config(state=__get_field_state())
 
     llvm_dis = tk.Entry(frame)
     llvm_dis.grid(row=11, column=2, sticky="ew")
     llvm_dis.insert(tk.END, wizard.settings.llvm_dis)
+    llvm_dis.config(state=__get_field_state())
 
     llvm_opt = tk.Entry(frame)
     llvm_opt.grid(row=12, column=2, sticky="ew")
     llvm_opt.insert(tk.END, wizard.settings.llvm_opt)
+    llvm_opt.config(state=__get_field_state())
 
     llvm_llc = tk.Entry(frame)
     llvm_llc.grid(row=13, column=2, sticky="ew")
     llvm_llc.insert(tk.END, wizard.settings.llvm_llc)
+    llvm_llc.config(state=__get_field_state())
 
     use_docker_container_var = tk.IntVar(value=1 if wizard.settings.use_docker_container_for_profiling else 0)
     use_docker_container = tk.Checkbutton(frame, variable=use_docker_container_var)
+    create_tool_tip(use_docker_container, "When un-checking, please save and re-open"
+                                          " the settings to enable input fields!")
 
     use_docker_container.grid(row=16, column=2)
 
