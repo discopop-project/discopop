@@ -35,6 +35,7 @@ class Settings(object):
         self.llvm_dis = shutil.which("llvm-dis-11")
         self.llvm_opt = shutil.which("opt-11")
         self.llvm_llc = shutil.which("llc-11")
+        self.initialized = True  # since docker container shall be used by default
 
     def init_from_values(self, values: dict):
         """values stems from reading the 'add_configuration' form."""
