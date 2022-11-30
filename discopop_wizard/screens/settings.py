@@ -11,6 +11,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 
+from discopop_wizard.screens.utils import create_tool_tip
+
 
 def show_settings_screen(wizard):
     # clear content frame
@@ -42,42 +44,52 @@ def show_settings_screen(wizard):
     discopop_source = tk.Entry(frame)
     discopop_source.grid(row=2, column=2, sticky="ew")
     discopop_source.insert(tk.END, wizard.settings.discopop_dir)
+    create_tool_tip(discopop_source, "Path to DiscoPoP root directory.")
 
     discopop_build = tk.Entry(frame)
     discopop_build.grid(row=3, column=2, sticky="ew")
     discopop_build.insert(tk.END, wizard.settings.discopop_build_dir)
+    create_tool_tip(discopop_build, "Path to DiscoPoP build directory.")
 
     go_bin_path = tk.Entry(frame)
     go_bin_path.grid(row=4, column=2, sticky="ew")
     go_bin_path.insert(tk.END, wizard.settings.go_bin)
+    create_tool_tip(go_bin_path, "Path to the bin folder inside the installation folder of Go.")
 
     clang = tk.Entry(frame, width=50)
     clang.grid(row=7, column=2, sticky="ew")
     clang.insert(tk.END, wizard.settings.clang)
+    create_tool_tip(clang, "Path to the clang executable.")
 
     clangpp = tk.Entry(frame)
     clangpp.grid(row=8, column=2, sticky="ew")
     clangpp.insert(tk.END, wizard.settings.clangpp)
+    create_tool_tip(clangpp, "Path to the clang++ executable.")
 
     llvm_ar = tk.Entry(frame)
     llvm_ar.grid(row=9, column=2, sticky="ew")
     llvm_ar.insert(tk.END, wizard.settings.llvm_ar)
+    create_tool_tip(llvm_ar, "Path to the llvm-ar executable.")
 
     llvm_link = tk.Entry(frame)
     llvm_link.grid(row=10, column=2, sticky="ew")
     llvm_link.insert(tk.END, wizard.settings.llvm_link)
+    create_tool_tip(llvm_link, "Path to the llvm_link executable.")
 
     llvm_dis = tk.Entry(frame)
     llvm_dis.grid(row=11, column=2, sticky="ew")
     llvm_dis.insert(tk.END, wizard.settings.llvm_dis)
+    create_tool_tip(llvm_dis, "Path to the llvm_dis executable.")
 
     llvm_opt = tk.Entry(frame)
     llvm_opt.grid(row=12, column=2, sticky="ew")
     llvm_opt.insert(tk.END, wizard.settings.llvm_opt)
+    create_tool_tip(llvm_opt, "Path to the llvm_opt executable.")
 
     llvm_llc = tk.Entry(frame)
     llvm_llc.grid(row=13, column=2, sticky="ew")
     llvm_llc.insert(tk.END, wizard.settings.llvm_llc)
+    create_tool_tip(llvm_llc, "Path to the llvm_llc executable.")
 
     # show path selector buttons
     tk.Button(frame, text="Select", command=lambda: __overwrite_with_selection(discopop_source)).grid(row=2, column=3)
