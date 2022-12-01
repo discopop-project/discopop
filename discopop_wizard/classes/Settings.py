@@ -26,7 +26,7 @@ class Settings(object):
     go_bin: str = ""
     use_docker_container_for_profiling: bool = True
 
-    def __init__(self) -> None:
+    def __init__(self, use_docker_container:bool=True) -> None:
         # try and find default values for executables
         self.clang = shutil.which("clang")
         self.clangpp = shutil.which("clang++")
@@ -35,7 +35,8 @@ class Settings(object):
         self.llvm_dis = shutil.which("llvm-dis-11")
         self.llvm_opt = shutil.which("opt-11")
         self.llvm_llc = shutil.which("llc-11")
-        self.initialized = True  # since docker container shall be used by default
+        self.use_docker_container_for_profiling = use_docker_container
+        self.initialized = True
 
     def init_from_values(self, values: dict):
         """values stems from reading the 'add_configuration' form."""
