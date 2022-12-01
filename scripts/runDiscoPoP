@@ -309,7 +309,6 @@ rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
 log -i "Building your application..."
 log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
 
-
 # create single .bc and .ll from the executable
 log -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"
 $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
