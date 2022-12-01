@@ -28,13 +28,13 @@ class Settings(object):
 
     def __init__(self, use_docker_container:bool=True) -> None:
         # try and find default values for executables
-        self.clang = shutil.which("clang")
-        self.clangpp = shutil.which("clang++")
-        self.llvm_ar = shutil.which("llvm-ar-11")
-        self.llvm_link = shutil.which("llvm-link-11")
-        self.llvm_dis = shutil.which("llvm-dis-11")
-        self.llvm_opt = shutil.which("opt-11")
-        self.llvm_llc = shutil.which("llc-11")
+        self.clang = "" if shutil.which("clang") is None else shutil.which("clang")
+        self.clangpp = "" if shutil.which("clang++") is None else shutil.which("clang++")
+        self.llvm_ar = "" if shutil.which("llvm-ar-11") is None else shutil.which("llvm-ar-11")
+        self.llvm_link = "" if shutil.which("llvm-link-11") is None else shutil.which("llvm-link-11")
+        self.llvm_dis = "" if shutil.which("llvm-dis-11") is None else shutil.which("llvm-dis-11")
+        self.llvm_opt = "" if shutil.which("opt-11") is None else shutil.which("opt-11")
+        self.llvm_llc = "" if shutil.which("llc-11") is None else shutil.which("llc-11")
         self.use_docker_container_for_profiling = use_docker_container
         self.initialized = True
 
