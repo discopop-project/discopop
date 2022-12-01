@@ -49,6 +49,12 @@ OPTIONAL ARGUMENTS:
 # log -i "some info"
 #####
 log () {
+  RETVAL=$?
+  if [ $RETVAL -ne 0 ]; then
+    echo "ERROR: $RETVAL"
+    exit $RETVAL
+  fi
+
   if [ "$COLORS" = true ]; then
     DEF='\033[0m'     # no color / default
     CYA='\033[0;36m'  # cyan
@@ -302,6 +308,7 @@ rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
 # build using gllvm as compiler
 log -i "Building your application..."
 log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
+
 
 # create single .bc and .ll from the executable
 log -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"
