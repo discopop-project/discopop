@@ -61,14 +61,15 @@ class DiscoPoPConfigurationWizard(object):
     style_font_bold: str = "Helvetica 12 bold"
     style_font_bold_small: str = "Helvetica 10 bold"
 
-
     def __init__(self, config_dir: str, arguments: Arguments):
         self.arguments = arguments
         self.config_dir = config_dir
         # check if settings exist
         if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
             # no settings exist
-            self.settings = Settings()
+            prompt_result = tk.messagebox.askyesno("DiscoPoP Wizard",
+                                                   "Do you want to make use of a docker container for the profiling?")
+            self.settings = Settings(use_docker_container=prompt_result)
         else:
             # load settings
             self.settings = load_from_config_file(config_dir)
