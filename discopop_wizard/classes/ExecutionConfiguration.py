@@ -16,6 +16,7 @@ from typing import TextIO
 
 from discopop_wizard.screens.execution import ExecutionView
 from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen, get_suggestion_objects
+from discopop_wizard.screens.utils import create_tool_tip
 
 
 class ExecutionConfiguration(object):
@@ -144,12 +145,16 @@ class ExecutionConfiguration(object):
         canvas.grid(row=1)
 
         # show labels
-        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=1, column=1, sticky='ew')
+        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=1,
+                                                                                                              column=1,
+                                                                                                              sticky='ew')
         tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky='ew')
-        tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=3, column=1, sticky='ew')
+        tk.Label(canvas, text="Executable name:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(
+            row=3, column=1, sticky='ew')
         tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky='ew')
         tk.Label(canvas, text="Make flags:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky='ew')
-        tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=6, column=1, sticky='ew')
+        tk.Label(canvas, text="Project path:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(
+            row=6, column=1, sticky='ew')
         tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky='ew')
         tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky='ew')
         tk.Label(canvas, text="Additional notes:", justify=tk.RIGHT, anchor="e").grid(row=9, column=1, sticky='ew')
@@ -158,21 +163,35 @@ class ExecutionConfiguration(object):
         label = tk.Entry(canvas)
         label.grid(row=1, column=2, sticky='ew')
         label.insert(tk.END, self.label)
+        create_tool_tip(label, "Name of the configuration. Used to distinguish configurations in the main menu.")
+
         description = tk.Entry(canvas)
         description.grid(row=2, column=2, sticky='ew')
         description.insert(tk.END, self.description)
+
         executable_name = tk.Entry(canvas)
         executable_name.insert(tk.END, self.executable_name)
         executable_name.grid(row=3, column=2, sticky='ew')
+        create_tool_tip(executable_name,
+                        "Name of the executable which is created when building the target project. The name will be "
+                        "used to execute the configuration.")
+
         executable_args = tk.Entry(canvas)
         executable_args.grid(row=4, column=2, sticky='ew')
         executable_args.insert(tk.END, self.executable_arguments)
+        create_tool_tip(executable_args,
+                        "Specify arguments which shall be forwarded to the call of the created executable for the "
+                        "profiling.")
+
         make_flags = tk.Entry(canvas)
         make_flags.grid(row=5, column=2, sticky='ew')
         make_flags.insert(tk.END, str(self.make_flags))
+        create_tool_tip(make_flags, "Specified flags will be forwarded to Make during the build of the target project.")
+
         project_path = tk.Entry(canvas)
         project_path.grid(row=6, column=2, sticky='ew')
         project_path.insert(tk.END, self.project_path)
+        create_tool_tip(project_path, "Path to the project which shall be analyzed for potential parallelism.")
 
         def overwrite_with_selection(target: tk.Entry):
             prompt_result = tk.filedialog.askdirectory()
@@ -186,12 +205,18 @@ class ExecutionConfiguration(object):
         project_linker_flags = tk.Entry(canvas)
         project_linker_flags.grid(row=7, column=2, sticky='ew')
         project_linker_flags.insert(tk.END, self.linker_flags)
+        create_tool_tip(project_linker_flags,
+                        "Linker flags which need to be passed to the build system in order to create a valid "
+                        "executable.")
+
         make_target = tk.Entry(canvas)
         make_target.grid(row=8, column=2, sticky='ew')
         make_target.insert(tk.END, self.make_target)
+
         additional_notes = tk.Text(canvas, height=10)
         additional_notes.grid(row=9, column=2, sticky='ew')
         additional_notes.insert(tk.END, self.notes)
+        create_tool_tip(additional_notes, "Can be used to store notes regarding the configuration.")
 
         # show buttons
         button_canvas = tk.Canvas(frame)
@@ -216,10 +241,12 @@ class ExecutionConfiguration(object):
                                                                               additional_notes))
         execute_button.grid(row=1, column=3)
 
-        results_button = tk.Button(button_canvas, text="Show Results", state=self.__button_state_from_result_existence(),
-                                   command=lambda: show_suggestions_overview_screen(wizard, main_screen_obj.details_frame, self))
+        results_button = tk.Button(button_canvas, text="Show Results",
+                                   state=self.__button_state_from_result_existence(),
+                                   command=lambda: show_suggestions_overview_screen(wizard,
+                                                                                    main_screen_obj.details_frame,
+                                                                                    self))
         results_button.grid(row=1, column=4)
-
 
     def __button_state_from_result_existence(self) -> str:
         # check if suggestions can be loaded. If so, enable the button.
