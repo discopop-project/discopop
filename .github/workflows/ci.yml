@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   execute_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Execute CI Tests
     steps:
       - name: Checkout Repository
@@ -129,7 +129,7 @@ jobs:
 
   ci_successful:
     name: "CI Tests Successful"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: execute_tests
     steps:
       - name: "Report success"
@@ -138,7 +138,7 @@ jobs:
 
   update_wiki-build:
     name: "Update Wiki - Build"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: ci_successful
     if: github.ref == 'refs/heads/master'
     steps:
@@ -159,7 +159,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: update_wiki-build
     if: github.ref == 'refs/heads/master'
     steps:
