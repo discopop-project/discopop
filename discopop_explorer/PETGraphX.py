@@ -386,7 +386,7 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]["data"]
 
-    def all_nodes(self, type: Optional[NodeType] = None) -> List[CUNode]:
+    def all_nodes(self, type: NodeType = None) -> List[CUNode]:
         """List of all nodes of specified type
 
         :param type: type of node
@@ -394,9 +394,7 @@ class PETGraphX(object):
         """
         return [n[1] for n in self.g.nodes(data="data") if type is None or n[1].type == type]
 
-    def out_edges(
-        self, node_id: str, etype: Optional[EdgeType] = None
-    ) -> List[Tuple[str, str, Dependency]]:
+    def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
         """Get outgoing edges of node of specified type
 
         :param node_id: id of the source node
@@ -409,9 +407,7 @@ class PETGraphX(object):
             if etype is None or t[2].etype == etype
         ]
 
-    def in_edges(
-        self, node_id: str, etype: Optional[EdgeType] = None
-    ) -> List[Tuple[str, str, Dependency]]:
+    def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
         """Get incoming edges of node of specified type
 
         :param node_id: id of the target node
