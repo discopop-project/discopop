@@ -50,3 +50,5 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
+
+add_subdirectory(scripts)
