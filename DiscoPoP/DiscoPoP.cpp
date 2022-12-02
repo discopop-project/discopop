@@ -244,7 +244,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
     string varDefLine{"LineNotFound"};
 
     bool isGlobal = false;
-    string varName = determineVariableName_static(&*I, isGlobal);
+    string varName = determineVariableName_static(&*I, isGlobal, true);
     // varName = refineVarName(varName);
     varName = (varName.find(".addr") == varName.npos)
               ? varName
@@ -283,10 +283,10 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
                             if (AI) {
                                 for (User *U: AI->users()) {
                                     if (StoreInst * SI = dyn_cast<StoreInst>(U)) {
-                                        vn = determineVariableName_static(&*SI, isGlobal);
+                                        vn = determineVariableName_static(&*SI, isGlobal, true);
                                         break;
                                     } else if (LoadInst * LI = dyn_cast<LoadInst>(U)) {
-                                        vn = determineVariableName_static(&*LI, isGlobal);
+                                        vn = determineVariableName_static(&*LI, isGlobal, true);
                                         break;
                                     }
                                 }
@@ -363,7 +363,7 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
                 isa<CallInst>(instruction)) {
 
                 // NOTE: changed 'instruction' to '&*instruction'
-                string varName = determineVariableName_static(&*instruction, isGlobalVariable);
+                string varName = determineVariableName_static(&*instruction, isGlobalVariable, false);
 
                 if (isGlobalVariable) // add it if it is a global variable in the program
                 {
@@ -490,7 +490,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                     Type *Ty = operand->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
                     cu->writeDataSize += u;
-                    varName = determineVariableName_static(&*instruction, isGlobalVar);
+                    varName = determineVariableName_static(&*instruction, isGlobalVar, false);
                     varType = determineVariableType(&*instruction);
                     suspiciousVariables.insert(varName);
                     if (lid > 0)
@@ -500,7 +500,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                     Type *Ty = instruction->getType();
                     unsigned u = DL->getTypeSizeInBits(Ty);
                     cu->readDataSize += u;
-                    varName = determineVariableName_static(&*instruction, isGlobalVar);
+                    varName = determineVariableName_static(&*instruction, isGlobalVar, false);
                     if (suspiciousVariables.count(varName)) {
                         // VIOLATION OF CAUTIOUS PROPERTY
                         // it is a load instruction which read the value of a global
@@ -681,7 +681,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 if (lid == 0)
                     continue;
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-                varName = determineVariableName_static(&*instruction, isGlobalVar);
+                varName = determineVariableName_static(&*instruction, isGlobalVar, false);
                 varType = determineVariableType(&*instruction);
                 varDefLine = determineVariableDefLine(&*instruction);
 
@@ -2114,7 +2114,7 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
     return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 
-string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/)
+string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/, bool disable_MetadataMap)
 {
 
     assert(I && "Instruction cannot be NULL \n");
@@ -2126,7 +2126,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     if (operand == NULL)
     {
         string retVal = getOrInsertVarName_static("", builder);
-        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
             return retVal;  // not found
         } else {
             return trueVarNamesFromMetadataMap[retVal];  // found
@@ -2141,7 +2141,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
             //MOHAMMAD ADDED THIS FOR CHECKING
             isGlobalVariable = true;
             string retVal = string(operand->getName());
-            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+            if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
                 return retVal;  // not found
             } else {
                 return trueVarNamesFromMetadataMap[retVal];  // found
@@ -2172,7 +2172,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
                             if (ret.size() > 0)
                             {
                                 string retVal = ret;
-                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
                                     return retVal;  // not found
                                 } else {
                                     return trueVarNamesFromMetadataMap[retVal];  // found
@@ -2181,7 +2181,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
                             else
                             {
                                 string retVal = getOrInsertVarName_static("", builder);
-                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+                                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
                                     return retVal;  // not found
                                 } else {
                                     return trueVarNamesFromMetadataMap[retVal];  // found
@@ -2196,12 +2196,12 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
             // we've found an array
             if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand))
             {
-                return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable);
+                return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false);
             }
-            return determineVariableName_static((Instruction *)gep, isGlobalVariable);
+            return determineVariableName_static((Instruction *)gep, isGlobalVariable, false);
         }
         string retVal = string(operand->getName().data());
-        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end()) {
+        if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
             return retVal;  // not found
         } else {
             return trueVarNamesFromMetadataMap[retVal];  // found
@@ -2211,7 +2211,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
 
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
-        return determineVariableName_static((Instruction *)(operand), isGlobalVariable);
+        return determineVariableName_static((Instruction *)(operand), isGlobalVariable, false);
     }
     // if we cannot determine the name, then return *
     return ""; //getOrInsertVarName("*", builder);
