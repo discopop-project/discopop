@@ -21,19 +21,21 @@ The process is identical to the previously mentioned process for contributors wh
 The process to solve an already known issue (bug or feature request) is basically identical to the previously described process.
 However, instead of creating a fork of the repository please create a branch with a descriptive name, which allows to understand it's purpose and it's relation to the targeted issue.
 A good and easy option for this is to use the `Create a branch` link which can be found in the `Development` section of each issue.
+Follow the instructions for determining the Version number depending on the contents of your branch and create a pull request to the respective release branch.
 
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
+- Switch to the release branch (e.g. `release/1.2.3`) which shall be released
 - Update the version files in the repository
-- Create a branch of the `master` with the name `release/1.2.3`
-- Create a tag on the newly created branch with the name `v1.2.3`
-    - Creating the tag triggers the automatic publication of the project to PyPi	
-- Create a draft for the new release
-    - Release target: the newly created branch `release/1.2.3`
-    - Release tag: `v1.2.3`
-    - Release title: `Version 1.2.3`
-    - Description should contain a summary of the most relevant changes
-- If everything is fine, create the new release
+- Create a pull request to the `master` branch and validate the changes
+- Merge the pull request and create a tag on the `master` branch with the name `v1.2.3`
+    - Creating the tag triggers the automatic publication of the project to PyPi
+    - Creating the tag triggers the automatic creation of a release draft
+- Update the newly created release draft
+  - Release tag: `v1.2.3`
+  - Release title: `Version 1.2.3`
+  - Description should contain a summary of the most relevant changes
+- If everything is fine, publish the new release
 
 ### Determining the Version Number
 Lets assume a current version number `1.2.3`.
