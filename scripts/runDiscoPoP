@@ -40,6 +40,7 @@ OPTIONAL ARGUMENTS:
                           if not specified the default make target is used.
  --make-flags <flags>     specify flags which will be passed through to make.
  --explorer-flags <flags> will be passed through to the DiscoPoP Explorer.
+ --python-path <path>     path to python binary folder
  --help or -h,            show this text and exit.
  --verbose or -v,         show verbose output.
 "
@@ -82,7 +83,9 @@ log () {
   esac
 }
 
-#####
+###### TODO make this more robust
+# (currently breaks if script is moved or DP is built somewhere else)
+# idea: during discoPoP build move this script to the build directory and configure this and other variables
 # Parse Arguments
 # based on https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 #####
@@ -92,6 +95,7 @@ HELP=false
 VERBOSE=false
 COLORS=false
 MAKFILE_TARGET=""
+PYTHONPATH_FLAG="."
 
 POSITIONAL_ARGS=()
 requiredArgCount=0
@@ -180,6 +184,10 @@ while [[ $# -gt 0 ]]; do
       EXPLORER_FLAGS="$2"
       shift; shift # past argument and value
       ;;
+    --python-path)
+      PYTHONPATH_FLAG="$2"
+      shift; shift # past argument and value
+      ;;
     -*|--*)
       log -e "Unknown option $1"
       exit 1
@@ -219,11 +227,7 @@ cp -r * .discopop
 cd .discopop
 PROJECT=$PROJECT/.discopop
 
-# TODO make this more robust
-# (currently breaks if script is moved or DP is built somewhere else)
-# idea: during discoPoP build move this script to the build directory and configure this and other variables
-DP="$(dirname "$(dirname "$(readlink -fm "$0")")")"
-DP_BUILD=$DP/build
+DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
 GLLVM_LOG=$PROJECT/gllvm_log.txt
 
 # show helptext
@@ -258,9 +262,9 @@ log -i \
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
   makeFlags:  $MAKE_FLAGS
-  discoPoP:   $DP
   dp_build:   $DP_BUILD
-  gllvmLog:   $GLLVM_LOG"
+  gllvmLog:   $GLLVM_LOG
+  pythonPath: $PYTHONPATH_FLAG"
 
 #####
 # configure gllvm
@@ -280,6 +284,16 @@ log -v "GLLVM SANITY CHECK:
 $($GLLVM/gsanity-check)" 
 
 #####
+# Perform preliminary checks
+#####
+if ! command -v discopop_explorer &> /dev/null
+then
+  log -e "discopop_explorer could not be found."
+  log -i "Install the python package or set the --python-path flag if it is already installed."
+    exit 1
+fi
+
+#####
 # create FileMapping.txt,
 # build with gllvm,
 # create single .bc and .ll from the executable
@@ -289,7 +303,7 @@ cd $PROJECT
 
 # create FileMapping.txt
 rm -f FileMapping.txt
-$DP/scripts/dp-fmap
+$DP_BUILD/scripts/dp-fmap
 
 # cleanup
 rm -f $PROJECT/Data.xml
@@ -332,7 +346,7 @@ tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
 #####
 
 log -i "Looking for parallelization opportunities..."
-PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
+PATTERNS=$(PYTHONPATH=$PYTHONPATH_FLAG discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
 
 # write patterns to file
 echo "$PATTERNS" > patterns.txt
