@@ -53,20 +53,29 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-# install DiscoPoP python modules
+# install DiscoPoP python modules, if not already installed
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-# check if pip is available
-message(STATUS "Installing DiscoPoP python modules")
+# check if python modules are installed already
 execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-        RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
-        OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
-        COMMAND_ECHO STDOUT
+        COMMAND ${Python3_EXECUTABLE} -m discopop_explorer
+        RESULT_VARIABLE DP_MODULES_AVAILABLE
+        OUTPUT_QUIET
 )
-# check if installation of DiscoPoP Modules was successful
-if(${EXIT_CODE})
-    message(STATUS "${DP_INSTALLATION_CMD_ECHO}")
-    message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
+if (${DP_MODULES_AVAILABLE} EQUAL 0)
+    message(STATUS "Found DiscoPoP python modules")
+else()
+    message(STATUS "Installing DiscoPoP python modules")
+    execute_process(
+            COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+            RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
+            OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
+            COMMAND_ECHO STDOUT
+    )
+    # check if installation of DiscoPoP Modules was successful
+    if(${DP_INSTALLATION_EXIT_CODE})
+        message(STATUS "${DP_INSTALLATION_CMD_ECHO}")
+        message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
+    endif()
 endif()
 
 # save build configuration to build/build_config.txt
