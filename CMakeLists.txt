@@ -50,3 +50,9 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
+
+# save build configuration to build/build_config.txt
+file(TOUCH "${DiscoPoP_BINARY_DIR}/build_config.txt")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_BUILD=${DiscoPoP_BINARY_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_SOURCE=${DiscoPoP_SOURCE_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "LLVM_BIN_DIR=${LLVM_TOOLS_BINARY_DIR}\n")
