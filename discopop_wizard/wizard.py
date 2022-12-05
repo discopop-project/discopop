@@ -14,6 +14,7 @@ from os.path import dirname
 from typing import Optional
 
 from discopop_wizard.classes.Arguments import Arguments
+from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.main import MainScreen
 # todo add command line option to list available run configurations
@@ -54,11 +55,11 @@ class DiscoPoPConfigurationWizard(object):
     window_frame: tk.Frame
     config_dir: str
     menubar: tk.Menu
+    profiling_container: Optional[ProfilingContainer] = None
 
     ## font styles
     style_font_bold: str = "Helvetica 12 bold"
     style_font_bold_small: str = "Helvetica 10 bold"
-
 
     def __init__(self, config_dir: str, arguments: Arguments):
         self.arguments = arguments
@@ -66,7 +67,9 @@ class DiscoPoPConfigurationWizard(object):
         # check if settings exist
         if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
             # no settings exist
-            self.settings = Settings()
+            prompt_result = tk.messagebox.askyesno("DiscoPoP Wizard",
+                                                   "Do you want to make use of a docker container for the profiling?")
+            self.settings = Settings(use_docker_container=prompt_result)
         else:
             # load settings
             self.settings = load_from_config_file(config_dir)
@@ -99,10 +102,20 @@ class DiscoPoPConfigurationWizard(object):
 
         MainScreen(self, self.window_frame)
 
-        #        # show settings screen if first start
+        # create DiscoPoP profiling profiling_container if requested
+        if self.settings.use_docker_container_for_profiling:
+            self.profiling_container = ProfilingContainer()
+
+        # show settings screen if first start
         if not self.settings.initialized:
             show_settings_screen(self)
+
         self.window.mainloop()
+
+        # close DiscoPoP profiling profiling_container before exiting the application
+        if self.profiling_container is not None:
+            self.profiling_container.stop()
+
 
     def close_frame_contents(self):
         # close current frame contents

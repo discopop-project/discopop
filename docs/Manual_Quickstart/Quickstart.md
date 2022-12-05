@@ -1,9 +1,9 @@
 ---
 layout: default
-title: Quickstart
+title: Manual Quickstart
 has_children: true
-permalink: /Quickstart
-nav_order: 3
+permalink: /Manual_Quickstart
+nav_order: 2
 ---
 
 # Quickstart

@@ -271,6 +271,7 @@ class ExecutionConfiguration(object):
         self.executable_arguments = executable_args.get()
         self.make_flags = make_flags.get()
         self.project_path = project_path.get()
+        self.working_copy_path = self.project_path + "/.discopop"
         self.linker_flags = project_linker_flags.get()
         self.make_target = make_target.get()
         self.notes = additional_notes.get("1.0", tk.END)
