@@ -36,7 +36,7 @@ class Settings(object):
         self.llvm_opt = "" if shutil.which("opt-11") is None else shutil.which("opt-11")
         self.llvm_llc = "" if shutil.which("llc-11") is None else shutil.which("llc-11")
         self.use_docker_container_for_profiling = use_docker_container
-        self.initialized = True
+        self.initialized = use_docker_container  # show settings screen on first start if docker should not be used
 
     def init_from_values(self, values: dict):
         """values stems from reading the 'add_configuration' form."""
