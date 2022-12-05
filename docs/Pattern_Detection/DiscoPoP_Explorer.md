@@ -40,11 +40,11 @@ rm tmp_target_app.ll tmp_target_app_instrumented.ll iFunctions_CUInst.ll
 
 
 ### Pre-requisites
-To use the DiscoPoP Explorer, you need to have Python 3.6+ installed on your system. Further Python dependencies should have been installed during the [setup](../Setup.md), but can be installed using the following command:
+To use the DiscoPoP Explorer, you need to have Python 3.6+ installed on your system. Further Python dependencies should have been installed during the [manual setup](../Manual_Quickstart/Manual_Setup.md), but can be installed using the following command:
 `pip install -r requirements.txt`
 
 ### Usage
-If you followed the installation instructions in the [setup](../Setup.md), you can execute the DiscoPoP Explorer by simply calling the module:
+If you followed the installation instructions in the [manual setup](../Manual_Quickstart/Manual_Setup.md), you can execute the DiscoPoP Explorer by simply calling the module:
 
 `discopop_explorer --path <path-to-your-output>`
 
@@ -60,4 +60,4 @@ By default, running the DiscoPoP Explorer will print out the list of patterns al
 
 Detailed instructions on how to interpret the suggested patterns can be found on the pages of the respective [patterns](Patterns/Patterns.md).
 
-A simple walk-through example for the execution of the DiscoPoP Explorer and the interpretation and implementation of the results can be found as part of our [quickstart example](../Quickstart/Example.md).
+A simple walk-through example for the execution of the DiscoPoP Explorer and the interpretation and implementation of the results can be found as part of our [manual quickstart example](../Manual_Quickstart/Manual_Example.md).

@@ -1,14 +1,14 @@
 ---
 layout: default
-title: Example
-parent: Quickstart
+title: Manual Example
+parent: Manual Quickstart
 nav_order: 3
 ---
 
-# Quickstart Example
+# Manual Quickstart Example
 
 ## Prerequisites
-We assume that you have finished the [setup](../Setup.md) already.
+We assume that you have finished the [manual setup](Manual_Setup.md) already.
 In order to follow the example, please make sure you know the paths to the following executables, files and folders. 
 Occurrences of names in capital letters (e.g. `DP_SOURCE`) should be replaced by the respective (absolute) paths.
 
