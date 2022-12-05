@@ -82,6 +82,15 @@ log () {
   esac
 }
 
+log_or_fail () {
+  RETVAL=$?
+  log $1 "$2\n"
+  if [ $RETVAL -ne 0 ]; then
+    log -e "Exiting script with code: ${RETVAL}"
+    exit $RETVAL
+  fi
+}
+
 #####
 # Parse Arguments
 # based on https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
@@ -301,10 +310,10 @@ rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
 
 # build using gllvm as compiler
 log -i "Building your application..."
-log -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
+log_or_fail -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
 
 # create single .bc and .ll from the executable
-log -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"
+log_or_fail -v "$($GLLVM/get-bc -b -m -v $EXECUTABLE_NAME 2>&1)"
 $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 #####
