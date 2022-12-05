@@ -20,4 +20,4 @@ If you want to make use of the [Configuration](Configuration_Wizard.md) or [Exec
 
 Execute the runDiscoPoP script with the --help option to get a list of required and optional arguments.
 
-    DP_SOURCE/scripts/runDiscoPoP --help
+    DP_BUILD/scripts/runDiscoPoP --help
