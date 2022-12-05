@@ -20,7 +20,6 @@ RUN mkdir build
 WORKDIR /discopop/build
 RUN cmake ..
 RUN make
-RUN ls
 WORKDIR /discopop
 
 # install GO
