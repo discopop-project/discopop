@@ -43,7 +43,7 @@ class ExecutionView(object):
         # assemble command for regular execution
         command = ""
         # settings
-        command = self.wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
+        command = self.wizard.settings.discopop_build_dir + "/scripts/runDiscoPoP "
         command += "--llvm-clang \"" + self.wizard.settings.clang + "\" "
         command += "--llvm-clang++ \"" + self.wizard.settings.clangpp + "\" "
         command += "--llvm-ar \"" + self.wizard.settings.llvm_ar + "\" "
