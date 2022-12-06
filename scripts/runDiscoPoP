@@ -19,6 +19,12 @@ HELPTEXT="*** DiscoPoP Execution Wizard ***
 Use this tool to analyze a project that is built using Makefiles
 
 REQUIRED ARGUMENTS: Please use absolut paths!
+ --gllvm <path>         path to a directory with gllvm executables
+                        (gclang, gclang++, get-bc, gsanity-check)
+ --project <path>       path to the directory that contains your makefile
+ --executable-name <name> the name of the executable that is built and analyzed
+
+OPTIONAL ARGUMENTS:
  --llvm-clang <path>    path to clang executable
  --llvm-clang++ <path>  path to clang++ executable
  --llvm-ar <path>       path to llvm-ar executable
@@ -26,12 +32,6 @@ REQUIRED ARGUMENTS: Please use absolut paths!
  --llvm-dis <path>      path to llvm-dis executable
  --llvm-opt <path>      path to opt executable
  --llvm-llc <path>      path to llc executable
- --gllvm <path>         path to a directory with gllvm executables
-                        (gclang, gclang++, get-bc, gsanity-check)
- --project <path>       path to the directory that contains your makefile
- --executable-name <name> the name of the executable that is built and analyzed
-
-OPTIONAL ARGUMENTS:
  --executable-arguments <args>
                           run your application with these arguments
  --linker-flags <flags>   if your build requires to link other libraries
@@ -93,6 +93,12 @@ log_or_fail () {
 }
 
 #####
+# Read build configuration
+#####
+DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+DP_BUILD_LLVM_BIN_DIR="$(cat ${DP_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
+
+#####
 # Parse Arguments
 # based on https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 #####
@@ -103,6 +109,13 @@ VERBOSE=false
 COLORS=false
 MAKFILE_TARGET=""
 PYTHONPATH_FLAG="."
+LLVM_CLANG=$DP_BUILD_LLVM_BIN_DIR/clang
+LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
+LLVM_AR=$DP_BUILD_LLVM_BIN_DIR/llvm-ar
+LLVM_LINK=$DP_BUILD_LLVM_BIN_DIR/llvm-link
+LLVM_DIS=$DP_BUILD_LLVM_BIN_DIR/llvm-dis
+LLVM_OPT=$DP_BUILD_LLVM_BIN_DIR/opt
+LLVM_LLC=$DP_BUILD_LLVM_BIN_DIR/llc
 
 POSITIONAL_ARGS=()
 requiredArgCount=0
@@ -123,37 +136,30 @@ while [[ $# -gt 0 ]]; do
       ;;
     --llvm-clang)
       LLVM_CLANG=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-clang++)
       LLVM_CLANGPP=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-ar)
       LLVM_AR=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-link)
       LLVM_LINK=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-dis)
       LLVM_DIS=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-opt)
       LLVM_OPT=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-llc)
       LLVM_LLC=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --gllvm)
@@ -216,7 +222,7 @@ if [[ -n $1 ]]; then
 fi
 
 # check for required arguments
-if [ $requiredArgCount -ne 10 ]; then
+if [ $requiredArgCount -ne 3 ]; then
   log -e "Please provide all required arguments exactly once. Use --help or -h to view them."
   exit 1
 fi
@@ -234,7 +240,6 @@ cp -r * .discopop
 cd .discopop
 PROJECT=$PROJECT/.discopop
 
-DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
 GLLVM_LOG=$PROJECT/gllvm_log.txt
 
 # show helptext
