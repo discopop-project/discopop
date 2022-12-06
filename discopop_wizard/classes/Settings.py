@@ -14,7 +14,6 @@ import jsons
 
 class Settings(object):
     initialized = False
-    discopop_dir: str = ""
     discopop_build_dir: str = ""
     clang: str = ""
     clangpp: str = ""
@@ -66,7 +65,6 @@ def load_from_config_file(config_dir: str) -> Settings:
             json_str += line
     value_dict = jsons.loads(json_str)
     settings = Settings()
-    settings.discopop_dir = value_dict["discopop_dir"]
     settings.discopop_build_dir = value_dict["discopop_build_dir"]
     settings.clang = value_dict["clang"]
     settings.clangpp = value_dict["clangpp"]
