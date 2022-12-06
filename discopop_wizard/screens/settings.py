@@ -149,13 +149,7 @@ def save_settings(wizard, discopop_build: tk.Entry, go_bin_path: tk.Entry, clang
     wizard.settings.llvm_llc = llvm_llc.get()
     wizard.settings.use_docker_container_for_profiling = True if use_docker_container_var.get() == 1 else False
 
-    settings_path = os.path.join(wizard.config_dir, "SETTINGS.txt")
-    # remove old config if present
-    if os.path.exists(settings_path):
-        os.remove(settings_path)
-    # write config to file
-    with open(settings_path, "w+") as f:
-        f.write(wizard.settings.get_as_json_string())
+    wizard.settings.save_to_file(config_dir=wizard.config_dir)
 
     # return to main screen
     wizard.show_main_screen()

@@ -19,7 +19,7 @@ from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.main import MainScreen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
-from discopop_wizard.screens.settings import show_settings_screen
+from discopop_wizard.screens.settings import show_settings_screen, save_settings
 
 
 def main(arguments: Arguments):
@@ -117,6 +117,9 @@ class DiscoPoPConfigurationWizard(object):
         # show settings screen if first start
         if not self.settings.initialized:
             show_settings_screen(self)
+        else:
+            # save settings
+            self.settings.save_to_file(self.config_dir)
 
         self.window.mainloop()
 

@@ -103,6 +103,14 @@ class Settings(object):
         """returns a representation of the settings which will be stored in a configuration file."""
         return jsons.dumps(self)
 
+    def save_to_file(self, config_dir: str):
+        settings_path = os.path.join(config_dir, "SETTINGS.txt")
+        # remove old config if present
+        if os.path.exists(settings_path):
+            os.remove(settings_path)
+        # write config to file
+        with open(settings_path, "w+") as f:
+            f.write(self.get_as_json_string())
 
 def load_from_config_file(config_dir: str) -> Settings:
     json_str = ""
