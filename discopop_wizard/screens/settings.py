@@ -26,7 +26,6 @@ def show_settings_screen(wizard):
     # show labels
     tk.Label(frame, text="Directories:", justify=tk.RIGHT, font=wizard.style_font_bold).grid(row=1, column=1,
                                                                                              sticky="ew")
-    tk.Label(frame, text="DiscoPoP source:", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky='ew')
     tk.Label(frame, text="DiscoPoP build:", justify=tk.RIGHT, anchor="e").grid(row=3, column=1, sticky='ew')
     tk.Label(frame, text="go/bin directory:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky='ew')
 
@@ -49,12 +48,6 @@ def show_settings_screen(wizard):
         return tk.DISABLED if wizard.settings.use_docker_container_for_profiling else tk.NORMAL
 
     # show input fields
-    discopop_source = tk.Entry(frame)
-    discopop_source.grid(row=2, column=2, sticky="ew")
-    discopop_source.insert(tk.END, wizard.settings.discopop_dir)
-    discopop_source.config(state=__get_field_state())
-    create_tool_tip(discopop_source, "Path to DiscoPoP root directory.")
-
     discopop_build = tk.Entry(frame)
     discopop_build.grid(row=3, column=2, sticky="ew")
     discopop_build.insert(tk.END, wizard.settings.discopop_build_dir)
@@ -118,7 +111,6 @@ def show_settings_screen(wizard):
 
 
     # show path selector buttons
-    tk.Button(frame, text="Select", command=lambda: __overwrite_with_selection(discopop_source)).grid(row=2, column=3)
     tk.Button(frame, text="Select", command=lambda: __overwrite_with_selection(discopop_build)).grid(row=3, column=3)
     tk.Button(frame, text="Select", command=lambda: __overwrite_with_selection(go_bin_path)).grid(row=4, column=3)
     tk.Button(frame, text="Select", command=lambda: __overwrite_with_selection(clang)).grid(row=7, column=3)
@@ -131,7 +123,7 @@ def show_settings_screen(wizard):
 
     # show save button
     tk.Button(frame, text="Save", command=lambda: save_settings(wizard,
-                                                                discopop_source, discopop_build, go_bin_path, clang,
+                                                                discopop_build, go_bin_path, clang,
                                                                 clangpp, llvm_ar, llvm_link, llvm_dis, llvm_opt,
                                                                 llvm_llc, use_docker_container_var)).grid(row=17, column=2, pady=10)
 
@@ -143,10 +135,9 @@ def __overwrite_with_selection(target: tk.Entry):
         target.insert(0, prompt_result)
 
 
-def save_settings(wizard, discopop_source: tk.Entry, discopop_build: tk.Entry, go_bin_path: tk.Entry, clang: tk.Entry,
+def save_settings(wizard, discopop_build: tk.Entry, go_bin_path: tk.Entry, clang: tk.Entry,
                   clangpp: tk.Entry, llvm_ar: tk.Entry, llvm_link: tk.Entry, llvm_dis: tk.Entry, llvm_opt: tk.Entry,
                   llvm_llc: tk.Entry, use_docker_container_var):
-    wizard.settings.discopop_dir = discopop_source.get()
     wizard.settings.discopop_build_dir = discopop_build.get()
     wizard.settings.go_bin = go_bin_path.get()
     wizard.settings.clang = clang.get()
