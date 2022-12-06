@@ -69,7 +69,15 @@ class DiscoPoPConfigurationWizard(object):
             # no settings exist
             prompt_result = tk.messagebox.askyesno("DiscoPoP Wizard",
                                                    "Do you want to make use of a docker container for the profiling?")
-            self.settings = Settings(use_docker_container=prompt_result)
+            if not prompt_result:
+                # ask user for path to discopop_build and go/bin directory
+                discopop_build_dir = tk.filedialog.askdirectory(title="Select DiscoPoP build folder")
+                go_bin_dir = tk.filedialog.askdirectory(title="Select go/bin folder (Go installation)")
+            else:
+                discopop_build_dir = ""
+                go_bin_dir = ""
+            self.settings = Settings(use_docker_container=prompt_result, discopop_build_dir=discopop_build_dir,
+                                     go_bin_dir=go_bin_dir)
         else:
             # load settings
             self.settings = load_from_config_file(config_dir)
