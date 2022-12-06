@@ -26,7 +26,7 @@ class ExecutionView(object):
         if self.wizard.settings.use_docker_container_for_profiling:
             # start container if not already present. Required when enabling container usage after start of application.
             if self.wizard.profiling_container is None:
-                self.wizard.profiling_container = ProfilingContainer()
+                self.wizard.profiling_container = ProfilingContainer(self.wizard)
             self.wizard.profiling_container.analyze_project(self)
             # todo add display of suggestions
             self.__show_suggestions()
@@ -67,11 +67,14 @@ class ExecutionView(object):
             for line in p.stdout:
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
+                self.wizard.console.print(line)
         if p.returncode != 0:
             self.__print_to_console("An error occurred during the execution!")  # Error message
+            self.wizard.console.print("An error occurred during the execution!")
             for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
+                self.wizard.console.print(line)
         return p.returncode
 
     def __print_to_console(self, msg: str):

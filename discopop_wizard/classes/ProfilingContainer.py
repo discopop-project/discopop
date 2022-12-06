@@ -14,8 +14,10 @@ import subprocess
 
 class ProfilingContainer(object):
 
-    def __init__(self):
+    def __init__(self, wizard):
+        self.wizard = wizard
         self.start()
+
 
     def start(self):
         docker_context_path = os.path.join(pathlib.Path(__file__).parent.resolve(), "..", "assets",
@@ -111,9 +113,12 @@ class ProfilingContainer(object):
             for line in p.stdout:
                 line = line.replace("\n", "")
                 print(line)
+                self.wizard.console.print(line)
         if p.returncode != 0:
             print("An error occurred during the execution!")  # Error message
+            self.wizard.console.print("An error occurred during the execution!")
             for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
                 line = line.replace("\n", "")
                 print(line)
+                self.wizard.console.print(line)
         return p.returncode

@@ -15,6 +15,7 @@ from os.path import dirname
 from typing import Optional
 
 from discopop_wizard.classes.Arguments import Arguments
+from discopop_wizard.classes.Console import Console
 from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.screens.main import MainScreen
@@ -104,7 +105,6 @@ class DiscoPoPConfigurationWizard(object):
         # create content frame
         self.window_frame = tk.Frame(paned_window)
         paned_window.add(self.window_frame, weight=5)
-        #self.window_frame.grid(row=1, column=1, sticky="nsew")
         self.window_frame.columnconfigure(1, weight=1)
         self.window_frame.rowconfigure(1, weight=1)
 
@@ -113,17 +113,13 @@ class DiscoPoPConfigurationWizard(object):
         self.window.config(menu=self.menubar)
 
         # create console frame
-        self.console_frame = tk.Frame(paned_window, bg="red")
-        paned_window.add(self.console_frame, weight=1)
-        #self.console_frame.grid(row=2, column=1, sticky="nsew")
-
-
+        self.console_frame = tk.Frame(paned_window)
+        paned_window.add(self.console_frame, weight=0)
+        self.console_frame.columnconfigure(1, weight=1)
+        self.console_frame.rowconfigure(1, weight=1)
+        self.console = Console(self.console_frame)
 
         MainScreen(self, self.window_frame)
-
-        # create DiscoPoP profiling profiling_container if requested
-        if self.settings.use_docker_container_for_profiling:
-            self.profiling_container = ProfilingContainer()
 
         # show settings screen if first start
         if not self.settings.initialized:
