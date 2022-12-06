@@ -47,7 +47,8 @@ Once the configuration process is successfully finished, compile the DiscoPoP li
 
 
 ## Installation of Python Modules
-The included Python modules `discopop_explorer` and `discopop_wizard` can be installed using `pip` by executing the following command in the base directory of DiscoPoP:
+The included Python modules `discopop_explorer` and `discopop_wizard` will be installed during the `cmake` build process, 
+but they can also be installed using `pip` by executing the following command in the base directory of DiscoPoP:
 
 	pip install .
 
