@@ -9,6 +9,7 @@
 import os
 import pathlib
 import tkinter as tk
+from tkinter import ttk
 from enum import IntEnum
 from os.path import dirname
 from typing import Optional
@@ -97,16 +98,26 @@ class DiscoPoPConfigurationWizard(object):
         self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth(), self.window.winfo_screenheight()))
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(1, weight=1)
+        paned_window = ttk.PanedWindow(self.window, orient=tk.VERTICAL)
+        paned_window.pack(fill=tk.BOTH, expand=True)
 
         # create content frame
-        self.window_frame = tk.Frame(self.window)
-        self.window_frame.grid(row=1, column=1, sticky="nsew")
+        self.window_frame = tk.Frame(paned_window)
+        paned_window.add(self.window_frame, weight=5)
+        #self.window_frame.grid(row=1, column=1, sticky="nsew")
         self.window_frame.columnconfigure(1, weight=1)
         self.window_frame.rowconfigure(1, weight=1)
 
         # create menu bar
         self.menubar = tk.Menu(self.window)
         self.window.config(menu=self.menubar)
+
+        # create console frame
+        self.console_frame = tk.Frame(paned_window, bg="red")
+        paned_window.add(self.console_frame, weight=1)
+        #self.console_frame.grid(row=2, column=1, sticky="nsew")
+
+
 
         MainScreen(self, self.window_frame)
 
