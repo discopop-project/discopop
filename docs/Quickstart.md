@@ -33,7 +33,7 @@ Only three of the possible arguments are required to execute and analyze the pro
 * `Executable name`: Name of the executable created by the make file
   * For the provided example, use `my_exe`
 * `Project path`: Path to the project which shall be analyzed
-  * Fot the provided example, use your `ABSOLUTE_PATH_TO_DISCOPOP/example`
+  * For the provided example, use your `ABSOLUTE_PATH_TO_DISCOPOP/example`
 
 ![Example Configuration](img/quickstart_example_1.png)
 
