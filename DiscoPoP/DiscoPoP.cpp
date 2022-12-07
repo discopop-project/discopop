@@ -1668,17 +1668,45 @@ void DiscoPoP::dp_reduction_insert_functions() {
     }
 
     // insert function calls to monitor loop iterations
-    std::ofstream loop_counter_file;
-    loop_counter_file.open("loop_counter_output.txt");
-    for (auto const &loop_info: loops_) {
-        loop_counter_file << loop_info.file_id_ << " ";
-        loop_counter_file << loop_info.line_nr_ << " ";
-        // TODO: Replace 1000 with actual loop iterations
-        // TODO: Check if number of load and store instructions on a
-        //       reduction variable is the same
-        loop_counter_file << "1000" << "\n";
-    }
+    std::ofstream loop_metadata_file;
+    loop_metadata_file.open("loop_meta.txt");
+    int loop_id = 1;
+    llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
+    llvm::ArrayRef<llvm::Type*> loop_incr_fn_args(loop_incr_fn_arg_type);
+    llvm::FunctionType* loop_incr_fn_type = llvm::FunctionType::get(
+            llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
+    FunctionCallee incr_loop_counter_callee = module_->getOrInsertFunction("incr_loop_counter", loop_incr_fn_type);
 
+    for (auto const& loop_info : loops_) {
+        llvm::Value* val =
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
+        llvm::ArrayRef<llvm::Value*> args(val);
+        llvm::CallInst::Create(incr_loop_counter_callee, args, "",
+                               loop_info.first_body_instr_);
+        loop_metadata_file << loop_info.file_id_ << " ";
+        loop_metadata_file << loop_id++ << " ";
+        loop_metadata_file << loop_info.line_nr_ << "\n";
+    }
+    loop_metadata_file.close();
+
+    // add a function to output the final data
+    // loop_counter_output
+    llvm::FunctionType* output_fn_type =
+            llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
+    FunctionCallee loop_counter_output_callee = module_->getOrInsertFunction("loop_counter_output", output_fn_type);
+    llvm::Function* main_fn = module_->getFunction("main");
+    if (main_fn) {
+        for (auto it = llvm::inst_begin(main_fn); it != llvm::inst_end(main_fn);
+             ++it) {
+            if (llvm::isa<llvm::ReturnInst>(&(*it))) {
+                llvm::IRBuilder<> ir_builder(&(*it));
+                ir_builder.CreateCall(loop_counter_output_callee);
+                break;
+            }
+        }
+    } else {
+        llvm::errs() << "Error : Could not find a main function\n";
+    }
 }
 
 // DPReduction end
