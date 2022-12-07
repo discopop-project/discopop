@@ -12,6 +12,7 @@ import string
 import tkinter as tk
 from json import JSONDecodeError
 from tkinter import filedialog
+from tkinter import ttk
 from typing import TextIO, List
 
 from discopop_wizard.screens.execution import ExecutionView
@@ -42,7 +43,7 @@ class ExecutionConfiguration(object):
 
     def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, all_buttons: List[tk.Button]) -> tk.Button:
         button = tk.Button(parent_frame, text=self.label)
-        button.config(command=lambda: self.highlight_and_show_details_screen(wizard, main_screen_obj, button, all_buttons))
+        button.config(command=lambda: self.highlight_and_update_notebook_screens(wizard, main_screen_obj, button, all_buttons))
         self.button = button
         return button
 
@@ -135,7 +136,7 @@ class ExecutionConfiguration(object):
         script_str += command
         return script_str
 
-    def highlight_and_show_details_screen(self, wizard, main_screen_obj, pressed_button: tk.Button, all_buttons: List[tk.Button]):
+    def highlight_and_update_notebook_screens(self, wizard, main_screen_obj, pressed_button: tk.Button, all_buttons: List[tk.Button]):
         # remove previous highlights
         for configuration_button in all_buttons:
             configuration_button.configure(state=tk.NORMAL)
@@ -143,8 +144,13 @@ class ExecutionConfiguration(object):
         # highlight pressed configuration button
         pressed_button.configure(state=tk.DISABLED)
 
-        # show details screen of pressed configuration button
+        # update details screen of pressed configuration button
         self.show_details_screen(wizard, main_screen_obj)
+
+        # update results screen of pressed configuration button and set results tab state based on result existence
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        if self.__button_state_from_result_existence() == "normal":
+            show_suggestions_overview_screen(wizard, main_screen_obj.results_frame, self)
 
     def show_details_screen(self, wizard, main_screen_obj) -> tk.Frame:
         # delete previous frame contents
@@ -254,13 +260,6 @@ class ExecutionConfiguration(object):
                                                                               additional_notes))
         execute_button.grid(row=1, column=3)
 
-        results_button = tk.Button(button_canvas, text="Show Results",
-                                   state=self.__button_state_from_result_existence(),
-                                   command=lambda: show_suggestions_overview_screen(wizard,
-                                                                                    main_screen_obj.details_frame,
-                                                                                    self))
-        results_button.grid(row=1, column=4)
-
     def __button_state_from_result_existence(self) -> str:
         # check if suggestions can be loaded. If so, enable the button.
         # Else, disable it.
@@ -327,5 +326,9 @@ class ExecutionConfiguration(object):
                           project_path, project_linker_flags, make_target,
                           additional_notes, rebuild_configurations_frame=False)
 
-        # create execution view
-        ExecutionView(self, wizard, main_screen_obj.details_frame)
+        # create execution view and update results frame
+        ExecutionView(self, wizard, main_screen_obj.results_frame)
+        # set results tab state based on result existence
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        # show results tab
+        main_screen_obj.notebook.select(main_screen_obj.results_frame)

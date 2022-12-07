@@ -17,7 +17,9 @@ from discopop_wizard.screens.settings import show_settings_screen
 
 class MainScreen(object):
     configuration_frame: tk.Frame
+    notebook: ttk.Notebook
     details_frame: tk.Frame
+    results_frame: tk.Frame
 
     def __init__(self, wizard, window_frame: tk.Frame):
         self.wizard = wizard
@@ -32,8 +34,13 @@ class MainScreen(object):
         horizontal_paned_window.pack(fill=tk.BOTH, expand=True)
         self.configuration_frame = tk.Frame(horizontal_paned_window)
         horizontal_paned_window.add(self.configuration_frame, weight=1)
-        self.details_frame = tk.Frame(horizontal_paned_window)
-        horizontal_paned_window.add(self.details_frame, weight=5)
+        self.notebook = ttk.Notebook(horizontal_paned_window)
+        horizontal_paned_window.add(self.notebook, weight=5)
+
+        self.details_frame = tk.Frame(self.notebook)
+        self.results_frame = tk.Frame(self.notebook)
+        self.notebook.add(self.details_frame, text="Details")
+        self.notebook.add(self.results_frame, text="Results")
 
         self.build_configurations_frame(wizard)
 
