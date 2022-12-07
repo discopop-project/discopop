@@ -5,8 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from time import sleep
-from typing import List
 import tkinter as tk
 from tkinter import ttk
 
@@ -48,7 +46,7 @@ class Console(object):
         # configure parent_frame
         self.parent_frame.rowconfigure(0, weight=1)
         self.parent_frame.columnconfigure(0, weight=1)
-        #self.parent_frame.rowconfigure(2, weight=1)
+        # self.parent_frame.rowconfigure(2, weight=1)
 
         # create content frame and scroll bars
         self.log_screen = tk.Text(self.parent_frame, wrap=tk.NONE, height=8)
