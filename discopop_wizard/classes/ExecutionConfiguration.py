@@ -301,6 +301,7 @@ class ExecutionConfiguration(object):
         if rebuild_configurations_frame:  # used to prevent de-selecting button on execution
             main_screen_obj.build_configurations_frame(wizard)
         print("Saved configuration")
+        self.wizard.console.print("Saved configuration")
 
     def delete_configuration(self, wizard, main_screen_obj,
                              details_frame: tk.Frame):
