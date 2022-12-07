@@ -50,3 +50,28 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
+
+add_subdirectory(scripts)
+
+# install DiscoPoP python modules
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# check if python modules are installed already
+message(STATUS "Installing DiscoPoP python modules")
+execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+        RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
+        OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
+        COMMAND_ECHO STDOUT
+)
+# check if installation of DiscoPoP Modules was successful
+if(${DP_INSTALLATION_EXIT_CODE})
+    message(STATUS "${DP_INSTALLATION_CMD_ECHO}")
+    message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
+endif()
+
+# save build configuration to build/build_config.txt
+file(TOUCH "${DiscoPoP_BINARY_DIR}/build_config.txt")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_BUILD=${DiscoPoP_BINARY_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_SOURCE=${DiscoPoP_SOURCE_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "LLVM_BIN_DIR=${LLVM_TOOLS_BINARY_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "PYTHON_EXECUTABLE=${Python3_EXECUTABLE}\n")

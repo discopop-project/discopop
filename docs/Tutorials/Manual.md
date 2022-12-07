@@ -28,4 +28,4 @@ This will result in the creation of the data files described [here](../Profiling
 This will analyze the data files and provide parallelization suggestions.
 
 
-Please refer to the [quickstart example](../Quickstart/Example.md) to get an example of how the specific steps can be applied to a single file. The same approach will work for more complex projects.
+Please refer to the [manual quickstart example](../Manual_Quickstart/Manual_Example.md) to get an example of how the specific steps can be applied to a single file. The same approach will work for more complex projects.

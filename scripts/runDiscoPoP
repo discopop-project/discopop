@@ -19,6 +19,12 @@ HELPTEXT="*** DiscoPoP Execution Wizard ***
 Use this tool to analyze a project that is built using Makefiles
 
 REQUIRED ARGUMENTS: Please use absolut paths!
+ --gllvm <path>         path to a directory with gllvm executables
+                        (gclang, gclang++, get-bc, gsanity-check)
+ --project <path>       path to the directory that contains your makefile
+ --executable-name <name> the name of the executable that is built and analyzed
+
+OPTIONAL ARGUMENTS:
  --llvm-clang <path>    path to clang executable
  --llvm-clang++ <path>  path to clang++ executable
  --llvm-ar <path>       path to llvm-ar executable
@@ -26,12 +32,6 @@ REQUIRED ARGUMENTS: Please use absolut paths!
  --llvm-dis <path>      path to llvm-dis executable
  --llvm-opt <path>      path to opt executable
  --llvm-llc <path>      path to llc executable
- --gllvm <path>         path to a directory with gllvm executables
-                        (gclang, gclang++, get-bc, gsanity-check)
- --project <path>       path to the directory that contains your makefile
- --executable-name <name> the name of the executable that is built and analyzed
-
-OPTIONAL ARGUMENTS:
  --executable-arguments <args>
                           run your application with these arguments
  --linker-flags <flags>   if your build requires to link other libraries
@@ -40,6 +40,7 @@ OPTIONAL ARGUMENTS:
                           if not specified the default make target is used.
  --make-flags <flags>     specify flags which will be passed through to make.
  --explorer-flags <flags> will be passed through to the DiscoPoP Explorer.
+ --python-path <path>     path to python binary folder
  --help or -h,            show this text and exit.
  --verbose or -v,         show verbose output.
 "
@@ -92,6 +93,12 @@ log_or_fail () {
 }
 
 #####
+# Read build configuration
+#####
+DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+DP_BUILD_LLVM_BIN_DIR="$(cat ${DP_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
+
+#####
 # Parse Arguments
 # based on https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 #####
@@ -101,6 +108,14 @@ HELP=false
 VERBOSE=false
 COLORS=false
 MAKFILE_TARGET=""
+PYTHONPATH_FLAG="."
+LLVM_CLANG=$DP_BUILD_LLVM_BIN_DIR/clang
+LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
+LLVM_AR=$DP_BUILD_LLVM_BIN_DIR/llvm-ar
+LLVM_LINK=$DP_BUILD_LLVM_BIN_DIR/llvm-link
+LLVM_DIS=$DP_BUILD_LLVM_BIN_DIR/llvm-dis
+LLVM_OPT=$DP_BUILD_LLVM_BIN_DIR/opt
+LLVM_LLC=$DP_BUILD_LLVM_BIN_DIR/llc
 
 POSITIONAL_ARGS=()
 requiredArgCount=0
@@ -121,37 +136,30 @@ while [[ $# -gt 0 ]]; do
       ;;
     --llvm-clang)
       LLVM_CLANG=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-clang++)
       LLVM_CLANGPP=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-ar)
       LLVM_AR=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-link)
       LLVM_LINK=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-dis)
       LLVM_DIS=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-opt)
       LLVM_OPT=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --llvm-llc)
       LLVM_LLC=$2
-      ((requiredArgCount++))
       shift; shift # past argument and value
       ;;
     --gllvm)
@@ -189,6 +197,10 @@ while [[ $# -gt 0 ]]; do
       EXPLORER_FLAGS="$2"
       shift; shift # past argument and value
       ;;
+    --python-path)
+      PYTHONPATH_FLAG="$2"
+      shift; shift # past argument and value
+      ;;
     -*|--*)
       log -e "Unknown option $1"
       exit 1
@@ -210,7 +222,7 @@ if [[ -n $1 ]]; then
 fi
 
 # check for required arguments
-if [ $requiredArgCount -ne 10 ]; then
+if [ $requiredArgCount -ne 3 ]; then
   log -e "Please provide all required arguments exactly once. Use --help or -h to view them."
   exit 1
 fi
@@ -228,11 +240,6 @@ cp -r * .discopop
 cd .discopop
 PROJECT=$PROJECT/.discopop
 
-# TODO make this more robust
-# (currently breaks if script is moved or DP is built somewhere else)
-# idea: during discoPoP build move this script to the build directory and configure this and other variables
-DP="$(dirname "$(dirname "$(readlink -fm "$0")")")"
-DP_BUILD=$DP/build
 GLLVM_LOG=$PROJECT/gllvm_log.txt
 
 # show helptext
@@ -267,9 +274,9 @@ log -i \
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
   makeFlags:  $MAKE_FLAGS
-  discoPoP:   $DP
   dp_build:   $DP_BUILD
-  gllvmLog:   $GLLVM_LOG"
+  gllvmLog:   $GLLVM_LOG
+  pythonPath: $PYTHONPATH_FLAG"
 
 #####
 # configure gllvm
@@ -289,6 +296,16 @@ log -v "GLLVM SANITY CHECK:
 $($GLLVM/gsanity-check)" 
 
 #####
+# Perform preliminary checks
+#####
+if ! command -v discopop_explorer &> /dev/null
+then
+  log -e "discopop_explorer could not be found."
+  log -i "Install the python package or set the --python-path flag if it is already installed."
+    exit 1
+fi
+
+#####
 # create FileMapping.txt,
 # build with gllvm,
 # create single .bc and .ll from the executable
@@ -298,7 +315,7 @@ cd $PROJECT
 
 # create FileMapping.txt
 rm -f FileMapping.txt
-$DP/scripts/dp-fmap
+$DP_BUILD/scripts/dp-fmap
 
 # cleanup
 rm -f $PROJECT/Data.xml
@@ -341,7 +358,7 @@ tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
 #####
 
 log -i "Looking for parallelization opportunities..."
-PATTERNS=$(PYTHONPATH=$DP python3 -m discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
+PATTERNS=$(PYTHONPATH=$PYTHONPATH_FLAG discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
 
 # write patterns to file
 echo "$PATTERNS" > patterns.txt

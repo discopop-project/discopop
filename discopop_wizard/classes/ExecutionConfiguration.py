@@ -12,7 +12,8 @@ import string
 import tkinter as tk
 from json import JSONDecodeError
 from tkinter import filedialog
-from typing import TextIO
+from tkinter import ttk
+from typing import TextIO, List
 
 from discopop_wizard.screens.execution import ExecutionView
 from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen, get_suggestion_objects
@@ -34,14 +35,16 @@ class ExecutionConfiguration(object):
     notes: str = ""
     make_target: str = ""
     explorer_flags: str = "--json=patterns.json"
+    button: tk.Button
 
     def __init__(self, wizard):
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         self.wizard = wizard
 
-    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, ) -> tk.Button:
-        button = tk.Button(parent_frame, text=self.label,
-                           command=lambda: self.show_details_screen(wizard, main_screen_obj))
+    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, all_buttons: List[tk.Button]) -> tk.Button:
+        button = tk.Button(parent_frame, text=self.label)
+        button.config(command=lambda: self.highlight_and_update_notebook_screens(wizard, main_screen_obj, button, all_buttons))
+        self.button = button
         return button
 
     def init_from_dict(self, loaded: dict):
@@ -109,7 +112,7 @@ class ExecutionConfiguration(object):
         # assemble command for execution
         command = ""
         # settings
-        command = self.wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
+        command = self.wizard.settings.discopop_build_dir + "/scripts/runDiscoPoP "
         command += "--llvm-clang \"" + self.wizard.settings.clang + "\" "
         command += "--llvm-clang++ \"" + self.wizard.settings.clangpp + "\" "
         command += "--llvm-ar \"" + self.wizard.settings.llvm_ar + "\" "
@@ -132,6 +135,22 @@ class ExecutionConfiguration(object):
         # add invocation of actual executable to resulting string
         script_str += command
         return script_str
+
+    def highlight_and_update_notebook_screens(self, wizard, main_screen_obj, pressed_button: tk.Button, all_buttons: List[tk.Button]):
+        # remove previous highlights
+        for configuration_button in all_buttons:
+            configuration_button.configure(state=tk.NORMAL)
+
+        # highlight pressed configuration button
+        pressed_button.configure(state=tk.DISABLED)
+
+        # update details screen of pressed configuration button
+        self.show_details_screen(wizard, main_screen_obj)
+
+        # update results screen of pressed configuration button and set results tab state based on result existence
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        if self.__button_state_from_result_existence() == "normal":
+            show_suggestions_overview_screen(wizard, main_screen_obj.results_frame, self)
 
     def show_details_screen(self, wizard, main_screen_obj) -> tk.Frame:
         # delete previous frame contents
@@ -241,13 +260,6 @@ class ExecutionConfiguration(object):
                                                                               additional_notes))
         execute_button.grid(row=1, column=3)
 
-        results_button = tk.Button(button_canvas, text="Show Results",
-                                   state=self.__button_state_from_result_existence(),
-                                   command=lambda: show_suggestions_overview_screen(wizard,
-                                                                                    main_screen_obj.details_frame,
-                                                                                    self))
-        results_button.grid(row=1, column=4)
-
     def __button_state_from_result_existence(self) -> str:
         # check if suggestions can be loaded. If so, enable the button.
         # Else, disable it.
@@ -262,7 +274,7 @@ class ExecutionConfiguration(object):
     def save_changes(self, wizard, main_screen_obj,
                      label: tk.Entry, description: tk.Entry, executable_name: tk.Entry, executable_args: tk.Entry,
                      make_flags: tk.Entry, project_path: tk.Entry, project_linker_flags: tk.Entry,
-                     make_target: tk.Entry, additional_notes: tk.Entry):
+                     make_target: tk.Entry, additional_notes: tk.Entry, rebuild_configurations_frame=True):
 
         # update execution_configuration
         self.label = label.get()
@@ -285,8 +297,10 @@ class ExecutionConfiguration(object):
         with open(config_path, "w+") as f:
             f.write(self.get_as_executable_script())
 
-        main_screen_obj.build_configurations_frame(wizard)
+        if rebuild_configurations_frame:  # used to prevent de-selecting button on execution
+            main_screen_obj.build_configurations_frame(wizard)
         print("Saved configuration")
+        self.wizard.console.print("Saved configuration")
 
     def delete_configuration(self, wizard, main_screen_obj,
                              details_frame: tk.Frame):
@@ -310,7 +324,11 @@ class ExecutionConfiguration(object):
         self.save_changes(wizard, main_screen_obj, label, description, executable_name,
                           executable_args, make_flags,
                           project_path, project_linker_flags, make_target,
-                          additional_notes)
+                          additional_notes, rebuild_configurations_frame=False)
 
-        # create execution view
-        ExecutionView(self, wizard, main_screen_obj.details_frame)
+        # create execution view and update results frame
+        ExecutionView(self, wizard, main_screen_obj.results_frame)
+        # set results tab state based on result existence
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        # show results tab
+        main_screen_obj.notebook.select(main_screen_obj.results_frame)

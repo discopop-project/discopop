@@ -9,6 +9,7 @@
 import subprocess
 import tkinter as tk
 
+from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen
 
 
@@ -21,21 +22,28 @@ class ExecutionView(object):
         self.__execute()
 
     def __execute(self):
-        # prepare command
-        command = self.__assemble_command_string()
-        # execute command
-        return_code = self.__execute_command(command)
-        print("Return Code: ", return_code)
-        if return_code == 0:
-            # show suggestions
-            # suggestions are stored in project_path/patterns.txt
+        # prepare environment
+        if self.wizard.settings.use_docker_container_for_profiling:
+            # start container if not already present. Required when enabling container usage after start of application.
+            if self.wizard.profiling_container is None:
+                self.wizard.profiling_container = ProfilingContainer(self.wizard)
+            self.wizard.profiling_container.analyze_project(self)
+            # todo add display of suggestions
             self.__show_suggestions()
+        else:
+            # prepare command
+            command = self.__assemble_command_string()
+            # execute command
+            return_code = self.__execute_command(command)
+            if return_code == 0:
+                # show suggestions, stored in project_path/patterns.txt
+                self.__show_suggestions()
 
     def __assemble_command_string(self) -> str:
-        # assemble command for execution
+        # assemble command for regular execution
         command = ""
         # settings
-        command = self.wizard.settings.discopop_dir + "/scripts/runDiscoPoP "
+        command = self.wizard.settings.discopop_build_dir + "/scripts/runDiscoPoP "
         command += "--llvm-clang \"" + self.wizard.settings.clang + "\" "
         command += "--llvm-clang++ \"" + self.wizard.settings.clangpp + "\" "
         command += "--llvm-ar \"" + self.wizard.settings.llvm_ar + "\" "
@@ -59,11 +67,14 @@ class ExecutionView(object):
             for line in p.stdout:
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
+                self.wizard.console.print(line)
         if p.returncode != 0:
             self.__print_to_console("An error occurred during the execution!")  # Error message
+            self.wizard.console.print("An error occurred during the execution!")
             for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
+                self.wizard.console.print(line)
         return p.returncode
 
     def __print_to_console(self, msg: str):
