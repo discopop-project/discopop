@@ -51,12 +51,10 @@ After executing the instrumented program, you find a text file which ends with `
 A data dependence is represented as a triple `<sink, type, source>`. `type` denotes the dependence type and can be any of `RAW`, `WAR` or `WAW`. Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region.
 
 ## Loop Counters
-DiscoPoP allows the optional instrumentation of loops with the purpose to count executed iterations per loop.
-This analysis can be enabled as described in one of the [tutorials](../Tutorials/Tutorials.md).
+As part of the DiscoPoP profiling loops are instrumented with the purpose to count the executed iterations per loop.
 The gathered information will be stored in a file named `loop_counter_output.txt`.
 Each line of the file contains the summed count of iterations for the specified loop.
-The used format is as follows: `<file_id> <cu_id> <iteration_count>`.
-The location or further information for the respective loops can be found by looking up the `file_id` and `cu_id` in the previously described `Data.xml` file.
+The used format is as follows: `<file_id> <line_number> <iteration_count>`.
 
 ## Reduction Instructions
 Identified reduction instructions are stored in a file named `reduction.txt`.
