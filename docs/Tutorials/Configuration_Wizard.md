@@ -60,7 +60,7 @@ In the background, a command to call the [Execution Wizard](Execution_Wizard.md)
 ## Results
 As of right now, the created [parallelization suggestions](../Pattern_Detection/Patterns) will be printed to a file named `patterns.txt` in the project folder.
 This is not an ideal solution and will be improved in the future.
-The DiscoPoP Wizard provides a simple overview of the identified suggestions. The respective view can be opened using the `Show Results` button of a configuration on the main screen and will be opened automatically after a execution has finished.
+The DiscoPoP Wizard provides a simple overview of the identified suggestions. The respective view can be opened by clicking on the `Results` tab of a configuration on the main screen and will be opened automatically after an execution has finished.
 The identified parallelization suggestions are shown via buttons in the middle column of the screen and allow to open a code preview, which highlights the target code section and shows the suggested OpenMP pragma.
 All details regarding the suggestion can be made visible by hovering over the respective buttons.
 An example for this view can be found in the following figure:
