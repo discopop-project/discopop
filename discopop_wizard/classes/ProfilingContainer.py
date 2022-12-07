@@ -10,6 +10,7 @@ import glob
 import os
 import pathlib
 import subprocess
+import tkinter
 
 
 class ProfilingContainer(object):
@@ -113,7 +114,11 @@ class ProfilingContainer(object):
             for line in p.stdout:
                 line = line.replace("\n", "")
                 print(line)
-                self.wizard.console.print(line)
+                try:
+                    self.wizard.console.print(line)
+                except tkinter.TclError:
+                    # happens when container is still shutting down but interface already closed.
+                    pass
         if p.returncode != 0:
             print("An error occurred during the execution!")  # Error message
             self.wizard.console.print("An error occurred during the execution!")
