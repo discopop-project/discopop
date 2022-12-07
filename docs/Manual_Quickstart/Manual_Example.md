@@ -90,16 +90,16 @@ For detailed information on how to interpret and implement the created suggestio
 
 Looking at the created suggestions there are two ways that the code can be parallelized (the parallelized code can be found inside the example directory as `solution1.cpp` and `solution2.cpp`):
 
-* **Implementing the Do-All and Reduction Patterns**<br/> To implement the `Do-All` and `Reduction` patterns all we have to do is to add the suggested pragma before each loop. Make sure to add the `reduction` clause when implementing Reductions! The DiscoPoP Explorer also suggests variable classification for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
+* **Implementing the Do-All and Reduction Patterns**<br/> To implement the `Do-All` and `Reduction` patterns all we have to do is to add the suggested pragma before each loop. Make sure to add the `reduction` clause when implementing Reductions! The DiscoPoP Explorer also suggests classifications for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
   - To implement the `Do-All` suggestion we add the following line before the corresponding loop.
       
         #pragma omp parallel for shared(Arr,N)
 
-  - To implement the `Reduction` suggestion we add the folling line before the corresponding loop.
+  - To implement the `Reduction` suggestion we add the following line before the corresponding loop.
     
         # pragma omp parallel for reduction(+:sum) shared(Arr,N)
 
-  - When we implement both patterns it is better to open only one parallel region with `#pragma omp parallel` and use the `pragma omp for` before each loop:
+  - For this specific example, when we implement both patterns it is better to open only one parallel region with `#pragma omp parallel` and use the `pragma omp for` before each loop:
 
         #pragma omp parallel  shared(Arr,N)
         {
@@ -116,7 +116,7 @@ Please note that it is not possible to implement both the Geometric Decompositio
 
 ## Step 4: Compile the parallelized application
 After changing the source recompile the edited source code with the `-fopenmp` flag to enable openMP.
-We provide example solutions on how to parallelize The patterns in the files `solution1.cpp` and `solution2.cpp`. You can compile them using:
+We provide example solutions on how to parallelize the patterns in the files `solution1.cpp` and `solution2.cpp`. You can compile them using:
     
     clang++ solution1.cpp -fopenmp -o solution1
     clang++ solution2.cpp -fopenmp -o solution2
