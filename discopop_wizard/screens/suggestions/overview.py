@@ -52,9 +52,8 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
         # register hover message (suggestion details)
         create_tool_tip(button, text=suggestion.get_details())
 
-    # add label of execution configuration for overview purposes
-    tk.Label(scrollable_list_frame, text=execution_configuration_obj.label,
-             font=wizard.style_font_bold).pack(side="top", pady=10)
+    # add label
+    tk.Label(scrollable_list_frame, text="Suggestions", font=wizard.style_font_bold).pack(side="top", pady=10)
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")

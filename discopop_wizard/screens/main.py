@@ -83,9 +83,12 @@ class MainScreen(object):
 
         canvas.configure(yscrollcommand=scrollbar.set)
 
+        all_buttons: List[tk.Button] = []  # used to manage highlights when a different configuration is selected
+
         for row, config in enumerate(configs):
-            button = config.get_as_button(wizard, self, scrollable_frame)
+            button = config.get_as_button(wizard, self, scrollable_frame, all_buttons)
             button.pack(fill=tk.BOTH, expand=True)
+            all_buttons.append(button)
 
         canvas.pack(side="left", fill=tk.BOTH, expand=True)
         scrollbar.pack(side="right", fill="y")
