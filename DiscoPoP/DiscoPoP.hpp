@@ -47,7 +47,6 @@
 
 #include "DPUtils.hpp"
 #include "InstructionDG.hpp"
-#include "DPReductionUtils.hpp"
 
 #include <cstdlib>
 #include <algorithm>
