@@ -1029,10 +1029,8 @@ bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
         std::cout << "Opening FileMapping failed: " << strerror(errno) << "\n";
     }
     if (!fmap_file.is_open()) {
-        std::cout << "FMAP FILE IS NOT OPEN!\n";
         return false;
     }
-    std::cout << "AFTER OPENING\n";
 
     std::string line;
     while (std::getline(fmap_file, line)) {
