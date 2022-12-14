@@ -16,6 +16,7 @@
 #include "DiscoPoP.hpp"
 
 #define DP_DEBUG false
+#define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
 #define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
 
@@ -1653,7 +1654,9 @@ bool DiscoPoP::sanityCheck(BasicBlock *BB) {
             return true;
         }
     }
-    errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    if(DP_VERBOSE) {
+        errs() << "WARNING: basic block " << BB << " doesn't contain valid LID.\n";
+    }
     return false;
 }
 
@@ -1731,7 +1734,9 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
             //assert((RealExitBlocks.size() == 1) && "Loop has more than one real exit block!");
             if (RealExitBlocks.size() == 0) {
-                errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
+                if(DP_VERBOSE) {
+                    errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
+                }
                 continue;
             }
 
@@ -1762,13 +1767,19 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-    cout << "MODULE " << M.getName().str() << "\n\n";
+    cout << "MODULE " << M.getName().str() << "\n";
     long counter = 0;
+    cout << "\tFUNCTION:\n";
     for (Function &F: M) {
-        cout << "FUNCTION: " << F.getName().str() << "  -  (" << ++counter << " / " << M.size() << ")\n";
+        string to_be_printed = "\t(" + to_string(++counter) + " / " + to_string(M.size()) + ") -- " + F.getName().str();
+        while(to_be_printed.size() < 100){
+            to_be_printed += " ";
+        }
+        cout << to_be_printed + "\r";
         runOnFunction(F);
-        cout << "\t Done FUNCTION: " << F.getName().str() << "\n";
     }
+
+    cout << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
