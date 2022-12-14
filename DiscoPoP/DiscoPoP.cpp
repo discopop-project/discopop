@@ -1775,7 +1775,6 @@ bool DiscoPoP::runOnModule(Module &M) {
         }
         cout << to_be_printed + "\r";
         runOnFunction(F);
-        cout << "\t Done FUNCTION: " << F.getName().str() << "\n";
     }
 
     cout << "\n\tFunctions Done.\n";
