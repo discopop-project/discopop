@@ -14,6 +14,5 @@ add_llvm_library(LLVMDiscoPoP MODULE
         DiscoPoP.cpp
         InstructionCFG.cpp
         InstructionDG.cpp
-        DPReductionUtils.cpp
         ../share/lib/DPUtils.cpp
         )
