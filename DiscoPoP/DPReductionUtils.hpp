@@ -32,29 +32,30 @@
 
 namespace dp_reduction_utils {
 
-    bool init_util(std::string fmap_path);
+//    bool init_util(std::string fmap_path);
 
-    unsigned get_file_id(llvm::Function *func);
+//    unsigned get_file_id(llvm::Function *func);
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
-    char get_char_for_opcode(unsigned opcode);
+//    char get_char_for_opcode(unsigned opcode);
 
 // return true if 'operand' is an operand of the instruction 'instr'
-    bool is_operand(llvm::Instruction *instr, llvm::Value *operand);
+//    bool is_operand(llvm::Instruction *instr, llvm::Value *operand);
 
 // finds the previous use of 'val'
-    llvm::Instruction *get_prev_use(llvm::Instruction *instr, llvm::Value *val);
+//    llvm::Instruction *get_prev_use(llvm::Instruction *instr, llvm::Value *val);
 
 // Get the value that is stored or loaded by a store / load instruction.
-    llvm::Value *get_var(llvm::Instruction *instr);
+//    llvm::Value *dp_reduction_get_var(llvm::Instruction *instr);
 
-    llvm::Value *get_var_rec(llvm::Value *val);
+//    llvm::Value *get_var_rec(llvm::Value *val);
 
 // returns the value that the GetElementPtrInst ultimately points to
-    llvm::Value *points_to_var(llvm::GetElementPtrInst *instr);
+//    llvm::Value *points_to_var(llvm::GetElementPtrInst *instr);
 
-    inline bool loc_exists(llvm::DebugLoc const &loc) {
+/*    inline bool loc_exists(llvm::DebugLoc const &loc) {
         return static_cast<bool>(loc);
     }
+*/
 
 }  // namespace dp_reduction_utils

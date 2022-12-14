@@ -34,16 +34,20 @@
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <iostream>
+
 namespace dp_reduction_utils {
 
-    std::map<std::string, int> path_to_id_;
+//    std::map<std::string, int> path_to_id_;
 
-    bool init_util(std::string fmap_path) {
+/*    bool init_util(std::string fmap_path) {
         std::ifstream fmap_file;
         fmap_file.open(fmap_path.c_str());
         if (!fmap_file.is_open()) {
+            std::cout << "FMAP FILE IS NOT OPEN!\n";
             return false;
         }
+        std::cout << "AFTER OPENING\n";
 
         std::string line;
         while (std::getline(fmap_file, line)) {
@@ -55,12 +59,14 @@ namespace dp_reduction_utils {
                 path_to_id_.emplace(std::string(filename), file_id);
             }
         }
+
         fmap_file.close();
 
         return true;
     }
+    */
 
-    unsigned get_file_id(llvm::Function *func) {
+/*    unsigned get_file_id(llvm::Function *func) {
         unsigned file_id = 0;
 
         // get the filepath of this function
@@ -95,16 +101,18 @@ namespace dp_reduction_utils {
 
         return file_id;
     }
+    */
 
-    bool is_operand(llvm::Instruction *instr, llvm::Value *operand) {
+/*    bool is_operand(llvm::Instruction *instr, llvm::Value *operand) {
         unsigned num_operands = instr->getNumOperands();
         for (unsigned i = 0; i < num_operands; ++i) {
             if (instr->getOperand(i) == operand) return true;
         }
         return false;
     }
+    */
 
-    char get_char_for_opcode(unsigned opcode) {
+/*    char get_char_for_opcode(unsigned opcode) {
         if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd)
             return '+';
         if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub)
@@ -116,7 +124,9 @@ namespace dp_reduction_utils {
         if (opcode == llvm::Instruction::Xor) return '^';
         return ' ';
     }
+    */
 
+    /*
     llvm::Instruction *get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
         if (!instr) return nullptr;
 
@@ -137,8 +147,9 @@ namespace dp_reduction_utils {
         }
         return llvm::dyn_cast<llvm::Instruction>(val);
     }
+    */
 
-    llvm::Value *get_var_rec(llvm::Value *val) {
+/*    llvm::Value *get_var_rec(llvm::Value *val) {
         if (!val) return nullptr;
 
         if (llvm::isa<llvm::AllocaInst>(val) ||
@@ -167,13 +178,16 @@ namespace dp_reduction_utils {
 
         return nullptr;
     }
+    */
 
+    /*
     llvm::Value *get_var(llvm::Instruction *instr) {
         unsigned index = (llvm::isa<llvm::LoadInst>(instr)) ? 0 : 1;
         return get_var_rec(instr->getOperand(index));
     }
+     */
 
-    llvm::Value *points_to_var(llvm::GetElementPtrInst *instr) {
+/*    llvm::Value *points_to_var(llvm::GetElementPtrInst *instr) {
         llvm::Value *points_to = nullptr;
         while (instr) {
             points_to = instr->getPointerOperand();
@@ -181,5 +195,6 @@ namespace dp_reduction_utils {
         }
         return points_to;
     }
+*/
 
 }  // namespace dp_reduction_utils
