@@ -1024,6 +1024,9 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
     std::ifstream fmap_file;
     fmap_file.open(fmap_path.c_str());
+    if(fmap_file.fail()) {
+        std::cout << "Opening FileMapping failed: " << strerror(errno) << "\n";
+    }
     if (!fmap_file.is_open()) {
         std::cout << "FMAP FILE IS NOT OPEN!\n";
         return false;
@@ -2745,6 +2748,11 @@ void DiscoPoP::closeOutputFiles() {
     if (outOriginalVariables != NULL && outOriginalVariables->is_open()) {
         outOriginalVariables->flush();
         outOriginalVariables->close();
+    }
+
+    if(outCUIDCounter != NULL && outCUIDCounter->is_open()){
+        outCUIDCounter->flush();
+        outCUIDCounter->close();
     }
     // delete outCUs;
 }
