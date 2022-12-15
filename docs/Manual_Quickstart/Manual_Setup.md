@@ -17,6 +17,9 @@ Additionally, you need to install LLVM on your system. Currently, DiscoPoP only 
 
 If you want to make use of the [Configuration](../Tutorials/Configuration_Wizard.md) or [Execution Wizard](../Tutorials/Execution_Wizard.md) for a simplified analysis of your project, you additionally need a working installation of [gllvm](https://github.com/SRI-CSL/gllvm) and [go](https://go.dev/doc/install).
 
+The Configuration Wizard uses Tkinter for its GUI functionality. It can be installed using
+
+    sudo apt-get install python3-tk
 
 
 ## DiscoPoP profiler installation
