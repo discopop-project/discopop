@@ -149,7 +149,7 @@ class CUNode:
 
     def __eq__(self, other):
         if isinstance(other, CUNode):
-            return other.id == self.id
+            return other.file_id == self.file_id and other.node_id == self.node_id
         else:
             return False
 
@@ -453,7 +453,7 @@ class PETGraphX(object):
         :param cu_1: CUNode 1
         :param cu_2: CUNode 2
         :return: True, if cu_1 == cu_2. False, else"""
-        if cu_1.id == cu_2.id:
+        if cu_1.file_id == cu_2.file_id and cu_1.node_id == cu_2.node_id:
             return True
         return False
 
