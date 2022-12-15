@@ -208,6 +208,7 @@ class PETGraphX(object):
     reduction_vars: List[Dict[str, str]]
     main: CUNode
     pos: Dict
+    subtree_cache: Dict[Tuple[CUNode, Optional[NodeType]], List[CUNode]] = dict()
 
     def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
         self.g = g
@@ -418,18 +419,7 @@ class PETGraphX(object):
             t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
         ]
 
-    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root
-
-        :param root: root node
-        :param type: type of children, None is equal to a wildcard
-        :return: list of nodes in subtree
-        """
-        return self.__subtree_of_type_rec(root, type, set())
-
-    def __subtree_of_type_rec(
-        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]
-    ) -> List[CUNode]:
+    def subtree_of_type(self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]=set()) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -437,15 +427,21 @@ class PETGraphX(object):
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
-        res: List[CUNode] = []
-        for visited_cu in visited:
-            if self.__cu_equal__(root, visited_cu):
-                return res
-        visited.add(root)
-        if root.type == type or type is None:
-            res.append(root)
-        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
+        if (root, type) in self.subtree_cache:
+            return self.subtree_cache[(root, type)]
+        else:
+            res: List[CUNode] = []
+            for visited_cu in visited:
+                if self.__cu_equal__(root, visited_cu):
+                    self.subtree_cache[(root, type)] = res
+                    return res
+            visited.add(root)
+            if root.type == type or type is None:
+                res.append(root)
+            for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
+                res.extend(self.subtree_of_type(self.node_at(t), type, visited))
+
+        self.subtree_cache[(root, type)] = res
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
