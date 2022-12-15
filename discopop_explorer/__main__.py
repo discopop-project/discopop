@@ -12,7 +12,7 @@ Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
 [--task-pattern] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] \
-[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>]
+[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>] [--profiling <bool>]
 
 Options:
     --path=<path>               Directory with input data [default: ./]
@@ -32,13 +32,17 @@ Options:
     --generate-data-cu-inst=<outputdir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
+    --profiling=<bool>          Enable profiling. [default: false]
     -h --help                   Show this screen
 """
-
+import cProfile
+import io
 import json
 import os
+import pstats
 import sys
 import time
+from pstats import SortKey
 
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
@@ -62,6 +66,7 @@ docopt_schema = Schema(
         "--llvm-cxxfilt-path": Use(str),
         "--dp-build-path": Use(str),
         "--generate-data-cu-inst": Use(str),
+        "--profiling": Use(str),
     }
 )
 
@@ -106,6 +111,10 @@ def main():
 
     plugins = [] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" ")
 
+    if arguments["--profiling"] == "true":
+        profile = cProfile.Profile()
+        profile.enable()
+
     if arguments["--generate-data-cu-inst"] != "None":
         # start generation of Data_CUInst and stop execution afterwards
         from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
@@ -142,6 +151,14 @@ def main():
         print(str(res))
         with open(arguments["--json"], "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
+
+    if arguments["--profiling"] == "true":
+        profile.disable()
+        if os.path.exists("profiling_stats.txt"):
+            os.remove("profiling_stats.txt")
+        with open("profiling_stats.txt", "w+") as f:
+            stats = pstats.Stats(profile, stream=f).sort_stats(SortKey.TIME).reverse_order()
+            stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
 
