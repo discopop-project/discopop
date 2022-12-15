@@ -214,6 +214,12 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
+# show helptext
+if [ "$HELP" = true ]; then
+    echo "$HELPTEXT"
+    exit 0
+fi
+
 # this tool should not receive any positional arguments
 if [[ -n $1 ]]; then
   log -e "There should not be any positional arguments:"
@@ -241,12 +247,6 @@ cd .discopop
 PROJECT=$PROJECT/.discopop
 
 GLLVM_LOG=$PROJECT/gllvm_log.txt
-
-# show helptext
-if [ "$HELP" = true ]; then
-    echo "$HELPTEXT"
-    exit 0
-fi
 
 #####
 # show configuration
