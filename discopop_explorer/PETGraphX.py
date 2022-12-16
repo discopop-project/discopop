@@ -205,7 +205,6 @@ class PETGraphX(object):
     reduction_vars: List[Dict[str, str]]
     main: CUNode
     pos: Dict
-    subtree_cache: Dict[Tuple[CUNode, Optional[NodeType]], List[CUNode]] = dict()
 
     def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
         self.g = g
@@ -436,10 +435,6 @@ class PETGraphX(object):
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
-        # check cache
-#        if (root, target_type) in self.subtree_cache:
-#            return self.subtree_cache[(root, target_type)]
-        # no cache hit
         # check if root is of type target
         res: List[CUNode] = []
         if (type(target_type) == tuple and root.type in target_type) or \
@@ -457,9 +452,6 @@ class PETGraphX(object):
                 continue
             res += self.subtree_of_type_rec(self.node_at(t), target_type, visited)
 
-        # save results in cache and return
-#        if len(res) < 20:
-#            self.subtree_cache[(root, target_type)] = res
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
