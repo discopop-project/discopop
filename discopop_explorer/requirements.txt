@@ -16,4 +16,4 @@ numpy>=1.16.3
 schema>=0.7.0
 pycallgraph2
 graphviz
-pstats
+pstats2
