@@ -15,24 +15,24 @@ Usage:
 [--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>]
 
 OPTIONAL ARGUMENTS:
-*    --path=<dir>               Directory with input data [default: ./]
-*    --cu-xml=<file>            CU node xml file [default: Data.xml]
-*    --dep-file=<file>        Dependencies text file [default: dp_run_dep.txt]
-*    --loop-counter=<file>  Loop counter data [default: loop_counter_output.txt]
-*    --reduction=<file>     Reduction variables file [default: reduction.txt]
-*    --fmap=<file>               File mapping [default: FileMapping.txt]
-*    --json=<file>           Json output
-*    --plugins=<string>           Plugins to execute
-*    --task-pattern              Enables the task parallelism pattern identification.
+    --path=<dir>               Directory with input data [default: ./]
+    --cu-xml=<file>            CU node xml file [default: Data.xml]
+    --dep-file=<file>        Dependencies text file [default: dp_run_dep.txt]
+    --loop-counter=<file>  Loop counter data [default: loop_counter_output.txt]
+    --reduction=<file>     Reduction variables file [default: reduction.txt]
+    --fmap=<file>               File mapping [default: FileMapping.txt]
+    --json=<file>           Json output
+    --plugins=<string>           Plugins to execute
+    --task-pattern              Enables the task parallelism pattern identification.
                                 Requires --cu-inst-res and --llvm-cxxfilt-path to be set.
-*    --cu-inst-res=<file>   CU instantiation result file.
-*    --llvm-cxxfilt-path=<file> Path to llvm-cxxfilt executable. Required for task pattern detector
+    --cu-inst-res=<file>   CU instantiation result file.
+    --llvm-cxxfilt-path=<file> Path to llvm-cxxfilt executable. Required for task pattern detector
                                 if non-standard path should be used.
-*    --dp-build-path=<dir>           Path to DiscoPoP build folder [default: discopop/build]
-*    --generate-data-cu-inst=<dir>     Generates Data_CUInst.txt file and stores it in the given directory.
+    --dp-build-path=<dir>           Path to DiscoPoP build folder [default: discopop/build]
+    --generate-data-cu-inst=<dir>     Generates Data_CUInst.txt file and stores it in the given directory.
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
-*    -h --help                   Show this screen
+    -h --help                   Show this screen
 """
 
 import json

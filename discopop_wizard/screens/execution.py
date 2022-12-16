@@ -53,12 +53,12 @@ class ExecutionView(object):
         command += "--llvm-llc \"" + self.wizard.settings.llvm_llc + "\" "
         command += "--gllvm \"" + self.wizard.settings.go_bin + "\" "
         # execution configuration
-        command += "--project \"" + self.execution_configuration.project_path + "\" "
-        command += "--linker-flags \"" + self.execution_configuration.linker_flags + "\" "
-        command += "--executable-name \"" + self.execution_configuration.executable_name + "\" "
-        command += "--executable-arguments \"" + self.execution_configuration.executable_arguments + "\" "
-        command += "--make-flags \"" + self.execution_configuration.make_flags + "\" "
-        command += "--explorer-flags \"" + self.execution_configuration.explorer_flags + "\" "
+        command += "--project \"" + self.execution_configuration.value_dict["project_path"] + "\" "
+        command += "--linker-flags \"" + self.execution_configuration.value_dict["linker_flags"] + "\" "
+        command += "--executable-name \"" + self.execution_configuration.value_dict["executable_name"] + "\" "
+        command += "--executable-arguments \"" + self.execution_configuration.value_dict["executable_arguments"] + "\" "
+        command += "--make-flags \"" + self.execution_configuration.value_dict["make_flags"] + "\" "
+        command += "--explorer-flags \"" + self.execution_configuration.value_dict["explorer_flags"] + "\" "
 
         return command
 
