@@ -148,10 +148,7 @@ class CUNode:
         return self.id
 
     def __eq__(self, other):
-        if isinstance(other, CUNode):
-            return other.file_id == self.file_id and other.node_id == self.node_id
-        else:
-            return False
+        return other.file_id == self.file_id and other.node_id == self.node_id
 
     def __hash__(self):
         return hash(id)
