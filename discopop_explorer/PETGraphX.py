@@ -419,7 +419,9 @@ class PETGraphX(object):
             t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
         ]
 
-    def subtree_of_type(self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]=set()) -> List[CUNode]:
+    def subtree_of_type(
+        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode] = set()
+    ) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
