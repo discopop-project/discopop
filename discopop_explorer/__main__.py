@@ -138,6 +138,7 @@ def main():
         from pycallgraph2 import Config
         from pycallgraph2 import GlobbingFilter
         from pycallgraph2 import Grouper
+
         groups = []
         for dir in os.walk(os.getcwd() + "/discopop_validation"):
             groups.append(dir[0].replace(os.getcwd() + "/", "").replace("/", ".") + ".*")
@@ -146,12 +147,16 @@ def main():
 
         config = Config()
         config.trace_grouper = trace_grouper
-        config.trace_filter = GlobbingFilter(include=[
-            'discopop_explorer.*',
-            '__main_*',
-        ])
+        config.trace_filter = GlobbingFilter(
+            include=[
+                "discopop_explorer.*",
+                "__main_*",
+            ]
+        )
         res = None
-        with PyCallGraph(output=GraphvizOutput(output_file=arguments["--call-graph"]), config=config):
+        with PyCallGraph(
+            output=GraphvizOutput(output_file=arguments["--call-graph"]), config=config
+        ):
             res = run(
                 cu_xml,
                 dep_file,
@@ -192,7 +197,9 @@ def main():
         if os.path.exists("profiling_stats.txt"):
             os.remove("profiling_stats.txt")
         with open("profiling_stats.txt", "w+") as f:
-            stats = pstats2.Stats(profile, stream=f).sort_stats(pstats2.SortKey.TIME).reverse_order()
+            stats = (
+                pstats2.Stats(profile, stream=f).sort_stats(pstats2.SortKey.TIME).reverse_order()
+            )
             stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
