@@ -224,10 +224,12 @@ class PETGraphX(object):
     ):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
+        print("Creating graph...")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
+        print("Added nodes...")
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -248,9 +250,13 @@ class PETGraphX(object):
                         print(f"WARNING: no nodeCalled {nodeCalled} found")
                     g.add_edge(source, nodeCalled, data=Dependency(EdgeType.CALLSNODE))
 
+        print("Added edges...")
+
         for _, node in g.nodes(data="data"):
             if node.type == NodeType.LOOP:
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
+
+        print("Added iterations")
 
         # calculate position before dependencies affect them
         try:
@@ -261,7 +267,9 @@ class PETGraphX(object):
                 pos = nx.shell_layout(g)  # maybe
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        for dep in dependencies_list:
+        print("Calculated positions...")
+        for idx, dep in enumerate(dependencies_list):
+            print("Adding Dep: ", idx, "/", len(dependencies_list))
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
                 for s in sink:

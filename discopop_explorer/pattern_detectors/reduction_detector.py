@@ -53,8 +53,9 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     :return: List of detected pattern info
     """
     result: List[ReductionInfo] = []
-
-    for node in pet.all_nodes(NodeType.LOOP):
+    nodes = pet.all_nodes(NodeType.LOOP)
+    for idx, node in enumerate(nodes):
+        print("Reduction: ", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
             node.reduction = True
             if node.loop_iterations >= 0:
