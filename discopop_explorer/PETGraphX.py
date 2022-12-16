@@ -525,6 +525,7 @@ class PETGraphX(object):
             loop_start_lines.append(v.start_position())
 
         # check for RAW dependencies between any of source_children and any of target_children
+        root_children = self.subtree_of_type(root_loop, NodeType.CU)
         for source_child_id in source_children_ids:
             # get a list of filtered dependencies, outgoing from source_child
             out_deps = self.out_edges(source_child_id, EdgeType.DATA)
@@ -532,13 +533,13 @@ class PETGraphX(object):
             filtered_deps = [
                 elem
                 for elem in out_raw_deps
-                if not self.is_readonly_inside_loop_body(elem[2], root_loop)
+                if not self.is_readonly_inside_loop_body(elem[2], root_loop, root_children)
             ]
             filtered_deps = [
                 elem
                 for elem in filtered_deps
                 if not self.is_loop_index(
-                    elem[2].var_name, loop_start_lines, self.subtree_of_type(root_loop, NodeType.CU)
+                    elem[2].var_name, loop_start_lines, root_children
                 )
             ]
             # get a list of dependency targets
@@ -797,7 +798,7 @@ class PETGraphX(object):
 
         return False
 
-    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode) -> bool:
+    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode, children: List[CUNode] ) -> bool:
         """Checks, whether a variable is read-only in loop body
 
         :param dep: dependency variable
@@ -808,7 +809,6 @@ class PETGraphX(object):
         loops_start_lines = [
             v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)
         ]
-        children = self.subtree_of_type(root_loop, NodeType.CU)
 
         for v in children:
             for t, d in [
