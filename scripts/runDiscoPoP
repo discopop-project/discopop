@@ -358,7 +358,6 @@ tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
 #####
 
 log -i "Looking for parallelization opportunities..."
-log -i "PYTHONPATH=$PYTHONPATH_FLAG discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS}"
 PATTERNS=$(PYTHONPATH=$PYTHONPATH_FLAG discopop_explorer --dep-file=${EXECUTABLE_NAME}_dp_dep.txt ${EXPLORER_FLAGS})
 
 # write patterns to file
