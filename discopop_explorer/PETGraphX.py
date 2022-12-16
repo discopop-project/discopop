@@ -442,7 +442,8 @@ class PETGraphX(object):
             res: List[CUNode] = []
             for visited_cu in visited:
                 if self.__cu_equal__(root, visited_cu):
-                    self.subtree_cache[(root, type)] = res
+                    if len(res) < 20:
+                        self.subtree_cache[(root, type)] = res
                     return res
             visited.add(root)
             if root.type == type or type is None:
@@ -450,7 +451,8 @@ class PETGraphX(object):
             for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
                 res.extend(self.subtree_of_type_rec(self.node_at(t), type, visited))
 
-        self.subtree_cache[(root, type)] = res
+        if len(res) < 20:
+            self.subtree_cache[(root, type)] = res
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
