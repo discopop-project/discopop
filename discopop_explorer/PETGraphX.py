@@ -269,7 +269,6 @@ class PETGraphX(object):
                 pos = nx.random_layout(g)
         print("Calculated positions...")
         for idx, dep in enumerate(dependencies_list):
-            print("Adding Dep: ", idx, "/", len(dependencies_list))
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
                 for s in sink:
@@ -281,6 +280,7 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
+                    print("\nAdding Dep: ", idx, "/", len(dependencies_list))
                     print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
                     print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
 
