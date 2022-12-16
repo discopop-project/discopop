@@ -157,7 +157,7 @@ def main():
             os.remove("profiling_stats.txt")
         with open("profiling_stats.txt", "w+") as f:
             stats = (
-                pstats2.Stats(profile, stream=f).sort_stats(pstats2.SortKey.TIME).reverse_order()
+                pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
             )
             stats.print_stats()
 
