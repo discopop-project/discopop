@@ -419,8 +419,18 @@ class PETGraphX(object):
             t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
         ]
 
-    def subtree_of_type(
-        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode] = set()
+    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
+        """Gets all nodes in subtree of specified type including root
+
+        :param root: root node
+        :param type: type of children, None is equal to a wildcard
+        :param visited: set of visited nodes
+        :return: list of nodes in subtree
+        """
+        return self.subtree_of_type_rec(root, type, set())
+
+    def subtree_of_type_rec(
+        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]
     ) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
@@ -441,7 +451,7 @@ class PETGraphX(object):
             if root.type == type or type is None:
                 res.append(root)
             for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-                res.extend(self.subtree_of_type(self.node_at(t), type, visited))
+                res.extend(self.subtree_of_type_rec(self.node_at(t), type, visited))
 
         self.subtree_cache[(root, type)] = res
         return res
