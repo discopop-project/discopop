@@ -436,23 +436,28 @@ class PETGraphX(object):
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
+        # check cache
         if (root, target_type) in self.subtree_cache:
             return self.subtree_cache[(root, target_type)]
-        else:
-            res: List[CUNode] = []
-            for visited_cu in visited:
-                if self.__cu_equal__(root, visited_cu):
-                    if len(res) < 20:
-                        self.subtree_cache[(root, target_type)] = res
-                    return res
-            visited.add(root)
-            if (type(target_type) == tuple and root.type in target_type) or \
-                    root.type == target_type or \
-                    target_type is None:
-                res.append(root)
-            for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-                res.extend(self.subtree_of_type_rec(self.node_at(t), target_type, visited))
+        # no cache hit
+        # check if root is of type target
+        res: List[CUNode] = []
+        if (type(target_type) == tuple and root.type in target_type) or \
+                root.type == target_type or \
+                target_type is None:
+            res.append(root)
 
+        # append root to visited
+        visited.add(root)
+
+        # enter recursion
+        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
+            # prevent cycles
+            if self.node_at(t) in visited:
+                continue
+            res += self.subtree_of_type_rec(self.node_at(t), target_type, visited)
+
+        # save results in cache and return
         if len(res) < 20:
             self.subtree_cache[(root, target_type)] = res
         return res
