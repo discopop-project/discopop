@@ -40,10 +40,9 @@ import cProfile
 import io
 import json
 import os
-import pstats
+import pstats  # type:ignore
 import sys
 import time
-from pstats import SortKey
 
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
@@ -193,7 +192,7 @@ def main():
         if os.path.exists("profiling_stats.txt"):
             os.remove("profiling_stats.txt")
         with open("profiling_stats.txt", "w+") as f:
-            stats = pstats.Stats(profile, stream=f).sort_stats(SortKey.TIME).reverse_order()
+            stats = pstats.Stats(profile, stream=f).sort_stats(pstats.SortKey.TIME).reverse_order()
             stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
