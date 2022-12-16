@@ -8,7 +8,7 @@
 
 from enum import IntEnum, Enum
 from platform import node
-from typing import Dict, List, Tuple, Set, Optional, cast
+from typing import Dict, List, Tuple, Set, Optional, cast, Union
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -416,7 +416,7 @@ class PETGraphX(object):
             t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
         ]
 
-    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
+    def subtree_of_type(self, root: CUNode, type: Optional[Union[NodeType, Tuple[NodeType]]]) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -427,32 +427,34 @@ class PETGraphX(object):
         return self.subtree_of_type_rec(root, type, set())
 
     def subtree_of_type_rec(
-        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]
+        self, root: CUNode, target_type: Optional[Union[NodeType, Tuple[NodeType]]], visited: Set[CUNode]
     ) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
-        :param type: type of children, None is equal to a wildcard
+        :param target_type: type of children, None is equal to a wildcard
         :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
-        if (root, type) in self.subtree_cache:
-            return self.subtree_cache[(root, type)]
+        if (root, target_type) in self.subtree_cache:
+            return self.subtree_cache[(root, target_type)]
         else:
             res: List[CUNode] = []
             for visited_cu in visited:
                 if self.__cu_equal__(root, visited_cu):
                     if len(res) < 20:
-                        self.subtree_cache[(root, type)] = res
+                        self.subtree_cache[(root, target_type)] = res
                     return res
             visited.add(root)
-            if root.type == type or type is None:
+            if (type(target_type) == tuple and root.type in target_type) or \
+                    root.type == target_type or \
+                    target_type is None:
                 res.append(root)
             for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-                res.extend(self.subtree_of_type_rec(self.node_at(t), type, visited))
+                res.extend(self.subtree_of_type_rec(self.node_at(t), target_type, visited))
 
         if len(res) < 20:
-            self.subtree_cache[(root, type)] = res
+            self.subtree_cache[(root, target_type)] = res
         return res
 
     def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
@@ -521,11 +523,13 @@ class PETGraphX(object):
 
         # get required metadata
         loop_start_lines: List[str] = []
-        for v in self.subtree_of_type(root_loop, NodeType.LOOP):
+        root_children = self.subtree_of_type(root_loop, (NodeType.CU, NodeType.LOOP))
+        root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
+        root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
+        for v in root_children_loops:
             loop_start_lines.append(v.start_position())
 
         # check for RAW dependencies between any of source_children and any of target_children
-        root_children = self.subtree_of_type(root_loop, NodeType.CU)
         for source_child_id in source_children_ids:
             # get a list of filtered dependencies, outgoing from source_child
             out_deps = self.out_edges(source_child_id, EdgeType.DATA)
@@ -533,13 +537,13 @@ class PETGraphX(object):
             filtered_deps = [
                 elem
                 for elem in out_raw_deps
-                if not self.is_readonly_inside_loop_body(elem[2], root_loop, root_children)
+                if not self.is_readonly_inside_loop_body(elem[2], root_loop, root_children_cus, root_children_loops)
             ]
             filtered_deps = [
                 elem
                 for elem in filtered_deps
                 if not self.is_loop_index(
-                    elem[2].var_name, loop_start_lines, root_children
+                    elem[2].var_name, loop_start_lines, root_children_cus
                 )
             ]
             # get a list of dependency targets
@@ -596,13 +600,14 @@ class PETGraphX(object):
     def get_first_written_vars_in_loop(
         self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode
     ) -> Set[Variable]:
-        loop_node_ids = [n.id for n in self.subtree_of_type(root_loop, NodeType.CU)]
+        root_children = self.subtree_of_type(root_loop, NodeType.CU)
+        loop_node_ids = [n.id for n in root_children]
         fwVars = set()
 
         raw = set()
         war = set()
         waw = set()
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        sub = root_children
         for sub_node in sub:
             raw.update(self.get_dep(sub_node, DepType.RAW, False))
             war.update(self.get_dep(sub_node, DepType.WAR, False))
@@ -798,7 +803,7 @@ class PETGraphX(object):
 
         return False
 
-    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode, children: List[CUNode] ) -> bool:
+    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode, children_cus: List[CUNode], children_loops: List[CUNode]) -> bool:
         """Checks, whether a variable is read-only in loop body
 
         :param dep: dependency variable
@@ -807,10 +812,10 @@ class PETGraphX(object):
         """
         # TODO pass as param?
         loops_start_lines = [
-            v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)
+            v.start_position() for v in children_loops
         ]
 
-        for v in children:
+        for v in children_cus:
             for t, d in [
                 (t, d)
                 for s, t, d in self.out_edges(v.id, EdgeType.DATA)
