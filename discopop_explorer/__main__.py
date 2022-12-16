@@ -156,9 +156,7 @@ def main():
         if os.path.exists("profiling_stats.txt"):
             os.remove("profiling_stats.txt")
         with open("profiling_stats.txt", "w+") as f:
-            stats = (
-                pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
-            )
+            stats = pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
             stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
