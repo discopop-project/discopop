@@ -17,11 +17,13 @@ from .variable import Variable
 
 loop_data: Dict[str, int] = {}
 
+
 def contains(list, filter):
     for x in list:
         if filter(x):
             return True
     return False
+
 
 def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     """Calculates correlation coefficient as (A dot B) / (norm(A) * norm(B))
@@ -55,14 +57,14 @@ def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     """
     if source == target:
         return False
-    # target_nodes = pet.get_left_right_subtree(target, True)
     target_nodes = pet.subtree_of_type(target, None)
 
-    # for node in pet.get_left_right_subtree(source, True):
     for node in pet.subtree_of_type(source, NodeType.CU):
-        # for dep in [e.target() for e in pet.out_edges(node.id, EdgeType.DATA)]: # if e.dtype == 'RAW']:
-        for target in [pet.node_at(target_id) for source_id, target_id, dependence in
-                       pet.out_edges(node.id, EdgeType.DATA) if dependence.dtype == DepType.RAW]:
+        for target in [
+            pet.node_at(target_id)
+            for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA)
+            if dependence.dtype == DepType.RAW
+        ]:
             if target in target_nodes:
                 return True
     return False
@@ -76,27 +78,15 @@ def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position()
-                         for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
-    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU))
+    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
+    return pet.is_loop_index(
+        var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU)
+    )
 
 
+# NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-#def total_instructions_count(pet: PETGraphX, root: CUNode) -> int:
-#    """Calculates total number of the instructions in the subtree of a given node
-#
-#    :param pet: PET graph
-#    :param root: root node
-#    :return: number of instructions
-#    """
-#    res = 0
-#    for node in pet.get_left_right_subtree(root, True):
-#        res += node.instructions_count
-#    return res
-
-
-# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-#def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
+# def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
 #    """Calculates workload for a given node
 #    The workload is the number of instructions multiplied by respective number of iterations
 #
@@ -137,8 +127,9 @@ def get_loop_iterations(line: str) -> int:
     return loop_data.get(line, 0)
 
 
-def __get_dep_of_type(pet: PETGraphX, node: CUNode, dep_type: DepType,
-                      reversed: bool) -> List[Tuple[str, str, Dependency]]:
+def __get_dep_of_type(
+    pet: PETGraphX, node: CUNode, dep_type: DepType, reversed: bool
+) -> List[Tuple[str, str, Dependency]]:
     """Searches all dependencies of specified type
 
     :param pet: CU graph
@@ -147,8 +138,15 @@ def __get_dep_of_type(pet: PETGraphX, node: CUNode, dep_type: DepType,
     :param reversed: if true the it looks for incoming dependencies
     :return: list of dependencies
     """
-    return [e for e in (pet.in_edges(node.id, EdgeType.DATA) if reversed else pet.out_edges(node.id, EdgeType.DATA))
-            if e[2].dtype == dep_type]
+    return [
+        e
+        for e in (
+            pet.in_edges(node.id, EdgeType.DATA)
+            if reversed
+            else pet.out_edges(node.id, EdgeType.DATA)
+        )
+        if e[2].dtype == dep_type
+    ]
 
 
 def __get_variables(nodes: List[CUNode]) -> Set[Variable]:
@@ -174,10 +172,12 @@ def is_reduction_var(line: str, name: str, reduction_vars: List[Dict[str, str]])
     :param reduction_vars: List of reduction variables
     :return: true if is reduction variable
     """
-    return any(rv for rv in reduction_vars if rv['loop_line'] == line and rv['name'] == name)
+    return any(rv for rv in reduction_vars if rv["loop_line"] == line and rv["name"] == name)
 
 
-def is_reduction_any(possible_lines: List[str], name: str, reduction_vars: List[Dict[str, str]]) -> bool:
+def is_reduction_any(
+    possible_lines: List[str], name: str, reduction_vars: List[Dict[str, str]]
+) -> bool:
     """Determines, whether or not the given variable is reduction variable
 
     :param possible_lines: possible loop line number
@@ -192,9 +192,13 @@ def is_reduction_any(possible_lines: List[str], name: str, reduction_vars: List[
     return False
 
 
-def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
-                          waw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
-    """ Checks if variable is written in subtree
+def is_written_in_subtree(
+    var_name: str,
+    raw: Set[Tuple[str, str, Dependency]],
+    waw: Set[Tuple[str, str, Dependency]],
+    tree: List[CUNode],
+) -> bool:
+    """Checks if variable is written in subtree
 
     :param var_name: variable name
     :param raw: raw dependencies of the loop
@@ -202,9 +206,6 @@ def is_written_in_subtree(var_name: str, raw: Set[Tuple[str, str, Dependency]],
     :param tree: subtree
     :return: true if is written
     """
-    # for i in tree:
-    #     if i.start_line >= 900 and i.start_line <= 1000:
-    #         print(f"----------{i.start_line} {i.end_line}")
     for e in itertools.chain(raw, waw):
         if e[2].var_name == var_name and any([n.id == e[1] for n in tree]):
             return True
@@ -222,10 +223,9 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
     # None may occur because __get_variables doesn't check for actual elements
     if var is None:
         return False
-    if '.' not in var:
+    if "." not in var:
         return False
-    parents = [pet.node_at(edge[0])
-               for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
     # add current node to parents, if it is of type FUNC
     if node.type == NodeType.FUNC:
         parents.append(node)
@@ -243,11 +243,15 @@ def is_scalar_val(var) -> bool:
     :param var: variable
     :return: true if scalar
     """
-    return not (var.type.endswith('**') or var.type.startswith('ARRAY' or var.type.startswith('[')))
+    return not (var.type.endswith("**") or var.type.startswith("ARRAY" or var.type.startswith("[")))
 
 
-def is_readonly(var: str, war: Set[Tuple[str, str, Dependency]],
-                waw: Set[Tuple[str, str, Dependency]], rev_war: Set[Tuple[str, str, Dependency]]) -> bool:
+def is_readonly(
+    var: str,
+    war: Set[Tuple[str, str, Dependency]],
+    waw: Set[Tuple[str, str, Dependency]],
+    rev_war: Set[Tuple[str, str, Dependency]],
+) -> bool:
     """Checks if variable is readonly
 
     :param var: variable name
@@ -275,12 +279,16 @@ def is_global(var: str, tree: List[CUNode]) -> bool:
             for gv in node.global_vars:
                 if gv.name == var:
                     # TODO from tmp global vars
-                    return False
+                    return True
     return False
 
 
-def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
-                     war: Set[Tuple[str, str, Dependency]], sub: List[CUNode]) -> bool:
+def is_first_written(
+    var: str,
+    raw: Set[Tuple[str, str, Dependency]],
+    war: Set[Tuple[str, str, Dependency]],
+    sub: List[CUNode],
+) -> bool:
     """Checks whether a variable is first written inside the current node
 
     :param var: variable name
@@ -294,8 +302,11 @@ def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
             res = False
             for eraw in raw:
                 # TODO check
-                if (eraw[2].var_name == var and any([n.id == e[1] for n in sub])
-                        and e[0] == eraw[2].sink):
+                if (
+                    eraw[2].var_name == var
+                    and any([n.id == e[1] for n in sub])
+                    and e[0] == eraw[2].sink
+                ):
                     res = True
                     break
             if not res:
@@ -303,9 +314,14 @@ def is_first_written(var: str, raw: Set[Tuple[str, str, Dependency]],
     return True
 
 
-def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency]],
-                         war_deps: Set[Tuple[str, str, Dependency]], reverse_raw_deps: Set[Tuple[str, str, Dependency]],
-                         reverse_war_deps: Set[Tuple[str, str, Dependency]], tree: List[CUNode]):
+def is_first_written_new(
+    var: Variable,
+    raw_deps: Set[Tuple[str, str, Dependency]],
+    war_deps: Set[Tuple[str, str, Dependency]],
+    reverse_raw_deps: Set[Tuple[str, str, Dependency]],
+    reverse_war_deps: Set[Tuple[str, str, Dependency]],
+    tree: List[CUNode],
+):
     """Checks whether a variable is first written inside the current node
 
     :param var:
@@ -320,8 +336,7 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
     # None may occur because __get_variables doesn't check for actual elements
     if var.name is None:
         return False
-    is_read = is_read_in(var, raw_deps, war_deps,
-                         reverse_raw_deps, reverse_war_deps, tree)
+    is_read = is_read_in(var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
     if var.name is None:
         print("Empty var.name found. Skipping.")
         return False
@@ -331,15 +346,19 @@ def is_first_written_new(var: Variable, raw_deps: Set[Tuple[str, str, Dependency
             result = True
             for warDep in war_deps:
                 assert warDep[2].var_name is not None
-                if (var.name in warDep[2].var_name
-                        and any([n.id == dep[1] for n in tree])
-                        and dep[2].source == warDep[2].sink):
+                if (
+                    var.name in warDep[2].var_name
+                    and any([n.id == dep[1] for n in tree])
+                    and dep[2].source == warDep[2].sink
+                ):
                     result = False
                     break
     return result or not is_read
 
 
-def is_read_in_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
+def is_read_in_subtree(
+    var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]
+) -> bool:
     """Checks if variable is read in subtree
 
     :param var: variable name
@@ -385,8 +404,11 @@ def is_depend_in_out(var: Variable, in_deps: List[Tuple[str, str, Dependency]],
     return False
 
 
-def is_depend_in_var(var: Variable, in_deps: List[Tuple[str, str, Dependency]],
-                     raw_deps_on: Set[Tuple[str, str, Dependency]]) -> bool:
+def is_depend_in_var(
+    var: Variable,
+    in_deps: List[Tuple[str, str, Dependency]],
+    raw_deps_on: Set[Tuple[str, str, Dependency]],
+) -> bool:
     """Checks if variable is written inside a dependent task and read in current task
 
     :param var: Variable
@@ -400,24 +422,32 @@ def is_depend_in_var(var: Variable, in_deps: List[Tuple[str, str, Dependency]],
     return False
 
 
-def is_depend_out_var(var: Variable, reverse_raw_deps_on: Set[Tuple[str, str, Dependency]],
-                      out_deps: List[Tuple[str, str, Dependency]]) -> bool:
+def is_depend_out_var(
+    var: Variable,
+    reverse_raw_deps_on: Set[Tuple[str, str, Dependency]],
+    out_deps: List[Tuple[str, str, Dependency]],
+) -> bool:
     """Checks if variable is written inside a current task and read in dependent task
 
-        :param var: Variable
-        :param reverse_raw_deps_on: raw dependencies
-        :param out_deps: in dependencies
-        :return: true if variable is out dependency
-        """
+    :param var: Variable
+    :param reverse_raw_deps_on: raw dependencies
+    :param out_deps: in dependencies
+    :return: true if variable is out dependency
+    """
     for dep in out_deps:
         if dep[2].var_name == var.name and dep in reverse_raw_deps_on:
             return True
     return False
 
 
-def is_read_in(var: Variable, raw_deps_on: Set[Tuple[str, str, Dependency]],
-               war_deps_on: Set[Tuple[str, str, Dependency]], reverse_raw_deps_on: Set[Tuple[str, str, Dependency]],
-               reverse_war_deps_on: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
+def is_read_in(
+    var: Variable,
+    raw_deps_on: Set[Tuple[str, str, Dependency]],
+    war_deps_on: Set[Tuple[str, str, Dependency]],
+    reverse_raw_deps_on: Set[Tuple[str, str, Dependency]],
+    reverse_war_deps_on: Set[Tuple[str, str, Dependency]],
+    tree: List[CUNode],
+) -> bool:
     """Check all reverse RAW dependencies (since we know that var is written in loop, because
     is_first_written returned true)
 
@@ -474,8 +504,9 @@ def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CU
     return do_all, reduction
 
 
-def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable], List[Variable], List[Variable],
-                                                                   List[Variable], List[Variable]]:
+def classify_loop_variables(
+    pet: PETGraphX, loop: CUNode
+) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable]]:
     """Classifies variables inside the loop
 
     :param pet: CU graph
@@ -487,8 +518,6 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
     last_private = []
     shared = []
     reduction = []
-    # start1 = time.time()
-    # print(f"{loop.start_line}")
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
     sub = pet.subtree_of_type(loop, NodeType.CU)
@@ -505,19 +534,19 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     vars = pet.get_undefined_variables_inside_loop(loop)
-    # start = time.time()
-    # print(f"-- {loop.start_line} {start - start1}")
+    sub = pet.subtree_of_type(loop, NodeType.CU)
+    # vars = list(pet.get_variables(sub))
     for var in vars:
-        # print(f"Variable: {var.name}")
         if is_loop_index2(pet, loop, var.name):
             private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-            var.operation = pet.get_reduction_sign(
-                loop.start_position(), var.name)
+            var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
-            # TODO grouping
-        elif (is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop)
-              and is_scalar_val(var)):
+        elif (
+            is_written_in_subtree(var.name, raw, waw, lst)
+            or is_func_arg(pet, var.name, loop)
+            and is_scalar_val(var)
+        ):
             if is_readonly(var.name, war, waw, rev_raw):
                 if is_global(var.name, sub):
                     shared.append(var)
@@ -528,9 +557,12 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     last_private.append(var)
                 else:
                     shared.append(var)
+            else:
+                if not is_scalar_val(var):
+                    # array type variable is written
+                    shared.append(var)
 
         elif is_first_written(var.name, raw, war, sub):
-            # TODO simplify
             if is_read_in_subtree(var.name, rev_raw, rst):
                 if is_scalar_val(var):
                     last_private.append(var)
@@ -541,13 +573,17 @@ def classify_loop_variables(pet: PETGraphX, loop: CUNode) -> Tuple[List[Variable
                     private.append(var)
                 else:
                     shared.append(var)
-    # end = time.time()
-    # print(f"end {loop.start_line}: {end - start}")
     return first_private, private, last_private, shared, reduction
 
 
-def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tuple[str, str, Dependency]],
-                       out_deps: List[Tuple[str, str, Dependency]], used_in_task_parallelism_detection=False):
+def classify_task_vars(
+    pet: PETGraphX,
+    task: CUNode,
+    type: str,
+    in_deps: List[Tuple[str, str, Dependency]],
+    out_deps: List[Tuple[str, str, Dependency]],
+    used_in_task_parallelism_detection=False,
+):
     """Classify task variables
 
     :param pet: CU graph
@@ -583,7 +619,7 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
                 continue
 
             if "." in v.name:
-                name = v.name[0: v.name.index(".")]  # substring before '.'
+                name = v.name[0 : v.name.index(".")]  # substring before '.'
             else:
                 name = v.name
 
@@ -599,23 +635,16 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
     reverse_raw_deps_on = set()
     reverse_war_deps_on = set()
     reverse_waw_deps_on = set()
-    # init = []  # set<String>
 
     for sub_node in subtree:
         # insert all entries from child_cu.RAW_deps_on into RAW_deps_on etc.
-        raw_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.RAW, False))
-        war_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.WAR, False))
-        waw_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.WAW, False))
+        raw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.RAW, False))
+        war_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAR, False))
+        waw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
 
-        reverse_raw_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.RAW, True))
-        reverse_war_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.WAR, True))
-        reverse_waw_deps_on.update(__get_dep_of_type(
-            pet, sub_node, DepType.WAW, True))
+        reverse_raw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
+        reverse_war_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAR, True))
+        reverse_waw_deps_on.update(__get_dep_of_type(pet, sub_node, DepType.WAW, True))
 
     do_all_loops, reduction_loops = get_child_loops(pet, task)
     # reduction_result = ""
@@ -643,8 +672,9 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
                 break
         if var_is_loop_index:
             private.append(var)
-        elif (("GeometricDecomposition" in type or "Pipeline" in type)
-              and is_reduction_any(loops_start_lines, var.name, pet.reduction_vars)):
+        elif ("GeometricDecomposition" in type or "Pipeline" in type) and is_reduction_any(
+            loops_start_lines, var.name, pet.reduction_vars
+        ):
             reduction.append(var.name)
         elif is_depend_in_out(var, in_deps, out_deps):
             depend_in_out.append(var)
@@ -652,17 +682,29 @@ def classify_task_vars(pet: PETGraphX, task: CUNode, type: str, in_deps: List[Tu
             depend_in.append(var)
         elif is_depend_out_var(var, reverse_raw_deps_on, out_deps):
             depend_out.append(var)
-        elif ((is_written_in_subtree(var.name, raw_deps_on, waw_deps_on, left_sub_tree) or
-               (is_func_arg(pet, var.name, task) and is_scalar_val(var))) and
-              is_readonly(var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on)):
+        elif (
+            is_written_in_subtree(var.name, raw_deps_on, waw_deps_on, left_sub_tree)
+            or (is_func_arg(pet, var.name, task) and is_scalar_val(var))
+        ) and is_readonly(var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on):
             if is_global(var.name, subtree):
                 shared.append(var)
             else:
                 first_private.append(var)
-        elif is_first_written_new(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree):
-            if is_scalar_val(var) and \
-                    (not used_in_task_parallelism_detection or not __is_written_prior_to_task(pet, var, task)):
-                if is_read_in(var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, right_sub_tree):
+        elif is_first_written_new(
+            var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree
+        ):
+            if is_scalar_val(var) and (
+                not used_in_task_parallelism_detection
+                or not __is_written_prior_to_task(pet, var, task)
+            ):
+                if is_read_in(
+                    var,
+                    raw_deps_on,
+                    war_deps_on,
+                    reverse_raw_deps_on,
+                    reverse_war_deps_on,
+                    right_sub_tree,
+                ):
                     shared.append(var)
                 else:
                     private.append(var)
@@ -689,8 +731,11 @@ def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> b
             visited.append(current)
         if current not in predecessors:
             predecessors.append(current)
-        queue += [pet.node_at(edge[0]) for edge in pet.in_edges(current.id,
-                                                                EdgeType.SUCCESSOR) if pet.node_at(edge[0]) not in visited]
+        queue += [
+            pet.node_at(edge[0])
+            for edge in pet.in_edges(current.id, EdgeType.SUCCESSOR)
+            if pet.node_at(edge[0]) not in visited
+        ]
 
     # check if raw-dependency on var to any predecessor exists)
     for out_dep in pet.out_edges(task.id, EdgeType.DATA):

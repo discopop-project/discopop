@@ -17,10 +17,9 @@ class Variable(object):
         self.operation = None
 
     def __hash__(self):
-        return hash(self.name)  # hash(self.type + self.name)
+        return hash(self.name)
 
     def __eq__(self, other):
-        # and self.type == other.type
         return isinstance(other, Variable) and self.name == other.name
 
     def __str__(self):

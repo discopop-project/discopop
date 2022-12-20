@@ -1,196 +1,128 @@
-START 7:209
-7:204 BGN loop 10
-7:207 END loop
-7:195 BGN loop 9
-7:200 END loop
-7:189 BGN loop 10
-7:193 END loop
-7:184 BGN loop 9
-7:189 END loop
-7:181 BGN loop 9
-7:184 END loop
-7:75 BGN loop 10000
-7:81 END loop
-7:71 BGN loop 10000
-7:75 END loop
-7:108 BGN loop 10
-7:115 END loop
-7:210 BGN loop 10000
-7:212 END loop
-7:45 BGN loop 10000
-7:50 END loop
-7:156 BGN loop 10000
-7:160 END loop
-7:67 BGN loop 10000
-7:71 END loop
-7:62 BGN loop 10000
-7:67 END loop
-7:141 BGN loop 10
-7:144 END loop
-7:59 BGN loop 10000
-7:62 END loop
-7:175 BGN loop 10000
-7:181 END loop
-7:96 BGN loop 10
-7:99 END loop
-7:200 BGN loop 9
-7:204 END loop
-7:42 BGN loop 10000
-7:45 END loop
-7:33 BGN loop 10000
-7:36 END loop
-7:169 BGN loop 10000
-7:175 END loop
-7:90 BGN loop 10
-7:93 END loop
-7:56 BGN loop 10000
-7:59 END loop
-7:118 BGN loop 10000
-7:122 END loop
-7:39 BGN loop 10000
-7:42 END loop
-7:84 BGN loop 10000
-7:89 END loop
-7:89 BGN loop 10000
-7:94 END loop
-7:126 BGN loop 10000
-7:129 END loop
-7:94 BGN loop 10000
-7:100 END loop
-7:100 BGN loop 10000
-7:108 END loop
-7:137 BGN loop 10
-7:141 END loop
-7:101 BGN loop 10
-7:104 END loop
-7:30 BGN loop 10000
-7:33 END loop
-7:109 BGN loop 10
-7:112 END loop
-7:36 BGN loop 10000
-7:39 END loop
-7:115 BGN loop 10000
-7:118 END loop
-7:152 BGN loop 10000
-7:156 END loop
-7:122 BGN loop 10000
-7:126 END loop
-7:50 BGN loop 10
-7:53 END loop
-7:129 BGN loop 10000
-7:132 END loop
-7:53 BGN loop 10
-7:56 END loop
-7:132 BGN loop 10
-7:137 END loop
-7:81 BGN loop 10000
-7:84 END loop
-7:160 BGN loop 10000
-7:169 END loop
-7:213 BGN func 7:147
-7:212 BGN func 7:23
-7:144 END func
-7:207 END func
-7:181 NOM  RAW 7:181|i42 WAR 7:181|i42 INIT *|i42
-7:90 NOM  RAW 7:90|j WAR 7:90|j INIT *|j
-7:169 NOM  RAW 7:169|i23 WAR 7:169|i23 INIT *|i23
-7:81 NOM  RAW 7:81|i124 WAR 7:81|i124 INIT *|i124
-7:109 NOM  RAW 7:109|j208 WAR 7:109|j208 INIT *|j208
-7:72 NOM  RAW 7:69|local_var RAW 7:73|local_var WAR 7:73|tmp_var108 INIT *|tmp_var108
-7:25 NOM  INIT *|local_var
-7:67 NOM  RAW 7:67|i96 WAR 7:67|i96 INIT *|i96
-7:73 NOM  RAW 7:72|tmp_var108 WAR 7:72|local_var
-7:36 NOM  RAW 7:36|i10 WAR 7:36|i10 INIT *|i10
-7:156 NOM  RAW 7:156|i1 WAR 7:156|i1 INIT *|i1
-7:119 NOM  WAR 7:120|tmp_var236 INIT *|tmp_var236
-7:45 NOM  RAW 7:45|i37 WAR 7:45|i37 INIT *|i37
-7:100 NOM  RAW 7:100|i183 WAR 7:100|i183 INIT *|i183
-7:56 NOM  RAW 7:56|i66 WAR 7:56|i66 INIT *|i66
-7:126 NOM  RAW 7:126|i253 WAR 7:126|i253 INIT *|i253
-7:137 NOM  RAW 7:137|i283 WAR 7:137|i283 INIT *|i283
-7:190 NOM  RAW 7:190|local_struct WAR 7:190|local_struct INIT *|local_struct
-7:196 NOM  RAW 7:193|test_x RAW 7:196|test_x WAR 7:196|test_x
-7:124 NOM  RAW 7:123|tmp_var_38 WAR 7:123|local_array
-7:123 NOM  RAW 7:120|local_array RAW 7:124|local_array WAR 7:124|tmp_var_38 INIT *|tmp_var_38
-7:118 NOM  RAW 7:118|i232 WAR 7:118|i232 INIT *|i232
-7:82 NOM  RAW 7:26|local_var_f RAW 7:81|i124 RAW 7:82|local_var_f RAW 7:210|global_array WAR 7:82|local_var_f
-7:161 NOM  RAW 7:160|i11
-7:75 NOM  RAW 7:75|i113 WAR 7:75|i113 INIT *|i113
-7:154 NOM  RAW 7:153|local_var WAW 7:154|tmp_var INIT *|tmp_var
-7:69 NOM  RAW 7:68|tmp_var WAR 7:68|local_var
-7:204 NOM  RAW 7:204|i89 WAR 7:204|i89 INIT *|i89
-7:37 NOM  RAW 7:34|local_var RAW 7:36|i10 RAW 7:37|local_var RAW 7:210|global_array WAR 7:37|local_var
-7:195 NOM  RAW 7:194|counter RAW 7:195|counter WAR 7:195|counter
-7:116 NOM  RAW 7:116|local_array WAR 7:116|local_array INIT *|local_array
-7:84 NOM  RAW 7:84|i134 WAR 7:84|i134 INIT *|i134
-7:40 NOM  RAW 7:37|local_var RAW 7:39|i19 RAW 7:40|local_var RAW 7:210|global_array WAR 7:40|local_var
-7:97 NOM  RAW 7:91|local_var RAW 7:94|i162 RAW 7:96|j169 RAW 7:97|local_var RAW 7:210|global_array WAR 7:97|local_var
-7:176 NOM  WAR 7:177|local_var WAW 7:171|local_var
-7:60 NOM  RAW 7:54|global_var RAW 7:59|i76 RAW 7:60|global_var RAW 7:210|global_array WAR 7:60|global_var
-7:76 NOM  RAW 7:73|local_var RAW 7:75|i113 RAW 7:77|local_var RAW 7:210|global_array WAR 7:77|tmp_var117 INIT *|tmp_var117
-7:39 NOM  RAW 7:39|i19 WAR 7:39|i19 INIT *|i19
-7:162 NOM  RAW 7:158|local_var RAW 7:160|i11 RAW 7:162|local_var RAW 7:210|global_array WAR 7:162|local_var
-7:175 NOM  RAW 7:175|i33 WAR 7:175|i33 INIT *|i33
-7:96 NOM  RAW 7:96|j169 WAR 7:96|j169 INIT *|j169
-7:104 NOM  RAW 7:95|global_var RAW 7:100|i183 RAW 7:104|global_var RAW 7:210|global_array WAR 7:104|global_var
-7:30 NOM  RAW 7:30|i WAR 7:30|i INIT *|i
-7:141 NOM  RAW 7:141|i294 WAR 7:141|i294 INIT *|i294
-7:62 NOM  RAW 7:62|i86 WAR 7:62|i86 INIT *|i86
-7:182 NOM  RAW 7:133|local_array RAW 7:181|i42 WAR 7:142|local_array WAR 7:182|local_array
-7:193 NOM  INIT *|test_x
-7:26 NOM  INIT *|local_var_f
-7:184 NOM  RAW 7:184|i55 WAR 7:184|i55 INIT *|i55
-7:63 NOM  RAW 7:62|i86 RAW 7:63|_ZZ9reductionvE10static_var RAW 7:210|global_array WAR 7:63|_ZZ9reductionvE10static_var INIT *|_ZZ9reductionvE10static_var
-7:142 NOM  RAW 7:133|local_array RAW 7:138|local_var RAW 7:141|i294 RAW 7:142|local_var WAR 7:142|local_var
-7:160 NOM  RAW 7:160|i11 WAR 7:160|i11 INIT *|i11
-7:94 NOM  RAW 7:94|i162 WAR 7:94|i162 INIT *|i162
-7:57 NOM  RAW 7:51|local_var RAW 7:56|i66 RAW 7:57|local_var RAW 7:210|global_array WAR 7:57|local_var
-7:205 NOM  RAW 7:182|local_array RAW 7:196|test_x RAW 7:201|local_array RAW 7:204|i89 RAW 7:205|test_x WAR 7:205|test_x
-7:46 NOM  RAW 7:43|local_var RAW 7:45|i37 RAW 7:46|local_var RAW 7:210|global_array WAR 7:46|local_var
-7:157 NOM  RAW 7:153|local_var RAW 7:156|i1 RAW 7:158|local_var RAW 7:210|global_array WAR 7:157|local_var
-7:153 NOM  RAW 7:147|local_var RAW 7:152|i RAW 7:153|local_var RAW 7:210|global_array WAR 7:153|local_var
-7:152 NOM  RAW 7:152|i WAR 7:152|i INIT *|i
-7:133 NOM  RAW 7:127|local_array RAW 7:132|i273 WAR 7:133|local_array INIT *|local_array
-7:54 NOM  RAW 7:53|i56 RAW 7:54|global_var WAR 7:54|global_var INIT *|global_var
-7:68 NOM  RAW 7:57|local_var RAW 7:69|local_var WAR 7:69|tmp_var INIT *|tmp_var
-7:147 NOM  INIT *|local_var
-7:31 NOM  RAW 7:25|local_var RAW 7:30|i RAW 7:31|local_var RAW 7:210|global_array WAR 7:31|local_var
-7:189 NOM  RAW 7:189|i65 WAR 7:189|i65 INIT *|i65
-7:110 NOM  RAW 7:102|local_var RAW 7:108|i204 RAW 7:109|j208 RAW 7:110|local_var WAR 7:110|local_var
-7:85 NOM  RAW 7:27|local_var_f2 RAW 7:84|i134 RAW 7:85|local_var_f2 RAW 7:210|global_array WAR 7:85|local_var_f2
-7:164 NOM  RAW 7:162|local_var WAW 7:164|tmp_var19 INIT *|tmp_var19
-7:34 NOM  RAW 7:31|local_var RAW 7:33|i1 RAW 7:34|local_var RAW 7:210|global_array WAR 7:34|local_var
-7:201 NOM  RAW 7:133|local_array RAW 7:182|local_array RAW 7:185|local_array RAW 7:200|i74 RAW 7:201|local_array WAR 7:201|local_array
-7:210 NOM  RAW 7:210|i WAR 7:210|i INIT *|i INIT *|global_array
-7:43 NOM  RAW 7:40|local_var RAW 7:42|i28 RAW 7:43|local_var RAW 7:210|global_array WAR 7:43|local_var
-7:122 NOM  RAW 7:122|i243 WAR 7:122|i243 INIT *|i243
-7:170 NOM  RAW 7:162|local_var RAW 7:169|i23 RAW 7:171|local_var RAW 7:210|global_array WAR 7:170|local_var
-7:91 NOM  RAW 7:77|local_var RAW 7:89|i145 RAW 7:90|j RAW 7:91|local_var RAW 7:210|global_array WAR 7:91|local_var
-7:95 NOM  RAW 7:60|global_var RAW 7:94|i162 RAW 7:95|global_var RAW 7:210|global_array WAR 7:95|global_var
-7:101 NOM  RAW 7:101|j187 WAR 7:101|j187 INIT *|j187
-7:59 NOM  RAW 7:59|i76 WAR 7:59|i76 INIT *|i76
-7:138 NOM  RAW 7:110|local_var RAW 7:133|local_array RAW 7:137|i283 RAW 7:138|local_var WAR 7:138|local_var
-7:102 NOM  RAW 7:97|local_var RAW 7:100|i183 RAW 7:101|j187 RAW 7:102|local_var RAW 7:210|global_array WAR 7:102|local_var
-7:27 NOM  INIT *|local_var_f2
-7:194 NOM  INIT *|counter
-7:115 NOM  RAW 7:115|i223 WAR 7:115|i223 INIT *|i223
-7:50 NOM  RAW 7:50|i46 WAR 7:50|i46 INIT *|i46
-7:129 NOM  RAW 7:129|i263 WAR 7:129|i263 INIT *|i263
-7:51 NOM  RAW 7:46|local_var RAW 7:50|i46 RAW 7:51|local_var WAR 7:51|local_var
-7:130 NOM  RAW 7:130|local_multi_dim_array WAR 7:130|local_multi_dim_array INIT *|local_multi_dim_array
-7:185 NOM  RAW 7:182|local_array WAW 7:182|local_array WAW 7:185|local_array
-7:177 NOM  RAW 7:176|local_var WAW 7:177|tmp_var37 INIT *|tmp_var37
-7:171 NOM  RAW 7:170|local_var WAR 7:171|local_var
-7:158 NOM  WAW 7:157|local_var
-7:127 NOM  RAW 7:124|local_array RAW 7:127|local_array WAR 7:127|local_array
-7:120 NOM  RAW 7:116|local_array RAW 7:119|tmp_var236 RAW 7:120|local_array WAR 7:120|local_array
-7:42 NOM  RAW 7:42|i28 WAR 7:42|i28 INIT *|i28
-7:200 NOM  RAW 7:200|i74 WAR 7:200|i74 INIT *|i74
-7:33 NOM  RAW 7:33|i1 WAR 7:33|i1 INIT *|i1
-7:77 NOM  RAW 7:76|tmp_var117 WAR 7:76|local_var
-7:71 NOM  RAW 7:71|i104 WAR 7:71|i104 INIT *|i104
-7:108 NOM  RAW 7:108|i204 WAR 7:108|i204 INIT *|i204
-7:89 NOM  RAW 7:89|i145 WAR 7:89|i145 INIT *|i145
-7:53 NOM  RAW 7:53|i56 WAR 7:53|i56 INIT *|i56
-7:132 NOM  RAW 7:132|i273 WAR 7:132|i273 INIT *|i273
-7:215 END program
+START 1:209
+1:204 BGN loop 10
+1:207 END loop
+1:195 BGN loop 9
+1:200 END loop
+1:184 BGN loop 9
+1:189 END loop
+1:175 BGN loop 10000
+1:181 END loop
+1:169 BGN loop 10000
+1:175 END loop
+1:156 BGN loop 10000
+1:160 END loop
+1:152 BGN loop 10000
+1:156 END loop
+1:200 BGN loop 9
+1:204 END loop
+1:141 BGN loop 10
+1:144 END loop
+1:137 BGN loop 10
+1:141 END loop
+1:132 BGN loop 10
+1:137 END loop
+1:129 BGN loop 10000
+1:132 END loop
+1:53 BGN loop 10
+1:56 END loop
+1:108 BGN loop 10
+1:115 END loop
+1:45 BGN loop 10000
+1:50 END loop
+1:189 BGN loop 10
+1:193 END loop
+1:71 BGN loop 10000
+1:75 END loop
+1:100 BGN loop 10000
+1:108 END loop
+1:39 BGN loop 10000
+1:42 END loop
+1:62 BGN loop 10000
+1:67 END loop
+1:36 BGN loop 10000
+1:39 END loop
+1:33 BGN loop 10000
+1:36 END loop
+1:210 BGN loop 10000
+1:212 END loop
+1:94 BGN loop 10000
+1:100 END loop
+1:126 BGN loop 10000
+1:129 END loop
+1:67 BGN loop 10000
+1:71 END loop
+1:96 BGN loop 10
+1:99 END loop
+1:75 BGN loop 10000
+1:81 END loop
+1:81 BGN loop 10000
+1:84 END loop
+1:84 BGN loop 10000
+1:89 END loop
+1:30 BGN loop 10000
+1:33 END loop
+1:89 BGN loop 10000
+1:94 END loop
+1:59 BGN loop 10000
+1:62 END loop
+1:118 BGN loop 10000
+1:122 END loop
+1:90 BGN loop 10
+1:93 END loop
+1:160 BGN loop 10000
+1:169 END loop
+1:42 BGN loop 10000
+1:45 END loop
+1:101 BGN loop 10
+1:104 END loop
+1:50 BGN loop 10
+1:53 END loop
+1:109 BGN loop 10
+1:112 END loop
+1:56 BGN loop 10000
+1:59 END loop
+1:115 BGN loop 10000
+1:118 END loop
+1:181 BGN loop 9
+1:184 END loop
+1:122 BGN loop 10000
+1:126 END loop
+1:213 BGN func 1:146
+1:212 BGN func 1:21
+1:144 END func
+1:207 END func
+1:116 NOM  INIT *|local_array RAW 1:116|local_array WAR 1:116|local_array
+1:57 NOM  RAW 1:210|global_array
+1:43 NOM  RAW 1:210|global_array
+1:97 NOM  RAW 1:210|global_array
+1:133 NOM  INIT *|local_array WAR 1:133|local_array
+1:102 NOM  RAW 1:210|global_array
+1:60 NOM  RAW 1:210|global_array RAW 1:60|global_var WAR 1:60|global_var
+1:170 NOM  RAW 1:210|global_array
+1:40 NOM  RAW 1:210|global_array
+1:210 NOM  INIT *|global_array
+1:190 NOM  INIT *|local_struct WAR 1:190|local_struct
+1:82 NOM  RAW 1:210|global_array
+1:124 NOM  WAR 1:123|local_array
+1:127 NOM  RAW 1:127|local_array WAR 1:127|local_array
+1:63 NOM  INIT *|reduction.static_var RAW 1:210|global_array RAW 1:63|reduction.static_var WAR 1:63|reduction.static_var
+1:34 NOM  RAW 1:210|global_array
+1:54 NOM  INIT *|global_var RAW 1:54|global_var WAR 1:54|global_var
+1:157 NOM  RAW 1:210|global_array
+1:76 NOM  RAW 1:210|global_array
+1:104 NOM  RAW 1:104|global_var RAW 1:210|global_array WAR 1:104|global_var
+1:46 NOM  RAW 1:210|global_array
+1:31 NOM  RAW 1:210|global_array
+1:85 NOM  RAW 1:210|global_array
+1:130 NOM  INIT *|local_multi_dim_array RAW 1:130|local_multi_dim_array WAR 1:130|local_multi_dim_array
+1:201 NOM  INIT *|local_array WAR 1:201|local_array
+1:185 NOM  WAR 1:182|local_array WAW 1:185|local_array
+1:37 NOM  RAW 1:210|global_array
+1:95 NOM  RAW 1:210|global_array RAW 1:95|global_var WAR 1:95|global_var
+1:153 NOM  RAW 1:210|global_array
+1:182 NOM  INIT *|local_array
+1:123 NOM  RAW 1:120|local_array RAW 1:124|local_array
+1:162 NOM  RAW 1:210|global_array
+1:91 NOM  RAW 1:210|global_array
+1:120 NOM  RAW 1:116|local_array RAW 1:120|local_array WAR 1:120|local_array
+1:215 END program

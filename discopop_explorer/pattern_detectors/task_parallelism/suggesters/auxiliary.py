@@ -1,16 +1,32 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import copy
 from typing import List, Tuple, Optional, cast, Dict
 
 from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, ParallelRegionInfo, \
-    Task, OmittableCuInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import get_parent_of_type, \
-    task_contained_in_reduction_loop
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    TaskParallelismInfo,
+    ParallelRegionInfo,
+    Task,
+    OmittableCuInfo,
+    TPIType,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
+    get_parent_of_type,
+    task_contained_in_reduction_loop,
+)
 
 
-def suggest_parallel_regions(pet: PETGraphX,
-                             suggestions: List[TaskParallelismInfo]) -> List[ParallelRegionInfo]:
+def suggest_parallel_regions(
+    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
+) -> List[ParallelRegionInfo]:
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
     possibly leading to the creation of tasks.
@@ -49,9 +65,11 @@ def suggest_parallel_regions(pet: PETGraphX,
         if last_node is None:
             continue
         last_node = cast(CUNode, last_node)
-        region_suggestions.append(ParallelRegionInfo(parent, TPIType.PARALLELREGION,
-                                                     last_node.start_position(),
-                                                     last_node.end_position()))
+        region_suggestions.append(
+            ParallelRegionInfo(
+                parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position()
+            )
+        )
     return region_suggestions
 
 
@@ -92,7 +110,7 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
                 s.region_end_line = str(end)
             else:
                 # if not, set end to end of cu
-                s.region_end_line = s.end_line[s.end_line.index(":") + 1:]
+                s.region_end_line = s.end_line[s.end_line.index(":") + 1 :]
             # overwrite entry in cu_to_suggestions_map for s
             cu_to_suggestions_map[cu][idx] = s
     # append suggestions to output
@@ -103,8 +121,9 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
     return output
 
 
-def detect_taskloop_reduction(pet: PETGraphX,
-                              suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
+def detect_taskloop_reduction(
+    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
+) -> List[TaskParallelismInfo]:
     """detect suggested tasks which can and should be replaced by
     taskloop reduction.
     return the modified list of suggestions.
@@ -150,8 +169,7 @@ def detect_taskloop_reduction(pet: PETGraphX,
     return output
 
 
-def combine_omittable_cus(pet: PETGraphX,
-                          suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """execute combination of tasks suggestions with omittable cus.
     Adds modified version of the respective Parent suggestions to the list.
     Returns the modified list of suggestions.
@@ -169,7 +187,9 @@ def combine_omittable_cus(pet: PETGraphX,
             omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
         else:
             if type(single_suggestion) == TaskParallelismInfo:
-                single_suggestion_tpi: TaskParallelismInfo = cast(TaskParallelismInfo, single_suggestion)
+                single_suggestion_tpi: TaskParallelismInfo = cast(
+                    TaskParallelismInfo, single_suggestion
+                )
                 try:
                     if single_suggestion_tpi.type is TPIType.TASK:
                         task_suggestions.append(single_suggestion_tpi)
@@ -184,10 +204,12 @@ def combine_omittable_cus(pet: PETGraphX,
     # successor graph of a node containing a task suggestion
     useful_omittable_suggestions = []
     for oms in omittable_suggestions:
-        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(oms._node.id) if
-                         e.etype == EdgeType.SUCCESSOR]
-        parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if
-                             pet.node_at(e[0]).tp_contains_task is True]
+        in_succ_edges = [
+            (s, t, e) for s, t, e in pet.in_edges(oms._node.id) if e.etype == EdgeType.SUCCESSOR
+        ]
+        parent_task_nodes = [
+            pet.node_at(e[0]) for e in in_succ_edges if pet.node_at(e[0]).tp_contains_task is True
+        ]
         if len(parent_task_nodes) != 0:
             useful_omittable_suggestions.append(oms)
         else:
@@ -236,33 +258,55 @@ def combine_omittable_cus(pet: PETGraphX,
                     if omit_out_var is None:
                         continue
                     task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].out_dep.append(cast(str, omit_out_var))
+                        omit_target_task_idx
+                    ].out_dep.append(cast(str, omit_out_var))
                     # omit_s.combine_with_node.out_dep.append(omit_out_var)
                 # process in dependencies of omit_s
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
-                    if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].out_dep:
+                    if (
+                        omit_in_var
+                        in task_suggestions_dict[omit_s.combine_with_node][
+                            omit_target_task_idx
+                        ].out_dep
+                    ):
                         task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].out_dep.remove(omit_in_var)
+                            omit_target_task_idx
+                        ].out_dep.remove(omit_in_var)
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
-                if ":" not in cast(str, task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].region_end_line):
-                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
-                            int(cast(str, task_suggestions_dict[omit_s.combine_with_node][
-                                omit_target_task_idx].region_end_line)):
+                if ":" not in cast(
+                    str,
+                    task_suggestions_dict[omit_s.combine_with_node][
+                        omit_target_task_idx
+                    ].region_end_line,
+                ):
+                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1 :]) > int(
+                        cast(
+                            str,
+                            task_suggestions_dict[omit_s.combine_with_node][
+                                omit_target_task_idx
+                            ].region_end_line,
+                        )
+                    ):
                         task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].region_end_line = omit_s.end_line
+                            omit_target_task_idx
+                        ].region_end_line = omit_s.end_line
                 else:
-                    cut_region_end_line = cast(str, task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx].region_end_line)
-                    cut_region_end_line = cut_region_end_line[cut_region_end_line.index(":") + 1:]
-                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1:]) > \
-                            int(cut_region_end_line):
+                    cut_region_end_line = cast(
+                        str,
                         task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx].region_end_line = omit_s.end_line
+                            omit_target_task_idx
+                        ].region_end_line,
+                    )
+                    cut_region_end_line = cut_region_end_line[cut_region_end_line.index(":") + 1 :]
+                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1 :]) > int(
+                        cut_region_end_line
+                    ):
+                        task_suggestions_dict[omit_s.combine_with_node][
+                            omit_target_task_idx
+                        ].region_end_line = omit_s.end_line
 
     # remove duplicates from dependency lists and append to result
     for key in task_suggestions_dict:

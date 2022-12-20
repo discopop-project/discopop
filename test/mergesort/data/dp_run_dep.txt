@@ -1,42 +1,42 @@
-START 2:53
-2:55 BGN loop 10
-2:58 END loop
-2:32 BGN loop 3
-2:41 END loop
-2:23 BGN loop 2
-2:26 END loop
-2:26 BGN loop 1
-2:29 END loop
-2:48 BGN func 2:16
-2:47 BGN func 2:43
-2:54 BGN func 2:43
-2:46 BGN func 2:43
-2:41 END func
-2:50 END func
-2:48 NOM  RAW 2:45|q
-2:47 NOM  RAW 2:45|q
-2:45 NOM  WAR 2:32|q WAR 2:48|q INIT *|q
-2:46 NOM  RAW 2:45|q
-2:32 NOM  RAW 2:32|k RAW 2:45|r.addr WAR 2:32|k INIT *|k
-2:38 NOM  RAW 2:31|j RAW 2:38|j WAR 2:38|j
-2:26 NOM  RAW 2:18|n2 RAW 2:22|j RAW 2:26|j WAR 2:26|j
-2:20 NOM  RAW 2:18|n2 WAW 2:20|__vla_expr1 INIT *|__vla_expr1
-2:22 NOM  WAR 2:33|j WAW 2:38|j INIT *|j
-2:41 NOM  RAW 2:19|saved_stack
-2:37 NOM  RAW 2:27|vla4 RAW 2:31|j RAW 2:32|k RAW 2:38|j WAR 2:24|A.addr WAR 2:27|A.addr INIT *|A.addr
-2:30 NOM  RAW 2:18|n2 WAR 2:33|vla4 WAW 2:30|vla4 INIT *|vla4
-2:27 NOM  RAW 2:22|j RAW 2:26|j RAW 2:34|A.addr RAW 2:37|A.addr WAR 2:37|vla4 INIT *|vla4
-2:35 NOM  RAW 2:31|i RAW 2:35|i WAR 2:35|i
-2:33 NOM  RAW 2:24|vla RAW 2:27|vla4 RAW 2:29|vla RAW 2:30|vla4 RAW 2:31|i RAW 2:31|j RAW 2:35|i RAW 2:38|j
-2:31 NOM  WAR 2:23|i WAR 2:26|j
-2:56 NOM  RAW 2:34|array RAW 2:37|array RAW 2:55|i
-2:19 NOM  RAW 2:17|n1 WAR 2:41|saved_stack WAW 2:19|__vla_expr0 INIT *|saved_stack INIT *|__vla_expr0
-2:34 NOM  RAW 2:24|vla RAW 2:31|i RAW 2:32|k RAW 2:35|i WAR 2:24|A.addr WAR 2:27|A.addr INIT *|A.addr
-2:17 NOM  WAR 2:29|n1 INIT *|n1
-2:24 NOM  RAW 2:21|i RAW 2:23|i RAW 2:34|A.addr RAW 2:37|A.addr WAR 2:32|vla WAR 2:34|vla WAW 2:29|vla WAW 2:38|vla INIT *|vla
-2:18 NOM  RAW 2:45|r.addr WAR 2:30|n2 INIT *|n2
-2:55 NOM  RAW 2:55|i WAR 2:55|i INIT *|i
-2:21 NOM  WAR 2:33|i WAW 2:35|i INIT *|i
-2:23 NOM  RAW 2:17|n1 RAW 2:21|i RAW 2:23|i WAR 2:23|i
-2:29 NOM  RAW 2:17|n1 WAR 2:33|vla WAR 2:34|vla WAW 2:29|vla INIT *|vla
-2:58 END program
+START 1:53
+1:55 BGN loop 10
+1:58 END loop
+1:32 BGN loop 3
+1:41 END loop
+1:23 BGN loop 2
+1:26 END loop
+1:26 BGN loop 1
+1:29 END loop
+1:48 BGN func 1:16
+1:47 BGN func 1:43
+1:54 BGN func 1:43
+1:46 BGN func 1:43
+1:41 END func
+1:50 END func
+1:48 NOM  RAW 1:45|q
+1:47 NOM  RAW 1:45|q
+1:45 NOM  WAR 1:32|q WAR 1:48|q INIT *|q
+1:46 NOM  RAW 1:45|q
+1:32 NOM  RAW 1:32|k RAW 1:45|r.addr WAR 1:32|k INIT *|k
+1:38 NOM  RAW 1:31|j RAW 1:38|j WAR 1:38|j
+1:26 NOM  RAW 1:18|n2 RAW 1:22|j RAW 1:26|j WAR 1:26|j
+1:20 NOM  RAW 1:18|n2 WAW 1:20|__vla_expr1 INIT *|__vla_expr1
+1:22 NOM  WAR 1:33|j WAW 1:38|j INIT *|j
+1:41 NOM  RAW 1:19|saved_stack
+1:37 NOM  RAW 1:27|vla4 RAW 1:31|j RAW 1:32|k RAW 1:38|j WAR 1:24|A.addr WAR 1:27|A.addr INIT *|A.addr
+1:30 NOM  RAW 1:18|n2 WAR 1:33|vla4 WAW 1:30|vla4 INIT *|vla4
+1:27 NOM  RAW 1:22|j RAW 1:26|j RAW 1:34|A.addr RAW 1:37|A.addr WAR 1:37|vla4 INIT *|vla4
+1:35 NOM  RAW 1:31|i RAW 1:35|i WAR 1:35|i
+1:33 NOM  RAW 1:24|vla RAW 1:27|vla4 RAW 1:29|vla RAW 1:30|vla4 RAW 1:31|i RAW 1:31|j RAW 1:35|i RAW 1:38|j
+1:31 NOM  WAR 1:23|i WAR 1:26|j
+1:56 NOM  RAW 1:34|array RAW 1:37|array RAW 1:55|i
+1:19 NOM  RAW 1:17|n1 WAR 1:41|saved_stack WAW 1:19|__vla_expr0 INIT *|saved_stack INIT *|__vla_expr0
+1:34 NOM  RAW 1:24|vla RAW 1:31|i RAW 1:32|k RAW 1:35|i WAR 1:24|A.addr WAR 1:27|A.addr INIT *|A.addr
+1:17 NOM  WAR 1:29|n1 INIT *|n1
+1:24 NOM  RAW 1:21|i RAW 1:23|i RAW 1:34|A.addr RAW 1:37|A.addr WAR 1:32|vla WAR 1:34|vla WAW 1:29|vla WAW 1:38|vla INIT *|vla
+1:18 NOM  RAW 1:45|r.addr WAR 1:30|n2 INIT *|n2
+1:55 NOM  RAW 1:55|i WAR 1:55|i INIT *|i
+1:21 NOM  WAR 1:33|i WAW 1:35|i INIT *|i
+1:23 NOM  RAW 1:17|n1 RAW 1:21|i RAW 1:23|i WAR 1:23|i
+1:29 NOM  RAW 1:17|n1 WAR 1:33|vla WAR 1:34|vla WAW 1:29|vla INIT *|vla
+1:58 END program

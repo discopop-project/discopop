@@ -10,5 +10,7 @@
 # https://packaging.python.org/guides/using-manifest-in/
 
 include VERSION
-include discopop_explorer/README.md
 include discopop_explorer/requirements.txt
+
+include discopop_wizard/requirements.txt
+recursive-include discopop_wizard *

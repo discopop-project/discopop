@@ -1,3 +1,16 @@
+<!-- 
+ /*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */ 
+ -->
+
 # DiscoPoP - Discovery of Potential Parallelism
 DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University. 
 
@@ -11,77 +24,83 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
-## Getting started
-### Pre-requisites
-Before doing anything, you need a basic development setup. We have tested DiscoPoP on Ubuntu, and the prerequisite packages should be installed using the following command:
+## Wiki
+Detailed information about each execution step, the setup as well as the functionality of DiscoPoP and how to contribute can be found on the [wiki page](https://discopop-project.github.io/discopop/).
 
-	sudo apt-get install git build-essential cmake
+### Quick Links
+- [Quickstart guide](https://discopop-project.github.io/discopop/Quickstart)
 
-Additionally, you need to install LLVM on your system. Currently, DiscoPoP only supports LLVM versions between 8.0 and 11.1. Due to API changes, which lead to compilation failures, it does not support lower and higher versions. Please follow the [installation tutorial](https://llvm.org/docs/GettingStarted.html), or install LLVM 11 via a package manager as shown in the following snippet, if you have not installed LLVM yet.
+## Example
+DiscoPoP creates parallelization suggestions for sequential source code.
+Implementing these suggestions results in a parallel program.
+A simple example for the results of the assisted parallelization on the basis of the created parallelization suggestions can be found below.
 
-    apt-get install libclang-11-dev clang-11 llvm-11
+### Original Source Code
+Let's assume the original source code looks as follows:
 
-### DiscoPoP profiler installation
-First, clone the source code into the designated folder. Then, create a build directory:
+    int foo(int in, int d){
+        return in * d;
+    }
 
-	mkdir build; cd build;
+    int bar(int in, int d){
+        return in + d;
+    }
 
-Next, configure the project using CMake. The preferred LLVM installation path for DiscoPoP can be set using the -DLLVM_DIST_PATH=<PATH_TO_LLVM_BUILD_FOLDER> CMake variable.
+    int delta(int in, int d){
+        return in -d;
+    }
 
-	cmake -DLLVM_DIST_PATH=<PATH_TO_LLVM_BUILD_FOLDER> ..
+    int main( void)
+    {
+        int i;
+        int d=20,a=22, b=44,c=90;
+        for (i=0; i<100; i++) {
+            a = foo(i, d);
+            b = bar(a, d);
+            c = delta(b, d);
+        }
+        a = b;
+        return 0;
+    }
 
-Once the configuration process is successfully finished, run `make` to compile and obtain the DiscoPoP libraries. All the shared objects will be stored in the build directory under a folder named as `libi/`.
+Applying DiscoPop to this program will result in a set of parallelization suggestions.
+
+### Parallel Source Code
+For demonstration purposes we have applied the identified and suggested [pipeline pattern](https://discopop-project.github.io/discopop/Pattern_Detection/Patterns/Pipeline/) to the original source code, which resulted in the following parallel source code.
+Please refer to the [parallel patterns](https://discopop-project.github.io/discopop/Pattern_Detection/Patterns) page of the [DiscoPoP wiki](https://discopop-project.github.io/discopop/) for a complete overview of the supported parallel patterns.
+
+    int foo(int in, int d){
+        return in * d;
+    }
+
+    int bar(int in, int d){
+        return in + d;
+    }
+
+    int delta(int in, int d){
+        return in -d;
+    }
+
+    int main( void)
+    {
+        int i;
+        int d=20,a=22, b=44,c=90;
+        for (i=0; i<100; i++) {
+            #pragma omp task firsprivate(i) shared(d, in) depend(out:a)
+            a = foo(i, d);
+            #pragma omp task shared(d, in) depend(in:a) depend(out:b)
+            b = bar(a, d);
+            #pragma omp task private(c) shared(d, in) depend(in: b)
+            c = delta(b, d);
+        }
+        a = b;
+        return 0;
+    }
 
 
-### Running DiscoPoP
-DiscoPoP contains different tools for analyzing the target sequential application, namely CUGeneration, DPInstrumentation, and DPReduction. In the following, we will explain how to run each of them. However, before executing anything, please run the `dp-fmap` script in the root folder of the target application to obtain the list of files. The output will be written in a file named `FileMapping.txt`.
 
-	<DISCOPOP_PATH>/scripts/dp-fmap
 
-#### CU generation 
-To obtain the computational unit (CU) graph of the target application, please run the following command.
 
-	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMCUGeneration.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File>
-
-#### Dependence profiling
-To obtain data dependences, we need to instrument the target application. Running the instrumented application will result in a text file containing all the dependences that are located in the present working directory.
-
-	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
-	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
-	./<APP_NAME>
-
-#### Identifying reduction operations
-To obtain the list of reduction operations in the target application, we need to instrument the target application. Running the instrumented application will result in a text file containing all the reductions that are located in the present working directory.
-
-	clang++ -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_DIR>/libi/LLVMDPReduction.so -mllvm -fm-path -mllvm ./FileMapping.txt -c <C_File> -o out.o
-	clang++ out.o -L<PATH_TO_DISCOPOP_BUILD_DIR>/rtlib -lDiscoPoP_RT -lpthread
-	./<APP_NAME>
-	
-*NOTE:* Please use the exact compiler flags that we used. Otherwise, you might not get the correct results, or the analysis might fail.
-
-DiscoPoP also provides a wrapper [discopop_profiler](discopop_profiler/README.md) to
-easily invoke clang with the DiscoPoP LLVM passes.
-
-#### Pattern identfication
-Once you have all the results generated by DiscoPoP passes, you can use them to identify possible parallel design patterns. To learn more, please read the pattern detection [README](/discopop_explorer/README.md), which explains how to run pattern identification in detail.
-
-## Walk-through example
-In the `test/` folder, we have provided sample programs to help you start using DiscoPoP. You can find the walk-through example [here](/docs/DPTutorial.md).
-
-## Troubleshooting
-### How to use DiscoPoP with projects which use CMake build system?
-To run DiscoPoP instrumentation on projects which use CMake, you need to use the following commands instead of the normal CMake.
-1. You first need to run CMake to just configure the project for compilation:
-```bash
-cmake -DCMAKE_CXX_COMPILER=<PATH_TO_CLANG> -DCMAKE_CXX_FLAGS="-c -g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_FOLDER>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm <PATH_TO_FILE_MAPPING>"
-```
-2. Then, configure the project for linking:
-```bash
-cmake -DCMAKE_CXX_COMPILER=<PATH_TO_CLANG> -DCMAKE_CXX_FLAGS="-g -O0 -fno-discard-value-names -Xclang -load -Xclang <PATH_TO_DISCOPOP_BUILD_FOLDER>/libi/LLVMDPInstrumentation.so -mllvm -fm-path -mllvm <PATH_TO_FILE_MAPPING>" -DCMAKE_CXX_STANDARD_LIBRARIES="-L<PATH_TO_DISCOPOP_BUILD_FOLDER>/rtlib -lDiscoPoP_RT -lpthread" .
-```
-3. Running `make` will build the project with DiscoPoP instrumentation applied on the code.
-
-You may use Github issues to report potential bugs or ask your questions. In case you need individual support, please contact us using discopop[at]lists.parallel.informatik.tu-darmstadt.de.
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.

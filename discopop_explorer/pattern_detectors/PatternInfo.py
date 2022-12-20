@@ -11,8 +11,8 @@ from ..PETGraphX import CUNode
 
 
 class PatternInfo(object):
-    """Base class for pattern detection info
-    """
+    """Base class for pattern detection info"""
+
     _node: CUNode
     node_id: str
     start_line: str
@@ -39,7 +39,7 @@ class PatternInfo(object):
         dic = self.__dict__
         keys = [k for k in dic.keys()]
         for key in keys:
-            if key.startswith('_'):
+            if key.startswith("_"):
                 del dic[key]
 
-        return json.dumps(dic, indent=2, default=lambda o: '<not serializable>')
+        return json.dumps(dic, indent=2, default=lambda o: "<not serializable>")

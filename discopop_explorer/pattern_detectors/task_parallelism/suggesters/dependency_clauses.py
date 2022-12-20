@@ -1,19 +1,42 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
 from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TaskParallelismInfo, OmittableCuInfo, TPIType
-from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region, \
-    get_function_call_from_source_code, get_called_function_and_parameter_names_from_function_call, demangle, \
-    get_called_functions_recursively
-from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import get_alias_information \
-    as get_alias_detection_result
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    TaskParallelismInfo,
+    OmittableCuInfo,
+    TPIType,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
+    line_contained_in_region,
+    get_function_call_from_source_code,
+    get_called_function_and_parameter_names_from_function_call,
+    demangle,
+    get_called_functions_recursively,
+)
+from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
+    get_alias_information as get_alias_detection_result,
+)
 
 
-def detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[PatternInfo], file_mapping_path: str,
-                                          cu_xml: str, dep_file: str, cu_inst_result_file: str,
-                                          discopop_build_path: str) -> List[PatternInfo]:
+def detect_dependency_clauses_alias_based(
+    pet: PETGraphX,
+    suggestions: List[PatternInfo],
+    file_mapping_path: str,
+    cu_xml: str,
+    dep_file: str,
+    cu_inst_result_file: str,
+    discopop_build_path: str,
+) -> List[PatternInfo]:
     """Wrapper for alias based dependency detection.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -37,14 +60,17 @@ def detect_dependency_clauses_alias_based(pet: PETGraphX, suggestions: List[Patt
     cu_inst_result_dict = get_dict_from_cu_inst_result_file(cu_inst_result_file)
     aliases = get_alias_information(pet, suggestions, source_code_files)
     # get function-internal parameter aliases
-    function_parameter_alias_dict = get_function_internal_parameter_aliases(file_mapping_path, cu_xml,
-                                                                            discopop_build_path)
+    function_parameter_alias_dict = get_function_internal_parameter_aliases(
+        file_mapping_path, cu_xml, discopop_build_path
+    )
     # find dependencies between calls of different functions inside function scopes
-    suggestions = identify_dependencies_for_different_functions(pet, suggestions, aliases, source_code_files,
-                                                                raw_dependency_information)
+    suggestions = identify_dependencies_for_different_functions(
+        pet, suggestions, aliases, source_code_files, raw_dependency_information
+    )
     # find dependencies between calls of same function inside function scopes
-    suggestions = identify_dependencies_for_same_functions(pet, suggestions, source_code_files,
-                                                           cu_inst_result_dict, function_parameter_alias_dict)
+    suggestions = identify_dependencies_for_same_functions(
+        pet, suggestions, source_code_files, cu_inst_result_dict, function_parameter_alias_dict
+    )
     return suggestions
 
 
@@ -93,12 +119,14 @@ def get_raw_dependency_information_from_dep_file(dep_file: str) -> Dict[str, Lis
     return raw_dependencies
 
 
-def get_dict_from_cu_inst_result_file(cu_inst_result_file: str) -> Dict[str, List[Dict[str, Optional[str]]]]:
+def get_dict_from_cu_inst_result_file(
+    cu_inst_result_file: str,
+) -> Dict[str, List[Dict[str, Optional[str]]]]:
     """Parses the information contained in cu_inst_result_file into a dictionary of dictionaries,
     ordered by dependency type and returns the dictionary.
     :param cu_inst_result_file: Path (string) to cu_inst_result file
     :return: parsed dictionary"""
-    res_dict: Dict[str, List[Dict[str, Optional[str]]]] = {'RAW': [], 'WAR': [], 'WAW': []}
+    res_dict: Dict[str, List[Dict[str, Optional[str]]]] = {"RAW": [], "WAR": [], "WAW": []}
     try:
         with open(cu_inst_result_file) as f:
             for line in f:
@@ -116,14 +144,20 @@ def get_dict_from_cu_inst_result_file(cu_inst_result_file: str) -> Dict[str, Lis
                     target_var = line_split[7]
                 else:
                     raise ValueError("Unknown type: ", target_type)
-                cur_line_dict = {'function': target_function, 'line': target_line.replace(",", ""), 'var': target_var}
+                cur_line_dict = {
+                    "function": target_function,
+                    "line": target_line.replace(",", ""),
+                    "var": target_var,
+                }
                 res_dict[dep_type].append(cur_line_dict)
     except FileNotFoundError as ex:
         raise ex
     return res_dict
 
 
-def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
+def get_alias_information(
+    pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]
+):
     """Generate and return alias information dictionary.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -131,9 +165,13 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     :return: alias information dictionary
     """
     # iterate over task suggestions
-    task_suggestions = [s for s in
-                        [cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo]
-                        if s.type is TPIType.TASK]
+    task_suggestions = [
+        s
+        for s in [
+            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
+        ]
+        if s.type is TPIType.TASK
+    ]
     # collect alias information
     aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, str, str]]]] = dict()
     called_function_cache: Dict = dict()
@@ -144,13 +182,18 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
         for parent_function in potential_parent_functions:
             # get recursive function call from original source code
             try:
-                function_call_string = get_function_call_from_source_code(source_code_files, int(ts.pragma_line),
-                                                                          ts.node_id.split(":")[0])
+                function_call_string = get_function_call_from_source_code(
+                    source_code_files, int(ts.pragma_line), ts.node_id.split(":")[0]
+                )
             except IndexError:
                 continue
             # get function parameter names from recursive function call
-            function_name, parameter_names = get_called_function_and_parameter_names_from_function_call(
-                function_call_string, ts._node.recursive_function_calls[0], ts._node)
+            (
+                function_name,
+                parameter_names,
+            ) = get_called_function_and_parameter_names_from_function_call(
+                function_call_string, ts._node.recursive_function_calls[0], ts._node
+            )
             # get CU Node object of called function
             called_function_cu_id = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
@@ -173,11 +216,22 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
                 if called_function_cu_id is None:
                     continue
                 called_function_cu_id_not_none = cast(str, called_function_cu_id)
-                current_alias = [(param, parent_function.name, parent_function.start_position(),
-                                  parent_function.end_position())]
-                current_alias += get_alias_for_parameter_at_position(pet, pet.node_at(called_function_cu_id_not_none),
-                                                                     idx,
-                                                                     source_code_files, [], called_function_cache)
+                current_alias = [
+                    (
+                        param,
+                        parent_function.name,
+                        parent_function.start_position(),
+                        parent_function.end_position(),
+                    )
+                ]
+                current_alias += get_alias_for_parameter_at_position(
+                    pet,
+                    pet.node_at(called_function_cu_id_not_none),
+                    idx,
+                    source_code_files,
+                    [],
+                    called_function_cache,
+                )
                 current_alias_entry.append(current_alias)
         aliases[ts] = current_alias_entry
     # join aliases on first element (original identifier)
@@ -200,8 +254,9 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     return aliases
 
 
-def get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path: str, discopop_build_path: str) \
-        -> Dict[str, List[Tuple[str, str]]]:
+def get_function_internal_parameter_aliases(
+    file_mapping_path: str, cu_xml_path: str, discopop_build_path: str
+) -> Dict[str, List[Tuple[str, str]]]:
     """Wrapper to execute simple alias analysis and parse results into dict (function name to list of alias-tuples).
     :param file_mapping_path: path to filemapping file
     :param cu_xml_path: path to cu_xml file
@@ -214,8 +269,9 @@ def get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path:
     cu_xml_path = os.path.abspath(cu_xml_path)
 
     # execute simple alias detection
-    alias_detection_result = get_alias_detection_result(file_mapping_path, cu_xml_path, alias_detection_temp_file,
-                                                        discopop_build_path)
+    alias_detection_result = get_alias_detection_result(
+        file_mapping_path, cu_xml_path, alias_detection_temp_file, discopop_build_path
+    )
 
     # check if alias_detection_result has contents
     if len(alias_detection_result) == 0:
@@ -238,9 +294,13 @@ def get_function_internal_parameter_aliases(file_mapping_path: str, cu_xml_path:
     return alias_dict
 
 
-def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: List[PatternInfo], aliases: Dict,
-                                                  source_code_files: Dict,
-                                                  raw_dependency_information: Dict) -> List[PatternInfo]:
+def identify_dependencies_for_different_functions(
+    pet: PETGraphX,
+    suggestions: List[PatternInfo],
+    aliases: Dict,
+    source_code_files: Dict,
+    raw_dependency_information: Dict,
+) -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning different called functions
      and supplement the suggestions.
     :param pet: PET Graph
@@ -273,13 +333,18 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
             potential_parent_functions_1.pop()
             # get recursive function call from original source code
             try:
-                function_call_string_1 = get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
-                                                                            ts_1.node_id.split(":")[0])
+                function_call_string_1 = get_function_call_from_source_code(
+                    source_code_files, int(ts_1.pragma_line), ts_1.node_id.split(":")[0]
+                )
             except IndexError:
                 continue
             # get function parameter names from recursive function call
-            function_name_1, parameter_names_1 = get_called_function_and_parameter_names_from_function_call(
-                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node)
+            (
+                function_name_1,
+                parameter_names_1,
+            ) = get_called_function_and_parameter_names_from_function_call(
+                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node
+            )
             for ts_2 in [s for s in task_suggestions if not s == ts_1]:
                 # get parent function
                 potential_parent_functions_2 = __get_potential_parent_functions(pet, ts_2)
@@ -287,31 +352,43 @@ def identify_dependencies_for_different_functions(pet: PETGraphX, suggestions: L
                     potential_parent_functions_2.pop()
                     # get recursive function call from original source code
                     try:
-                        function_call_string_2 = get_function_call_from_source_code(source_code_files,
-                                                                                    int(ts_2.pragma_line),
-                                                                                    ts_2.node_id.split(":")[0])
-                        (function_name_2,
-                         parameter_names_2) = get_called_function_and_parameter_names_from_function_call(
-                            function_call_string_2, ts_2._node.recursive_function_calls[0], ts_2._node)
+                        function_call_string_2 = get_function_call_from_source_code(
+                            source_code_files, int(ts_2.pragma_line), ts_2.node_id.split(":")[0]
+                        )
+                        (
+                            function_name_2,
+                            parameter_names_2,
+                        ) = get_called_function_and_parameter_names_from_function_call(
+                            function_call_string_2,
+                            ts_2._node.recursive_function_calls[0],
+                            ts_2._node,
+                        )
                         # exclude pairs of same function from dependency detection
                         if function_name_1 == function_name_2:
                             continue
                     except IndexError:
                         continue
                     # get function parameter names from recursive function call
-                    dependencies = check_dependence_of_task_pair(aliases, raw_dependency_information,
-                                                                 ts_1, parameter_names_1, ts_2)
+                    dependencies = check_dependence_of_task_pair(
+                        aliases, raw_dependency_information, ts_1, parameter_names_1, ts_2
+                    )
 
                     # check if task suggestion_1 occurs prior to task_suggestion_2
-                    if ts_1._node.start_position().split(":")[0] == \
-                            ts_2._node.start_position().split(":")[0]:
+                    if (
+                        ts_1._node.start_position().split(":")[0]
+                        == ts_2._node.start_position().split(":")[0]
+                    ):
                         # same file id
-                        ts_1_pragma_line = int(
-                            ts_1.pragma_line) if ":" not in ts_1.pragma_line else int(
-                            ts_1.pragma_line.split(":")[1])
-                        ts_2_pragma_line = int(
-                            ts_2.pragma_line) if ":" not in ts_2.pragma_line else int(
-                            ts_2.pragma_line.split(":")[1])
+                        ts_1_pragma_line = (
+                            int(ts_1.pragma_line)
+                            if ":" not in ts_1.pragma_line
+                            else int(ts_1.pragma_line.split(":")[1])
+                        )
+                        ts_2_pragma_line = (
+                            int(ts_2.pragma_line)
+                            if ":" not in ts_2.pragma_line
+                            else int(ts_2.pragma_line.split(":")[1])
+                        )
                         # check line numbers
                         if ts_2_pragma_line < ts_1_pragma_line:
                             continue
@@ -345,8 +422,11 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
     :param pet: PET Graph
     :param sug: target suggestion
     :return: List of potential parents of sug (Function CU Nodes)"""
-    potential_parent_functions = [pet.node_at(e[0]) for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
-                                  if pet.node_at(e[0]).type == NodeType.FUNC]
+    potential_parent_functions = [
+        pet.node_at(e[0])
+        for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
+        if pet.node_at(e[0]).type == NodeType.FUNC
+    ]
     if not potential_parent_functions:
         # perform BFS search on incoming CHILD edges to find closest parent function,
         # i.e. function which contains the CU.
@@ -375,20 +455,29 @@ def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode
         cur_potential_child = queue.pop()
         visited.append(cur_potential_child)
         # test if cur_potential_child is inside cur_potential_parent_functions scope
-        if line_contained_in_region(cur_potential_child.start_position(),
-                                    parent_function.start_position(),
-                                    parent_function.end_position()) and \
-                line_contained_in_region(cur_potential_child.end_position(),
-                                         parent_function.start_position(),
-                                         parent_function.end_position()):
+        if line_contained_in_region(
+            cur_potential_child.start_position(),
+            parent_function.start_position(),
+            parent_function.end_position(),
+        ) and line_contained_in_region(
+            cur_potential_child.end_position(),
+            parent_function.start_position(),
+            parent_function.end_position(),
+        ):
             potential_children.append(cur_potential_child)
         for tmp_child in pet.direct_children(cur_potential_child):
-            if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
+            if (
+                tmp_child not in queue
+                and tmp_child not in potential_children
+                and tmp_child not in visited
+            ):
                 queue.append(tmp_child)
     return potential_children
 
 
-def __get_recursive_calls_from_function(potential_children: List[CUNode], parent_function: CUNode) -> List[str]:
+def __get_recursive_calls_from_function(
+    potential_children: List[CUNode], parent_function: CUNode
+) -> List[str]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of recursive function calls located inside the body of the given function.
     :param potential_children: List of CUs contained in function's body
@@ -396,12 +485,16 @@ def __get_recursive_calls_from_function(potential_children: List[CUNode], parent
     :return: List of recursive function call contained in parent_function's body
     """
     recursive_function_calls = []
-    for child in [c for c in potential_children if
-                  line_contained_in_region(c.start_position(), parent_function.start_position(),
-                                           parent_function.end_position())
-                  and
-                  line_contained_in_region(c.end_position(), parent_function.start_position(),
-                                           parent_function.end_position())]:
+    for child in [
+        c
+        for c in potential_children
+        if line_contained_in_region(
+            c.start_position(), parent_function.start_position(), parent_function.end_position()
+        )
+        and line_contained_in_region(
+            c.end_position(), parent_function.start_position(), parent_function.end_position()
+        )
+    ]:
         for e in child.recursive_function_calls:
             if e is not None:
                 recursive_function_calls.append(e)
@@ -409,11 +502,13 @@ def __get_recursive_calls_from_function(potential_children: List[CUNode], parent
     return recursive_function_calls
 
 
-def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[PatternInfo],
-                                             source_code_files: Dict,
-                                             cu_inst_result_dict: Dict,
-                                             function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]]) \
-        -> List[PatternInfo]:
+def identify_dependencies_for_same_functions(
+    pet: PETGraphX,
+    suggestions: List[PatternInfo],
+    source_code_files: Dict,
+    cu_inst_result_dict: Dict,
+    function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
+) -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
     and supplement the suggestions.
     :param pet: PET Graph
@@ -457,57 +552,93 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
             cur_potential_parent_function = potential_parent_functions_1.pop()
             # get recursive function call from original source code
             try:
-                get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line),
-                                                   ts_1.node_id.split(":")[0])
+                get_function_call_from_source_code(
+                    source_code_files, int(ts_1.pragma_line), ts_1.node_id.split(":")[0]
+                )
             except IndexError:
                 continue
             # get potential children by dfs enumerating children nodes inside cur_potential_parent_functions scope
-            potential_children = __get_potential_children_of_function(pet, cur_potential_parent_function)
+            potential_children = __get_potential_children_of_function(
+                pet, cur_potential_parent_function
+            )
 
-            cppf_recursive_function_calls = __get_recursive_calls_from_function(potential_children,
-                                                                                cur_potential_parent_function)
+            cppf_recursive_function_calls = __get_recursive_calls_from_function(
+                potential_children, cur_potential_parent_function
+            )
             outer_breaker = False
-            for rfce_idx_1, recursive_function_call_entry_1 in enumerate(cppf_recursive_function_calls):
+            for rfce_idx_1, recursive_function_call_entry_1 in enumerate(
+                cppf_recursive_function_calls
+            ):
                 if outer_breaker:
                     break
                 # 3. get R/W information for cf's parameters based on CUInstResult.txt
-                called_function_name_1, call_line_1 = recursive_function_call_entry_1.split(",")[0].split(" ")
+                called_function_name_1, call_line_1 = recursive_function_call_entry_1.split(",")[
+                    0
+                ].split(" ")
                 lower_line_num_1 = ts_1.pragma_line
                 if ":" in lower_line_num_1:
                     lower_line_num_1 = lower_line_num_1.split(":")[1]
                 lower_line_num_1 = int(lower_line_num_1)
-                ret_val_1 = get_function_call_parameter_rw_information(pet, call_line_1, ts_1._node, lower_line_num_1,
-                                                                       True, False,
-                                                                       cu_inst_result_dict, source_code_files, [],
-                                                                       function_raw_information_cache,
-                                                                       function_parameter_alias_dict,
-                                                                       called_function_name=called_function_name_1)
+                ret_val_1 = get_function_call_parameter_rw_information(
+                    pet,
+                    call_line_1,
+                    ts_1._node,
+                    lower_line_num_1,
+                    True,
+                    False,
+                    cu_inst_result_dict,
+                    source_code_files,
+                    [],
+                    function_raw_information_cache,
+                    function_parameter_alias_dict,
+                    called_function_name=called_function_name_1,
+                )
                 if ret_val_1 is None:
                     continue
-                (recursive_function_call_line_1, parameter_names_1_raw_information, recursively_visited_1,
-                 function_raw_information_cache) = ret_val_1
+                (
+                    recursive_function_call_line_1,
+                    parameter_names_1_raw_information,
+                    recursively_visited_1,
+                    function_raw_information_cache,
+                ) = ret_val_1
                 # 4. iterate over successive calls to cf, named scf
-                for rfce_idx_2, recursive_function_call_entry_2 in enumerate(cppf_recursive_function_calls):
+                for rfce_idx_2, recursive_function_call_entry_2 in enumerate(
+                    cppf_recursive_function_calls
+                ):
                     if rfce_idx_2 == rfce_idx_1:
                         continue
                     if recursive_function_call_entry_2 is None:
                         continue
                     # 5. get R/W Information for scf
-                    called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(",")[0].split(" ")
+                    called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(
+                        ","
+                    )[0].split(" ")
                     lower_line_num_2 = ts_1.pragma_line
                     if ":" in lower_line_num_2:
                         lower_line_num_2 = lower_line_num_2.split(":")[1]
                     lower_line_num_2 = int(lower_line_num_2)
-                    ret_val_2 = get_function_call_parameter_rw_information(pet, call_line_2, ts_1._node,
-                                                                           lower_line_num_2, False, True,
-                                                                           cu_inst_result_dict, source_code_files, [],
-                                                                           function_raw_information_cache,
-                                                                           function_parameter_alias_dict,
-                                                                           called_function_name=called_function_name_2)
+                    ret_val_2 = get_function_call_parameter_rw_information(
+                        pet,
+                        call_line_2,
+                        ts_1._node,
+                        lower_line_num_2,
+                        False,
+                        True,
+                        cu_inst_result_dict,
+                        source_code_files,
+                        [],
+                        function_raw_information_cache,
+                        function_parameter_alias_dict,
+                        called_function_name=called_function_name_2,
+                    )
                     if ret_val_2 is None:
                         continue
-                    (recursive_function_call_line_2, parameter_names_2_raw_information, recursively_visited_2,
-                     function_raw_information_cache) = ret_val_2
+                    (
+                        recursive_function_call_line_2,
+                        parameter_names_2_raw_information,
+                        recursively_visited_2,
+                        function_raw_information_cache,
+                    ) = ret_val_2
 
                     # 6. check cf's R/W information against scf's R/W information and identify dependencies
                     # 6.1 Intersect cf's parameters with scf's parameters
@@ -531,7 +662,9 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for (intersection_var, is_pessimistic) in [(e[0], e[2]) for e in intersection if e[1]]:
+                        for (intersection_var, is_pessimistic) in [
+                            (e[0], e[2]) for e in intersection if e[1]
+                        ]:
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append((intersection_var, is_pessimistic))
@@ -540,13 +673,17 @@ def identify_dependencies_for_same_functions(pet: PETGraphX, suggestions: List[P
                             in_dep_updates[ts_2].append((intersection_var, is_pessimistic))
                     outer_breaker = True
     # perform updates of in and out dependencies
-    return __perform_dependency_updates(task_suggestions, in_dep_updates, out_dep_updates, result_suggestions)
+    return __perform_dependency_updates(
+        task_suggestions, in_dep_updates, out_dep_updates, result_suggestions
+    )
 
 
-def __perform_dependency_updates(task_suggestions: List[TaskParallelismInfo],
-                                 in_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
-                                 out_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
-                                 result_suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def __perform_dependency_updates(
+    task_suggestions: List[TaskParallelismInfo],
+    in_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
+    out_dep_updates: Dict[TaskParallelismInfo, List[Tuple[str, bool]]],
+    result_suggestions: List[PatternInfo],
+) -> List[PatternInfo]:
     """Helper function for identify_dependencies_for_same_functions.
     Applies the identified updates to the in and out dependency lists of each task suggestion.
     Returns the list of modified suggestions.
@@ -560,25 +697,37 @@ def __perform_dependency_updates(task_suggestions: List[TaskParallelismInfo],
         if ts in out_dep_updates:
             for (out_dep_var, is_pessimistic) in out_dep_updates[ts]:
                 if out_dep_var not in ts.out_dep and is_pessimistic:
-                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: OUT  VarName:",
-                          out_dep_var)
+                    print(
+                        "TPDet: Warning: Pessimistic Dependency:: CUid:",
+                        ts.node_id,
+                        " Type: OUT  VarName:",
+                        out_dep_var,
+                    )
                 ts.out_dep.append(out_dep_var)
             ts.out_dep = list(set(ts.out_dep))
         if ts in in_dep_updates:
             for (in_dep_var, is_pessimistic) in in_dep_updates[ts]:
                 if in_dep_var not in ts.in_dep and is_pessimistic:
-                    print("TPDet: Warning: Pessimistic Dependency:: CUid:", ts.node_id, " Type: IN  VarName:",
-                          in_dep_var)
+                    print(
+                        "TPDet: Warning: Pessimistic Dependency:: CUid:",
+                        ts.node_id,
+                        " Type: IN  VarName:",
+                        in_dep_var,
+                    )
                 ts.in_dep.append(in_dep_var)
             ts.in_dep = list(set(ts.in_dep))
         result_suggestions.append(ts)
     return result_suggestions
 
 
-def get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parameter_position: int,
-                                        source_code_files: Dict[str, str], visited: List[Tuple[CUNode, int]],
-                                        called_function_cache: Dict) \
-        -> List[Tuple[str, str, str, str]]:
+def get_alias_for_parameter_at_position(
+    pet: PETGraphX,
+    function: CUNode,
+    parameter_position: int,
+    source_code_files: Dict[str, str],
+    visited: List[Tuple[CUNode, int]],
+    called_function_cache: Dict,
+) -> List[Tuple[str, str, str, str]]:
     """Returns alias information for a parameter at a specific position.
     :param pet: PET Graph
     :param function: CUNode of called function
@@ -604,29 +753,43 @@ def get_alias_for_parameter_at_position(pet: PETGraphX, function: CUNode, parame
             # read line from source code (iterate over lines of CU to search for function call)
             for line in range(cu.start_line, cu.end_line + 1):
                 try:
-                    source_code_line = get_function_call_from_source_code(source_code_files, line,
-                                                                          cu.id.split(":")[0])
+                    source_code_line = get_function_call_from_source_code(
+                        source_code_files, line, cu.id.split(":")[0]
+                    )
                 except IndexError:
                     continue
                 # get parameter names from call
 
-                function_name, call_parameters = get_called_function_and_parameter_names_from_function_call(
-                    source_code_line, called_function.name, cu)
+                (
+                    function_name,
+                    call_parameters,
+                ) = get_called_function_and_parameter_names_from_function_call(
+                    source_code_line, called_function.name, cu
+                )
                 # check if parameter_name is contained
                 for idx, pn in enumerate(call_parameters):
                     if pn == parameter_name:
                         # check if same configuration for alias detection has been used:
                         if (called_function, idx) not in visited:
                             # if not, start recursion
-                            result += get_alias_for_parameter_at_position(pet, called_function, idx,
-                                                                          source_code_files, visited,
-                                                                          called_function_cache)
+                            result += get_alias_for_parameter_at_position(
+                                pet,
+                                called_function,
+                                idx,
+                                source_code_files,
+                                visited,
+                                called_function_cache,
+                            )
     return result
 
 
-def check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: Dict,
-                                  task_suggestion_1: TaskParallelismInfo, param_names_1: List[Optional[str]],
-                                  task_suggestion_2: TaskParallelismInfo) -> List[str]:
+def check_dependence_of_task_pair(
+    aliases: Dict,
+    raw_dependency_information: Dict,
+    task_suggestion_1: TaskParallelismInfo,
+    param_names_1: List[Optional[str]],
+    task_suggestion_2: TaskParallelismInfo,
+) -> List[str]:
     """Check if function calls specified by task_suggestion_1 and _2 are dependent and
     return a list of found dependencies. An empty list is returned if task_suggestion_2 occurs before task_suggestion_1.
     :param aliases: alias information dict
@@ -681,28 +844,44 @@ def check_dependence_of_task_pair(aliases: Dict, raw_dependency_information: Dic
                                 dependencies.append(parameter)
     dependencies = list(set(dependencies))
     # check if task suggestion_1 occurs prior to task_suggestion_2
-    if task_suggestion_1._node.start_position().split(":")[0] == task_suggestion_2._node.start_position().split(":")[0]:
+    if (
+        task_suggestion_1._node.start_position().split(":")[0]
+        == task_suggestion_2._node.start_position().split(":")[0]
+    ):
         # same file id
-        ts_1_pragma_line = int(task_suggestion_1.pragma_line) if ":" not in task_suggestion_1.pragma_line else int(
-            task_suggestion_1.pragma_line.split(":")[1])
-        ts_2_pragma_line = int(task_suggestion_2.pragma_line) if ":" not in task_suggestion_2.pragma_line else int(
-            task_suggestion_2.pragma_line.split(":")[1])
+        ts_1_pragma_line = (
+            int(task_suggestion_1.pragma_line)
+            if ":" not in task_suggestion_1.pragma_line
+            else int(task_suggestion_1.pragma_line.split(":")[1])
+        )
+        ts_2_pragma_line = (
+            int(task_suggestion_2.pragma_line)
+            if ":" not in task_suggestion_2.pragma_line
+            else int(task_suggestion_2.pragma_line.split(":")[1])
+        )
         # check line numbers
         if ts_2_pragma_line < ts_1_pragma_line:
             return []
     return dependencies
 
 
-def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: str, parent_cu_node: CUNode,
-                                               lower_line_num: int, equal_lower_line_num: bool,
-                                               greater_lower_line_num: bool,
-                                               cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
-                                               source_code_files: Dict[str, str], recursively_visited: List[CUNode],
-                                               function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
-                                               function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
-                                               called_cu_id: Optional[str] = None,
-                                               called_function_name: Optional[str] = None) \
-        -> Optional[Tuple[str, List[Tuple[str, bool, bool]], List[CUNode], Dict[str, List[Tuple[bool, bool]]]]]:
+def get_function_call_parameter_rw_information(
+    pet: PETGraphX,
+    call_position: str,
+    parent_cu_node: CUNode,
+    lower_line_num: int,
+    equal_lower_line_num: bool,
+    greater_lower_line_num: bool,
+    cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
+    source_code_files: Dict[str, str],
+    recursively_visited: List[CUNode],
+    function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
+    function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
+    called_cu_id: Optional[str] = None,
+    called_function_name: Optional[str] = None,
+) -> Optional[
+    Tuple[str, List[Tuple[str, bool, bool]], List[CUNode], Dict[str, List[Tuple[bool, bool]]]]
+]:
     """Retrieves the call_position and information whether the parameters of the target function are modified
     within the respective function, based on the contents of cu_inst_result_dict.
     Either called_cu_id, called_function_name or both need to be set.
@@ -778,9 +957,15 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
     called_function_cu = pet.node_at(called_function_cu_id)
     # get raw info concerning the scope of called_function_cu
     raw_info = cu_inst_result_dict["RAW"]
-    filtered_raw_info = [e for e in raw_info if line_contained_in_region(cast(str, e["line"]),
-                                                                         called_function_cu.start_position(),
-                                                                         called_function_cu.end_position())]
+    filtered_raw_info = [
+        e
+        for e in raw_info
+        if line_contained_in_region(
+            cast(str, e["line"]),
+            called_function_cu.start_position(),
+            called_function_cu.end_position(),
+        )
+    ]
     # iterate over args positions and check if RAW is reported
     raw_reported_for_param_positions: List[Tuple[bool, bool]] = []
     for arg_var in called_function_cu.args:
@@ -805,27 +990,45 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
 
     # 5.3 get function call corresponding to scf from source code
     try:
-        function_call_string = get_function_call_from_source_code(source_code_files, int(call_position.split(":")[1]),
-                                                                  call_position.split(":")[0], called_function_name=
-                                                                  demangle(called_function_name_not_none).split("(")[0])
+        function_call_string = get_function_call_from_source_code(
+            source_code_files,
+            int(call_position.split(":")[1]),
+            call_position.split(":")[0],
+            called_function_name=demangle(called_function_name_not_none).split("(")[0],
+        )
     except IndexError:
         return None
     # get function parameter names from recursive function call
     function_name, parameter_names = get_called_function_and_parameter_names_from_function_call(
-        function_call_string, called_function_name_not_none, parent_cu_node)
+        function_call_string, called_function_name_not_none, parent_cu_node
+    )
 
     # 5.4. start recursion step
     res_called_function_raw_information: List[Tuple[bool, bool]] = []
     if called_function_cu not in recursively_visited:
-        (recursively_visited, res_called_function_name, res_called_function_raw_information,
-         function_raw_information_cache) = get_function_call_parameter_rw_information_recursion_step(
-            pet, called_function_cu, recursively_visited, function_raw_information_cache, cu_inst_result_dict,
-            function_parameter_alias_dict, source_code_files)
-        function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
+        (
+            recursively_visited,
+            res_called_function_name,
+            res_called_function_raw_information,
+            function_raw_information_cache,
+        ) = get_function_call_parameter_rw_information_recursion_step(
+            pet,
+            called_function_cu,
+            recursively_visited,
+            function_raw_information_cache,
+            cu_inst_result_dict,
+            function_parameter_alias_dict,
+            source_code_files,
+        )
+        function_raw_information_cache[
+            called_function_cu.name
+        ] = res_called_function_raw_information
     else:
         # read cache
         if called_function_cu.name in function_raw_information_cache:
-            res_called_function_raw_information = function_raw_information_cache[called_function_cu.name]
+            res_called_function_raw_information = function_raw_information_cache[
+                called_function_cu.name
+            ]
 
     # 5.5 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
@@ -835,8 +1038,12 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
         for idx in range(0, len(parameter_names)):
             tmp = (
                 parameter_names[idx],
-                (raw_reported_for_param_positions[idx][0] or res_called_function_raw_information[idx][0]),
-                res_called_function_raw_information[idx][1])
+                (
+                    raw_reported_for_param_positions[idx][0]
+                    or res_called_function_raw_information[idx][0]
+                ),
+                res_called_function_raw_information[idx][1],
+            )
             if tmp[0] is None:
                 continue
             tmp_not_none = cast(Tuple[str, bool, bool], tmp)
@@ -857,19 +1064,23 @@ def get_function_call_parameter_rw_information(pet: PETGraphX, call_position: st
             tmp_not_none = cast(Tuple[str, bool, bool], tmp)
             parameter_names_raw_information.append(tmp_not_none)
 
-    return call_position, parameter_names_raw_information, recursively_visited, function_raw_information_cache
+    return (
+        call_position,
+        parameter_names_raw_information,
+        recursively_visited,
+        function_raw_information_cache,
+    )
 
 
-def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, called_function_cu: CUNode,
-                                                              recursively_visited: List[CUNode],
-                                                              function_raw_information_cache: Dict[
-                                                                  str, List[Tuple[bool, bool]]],
-                                                              cu_inst_result_dict: Dict[
-                                                                  str, List[Dict[str, Optional[str]]]],
-                                                              function_parameter_alias_dict: Dict[
-                                                                  str, List[Tuple[str, str]]],
-                                                              source_code_files: Dict[str, str]) \
-        -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
+def get_function_call_parameter_rw_information_recursion_step(
+    pet: PETGraphX,
+    called_function_cu: CUNode,
+    recursively_visited: List[CUNode],
+    function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
+    cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
+    function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
+    source_code_files: Dict[str, str],
+) -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
     i.e. for every function call in called functions body.
     The gathered information is aggregated via a logical disjunction on a per-variable level.
@@ -897,50 +1108,82 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
         cur_potential_child = queue_1.pop()
         visited.append(cur_potential_child)
         # test if cur_potential_child is inside cur_potential_parent_functions scope
-        if line_contained_in_region(cur_potential_child.start_position(),
-                                    called_function_cu.start_position(),
-                                    called_function_cu.end_position()) and \
-                line_contained_in_region(cur_potential_child.end_position(),
-                                         called_function_cu.start_position(),
-                                         called_function_cu.end_position()):
+        if line_contained_in_region(
+            cur_potential_child.start_position(),
+            called_function_cu.start_position(),
+            called_function_cu.end_position(),
+        ) and line_contained_in_region(
+            cur_potential_child.end_position(),
+            called_function_cu.start_position(),
+            called_function_cu.end_position(),
+        ):
             if cur_potential_child not in potential_children:
                 potential_children.append(cur_potential_child)
         for tmp_child in pet.direct_children(cur_potential_child):
-            if tmp_child not in queue_1 and tmp_child not in potential_children and tmp_child not in visited:
+            if (
+                tmp_child not in queue_1
+                and tmp_child not in potential_children
+                and tmp_child not in visited
+            ):
                 queue_1.append(tmp_child)
 
     called_function_args_raw_information = []
     for var in called_function_cu.args:
         called_function_args_raw_information.append((var.name, False, False))
 
-    for child in [c for c in potential_children if
-                  line_contained_in_region(c.start_position(), called_function_cu.start_position(),
-                                           called_function_cu.end_position())
-                  and
-                  line_contained_in_region(c.end_position(), called_function_cu.start_position(),
-                                           called_function_cu.end_position())]:
+    for child in [
+        c
+        for c in potential_children
+        if line_contained_in_region(
+            c.start_position(),
+            called_function_cu.start_position(),
+            called_function_cu.end_position(),
+        )
+        and line_contained_in_region(
+            c.end_position(), called_function_cu.start_position(), called_function_cu.end_position()
+        )
+    ]:
         # find called functions
         for child_func in pet.direct_children_of_type(child, NodeType.FUNC):
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
-                ret_val = get_function_call_parameter_rw_information(pet, child.start_position(), child,
-                                                                     int(child.start_position().split(":")[1]), True,
-                                                                     True,
-                                                                     cu_inst_result_dict, source_code_files,
-                                                                     recursively_visited,
-                                                                     function_raw_information_cache,
-                                                                     function_parameter_alias_dict,
-                                                                     called_function_name=child_func.name)
+                ret_val = get_function_call_parameter_rw_information(
+                    pet,
+                    child.start_position(),
+                    child,
+                    int(child.start_position().split(":")[1]),
+                    True,
+                    True,
+                    cu_inst_result_dict,
+                    source_code_files,
+                    recursively_visited,
+                    function_raw_information_cache,
+                    function_parameter_alias_dict,
+                    called_function_name=child_func.name,
+                )
                 if ret_val is None:
                     continue
-                (recursive_function_call_line, parameter_names_raw_information, recursively_visited,
-                 function_raw_information_cache) = ret_val
+                (
+                    recursive_function_call_line,
+                    parameter_names_raw_information,
+                    recursively_visited,
+                    function_raw_information_cache,
+                ) = ret_val
                 # perform or-conjunction of RAW information parent <> child
-                for child_var_name, child_raw_info, child_is_pessimistic in parameter_names_raw_information:
-                    for idx, (var_name, raw_info, is_pessimistic) in enumerate(called_function_args_raw_information):
+                for (
+                    child_var_name,
+                    child_raw_info,
+                    child_is_pessimistic,
+                ) in parameter_names_raw_information:
+                    for idx, (var_name, raw_info, is_pessimistic) in enumerate(
+                        called_function_args_raw_information
+                    ):
                         if var_name == child_var_name:
-                            called_function_args_raw_information[idx] = (var_name, raw_info or child_raw_info,
-                                                                         child_is_pessimistic or is_pessimistic)
+                            called_function_args_raw_information[idx] = (
+                                var_name,
+                                raw_info or child_raw_info,
+                                child_is_pessimistic or is_pessimistic,
+                            )
 
     # if parameter alias entry for parent function exists:
     if called_function_cu.name in function_parameter_alias_dict:
@@ -954,21 +1197,24 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
             while len(queue) > 0:
                 cur: CUNode = queue.pop(0)
                 # check if cur inside function body, append to function_internal_cu_nodes if so
-                if line_contained_in_region(cur.start_position(), called_function_cu.start_position(),
-                                            called_function_cu.end_position()) and \
-                        line_contained_in_region(cur.end_position(), called_function_cu.start_position(),
-                                                 called_function_cu.end_position()):
+                if line_contained_in_region(
+                    cur.start_position(),
+                    called_function_cu.start_position(),
+                    called_function_cu.end_position(),
+                ) and line_contained_in_region(
+                    cur.end_position(),
+                    called_function_cu.start_position(),
+                    called_function_cu.end_position(),
+                ):
                     function_internal_cu_nodes.append(cur)
                 # add children to queue
                 for cur_child in pet.direct_children(cur):
-                    if cur_child not in function_internal_cu_nodes and \
-                            cur_child not in queue:
+                    if cur_child not in function_internal_cu_nodes and cur_child not in queue:
                         queue.append(cur_child)
             for child_cu in function_internal_cu_nodes:
                 child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
                 child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
-                dep_var_names = [x[2].var_name for x in
-                                 child_in_deps + child_out_deps]
+                dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]
                 dep_var_names_not_none = [x for x in dep_var_names if x is not None]
                 dep_var_names_not_none = [x.replace(".addr", "") for x in dep_var_names_not_none]
                 if alias_name in dep_var_names_not_none:
@@ -976,13 +1222,20 @@ def get_function_call_parameter_rw_information_recursion_step(pet: PETGraphX, ca
                     break
             if var_name_is_modified:
                 # update RAW information
-                for idx, (old_var_name, raw_info, _) in enumerate(called_function_args_raw_information):
+                for idx, (old_var_name, raw_info, _) in enumerate(
+                    called_function_args_raw_information
+                ):
                     if old_var_name == var_name:
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True, True)
                             # second True denotes the pessimistic nature of a potential created dependency
     # remove names from called_function_args_raw_information
-    called_function_args_raw_information_bools = [(e[1], e[2]) for e in called_function_args_raw_information]
+    called_function_args_raw_information_bools = [
+        (e[1], e[2]) for e in called_function_args_raw_information
+    ]
     return (
-        recursively_visited, called_function_cu.name, called_function_args_raw_information_bools,
-        function_raw_information_cache)
+        recursively_visited,
+        called_function_cu.name,
+        called_function_args_raw_information_bools,
+        function_raw_information_cache,
+    )

@@ -13,7 +13,8 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 os.chdir(Path(__file__).parent)
-SRC = Path("discopop_explorer")
+Explorer_SRC = Path("discopop_explorer")
+Wizard_SRC = Path("discopop_wizard")
 
 
 def get_version():
@@ -22,8 +23,14 @@ def get_version():
 
 
 def get_requirements():
-    with open(SRC / "requirements.txt") as f:
-        return [line.rstrip() for line in f]
+    requirements = []
+    # add discopop_explorer requirements
+    with open(Explorer_SRC / "requirements.txt") as f:
+        requirements += [line.rstrip() for line in f]
+    # add discopop_wizard requirements
+    with open(Wizard_SRC / "requirements.txt") as f:
+        requirements += [line.rstrip() for line in f]
+    return requirements
 
 
 if sys.version_info < (3, 6):
@@ -39,7 +46,7 @@ setup(
     description="DiscoPoP is a tool that helps software developers parallelize their "
                 "programs with threads. It discovers potential parallelism in a "
                 "sequential program and makes recommendations on how to exploit it.",
-    long_description=open(SRC / "README.md").read(),
+#long_description=open(SRC / "README.md").read(),
     long_description_content_type="text/markdown",
     install_requires=get_requirements(),
     python_requires=">=3.6",
@@ -47,6 +54,7 @@ setup(
         "console_scripts": [
             "discopop_explorer=discopop_explorer.__main__:main",
             "discopop_profiler=discopop_profiler.__main__:main",
+            "discopop_wizard=discopop_wizard.__main__:main",
         ]
     },
     zip_safe=True,
@@ -60,4 +68,5 @@ setup(
         "Topic :: Software Development",
     ],
     license_files=["LICENSE"],
+    include_package_data=True,
 )

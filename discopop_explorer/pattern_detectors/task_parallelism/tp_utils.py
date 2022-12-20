@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import subprocess
 from typing import cast, IO, Dict, List, Tuple, Optional
 
@@ -36,8 +44,12 @@ def demangle(mangled_name: str) -> str:
             demangling_cache[mangled_name] = out
             return out
     except FileNotFoundError:
-        raise ValueError("Executable '" + llvm_cxxfilt_path + "' not found." +
-                         " Check or supply --llvm-cxxfilt-path parameter.")
+        raise ValueError(
+            "Executable '"
+            + llvm_cxxfilt_path
+            + "' not found."
+            + " Check or supply --llvm-cxxfilt-path parameter."
+        )
     raise ValueError("Demangling of " + mangled_name + " not possible!")
 
 
@@ -55,15 +67,17 @@ def line_contained_in_region(test_line: str, start_line: str, end_line: str) -> 
     start_line_line = int(start_line.split(":")[1])
     end_line_file_id = int(end_line.split(":")[0])
     end_line_line = int(end_line.split(":")[1])
-    if test_line_file_id == start_line_file_id == end_line_file_id and \
-            start_line_line <= test_line_line <= end_line_line:
+    if (
+        test_line_file_id == start_line_file_id == end_line_file_id
+        and start_line_line <= test_line_line <= end_line_line
+    ):
         return True
     return False
 
 
-def get_parent_of_type(pet: PETGraphX, node: CUNode,
-                       parent_type: NodeType, edge_type: EdgeType, only_first: bool) \
-        -> List[Tuple[CUNode, Optional[CUNode]]]:
+def get_parent_of_type(
+    pet: PETGraphX, node: CUNode, parent_type: NodeType, edge_type: EdgeType, only_first: bool
+) -> List[Tuple[CUNode, Optional[CUNode]]]:
     """return parent cu nodes and the last node of the path to them as a tuple
     for the given node with type parent_type
     accessible via edges of type edge_type.
@@ -82,9 +96,11 @@ def get_parent_of_type(pet: PETGraphX, node: CUNode,
         (cur_node, last_node) = tmp
         last_node = cur_node
         visited.append(cur_node)
-        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
-                    if pet.node_at(s) not in visited and
-                    e.etype == edge_type]
+        tmp_list = [
+            (s, t, e)
+            for s, t, e in pet.in_edges(cur_node.id)
+            if pet.node_at(s) not in visited and e.etype == edge_type
+        ]
         for e in tmp_list:
             if pet.node_at(e[0]).type == parent_type:
                 if only_first is True:
@@ -113,10 +129,11 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
             continue
         visited.append(cur_cu)
         # check if cur_cu inside functions body
-        if line_contained_in_region(cur_cu.start_position(), function_cu.start_position(),
-                                    function_cu.end_position()) and \
-                line_contained_in_region(cur_cu.end_position(), function_cu.start_position(),
-                                         function_cu.end_position()):
+        if line_contained_in_region(
+            cur_cu.start_position(), function_cu.start_position(), function_cu.end_position()
+        ) and line_contained_in_region(
+            cur_cu.end_position(), function_cu.start_position(), function_cu.end_position()
+        ):
             # cur_cu contained in function body
             if cur_cu not in result_list:
                 result_list.append(cur_cu)
@@ -130,8 +147,9 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
     return result_list
 
 
-def check_reachability(pet: PETGraphX, target: CUNode,
-                       source: CUNode, edge_types: List[EdgeType]) -> bool:
+def check_reachability(
+    pet: PETGraphX, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+) -> bool:
     """check if target is reachable from source via edges of types edge_type.
     :param pet: PET graph
     :param source: CUNode
@@ -148,9 +166,11 @@ def check_reachability(pet: PETGraphX, target: CUNode,
             cur_node_list = cast(List[CUNode], cur_node)
             cur_node = cur_node_list[0]
         visited.append(cur_node.id)
-        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id)
-                    if s not in visited and
-                    e.etype in edge_types]
+        tmp_list = [
+            (s, t, e)
+            for s, t, e in pet.in_edges(cur_node.id)
+            if s not in visited and e.etype in edge_types
+        ]
         for e in tmp_list:
             if pet.node_at(e[0]) == source:
                 return True
@@ -160,8 +180,9 @@ def check_reachability(pet: PETGraphX, target: CUNode,
     return False
 
 
-def get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode]) \
-        -> Tuple[List[CUNode], List[CUNode]]:
+def get_predecessor_nodes(
+    pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode]
+) -> Tuple[List[CUNode], List[CUNode]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -176,9 +197,13 @@ def get_predecessor_nodes(pet: PETGraphX, root: CUNode, visited_nodes: List[CUNo
     if root.type == NodeType.FUNC or root.tp_contains_taskwait is True:
         # root of type "function" or root is a barrier
         return result, visited_nodes
-    in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(root.id) if
-                     e.etype == EdgeType.SUCCESSOR and
-                     pet.node_at(s) != root and pet.node_at(s) not in visited_nodes]
+    in_succ_edges = [
+        (s, t, e)
+        for s, t, e in pet.in_edges(root.id)
+        if e.etype == EdgeType.SUCCESSOR
+        and pet.node_at(s) != root
+        and pet.node_at(s) not in visited_nodes
+    ]
     for e in in_succ_edges:
         tmp, visited_nodes = get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
         result += tmp
@@ -192,13 +217,14 @@ def check_neighbours(first: Task, second: Task):
     :param second: successor task
     :return: true if second task immediately follows first task
     """
-    fel = int(first.end_line.split(':')[1])
-    ssl = int(second.start_line.split(':')[1])
+    fel = int(first.end_line.split(":")[1])
+    ssl = int(second.start_line.split(":")[1])
     return fel == ssl or fel + 1 == ssl or fel + 2 == ssl
 
 
+# NOTE: left, as it may become relevant in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-#def merge_tasks(pet: PETGraphX, task: Task):
+# def merge_tasks(pet: PETGraphX, task: Task):
 #    """Merges the tasks into having required workload.
 #
 #    :param pet: PET graph
@@ -248,7 +274,9 @@ def create_task_tree(pet: PETGraphX, root: CUNode):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visited_func: List[CUNode]):
+def create_task_tree_helper(
+    pet: PETGraphX, current: CUNode, root: Task, visited_func: List[CUNode]
+):
     """generates task tree data recursively
 
     :param pet: PET graph
@@ -269,7 +297,7 @@ def create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visited
             task = Task(pet, child)
             root.child_tasks.append(task)
             create_task_tree_helper(pet, child, task, visited_func)
-        elif mw_type == MWType.FORK and not child.start_position().endswith('16383'):
+        elif mw_type == MWType.FORK and not child.start_position().endswith("16383"):
             task = Task(pet, child)
             __forks.add(task)
             create_task_tree_helper(pet, child, task, visited_func)
@@ -277,8 +305,9 @@ def create_task_tree_helper(pet: PETGraphX, current: CUNode, root: Task, visited
             create_task_tree_helper(pet, child, root, visited_func)
 
 
-def recursive_function_call_contained_in_worker_cu(function_call_string: str,
-                                                   worker_cus: List[CUNode]) -> CUNode:
+def recursive_function_call_contained_in_worker_cu(
+    function_call_string: str, worker_cus: List[CUNode]
+) -> CUNode:
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -299,8 +328,10 @@ def recursive_function_call_contained_in_worker_cu(function_call_string: str,
     # function_call_string looks now like like: 'fib 7:52'
 
     # split String into function_name. file_id and line_number
-    file_id = function_call_string[function_call_string.index(" ") + 1:function_call_string.index(":")]
-    line_number = function_call_string[function_call_string.index(":") + 1:]
+    file_id = function_call_string[
+        function_call_string.index(" ") + 1 : function_call_string.index(":")
+    ]
+    line_number = function_call_string[function_call_string.index(":") + 1 :]
 
     # get tightest surrounding cu
     tightest_worker_cu = None
@@ -308,33 +339,36 @@ def recursive_function_call_contained_in_worker_cu(function_call_string: str,
     for cur_w in worker_cus:
         cur_w_starts_at_line = cur_w.start_position()
         cur_w_ends_at_line = cur_w.end_position()
-        cur_w_file_id = cur_w_starts_at_line[:cur_w_starts_at_line.index(":")]
+        cur_w_file_id = cur_w_starts_at_line[: cur_w_starts_at_line.index(":")]
         # check if file_id is equal
         if file_id == cur_w_file_id:
             # trim to line numbers only
-            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1:]
-            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1:]
+            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1 :]
+            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1 :]
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 # check if cur_w is tighter than last result
                 if tightest_worker_cu is None:
                     tightest_worker_cu = cur_w
                     continue
-                if line_contained_in_region(cur_w.start_position(),
-                                            tightest_worker_cu.start_position(),
-                                            tightest_worker_cu.end_position()) \
-                        and \
-                        line_contained_in_region(cur_w.end_position(),
-                                                 tightest_worker_cu.start_position(),
-                                                 tightest_worker_cu.end_position()):
+                if line_contained_in_region(
+                    cur_w.start_position(),
+                    tightest_worker_cu.start_position(),
+                    tightest_worker_cu.end_position(),
+                ) and line_contained_in_region(
+                    cur_w.end_position(),
+                    tightest_worker_cu.start_position(),
+                    tightest_worker_cu.end_position(),
+                ):
                     tightest_worker_cu = cur_w
     if tightest_worker_cu is None:
         raise ValueError("No surrounding worker CU could be found.")
     return cast(CUNode, tightest_worker_cu)
 
 
-def task_contained_in_reduction_loop(pet: PETGraphX,
-                                     task: TaskParallelismInfo) -> Tuple[Optional[Dict[str, str]], Optional[CUNode]]:
+def task_contained_in_reduction_loop(
+    pet: PETGraphX, task: TaskParallelismInfo
+) -> Tuple[Optional[Dict[str, str]], Optional[CUNode]]:
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
     else, return reduction_vars entry of parent reduction loop and loop CU Node.
@@ -351,13 +385,13 @@ def task_contained_in_reduction_loop(pet: PETGraphX,
         # check if task is actually contained in one of the parents
         for parent_loop, last_node in parents:
             p_start_line = parent_loop.start_position()
-            p_start_line = p_start_line[p_start_line.index(":") + 1:]
+            p_start_line = p_start_line[p_start_line.index(":") + 1 :]
             p_end_line = parent_loop.end_position()
-            p_end_line = p_end_line[p_end_line.index(":") + 1:]
+            p_end_line = p_end_line[p_end_line.index(":") + 1 :]
             t_start_line = task.start_line
-            t_start_line = t_start_line[t_start_line.index(":") + 1:]
+            t_start_line = t_start_line[t_start_line.index(":") + 1 :]
             t_end_line = task.end_line
-            t_end_line = t_end_line[t_end_line.index(":") + 1:]
+            t_end_line = t_end_line[t_end_line.index(":") + 1 :]
             if p_start_line <= t_start_line and p_end_line >= t_end_line:
                 contained_in.append(parent_loop)
     # check if task is contained in a reduction loop
@@ -370,8 +404,12 @@ def task_contained_in_reduction_loop(pet: PETGraphX,
     return None, None
 
 
-def get_function_call_from_source_code(source_code_files: Dict[str, str], line_number: int, file_id: str,
-                                       called_function_name: Optional[str] = None) -> str:
+def get_function_call_from_source_code(
+    source_code_files: Dict[str, str],
+    line_number: int,
+    file_id: str,
+    called_function_name: Optional[str] = None,
+) -> str:
     """Extract code snippet from original source code which contains a function call.
     :param source_code_files: File-Mapping dictionary
     :param line_number: original source code line number to start searching at
@@ -385,14 +423,14 @@ def get_function_call_from_source_code(source_code_files: Dict[str, str], line_n
     function_call_string = source_code_lines[line_number + offset]
     if ")" in function_call_string and "(" in function_call_string:
         if function_call_string.index(")") < function_call_string.index("("):
-            function_call_string = function_call_string[function_call_string.index(")") + 1:]
+            function_call_string = function_call_string[function_call_string.index(")") + 1 :]
     if ")" in function_call_string and "(" not in function_call_string:
-        function_call_string = function_call_string[function_call_string.index(")") + 1:]
+        function_call_string = function_call_string[function_call_string.index(")") + 1 :]
 
     def __get_word_prior_to_bracket(string):
         if "(" not in string:
             return None
-        string = string[:string.index("(")]
+        string = string[: string.index("(")]
         string = string.split(" ")
         string = [e for e in string if len(e) > 0]
         string = string[-1]
@@ -402,22 +440,28 @@ def get_function_call_from_source_code(source_code_files: Dict[str, str], line_n
     if called_function_name is None:
         called_function_name_contained = True
 
-    while function_call_string.count("(") > function_call_string.count(")") \
-            or function_call_string.count("(") < 1 \
-            or function_call_string.count(")") < 1 \
-            or __get_word_prior_to_bracket(function_call_string) == "while" \
-            or __get_word_prior_to_bracket(function_call_string) == "for" \
-            or __get_word_prior_to_bracket(function_call_string) == "if" \
-            or not called_function_name_contained:
+    while (
+        function_call_string.count("(") > function_call_string.count(")")
+        or function_call_string.count("(") < 1
+        or function_call_string.count(")") < 1
+        or __get_word_prior_to_bracket(function_call_string) == "while"
+        or __get_word_prior_to_bracket(function_call_string) == "for"
+        or __get_word_prior_to_bracket(function_call_string) == "if"
+        or not called_function_name_contained
+    ):
         # if ) prior to (, cut first part away
         if ")" in function_call_string and "(" in function_call_string:
             if function_call_string.index(")") < function_call_string.index("("):
-                function_call_string = function_call_string[function_call_string.index(")") + 1:]
+                function_call_string = function_call_string[function_call_string.index(")") + 1 :]
         # if word prior to ( is "while", "for" or "if", cut away until (
         word_prior_to_bracket = __get_word_prior_to_bracket(function_call_string)
         if word_prior_to_bracket is not None:
-            if word_prior_to_bracket == "while" or word_prior_to_bracket == "for" or word_prior_to_bracket == "if":
-                function_call_string = function_call_string[function_call_string.index("(") + 1:]
+            if (
+                word_prior_to_bracket == "while"
+                or word_prior_to_bracket == "for"
+                or word_prior_to_bracket == "if"
+            ):
+                function_call_string = function_call_string[function_call_string.index("(") + 1 :]
         # check if called_function_name is contained in function_call_string
         if not called_function_name_contained:
             called_function_name_str = cast(str, called_function_name)
@@ -430,14 +474,16 @@ def get_function_call_from_source_code(source_code_files: Dict[str, str], line_n
     if called_function_name is not None:
         called_function_name_str = cast(str, called_function_name)
         while function_call_string.count(called_function_name_str) > 1:
-            function_call_string = function_call_string[:function_call_string.rfind(called_function_name_str)]
+            function_call_string = function_call_string[
+                : function_call_string.rfind(called_function_name_str)
+            ]
 
     return function_call_string
 
 
-def get_called_function_and_parameter_names_from_function_call(source_code_line: str, mangled_function_name: str,
-                                                               node: CUNode) \
-        -> Tuple[Optional[str], List[Optional[str]]]:
+def get_called_function_and_parameter_names_from_function_call(
+    source_code_line: str, mangled_function_name: str, node: CUNode
+) -> Tuple[Optional[str], List[Optional[str]]]:
     """Returns the name of the called function and the names of the variables used as parameters in a list,
     if any are used.
     If parameter is a complex expression (e.g. addition, or function call, None is used at the respective position.
@@ -461,35 +507,50 @@ def get_called_function_and_parameter_names_from_function_call(source_code_line:
 
     # get parameters in brackets
     # parameter_string = source_code_line[function_position:]
-    parameter_string = source_code_line[source_code_line.find(function_name) + len(function_name):]
+    parameter_string = source_code_line[source_code_line.find(function_name) + len(function_name) :]
     parameter_string = parameter_string.replace("\t", "")
     if ";" in parameter_string:
-        parameter_string = parameter_string[:parameter_string.index(";")]
+        parameter_string = parameter_string[: parameter_string.index(";")]
     # prune left
     while "(" in parameter_string and not parameter_string.startswith("("):
-        parameter_string = parameter_string[parameter_string.find("("):]
+        parameter_string = parameter_string[parameter_string.find("(") :]
     # prune right
     while ")" in parameter_string and not parameter_string.endswith(")"):
-        parameter_string = parameter_string[:parameter_string.rfind(")") + 1]
+        parameter_string = parameter_string[: parameter_string.rfind(")") + 1]
     # prune to correct amount of closing brackets
     while not parameter_string.count("(") == parameter_string.count(")"):
         parameter_string = parameter_string[:-1]
-        parameter_string = parameter_string[:parameter_string.rfind(")") + 1]
+        parameter_string = parameter_string[: parameter_string.rfind(")") + 1]
     parameter_string = parameter_string[1:-1]
     # intersect parameters with set of known variables to prevent errors
     parameters = parameter_string.split(",")
     result_parameters: List[Optional[str]] = []
     for param in parameters:
         param = param.replace("\t", "")
-        if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
+        if (
+            "+" in param
+            or "-" in param
+            or "*" in param
+            or "/" in param
+            or "(" in param
+            or ")" in param
+        ):
             param_expression = param.replace("+", "$$").replace("-", "$$").replace("/", "$$")
-            param_expression = param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
+            param_expression = (
+                param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
+            )
             split_param_expression = param_expression.split("$$")
             split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
             # check if any of the parameters is in list of known variables
-            split_param_expression = [ex for ex in split_param_expression
-                                      if ex in [var.replace(".addr", "")
-                                                for var in [v.name for v in node.local_vars + node.global_vars]]]
+            split_param_expression = [
+                ex
+                for ex in split_param_expression
+                if ex
+                in [
+                    var.replace(".addr", "")
+                    for var in [v.name for v in node.local_vars + node.global_vars]
+                ]
+            ]
             # check if type of any of them contains * (i.e. is a pointer)
             found_entry = False
             for var_name_to_check in split_param_expression:
@@ -517,8 +578,9 @@ def set_global_llvm_cxxfilt_path(value: str):
     __global_llvm_cxxfilt_path = value
 
 
-def get_called_functions_recursively(pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict) \
-        -> List[CUNode]:
+def get_called_functions_recursively(
+    pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict
+) -> List[CUNode]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
     called_functions = []
@@ -552,7 +614,9 @@ def contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
     :param node: CUNode
     :return: bool"""
     for red_var in pet.reduction_vars:
-        if line_contained_in_region(red_var["reduction_line"], node.start_position(), node.end_position()):
+        if line_contained_in_region(
+            red_var["reduction_line"], node.start_position(), node.end_position()
+        ):
             return True
     return False
 
@@ -618,8 +682,9 @@ def detect_mw_types(pet: PETGraphX, main_node: CUNode):
         if n1.mw_type == MWType.BARRIER:
             for n2 in direct_subnodes:
                 if n2.mw_type == MWType.BARRIER and n1 != n2:
-                    if n2 in [pet.node_at(t) for s, t, d in pet.out_edges(n1.id)] or n2 in [pet.node_at(s) for s, t, d
-                                                                                            in pet.in_edges(n1.id)]:
+                    if n2 in [pet.node_at(t) for s, t, d in pet.out_edges(n1.id)] or n2 in [
+                        pet.node_at(s) for s, t, d in pet.in_edges(n1.id)
+                    ]:
                         break
                     # so these two nodes are BarrierWorker, because there is no dependency between them
                     pairs.append((n1, n2))
@@ -638,7 +703,7 @@ def get_var_definition_line_dict(cu_xml: str) -> Dict[str, List[str]]:
     xml_fd = open(cu_xml)
     xml_content = ""
     for line in xml_fd.readlines():
-        if not (line.rstrip().endswith('</Nodes>') or line.rstrip().endswith('<Nodes>')):
+        if not (line.rstrip().endswith("</Nodes>") or line.rstrip().endswith("<Nodes>")):
             xml_content = xml_content + line
     xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
     parsed_cu = objectify.fromstring(xml_content)
@@ -657,7 +722,8 @@ def get_var_definition_line_dict(cu_xml: str) -> Dict[str, List[str]]:
                         else:
                             var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
                             var_def_line_dict[i.text.replace(".addr", "")] = list(
-                                set(var_def_line_dict[i.text.replace(".addr", "")]))
+                                set(var_def_line_dict[i.text.replace(".addr", "")])
+                            )
                 except AttributeError:
                     pass
             # add local variables
@@ -670,7 +736,8 @@ def get_var_definition_line_dict(cu_xml: str) -> Dict[str, List[str]]:
                         else:
                             var_def_line_dict[i.text.replace(".addr", "")].append(i.get("defLine"))
                             var_def_line_dict[i.text.replace(".addr", "")] = list(
-                                set(var_def_line_dict[i.text.replace(".addr", "")]))
+                                set(var_def_line_dict[i.text.replace(".addr", "")])
+                            )
                 except AttributeError:
                     pass
     return var_def_line_dict
