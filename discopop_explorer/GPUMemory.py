@@ -60,8 +60,7 @@ def getCalledFunctions(pet: PETGraphX, node: CUNode,
     """
     sub_func = pet.subtree_of_type(node, NodeType.FUNC)
     for e in sub_func:
-        calledFunctions.update(e.id)
-
+        calledFunctions.add(e.id)
     # unnecessary in this i think
     sub_dummy = pet.subtree_of_type(node, NodeType.DUMMY)
     for e in sub_dummy:
