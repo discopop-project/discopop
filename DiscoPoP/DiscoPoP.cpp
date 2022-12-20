@@ -612,7 +612,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             string type_str;
                             raw_string_ostream rso(type_str);
                             (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid);
+                            Variable v(string(it->getName()), rso.str(), lid, true, true);
                             n->argumentsList.push_back(v);
                         }
                     } else // get name of the indirect function which is called
@@ -685,7 +685,10 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 varType = determineVariableType(&*instruction);
                 varDefLine = determineVariableDefLine(&*instruction);
 
-                Variable v(varName, varType, varDefLine);
+                bool readAccess = isa<LoadInst>(instruction);
+                bool writeAccess = isa<StoreInst>(instruction);
+
+                Variable v(varName, varType, varDefLine, readAccess, writeAccess);
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
@@ -1701,7 +1704,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
+            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
@@ -2493,7 +2496,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai: root->argumentsList) {
                 *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
-                        << " defLine=\"" << xmlEscape(ai.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(ai.defLine) << "\""
+                        << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(ai.name) << "</arg>" << endl;
             }
             *outCUs << "\t\t</funcArguments>" << endl;
@@ -2549,7 +2554,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<globalVariables>" << endl;
             for (auto gvi: cu->globalVariableNames) {
                 *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
+                        << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(gvi.name) << "</global>" << endl;
             }
             *outCUs << "\t\t</globalVariables>" << endl;

@@ -90,12 +90,15 @@ namespace {
         string type;
         string defLine;
         string isArray;
+        bool readAccess;
+        bool writeAccess;
 
         Variable_struct(const Variable_struct &other)
-                : name(other.name), type(other.type), defLine(other.defLine) {}
+                : name(other.name), type(other.type), defLine(other.defLine),
+                readAccess(other.readAccess), writeAccess(other.writeAccess) {}
 
-        Variable_struct(string n, string t, string d)
-                : name(n), type(t), defLine(d) {}
+        Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess)
+                : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess){}
 
         // We have a set of this struct. The set doesn't know how to order the
         // elements.

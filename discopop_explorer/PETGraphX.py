@@ -173,25 +173,20 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
         n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
 
     if n.type == NodeType.CU:
-        if hasattr(node.localVariables, "local"):
-            n.local_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.localVariables.local
-            ]
-        if hasattr(node.globalVariables, "global"):
-            n.global_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"))
-                for v in getattr(node.globalVariables, "global")
-            ]
-        if hasattr(node, "BasicBlockID"):
-            n.basic_block_id = getattr(node, "BasicBlockID")
-        if hasattr(node, "returnInstructions"):
-            n.return_instructions_count = int(getattr(node, "returnInstructions").get("count"))
-        if hasattr(node.callsNode, "nodeCalled"):
-            n.node_calls = [
-                {"cuid": v.text, "atLine": v.get("atLine")}
-                for v in getattr(node.callsNode, "nodeCalled")
-                if v.get("atLine") is not None
-            ]
+        if hasattr(node.localVariables, 'local'):
+            n.local_vars = [Variable(v.get('type'), v.text, v.get('defLine'), v.get('accessMode'))
+                            for v in node.localVariables.local]
+        if hasattr(node.globalVariables, 'global'):
+            n.global_vars = [Variable(v.get('type'), v.text, v.get('defLine'), v.get('accessMode'))
+                             for v in getattr(node.globalVariables, 'global')]
+        if hasattr(node, 'BasicBlockID'):
+            n.basic_block_id = getattr(node, 'BasicBlockID')
+        if hasattr(node, 'returnInstructions'):
+            n.return_instructions_count = int(
+                getattr(node, 'returnInstructions').get('count'))
+        if hasattr(node.callsNode, 'nodeCalled'):
+            n.node_calls = [{"cuid": v.text,  "atLine": v.get('atLine')} for v in getattr(
+                node.callsNode, 'nodeCalled') if v.get('atLine') is not None]
     return n
 
 
