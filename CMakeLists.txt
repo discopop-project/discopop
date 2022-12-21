@@ -55,17 +55,25 @@ add_subdirectory(scripts)
 
 # install DiscoPoP python modules
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-# check if python modules are installed already
+
+# check if python tkinter module is available
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import tkinter"
+    RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
+)
+if(${TKINTER_AVAILABLE_EXIT_CODE})
+    message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
+endif()
+
+# install DiscoPoP python modules
 message(STATUS "Installing DiscoPoP python modules")
 execute_process(
         COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
         RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
         OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
-        COMMAND_ECHO STDOUT
 )
 # check if installation of DiscoPoP Modules was successful
 if(${DP_INSTALLATION_EXIT_CODE})
-    message(STATUS "${DP_INSTALLATION_CMD_ECHO}")
     message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
 endif()
 
