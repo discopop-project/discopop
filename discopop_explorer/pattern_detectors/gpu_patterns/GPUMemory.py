@@ -1,8 +1,16 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from enum import Enum
 from typing import List, Set
-from .variable import Variable
-from .PETGraphX import PETGraphX, CUNode, NodeType, DepType
-from .utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
+from discopop_explorer.variable import Variable
+from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, DepType
+from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 
 
 def map_node(pet: PETGraphX, nodeID: str) -> CUNode:
@@ -18,7 +26,7 @@ class map_type_t(Enum):
 
 
 def set_find(x: str, s: Set[str]) -> str:
-    """ implements the cpp function set::find
+    """implements the cpp function set::find
 
     :param x: Node to find in set
     :param s: Set to search for given node
@@ -33,7 +41,7 @@ def set_find(x: str, s: Set[str]) -> str:
 
 
 def set_end(s: Set[str]) -> str:
-    """ implements the cpp function set::end
+    """implements the cpp function set::end
 
     :param s: set of Node IDs
     :return: last elem of given set
@@ -44,9 +52,10 @@ def set_end(s: Set[str]) -> str:
         return s.pop()  # returns last elem of set without popping
 
 
-def getCalledFunctions(pet: PETGraphX, node: CUNode,
-                       calledFunctions: Set[str], dummyFunctions: Set[str]) -> Set[str]:
-    """ This function traverses all children nodes of 'node' and adds every
+def getCalledFunctions(
+    pet: PETGraphX, node: CUNode, calledFunctions: Set[str], dummyFunctions: Set[str]
+) -> Set[str]:
+    """This function traverses all children nodes of 'node' and adds every
         encountered function (non-dummy) to the 'calledFunctions' set.
         Dummy functions (e.g. functions from linked libraries) are added to the
         'dummyFunctions' set.
@@ -69,12 +78,17 @@ def getCalledFunctions(pet: PETGraphX, node: CUNode,
     return calledFunctions
 
 
-def getDeps(cuIDs: List[CUNode], pet: PETGraphX,
-            RAWDepsOn: Set, WARDepsOn: Set, WAWDepsOn: Set,
-            reverseRAWDepsOn: Set,
-            reverseWARDepsOn: Set,
-            reverseWAWDepsOn: Set) -> None:
-    """ gather all dependencies of the nodes specified in 'cuIDs'
+def getDeps(
+    cuIDs: List[CUNode],
+    pet: PETGraphX,
+    RAWDepsOn: Set,
+    WARDepsOn: Set,
+    WAWDepsOn: Set,
+    reverseRAWDepsOn: Set,
+    reverseWARDepsOn: Set,
+    reverseWAWDepsOn: Set,
+) -> None:
+    """gather all dependencies of the nodes specified in 'cuIDs'
         ---doesnt work here because addresses---
 
     :param pet:
@@ -92,17 +106,21 @@ def getDeps(cuIDs: List[CUNode], pet: PETGraphX,
         RAWDepsOn.update(get_dep_of_type(pet, sub_node, DepType.RAW, False))
         WARDepsOn.update(get_dep_of_type(pet, sub_node, DepType.WAR, False))
         WAWDepsOn.update(get_dep_of_type(pet, sub_node, DepType.WAW, False))
-        reverseRAWDepsOn.update(get_dep_of_type(
-            pet, sub_node, DepType.RAW, True))
-        reverseWARDepsOn.update(get_dep_of_type(
-            pet, sub_node, DepType.WAR, True))
-        reverseWAWDepsOn.update(get_dep_of_type(
-            pet, sub_node, DepType.WAW, True))
+        reverseRAWDepsOn.update(get_dep_of_type(pet, sub_node, DepType.RAW, True))
+        reverseWARDepsOn.update(get_dep_of_type(pet, sub_node, DepType.WAR, True))
+        reverseWAWDepsOn.update(get_dep_of_type(pet, sub_node, DepType.WAW, True))
 
 
-def assignMapType(loop: CUNode, loopCUs: List[str], var: Variable, isScalar: bool, pet: PETGraphX,
-                  RAWDepsOn: Set, reverseRAWDepsOn: Set) -> map_type_t:
-    """ assigns a map-type to the variable 'var'
+def assignMapType(
+    loop: CUNode,
+    loopCUs: List[str],
+    var: Variable,
+    isScalar: bool,
+    pet: PETGraphX,
+    RAWDepsOn: Set,
+    reverseRAWDepsOn: Set,
+) -> map_type_t:
+    """assigns a map-type to the variable 'var'
 
     WARDepsOn: Set[Dependency], WAWDepsOn: Set[Dependency], reverseWARDepsOn: Set[Dependency],
     reverseWAWDepsOn: Set[Dependency] all unused
@@ -119,9 +137,6 @@ def assignMapType(loop: CUNode, loopCUs: List[str], var: Variable, isScalar: boo
     # transfers to or from the device are required.
     copy_to: bool = False
     copy_from: bool = False
-
-    # print("VAR: " + var.name + " in " +
-    #       str(loop.start_line) + " " + str(loop.end_line))
 
     # is_global takes list of nodes, not ids
     loop_nodes: List[CUNode] = []

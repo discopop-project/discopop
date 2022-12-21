@@ -15,20 +15,6 @@ from .PETGraphX import PETGraphX, NodeType
 from ._version import __version__
 from .parser import parse_inputs
 from .pattern_detection import DetectionResult, PatternDetectorX
-from .GPULoop import GPULoopPattern
-from .GPURegions import GPURegions
-import time
-
-from .variable import Variable
-
-
-def sort_by_nodeID(e: GPULoopPattern):
-    """ used to sort a list of gpu patterns by their node ids
-
-    :return:
-    :param e:
-    """
-    return e.nodeID
 
 
 def run(
@@ -70,40 +56,6 @@ def run(
         discopop_build_path,
         enable_task_pattern,
     )
-
-    gpu_patterns: List[GPULoopPattern] = []
-
-    for node in pet.all_nodes(NodeType.LOOP):
-        if any(node.id == d.node_id for d in res.do_all) or any(node.id == r.node_id for r in res.reduction):
-            reduction_vars: List[Variable] = []
-            if node.id in [r.node_id for r in res.reduction]:
-                parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
-                reduction_vars = parent_reduction.reduction
-            gpulp = GPULoopPattern(pet, node.id, node.start_line, node.end_line,
-                                   node.loop_iterations, reduction_vars)
-            gpulp.getNestedLoops(node.id)
-            gpulp.setParentLoop(node.id)
-            gpulp.classifyLoopVars(pet, node)
-            gpu_patterns.append(gpulp)
-
-    # print("\nnumber of detected patterns: " + str(len(gpu_patterns)))
-    # print("-------------------------------------------------------------------------------")
-
-    regions = GPURegions(pet, gpu_patterns)
-
-    for i in gpu_patterns:
-        i.setCollapseClause(i.node_id)
-        # print("id: " + i.node_id + " start: " +
-        #       i.start_line + " COLLAPSE: " + str(i.collapse))
-
-    regions.identifyGPURegions()
-    #regions.old_mapData()
-    regions.determineDataMapping()
-
-    for loop_patterns in regions.gpu_loop_patterns:
-        print(loop_patterns.toJson())
-
-    # print("-------------------------------------------------------------------------------")
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)

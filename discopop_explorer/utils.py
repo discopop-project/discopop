@@ -372,7 +372,9 @@ def is_read_in_subtree(
     return False
 
 
-def is_read_in_right_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]) -> bool:
+def is_read_in_right_subtree(
+    var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]
+) -> bool:
     """Checks if variable is read in subtree
 
     :param var: variable name
@@ -388,8 +390,11 @@ def is_read_in_right_subtree(var: str, rev_raw: Set[Tuple[str, str, Dependency]]
     return False
 
 
-def is_depend_in_out(var: Variable, in_deps: List[Tuple[str, str, Dependency]],
-                     out_deps: List[Tuple[str, str, Dependency]]) -> bool:
+def is_depend_in_out(
+    var: Variable,
+    in_deps: List[Tuple[str, str, Dependency]],
+    out_deps: List[Tuple[str, str, Dependency]],
+) -> bool:
     """there is an in and out dependency
 
     :param var: Variable

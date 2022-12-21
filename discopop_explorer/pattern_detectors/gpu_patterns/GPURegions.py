@@ -1,10 +1,62 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from numpy import long  # type: ignore
-from typing import List, Set, Optional, cast
-from .PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType
+from typing import List, Set, Optional, cast, Dict, Tuple
+from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
-from .utils import is_loop_index2
-from .variable import Variable
+from discopop_explorer.utils import is_loop_index2
+from discopop_explorer.variable import Variable
+from ..PatternInfo import PatternInfo
+
+
+class GPURegionInfo(PatternInfo):
+    """Class, that represents an identified GPU Region"""
+
+    contained_loops: List[GPULoopPattern]
+    produced_vars: Tuple[str, ...]
+    consumed_vars: Tuple[str, ...]
+
+    def __init__(
+        self,
+        pet: PETGraphX,
+        contained_loops: List[GPULoopPattern],
+        consumed_vars: Tuple[str, ...],
+        produced_vars: Tuple[str, ...],
+    ):
+        node_id = sorted([loop.nodeID for loop in contained_loops])[0]
+        PatternInfo.__init__(self, pet.node_at(node_id))
+        self.contained_loops = contained_loops
+        self.consumed_vars = consumed_vars
+        self.produced_vars = produced_vars
+        self.start_line = min([l.start_line for l in contained_loops])
+        self.end_line = max([l.end_line for l in contained_loops])
+
+    def __str__(self):
+        raise NotImplementedError()  # used to identify necessity to call to_string() instead
+
+    def to_string(self, pet: PETGraphX):
+        contained_loops_str = "\n" if len(self.contained_loops) > 0 else ""
+        for loop in self.contained_loops:
+            loop_str = loop.to_string(pet)
+            # pretty printing
+            loop_str = "".join(["\t" + s + "\n" for s in loop_str.split("\n")])
+            contained_loops_str += loop_str
+
+        return (
+            f"GPU Region at: {self.node_id}\n"
+            f"Start line: {self.start_line}\n"
+            f"End line: {self.end_line}\n"
+            f"Consumed vars: {self.consumed_vars}\n"
+            f"Produced vars: {self.produced_vars}\n"
+            f"Contained patterns: {contained_loops_str}\n"
+        )
 
 
 class GPURegions:
@@ -13,6 +65,8 @@ class GPURegions:
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
+    produced_vars_by_region: Dict[List[str], List[str]]
+    consumed_vars_by_region: Dict[List[str], List[str]]
 
     def __init__(self, pet, gpu_patterns):
         self.loopsInRegion = []
@@ -20,7 +74,8 @@ class GPURegions:
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
         self.pet = pet
-
+        self.produced_vars_by_region = dict()
+        self.consumed_vars_by_region = dict()
 
     def findGPULoop(self, nodeID: str) -> Optional[GPULoopPattern]:
         """
@@ -68,19 +123,22 @@ class GPURegions:
         # find the next loop of each loop in the source code
         self.findNextLoop()
 
-        self.cascadingLoopsInRegions[regionNum].append(
-            self.gpu_loop_patterns[0].nodeID)
+        self.cascadingLoopsInRegions[regionNum].append(self.gpu_loop_patterns[0].nodeID)
         for i in range(0, len(self.gpu_loop_patterns)):
             if self.gpu_loop_patterns[i].nextLoop:
                 if map_node(self.pet, self.gpu_loop_patterns[i].nextLoop).type == 2:
-                    if self.reachableCUs(self.gpu_loop_patterns[i].nodeID, self.gpu_loop_patterns[i].nextLoop):
+                    if self.reachableCUs(
+                        self.gpu_loop_patterns[i].nodeID, self.gpu_loop_patterns[i].nextLoop
+                    ):
                         self.cascadingLoopsInRegions[regionNum].append(
-                            self.gpu_loop_patterns[i].nextLoop)
+                            self.gpu_loop_patterns[i].nextLoop
+                        )
                     else:
                         regionNum += 1
                         self.cascadingLoopsInRegions.append([])
                         self.cascadingLoopsInRegions[regionNum].append(
-                            self.gpu_loop_patterns[i].nextLoop)
+                            self.gpu_loop_patterns[i].nextLoop
+                        )
 
         self.numRegions = regionNum + 1
 
@@ -88,17 +146,19 @@ class GPURegions:
         """determine data mapping for each GPU Region and their contained GPU Loops."""
 
         for region in self.cascadingLoopsInRegions:
-            print("GPU Region:", region)
             # determine CUs which belong to the region (= which are located inside the region)
             region_cus: List[CUNode] = []
             for loop_id in region:
                 loop_node: CUNode = self.pet.node_at(loop_id)
-                gpu_lp: GPULoopPattern = [p for p in self.gpu_loop_patterns if p.parentLoop == loop_id][0]
-                region_cus += [cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus]
+                gpu_lp: GPULoopPattern = [
+                    p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
+                ][0]
+                region_cus += [
+                    cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
+                ]
             # determine start and end line of region
             region_start_line = min([cu.start_line for cu in region_cus])
             region_end_line = max([cu.end_line for cu in region_cus])
-
 
             # determine variables which are written outside the region and read inside
             consumed_vars: List[str] = []
@@ -114,7 +174,6 @@ class GPURegions:
                         if dep.dtype == DepType.RAW:
                             if dep.var_name not in consumed_vars:
                                 consumed_vars.append(dep.var_name)
-            print("Consumed vars: ", consumed_vars)
 
             # determine variables which are read afterwards and written in the region
             produced_vars: List[str] = []
@@ -130,8 +189,9 @@ class GPURegions:
                         if dep.dtype in [DepType.RAW, DepType.WAW]:
                             if dep.var_name not in produced_vars:
                                 produced_vars.append(dep.var_name)
-            print("Produced vars: ", produced_vars)
 
+            self.produced_vars_by_region[tuple(region)] = produced_vars
+            self.consumed_vars_by_region[tuple(region)] = consumed_vars
 
     def old_mapData(self) -> None:
         """
@@ -154,12 +214,12 @@ class GPURegions:
             ln = map_node(self.pet, lastNodeID)
             start = fn.start_line
             end = ln.end_line
-            gpuRegionLoop = GPULoopPattern(
-                self.pet, firstNodeID, start, end, 1000)
+            gpuRegionLoop = GPULoopPattern(self.pet, firstNodeID, start, end, 1000)
             visitedVars: Set[Variable] = set()
             while t >= 0:
                 tmp_result = self.findGPULoop(
-                    self.cascadingLoopsInRegions[i][t])  # tmp_result contains GPU loops inside the parent region
+                    self.cascadingLoopsInRegions[i][t]
+                )  # tmp_result contains GPU loops inside the parent region
 
                 if tmp_result is None:
                     t -= 1
@@ -222,8 +282,8 @@ class GPURegions:
                 t -= 1
 
             # gpuRegionLoop.printGPULoop()  # only prints first loop of the region.
-                                            # first loop of the region is used to store the map_to behavior
-                                            # last loop if the region should be used to store the map_from behavior
+            # first loop of the region is used to store the map_to behavior
+            # last loop if the region should be used to store the map_from behavior
 
     def findNextLoop(self) -> None:
         """
@@ -235,17 +295,20 @@ class GPURegions:
         while i < len(self.gpu_loop_patterns):
             skip: int = i
             for k in self.gpu_loop_patterns[skip].nestedLoops:
-                """ To find the next loop for a loop,
-                    we need to skip over the nested loops in the identified GPU loops.
-                    Also, some loops may not be do-all or reduction
-                    and not listed in the gpu_loop_patterns. We need to skip them
-                    Create a dummy GPULoopPattern and
-                    search for the gpu loops with the same NodeID
+                """To find the next loop for a loop,
+                we need to skip over the nested loops in the identified GPU loops.
+                Also, some loops may not be do-all or reduction
+                and not listed in the gpu_loop_patterns. We need to skip them
+                Create a dummy GPULoopPattern and
+                search for the gpu loops with the same NodeID
                 """
-                dd = GPULoopPattern(self.pet, k,
-                                    self.gpu_loop_patterns[skip].start_line,
-                                    self.gpu_loop_patterns[skip].end_line,
-                                    self.gpu_loop_patterns[skip].iteration_count)
+                dd = GPULoopPattern(
+                    self.pet,
+                    k,
+                    self.gpu_loop_patterns[skip].start_line,
+                    self.gpu_loop_patterns[skip].end_line,
+                    self.gpu_loop_patterns[skip].iteration_count,
+                )
                 for ii in self.gpu_loop_patterns:
                     if dd.nodeID == ii.nodeID:  # TODO: check remaining attributes too
                         i += 1
@@ -269,3 +332,22 @@ class GPURegions:
             if not parent.id == node.id and parent.type == NodeType.LOOP:
                 return True
         return False
+
+    def get_gpu_region_info(self, pet: PETGraphX) -> List[GPURegionInfo]:
+        """Construct GPURegionInfo representations of all identified GPU Regions and return them in a list"""
+        gpu_region_info: List[GPURegionInfo] = []
+        for region in self.cascadingLoopsInRegions:
+            contained_loop_patterns = [
+                pattern for pattern in self.gpu_loop_patterns if pattern.nodeID in region
+            ]
+            # save OpenMP constructs in GPULoops for the exporting to JSON
+            for loop in contained_loop_patterns:
+                loop.save_omp_constructs(pet)
+            current_info = GPURegionInfo(
+                self.pet,
+                contained_loop_patterns,
+                self.consumed_vars_by_region[tuple(region)],
+                self.produced_vars_by_region[tuple(region)],
+            )
+            gpu_region_info.append(current_info)
+        return gpu_region_info
