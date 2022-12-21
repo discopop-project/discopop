@@ -240,7 +240,19 @@ class Suggestion(object):
             # mark gpu region
             # increase region end line to account for added pragmas
             pragmas_in_region = [p for p in pragmas if p[0] >= region_start_line and p[1] <= region_end_line]
-            pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), "// gpu region", PragmaType.REGION))
+            region_pragma = "// gpu region "
+            consumed_str = "consumes(" if len(self.values["consumed_vars"]) > 0 else ""
+            consumed_str += ",".join(self.values["consumed_vars"])
+            consumed_str += ") " if len(self.values["consumed_vars"]) > 0 else ""
+
+            produced_str = "produces(" if len(self.values["produced_vars"]) > 0 else ""
+            produced_str += ",".join(self.values["produced_vars"])
+            produced_str += ")" if len(self.values["produced_vars"]) > 0 else ""
+
+            region_pragma += consumed_str
+            region_pragma += produced_str
+
+            pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), region_pragma, PragmaType.REGION))
         else:
             pragmas.append((self.start_line, self.end_line, "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type,
                             PragmaType.PRAGMA))
