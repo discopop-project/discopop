@@ -30,7 +30,7 @@ class ExecutionConfiguration(object):
         self.value_dict = {"label": "", "description": "", "executable_name": "", "executable_arguments": "",
                            "make_flags": "", "project_path": "", "linker_flags": "", "make_target": "", "notes": "",
                            "working_copy_path": "",
-                           "explorer_flags": ""}
+                           "explorer_flags": "--json=patterns.json"}
         self.value_dict["id"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         self.wizard = wizard
 
