@@ -560,7 +560,8 @@ def classify_loop_variables(
                     private.append(var)
                 else:
                     shared.append(var)
-    return first_private, private, last_private, shared, reduction
+    #return first_private, private, last_private, shared, reduction
+    return sorted(first_private), sorted(private), sorted(last_private), sorted(shared), sorted(reduction)
 
 
 def classify_task_vars(
@@ -698,7 +699,7 @@ def classify_task_vars(
             else:
                 shared.append(var)
 
-    return first_private, private, shared, depend_in, depend_out, depend_in_out, reduction
+    return sorted(first_private), sorted(private), sorted(shared), sorted(depend_in), sorted(depend_out), sorted(depend_in_out), sorted(reduction)
 
 
 def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> bool:
