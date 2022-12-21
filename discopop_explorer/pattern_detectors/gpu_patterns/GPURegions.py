@@ -20,15 +20,15 @@ class GPURegionInfo(PatternInfo):
     """Class, that represents an identified GPU Region"""
 
     contained_loops: List[GPULoopPattern]
-    produced_vars: Tuple[str, ...]
-    consumed_vars: Tuple[str, ...]
+    produced_vars: List[str]
+    consumed_vars: List[str]
 
     def __init__(
         self,
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
-        consumed_vars: Tuple[str, ...],
-        produced_vars: Tuple[str, ...],
+        consumed_vars: List[str],
+        produced_vars: List[str]
     ):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
@@ -65,8 +65,8 @@ class GPURegions:
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
-    produced_vars_by_region: Dict[List[str], List[str]]
-    consumed_vars_by_region: Dict[List[str], List[str]]
+    produced_vars_by_region: Dict[Tuple[str, ...], List[str]]
+    consumed_vars_by_region: Dict[Tuple[str, ...], List[str]]
 
     def __init__(self, pet, gpu_patterns):
         self.loopsInRegion = []
@@ -172,8 +172,8 @@ class GPURegions:
                     var_name = dep.var_name
                     if self.pet.node_at(source_cu_id) not in region_cus:
                         if dep.dtype == DepType.RAW:
-                            if dep.var_name not in consumed_vars:
-                                consumed_vars.append(dep.var_name)
+                            if dep.var_name not in consumed_vars and dep.var_name is not None:
+                                consumed_vars.append(cast(str, dep.var_name))
 
             # determine variables which are read afterwards and written in the region
             produced_vars: List[str] = []
@@ -187,8 +187,8 @@ class GPURegions:
                     var_name = dep.var_name
                     if self.pet.node_at(sink_cu_id) not in region_cus:
                         if dep.dtype in [DepType.RAW, DepType.WAW]:
-                            if dep.var_name not in produced_vars:
-                                produced_vars.append(dep.var_name)
+                            if dep.var_name not in produced_vars and dep.var_name is not None:
+                                produced_vars.append(cast(str, dep.var_name))
 
             self.produced_vars_by_region[tuple(region)] = produced_vars
             self.consumed_vars_by_region[tuple(region)] = consumed_vars

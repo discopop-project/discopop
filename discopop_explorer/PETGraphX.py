@@ -9,6 +9,7 @@
 from enum import IntEnum, Enum
 from platform import node
 from typing import Dict, List, Tuple, Set, Optional, cast
+import jsonpickle  # type:ignore
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore

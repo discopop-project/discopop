@@ -7,7 +7,7 @@
 # directory for details.
 
 from numpy import long  # type: ignore
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Union, Any, Dict
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, parse_id, DepType
@@ -122,18 +122,10 @@ def omp_construct_dict(name: str, line: long, clauses: List[str]) -> dict:
     :param clauses:
     :return:
     """
-    result = dict()
+    result: Dict[str, Union[str, long, List[str]]] = dict()
     result["name"] = name
     result["line"] = line
     result["clauses"] = clauses
-#    result: str = '{"name":"' + name + '",'
-#    result += '"line":' + str(line) + ","
-#    result += '"clauses":['
-#    if clauses:
-#        result += clauses[0]
-#    for i in range(1, len(clauses)):
-#        result += "," + clauses[i]
-#    result += "]}"
     return result
 
 
@@ -232,7 +224,7 @@ class GPULoopPattern(PatternInfo):
 
         :return:
         """
-        json_output: str = "{"
+        json_output: Any = "{"
         # == == Metadata == ==
         json_output += '"id":"' + str(self.nodeID) + '",'
         json_output += '"startline":"' + self.start_line + '",'
@@ -245,7 +237,7 @@ class GPULoopPattern(PatternInfo):
         # == == Constructs == ==
         json_output += '"constructs":['
 
-        constructs = self.__get_constructs(pet)
+        constructs: List[Any] = self.__get_constructs(pet)
 
         # add all constructs to the output string
         json_output += constructs[0]
