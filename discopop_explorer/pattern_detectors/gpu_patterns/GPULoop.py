@@ -114,6 +114,7 @@ def omp_construct_str(name: str, line: long, clauses: List[str]) -> str:
     result += "]}"
     return result
 
+
 def omp_construct_dict(name: str, line: long, clauses: List[str]) -> dict:
     """
 

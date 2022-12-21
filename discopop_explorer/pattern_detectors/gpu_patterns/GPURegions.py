@@ -28,7 +28,7 @@ class GPURegionInfo(PatternInfo):
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
         consumed_vars: List[str],
-        produced_vars: List[str]
+        produced_vars: List[str],
     ):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
