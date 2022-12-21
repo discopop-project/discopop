@@ -290,20 +290,23 @@ class GPULoopPattern(PatternInfo):
             if self.has_scalar_reduction_var:
                 clauses.append(omp_clause_str("defaultmap(tofrom:scalar)", []))
 
+        tmp_start_line = str(self._node.file_id) + ":" + str(self.startLine)
         constructs.append(
             omp_construct_dict(
-                "#pragma omp target teams distribute parallel for", self.startLine, clauses
+                "#pragma omp target teams distribute parallel for", tmp_start_line, clauses
             )
         )
 
         # == additional constructs ==
         for node_id in self.called_functions:
             fn_node: CUNode = map_node(pet, node_id)
+            fn_node_start_line = str(fn_node.file_id) + ":" + str(fn_node.start_line)
+            fn_node_end_line = str(fn_node.file_id) + ":" + str(fn_node.end_line + 1)
             constructs.append(
-                omp_construct_dict("#pragma omp declare target", fn_node.start_line, [])
+                omp_construct_dict("#pragma omp declare target", fn_node_start_line, [])
             )
             constructs.append(
-                omp_construct_dict("#pragma omp end declare target", fn_node.end_line + 1, [])
+                omp_construct_dict("#pragma omp end declare target", fn_node_end_line, [])
             )
         return constructs
 
