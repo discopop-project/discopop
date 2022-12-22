@@ -22,6 +22,7 @@ class GPURegionInfo(PatternInfo):
     contained_loops: List[GPULoopPattern]
     produced_vars: List[str]
     consumed_vars: List[str]
+    allocated_vars: List[str]
 
     def __init__(
         self,
@@ -29,12 +30,16 @@ class GPURegionInfo(PatternInfo):
         contained_loops: List[GPULoopPattern],
         consumed_vars: List[str],
         produced_vars: List[str],
+        allocated_vars: List[str],
+        deleted_vars: List[str],
     ):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_loops = contained_loops
         self.consumed_vars = consumed_vars
         self.produced_vars = produced_vars
+        self.allocated_vars = allocated_vars
+        self.deleted_vars = deleted_vars
         self.start_line = min([l.start_line for l in contained_loops])
         self.end_line = max([l.end_line for l in contained_loops])
 
@@ -55,6 +60,8 @@ class GPURegionInfo(PatternInfo):
             f"End line: {self.end_line}\n"
             f"Consumed vars: {self.consumed_vars}\n"
             f"Produced vars: {self.produced_vars}\n"
+            f"Allocated vars: {self.allocated_vars}\n"
+            f"Deleted vars: {self.deleted_vars}\n"
             f"Contained patterns: {contained_loops_str}\n"
         )
 
@@ -67,6 +74,8 @@ class GPURegions:
     numRegions: int
     produced_vars_by_region: Dict[Tuple[str, ...], List[str]]
     consumed_vars_by_region: Dict[Tuple[str, ...], List[str]]
+    allocated_vars_by_region: Dict[Tuple[str, ...], List[str]]
+    deleted_vars_by_region: Dict[Tuple[str, ...], List[str]]
 
     def __init__(self, pet, gpu_patterns):
         self.loopsInRegion = []
@@ -76,6 +85,8 @@ class GPURegions:
         self.pet = pet
         self.produced_vars_by_region = dict()
         self.consumed_vars_by_region = dict()
+        self.allocated_vars_by_region = dict()
+        self.deleted_vars_by_region = dict()
 
     def findGPULoop(self, nodeID: str) -> Optional[GPULoopPattern]:
         """
@@ -148,50 +159,49 @@ class GPURegions:
         for region in self.cascadingLoopsInRegions:
             # determine CUs which belong to the region (= which are located inside the region)
             region_cus: List[CUNode] = []
+            region_loop_patterns: List[GPULoopPattern] = []
             for loop_id in region:
                 loop_node: CUNode = self.pet.node_at(loop_id)
                 gpu_lp: GPULoopPattern = [
                     p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
                 ][0]
+                region_loop_patterns.append(gpu_lp)
                 region_cus += [
                     cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
                 ]
+
             # determine start and end line of region
             region_start_line = min([cu.start_line for cu in region_cus])
             region_end_line = max([cu.end_line for cu in region_cus])
 
-            # determine variables which are written outside the region and read inside
+            # gather consumed, produced and allocated variables
             consumed_vars: List[str] = []
-            for cu in region_cus:
-                in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
-                # var is consumed, if incoming RAW dep exists
-                for sink_cu_id, source_cu_id, dep in in_dep_edges:
-                    # unpack dep for sake of clarity
-                    sink_line = dep.sink
-                    source_line = dep.source
-                    var_name = dep.var_name
-                    if self.pet.node_at(source_cu_id) not in region_cus:
-                        if dep.dtype == DepType.RAW:
-                            if dep.var_name not in consumed_vars and dep.var_name is not None:
-                                consumed_vars.append(cast(str, dep.var_name))
+            for loop_pattern in region_loop_patterns:
+                consumed_vars += [
+                    v for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
+                ]
+            consumed_vars = list(set(consumed_vars))
 
-            # determine variables which are read afterwards and written in the region
             produced_vars: List[str] = []
-            for cu in region_cus:
-                out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
-                # var is produced, if outgoing RAW or WAW dep exists
-                for sink_cu_id, source_cu_id, dep in out_dep_edges:
-                    # unpack dep for sake of clarity
-                    sink_line = dep.sink
-                    source_line = dep.source
-                    var_name = dep.var_name
-                    if self.pet.node_at(sink_cu_id) not in region_cus:
-                        if dep.dtype in [DepType.RAW, DepType.WAW]:
-                            if dep.var_name not in produced_vars and dep.var_name is not None:
-                                produced_vars.append(cast(str, dep.var_name))
+            for loop_pattern in region_loop_patterns:
+                produced_vars += [
+                    v for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
+                ]
+            produced_vars = list(set(produced_vars))
+
+            allocated_vars: List[str] = []
+            for loop_pattern in region_loop_patterns:
+                allocated_vars += [v for v in loop_pattern.map_type_alloc]
+            allocated_vars = list(set(allocated_vars))
+
+            deleted_vars: List[str] = list(
+                set([v for v in consumed_vars + allocated_vars if v not in produced_vars])
+            )
 
             self.produced_vars_by_region[tuple(region)] = produced_vars
             self.consumed_vars_by_region[tuple(region)] = consumed_vars
+            self.allocated_vars_by_region[tuple(region)] = allocated_vars
+            self.deleted_vars_by_region[tuple(region)] = deleted_vars
 
     def old_mapData(self) -> None:
         """
@@ -348,6 +358,8 @@ class GPURegions:
                 contained_loop_patterns,
                 self.consumed_vars_by_region[tuple(region)],
                 self.produced_vars_by_region[tuple(region)],
+                self.allocated_vars_by_region[tuple(region)],
+                self.deleted_vars_by_region[tuple(region)],
             )
             gpu_region_info.append(current_info)
         return gpu_region_info

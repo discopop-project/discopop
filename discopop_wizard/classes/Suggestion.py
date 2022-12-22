@@ -247,10 +247,20 @@ class Suggestion(object):
 
             produced_str = "produces(" if len(self.values["produced_vars"]) > 0 else ""
             produced_str += ",".join(self.values["produced_vars"])
-            produced_str += ")" if len(self.values["produced_vars"]) > 0 else ""
+            produced_str += ") " if len(self.values["produced_vars"]) > 0 else ""
+
+            allocated_str = "allocates(" if len(self.values["allocated_vars"]) > 0 else ""
+            allocated_str += ",".join(self.values["allocated_vars"])
+            allocated_str += ") " if len(self.values["allocated_vars"]) > 0 else ""
+
+            deleted_str = "deletes(" if len(self.values["deleted_vars"]) > 0 else ""
+            deleted_str += ",".join(self.values["deleted_vars"])
+            deleted_str += ") " if len(self.values["deleted_vars"]) > 0 else ""
 
             region_pragma += consumed_str
             region_pragma += produced_str
+            region_pragma += allocated_str
+            region_pragma += deleted_str
 
             pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), region_pragma, PragmaType.REGION))
         else:
