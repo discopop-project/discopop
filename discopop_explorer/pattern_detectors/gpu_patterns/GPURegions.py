@@ -174,15 +174,45 @@ class GPURegions:
             region_start_line = min([cu.start_line for cu in region_cus])
             region_end_line = max([cu.end_line for cu in region_cus])
 
-            # gather consumed, produced and allocated variables
+            # determine variables which are written outside the region and read inside
             consumed_vars: List[str] = []
+            for cu in region_cus:
+                in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
+
+                # var is consumed, if incoming RAW dep exists
+                for sink_cu_id, source_cu_id, dep in in_dep_edges:
+                    # unpack dep for sake of clarity
+                    sink_line = dep.sink
+                    source_line = dep.source
+                    var_name = dep.var_name
+
+                    if self.pet.node_at(source_cu_id) not in region_cus:
+                        if dep.dtype == DepType.RAW:
+                            if dep.var_name not in consumed_vars and dep.var_name is not None:
+                                consumed_vars.append(cast(str, dep.var_name))
+
+            # determine variables which are read afterwards and written in the region
+            produced_vars: List[str] = []
+            for cu in region_cus:
+                out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
+                # var is produced, if outgoing RAW or WAW dep exists
+                for sink_cu_id, source_cu_id, dep in out_dep_edges:
+                    # unpack dep for sake of clarity
+                    sink_line = dep.sink
+                    source_line = dep.source
+                    var_name = dep.var_name
+                    if self.pet.node_at(sink_cu_id) not in region_cus:
+                        if dep.dtype in [DepType.RAW, DepType.WAW]:
+                            if dep.var_name not in produced_vars and dep.var_name is not None:
+                                produced_vars.append(cast(str, dep.var_name))
+
+            # gather consumed, produced, allocated and deleted variables from mapping information
             for loop_pattern in region_loop_patterns:
                 consumed_vars += [
                     v for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
                 ]
             consumed_vars = list(set(consumed_vars))
 
-            produced_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
                 produced_vars += [
                     v for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
