@@ -20,26 +20,36 @@ class GPURegionInfo(PatternInfo):
     """Class, that represents an identified GPU Region"""
 
     contained_loops: List[GPULoopPattern]
+    map_from_vars: List[str]
+    map_to_vars: List[str]
+    map_to_from_vars: List[str]
+    map_alloc_vars: List[str]
+    map_delete_vars: List[str]
     produced_vars: List[str]
     consumed_vars: List[str]
-    allocated_vars: List[str]
 
     def __init__(
         self,
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
-        consumed_vars: List[str],
+        map_to_vars: List[str],
+        map_from_vars: List[str],
+        map_to_from_vars: List[str],
+        map_alloc_vars: List[str],
+        map_delete_vars: List[str],
         produced_vars: List[str],
-        allocated_vars: List[str],
-        deleted_vars: List[str],
+        consumed_vars: List[str],
     ):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_loops = contained_loops
-        self.consumed_vars = consumed_vars
+        self.map_to_vars = map_to_vars
+        self.map_from_vars = map_from_vars
+        self.map_to_from_vars = map_to_from_vars
+        self.map_alloc_vars = map_alloc_vars
+        self.map_delete_vars = map_delete_vars
         self.produced_vars = produced_vars
-        self.allocated_vars = allocated_vars
-        self.deleted_vars = deleted_vars
+        self.consumed_vars = consumed_vars
         self.start_line = min([l.start_line for l in contained_loops])
         self.end_line = max([l.end_line for l in contained_loops])
 
@@ -58,10 +68,11 @@ class GPURegionInfo(PatternInfo):
             f"GPU Region at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
-            f"Consumed vars: {self.consumed_vars}\n"
-            f"Produced vars: {self.produced_vars}\n"
-            f"Allocated vars: {self.allocated_vars}\n"
-            f"Deleted vars: {self.deleted_vars}\n"
+            f"Map to: {self.map_to_vars}\n"
+            f"Map from: {self.map_from_vars}\n"
+            f"Map to/from: {self.map_to_from_vars}\n"
+            f"Map alloc: {self.map_alloc_vars}\n"
+            f"Map delete: {self.map_delete_vars}\n"
             f"Contained patterns: {contained_loops_str}\n"
         )
 
@@ -72,10 +83,13 @@ class GPURegions:
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
-    produced_vars_by_region: Dict[Tuple[str, ...], List[str]]
-    consumed_vars_by_region: Dict[Tuple[str, ...], List[str]]
-    allocated_vars_by_region: Dict[Tuple[str, ...], List[str]]
-    deleted_vars_by_region: Dict[Tuple[str, ...], List[str]]
+    map_type_from_by_region: Dict[Tuple[str, ...], List[str]]
+    map_type_to_by_region: Dict[Tuple[str, ...], List[str]]
+    map_type_tofrom_by_region: Dict[Tuple[str, ...], List[str]]
+    map_type_alloc_by_region: Dict[Tuple[str, ...], List[str]]
+    map_type_delete_by_region: Dict[Tuple[str, ...], List[str]]
+    produced_vars: Dict[Tuple[str, ...], List[str]]
+    consumed_vars: Dict[Tuple[str, ...], List[str]]
 
     def __init__(self, pet, gpu_patterns):
         self.loopsInRegion = []
@@ -83,10 +97,13 @@ class GPURegions:
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
         self.pet = pet
-        self.produced_vars_by_region = dict()
-        self.consumed_vars_by_region = dict()
-        self.allocated_vars_by_region = dict()
-        self.deleted_vars_by_region = dict()
+        self.map_type_from_by_region = dict()
+        self.map_type_to_by_region = dict()
+        self.map_type_tofrom_by_region = dict()
+        self.map_type_alloc_by_region = dict()
+        self.map_type_delete_by_region = dict()
+        self.produced_vars = dict()  # includes implicitly mapped variables as well
+        self.consumed_vars = dict()  # includes implicitly mapped variables as well
 
     def findGPULoop(self, nodeID: str) -> Optional[GPULoopPattern]:
         """
@@ -207,31 +224,49 @@ class GPURegions:
                                 produced_vars.append(cast(str, dep.var_name))
 
             # gather consumed, produced, allocated and deleted variables from mapping information
+            map_to_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
-                consumed_vars += [
-                    v for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
-                ]
-            consumed_vars = list(set(consumed_vars))
+                map_to_vars += [v for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom]
+            map_to_vars = list(set(map_to_vars))
 
+            map_from_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
-                produced_vars += [
+                map_from_vars += [
                     v for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
                 ]
-            produced_vars = list(set(produced_vars))
+            map_from_vars = list(set(map_from_vars))
 
-            allocated_vars: List[str] = []
+            map_alloc_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
-                allocated_vars += [v for v in loop_pattern.map_type_alloc]
-            allocated_vars = list(set(allocated_vars))
+                map_alloc_vars += [v for v in loop_pattern.map_type_alloc]
+            map_alloc_vars = list(set(map_alloc_vars))
 
-            deleted_vars: List[str] = list(
-                set([v for v in consumed_vars + allocated_vars if v not in produced_vars])
+            map_delete_vars: List[str] = list(
+                set([v for v in map_to_vars + map_alloc_vars if v not in map_from_vars])
             )
 
-            self.produced_vars_by_region[tuple(region)] = produced_vars
-            self.consumed_vars_by_region[tuple(region)] = consumed_vars
-            self.allocated_vars_by_region[tuple(region)] = allocated_vars
-            self.deleted_vars_by_region[tuple(region)] = deleted_vars
+            map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
+
+            # allocate unknown variables
+            map_alloc_vars += [
+                var
+                for var in map_from_vars
+                if var not in consumed_vars + map_to_vars + map_alloc_vars
+            ]
+            map_alloc_vars = list(set(map_alloc_vars))
+
+            # store results
+            self.map_type_from_by_region[tuple(region)] = [
+                var for var in map_from_vars if var not in map_to_from_vars
+            ]
+            self.map_type_to_by_region[tuple(region)] = [
+                var for var in map_to_vars if var not in map_to_from_vars
+            ]
+            self.map_type_tofrom_by_region[tuple(region)] = map_to_from_vars
+            self.map_type_alloc_by_region[tuple(region)] = map_alloc_vars
+            self.map_type_delete_by_region[tuple(region)] = map_delete_vars
+            self.produced_vars[tuple(region)] = produced_vars
+            self.consumed_vars[tuple(region)] = consumed_vars
 
     def old_mapData(self) -> None:
         """
@@ -386,10 +421,13 @@ class GPURegions:
             current_info = GPURegionInfo(
                 self.pet,
                 contained_loop_patterns,
-                self.consumed_vars_by_region[tuple(region)],
-                self.produced_vars_by_region[tuple(region)],
-                self.allocated_vars_by_region[tuple(region)],
-                self.deleted_vars_by_region[tuple(region)],
+                self.map_type_to_by_region[tuple(region)],
+                self.map_type_from_by_region[tuple(region)],
+                self.map_type_tofrom_by_region[tuple(region)],
+                self.map_type_alloc_by_region[tuple(region)],
+                self.map_type_delete_by_region[tuple(region)],
+                self.produced_vars[tuple(region)],
+                self.consumed_vars[tuple(region)],
             )
             gpu_region_info.append(current_info)
         return gpu_region_info

@@ -240,29 +240,45 @@ class Suggestion(object):
             # mark gpu region
             # increase region end line to account for added pragmas
             pragmas_in_region = [p for p in pragmas if p[0] >= region_start_line and p[1] <= region_end_line]
-            region_pragma = "// gpu region "
-            consumed_str = "consumes(" if len(self.values["consumed_vars"]) > 0 else ""
+            region_pragma = "#pragma omp target data "
+            map_to_str = "map(to: " if len(self.values["map_to_vars"]) > 0 else ""
+            map_to_str += ",".join(self.values["map_to_vars"])
+            map_to_str += ") " if len(self.values["map_to_vars"]) > 0 else ""
+
+            map_from_str = "map(from: " if len(self.values["map_from_vars"]) > 0 else ""
+            map_from_str += ",".join(self.values["map_from_vars"])
+            map_from_str += ") " if len(self.values["map_from_vars"]) > 0 else ""
+
+            map_to_from_str = "map(tofrom: " if len(self.values["map_to_from_vars"]) > 0 else ""
+            map_to_from_str += ",".join(self.values["map_to_from_vars"])
+            map_to_from_str += ") " if len(self.values["map_to_from_vars"]) > 0 else ""
+
+            map_alloc_str = "map(alloc: " if len(self.values["map_alloc_vars"]) > 0 else ""
+            map_alloc_str += ",".join(self.values["map_alloc_vars"])
+            map_alloc_str += ") " if len(self.values["map_alloc_vars"]) > 0 else ""
+
+            map_delete_str = "map(delete: " if len(self.values["map_delete_vars"]) > 0 else ""
+            map_delete_str += ",".join(self.values["map_delete_vars"])
+            map_delete_str += ") " if len(self.values["map_delete_vars"]) > 0 else ""
+
+            consumed_str = "consumed(" if len(self.values["consumed_vars"]) > 0 else ""
             consumed_str += ",".join(self.values["consumed_vars"])
             consumed_str += ") " if len(self.values["consumed_vars"]) > 0 else ""
 
-            produced_str = "produces(" if len(self.values["produced_vars"]) > 0 else ""
+            produced_str = "produced(" if len(self.values["produced_vars"]) > 0 else ""
             produced_str += ",".join(self.values["produced_vars"])
             produced_str += ") " if len(self.values["produced_vars"]) > 0 else ""
 
-            allocated_str = "allocates(" if len(self.values["allocated_vars"]) > 0 else ""
-            allocated_str += ",".join(self.values["allocated_vars"])
-            allocated_str += ") " if len(self.values["allocated_vars"]) > 0 else ""
-
-            deleted_str = "deletes(" if len(self.values["deleted_vars"]) > 0 else ""
-            deleted_str += ",".join(self.values["deleted_vars"])
-            deleted_str += ") " if len(self.values["deleted_vars"]) > 0 else ""
-
+            region_pragma += map_to_str
+            region_pragma += map_from_str
+            region_pragma += map_to_from_str
+            region_pragma += map_alloc_str
+            region_pragma += map_delete_str
+            region_pragma += "// " if len(consumed_str) + len(produced_str) > 0 else ""
             region_pragma += consumed_str
             region_pragma += produced_str
-            region_pragma += allocated_str
-            region_pragma += deleted_str
 
-            pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), region_pragma, PragmaType.REGION))
+            pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), region_pragma, PragmaType.REGION))  # +2 to account for added braces
         else:
             pragmas.append((self.start_line, self.end_line, "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type,
                             PragmaType.PRAGMA))
