@@ -56,8 +56,8 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     gpu_region_info: List[GPURegionInfo] = regions.get_gpu_region_info(pet)
 
     # construct Combined GPU Regions
-    combined_gpu_regions: List[PatternInfo] = find_all_pairwise_gpu_region_combinations(
-        gpu_region_info, pet
-    )
+    combinable_gpu_regions: List[
+        Tuple[GPURegionInfo, GPURegionInfo, List[str]]
+    ] = find_all_pairwise_gpu_region_combinations(gpu_region_info, pet)
 
     return cast(List[PatternInfo], gpu_region_info)
