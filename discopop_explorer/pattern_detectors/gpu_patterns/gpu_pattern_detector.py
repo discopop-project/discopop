@@ -10,8 +10,11 @@ from typing import List, Dict, Set, Tuple, cast
 
 from discopop_explorer.PETGraphX import CUNode, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.gpu_patterns.CombinedGPURegions import (
+    find_all_pairwise_gpu_region_combinations,
+)
 from discopop_explorer.pattern_detectors.gpu_patterns.GPULoop import GPULoopPattern
-from discopop_explorer.pattern_detectors.gpu_patterns.GPURegions import GPURegions
+from discopop_explorer.pattern_detectors.gpu_patterns.GPURegions import GPURegions, GPURegionInfo
 from discopop_explorer.variable import Variable
 
 
@@ -50,6 +53,11 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     regions.determineDataMapping()
 
     # construct GPURegions
-    gpu_region_info: List[PatternInfo] = cast(List[PatternInfo], regions.get_gpu_region_info(pet))
+    gpu_region_info: List[GPURegionInfo] = regions.get_gpu_region_info(pet)
 
-    return gpu_region_info
+    # construct Combined GPU Regions
+    combined_gpu_regions: List[PatternInfo] = find_all_pairwise_gpu_region_combinations(
+        gpu_region_info, pet
+    )
+
+    return cast(List[PatternInfo], gpu_region_info)

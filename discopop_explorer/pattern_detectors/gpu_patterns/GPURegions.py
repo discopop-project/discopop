@@ -20,6 +20,7 @@ class GPURegionInfo(PatternInfo):
     """Class, that represents an identified GPU Region"""
 
     contained_loops: List[GPULoopPattern]
+    contained_cu_ids: List[str]
     map_from_vars: List[str]
     map_to_vars: List[str]
     map_to_from_vars: List[str]
@@ -32,6 +33,7 @@ class GPURegionInfo(PatternInfo):
         self,
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
+        contained_cu_ids: List[str],
         map_to_vars: List[str],
         map_from_vars: List[str],
         map_to_from_vars: List[str],
@@ -43,6 +45,7 @@ class GPURegionInfo(PatternInfo):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_loops = contained_loops
+        self.contained_cu_ids = contained_cu_ids
         self.map_to_vars = map_to_vars
         self.map_from_vars = map_from_vars
         self.map_to_from_vars = map_to_from_vars
@@ -83,6 +86,7 @@ class GPURegions:
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
+    cu_ids_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_from_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_to_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_tofrom_by_region: Dict[Tuple[str, ...], List[str]]
@@ -97,6 +101,7 @@ class GPURegions:
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
         self.pet = pet
+        self.cu_ids_by_region = dict()
         self.map_type_from_by_region = dict()
         self.map_type_to_by_region = dict()
         self.map_type_tofrom_by_region = dict()
@@ -186,6 +191,7 @@ class GPURegions:
                 region_cus += [
                     cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
                 ]
+            self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
 
             # determine start and end line of region
             region_start_line = min([cu.start_line for cu in region_cus])
@@ -421,6 +427,7 @@ class GPURegions:
             current_info = GPURegionInfo(
                 self.pet,
                 contained_loop_patterns,
+                self.cu_ids_by_region[tuple(region)],
                 self.map_type_to_by_region[tuple(region)],
                 self.map_type_from_by_region[tuple(region)],
                 self.map_type_tofrom_by_region[tuple(region)],
