@@ -22,7 +22,7 @@ def find_combined_gpu_regions(
 ) -> List[CombinedGPURegion]:
     combinable_pairs: List[
         Tuple[GPURegionInfo, GPURegionInfo, List[str]]
-    ] = find_all_pairwise_gpu_region_combinations(gpu_regions, pet)
+    ] = __find_all_pairwise_gpu_region_combinations(gpu_regions, pet)
     # print combinable gpu regions
     for combinable_1, combinable_2, common_data in combinable_pairs:
         print("Combinable: ")
@@ -34,7 +34,7 @@ def find_combined_gpu_regions(
         print("Common data: ", common_data)
         print()
 
-    intra_function_combinations = find_combinations_within_function_body(pet, combinable_pairs)
+    intra_function_combinations = __find_combinations_within_function_body(pet, combinable_pairs)
     for combinable_1, combinable_2 in intra_function_combinations:
         print("INTRA COMBINE: ")
         print(combinable_1.start_line, combinable_1.end_line)
@@ -43,7 +43,7 @@ def find_combined_gpu_regions(
         print("####")
         print()
 
-    true_successor_combinations = find_true_successor_combinations(pet, intra_function_combinations)
+    true_successor_combinations = __find_true_successor_combinations(pet, intra_function_combinations)
     for combinable_1, combinable_2 in true_successor_combinations:
         print("TRUE SUCCESSORS: ")
         print(combinable_1.start_line, combinable_1.end_line)
@@ -55,7 +55,7 @@ def find_combined_gpu_regions(
     return []
 
 
-def find_true_successor_combinations(
+def __find_true_successor_combinations(
     pet, intra_function_combinations: List[Tuple[GPURegionInfo, GPURegionInfo]]
 ) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
     """Check for combinations options without branching inbetween.
@@ -83,13 +83,12 @@ def find_true_successor_combinations(
                 # end of the function's body not yet reached, continue searching
                 # add successors to queue
                 queue += [succ for succ in successors if succ not in visited]
-
         if true_successors:
             result.append((region_1, region_2))
     return result
 
 
-def find_combinations_within_function_body(
+def __find_combinations_within_function_body(
     pet: PETGraphX, combinable_pairs: List[Tuple[GPURegionInfo, GPURegionInfo, List[str]]]
 ) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
     """Check regions pairwise for reachability via successor edges.
@@ -114,7 +113,7 @@ def find_combinations_within_function_body(
     return result
 
 
-def find_all_pairwise_gpu_region_combinations(
+def __find_all_pairwise_gpu_region_combinations(
     gpu_regions: List[GPURegionInfo], pet: PETGraphX
 ) -> List[Tuple[GPURegionInfo, GPURegionInfo, List[str]]]:
     combinable_pairs: List[

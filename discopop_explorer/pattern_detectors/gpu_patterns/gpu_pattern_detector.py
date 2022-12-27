@@ -11,7 +11,7 @@ from typing import List, Dict, Set, Tuple, cast
 from discopop_explorer.PETGraphX import CUNode, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.gpu_patterns.CombinedGPURegions import (
-    find_all_pairwise_gpu_region_combinations,
+    __find_all_pairwise_gpu_region_combinations,
     find_combined_gpu_regions,
 )
 from discopop_explorer.pattern_detectors.gpu_patterns.GPULoop import GPULoopPattern
