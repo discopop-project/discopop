@@ -10,7 +10,7 @@ from typing import List, Tuple, cast
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.gpu_patterns.GPURegions import GPURegionInfo
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
 
 class CombinedGPURegion(PatternInfo):
@@ -131,7 +131,7 @@ class CombinedGPURegion(PatternInfo):
 
 
 def find_combined_gpu_regions(
-    gpu_regions: List[GPURegionInfo], pet: PETGraphX
+    pet: PETGraphX, gpu_regions: List[GPURegionInfo]
 ) -> List[CombinedGPURegion]:
     combinable_pairs: List[
         Tuple[GPURegionInfo, GPURegionInfo, List[str]]

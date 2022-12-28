@@ -6,16 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List, Dict, Set, Tuple, cast
+from typing import List, cast
 
-from discopop_explorer.PETGraphX import CUNode, NodeType, PETGraphX
+from discopop_explorer.PETGraphX import NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.gpu_patterns.CombinedGPURegions import (
-    __find_all_pairwise_gpu_region_combinations,
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
     find_combined_gpu_regions,
 )
-from discopop_explorer.pattern_detectors.gpu_patterns.GPULoop import GPULoopPattern
-from discopop_explorer.pattern_detectors.gpu_patterns.GPURegions import GPURegions, GPURegionInfo
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
+    GPURegions,
+    GPURegionInfo,
+)
 from discopop_explorer.variable import Variable
 
 
@@ -55,8 +57,5 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
 
     # construct GPURegions
     gpu_region_info: List[GPURegionInfo] = regions.get_gpu_region_info(pet)
-
-    # construct Combined GPU Regions
-    combined_gpu_regions = find_combined_gpu_regions(gpu_region_info, pet)
 
     return cast(List[PatternInfo], gpu_region_info)

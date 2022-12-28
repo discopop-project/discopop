@@ -205,7 +205,7 @@ class Suggestion(object):
                     int(stage["startsAtLine"].split(":")[1]), int(stage["endsAtLine"].split(":")[1]), pragma,
                     PragmaType.PRAGMA)
                 pragmas.append(pragma_tuple)
-        elif self.type == "gpu":
+        elif self.type == "simple_gpu":
             region_start = self.values["start_line"]
             region_start_line = int(region_start.split(":")[1])
             region_end = self.values["end_line"]
