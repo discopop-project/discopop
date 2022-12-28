@@ -17,6 +17,9 @@ class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
     device_cu_ids: List[str]
     host_cu_ids: List[str]
+    # meta information, mainly for display and overview purposes
+    meta_device_lines: List[str]
+    meta_host_lines: List[str]
 
     def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
         node_id = sorted([region.node_id for region in contained_regions])[0]
@@ -35,6 +38,63 @@ class CombinedGPURegion(PatternInfo):
         print(self.end_line)
         print("DEVICE CUS: ", self.device_cu_ids)
         print("HOST CUS: ", self.host_cu_ids)
+        self.meta_device_lines = []
+        self.meta_host_lines = []
+        self.__get_metadata(pet)
+
+    def __str__(self):
+        raise NotImplementedError()  # used to identify necessity to call to_string() instead
+
+    def to_string(self, pet: PETGraphX):
+        contained_regions_str = "\n" if len(self.contained_regions) > 0 else ""
+        for region in self.contained_regions:
+            region_str = region.to_string(pet)
+            # pretty printing
+            region_str = "".join(["\t" + s + "\n" for s in region_str.split("\n")])
+            contained_regions_str += region_str
+
+        return (
+            f"COMBINED GPU Region at: {self.node_id}\n"
+            f"Start line: {self.start_line}\n"
+            f"End line: {self.end_line}\n"
+            f"Device CUs: {self.device_cu_ids}\n"
+            f"Host CUs: {self.host_cu_ids}\n"
+            f"Device lines: {self.meta_device_lines}\n"
+            f"Host lines: {self.meta_host_lines}\n"
+            f"Contained regions: {contained_regions_str}\n"
+        )
+
+    def __get_metadata(self, pet: PETGraphX):
+        """Create metadata and store it in the respective fields."""
+        for device_cu_id in self.device_cu_ids:
+            device_cu = pet.node_at(device_cu_id)
+            self.meta_device_lines = list(
+                set(
+                    self.meta_device_lines
+                    + self.__get_contained_lines(
+                        device_cu.start_position(), device_cu.end_position()
+                    )
+                )
+            )
+        for host_cu_id in self.host_cu_ids:
+            host_cu = pet.node_at(host_cu_id)
+            self.meta_host_lines = list(
+                set(
+                    self.meta_host_lines
+                    + self.__get_contained_lines(host_cu.start_position(), host_cu.end_position())
+                )
+            )
+
+    def __get_contained_lines(self, start_line: str, end_line: str) -> List[str]:
+        """Returns a list of line numbers inbetween start_line and end_line"""
+        file_id = start_line.split(":")[0]
+        if file_id != end_line.split(":")[0]:
+            raise ValueError("File-ids not equal! ", start_line, end_line)
+        line_numbers: List[int] = list(
+            range(int(start_line.split(":")[1]), int(end_line.split(":")[1]) + 1)
+        )
+        result = [file_id + ":" + str(num) for num in line_numbers]
+        return result
 
     def __get_host_cu_ids(self, pet: PETGraphX) -> List[str]:
         """identify CUs within the region which are not offloaded to a device."""
@@ -112,7 +172,7 @@ def find_combined_gpu_regions(
     for gpu_region in gpu_regions:
         combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region]))
 
-    return []
+    return combined_gpu_regions
 
 
 def __find_true_successor_combinations(
