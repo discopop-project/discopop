@@ -14,7 +14,60 @@ from discopop_explorer.pattern_detectors.gpu_patterns.GPURegions import GPURegio
 
 
 class CombinedGPURegion(PatternInfo):
-    pass
+    contained_regions: List[GPURegionInfo]
+    device_cu_ids: List[str]
+    host_cu_ids: List[str]
+
+    def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
+        node_id = sorted([region.node_id for region in contained_regions])[0]
+        device_cu_ids = []
+        for region in contained_regions:
+            device_cu_ids += region.contained_cu_ids
+            device_cu_ids = list(set(device_cu_ids))
+        PatternInfo.__init__(self, pet.node_at(node_id))
+        self.contained_regions = contained_regions
+        self.device_cu_ids = device_cu_ids
+        self.start_line = min([l.start_line for l in contained_regions])
+        self.end_line = max([l.end_line for l in contained_regions])
+        self.host_cu_ids = self.__get_host_cu_ids(pet)
+        print()
+        print(self.start_line)
+        print(self.end_line)
+        print("DEVICE CUS: ", self.device_cu_ids)
+        print("HOST CUS: ", self.host_cu_ids)
+
+    def __get_host_cu_ids(self, pet: PETGraphX) -> List[str]:
+        """identify CUs within the region which are not offloaded to a device."""
+        host_cu_ids: List[str] = []
+        for node_id_1 in self.device_cu_ids:
+            for node_id_2 in self.device_cu_ids:
+                if node_id_1 == node_id_2:
+                    continue
+                cu_ids_inbetween: List[str] = []
+                # construct all paths from node_id_1 to node_id_2 and get all visited nodes
+                queue: List[CUNode] = [pet.node_at(node_id_1)]
+                while queue:
+                    current = queue.pop()
+                    if current.id == node_id_2:
+                        # found target, stop searching on this branch
+                        continue
+                    else:
+                        # add current to cu_ids_inbetween
+                        cu_ids_inbetween.append(current.id)
+                        # continue search for successors as long as line numbers potentially allow a match
+                        queue += [
+                            n
+                            for n in pet.direct_successors(current)
+                            if n.id not in cu_ids_inbetween
+                            and n.id.split(":")[0] == node_id_2.split(":")[0]
+                            and int(n.id.split(":")[1]) <= int(node_id_2.split(":")[1])
+                        ]
+                host_cu_ids += [
+                    cu_id for cu_id in cu_ids_inbetween if cu_id not in self.device_cu_ids
+                ]
+        host_cu_ids = list(set(host_cu_ids))
+        host_cu_ids = sorted(host_cu_ids)
+        return host_cu_ids
 
 
 def find_combined_gpu_regions(
@@ -43,7 +96,9 @@ def find_combined_gpu_regions(
         print("####")
         print()
 
-    true_successor_combinations = __find_true_successor_combinations(pet, intra_function_combinations)
+    true_successor_combinations = __find_true_successor_combinations(
+        pet, intra_function_combinations
+    )
     for combinable_1, combinable_2 in true_successor_combinations:
         print("TRUE SUCCESSORS: ")
         print(combinable_1.start_line, combinable_1.end_line)
@@ -51,6 +106,11 @@ def find_combined_gpu_regions(
         print(combinable_2.start_line, combinable_2.end_line)
         print("####")
         print()
+
+    # create combined gpu regions from original gpu regions
+    combined_gpu_regions = []
+    for gpu_region in gpu_regions:
+        combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region]))
 
     return []
 

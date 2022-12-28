@@ -424,10 +424,17 @@ class GPURegions:
             # save OpenMP constructs in GPULoops for the exporting to JSON
             for loop in contained_loop_patterns:
                 loop.save_omp_constructs(pet)
+            device_cu_ids = self.cu_ids_by_region[tuple(region)]
+            for loop in contained_loop_patterns:
+                for func_node_id in loop.called_functions:
+                    for child in pet.direct_children(pet.node_at(func_node_id)):
+                        device_cu_ids.append(child.id)
+
+            device_cu_ids = list(set(device_cu_ids))
             current_info = GPURegionInfo(
                 self.pet,
                 contained_loop_patterns,
-                self.cu_ids_by_region[tuple(region)],
+                device_cu_ids,
                 self.map_type_to_by_region[tuple(region)],
                 self.map_type_from_by_region[tuple(region)],
                 self.map_type_tofrom_by_region[tuple(region)],
