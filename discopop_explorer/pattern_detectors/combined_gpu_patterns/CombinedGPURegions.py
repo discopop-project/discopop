@@ -33,11 +33,6 @@ class CombinedGPURegion(PatternInfo):
         self.start_line = min([l.start_line for l in contained_regions])
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
-        print()
-        print(self.start_line)
-        print(self.end_line)
-        print("DEVICE CUS: ", self.device_cu_ids)
-        print("HOST CUS: ", self.host_cu_ids)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -133,9 +128,15 @@ class CombinedGPURegion(PatternInfo):
 def find_combined_gpu_regions(
     pet: PETGraphX, gpu_regions: List[GPURegionInfo]
 ) -> List[CombinedGPURegion]:
+    # create combined gpu regions from original gpu regions
+    combined_gpu_regions = []
+    for gpu_region in gpu_regions:
+        combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region]))
+
+    # determine relations between single-element regions
     combinable_pairs: List[
-        Tuple[GPURegionInfo, GPURegionInfo, List[str]]
-    ] = __find_all_pairwise_gpu_region_combinations(gpu_regions, pet)
+        Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]
+    ] = __find_all_pairwise_gpu_region_combinations(combined_gpu_regions, pet)
     # print combinable gpu regions
     for combinable_1, combinable_2, common_data in combinable_pairs:
         print("Combinable: ")
@@ -167,17 +168,36 @@ def find_combined_gpu_regions(
         print("####")
         print()
 
-    # create combined gpu regions from original gpu regions
-    combined_gpu_regions = []
-    for gpu_region in gpu_regions:
-        combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region]))
+    # combine regions
+    for combinable_1, combinable_2 in true_successor_combinations:
+        combined_gpu_regions.remove(combinable_1)
+        combined_gpu_regions.remove(combinable_2)
+        combined_gpu_regions.append(__combine_regions(pet, combinable_1, combinable_2))
 
+    # todo add update instructions
+    # todo merge data regions
+    
     return combined_gpu_regions
 
 
+def __combine_regions(
+    pet: PETGraphX, region_1: CombinedGPURegion, region_2: CombinedGPURegion
+) -> CombinedGPURegion:
+    """Combines regions. Individual contained regions are not yet merged!
+    Analysis of Live-data and necessary update pragmas needs ti happen in a subsequent step."""
+    print(region_1.to_string(pet))
+    print(region_2.to_string(pet))
+    combined_region = CombinedGPURegion(
+        pet, region_1.contained_regions + region_2.contained_regions
+    )
+    print("COMBINED REGION: ")
+    print(combined_region.to_string(pet))
+    return combined_region
+
+
 def __find_true_successor_combinations(
-    pet, intra_function_combinations: List[Tuple[GPURegionInfo, GPURegionInfo]]
-) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
+    pet, intra_function_combinations: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
+) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     """Check for combinations options without branching inbetween.
     As a result, both regions will always be executed in succession."""
     result = []
@@ -185,12 +205,16 @@ def __find_true_successor_combinations(
     # a true successor relation exists, if every successor path outgoing from any child of region_1 arrives at region_2
     for region_1, region_2 in intra_function_combinations:
         true_successors = True
-        queue: List[CUNode] = pet.direct_children(pet.node_at(region_1.node_id))
+        queue: List[CUNode] = pet.direct_children(
+            pet.node_at(region_1.contained_regions[0].node_id)
+        )
         visited: List[CUNode] = []
         while queue:
             current_node: CUNode = queue.pop()
             visited.append(current_node)
-            if current_node in pet.direct_children(pet.node_at(region_2.node_id)):
+            if current_node in pet.direct_children(
+                pet.node_at(region_2.contained_regions[0].node_id)
+            ):
                 # reached region_2
                 continue
             # region_2 not reached
@@ -209,8 +233,8 @@ def __find_true_successor_combinations(
 
 
 def __find_combinations_within_function_body(
-    pet: PETGraphX, combinable_pairs: List[Tuple[GPURegionInfo, GPURegionInfo, List[str]]]
-) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
+    pet: PETGraphX, combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]]
+) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     """Check regions pairwise for reachability via successor edges.
     Only combinations within a function's body are possible in this way since successor edges only exist
     for function body's."""
@@ -220,8 +244,12 @@ def __find_combinations_within_function_body(
             continue
         # check reachability in both directions via successor edges
         # consider children, as loop nodes do not have successors on their own
-        for region_1_child in pet.direct_children(pet.node_at(region_1.node_id)):
-            for region_2_child in pet.direct_children(pet.node_at(region_2.node_id)):
+        for region_1_child in pet.direct_children(
+            pet.node_at(region_1.contained_regions[0].node_id)
+        ):
+            for region_2_child in pet.direct_children(
+                pet.node_at(region_2.contained_regions[0].node_id)
+            ):
                 if region_1_child == region_2_child:
                     continue
                 if pet.check_reachability(region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
@@ -234,10 +262,10 @@ def __find_combinations_within_function_body(
 
 
 def __find_all_pairwise_gpu_region_combinations(
-    gpu_regions: List[GPURegionInfo], pet: PETGraphX
-) -> List[Tuple[GPURegionInfo, GPURegionInfo, List[str]]]:
+    gpu_regions: List[CombinedGPURegion], pet: PETGraphX
+) -> List[Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]]:
     combinable_pairs: List[
-        Tuple[GPURegionInfo, GPURegionInfo, List[str]]
+        Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]
     ] = []  # [(region1, region2, [common data])
     # check pairwise if gpu regions can be combined
     for gpu_region_1 in gpu_regions:
@@ -245,11 +273,16 @@ def __find_all_pairwise_gpu_region_combinations(
             if gpu_region_1 == gpu_region_2:
                 continue
             # check if same data is accessed
-            if __common_data_accessed(gpu_region_1, gpu_region_2, pet):
+            if __common_data_accessed(
+                gpu_region_1.contained_regions[0], gpu_region_2.contained_regions[0], pet
+            ):
                 common_data = [
                     var
-                    for var in gpu_region_1.consumed_vars + gpu_region_1.produced_vars
-                    if var in gpu_region_2.produced_vars + gpu_region_2.consumed_vars
+                    for var in gpu_region_1.contained_regions[0].consumed_vars
+                    + gpu_region_1.contained_regions[0].produced_vars
+                    if var
+                    in gpu_region_2.contained_regions[0].produced_vars
+                    + gpu_region_2.contained_regions[0].consumed_vars
                 ]
                 combinable_pairs.append((gpu_region_1, gpu_region_2, common_data))
     return combinable_pairs
