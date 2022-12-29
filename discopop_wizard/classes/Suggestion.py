@@ -13,6 +13,8 @@ from enum import IntEnum
 from tkinter import ttk
 from typing import List, Tuple
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType
+
 
 class PragmaType(IntEnum):
     PRAGMA = 1
@@ -288,6 +290,22 @@ class Suggestion(object):
                         PragmaType.REGION, indentation))  # +2 to account for added braces
         return pragmas
 
+    def __get_update_pragmas(self, update_instructions) -> List[Tuple[int, int, str, PragmaType, int]]:
+        pragmas = []
+        for source_cu_id, sink_cu_id, update_type, target_var, pragma_line in update_instructions:
+            pragma_str = "#pragma TODO update "
+
+            if update_type == UpdateType.TO_DEVICE:
+                pragma_str += "HOST_TO_DEVICE "
+            elif update_type == UpdateType.FROM_DEVICE:
+                pragma_str += "DEVICE_TO_HOST "
+            else:
+                raise ValueError("Unsupported update type: ", update_type)
+            pragma_str += target_var + " "
+            pragma_line_num = int(pragma_line.split(":")[1])
+            pragmas.append((pragma_line_num, pragma_line_num, pragma_str, PragmaType.PRAGMA, 0))
+        return pragmas
+
     def __get_combined_gpu_pragmas(self) -> List[Tuple[int, int, str, PragmaType]]:
         pragmas = []
         for region in self.values["contained_regions"]:
@@ -296,7 +314,9 @@ class Suggestion(object):
                                                      region["map_to_vars"], region["map_from_vars"],
                                                      region["map_to_from_vars"],
                                                      region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=2)
+                                                     region["consumed_vars"], region["produced_vars"], indentation=0)
+        # add update instructions to pragmas
+        pragmas += self.__get_update_pragmas(self.values["update_instructions"])
 
 
         return pragmas

@@ -5,16 +5,26 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+from enum import IntEnum
 from typing import List, Tuple, cast
 
-from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
 
+class UpdateType(IntEnum):
+    TO_DEVICE = 0
+    FROM_DEVICE = 1
+    # TO_FROM should not occur ideally, since data should only be modified either on the host or the device for now
+    TO_FROM_DEVICE = 2
+
+
 class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
+    update_instructions: List[
+        Tuple[str, str, UpdateType, str, str]
+    ]  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
     device_cu_ids: List[str]
     host_cu_ids: List[str]
     # meta information, mainly for display and overview purposes
@@ -33,6 +43,7 @@ class CombinedGPURegion(PatternInfo):
         self.start_line = min([l.start_line for l in contained_regions])
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
+        self.update_instructions = self.__get_update_instructions(pet)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -58,6 +69,103 @@ class CombinedGPURegion(PatternInfo):
             f"Host lines: {self.meta_host_lines}\n"
             f"Contained regions: {contained_regions_str}\n"
         )
+
+    def __get_update_instructions(
+        self, pet: PETGraphX
+    ) -> List[Tuple[str, str, UpdateType, str, str]]:
+        """Identify update points and create a list of required update instructions to be inserted into
+        the combined GPU region.
+        Updates point are defined by data dependencies between host and device cu's."""
+        update_instructions: List[
+            Tuple[str, str, UpdateType, str, str]
+        ] = []  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
+
+        def determine_updates(source_cu_ids, sink_cu_ids, update_type):
+            for sink_cu_id in sink_cu_ids:
+                out_deps = [
+                    (target_id, dep)
+                    for _, target_id, dep in pet.out_edges(sink_cu_id)
+                    if dep.var_name is not None and dep.dtype == DepType.RAW
+                ]
+                filtered_deps = [(t, d) for (t, d) in out_deps if t in source_cu_ids]
+                # report UpdateInstructions
+                for source_cu_id, dep in filtered_deps:
+                    # use Host code to handle updates
+                    if update_type == UpdateType.TO_DEVICE:
+                        pragma_position = pet.node_at(source_cu_id).start_position()
+                    elif update_type == UpdateType.FROM_DEVICE:
+                        pragma_position = pet.node_at(sink_cu_id).start_position()
+                    else:
+                        raise ValueError("Unsupported update type: ", update_type)
+                    update_instructions.append(
+                        (
+                            source_cu_id,
+                            sink_cu_id,
+                            update_type,
+                            cast(str, dep.var_name),
+                            pragma_position,
+                        )
+                    )
+
+        # determine device to host updates
+        determine_updates(self.device_cu_ids, self.host_cu_ids, UpdateType.FROM_DEVICE)
+
+        # determine host to device updates
+        determine_updates(self.host_cu_ids, self.device_cu_ids, UpdateType.TO_DEVICE)
+
+        # cleanup update instructions (remove duplicates, combine updates of equal data for successors and children)
+        # remove duplicates
+        update_instructions = list(set(update_instructions))
+        # if multiple updates with equal source and data exist, allow only such updates which have a predecessor on a
+        # different device
+        to_be_removed: List[Tuple[str, str, UpdateType, str, str]] = []
+        for update_1 in update_instructions:
+            for update_2 in update_instructions:
+                if update_1 == update_2 or update_1[3] != update_2[3] or update_1[0] != update_2[0]:
+                    continue
+                # two updates with identical source and target variable found
+                # if one is a successor of the other, keep the predecessor
+                sink_1 = pet.node_at(update_1[1])
+                sink_2 = pet.node_at(update_2[1])
+
+                if pet.check_reachability(
+                    sink_2, sink_1, [EdgeType.SUCCESSOR]
+                ) and not pet.check_reachability(sink_1, sink_2, [EdgeType.SUCCESSOR]):
+                    # sink_1 is a true predecessor of sink_2
+                    to_be_removed.append(update_2)
+                elif pet.check_reachability(
+                    sink_1, sink_2, [EdgeType.SUCCESSOR]
+                ) and not pet.check_reachability(sink_2, sink_1, [EdgeType.SUCCESSOR]):
+                    # sink_2 is a true predecessor of sink_1
+                    to_be_removed.append(update_1)
+                else:
+                    # no true predecessor relation (e.g. due to loops)
+                    # determine predecessor based on predecessor location if possible
+                    diff_device_predecessors = []
+                    if update_1[1] in self.device_cu_ids:
+                        diff_device_predecessors += [
+                            s
+                            for s, _, _ in pet.in_edges(update_1[1], EdgeType.SUCCESSOR)
+                            if s in self.host_cu_ids
+                        ]
+                    elif update_1[2] in self.host_cu_ids:
+                        diff_device_predecessors += [
+                            s
+                            for s, _, _ in pet.in_edges(update_1[1], EdgeType.SUCCESSOR)
+                            if s in self.device_cu_ids
+                        ]
+                    if len(diff_device_predecessors) > 0:
+                        to_be_removed.append(update_2)
+                    else:
+                        # else, determine predecessor based on start_line
+                        if sink_1.start_line < sink_2.start_line:
+                            to_be_removed.append(update_2)
+
+        to_be_removed = list(set(to_be_removed))
+        for update_1 in to_be_removed:
+            if update_1 in update_instructions:
+                update_instructions.remove(update_1)
+        return update_instructions
 
     def __get_metadata(self, pet: PETGraphX):
         """Create metadata and store it in the respective fields."""
@@ -176,7 +284,7 @@ def find_combined_gpu_regions(
 
     # todo add update instructions
     # todo merge data regions
-    
+
     return combined_gpu_regions
 
 
