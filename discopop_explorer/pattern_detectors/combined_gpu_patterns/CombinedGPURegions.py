@@ -44,6 +44,7 @@ class CombinedGPURegion(PatternInfo):
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
+        self.__optimize_mapping_clauses()
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -231,6 +232,12 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = list(set(host_cu_ids))
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
+
+    def __optimize_mapping_clauses(self):
+        """rely on the explicit update instructions for data synchronization within the region.
+        Optimize mapping instructions for an efficient use within the region.
+        Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region."""
+        pass
 
 
 def find_combined_gpu_regions(
