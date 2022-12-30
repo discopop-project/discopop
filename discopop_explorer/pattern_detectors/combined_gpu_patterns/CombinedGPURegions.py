@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from enum import IntEnum
-from typing import List, Tuple, cast
+from typing import List, Tuple, cast, Dict
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -46,7 +46,7 @@ class CombinedGPURegion(PatternInfo):
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
         self.pairwise_reachability = self.__get_pairwise_reachability(pet)
-        self.__optimize_data_region()
+        self.__optimize_data_region(pet)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -235,7 +235,7 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
 
-    def __optimize_data_region(self):
+    def __optimize_data_region(self, pet: PETGraphX):
         """rely on the explicit update instructions for data synchronization within the region.
         Optimize mapping instructions for an efficient use within the region.
         Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region."""
@@ -243,6 +243,19 @@ class CombinedGPURegion(PatternInfo):
             # only optimize such data regions which contain at least two GPU regions
             return
 
+        # calculate data liveness
+        liveness: Dict[str, List[str]] = self.__calculate_data_liveness(pet)  # {var_name: [cu_ids]}
+        print("LIVENESS")
+        for key in liveness:
+            print(key)
+            live_lines = [pet.node_at(v).start_line for v in liveness[key]]
+            live_lines = list(set(live_lines))
+            live_lines = sorted(live_lines)
+            print("\t", live_lines)
+        print()
+        return
+
+        # todo below here should be replaced with a more intelligent solution
         # replace TOFROM with explicit TO and FROM mappings (note: TO and FROM to same variable in one pragma not valid)
         for region in self.contained_regions:
             for var in region.map_to_from_vars:
@@ -324,6 +337,28 @@ class CombinedGPURegion(PatternInfo):
                 if successor_relation:
                     reachable_pairs.append((region_1, region_2))
         return reachable_pairs
+
+    def __calculate_data_liveness(self, pet: PETGraphX) -> Dict[str, List[str]]:
+        """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
+        The gathered information is used for the optimization of data mapping instructions afterwards."""
+        liveness: Dict[str, List[str]] = dict()
+        # populate liveness sets based on regions
+        for region in self.contained_regions:
+            live_in_region = region.map_to_vars + region.map_to_from_vars + region.map_alloc_vars
+            # set liveness within region
+            for var in live_in_region:
+                for region_cu in region.contained_cu_ids:
+                    if var not in liveness:
+                        liveness[var] = []
+                    liveness[var].append(region_cu)
+        # populate liveness sets based on update instructions
+        for source_id, sink_id, update_type, var, meta_line_num in self.update_instructions:
+            if var not in liveness:
+                liveness[var] = []
+            liveness[var].append(source_id)
+            liveness[var].append(sink_id)
+
+        return liveness
 
 
 def find_combined_gpu_regions(
