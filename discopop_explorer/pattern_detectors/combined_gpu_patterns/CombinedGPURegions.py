@@ -239,7 +239,53 @@ class CombinedGPURegion(PatternInfo):
         """rely on the explicit update instructions for data synchronization within the region.
         Optimize mapping instructions for an efficient use within the region.
         Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region."""
-        pass
+        if not len(self.contained_regions) > 1:
+            # only optimize such data regions which contain at least two GPU regions
+            return
+
+        # replace TOFROM with explicit TO and FROM mappings (note: TO and FROM to same variable in one pragma not valid)
+        for region in self.contained_regions:
+            for var in region.map_to_from_vars:
+                region.map_to_vars.append(var)
+                region.map_to_vars = list(set(region.map_to_vars))
+                region.map_from_vars.append(var)
+                region.map_from_vars = list(set(region.map_from_vars))
+            region.map_to_from_vars = []
+
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for region_1, region_2 in self.pairwise_reachability:
+                # region_1 is a predecessor of region_2
+                if self.__opt_move_TO_and_FROM_mappings(region_1, region_2):
+                    modification_found = True
+                    break
+
+    def __opt_move_TO_and_FROM_mappings(self, region_1: GPURegionInfo, region_2: GPURegionInfo):
+        """moves TO mappings forwards as far as possible.
+        moves FROM mappings backwards as far as possible.
+        returns True if a modifications has been done."""
+        # todo only update if region_2 is a true successor of region_1 (currently, CombinedGPURegions can only consist of True successors)
+        # todo determine mappings more intelligently
+        # move TO mappings to the front
+        # keep data alive if possible
+        move_forwards = [
+            var
+            for var in region_2.map_to_vars
+            if var in region_1.map_to_vars + region_1.map_alloc_vars
+        ]
+        region_2.map_to_vars = [var for var in region_2.map_to_vars if var not in move_forwards]
+        if len(move_forwards) > 0:
+            return True
+
+        # move FROM mappings to the back
+        # copy from at last region
+        move_backwards = [var for var in region_1.map_from_vars if var in region_2.map_from_vars]
+        region_1.map_from_vars = [
+            var for var in region_1.map_from_vars if var not in move_backwards
+        ]
+        if len(move_backwards) > 0:
+            return True
 
     def __get_pairwise_reachability(self, pet) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
         """Create a list of pairs of GPURegionInfo which represents pairwise reachability relation from
