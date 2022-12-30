@@ -79,6 +79,20 @@ class GPURegionInfo(PatternInfo):
             f"Contained patterns: {contained_loops_str}\n"
         )
 
+    def get_entry_cus(self, pet: PETGraphX) -> List[str]:
+        """returns a list of contained cus with predecessors outside the GPU Region,
+        i.e. entry points into the region"""
+        entry_cus: List[str] = []
+        for contained_cu_id in self.contained_cu_ids:
+            # check if contained_cu has only predecessors inside the gpu region
+            for predecessor_id, _, _ in pet.in_edges(contained_cu_id, EdgeType.SUCCESSOR):
+                if predecessor_id not in self.contained_cu_ids:
+                    # found entry node
+                    entry_cus.append(contained_cu_id)
+        # remove duplicates
+        entry_cus = list(set(entry_cus))
+        return entry_cus
+
 
 class GPURegions:
     cascadingLoopsInRegions: List[List[str]]

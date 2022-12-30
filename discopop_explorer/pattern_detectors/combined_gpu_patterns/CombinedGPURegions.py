@@ -27,6 +27,7 @@ class CombinedGPURegion(PatternInfo):
     ]  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
     device_cu_ids: List[str]
     host_cu_ids: List[str]
+    pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
@@ -44,7 +45,8 @@ class CombinedGPURegion(PatternInfo):
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
-        self.__optimize_mapping_clauses()
+        self.pairwise_reachability = self.__get_pairwise_reachability(pet)
+        self.__optimize_data_region()
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -233,11 +235,49 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
 
-    def __optimize_mapping_clauses(self):
+    def __optimize_data_region(self):
         """rely on the explicit update instructions for data synchronization within the region.
         Optimize mapping instructions for an efficient use within the region.
         Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region."""
         pass
+
+    def __get_pairwise_reachability(self, pet) -> List[Tuple[GPURegionInfo, GPURegionInfo]]:
+        """Create a list of pairs of GPURegionInfo which represents pairwise reachability relation from
+        Tuple[0] to Tuple[1]."""
+
+        def is_successor_bfs(source_cu, target_cu):
+            # returns true, if target_cu is a successor of source_cu
+            # searches along successor paths using bfs search
+            if source_cu == target_cu:
+                return True
+            queue: List[CUNode] = [source_cu]
+            visited: List[CUNode] = []
+            while queue:
+                current = queue.pop(0)
+                visited.append(current)
+                if current == target_cu:
+                    return True
+                queue += [n for n in pet.direct_successors(current) if n not in visited]
+            return False
+
+        reachable_pairs: List[Tuple[GPURegionInfo, GPURegionInfo]] = []
+        for region_1 in self.contained_regions:
+            for region_2 in self.contained_regions:
+                if region_1 == region_2:
+                    continue
+                successor_relation = True
+                for region_1_entry_cu_id in region_1.get_entry_cus(pet):
+                    for region_2_entry_cu_id in region_2.get_entry_cus(pet):
+                        if not is_successor_bfs(
+                            pet.node_at(region_1_entry_cu_id), pet.node_at(region_2_entry_cu_id)
+                        ):
+                            successor_relation = False
+                            break
+                    if not successor_relation:
+                        break
+                if successor_relation:
+                    reachable_pairs.append((region_1, region_2))
+        return reachable_pairs
 
 
 def find_combined_gpu_regions(
