@@ -282,9 +282,9 @@ class Suggestion(object):
         region_pragma += map_to_from_str
         region_pragma += map_alloc_str
         region_pragma += map_delete_str
-        region_pragma += "// " if len(consumed_str) + len(produced_str) > 0 else ""
-        region_pragma += consumed_str
-        region_pragma += produced_str
+#        region_pragma += "// " if len(consumed_str) + len(produced_str) > 0 else ""
+#        region_pragma += consumed_str
+#        region_pragma += produced_str
 
         pragmas.append((region_start_line, region_end_line + len(pragmas_in_region), region_pragma,
                         PragmaType.REGION, indentation))  # +2 to account for added braces
