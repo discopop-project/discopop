@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from enum import IntEnum
-from typing import List, Tuple, cast, Dict
+from typing import List, Tuple, cast, Dict, Optional
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -49,6 +49,8 @@ class CombinedGPURegion(PatternInfo):
         self.update_instructions = self.__get_update_instructions(pet)
         self.pairwise_reachability = self.__get_pairwise_reachability(pet)
         liveness = self.__optimize_data_mapping(pet)
+        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
+        # todo: self.__find_async_transfer_points(pet)
         # self.target_data_regions = self.__unused_get_target_data_regions(pet, liveness)
         self.meta_device_lines = []
         self.meta_host_lines = []
@@ -556,8 +558,37 @@ class CombinedGPURegion(PatternInfo):
         # todo convert data regions to tuples
         #            data_regions[var] = current_data_regions
 
+    #        return data_regions
 
-#        return data_regions
+    def __get_explicit_data_entry_and_exit_points(
+        self, pet: PETGraphX
+    ) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+        """Returns a tuple containing the explicit entry and exit points of target data regions."""
+        entry_points: List[Tuple[str, str]] = []
+        exit_points: List[Tuple[str, str]] = []
+        for region in self.contained_regions:
+            # open data region on alloc
+            # open data region on to
+            # open data region on to_from
+            for cu_id in region.get_entry_cus(pet):
+                for var in list(
+                    set(region.map_alloc_vars + region.map_to_vars + region.map_to_from_vars)
+                ):
+                    entry_points.append((var, cu_id))
+
+            # close data region on to_from
+            # close data region on delete
+            # close data region on from
+            region_cu_ids, outside_cu_ids = region.get_exit_cus(pet)
+            for cu_id in outside_cu_ids:  # cu_id -> first cu's after region
+                for var in list(
+                    set(region.map_to_from_vars + region.map_delete_vars + region.map_from_vars)
+                ):
+                    exit_points.append((var, cu_id))
+        print("ENTRY: ", entry_points)
+        print("EXIT: ", exit_points)
+
+        return entry_points, exit_points
 
 
 def find_combined_gpu_regions(

@@ -93,6 +93,23 @@ class GPURegionInfo(PatternInfo):
         entry_cus = list(set(entry_cus))
         return entry_cus
 
+    def get_exit_cus(self, pet: PETGraphX) -> Tuple[List[str], List[str]]:
+        """returns a list of contained cus with successors outside the GPU Region,
+        i.e. exit points of the region. as well as a list of their successors, i.e. the nodes after the region"""
+        contained_exit_cus: List[str] = []
+        outside_cus: List[str] = []
+        for contained_cu_id in self.contained_cu_ids:
+            # check if contained_cu_id has only successors inside the gpu region
+            for _, successor_id, _ in pet.out_edges(contained_cu_id, EdgeType.SUCCESSOR):
+                if successor_id not in self.contained_cu_ids:
+                    # found exit node
+                    contained_exit_cus.append(contained_cu_id)
+                    outside_cus.append(successor_id)
+        # remove duplicates
+        contained_exit_cus = list(set(contained_exit_cus))
+        outside_cus = list(set(outside_cus))
+        return contained_exit_cus, outside_cus
+
 
 class GPURegions:
     cascadingLoopsInRegions: List[List[str]]
