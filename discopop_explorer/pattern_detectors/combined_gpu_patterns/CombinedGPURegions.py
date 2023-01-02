@@ -327,7 +327,6 @@ class CombinedGPURegion(PatternInfo):
         Return True if modification has been found."""
         modification_found = False
         for region in self.contained_regions:
-            print("Region: ", region.node_id)
             to_be_removed: List[str] = []
             successors = [s for p, s in self.pairwise_reachability if p == region]
             for succ in successors:
@@ -337,7 +336,7 @@ class CombinedGPURegion(PatternInfo):
             to_be_removed = list(set(to_be_removed))
             for var in to_be_removed:
                 if var in region.map_from_vars:
-                    print("REMOVED: FROM:", var)
+                    print("REMOVED: FROM:", var, "from", region.start_line)
                     region.map_from_vars.remove(var)
                     modification_found = True
         return modification_found
