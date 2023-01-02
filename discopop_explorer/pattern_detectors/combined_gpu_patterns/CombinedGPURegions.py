@@ -244,35 +244,55 @@ class CombinedGPURegion(PatternInfo):
             return
 
         # calculate data liveness
-        liveness: Dict[str, List[str]] = self.__calculate_data_liveness(pet)  # {var_name: [cu_ids]}
+        liveness: Dict[str, List[str]] = self.__analyze_live_data(pet)  # {var_name: [cu_ids]}
         print("LIVENESS")
         for key in liveness:
             print(key)
             live_lines = [pet.node_at(v).start_line for v in liveness[key]]
             live_lines = list(set(live_lines))
             live_lines = sorted(live_lines)
-            print("\t", live_lines)
+            print("\t", live_lines, "->", liveness[key])
         print()
+
+        self.opt_map_type_to(pet, liveness)
+
         return
 
-        # todo below here should be replaced with a more intelligent solution
-        # replace TOFROM with explicit TO and FROM mappings (note: TO and FROM to same variable in one pragma not valid)
+    def opt_map_type_to(self, pet: PETGraphX, liveness: Dict[str, List[str]]):
+        """Only allow map type TO, if the data is not mapped TO by any predecessor"""
         for region in self.contained_regions:
-            for var in region.map_to_from_vars:
-                region.map_to_vars.append(var)
-                region.map_to_vars = list(set(region.map_to_vars))
-                region.map_from_vars.append(var)
-                region.map_from_vars = list(set(region.map_from_vars))
-            region.map_to_from_vars = []
+            print("Region:", region.node_id)
+            to_be_removed: List[str] = []
+            predecessors = [p for p, s in self.pairwise_reachability if s == region]
+            for pred in predecessors:
+                # validate map_type_to variables of region against pred
+                for var in region.map_to_vars:
+                    if var in pred.map_to_vars + pred.map_alloc_vars:
+                        to_be_removed.append(var)
+            to_be_removed = list(set(to_be_removed))
+            for var in to_be_removed:
+                if var in region.map_to_vars:
+                    print("REMOVED: TO:", var)
+                    region.map_to_vars.remove(var)
 
-        modification_found = True
-        while modification_found:
-            modification_found = False
-            for region_1, region_2 in self.pairwise_reachability:
-                # region_1 is a predecessor of region_2
-                if self.__opt_move_TO_and_FROM_mappings(region_1, region_2):
-                    modification_found = True
-                    break
+    #        # todo below here should be replaced with a more intelligent solution
+    #        # replace TOFROM with explicit TO and FROM mappings (note: TO and FROM to same variable in one pragma not valid)
+    #        for region in self.contained_regions:
+    #            for var in region.map_to_from_vars:
+    #                region.map_to_vars.append(var)
+    #                region.map_to_vars = list(set(region.map_to_vars))
+    #                region.map_from_vars.append(var)
+    #                region.map_from_vars = list(set(region.map_from_vars))
+    #            region.map_to_from_vars = []
+    #
+    #        modification_found = True
+    #        while modification_found:
+    #            modification_found = False
+    #            for region_1, region_2 in self.pairwise_reachability:
+    #                # region_1 is a predecessor of region_2
+    #                if self.__opt_move_TO_and_FROM_mappings(region_1, region_2):
+    #                    modification_found = True
+    #                    break
 
     def __opt_move_TO_and_FROM_mappings(self, region_1: GPURegionInfo, region_2: GPURegionInfo):
         """moves TO mappings forwards as far as possible.
@@ -338,13 +358,18 @@ class CombinedGPURegion(PatternInfo):
                     reachable_pairs.append((region_1, region_2))
         return reachable_pairs
 
-    def __calculate_data_liveness(self, pet: PETGraphX) -> Dict[str, List[str]]:
+    def __analyze_live_data(self, pet: PETGraphX) -> Dict[str, List[str]]:
         """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
         The gathered information is used for the optimization of data mapping instructions afterwards."""
         liveness: Dict[str, List[str]] = dict()
         # populate liveness sets based on regions
         for region in self.contained_regions:
-            live_in_region = region.map_to_vars + region.map_to_from_vars + region.map_alloc_vars
+            live_in_region = (
+                region.map_to_vars
+                + region.map_to_from_vars
+                + region.map_alloc_vars
+                + region.consumed_vars
+            )
             # set liveness within region
             for var in live_in_region:
                 for region_cu in region.contained_cu_ids:
