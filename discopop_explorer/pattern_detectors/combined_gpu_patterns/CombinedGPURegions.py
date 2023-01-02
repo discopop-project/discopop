@@ -51,7 +51,6 @@ class CombinedGPURegion(PatternInfo):
         liveness = self.__optimize_data_mapping(pet)
         entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         # todo: self.__find_async_transfer_points(pet)
-        # self.target_data_regions = self.__unused_get_target_data_regions(pet, liveness)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -473,92 +472,6 @@ class CombinedGPURegion(PatternInfo):
             liveness[var].append(sink_id)
 
         return liveness
-
-    def __unused_get_target_data_regions(
-        self, pet: PETGraphX, liveness: Dict[str, List[str]]
-    ) -> Dict[str, List[Tuple[List[str], str, str, str, str]]]:
-        """Calculate beginnings and endings of the data regions for all target variables"""
-        for var in liveness:
-            print("Var: ", var)
-            successors_dict: Dict[str, List[str]] = dict()
-            predecessors_dict: Dict[str, List[str]] = dict()
-            # calculate successor relations between cu's in which var is live
-            for cu_id_1 in liveness[var]:
-                for cu_id_2 in liveness[var]:
-                    if cu_id_1 == cu_id_2:
-                        continue
-                    # check if cu_1 is a predecessor of cu_2
-                    if pet.is_predecessor(cu_id_1, cu_id_2):
-                        if cu_id_1 not in successors_dict:
-                            successors_dict[cu_id_1] = []
-                        successors_dict[cu_id_1].append(cu_id_2)
-                        successors_dict[cu_id_1] = list(set(successors_dict[cu_id_1]))
-                        if cu_id_2 not in predecessors_dict:
-                            predecessors_dict[cu_id_2] = []
-                        predecessors_dict[cu_id_2].append(cu_id_1)
-                        predecessors_dict[cu_id_2] = list(set(predecessors_dict[cu_id_2]))
-
-            # identify start positions of data regions
-            start_positions: List[str] = []
-            for cu_id in liveness[var]:
-                # check if cu_id is already covered
-                already_covered = False
-                for start_cu in start_positions:
-                    if pet.is_predecessor(start_cu, cu_id):
-                        # cu_id is already covered, skip
-                        already_covered = True
-                        break
-                if already_covered:
-                    continue
-
-                # check if cu_id is a predecessor of a start_cu
-                is_predecessor = False
-                for idx, start_cu in enumerate(start_positions):
-                    if pet.is_predecessor(cu_id, start_cu):
-                        # overwrite start_cu
-                        start_positions[idx] = cu_id
-                        is_predecessor = True
-                if is_predecessor:
-                    continue
-
-                # create a new entry
-                start_positions.append(cu_id)
-            start_positions = list(set(start_positions))
-
-            print(start_positions)
-            print("->", [pet.node_at(l).start_position() for l in start_positions])
-
-            # check predecessor relations against other contained cu_ids
-
-        return dict()
-
-        #        data_regions: Dict[str, List[Tuple[List[str], str, str, str, str]]] = dict()
-        #        # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
-        #        for var in liveness:
-        #            successors_dict: Dict[str, List[str]] = dict()
-        #            predecessors_dict: Dict[str, List[str]] = dict()
-        #            # calculate successor relations between cu's in which var is live
-        #            for cu_id_1 in liveness[var]:
-        #                for cu_id_2 in liveness[var]:
-        #                    if cu_id_1 == cu_id_2:
-        #                        continue
-        #                    # check if cu_1 is a predecessor of cu_2
-        #                    if pet.is_predecessor(cu_id_1, cu_id_2):
-        #                        if cu_id_1 not in successors_dict:
-        #                            successors_dict[cu_id_1] = []
-        #                        successors_dict[cu_id_1].append(cu_id_2)
-        #                        successors_dict[cu_id_1] = list(set(successors_dict[cu_id_1]))
-        #                        if cu_id_2 not in predecessors_dict:
-        #                            predecessors_dict[cu_id_2] = []
-        #                        predecessors_dict[cu_id_2].append(cu_id_1)
-        #                        predecessors_dict[cu_id_2] = list(set(predecessors_dict[cu_id_2]))
-
-        # calculate region entry and exit cu_s
-
-        # todo convert data regions to tuples
-        #            data_regions[var] = current_data_regions
-
-    #        return data_regions
 
     def __get_explicit_data_entry_and_exit_points(
         self, pet: PETGraphX
