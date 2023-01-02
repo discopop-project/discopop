@@ -20,6 +20,18 @@ class UpdateType(IntEnum):
     TO_FROM_DEVICE = 2
 
 
+class EntryPointType(IntEnum):
+    TO_DEVICE = 0
+    ALLOCATE = 1
+    ASYNC_TO_DEVICE = 2
+    ASYNC_ALLOCATE = 3
+
+
+class ExitPointType(IntEnum):
+    FROM_DEVICE = 0
+    DELETE = 1
+
+
 class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
     update_instructions: List[
@@ -50,7 +62,20 @@ class CombinedGPURegion(PatternInfo):
         self.pairwise_reachability = self.__get_pairwise_reachability(pet)
         liveness = self.__optimize_data_mapping(pet)
         entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
-        # todo: self.__find_async_transfer_points(pet)
+        (
+            entry_points,
+            exit_points,
+            in_dependencies,
+            out_dependencies,
+        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+        print("Entry Points:")
+        print(entry_points)
+        print("Exit Points:")
+        print(exit_points)
+        print("Depend(in): ")
+        print(in_dependencies)
+        print("Depend(out):")
+        print(out_dependencies)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -475,33 +500,83 @@ class CombinedGPURegion(PatternInfo):
 
     def __get_explicit_data_entry_and_exit_points(
         self, pet: PETGraphX
-    ) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+    ) -> Tuple[List[Tuple[str, str, EntryPointType]], List[Tuple[str, str, ExitPointType]]]:
         """Returns a tuple containing the explicit entry and exit points of target data regions."""
-        entry_points: List[Tuple[str, str]] = []
-        exit_points: List[Tuple[str, str]] = []
+        entry_points: List[Tuple[str, str, EntryPointType]] = []
+        exit_points: List[Tuple[str, str, ExitPointType]] = []
         for region in self.contained_regions:
-            # open data region on alloc
-            # open data region on to
-            # open data region on to_from
-            for cu_id in region.get_entry_cus(pet):
-                for var in list(
-                    set(region.map_alloc_vars + region.map_to_vars + region.map_to_from_vars)
-                ):
-                    entry_points.append((var, cu_id))
 
-            # close data region on to_from
-            # close data region on delete
-            # close data region on from
+            for cu_id in region.get_entry_cus(pet):
+                # open data region on to
+                # open data region on to_from
+                for var in list(set(region.map_to_vars + region.map_to_from_vars)):
+                    entry_points.append((var, cu_id, EntryPointType.TO_DEVICE))
+                # open data region on alloc
+                for var in list(set(region.map_alloc_vars)):
+                    entry_points.append((var, cu_id, EntryPointType.ALLOCATE))
+
             region_cu_ids, outside_cu_ids = region.get_exit_cus(pet)
             for cu_id in outside_cu_ids:  # cu_id -> first cu's after region
-                for var in list(
-                    set(region.map_to_from_vars + region.map_delete_vars + region.map_from_vars)
-                ):
-                    exit_points.append((var, cu_id))
+                # close data region on to_from
+                # close data region on from
+                for var in list(set(region.map_to_from_vars + region.map_from_vars)):
+                    exit_points.append((var, cu_id, ExitPointType.FROM_DEVICE))
+                # close data region on delete
+                for var in list(set(region.map_delete_vars)):
+                    exit_points.append((var, cu_id, ExitPointType.DELETE))
         print("ENTRY: ", entry_points)
         print("EXIT: ", exit_points)
 
         return entry_points, exit_points
+
+    def __find_async_loading_points(
+        self,
+        pet: PETGraphX,
+        entry_points: List[Tuple[str, str, EntryPointType]],
+        exit_points: List[Tuple[str, str, ExitPointType]],
+    ) -> Tuple[
+        List[Tuple[str, str, EntryPointType]],
+        List[Tuple[str, str, ExitPointType]],
+        List[Tuple[str, str]],
+        List[Tuple[str, str]],
+    ]:
+        """Checks if asynchronous preloading of data is possible. Returns the modified lists of entry_ and
+        exit_points."""
+        updated_entry_points: List[Tuple[str, str, EntryPointType]] = []
+        in_dependencies: List[Tuple[str, str]] = []
+        out_dependencies: List[Tuple[str, str]] = []
+        for var, entry_point_cu, entry_point_type in entry_points:
+            if entry_point_type == EntryPointType.ALLOCATE:
+                updated_entry_points.append((var, entry_point_cu, entry_point_type))
+                continue
+            # todo estimate workload of skipped section and determine whether preloading is worth it
+            # find locations of accesses to var which are predecessors to entry_point_cu
+            found_update = False
+            for dev_cu_id in self.device_cu_ids:
+                for _, t, dep in pet.out_edges(dev_cu_id, EdgeType.DATA):
+                    if dep.var_name != var:
+                        continue
+                    if t in self.device_cu_ids:
+                        continue
+                    # check if t is a predecessor of entry_point_cu
+                    if pet.is_predecessor(t, entry_point_cu):
+                        # update entry point
+                        ept = (
+                            EntryPointType.ASYNC_ALLOCATE
+                            if entry_point_type == EntryPointType.ALLOCATE
+                            else EntryPointType.ASYNC_TO_DEVICE
+                        )
+                        updated_entry_points.append((var, t, ept))
+                        found_update = True
+                        # create dependency
+                        in_dependencies.append((var, entry_point_cu))
+                        out_dependencies.append((var, t))
+                if found_update:
+                    break
+            if not found_update:
+                updated_entry_points.append((var, entry_point_cu, entry_point_type))
+
+        return updated_entry_points, exit_points, in_dependencies, out_dependencies
 
 
 def find_combined_gpu_regions(
