@@ -30,6 +30,7 @@ class EntryPointType(IntEnum):
 class ExitPointType(IntEnum):
     FROM_DEVICE = 0
     DELETE = 1
+    ASYNC_FROM_DEVICE = 2
 
 
 class CombinedGPURegion(PatternInfo):
@@ -543,8 +544,10 @@ class CombinedGPURegion(PatternInfo):
         """Checks if asynchronous preloading of data is possible. Returns the modified lists of entry_ and
         exit_points."""
         updated_entry_points: List[Tuple[str, str, EntryPointType]] = []
+        updated_exit_points: List[Tuple[str, str, ExitPointType]] = []
         in_dependencies: List[Tuple[str, str]] = []
         out_dependencies: List[Tuple[str, str]] = []
+        # find options for async H2D copying
         for var, entry_point_cu, entry_point_type in entry_points:
             if entry_point_type == EntryPointType.ALLOCATE:
                 updated_entry_points.append((var, entry_point_cu, entry_point_type))
@@ -576,7 +579,39 @@ class CombinedGPURegion(PatternInfo):
             if not found_update:
                 updated_entry_points.append((var, entry_point_cu, entry_point_type))
 
-        return updated_entry_points, exit_points, in_dependencies, out_dependencies
+        # find options for async D2H copying
+        for var, exit_point_cu, exit_point_type in exit_points:
+            if exit_point_type == ExitPointType.DELETE:
+                updated_exit_points.append((var, exit_point_cu, exit_point_type))
+            # todo estimate workload of skipped section and determine whether async copying is worth it
+            # find locations of accesses to var which are successors to exit_point_cu
+            found_update = False
+            for dev_cu_id in self.device_cu_ids:
+                for s, _, dep in pet.in_edges(dev_cu_id, EdgeType.DATA):
+                    if dep.var_name != var:
+                        continue
+                    if s in self.device_cu_ids:
+                        continue
+                    # check if s is a successor of exit_point_cu
+                    if pet.is_predecessor(exit_point_cu, s):
+                        # update exit point
+                        updated_exit_points.append(
+                            (var, exit_point_cu, ExitPointType.ASYNC_FROM_DEVICE)
+                        )
+                        found_update = True
+                        # create dependency
+                        out_dependencies.append((var, exit_point_cu))
+                        in_dependencies.append((var, s))
+                if found_update:
+                    break
+            if not found_update:
+                updated_exit_points.append((var, exit_point_cu, exit_point_type))
+
+        # remove duplicates
+        updated_entry_points = list(set(updated_entry_points))
+        updated_exit_points = list(set(updated_exit_points))
+
+        return updated_entry_points, updated_exit_points, in_dependencies, out_dependencies
 
 
 def find_combined_gpu_regions(
