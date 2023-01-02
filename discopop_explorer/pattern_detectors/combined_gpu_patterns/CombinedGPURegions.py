@@ -25,6 +25,8 @@ class CombinedGPURegion(PatternInfo):
     update_instructions: List[
         Tuple[str, str, UpdateType, str, str]
     ]  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
+    target_data_regions: Dict[str, List[Tuple[List[str], str, str, str, str]]]
+    # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
     device_cu_ids: List[str]
     host_cu_ids: List[str]
     pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
@@ -46,7 +48,8 @@ class CombinedGPURegion(PatternInfo):
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
         self.pairwise_reachability = self.__get_pairwise_reachability(pet)
-        self.__optimize_data_region(pet)
+        liveness = self.__optimize_data_mapping(pet)
+        self.target_data_regions = self.__get_target_data_regions(pet, liveness)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -235,13 +238,22 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
 
-    def __optimize_data_region(self, pet: PETGraphX):
+    def __optimize_data_mapping(self, pet: PETGraphX) -> Dict[str, List[str]]:
         """rely on the explicit update instructions for data synchronization within the region.
         Optimize mapping instructions for an efficient use within the region.
-        Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region."""
+        Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region.
+        Returns liveness information for each target variable."""
         if not len(self.contained_regions) > 1:
             # only optimize such data regions which contain at least two GPU regions
-            return
+            return dict()
+
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            self.opt_split_map_type_to_from()
+            modification_found = modification_found or self.opt_map_type_to()
+            modification_found = modification_found or self.opt_map_type_from()
+            self.opt_find_map_type_to_from()
 
         # calculate data liveness
         liveness: Dict[str, List[str]] = self.__analyze_live_data(pet)  # {var_name: [cu_ids]}
@@ -251,15 +263,88 @@ class CombinedGPURegion(PatternInfo):
             live_lines = [pet.node_at(v).start_line for v in liveness[key]]
             live_lines = list(set(live_lines))
             live_lines = sorted(live_lines)
-            print("\t", live_lines, "->", liveness[key])
+            print("\t", live_lines)
         print()
 
-        self.opt_map_type_to(pet, liveness)
+        return liveness
 
-        return
+    def __group_liveness(
+        self, pet: PETGraphX, liveness: Dict[str, List[str]]
+    ) -> Dict[str, List[List[str]]]:
+        """Groups liveness information into reachable regions"""
+        grouped_liveness: Dict[str, List[List[str]]] = dict()
+        for var in liveness:
+            groups: List[List[str]] = []
+            for cu_1 in liveness[var]:
+                # check if cu_1 belongs to a group
+                belongs_to_any_group = False
+                for idx, group in enumerate(groups):
+                    belongs_to_group = False
+                    for cu_2 in group:
+                        if pet.check_reachability(
+                            pet.node_at(cu_2), pet.node_at(cu_1), [EdgeType.SUCCESSOR]
+                        ):
+                            belongs_to_group = True
+                    if belongs_to_group:
+                        # append cu_1 to current group
+                        groups[idx].append(cu_1)
+                        belongs_to_any_group = True
+                if not belongs_to_any_group:
+                    # create a new group
+                    groups.append([cu_1])
+            grouped_liveness[var] = groups
+        return grouped_liveness
 
-    def opt_map_type_to(self, pet: PETGraphX, liveness: Dict[str, List[str]]):
-        """Only allow map type TO, if the data is not mapped TO by any predecessor"""
+    def opt_find_map_type_to_from(self):
+        """Find pairs in map type TO and FROM and combine them into map type TO_FROM."""
+        for region in self.contained_regions:
+            buffer: List[str] = []
+            for var_1 in region.map_to_vars:
+                for var_2 in region.map_from_vars:
+                    if var_1 == var_2:
+                        # found match
+                        buffer.append(var_1)
+            buffer = list(set(buffer))
+            for var in buffer:
+                region.map_to_vars.remove(var)
+                region.map_from_vars.remove(var)
+                region.map_to_from_vars.append(var)
+            region.map_to_from_vars = list(set(region.map_to_from_vars))
+
+    def opt_split_map_type_to_from(self):
+        """Split map type TO_FROM into TO and FROM for easier optimization."""
+        for region in self.contained_regions:
+            for var in region.map_to_from_vars:
+                region.map_to_vars.append(var)
+                region.map_from_vars.append(var)
+                region.map_to_vars = list(set(region.map_to_vars))
+                region.map_from_vars = list(set(region.map_from_vars))
+            region.map_to_from_vars = []
+
+    def opt_map_type_from(self) -> bool:
+        """Only allow map type FROM, if the data is not used by any successor.
+        Return True if modification has been found."""
+        modification_found = False
+        for region in self.contained_regions:
+            print("Region: ", region.node_id)
+            to_be_removed: List[str] = []
+            successors = [s for p, s in self.pairwise_reachability if p == region]
+            for succ in successors:
+                for var in region.map_from_vars:
+                    if var in succ.consumed_vars:
+                        to_be_removed.append(var)
+            to_be_removed = list(set(to_be_removed))
+            for var in to_be_removed:
+                if var in region.map_from_vars:
+                    print("REMOVED: FROM:", var)
+                    region.map_from_vars.remove(var)
+                    modification_found = True
+        return modification_found
+
+    def opt_map_type_to(self) -> bool:
+        """Only allow map type TO, if the data is not mapped TO by any predecessor.
+        Return True, if a modification has been found."""
+        modification_found = False
         for region in self.contained_regions:
             print("Region:", region.node_id)
             to_be_removed: List[str] = []
@@ -274,6 +359,8 @@ class CombinedGPURegion(PatternInfo):
                 if var in region.map_to_vars:
                     print("REMOVED: TO:", var)
                     region.map_to_vars.remove(var)
+                    modification_found = True
+        return modification_found
 
     #        # todo below here should be replaced with a more intelligent solution
     #        # replace TOFROM with explicit TO and FROM mappings (note: TO and FROM to same variable in one pragma not valid)
@@ -384,6 +471,39 @@ class CombinedGPURegion(PatternInfo):
             liveness[var].append(sink_id)
 
         return liveness
+
+    def __get_target_data_regions(
+        self, pet: PETGraphX, liveness: Dict[str, List[str]]
+    ) -> Dict[str, List[Tuple[List[str], str, str, str, str]]]:
+        """Calculate beginnings and endings of the data regions for all target variables"""
+
+        data_regions: Dict[str, List[Tuple[List[str], str, str, str, str]]] = dict()
+        # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
+        for var in liveness:
+            successors_dict: Dict[str, List[str]] = dict()
+            predecessors_dict: Dict[str, List[str]] = dict()
+            # calculate successor relations between cu's in which var is live
+            for cu_id_1 in liveness[var]:
+                for cu_id_2 in liveness[var]:
+                    if cu_id_1 == cu_id_2:
+                        continue
+                    # check if cu_1 is a predecessor of cu_2
+                    if pet.is_predecessor(cu_id_1, cu_id_2):
+                        if cu_id_1 not in successors_dict:
+                            successors_dict[cu_id_1] = []
+                        successors_dict[cu_id_1].append(cu_id_2)
+                        successors_dict[cu_id_1] = list(set(successors_dict[cu_id_1]))
+                        if cu_id_2 not in predecessors_dict:
+                            predecessors_dict[cu_id_2] = []
+                        predecessors_dict[cu_id_2].append(cu_id_1)
+                        predecessors_dict[cu_id_2] = list(set(predecessors_dict[cu_id_2]))
+
+            # calculate region entry and exit cu_s
+
+            # todo convert data regions to tuples
+        #            data_regions[var] = current_data_regions
+
+        return data_regions
 
 
 def find_combined_gpu_regions(

@@ -962,3 +962,34 @@ class PETGraphX(object):
                     if e[0] not in visited:
                         queue.append(self.node_at(e[0]))
         return False
+
+    def is_predecessor(self, source_id: str, target_id: str) -> bool:
+        """returns true, if source is a predecessor of target.
+        This analysis includes traversal of successor, child and calls edges."""
+        # perform a bfs search for target
+        queue: List[str] = [source_id]
+        visited: List[str] = []
+        while queue:
+            current = queue.pop(0)
+            if current == target_id:
+                return True
+            visited.append(current)
+            # add direct successors to queue
+            queue += [
+                n.id
+                for n in self.direct_successors(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add children to queue
+            queue += [
+                n.id
+                for n in self.direct_children(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add called functions to queue
+            queue += [
+                t
+                for _, t, _ in self.out_edges(current, EdgeType.CALLSNODE)
+                if t not in visited and t not in queue
+            ]
+        return False
