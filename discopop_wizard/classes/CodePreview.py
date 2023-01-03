@@ -31,7 +31,7 @@ class Line(object):
         result += regions_str
         return result
 
-    def display(self, parent_element: tk.Text, max_line_num: int, max_metadata_len: int):
+    def display(self, parent_element: tk.Text, line_idx: int,  max_line_num: int, max_metadata_len: int):
         if not self.content.endswith("\n"):
             self.content += "\n"
         # assemble line_num_str
@@ -49,8 +49,26 @@ class Line(object):
         line += line_num_str
         line += "  "  # padding
         line += self.content
+
         parent_element.insert(tk.END, line)
 
+        # highlight inserted pragmas
+        if self.line_num is None:
+            # todo generate background colors
+            background_color = "#e5f2b3" if line_idx % 2 == 0 else "#a4ed9a"
+            if self.owns_region is not None:
+                # highlight entire line if a new region is created
+                self.__highlight(parent_element, line_idx, 0, len(line), background_color)
+            else:
+                # highlight pragma only
+                self.__highlight(parent_element, line_idx, len(line) - len(self.content), len(line), background_color)
+
+    def __highlight(self, parent_element: tk.Text, line_idx: int, start_position: int, end_position: int, color: str):
+        """highlights the given section of the line in the given color"""
+        start_position_str = str(line_idx) + "." + str(start_position)
+        end_position_str = str(line_idx) + "." + str(end_position)
+        parent_element.tag_add(color + ":" + start_position_str + "-" + end_position_str, start_position_str, end_position_str)
+        parent_element.tag_config(color + ":" + start_position_str + "-" + end_position_str, background=color, foreground="black")
 
 class CodePreview(object):
     lines: List[Line]
@@ -89,8 +107,10 @@ class CodePreview(object):
                 max_metadata_len = len(tmp)
 
 
-        for line in self.lines:
-            line.display(parent_element, self.max_line_num, max_metadata_len)
+        for line_idx, line in enumerate(self.lines):
+            # offset line_id to account for start with 1
+            offset_line_id = line_idx + 1
+            line.display(parent_element, offset_line_id, self.max_line_num, max_metadata_len)
 
     def jump_to_first_modification(self, parent_element: tk.Text):
         """Jumps to the location of the first modified source code location."""
@@ -104,14 +124,6 @@ class CodePreview(object):
 
     def add_pragma(self, pragma: Pragma, parent_regions: List[int]):
         """insert pragma into the maintained list of source code lines"""
-        # todo remove PRAGMA FIELDS
-        # pragma_str: str = ""
-        # file_id: Optional[int] = None
-        # start_line: Optional[int] = None
-        # end_line: Optional[int] = None
-        # pragma_position: PragmaPosition = PragmaPosition.BEFORE_START
-        # parent_cu_id: str = ""
-        # children: List[Any] = []
         if pragma.start_line is None or pragma.end_line is None:
             raise ValueError("Unsupported start or end line: ", pragma.start_line, "-", pragma.end_line)
         if pragma.file_id is None:
