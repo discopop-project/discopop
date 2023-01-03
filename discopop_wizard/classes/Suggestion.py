@@ -82,18 +82,9 @@ class Suggestion(object):
 
         # show CodePreview
         code_preview.show_in(source_code)
-        #
-        # get list of pragmas to be inserted
-
-        #        pragmas = self.__get_pragmas()
-        #
-        #        # insert pragmas to code preview and add highlights
-        #        highlight_start_positions = self.__insert_pragmas(source_code, pragmas, max_line_num_length)
-        #
 
         # show targeted code section
         code_preview.jump_to_first_modification(source_code)
-
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
@@ -101,64 +92,6 @@ class Suggestion(object):
     def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
         return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
-
-    def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str, PragmaType, int]],
-                         max_line_num_lenght: int):
-        highlight_start_positions = []
-
-        idx = 0
-        for start_line, end_line, pragma_str, pragma_type, indentation in sorted(pragmas, reverse=True,
-                                                                                 key=lambda v: int(
-                                                                                     v[0])):  # sort reverse by line num
-            # add pragma string
-            padding = ""
-            while len(padding) < max_line_num_lenght + indentation:
-                padding += " "
-            source_code.insert(str(start_line) + ".0", padding + "    " + pragma_str + "\n")
-            # highlight inserted pragmas and their target code sections
-            pos = self.__highlight_code(source_code, start_line, end_line + 1,
-                                        idx, pragma_type, indentation,
-                                        max_line_num_lenght)  # +1 to account for added pragma line
-            highlight_start_positions.append(pos)
-            idx += 1
-
-        return sorted(highlight_start_positions, key=lambda value: int(value.split(".")[0]))
-
-    def __highlight_code(self, source_code: tk.Text, start_line: int, end_line: int, index, pragma_type: PragmaType,
-                         indentation: int, max_line_num_length: int):
-        """highlights the specified lines in the source code preview and returns the used start position.
-        index is used to determine the color."""
-        end_line_length = 200
-        background_color = "#e5f2b3" if index % 2 == 0 else "#a4ed9a"
-        if pragma_type == PragmaType.PRAGMA:
-            # highlight source code
-            # highlight code line by line
-            for line_num in range(start_line, end_line + 1):
-                start_pos = str(line_num) + "." + str(
-                    max_line_num_length + 4 + indentation)  # + 4 to account for added whitespaces
-                end_pos = str(line_num) + "." + str(end_line_length)
-                source_code.tag_add("start" + str(index) + ":" + str(line_num), start_pos, end_pos)
-                source_code.tag_config("start" + str(index) + ":" + str(line_num), background=background_color,
-                                       foreground="black")
-            start_pos = str(start_line) + "." + str(max_line_num_length)
-        elif pragma_type == PragmaType.REGION:
-            # highlight start line of region
-            start_pos = str(start_line) + "." + str(0 + indentation)
-            end_pos = str(start_line) + "." + str(end_line_length)
-            source_code.tag_add("start" + str(index) + ":region_start", start_pos, end_pos)
-            source_code.tag_config("start" + str(index) + ":region_start", background=background_color,
-                                   foreground="black")
-            # highlight line numbers within region
-            for line_num in range(start_line + 1, end_line + 1):
-                start_pos = str(line_num) + "." + str(0 + indentation)
-                end_pos = str(line_num) + "." + str(max_line_num_length + indentation)
-                source_code.tag_add("start" + str(index) + ":region_" + str(line_num), start_pos, end_pos)
-                source_code.tag_config("start" + str(index) + ":region_" + str(line_num), background=background_color,
-                                       foreground="black")
-            start_pos = str(start_line) + ".0"
-        else:
-            raise ValueError("Unsupported pragma type: ", pragma_type)
-        return start_pos
 
     def __get_do_all_and_reduction_pragmas(self) -> List[Pragma]:
         pragmas = []
@@ -265,7 +198,7 @@ class Suggestion(object):
                 pragmas.append(pragma)
         # mark gpu region
         # increase region end line to account for added pragmas
-#        pragmas_in_region = [p for p in pragmas if p[0] >= region_start_line and p[1] <= region_end_line]
+        #        pragmas_in_region = [p for p in pragmas if p[0] >= region_start_line and p[1] <= region_end_line]
         region_pragma = Pragma()
         region_pragma.pragma_str = "#pragma omp target data "
         map_to_str = "map(to: " if len(map_to_vars) > 0 else ""
