@@ -92,6 +92,16 @@ class CodePreview(object):
         for line in self.lines:
             line.display(parent_element, self.max_line_num, max_metadata_len)
 
+    def jump_to_first_modification(self, parent_element: tk.Text):
+        """Jumps to the location of the first modified source code location."""
+        first_location = ""
+        for idx, line in enumerate(self.lines):
+            if line.line_num is None:
+                first_location = "" + str(idx) + ".0"
+                break
+        parent_element.see(first_location)
+
+
     def add_pragma(self, pragma: Pragma, parent_regions: List[int]):
         """insert pragma into the maintained list of source code lines"""
         # todo remove PRAGMA FIELDS

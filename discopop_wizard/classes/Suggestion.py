@@ -75,35 +75,10 @@ class Suggestion(object):
         # create CodePreview object
         code_preview = CodePreview(self.file_id, file_mapping[self.file_id])
 
-        # todo create DUmmy Pragmas
-        pragma_3 = Pragma()
-        pragma_3.pragma_str = "#DUMMY PRAGMA 3"
-        pragma_3.file_id = 1
-        pragma_3.start_line = 40
-        pragma_3.end_line = 44
-
-        pragma_2 = Pragma()
-        pragma_2.pragma_str = "#DUMMY PRAGMA 2"
-        pragma_2.file_id = 1
-        pragma_2.start_line = 40
-        pragma_2.end_line = 44
-        pragma_2.children = [pragma_3]
-
-        pragma_1 = Pragma()
-        pragma_1.pragma_str = "#DUMMY PRAGMA 1"
-        pragma_1.file_id = 1
-        pragma_1.start_line = 40
-        pragma_1.end_line = 44
-        pragma_1.children = [pragma_2]
-
-        #code_preview.add_pragma(pragma_1, [])
-
-        # get pragmas
+        # get and insert pragmas
         pragmas = self.__get_pragmas()
         for pragma in pragmas:
             code_preview.add_pragma(pragma, [])
-
-
 
         # show CodePreview
         code_preview.show_in(source_code)
@@ -115,8 +90,10 @@ class Suggestion(object):
         #        # insert pragmas to code preview and add highlights
         #        highlight_start_positions = self.__insert_pragmas(source_code, pragmas, max_line_num_length)
         #
-        #        # show targeted code section
-        #        source_code.see(highlight_start_positions[0])
+
+        # show targeted code section
+        code_preview.jump_to_first_modification(source_code)
+
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
