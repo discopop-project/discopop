@@ -30,7 +30,8 @@ class Suggestion(object):
     start_line: int
     end_line: int
 
-    def __init__(self, type: str, values: dict):
+    def __init__(self, wizard, type: str, values: dict):
+        self.wizard = wizard
         self.type = type
         self.values = values
 
@@ -73,7 +74,7 @@ class Suggestion(object):
                 file_mapping[id] = path
 
         # create CodePreview object
-        code_preview = CodePreview(self.file_id, file_mapping[self.file_id])
+        code_preview = CodePreview(self.wizard, self.file_id, file_mapping[self.file_id])
 
         # get and insert pragmas
         pragmas = self.__get_pragmas()
