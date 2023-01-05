@@ -20,6 +20,7 @@ class GPURegionInfo(PatternInfo):
     """Class, that represents an identified GPU Region"""
 
     contained_loops: List[GPULoopPattern]
+    contained_cu_ids: List[str]
     map_from_vars: List[str]
     map_to_vars: List[str]
     map_to_from_vars: List[str]
@@ -32,6 +33,7 @@ class GPURegionInfo(PatternInfo):
         self,
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
+        contained_cu_ids: List[str],
         map_to_vars: List[str],
         map_from_vars: List[str],
         map_to_from_vars: List[str],
@@ -43,6 +45,7 @@ class GPURegionInfo(PatternInfo):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_loops = contained_loops
+        self.contained_cu_ids = contained_cu_ids
         self.map_to_vars = map_to_vars
         self.map_from_vars = map_from_vars
         self.map_to_from_vars = map_to_from_vars
@@ -76,6 +79,37 @@ class GPURegionInfo(PatternInfo):
             f"Contained patterns: {contained_loops_str}\n"
         )
 
+    def get_entry_cus(self, pet: PETGraphX) -> List[str]:
+        """returns a list of contained cus with predecessors outside the GPU Region,
+        i.e. entry points into the region"""
+        entry_cus: List[str] = []
+        for contained_cu_id in self.contained_cu_ids:
+            # check if contained_cu has only predecessors inside the gpu region
+            for predecessor_id, _, _ in pet.in_edges(contained_cu_id, EdgeType.SUCCESSOR):
+                if predecessor_id not in self.contained_cu_ids:
+                    # found entry node
+                    entry_cus.append(contained_cu_id)
+        # remove duplicates
+        entry_cus = list(set(entry_cus))
+        return entry_cus
+
+    def get_exit_cus(self, pet: PETGraphX) -> Tuple[List[str], List[str]]:
+        """returns a list of contained cus with successors outside the GPU Region,
+        i.e. exit points of the region. as well as a list of their successors, i.e. the nodes after the region"""
+        contained_exit_cus: List[str] = []
+        outside_cus: List[str] = []
+        for contained_cu_id in self.contained_cu_ids:
+            # check if contained_cu_id has only successors inside the gpu region
+            for _, successor_id, _ in pet.out_edges(contained_cu_id, EdgeType.SUCCESSOR):
+                if successor_id not in self.contained_cu_ids:
+                    # found exit node
+                    contained_exit_cus.append(contained_cu_id)
+                    outside_cus.append(successor_id)
+        # remove duplicates
+        contained_exit_cus = list(set(contained_exit_cus))
+        outside_cus = list(set(outside_cus))
+        return contained_exit_cus, outside_cus
+
 
 class GPURegions:
     cascadingLoopsInRegions: List[List[str]]
@@ -83,6 +117,7 @@ class GPURegions:
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
+    cu_ids_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_from_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_to_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_tofrom_by_region: Dict[Tuple[str, ...], List[str]]
@@ -97,6 +132,7 @@ class GPURegions:
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
         self.pet = pet
+        self.cu_ids_by_region = dict()
         self.map_type_from_by_region = dict()
         self.map_type_to_by_region = dict()
         self.map_type_tofrom_by_region = dict()
@@ -186,6 +222,7 @@ class GPURegions:
                 region_cus += [
                     cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
                 ]
+            self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
 
             # determine start and end line of region
             region_start_line = min([cu.start_line for cu in region_cus])
@@ -418,9 +455,17 @@ class GPURegions:
             # save OpenMP constructs in GPULoops for the exporting to JSON
             for loop in contained_loop_patterns:
                 loop.save_omp_constructs(pet)
+            device_cu_ids = self.cu_ids_by_region[tuple(region)]
+            for loop in contained_loop_patterns:
+                for func_node_id in loop.called_functions:
+                    for child in pet.direct_children(pet.node_at(func_node_id)):
+                        device_cu_ids.append(child.id)
+
+            device_cu_ids = list(set(device_cu_ids))
             current_info = GPURegionInfo(
                 self.pet,
                 contained_loop_patterns,
+                device_cu_ids,
                 self.map_type_to_by_region[tuple(region)],
                 self.map_type_from_by_region[tuple(region)],
                 self.map_type_tofrom_by_region[tuple(region)],

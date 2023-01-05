@@ -10,9 +10,10 @@ import os
 import shutil
 
 import jsons
-
+import tkinter as tk
 
 class Settings(object):
+    # general settings
     initialized = False
     discopop_build_dir: str = ""
     clang: str = ""
@@ -24,6 +25,10 @@ class Settings(object):
     llvm_llc: str = ""
     go_bin: str = ""
     use_docker_container_for_profiling: bool = True
+
+    # code preview settings
+    code_preview_show_metadata: int = 1  # 1 = True, 0 = False
+    code_preview_show_line_numbers: int = 1 # 1 = True, 0 = False
 
     def __init__(self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True) -> None:
         self.discopop_build_dir = discopop_build_dir
@@ -119,6 +124,7 @@ def load_from_config_file(config_dir: str) -> Settings:
             json_str += line
     value_dict = jsons.loads(json_str)
     settings = Settings()
+    # general settings
     settings.discopop_build_dir = value_dict["discopop_build_dir"]
     settings.clang = value_dict["clang"]
     settings.clangpp = value_dict["clangpp"]
@@ -129,5 +135,9 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.llvm_llc = value_dict["llvm_llc"]
     settings.go_bin = value_dict["go_bin"]
     settings.use_docker_container_for_profiling = value_dict["use_docker_container_for_profiling"]
+    # code preview settings
+    settings.code_preview_show_metadata = value_dict["code_preview_show_metadata"]
+    settings.code_preview_show_line_numbers = value_dict["code_preview_show_line_numbers"]
+
     settings.initialized = True
     return settings

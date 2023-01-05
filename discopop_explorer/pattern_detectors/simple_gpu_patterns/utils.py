@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from discopop_explorer.pattern_detectors.gpu_patterns.GPULoop import GPULoopPattern
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 
 
 def sort_by_nodeID(e: GPULoopPattern):

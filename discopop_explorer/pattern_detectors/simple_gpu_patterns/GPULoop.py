@@ -373,7 +373,7 @@ class GPULoopPattern(PatternInfo):
         vars = pet.get_undefined_variables_inside_loop(loop)
 
         for var in vars:
-            if is_scalar_val(var) and var.accessMode == "R":
+            if is_scalar_val(var) and var.accessMode == "R" and False:
                 # will be implicitly mapped as firstprivate
                 continue
             if is_loop_index2(pet, loop, var.name):
