@@ -375,7 +375,7 @@ class PETGraphX(object):
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
         )
 
-        plt.show()
+        # plt.show()
         plt.savefig("graphX.svg")
 
     def node_at(self, node_id: str) -> CUNode:
@@ -910,3 +910,23 @@ class PETGraphX(object):
             if rv["loop_line"] == line and rv["name"] == name:
                 return rv["operation"]
         return ""
+
+    def dump_to_gephi_file(self):
+        """Note: Destroys the PETGraph!"""
+        # replace node data with label
+        for node_id in self.g.nodes:
+            tmp_cu: CUNode = self.g.nodes[node_id]["data"]
+            del self.g.nodes[node_id]["data"]
+            self.g.nodes[node_id]["id"] = tmp_cu.id
+            self.g.nodes[node_id]["type"] = str(tmp_cu.type)
+        for edge in self.g.edges:
+            print(edge)
+            print("\t", self.g.edges[edge]["data"])
+            print("\t", type(self.g.edges[edge]["data"]))
+            dep: Dependency = self.g.edges[edge]["data"]
+            del self.g.edges[edge]["data"]
+            self.g.edges[edge]["edge_type"] = str(dep.etype.name)
+            if dep.etype == EdgeType.DATA:
+                self.g.edges[edge]["var"] = dep.var_name
+                self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
+        nx.write_gexf(self.g, "pet.gexf")
