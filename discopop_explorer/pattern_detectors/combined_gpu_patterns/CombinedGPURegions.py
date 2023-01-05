@@ -69,14 +69,14 @@ class CombinedGPURegion(PatternInfo):
             in_dependencies,
             out_dependencies,
         ) = self.__find_async_loading_points(pet, entry_points, exit_points)
-        print("Entry Points:")
-        print(entry_points)
-        print("Exit Points:")
-        print(exit_points)
-        print("Depend(in): ")
-        print(in_dependencies)
-        print("Depend(out):")
-        print(out_dependencies)
+        #        print("Entry Points:")
+        #        print(entry_points)
+        #        print("Exit Points:")
+        #        print(exit_points)
+        #        print("Depend(in): ")
+        #        print(in_dependencies)
+        #        print("Depend(out):")
+        #        print(out_dependencies)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -363,7 +363,6 @@ class CombinedGPURegion(PatternInfo):
             to_be_removed = list(set(to_be_removed))
             for var in to_be_removed:
                 if var in region.map_from_vars:
-                    print("REMOVED: FROM:", var, "from", region.start_line)
                     region.map_from_vars.remove(var)
                     modification_found = True
         return modification_found
@@ -373,7 +372,6 @@ class CombinedGPURegion(PatternInfo):
         Return True, if a modification has been found."""
         modification_found = False
         for region in self.contained_regions:
-            print("Region:", region.node_id)
             to_be_removed: List[str] = []
             predecessors = [p for p, s in self.pairwise_reachability if s == region]
             for pred in predecessors:
@@ -381,7 +379,6 @@ class CombinedGPURegion(PatternInfo):
                 for var in region.map_to_vars:
                     if var in pred.map_to_vars + pred.map_alloc_vars:
                         to_be_removed.append(var)
-                        print("REMOVED: TO:", var, "from", region.start_line)
             to_be_removed = list(set(to_be_removed))
             for var in to_be_removed:
                 if var in region.map_to_vars:
@@ -525,8 +522,6 @@ class CombinedGPURegion(PatternInfo):
                 # close data region on delete
                 for var in list(set(region.map_delete_vars)):
                     exit_points.append((var, cu_id, ExitPointType.DELETE))
-        print("ENTRY: ", entry_points)
-        print("EXIT: ", exit_points)
 
         return entry_points, exit_points
 
@@ -626,36 +621,12 @@ def find_combined_gpu_regions(
     combinable_pairs: List[
         Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]
     ] = __find_all_pairwise_gpu_region_combinations(combined_gpu_regions, pet)
-    # print combinable gpu regions
-    for combinable_1, combinable_2, common_data in combinable_pairs:
-        print("Combinable: ")
-        print(combinable_1.start_line, combinable_1.end_line)
-        print("####")
-        print(combinable_2.start_line, combinable_2.end_line)
-        print("####")
-        # preliminary calculation of common data. Calculation based on dependencies should be preferred!
-        print("Common data: ", common_data)
-        print()
 
     intra_function_combinations = __find_combinations_within_function_body(pet, combinable_pairs)
-    for combinable_1, combinable_2 in intra_function_combinations:
-        print("INTRA COMBINE: ")
-        print(combinable_1.start_line, combinable_1.end_line)
-        print("####")
-        print(combinable_2.start_line, combinable_2.end_line)
-        print("####")
-        print()
 
     true_successor_combinations = __find_true_successor_combinations(
         pet, intra_function_combinations
     )
-    for combinable_1, combinable_2 in true_successor_combinations:
-        print("TRUE SUCCESSORS: ")
-        print(combinable_1.start_line, combinable_1.end_line)
-        print("####")
-        print(combinable_2.start_line, combinable_2.end_line)
-        print("####")
-        print()
 
     # combine regions
     for combinable_1, combinable_2 in true_successor_combinations:
@@ -674,13 +645,9 @@ def __combine_regions(
 ) -> CombinedGPURegion:
     """Combines regions. Individual contained regions are not yet merged!
     Analysis of Live-data and necessary update pragmas needs ti happen in a subsequent step."""
-    print(region_1.to_string(pet))
-    print(region_2.to_string(pet))
     combined_region = CombinedGPURegion(
         pet, region_1.contained_regions + region_2.contained_regions
     )
-    print("COMBINED REGION: ")
-    print(combined_region.to_string(pet))
     return combined_region
 
 
