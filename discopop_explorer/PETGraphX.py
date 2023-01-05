@@ -433,7 +433,6 @@ class PETGraphX(object):
 
         :param root: root node
         :param type: type of children, None is equal to a wildcard
-        :param visited: set of visited nodes
         :return: list of nodes in subtree
         """
         return self.subtree_of_type_rec(root, type, set())
@@ -869,7 +868,7 @@ class PETGraphX(object):
         """
         stack: List[CUNode] = []
         res: List[CUNode] = []
-        visited = []
+        visited = set()
 
         parent_func = self.get_parent_function(target)
         stack.append(parent_func)
@@ -885,7 +884,7 @@ class PETGraphX(object):
             if current in visited:  # suppress looping
                 continue
             else:
-                visited.append(current)
+                visited.add(current)
 
             stack.extend(
                 self.direct_children(current)
