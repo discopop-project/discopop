@@ -920,9 +920,6 @@ class PETGraphX(object):
             self.g.nodes[node_id]["id"] = tmp_cu.id
             self.g.nodes[node_id]["type"] = str(tmp_cu.type)
         for edge in self.g.edges:
-            print(edge)
-            print("\t", self.g.edges[edge]["data"])
-            print("\t", type(self.g.edges[edge]["data"]))
             dep: Dependency = self.g.edges[edge]["data"]
             del self.g.edges[edge]["data"]
             self.g.edges[edge]["edge_type"] = str(dep.etype.name)
