@@ -115,8 +115,10 @@ class MainScreen(object):
     def load_execution_configurations(self, config_dir: str) -> List[ExecutionConfiguration]:
         execution_configs: List[ExecutionConfiguration] = []
         for filename in os.listdir(os.path.join(config_dir, "execution_configurations")):
-            with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), 'r') as script:
+            if not filename.endswith(".json"):
+                continue
+            with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), 'r') as json_file:
                 config = ExecutionConfiguration(self.wizard)
-                config.init_from_script(script)
+                config.init_from_json(json_file)
                 execution_configs.append(config)
         return execution_configs

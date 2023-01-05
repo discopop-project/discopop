@@ -8,8 +8,11 @@
 
 FROM ubuntu:22.04
 
+ENV TZ=Europe/Berlin
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN apt-get update
-RUN apt-get install -y git cmake gcc libclang-11-dev clang-11 llvm-11 clang-tools-11 python3 python3-pip wget file
+RUN apt-get install -y git cmake gcc libclang-11-dev clang-11 llvm-11 clang-tools-11 python3 python3-pip python3-tk wget file
 
 # clone DiscoPoP
 RUN git clone https://github.com/discopop-project/discopop.git

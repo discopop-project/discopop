@@ -60,7 +60,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
 
 def get_suggestion_objects(wizard, execution_configuration_obj) -> List[Suggestion]:
-    suggestions_path = os.path.join(execution_configuration_obj.working_copy_path, "patterns.json")
+    suggestions_path = os.path.join(execution_configuration_obj.value_dict["working_copy_path"], "patterns.json")
 
     suggestions_list: List[Suggestion] = []
     with open(suggestions_path, "r") as f:

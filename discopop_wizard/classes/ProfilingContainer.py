@@ -53,8 +53,8 @@ class ProfilingContainer(object):
             "Data.xml",
             "loop_counter_output.txt",
             "reduction.txt",
-            execution_view.execution_configuration.executable_name + "_dp_dep.txt",
-            execution_view.execution_configuration.executable_name + "_dp.ll",
+            execution_view.execution_configuration.value_dict["executable_name"] + "_dp_dep.txt",
+            execution_view.execution_configuration.value_dict["executable_name"] + "_dp.ll",
             "patterns.txt",
             "patterns.json"
         ]
@@ -66,10 +66,10 @@ class ProfilingContainer(object):
     def analyze_project(self, execution_view):
         # copy project folder to container. Note: mounting would be nicer but requires restarting the container.
         # might be a nicer solution in the long run, especially for larger projects
-        self.copy_project_folder_to_container(execution_view.execution_configuration.project_path)
+        self.copy_project_folder_to_container(execution_view.execution_configuration.value_dict["project_path"])
 
         # settings
-        command = "/discopop/scripts/runDiscoPoP "
+        command = "/discopop/build/scripts/runDiscoPoP "
         command += "--llvm-clang clang-11 "
         command += "--llvm-clang++ clang++-11 "
         command += "--llvm-ar llvm-ar-11 "
@@ -80,32 +80,32 @@ class ProfilingContainer(object):
         command += "--gllvm /software/go/bin "
         # execution configuration
         command += "--project /project "
-        command += "--linker-flags \"" + execution_view.execution_configuration.linker_flags + "\" "
-        command += "--executable-name \"" + execution_view.execution_configuration.executable_name + "\" "
-        command += "--executable-arguments \"" + execution_view.execution_configuration.executable_arguments + "\" "
-        command += "--make-flags \"" + execution_view.execution_configuration.make_flags + "\" "
-        command += "--explorer-flags \"" + execution_view.execution_configuration.explorer_flags + "\" "
+        command += "--linker-flags \"" + execution_view.execution_configuration.value_dict["linker_flags"] + "\" "
+        command += "--executable-name \"" + execution_view.execution_configuration.value_dict["executable_name"] + "\" "
+        command += "--executable-arguments \"" + execution_view.execution_configuration.value_dict["executable_arguments"] + "\" "
+        command += "--make-flags \"" + execution_view.execution_configuration.value_dict["make_flags"] + "\" "
+        command += "--explorer-flags \"" + execution_view.execution_configuration.value_dict["explorer_flags"] + "\" "
 
         self.__execute_command("docker exec -it discopop_container " + command)
 
         # copy results from container into working copy path
-        if not os.path.exists(execution_view.execution_configuration.working_copy_path):
-            os.mkdir(execution_view.execution_configuration.working_copy_path)
+        if not os.path.exists(execution_view.execution_configuration.value_dict["working_copy_path"]):
+            os.mkdir(execution_view.execution_configuration.value_dict["working_copy_path"])
 
         # remove previous results
-        self.remove_previous_results(execution_view.execution_configuration.working_copy_path)
+        self.remove_previous_results(execution_view.execution_configuration.value_dict["working_copy_path"])
 
         # copy results from container
-        self.copy_results_from_container(execution_view.execution_configuration.working_copy_path, execution_view)
+        self.copy_results_from_container(execution_view.execution_configuration.value_dict["working_copy_path"], execution_view)
 
         # correct paths in generated FileMapping.txt
         self.__correct_file_mapping_paths(execution_view)
 
     def __correct_file_mapping_paths(self, execution_view):
-        file_mapping_path = os.path.join(execution_view.execution_configuration.working_copy_path, "FileMapping.txt")
+        file_mapping_path = os.path.join(execution_view.execution_configuration.value_dict["working_copy_path"], "FileMapping.txt")
         with open(file_mapping_path, 'r') as file:
             contents = file.read()
-        contents = contents.replace('/project/.discopop', execution_view.execution_configuration.project_path)
+        contents = contents.replace('/project/.discopop', execution_view.execution_configuration.value_dict["project_path"])
         with open(file_mapping_path, 'w') as file:
             file.write(contents)
 

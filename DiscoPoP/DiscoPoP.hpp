@@ -47,7 +47,6 @@
 
 #include "DPUtils.hpp"
 #include "InstructionDG.hpp"
-#include "DPReductionUtils.hpp"
 
 #include <cstdlib>
 #include <algorithm>
@@ -400,6 +399,17 @@ namespace {
         llvm::Instruction *dp_reduction_get_load_instr(llvm::Value *load_val,
                                                                llvm::Instruction *cur_instr,
                                                                std::vector<char> &reduction_operations);
+        llvm::Value *dp_reduction_points_to_var(llvm::GetElementPtrInst *instr);
+        llvm::Value *dp_reduction_get_var(llvm::Instruction *instr);
+        llvm::Value *dp_reduction_get_var_rec(llvm::Value *val);
+        llvm::Instruction *dp_reduction_get_prev_use(llvm::Instruction *instr, llvm::Value *val);
+        inline bool dp_reduction_loc_exists(llvm::DebugLoc const &loc) {
+            return static_cast<bool>(loc);
+        }
+        unsigned dp_reduction_get_file_id(llvm::Function *func);
+        bool dp_reduction_init_util(std::string fmap_path);
+        char dp_reduction_get_char_for_opcode(unsigned opcode);
+        bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
         int dp_reduction_get_op_order(char c);
         Type *dp_reduction_pointsToStruct(PointerType *PTy);
         string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
@@ -412,6 +422,7 @@ namespace {
         std::ofstream *loop_counter_file;
         std::vector <loop_info_t> loops_;
         std::vector <instr_info_t> instructions_;
+        std::map<std::string, int> path_to_id_;
 
 // DPReduction end
 

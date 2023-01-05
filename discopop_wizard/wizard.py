@@ -98,7 +98,7 @@ class DiscoPoPConfigurationWizard(object):
         self.window.iconphoto(False, photo)
 
         # set window to full screen
-        self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth(), self.window.winfo_screenheight()))
+        self.window.attributes('-zoomed', True)
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(1, weight=1)
         paned_window = ttk.PanedWindow(self.window, orient=tk.VERTICAL)

@@ -19,28 +19,28 @@ HELPTEXT="*** DiscoPoP Execution Wizard ***
 Use this tool to analyze a project that is built using Makefiles
 
 REQUIRED ARGUMENTS: Please use absolut paths!
- --gllvm <path>         path to a directory with gllvm executables
+ --gllvm <dir>         path to a directory with gllvm executables
                         (gclang, gclang++, get-bc, gsanity-check)
- --project <path>       path to the directory that contains your makefile
- --executable-name <name> the name of the executable that is built and analyzed
+ --project <dir>       path to the directory that contains your makefile
+ --executable-name <string> the name of the executable that is built and analyzed
 
 OPTIONAL ARGUMENTS:
- --llvm-clang <path>    path to clang executable
- --llvm-clang++ <path>  path to clang++ executable
- --llvm-ar <path>       path to llvm-ar executable
- --llvm-link <path>     path to llvm-link executable
- --llvm-dis <path>      path to llvm-dis executable
- --llvm-opt <path>      path to opt executable
- --llvm-llc <path>      path to llc executable
- --executable-arguments <args>
+ --llvm-clang <file>    path to clang executable
+ --llvm-clang++ <file>  path to clang++ executable
+ --llvm-ar <file>       path to llvm-ar executable
+ --llvm-link <file>     path to llvm-link executable
+ --llvm-dis <file>      path to llvm-dis executable
+ --llvm-opt <file>      path to opt executable
+ --llvm-llc <file>      path to llc executable
+ --executable-arguments <string>
                           run your application with these arguments
- --linker-flags <flags>   if your build requires to link other libraries
+ --linker-flags <string>   if your build requires to link other libraries
                           please provide the necessary linker flags. e.g. -lm
- --make-target <target>   specify a specific Make target to be built,
+ --make-target <string>   specify a specific Make target to be built,
                           if not specified the default make target is used.
- --make-flags <flags>     specify flags which will be passed through to make.
- --explorer-flags <flags> will be passed through to the DiscoPoP Explorer.
- --python-path <path>     path to python binary folder
+ --make-flags <string>     specify flags which will be passed through to make.
+ --explorer-flags <string> will be passed through to the DiscoPoP Explorer.
+ --python-path <dir>     path to python binary folder
  --help or -h,            show this text and exit.
  --verbose or -v,         show verbose output.
 "
@@ -214,6 +214,12 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
+# show helptext
+if [ "$HELP" = true ]; then
+    echo "$HELPTEXT"
+    exit 0
+fi
+
 # this tool should not receive any positional arguments
 if [[ -n $1 ]]; then
   log -e "There should not be any positional arguments:"
@@ -241,12 +247,6 @@ cd .discopop
 PROJECT=$PROJECT/.discopop
 
 GLLVM_LOG=$PROJECT/gllvm_log.txt
-
-# show helptext
-if [ "$HELP" = true ]; then
-    echo "$HELPTEXT"
-    exit 0
-fi
 
 #####
 # show configuration
