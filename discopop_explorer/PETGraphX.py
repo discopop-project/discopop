@@ -151,7 +151,7 @@ class CUNode:
         return other.file_id == self.file_id and other.node_id == self.node_id
 
     def __hash__(self):
-        return hash(id)
+        return hash(self.id)
 
 
 def parse_cu(node: ObjectifiedElement) -> CUNode:
