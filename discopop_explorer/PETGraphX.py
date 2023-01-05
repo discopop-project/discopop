@@ -585,7 +585,7 @@ class PETGraphX(object):
 
         return res
 
-    def get_first_written_vars_in_loop(
+    def unused_get_first_written_vars_in_loop(
         self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode
     ) -> Set[Variable]:
         loop_node_ids = [n.id for n in self.subtree_of_type(root_loop, NodeType.CU)]
@@ -699,7 +699,7 @@ class PETGraphX(object):
 
         return vars
 
-    def is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
+    def unused_is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
         """Checks whether a variable is first written inside the current node
 
         :param var:
