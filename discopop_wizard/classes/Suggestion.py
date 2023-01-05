@@ -250,15 +250,15 @@ class Suggestion(object):
         pragmas = []
         for source_cu_id, sink_cu_id, update_type, target_var, pragma_line in update_instructions:
             pragma = Pragma()
-            pragma.pragma_str = "#pragma TODO update "
+            pragma.pragma_str = "#pragma omp target update "
 
             if update_type == UpdateType.TO_DEVICE:
-                pragma.pragma_str += "HOST_TO_DEVICE "
+                pragma.pragma_str += "to("
             elif update_type == UpdateType.FROM_DEVICE:
-                pragma.pragma_str += "DEVICE_TO_HOST "
+                pragma.pragma_str += "from("
             else:
                 raise ValueError("Unsupported update type: ", update_type)
-            pragma.pragma_str += target_var + " "
+            pragma.pragma_str += target_var + ") "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
