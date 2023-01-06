@@ -46,6 +46,8 @@ class CombinedGPURegion(PatternInfo):
     data_region_exit_points: List[
         Tuple[str, str, ExitPointType, str]
     ]  # [(var, cu_id, exit_point_type, meta_line_num)]
+    data_region_depend_in: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_out: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
     device_cu_ids: List[str]
     host_cu_ids: List[str]
     # meta information, mainly for display and overview purposes
@@ -69,25 +71,20 @@ class CombinedGPURegion(PatternInfo):
         liveness = self.__optimize_data_mapping(pet, pairwise_reachability)
         entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         (
-            entry_points,
-            exit_points,
-            in_dependencies,
-            out_dependencies,
+            self.data_region_entry_points,
+            self.data_region_exit_points,
+            self.data_region_depend_in,
+            self.data_region_depend_out,
         ) = self.__find_async_loading_points(pet, entry_points, exit_points)
         print("Entry Points:")
-        print(entry_points)
-        self.data_region_entry_points = [
-            (ep[0], ep[1], ep[2], pet.node_at(ep[1]).start_position()) for ep in entry_points
-        ]
+        print(self.data_region_entry_points)
         print("Exit Points:")
-        print(exit_points)
-        self.data_region_exit_points = [
-            (ep[0], ep[1], ep[2], pet.node_at(ep[1]).start_position()) for ep in exit_points
-        ]
+        print(self.data_region_exit_points)
+
         print("Depend(in): ")
-        print(in_dependencies)
+        print(self.data_region_depend_in)
         print("Depend(out):")
-        print(out_dependencies)
+        print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -548,21 +545,28 @@ class CombinedGPURegion(PatternInfo):
         entry_points: List[Tuple[str, str, EntryPointType]],
         exit_points: List[Tuple[str, str, ExitPointType]],
     ) -> Tuple[
-        List[Tuple[str, str, EntryPointType]],
-        List[Tuple[str, str, ExitPointType]],
-        List[Tuple[str, str]],
-        List[Tuple[str, str]],
+        List[Tuple[str, str, EntryPointType, str]],
+        List[Tuple[str, str, ExitPointType, str]],
+        List[Tuple[str, str, str]],
+        List[Tuple[str, str, str]],
     ]:
         """Checks if asynchronous preloading of data is possible. Returns the modified lists of entry_ and
         exit_points."""
-        updated_entry_points: List[Tuple[str, str, EntryPointType]] = []
-        updated_exit_points: List[Tuple[str, str, ExitPointType]] = []
-        in_dependencies: List[Tuple[str, str]] = []
-        out_dependencies: List[Tuple[str, str]] = []
+        updated_entry_points: List[Tuple[str, str, EntryPointType, str]] = []
+        updated_exit_points: List[Tuple[str, str, ExitPointType, str]] = []
+        in_dependencies: List[Tuple[str, str, str]] = []
+        out_dependencies: List[Tuple[str, str, str]] = []
         # find options for async H2D copying
         for var, entry_point_cu, entry_point_type in entry_points:
             if entry_point_type == EntryPointType.ALLOCATE:
-                updated_entry_points.append((var, entry_point_cu, entry_point_type))
+                updated_entry_points.append(
+                    (
+                        var,
+                        entry_point_cu,
+                        entry_point_type,
+                        pet.node_at(entry_point_cu).start_position(),
+                    )
+                )
                 continue
             # todo estimate workload of skipped section and determine whether preloading is worth it
             # find locations of accesses to var which are predecessors to entry_point_cu
@@ -581,20 +585,36 @@ class CombinedGPURegion(PatternInfo):
                             if entry_point_type == EntryPointType.ALLOCATE
                             else EntryPointType.ASYNC_TO_DEVICE
                         )
-                        updated_entry_points.append((var, t, ept))
+                        updated_entry_points.append((var, t, ept, cast(str, dep.source)))
                         found_update = True
                         # create dependency
-                        in_dependencies.append((var, entry_point_cu))
-                        out_dependencies.append((var, t))
+                        in_dependencies.append(
+                            (var, entry_point_cu, pet.node_at(entry_point_cu).start_position())
+                        )
+                        out_dependencies.append((var, t, cast(str, dep.source)))
                 if found_update:
                     break
             if not found_update:
-                updated_entry_points.append((var, entry_point_cu, entry_point_type))
+                updated_entry_points.append(
+                    (
+                        var,
+                        entry_point_cu,
+                        entry_point_type,
+                        pet.node_at(entry_point_cu).start_position(),
+                    )
+                )
 
         # find options for async D2H copying
         for var, exit_point_cu, exit_point_type in exit_points:
             if exit_point_type == ExitPointType.DELETE:
-                updated_exit_points.append((var, exit_point_cu, exit_point_type))
+                updated_exit_points.append(
+                    (
+                        var,
+                        exit_point_cu,
+                        exit_point_type,
+                        pet.node_at(exit_point_cu).start_position(),
+                    )
+                )
             # todo estimate workload of skipped section and determine whether async copying is worth it
             # find locations of accesses to var which are successors to exit_point_cu
             found_update = False
@@ -602,22 +622,40 @@ class CombinedGPURegion(PatternInfo):
                 for s, _, dep in pet.in_edges(dev_cu_id, EdgeType.DATA):
                     if dep.var_name != var:
                         continue
+                    if dep.dtype == DepType.WAR or dep.dtype == DepType.WAW:
+                        # since value on device is not read, ignore the dependency
+                        continue
                     if s in self.device_cu_ids:
                         continue
+
                     # check if s is a successor of exit_point_cu
                     if pet.is_predecessor(exit_point_cu, s):
                         # update exit point
                         updated_exit_points.append(
-                            (var, exit_point_cu, ExitPointType.ASYNC_FROM_DEVICE)
+                            (
+                                var,
+                                exit_point_cu,
+                                ExitPointType.ASYNC_FROM_DEVICE,
+                                pet.node_at(exit_point_cu).start_position(),
+                            )
                         )
                         found_update = True
                         # create dependency
-                        out_dependencies.append((var, exit_point_cu))
-                        in_dependencies.append((var, s))
+                        out_dependencies.append(
+                            (var, exit_point_cu, pet.node_at(exit_point_cu).start_position())
+                        )
+                        in_dependencies.append((var, s, pet.node_at(s).start_position()))
                 if found_update:
                     break
             if not found_update:
-                updated_exit_points.append((var, exit_point_cu, exit_point_type))
+                updated_exit_points.append(
+                    (
+                        var,
+                        exit_point_cu,
+                        exit_point_type,
+                        pet.node_at(exit_point_cu).start_position(),
+                    )
+                )
 
         # remove duplicates
         updated_entry_points = list(set(updated_entry_points))
