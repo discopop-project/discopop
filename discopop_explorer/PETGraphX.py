@@ -428,7 +428,9 @@ class PETGraphX(object):
             t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
         ]
 
-    def subtree_of_type(self, root: CUNode, type: Optional[Union[NodeType, Tuple[NodeType]]]) -> List[CUNode]:
+    def subtree_of_type(
+        self, root: CUNode, type: Optional[Union[NodeType, Tuple[NodeType, ...]]]
+    ) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -438,7 +440,10 @@ class PETGraphX(object):
         return self.subtree_of_type_rec(root, type, set())
 
     def subtree_of_type_rec(
-        self, root: CUNode, target_type: Optional[Union[NodeType, Tuple[NodeType]]], visited: Set[CUNode]
+        self,
+        root: CUNode,
+        target_type: Optional[Union[NodeType, Tuple[NodeType, ...]]],
+        visited: Set[CUNode],
     ) -> List[CUNode]:
         """Gets all nodes in subtree of specified type including root
 
@@ -449,9 +454,11 @@ class PETGraphX(object):
         """
         # check if root is of type target
         res: List[CUNode] = []
-        if (type(target_type) == tuple and root.type in target_type) or \
-                root.type == target_type or \
-                target_type is None:
+        if (
+            (type(target_type) == tuple and root.type in target_type)
+            or root.type == target_type
+            or target_type is None
+        ):
             res.append(root)
 
         # append root to visited
@@ -546,14 +553,14 @@ class PETGraphX(object):
             filtered_deps = [
                 elem
                 for elem in out_raw_deps
-                if not self.is_readonly_inside_loop_body(elem[2], root_loop, root_children_cus, root_children_loops)
+                if not self.is_readonly_inside_loop_body(
+                    elem[2], root_loop, root_children_cus, root_children_loops
+                )
             ]
             filtered_deps = [
                 elem
                 for elem in filtered_deps
-                if not self.is_loop_index(
-                    elem[2].var_name, loop_start_lines, root_children_cus
-                )
+                if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
             # get a list of dependency targets
             dep_targets = [t for _, t, _ in filtered_deps]
@@ -812,7 +819,13 @@ class PETGraphX(object):
 
         return False
 
-    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode, children_cus: List[CUNode], children_loops: List[CUNode]) -> bool:
+    def is_readonly_inside_loop_body(
+        self,
+        dep: Dependency,
+        root_loop: CUNode,
+        children_cus: List[CUNode],
+        children_loops: List[CUNode],
+    ) -> bool:
         """Checks, whether a variable is read-only in loop body
 
         :param dep: dependency variable
@@ -820,9 +833,7 @@ class PETGraphX(object):
         :return: true if variable is read-only in loop body
         """
         # TODO pass as param?
-        loops_start_lines = [
-            v.start_position() for v in children_loops
-        ]
+        loops_start_lines = [v.start_position() for v in children_loops]
 
         for v in children_cus:
             for t, d in [
