@@ -40,9 +40,14 @@ class CombinedGPURegion(PatternInfo):
     ]  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
     target_data_regions: Dict[str, List[Tuple[List[str], str, str, str, str]]]
     # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
+    data_region_entry_points: List[
+        Tuple[str, str, EntryPointType, str]
+    ]  # [(var, cu_id, entry_point_type, meta_line_num)]
+    data_region_exit_points: List[
+        Tuple[str, str, ExitPointType, str]
+    ]  # [(var, cu_id, exit_point_type, meta_line_num)]
     device_cu_ids: List[str]
     host_cu_ids: List[str]
-    pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
@@ -60,8 +65,8 @@ class CombinedGPURegion(PatternInfo):
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
-        self.pairwise_reachability = self.__get_pairwise_reachability(pet)
-        liveness = self.__optimize_data_mapping(pet)
+        pairwise_reachability = self.__get_pairwise_reachability(pet)
+        liveness = self.__optimize_data_mapping(pet, pairwise_reachability)
         entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         (
             entry_points,
@@ -69,14 +74,20 @@ class CombinedGPURegion(PatternInfo):
             in_dependencies,
             out_dependencies,
         ) = self.__find_async_loading_points(pet, entry_points, exit_points)
-        #        print("Entry Points:")
-        #        print(entry_points)
-        #        print("Exit Points:")
-        #        print(exit_points)
-        #        print("Depend(in): ")
-        #        print(in_dependencies)
-        #        print("Depend(out):")
-        #        print(out_dependencies)
+        print("Entry Points:")
+        print(entry_points)
+        self.data_region_entry_points = [
+            (ep[0], ep[1], ep[2], pet.node_at(ep[1]).start_position()) for ep in entry_points
+        ]
+        print("Exit Points:")
+        print(exit_points)
+        self.data_region_exit_points = [
+            (ep[0], ep[1], ep[2], pet.node_at(ep[1]).start_position()) for ep in exit_points
+        ]
+        print("Depend(in): ")
+        print(in_dependencies)
+        print("Depend(out):")
+        print(out_dependencies)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet)
@@ -265,7 +276,9 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
 
-    def __optimize_data_mapping(self, pet: PETGraphX) -> Dict[str, List[str]]:
+    def __optimize_data_mapping(
+        self, pet: PETGraphX, pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
+    ) -> Dict[str, List[str]]:
         """rely on the explicit update instructions for data synchronization within the region.
         Optimize mapping instructions for an efficient use within the region.
         Keep mapping instructions TO the first and FROM the last small GPU region in the combined GPU Region.
@@ -278,8 +291,8 @@ class CombinedGPURegion(PatternInfo):
         while modification_found:
             modification_found = False
             self.opt_split_map_type_to_from()
-            modification_found = modification_found or self.opt_map_type_to()
-            modification_found = modification_found or self.opt_map_type_from()
+            modification_found = modification_found or self.opt_map_type_to(pairwise_reachability)
+            modification_found = modification_found or self.opt_map_type_from(pairwise_reachability)
             self.opt_find_map_type_to_from()
 
         #        # calculate data liveness
@@ -349,13 +362,15 @@ class CombinedGPURegion(PatternInfo):
                 region.map_from_vars = list(set(region.map_from_vars))
             region.map_to_from_vars = []
 
-    def opt_map_type_from(self) -> bool:
+    def opt_map_type_from(
+        self, pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
+    ) -> bool:
         """Only allow map type FROM, if the data is not used by any successor.
         Return True if modification has been found."""
         modification_found = False
         for region in self.contained_regions:
             to_be_removed: List[str] = []
-            successors = [s for p, s in self.pairwise_reachability if p == region]
+            successors = [s for p, s in pairwise_reachability if p == region]
             for succ in successors:
                 for var in region.map_from_vars:
                     if var in succ.consumed_vars:
@@ -367,13 +382,15 @@ class CombinedGPURegion(PatternInfo):
                     modification_found = True
         return modification_found
 
-    def opt_map_type_to(self) -> bool:
+    def opt_map_type_to(
+        self, pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
+    ) -> bool:
         """Only allow map type TO, if the data is not mapped TO by any predecessor.
         Return True, if a modification has been found."""
         modification_found = False
         for region in self.contained_regions:
             to_be_removed: List[str] = []
-            predecessors = [p for p, s in self.pairwise_reachability if s == region]
+            predecessors = [p for p, s in pairwise_reachability if s == region]
             for pred in predecessors:
                 # validate map_type_to variables of region against pred
                 for var in region.map_to_vars:
