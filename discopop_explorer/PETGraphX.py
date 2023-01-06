@@ -911,7 +911,7 @@ class PETGraphX(object):
                 return rv["operation"]
         return ""
 
-    def dump_to_gephi_file(self):
+    def dump_to_gephi_file(self, name="pet.gexf"):
         """Note: Destroys the PETGraph!"""
         # replace node data with label
         for node_id in self.g.nodes:
@@ -926,4 +926,4 @@ class PETGraphX(object):
             if dep.etype == EdgeType.DATA:
                 self.g.edges[edge]["var"] = dep.var_name
                 self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
-        nx.write_gexf(self.g, "pet.gexf")
+        nx.write_gexf(self.g, name)
