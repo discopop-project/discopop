@@ -161,7 +161,7 @@ class Suggestion(object):
 
     def __get_simple_gpu_pragmas(self, region_start, region_end, contained_loops, map_to_vars, map_from_vars,
                                  map_to_from_vars, map_alloc_vars, map_delete_vars, consumed_vars, produced_vars,
-                                 indentation: int = 0
+                                 indentation: int = 0, ignore_mapping_clauses: bool = False
                                  ) -> List[Tuple[int, int, str, PragmaType, int]]:
         pragmas = []
 
@@ -178,6 +178,9 @@ class Suggestion(object):
                 pragma = Pragma()
                 pragma.pragma_str = construct["name"] + " "
                 for clause in construct["clauses"]:
+                    if ignore_mapping_clauses:
+                        if clause.startswith("map("):
+                            continue
                     pragma.pragma_str += clause + " "
                 # determine start_line and end_line
                 if construct_start_line == loop_start_line:
@@ -231,14 +234,15 @@ class Suggestion(object):
         produced_str += ",".join(produced_vars)
         produced_str += ") " if len(produced_vars) > 0 else ""
 
-        region_pragma.pragma_str += map_to_str
-        region_pragma.pragma_str += map_from_str
-        region_pragma.pragma_str += map_to_from_str
-        region_pragma.pragma_str += map_alloc_str
-        region_pragma.pragma_str += map_delete_str
-        #        region_pragma += "// " if len(consumed_str) + len(produced_str) > 0 else ""
-        #        region_pragma += consumed_str
-        #        region_pragma += produced_str
+        if not ignore_mapping_clauses:
+            region_pragma.pragma_str += map_to_str
+            region_pragma.pragma_str += map_from_str
+            region_pragma.pragma_str += map_to_from_str
+            region_pragma.pragma_str += map_alloc_str
+            region_pragma.pragma_str += map_delete_str
+#            region_pragma.pragma_str += "// " if len(consumed_str) + len(produced_str) > 0 else ""
+#            region_pragma.pragma_str += consumed_str
+#            region_pragma.pragma_str += produced_str
 
         region_pragma.children = pragmas
         region_pragma.start_line = region_start_line
@@ -345,7 +349,7 @@ class Suggestion(object):
                                                      region["map_to_vars"], region["map_from_vars"],
                                                      region["map_to_from_vars"],
                                                      region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=0)
+                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=False)
         # add update instructions to pragmas
         pragmas += self.__get_update_pragmas(self.values["update_instructions"])
 
