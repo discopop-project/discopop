@@ -75,13 +75,10 @@ class CombinedGPURegion(PatternInfo):
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
         entry_pints, exit_points = self.__optimize_data_mapping(pet, entry_points, exit_points)
 
-        liveness = self.__analyze_live_data(pet)
-        print("LIVENESS")
-        for key in liveness:
-            lines = [pet.node_at(n).start_position() for n in liveness[key]]
-            lines = list(set(lines))
-            print(key)
-            print("\t", lines)
+        liveness = self.__populate_live_data()
+        # todo add the option to create memory or data transmission optimal liveness and thus data mappings
+        #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
+        liveness = self.__extend_data_lifespan(pet, liveness)
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
@@ -516,9 +513,9 @@ class CombinedGPURegion(PatternInfo):
                     reachable_pairs.append((region_1, region_2))
         return reachable_pairs
 
-    def __analyze_live_data(self, pet: PETGraphX) -> Dict[str, List[str]]:
+    def __populate_live_data(self) -> Dict[str, List[str]]:
         """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
-        The gathered information is used for the optimization of data mapping instructions afterwards."""
+        The gathered information is used for the optimization / creation of data mapping instructions afterwards."""
         liveness: Dict[str, List[str]] = dict()
         # populate liveness sets based on regions
         for region in self.contained_regions:
@@ -542,6 +539,48 @@ class CombinedGPURegion(PatternInfo):
             liveness[var].append(sink_id)
 
         return liveness
+
+    def __extend_data_lifespan(
+        self, pet: PETGraphX, live_data: Dict[str, List[str]]
+    ) -> Dict[str, List[str]]:
+        """Extends the lifespan of the data on the device to allow as little data movement as possible."""
+        # todo not very efficient
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            new_entries: List[Tuple[str, str]] = []
+            for var_name in live_data:
+                for cu_id in live_data[var_name]:
+                    # check if data is live in any successor. If so, set var_name to live in each of the encountered CUs.
+                    for potential_successor_cu_id in live_data[var_name]:
+                        if cu_id == potential_successor_cu_id:
+                            continue
+                        reachable, path_nodes = pet.check_reachability_and_get_path_nodes(
+                            pet.node_at(potential_successor_cu_id),
+                            pet.node_at(cu_id),
+                            [EdgeType.SUCCESSOR, EdgeType.CHILD],
+                        )
+                        if reachable:
+                            # mark var_name live in all path_nodes
+                            for path_node in path_nodes:
+                                path_node_id = path_node.id
+                                if path_node_id not in live_data[var_name]:
+                                    new_entries.append((var_name, path_node_id))
+                                    print(
+                                        "FOUND ENTRY: ",
+                                        cu_id,
+                                        potential_successor_cu_id,
+                                        var_name,
+                                        "->",
+                                        path_node_id,
+                                    )
+            new_entries = list(set(new_entries))
+            if len(new_entries) > 0:
+                modification_found = True
+            for var_name, new_cu_id in new_entries:
+                live_data[var_name].append(new_cu_id)
+                print("Extend: ", var_name, " -> ", new_cu_id)
+        return live_data
 
     def __translate_mapping_to_explicit_data_entry_points(
         self, pet: PETGraphX

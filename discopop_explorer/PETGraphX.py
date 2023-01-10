@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+import copy
 from enum import IntEnum, Enum
 from platform import node
 from typing import Dict, List, Tuple, Set, Optional, cast
@@ -993,3 +993,37 @@ class PETGraphX(object):
                 if t not in visited and t not in queue
             ]
         return False
+
+    def check_reachability_and_get_path_nodes(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> Tuple[bool, List[CUNode]]:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True, []
+        visited: List[str] = []
+        queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
+        while len(queue) > 0:
+            cur_node, cur_path = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.in_edges(cur_node.id)
+                if s not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True, cur_path
+                else:
+                    if e[0] not in visited:
+                        tmp_path = copy.deepcopy(cur_path)
+                        tmp_path.append(cur_node)
+                        queue.append((self.node_at(e[0]), tmp_path))
+        return False, []
