@@ -80,8 +80,8 @@ class Suggestion(object):
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
-        return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],
+    def get_as_button(self, scrollable_frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
+        return tk.Button(scrollable_frame, text=self.type + " @ " + self.values["start_line"],
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
 
     def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str]]):

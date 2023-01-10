@@ -32,9 +32,12 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     code_preview_frame = tk.Frame(horizontal_paned_window)
     horizontal_paned_window.add(code_preview_frame, weight=5)
 
+    tmp_frame = tk.Frame(scrollable_list_frame)
+    tmp_frame.pack(fill=tk.BOTH)
+
     # create scrollable list of suggestions
-    canvas = tk.Canvas(scrollable_list_frame)
-    scrollbar = tk.Scrollbar(scrollable_list_frame, orient="vertical", command=canvas.yview)
+    canvas = tk.Canvas(tmp_frame)
+    scrollbar = tk.Scrollbar(tmp_frame, orient="vertical", command=canvas.yview)
     scrollable_frame = tk.Frame(canvas)
     scrollable_frame.bind(
         "<Configure>",
@@ -46,14 +49,14 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     canvas.configure(yscrollcommand=scrollbar.set)
     for row, suggestion in enumerate(suggestions):
         # create button to load code preview
-        button = suggestion.get_as_button(canvas, code_preview_frame, execution_configuration_obj)
+        button = suggestion.get_as_button(scrollable_frame, code_preview_frame, execution_configuration_obj)
+        button.pack(fill=tk.BOTH, expand=True)
 
-        button.grid(row=row)
         # register hover message (suggestion details)
         create_tool_tip(button, text=suggestion.get_details())
 
     # add label
-    tk.Label(scrollable_list_frame, text="Suggestions", font=wizard.style_font_bold).pack(side="top", pady=10)
+    tk.Label(tmp_frame, text="Suggestions", font=wizard.style_font_bold).pack(side="top", pady=10)
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
