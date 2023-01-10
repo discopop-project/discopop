@@ -33,7 +33,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     horizontal_paned_window.add(code_preview_frame, weight=5)
 
     tmp_frame = tk.Frame(scrollable_list_frame)
-    tmp_frame.pack(fill=tk.BOTH)
+    tmp_frame.pack(fill=tk.BOTH, expand=True)
 
     # create scrollable list of suggestions
     canvas = tk.Canvas(tmp_frame)
