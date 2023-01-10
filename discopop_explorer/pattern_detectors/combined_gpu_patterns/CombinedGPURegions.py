@@ -79,6 +79,11 @@ class CombinedGPURegion(PatternInfo):
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
+        # todo identify map to
+        # todo identify map alloc
+        # todo identify map from
+        # todo identify map delete
+
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
