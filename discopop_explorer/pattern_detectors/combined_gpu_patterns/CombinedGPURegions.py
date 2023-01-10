@@ -523,7 +523,7 @@ class CombinedGPURegion(PatternInfo):
                 region.map_to_vars
                 + region.map_to_from_vars
                 + region.map_alloc_vars
-                + region.consumed_vars
+                # + region.consumed_vars
             )
             # set liveness within region
             for var in live_in_region:
