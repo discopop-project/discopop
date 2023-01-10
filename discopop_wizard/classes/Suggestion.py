@@ -302,7 +302,7 @@ class Suggestion(object):
                                                      region["map_to_vars"], region["map_from_vars"],
                                                      region["map_to_from_vars"],
                                                      region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=False)
+                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=True)
         # add update instructions to pragmas
         pragmas += self.__get_update_pragmas(self.values["update_instructions"])
 

@@ -68,9 +68,14 @@ class CombinedGPURegion(PatternInfo):
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
         pairwise_reachability = self.__get_pairwise_reachability(pet)
-        # todo compute data mapping from scratch
-        self.__optimize_data_mapping(pet, pairwise_reachability)
-        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
+        entry_points: List[Tuple[str, str, EntryPointType, str]] = []
+        exit_points: List[Tuple[str, str, ExitPointType, str]] = []
+
+        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
+        entry_pints, exit_points = self.__optimize_data_mapping(pet, entry_points, exit_points)
+
+        # self.__optimize_data_mapping(pet, pairwise_reachability)
+        #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         #        (
         #            self.data_region_entry_points,
         #            self.data_region_exit_points,
@@ -119,6 +124,11 @@ class CombinedGPURegion(PatternInfo):
             f"Host lines: {self.meta_host_lines}\n"
             f"Contained regions: {contained_regions_str}\n"
         )
+
+    def __optimize_data_mapping(self, pet, entry_points, exit_points):
+        # todo
+        pass
+        return entry_points, exit_points
 
     def __get_update_instructions(
         self, pet: PETGraphX
@@ -282,7 +292,7 @@ class CombinedGPURegion(PatternInfo):
         host_cu_ids = sorted(host_cu_ids)
         return host_cu_ids
 
-    def __optimize_data_mapping(
+    def __old_optimize_data_mapping(
         self, pet: PETGraphX, pairwise_reachability: List[Tuple[GPURegionInfo, GPURegionInfo]]
     ):
         """rely on the explicit update instructions for data synchronization within the region.
@@ -515,7 +525,29 @@ class CombinedGPURegion(PatternInfo):
 
         return liveness
 
-    def __get_explicit_data_entry_and_exit_points(
+    def __translate_mapping_to_explicit_data_entry_points(
+        self, pet: PETGraphX
+    ) -> Tuple[
+        List[Tuple[str, str, EntryPointType, str]], List[Tuple[str, str, ExitPointType, str]]
+    ]:
+        """Returns a tuple containing the explicit entry and exit points of target data regions."""
+        entry_points: List[Tuple[str, str, EntryPointType, str]] = []
+        exit_points: List[Tuple[str, str, ExitPointType, str]] = []
+        # create entry points for contained loops
+        for region in self.contained_regions:
+            for gpu_loop in region.contained_loops:
+                cu_node_id = gpu_loop.node_id
+                start_position = pet.node_at(cu_node_id).start_position()
+
+                # create TO_DEVICE entry points
+                for var in gpu_loop.map_type_to + gpu_loop.map_type_tofrom:
+                    entry_points.append((var, cu_node_id, EntryPointType.TO_DEVICE, start_position))
+                # create ALLOC entry points
+                for var in gpu_loop.map_type_alloc:
+                    entry_points.append((var, cu_node_id, EntryPointType.ALLOCATE, start_position))
+        return entry_points, exit_points
+
+    def __unused_get_explicit_data_entry_and_exit_points(
         self, pet: PETGraphX
     ) -> Tuple[
         List[Tuple[str, str, EntryPointType, str]], List[Tuple[str, str, ExitPointType, str]]
