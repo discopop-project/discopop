@@ -8,7 +8,7 @@
 from enum import IntEnum
 from typing import List, Tuple, cast, Dict, Optional, Set
 
-from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType
+from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType, NodeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
@@ -75,7 +75,7 @@ class CombinedGPURegion(PatternInfo):
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
         entry_pints, exit_points = self.__optimize_data_mapping(pet, entry_points, exit_points)
 
-        liveness = self.__populate_live_data()
+        liveness = self.__populate_live_data(pet)
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
@@ -513,24 +513,40 @@ class CombinedGPURegion(PatternInfo):
                     reachable_pairs.append((region_1, region_2))
         return reachable_pairs
 
-    def __populate_live_data(self) -> Dict[str, List[str]]:
+    def __populate_live_data(self, pet: PETGraphX) -> Dict[str, List[str]]:
         """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
         The gathered information is used for the optimization / creation of data mapping instructions afterwards."""
         liveness: Dict[str, List[str]] = dict()
+        # Problem: regions to course grained
         # populate liveness sets based on regions
+        #        for region in self.contained_regions:
+        #            live_in_region = (
+        #                region.map_to_vars
+        #                + region.map_to_from_vars
+        #                + region.map_alloc_vars
+        #                # + region.consumed_vars
+        #            )
+        #            # set liveness within region
+        #            for var in live_in_region:
+        #                for region_cu in region.contained_cu_ids:
+        #                    if var not in liveness:
+        #                        liveness[var] = []
+        #                    liveness[var].append(region_cu)
+
+        # populate liveness sets based on gpu loops
         for region in self.contained_regions:
-            live_in_region = (
-                region.map_to_vars
-                + region.map_to_from_vars
-                + region.map_alloc_vars
-                # + region.consumed_vars
-            )
-            # set liveness within region
-            for var in live_in_region:
-                for region_cu in region.contained_cu_ids:
+            for gpu_loop in region.contained_loops:
+                live_in_loop = (
+                    gpu_loop.map_type_to + gpu_loop.map_type_tofrom + gpu_loop.map_type_alloc
+                )
+                # set liveness within loop
+                subtree = pet.subtree_of_type(pet.node_at(gpu_loop.node_id), NodeType.CU)
+                for var in live_in_loop:
                     if var not in liveness:
                         liveness[var] = []
-                    liveness[var].append(region_cu)
+                    for cu in subtree:
+                        liveness[var].append(cu.id)
+
         # populate liveness sets based on update instructions
         for source_id, sink_id, update_type, var, meta_line_num in self.update_instructions:
             if var not in liveness:
