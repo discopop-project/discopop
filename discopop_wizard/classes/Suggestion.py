@@ -11,7 +11,7 @@ import os
 import tkinter as tk
 from enum import IntEnum
 from tkinter import ttk
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
     ExitPointType
@@ -82,6 +82,13 @@ class Suggestion(object):
         for pragma in pragmas:
             code_preview.add_pragma(pragma, [])
 
+        # get and insert metadata
+        live_variables: Dict[int, List[str]] = self.__get_metadata_live_variables()
+        code_preview.add_live_variables(live_variables)
+
+
+
+
         # show CodePreview
         code_preview.show_in(source_code)
 
@@ -90,6 +97,17 @@ class Suggestion(object):
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
+
+    def __get_metadata_live_variables(self):
+        live_variables: Dict[int, List[str]] = dict()
+        for var_name in self.values["meta_liveness"]:
+            for line_num in self.values["meta_liveness"][var_name]:
+                int_line_num = int(line_num.split(":")[1]) + 1  # + 1 to account for line counting from 1
+                if int_line_num not in live_variables:
+                    live_variables[int_line_num] = []
+                live_variables[int_line_num].append(var_name)
+        return live_variables
+
 
     def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
         return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],

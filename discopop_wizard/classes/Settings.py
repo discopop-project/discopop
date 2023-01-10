@@ -27,8 +27,9 @@ class Settings(object):
     use_docker_container_for_profiling: bool = True
 
     # code preview settings
-    code_preview_show_metadata: int = 1  # 1 = True, 0 = False
-    code_preview_show_line_numbers: int = 1 # 1 = True, 0 = False
+    code_preview_show_metadata_regions: int = 1  # 1 = True, 0 = False
+    code_preview_show_metadata_live_device_variables: int = 1  # 1 = True, 0 = False
+    code_preview_show_line_numbers: int = 1  # 1 = True, 0 = False
 
     def __init__(self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True) -> None:
         self.discopop_build_dir = discopop_build_dir
@@ -136,8 +137,9 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.go_bin = value_dict["go_bin"]
     settings.use_docker_container_for_profiling = value_dict["use_docker_container_for_profiling"]
     # code preview settings
-    settings.code_preview_show_metadata = value_dict["code_preview_show_metadata"]
+    settings.code_preview_show_metadata_regions = value_dict["code_preview_show_metadata_regions"]
     settings.code_preview_show_line_numbers = value_dict["code_preview_show_line_numbers"]
+    settings.code_preview_show_metadata_live_device_variables = value_dict["code_preview_show_metadata_live_device_variables"]
 
     settings.initialized = True
     return settings

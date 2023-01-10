@@ -57,8 +57,12 @@ class MainScreen(object):
         # build code preview menu
         code_preview_menu = tk.Menu(optionsmenu)
         optionsmenu.add_cascade(label="Code Preview", menu=code_preview_menu)
-        code_preview_menu.add_checkbutton(label="Show Metadata", variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata, onvalue=1, offvalue=0, command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+        code_preview_menu.add_checkbutton(label="Show Metadata Regions", variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata_regions, onvalue=1, offvalue=0, command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
         code_preview_menu.add_checkbutton(label="Show Line Numbers", variable=wizard.tk_var_storage.toggle_var_code_preview_show_line_numbers, onvalue=1, offvalue=0, command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+        code_preview_menu.add_checkbutton(label="Show Live Device Variables",
+                                          variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata_live_device_variables,
+                                          onvalue=1, offvalue=0,
+                                          command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
 
 
     def build_configurations_frame(self, wizard):
