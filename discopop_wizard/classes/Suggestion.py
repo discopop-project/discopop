@@ -201,55 +201,8 @@ class Suggestion(object):
                 pragma.end_line = end_line
                 pragma.file_id = self.file_id
                 pragmas.append(pragma)
-        # mark gpu region
-        # increase region end line to account for added pragmas
-        #        pragmas_in_region = [p for p in pragmas if p[0] >= region_start_line and p[1] <= region_end_line]
-        region_pragma = Pragma()
-        region_pragma.pragma_str = "#pragma omp target data "
-        map_to_str = "map(to: " if len(map_to_vars) > 0 else ""
-        map_to_str += ",".join(map_to_vars)
-        map_to_str += ") " if len(map_to_vars) > 0 else ""
 
-        map_from_str = "map(from: " if len(map_from_vars) > 0 else ""
-        map_from_str += ",".join(map_from_vars)
-        map_from_str += ") " if len(map_from_vars) > 0 else ""
-
-        map_to_from_str = "map(tofrom: " if len(map_to_from_vars) > 0 else ""
-        map_to_from_str += ",".join(map_to_from_vars)
-        map_to_from_str += ") " if len(map_to_from_vars) > 0 else ""
-
-        map_alloc_str = "map(alloc: " if len(map_alloc_vars) > 0 else ""
-        map_alloc_str += ",".join(map_alloc_vars)
-        map_alloc_str += ") " if len(map_alloc_vars) > 0 else ""
-
-        map_delete_str = "map(delete: " if len(map_delete_vars) > 0 else ""
-        map_delete_str += ",".join(map_delete_vars)
-        map_delete_str += ") " if len(map_delete_vars) > 0 else ""
-
-        consumed_str = "consumed(" if len(consumed_vars) > 0 else ""
-        consumed_str += ",".join(consumed_vars)
-        consumed_str += ") " if len(consumed_vars) > 0 else ""
-
-        produced_str = "produced(" if len(produced_vars) > 0 else ""
-        produced_str += ",".join(produced_vars)
-        produced_str += ") " if len(produced_vars) > 0 else ""
-
-        if not ignore_mapping_clauses:
-            region_pragma.pragma_str += map_to_str
-            region_pragma.pragma_str += map_from_str
-            region_pragma.pragma_str += map_to_from_str
-            region_pragma.pragma_str += map_alloc_str
-            region_pragma.pragma_str += map_delete_str
-#            region_pragma.pragma_str += "// " if len(consumed_str) + len(produced_str) > 0 else ""
-#            region_pragma.pragma_str += consumed_str
-#            region_pragma.pragma_str += produced_str
-
-        region_pragma.children = pragmas
-        region_pragma.start_line = region_start_line
-        region_pragma.end_line = region_end_line
-        region_pragma.file_id = self.file_id
-
-        return [region_pragma]
+        return pragmas
 
     def __get_update_pragmas(self, update_instructions) -> List[Pragma]:
         pragmas = []

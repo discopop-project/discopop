@@ -278,10 +278,6 @@ class GPURegions:
                 map_alloc_vars += [v for v in loop_pattern.map_type_alloc]
             map_alloc_vars = list(set(map_alloc_vars))
 
-            map_delete_vars: List[str] = list(
-                set([v for v in map_to_vars + map_alloc_vars if v not in map_from_vars])
-            )
-
             map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
 
             # allocate unknown variables
@@ -301,7 +297,7 @@ class GPURegions:
             ]
             self.map_type_tofrom_by_region[tuple(region)] = map_to_from_vars
             self.map_type_alloc_by_region[tuple(region)] = map_alloc_vars
-            self.map_type_delete_by_region[tuple(region)] = map_delete_vars
+            self.map_type_delete_by_region[tuple(region)] = []
             self.produced_vars[tuple(region)] = produced_vars
             self.consumed_vars[tuple(region)] = consumed_vars
 
