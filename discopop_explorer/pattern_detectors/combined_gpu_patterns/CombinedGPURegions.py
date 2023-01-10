@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from enum import IntEnum
-from typing import List, Tuple, cast, Dict, Optional
+from typing import List, Tuple, cast, Dict, Optional, Set
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -53,6 +53,7 @@ class CombinedGPURegion(PatternInfo):
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
+    meta_liveness: Dict[str, List[str]]
 
     def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
         node_id = sorted([region.node_id for region in contained_regions])[0]
@@ -74,6 +75,14 @@ class CombinedGPURegion(PatternInfo):
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
         entry_pints, exit_points = self.__optimize_data_mapping(pet, entry_points, exit_points)
 
+        liveness = self.__analyze_live_data(pet)
+        print("LIVENESS")
+        for key in liveness:
+            lines = [pet.node_at(n).start_position() for n in liveness[key]]
+            lines = list(set(lines))
+            print(key)
+            print("\t", lines)
+
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         #        (
@@ -86,22 +95,22 @@ class CombinedGPURegion(PatternInfo):
         self.data_region_exit_points = exit_points
         self.data_region_depend_in = []
         self.data_region_depend_out = []
-        print("Entry Points:")
-        print(entry_points)
-        print("Exit Points:")
-        print(exit_points)
-        print("Updated Entry Points:")
-        print(self.data_region_entry_points)
-        print("Updated Exit Points:")
-        print(self.data_region_exit_points)
+        #        print("Entry Points:")
+        #        print(entry_points)
+        #        print("Exit Points:")
+        #        print(exit_points)
+        #        print("Updated Entry Points:")
+        #        print(self.data_region_entry_points)
+        #        print("Updated Exit Points:")
+        #        print(self.data_region_exit_points)
 
-        print("Depend(in): ")
-        print(self.data_region_depend_in)
-        print("Depend(out):")
-        print(self.data_region_depend_out)
+        #        print("Depend(in): ")
+        #        print(self.data_region_depend_in)
+        #        print("Depend(out):")
+        #        print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
-        self.__get_metadata(pet)
+        self.__get_metadata(pet, liveness)
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -227,7 +236,7 @@ class CombinedGPURegion(PatternInfo):
                 update_instructions.remove(update_1)
         return update_instructions
 
-    def __get_metadata(self, pet: PETGraphX):
+    def __get_metadata(self, pet: PETGraphX, liveness: Dict[str, List[str]]):
         """Create metadata and store it in the respective fields."""
         for device_cu_id in self.device_cu_ids:
             device_cu = pet.node_at(device_cu_id)
@@ -247,6 +256,15 @@ class CombinedGPURegion(PatternInfo):
                     + self.__get_contained_lines(host_cu.start_position(), host_cu.end_position())
                 )
             )
+        # get liveness as metadata
+        self.meta_liveness = dict()
+        for var_name in liveness:
+            lines: Set[str] = set()
+            for cu_id in liveness[var_name]:
+                cu_node = pet.node_at(cu_id)
+                for line in range(cu_node.start_line, cu_node.end_line + 1):
+                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+            self.meta_liveness[var_name] = list(lines)
 
     def __get_contained_lines(self, start_line: str, end_line: str) -> List[str]:
         """Returns a list of line numbers inbetween start_line and end_line"""
