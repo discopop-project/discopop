@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import functools
 import json
 import os
 import tkinter as tk
@@ -54,6 +55,18 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
         # register hover message (suggestion details)
         create_tool_tip(button, text=suggestion.get_details())
+
+    # add support for mouse wheel scrolling (on linux systems)
+    def _on_mousewheel(event, scroll):
+        canvas.yview_scroll(int(scroll), "units")
+    def _bind_to_mousewheel(event):
+        canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
+        canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
+    def _unbind_from_mousewheel(event):
+        canvas.unbind_all("<Button-4>")
+        canvas.unbind_all("<Button-5>")
+    canvas.bind('<Enter>', _bind_to_mousewheel)
+    canvas.bind('<Leave>', _unbind_from_mousewheel)
 
     # add label
     tk.Label(tmp_frame, text="Suggestions", font=wizard.style_font_bold).pack(side="top", pady=10)
