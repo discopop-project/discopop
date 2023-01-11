@@ -32,6 +32,7 @@ def run(
     pet = PETGraphX.from_parsed_input(
         *parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping)
     )
+    print("PET CREATION FINISHED.")
     # TODO add visualization
 
     plugin_base = PluginBase(package="plugins")

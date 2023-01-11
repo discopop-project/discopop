@@ -53,7 +53,9 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :return: List of detected pattern info
     """
     result: List[DoAllInfo] = []
-    for node in pet.all_nodes(NodeType.LOOP):
+    nodes = pet.all_nodes(NodeType.LOOP)
+    for idx, node in enumerate(nodes):
+        print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
             if not node.reduction and node.loop_iterations >= 0:
