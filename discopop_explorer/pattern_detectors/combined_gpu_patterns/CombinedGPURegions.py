@@ -84,7 +84,6 @@ class CombinedGPURegion(PatternInfo):
         # todo identify map from
         # todo identify map delete
 
-
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
         #        (

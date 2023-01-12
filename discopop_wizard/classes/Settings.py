@@ -125,9 +125,9 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.use_docker_container_for_profiling = __load_or_get_default(value_dict,
                                                                         "use_docker_container_for_profiling")
     # code preview settings
-    settings.code_preview_show_metadata_regions = value_dict["code_preview_show_metadata_regions"]
-    settings.code_preview_show_line_numbers = value_dict["code_preview_show_line_numbers"]
-    settings.code_preview_show_metadata_live_device_variables = value_dict["code_preview_show_metadata_live_device_variables"]
+    settings.code_preview_show_metadata_regions = __load_or_get_default(value_dict, "code_preview_show_metadata_regions")
+    settings.code_preview_show_line_numbers = __load_or_get_default(value_dict, "code_preview_show_line_numbers")
+    settings.code_preview_show_metadata_live_device_variables = __load_or_get_default(value_dict, "code_preview_show_metadata_live_device_variables")
 
     settings.initialized = True
     return settings
