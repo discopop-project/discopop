@@ -582,7 +582,7 @@ class PETGraphX(object):
                 return True
         return False
 
-    def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
+    def unused_check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
         sub = self.subtree_of_type(root_loop, NodeType.CU)
         parent_func_sink = self.get_parent_function(self.node_at(s))
         parent_func_source = self.get_parent_function(self.node_at(t))
@@ -590,14 +590,14 @@ class PETGraphX(object):
         res = False
         d_var_name_str = cast(str, str(d.var_name))
 
-        if self.is_global(d_var_name_str, sub) and not (
+        if self.unused_is_global(d_var_name_str, sub) and not (
             self.is_passed_by_reference(d, parent_func_sink)
             and self.is_passed_by_reference(d, parent_func_source)
         ):
             return res
         return not res
 
-    def is_global(self, var: str, tree: List[CUNode]) -> bool:
+    def unused_is_global(self, var: str, tree: List[CUNode]) -> bool:
         """Checks if variable is global
 
         :param var: variable name
@@ -624,7 +624,7 @@ class PETGraphX(object):
 
         return res
 
-    def get_first_written_vars_in_loop(
+    def unused_get_first_written_vars_in_loop(
         self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode
     ) -> Set[Variable]:
         root_children = self.subtree_of_type(root_loop, NodeType.CU)
@@ -739,7 +739,7 @@ class PETGraphX(object):
 
         return vars
 
-    def is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
+    def unused_is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
         """Checks whether a variable is first written inside the current node
 
         :param var:

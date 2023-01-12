@@ -90,21 +90,6 @@ class Settings(object):
         # set initialized, if all values could be determined and are valid, or docker container is used
         self.initialized = use_docker_container or settings_valid
 
-    def init_from_values(self, values: dict):
-        """values stems from reading the 'add_configuration' form."""
-        for key in values:
-            values[key] = values[key].replace("\n", ";;")
-        self.discopop_build_dir = values["DiscoPoP build: "]
-        self.clang = values["clang (exe): "]
-        self.clangpp = values["clang++ (exe): "]
-        self.llvm_ar = values["llvm-ar (exe): "]
-        self.llvm_link = values["llvm-link (exe): "]
-        self.llvm_dis = values["llvm-dis (exe): "]
-        self.llvm_opt = values["llvm-opt (exe): "]
-        self.llvm_llc = values["llvm-llc (exe): "]
-        self.go_bin = values["go (bin directory): "]
-        self.initialized = True
-
     def get_as_json_string(self) -> str:
         """returns a representation of the settings which will be stored in a configuration file."""
         return jsons.dumps(self)
@@ -118,6 +103,7 @@ class Settings(object):
         with open(settings_path, "w+") as f:
             f.write(self.get_as_json_string())
 
+
 def load_from_config_file(config_dir: str) -> Settings:
     json_str = ""
     with open(os.path.join(config_dir, "SETTINGS.txt"), "r") as f:
@@ -125,17 +111,19 @@ def load_from_config_file(config_dir: str) -> Settings:
             json_str += line
     value_dict = jsons.loads(json_str)
     settings = Settings()
+
     # general settings
-    settings.discopop_build_dir = value_dict["discopop_build_dir"]
-    settings.clang = value_dict["clang"]
-    settings.clangpp = value_dict["clangpp"]
-    settings.llvm_ar = value_dict["llvm_ar"]
-    settings.llvm_link = value_dict["llvm_link"]
-    settings.llvm_dis = value_dict["llvm_dis"]
-    settings.llvm_opt = value_dict["llvm_opt"]
-    settings.llvm_llc = value_dict["llvm_llc"]
-    settings.go_bin = value_dict["go_bin"]
-    settings.use_docker_container_for_profiling = value_dict["use_docker_container_for_profiling"]
+    settings.discopop_build_dir = __load_or_get_default(value_dict, "discopop_build_dir")
+    settings.clang = __load_or_get_default(value_dict, "clang")
+    settings.clangpp = __load_or_get_default(value_dict, "clangpp")
+    settings.llvm_ar = __load_or_get_default(value_dict, "llvm_ar")
+    settings.llvm_link = __load_or_get_default(value_dict, "llvm_link")
+    settings.llvm_dis = __load_or_get_default(value_dict, "llvm_dis")
+    settings.llvm_opt = __load_or_get_default(value_dict, "llvm_opt")
+    settings.llvm_llc = __load_or_get_default(value_dict, "llvm_llc")
+    settings.go_bin = __load_or_get_default(value_dict, "go_bin")
+    settings.use_docker_container_for_profiling = __load_or_get_default(value_dict,
+                                                                        "use_docker_container_for_profiling")
     # code preview settings
     settings.code_preview_show_metadata_regions = value_dict["code_preview_show_metadata_regions"]
     settings.code_preview_show_line_numbers = value_dict["code_preview_show_line_numbers"]
@@ -143,3 +131,10 @@ def load_from_config_file(config_dir: str) -> Settings:
 
     settings.initialized = True
     return settings
+
+
+def __load_or_get_default(value_dict, key_name):
+    if key_name in value_dict:
+        return value_dict[key_name]
+    # get default value
+    return getattr(Settings(), key_name)
