@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+import functools
 import os.path
 import tkinter as tk
 from tkinter import ttk
@@ -55,50 +55,64 @@ class MainScreen(object):
             c.destroy()
         # build configuration frame
         self.__display_execution_configurations(wizard)
-        self.__display_configuration_buttons(wizard)
 
     def __create_new_execution_configuration(self, wizard):
         execution_config = ExecutionConfiguration(wizard)
         execution_config.show_details_screen(wizard, self)
 
-    def __display_configuration_buttons(self, wizard):
-        button_frame = tk.Frame(self.configuration_frame)
-        new_button = tk.Button(button_frame, text="New..",
-                               command=lambda: self.__create_new_execution_configuration(wizard))
-        new_button.grid(row=1, column=1, sticky="nsew")
-        button_frame.pack()
 
     def __display_execution_configurations(self, wizard):
         # based on https://blog.teclado.com/tkinter-scrollable-frames/
         # load configuration options
         configs: List[ExecutionConfiguration] = self.load_execution_configurations(wizard.config_dir)
         frame = tk.Frame(self.configuration_frame)
-        frame.pack(fill=tk.BOTH)
+        frame.pack(fill=tk.BOTH, expand=True)
         tk.Label(frame, text="Configurations", font=wizard.style_font_bold, pady=10).pack()
-        canvas = tk.Canvas(frame)
-        scrollbar = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas)
+        # add New.. Button
+        tk.Button(frame, text="New..",
+                  command=lambda: self.__create_new_execution_configuration(wizard)).pack()
 
+        tmp_frame = tk.Frame(frame)
+        tmp_frame.pack(fill=tk.BOTH, expand=True)
+
+        # create scrollable list of suggestions
+        canvas = tk.Canvas(tmp_frame)
+        scrollbar = tk.Scrollbar(tmp_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(
                 scrollregion=canvas.bbox("all")
             )
         )
-
-        scrollable_frame.pack()
-
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         all_buttons: List[tk.Button] = []  # used to manage highlights when a different configuration is selected
-
         for row, config in enumerate(configs):
             button = config.get_as_button(wizard, self, scrollable_frame, all_buttons)
             button.pack(fill=tk.BOTH, expand=True)
             all_buttons.append(button)
 
-        canvas.pack(side="left", fill=tk.BOTH, expand=True)
+        # add support for mouse wheel scrolling (on linux systems)
+        def _on_mousewheel(event, scroll):
+            canvas.yview_scroll(int(scroll), "units")
+
+        def _bind_to_mousewheel(event):
+            canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
+            canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
+
+        def _unbind_from_mousewheel(event):
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        canvas.bind('<Enter>', _bind_to_mousewheel)
+        canvas.bind('<Leave>', _unbind_from_mousewheel)
+
+        canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+
 
     def load_execution_configurations(self, config_dir: str) -> List[ExecutionConfiguration]:
         execution_configs: List[ExecutionConfiguration] = []
