@@ -100,12 +100,13 @@ class Suggestion(object):
 
     def __get_metadata_live_variables(self):
         live_variables: Dict[int, List[str]] = dict()
-        for var_name in self.values["meta_liveness"]:
-            for line_num in self.values["meta_liveness"][var_name]:
-                int_line_num = int(line_num.split(":")[1])
-                if int_line_num not in live_variables:
-                    live_variables[int_line_num] = []
-                live_variables[int_line_num].append(var_name)
+        if "meta_liveness" in self.values:
+            for var_name in self.values["meta_liveness"]:
+                for line_num in self.values["meta_liveness"][var_name]:
+                    int_line_num = int(line_num.split(":")[1])
+                    if int_line_num not in live_variables:
+                        live_variables[int_line_num] = []
+                    live_variables[int_line_num].append(var_name)
         return live_variables
 
 
