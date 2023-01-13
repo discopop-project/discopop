@@ -187,20 +187,45 @@ class CombinedGPURegion(PatternInfo):
                                 do_not_kill.add((var_name, in_cu_id))
                     to_be_killed = to_be_killed ^ do_not_kill
 
-                identified_exit_points: Set[Tuple[str, str]] = set()
+                identified_exit_points: Set[Tuple[str, str, ExitPointType]] = set()
                 for var_name, live_cu_id in to_be_killed:
+                    ept = ExitPointType.DELETE
+                    in_raw_deps = pet.in_edges(live_cu_id, EdgeType.DATA)
+                    # ept = FROM if incoming RAW edge to var_name exists
+                    filtered_in_raw_deps = [
+                        (s, t, d)
+                        for (s, t, d) in in_raw_deps
+                        if d.dtype == DepType.RAW
+                        and d.var_name == var_name
+                        and s not in loop_subtree
+                    ]
+                    if len(filtered_in_raw_deps) > 0:
+                        ept = ExitPointType.FROM_DEVICE
+
+                    # determine killing cu
                     for killed_var_name, killing_cu_id in killing:
                         if var_name == killed_var_name:
                             if pet.is_predecessor(live_cu_id, killing_cu_id):
-                                identified_exit_points.add((var_name, killing_cu_id))
+                                identified_exit_points.add((var_name, killing_cu_id, ept))
 
-                print("IEP: ", identified_exit_points)
+                # cleanup identified exit points (required to remove deletions if map type from should be used instead)
+                to_be_removed: Set[Tuple[str, str, ExitPointType]] = set()
+                for elem_1 in identified_exit_points:
+                    for elem_2 in identified_exit_points:
+                        if elem_1 == elem_2:
+                            continue
+                        if elem_1[0] == elem_2[0] and elem_1[1] == elem_2[1]:
+                            if (
+                                elem_1[2] == ExitPointType.DELETE
+                                and elem_2[2] == ExitPointType.FROM_DEVICE
+                            ):
+                                to_be_removed.add(elem_1)
+
+                for elem in to_be_removed:
+                    identified_exit_points.remove(elem)
 
                 # create exit points
-                for var_name, killing_cu_id in identified_exit_points:
-                    # todo identify ept
-                    ept = ExitPointType.DELETE
-
+                for var_name, killing_cu_id, ept in identified_exit_points:
                     exit_cu_node = pet.node_at(killing_cu_id)
                     # check if location data for cu_id exists. may not be the case at the end of functions
                     if (
@@ -224,7 +249,6 @@ class CombinedGPURegion(PatternInfo):
                             )
                             exit_points.append(exit_point)
                     else:
-                        ept = ExitPointType.DELETE
                         exit_point = (
                             var_name,
                             killing_cu_id,
