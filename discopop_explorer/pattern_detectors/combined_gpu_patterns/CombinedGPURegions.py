@@ -162,9 +162,9 @@ class CombinedGPURegion(PatternInfo):
                 for source_cu_id, dep in filtered_deps:
                     # use Host code to handle updates
                     if update_type == UpdateType.TO_DEVICE:
-                        pragma_position = pet.node_at(source_cu_id).start_position()
+                        pragma_position = dep.source
                     elif update_type == UpdateType.FROM_DEVICE:
-                        pragma_position = pet.node_at(sink_cu_id).start_position()
+                        pragma_position = dep.sink
                     else:
                         raise ValueError("Unsupported update type: ", update_type)
                     update_instructions.append(

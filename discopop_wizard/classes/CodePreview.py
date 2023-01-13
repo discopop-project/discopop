@@ -21,8 +21,9 @@ class Line(object):
     highlight_color: Optional[str]
     owns_region: Optional[int]
     belongs_to_regions: List[int]
+    belongs_to_original_line: int
 
-    def __init__(self, wizard, line_num=None, content=""):
+    def __init__(self, wizard, parent_line_num: int, line_num=None, content=""):
         self.wizard = wizard
         self.line_num = line_num
         self.meta_information = []
@@ -31,6 +32,7 @@ class Line(object):
         self.highlight_color = None
         self.owns_region = None
         self.belongs_to_regions = []
+        self.belongs_to_original_line = parent_line_num
 
     def get_metadata_live_device_variables_str(self, padded_length: int = 0) -> str:
         result = ""
@@ -121,7 +123,7 @@ class CodePreview(object):
             for idx, line in enumerate(lines):
                 idx = idx + 1  # start with line number 1
                 self.max_line_num = idx
-                line_obj = Line(self.wizard, line_num=idx, content=line)
+                line_obj = Line(self.wizard, idx, line_num=idx, content=line)
                 self.lines.append(line_obj)
 
     def print_lines(self):
@@ -162,6 +164,23 @@ class CodePreview(object):
                 break
         parent_element.see(first_location)
 
+    def append_line_before(self, parent_line_num: int, line: Line):
+        """Appends line before the specified parent_line_num"""
+        for idx, potential_parent_line in enumerate(self.lines):
+            if potential_parent_line.line_num == parent_line_num:
+                self.lines.insert(idx, line)
+                return
+
+    def append_line_after(self, parent_line_num: int, line: Line):
+        """Appends line after the specified parent_line_num"""
+        for idx, potential_parent_line in enumerate(self.lines):
+            if potential_parent_line.line_num == parent_line_num:
+                if idx + 1 < len(self.lines):
+                    self.lines.insert(idx + 1, line)
+                else:
+                    self.lines.append(line)
+                return
+
     def add_pragma(self, pragma: Pragma, parent_regions: List[int]):
         """insert pragma into the maintained list of source code lines"""
         if pragma.start_line is None or pragma.end_line is None:
@@ -172,7 +191,7 @@ class CodePreview(object):
             return  # incorrect target file, ignore the pragma
 
         # construct line
-        pragma_line = Line(self.wizard)
+        pragma_line = Line(self.wizard, pragma.start_line)
         pragma_line.content = pragma.pragma_str
         pragma_line.belongs_to_regions = copy.deepcopy(parent_regions)
         # create new region if necessary
@@ -182,33 +201,13 @@ class CodePreview(object):
             pragma_line.belongs_to_regions.append(region_id)
 
         if pragma.pragma_position == PragmaPosition.BEFORE_START:
-            for idx, line in enumerate(self.lines):
-                if line.line_num == pragma.start_line:
-                    # prepend pragma
-                    self.lines.insert(idx, pragma_line)
-                    break
+            self.append_line_before(pragma.start_line, pragma_line)
         elif pragma.pragma_position == PragmaPosition.AFTER_START:
-            for idx, line in enumerate(self.lines):
-                # append after line
-                if line.line_num == pragma.start_line:
-                    if idx + 1 < len(self.lines):
-                        self.lines.insert(idx + 1, pragma_line)
-                    else:
-                        self.lines.append(pragma_line)
-                    break
+            self.append_line_after(pragma.start_line, pragma_line)
         elif pragma.pragma_position == PragmaPosition.BEFORE_END:
-            for idx, line in enumerate(self.lines):
-                if line.line_num == pragma.end_line:
-                    self.lines.insert(idx, pragma_line)
-                    break
+            self.append_line_before(pragma.end_line, pragma_line)
         elif pragma.pragma_position == PragmaPosition.AFTER_END:
-            for idx, line in enumerate(self.lines):
-                if line.line_num == pragma.end_line:
-                    if idx + 1 < len(self.lines):
-                        self.lines.insert(idx + 1, pragma_line)
-                    else:
-                        self.lines.append(pragma_line)
-                    break
+            self.append_line_after(pragma.end_line, pragma_line)
         else:
             raise ValueError("Unsupported pragma position: ", pragma.pragma_position)
 

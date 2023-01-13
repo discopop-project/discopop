@@ -16,7 +16,7 @@ from typing import List, Tuple, Dict
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
     ExitPointType
 from discopop_wizard.classes.CodePreview import CodePreview
-from discopop_wizard.classes.Pragma import Pragma
+from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
 
 class PragmaType(IntEnum):
@@ -230,8 +230,12 @@ class Suggestion(object):
             pragma.pragma_str = "#pragma omp target update "
 
             if update_type == UpdateType.TO_DEVICE:
+                # to device means host is writing, so update after the instruction
+                pragma.pragma_position = PragmaPosition.AFTER_END
                 pragma.pragma_str += "to("
             elif update_type == UpdateType.FROM_DEVICE:
+                # from device means host is reading, so update before the instruction
+                pragma.pragma_position = PragmaPosition.BEFORE_START
                 pragma.pragma_str += "from("
             else:
                 raise ValueError("Unsupported update type: ", update_type)
