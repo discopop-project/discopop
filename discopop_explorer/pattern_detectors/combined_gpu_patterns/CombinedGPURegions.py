@@ -231,6 +231,24 @@ class CombinedGPURegion(PatternInfo):
                         if sink_1.start_line < sink_2.start_line:
                             to_be_removed.append(update_2)
 
+        # ignore update instructions which result from the initialization of gpu for loops
+        for update in update_instructions:
+            source_cu_id, sink_cu_id, update_type, var_name, pragma_position = update
+            for region in self.contained_regions:
+                for gpu_loop in region.contained_loops:
+                    # remove update if:
+                    # sink in gpu_loop and
+                    # source is predecessor of sink and
+                    # dep.source line num == gpu_loop.start_line
+                    if pet.node_at(sink_cu_id) in pet.direct_children(
+                        pet.node_at(gpu_loop.node_id)
+                    ):
+                        if pet.node_at(sink_cu_id) in pet.direct_successors(
+                            pet.node_at(source_cu_id)
+                        ):
+                            if pragma_position == gpu_loop.start_line:
+                                to_be_removed.append(update)
+
         to_be_removed = list(set(to_be_removed))
         for update_1 in to_be_removed:
             if update_1 in update_instructions:
