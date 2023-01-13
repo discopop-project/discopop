@@ -14,7 +14,7 @@ from tkinter import ttk
 from typing import List, Tuple, Dict
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
-    ExitPointType
+    ExitPointType, ExitPointPositioning
 from discopop_wizard.classes.CodePreview import CodePreview
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
@@ -291,7 +291,7 @@ class Suggestion(object):
             pragma.file_id = self.file_id
             pragmas.append(pragma)
 
-        for var_name, cu_id, exit_point_type, pragma_line in exit_points:
+        for var_name, cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
             pragma = Pragma()
             pragma.pragma_str = "#exit data "
             if exit_point_type == ExitPointType.FROM_DEVICE:
@@ -307,6 +307,12 @@ class Suggestion(object):
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
             pragma.file_id = self.file_id
+            if exit_point_positioning == ExitPointPositioning.BEFORE_CU:
+                pragma.pragma_position = PragmaPosition.BEFORE_START
+            elif exit_point_positioning == ExitPointPositioning.AFTER_CU:
+                pragma.pragma_position = PragmaPosition.AFTER_END
+            else:
+                raise ValueError("Usupported ExitPointPositioning: ", exit_point_positioning)
             pragmas.append(pragma)
         return pragmas
 

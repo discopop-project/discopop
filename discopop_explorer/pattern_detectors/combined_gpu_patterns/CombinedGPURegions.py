@@ -33,6 +33,11 @@ class ExitPointType(IntEnum):
     ASYNC_FROM_DEVICE = 2
 
 
+class ExitPointPositioning(IntEnum):
+    BEFORE_CU = 0
+    AFTER_CU = 1
+
+
 class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
     update_instructions: List[
@@ -44,7 +49,7 @@ class CombinedGPURegion(PatternInfo):
         Tuple[str, str, EntryPointType, str]
     ]  # [(var, cu_id, entry_point_type, meta_line_num)]
     data_region_exit_points: List[
-        Tuple[str, str, ExitPointType, str]
+        Tuple[str, str, ExitPointType, str, ExitPointPositioning]
     ]  # [(var, cu_id, exit_point_type, meta_line_num)]
     data_region_depend_in: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
     data_region_depend_out: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
@@ -70,7 +75,7 @@ class CombinedGPURegion(PatternInfo):
         self.update_instructions = self.__get_update_instructions(pet)
         pairwise_reachability = self.__get_pairwise_reachability(pet)
         entry_points: List[Tuple[str, str, EntryPointType, str]] = []
-        exit_points: List[Tuple[str, str, ExitPointType, str]] = []
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
 
@@ -82,8 +87,11 @@ class CombinedGPURegion(PatternInfo):
             pet, entry_points, exit_points, liveness
         )
 
-        # todo validate entry and exit points
+        entry_points, exit_points = self.__find_data_mapping_exits(
+            pet, entry_points, exit_points, liveness
+        )
 
+        # todo validate entry and exit points
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
@@ -136,11 +144,152 @@ class CombinedGPURegion(PatternInfo):
             f"Contained regions: {contained_regions_str}\n"
         )
 
+    def __find_data_mapping_exits(
+        self,
+        pet: PETGraphX,
+        entry_points: List[Tuple[str, str, EntryPointType, str]],
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
+        liveness: dict[str, list[str]],
+    ):
+        for region in self.contained_regions:
+            exit_cus_inside, exit_cus_outside = region.get_exit_cus(pet)
+            # get killed data
+            live_in_region: Set[str] = set()
+            live_after_region: Set[str] = set()
+            for var_name in liveness:
+                for region_cu_id in region.contained_cu_ids:
+                    if region_cu_id in liveness[var_name]:
+                        live_in_region.add(var_name)
+            for var_name in liveness:
+                for exit_cu_id in exit_cus_outside:
+                    if exit_cu_id in liveness[var_name]:
+                        live_after_region.add(var_name)
+            killed = live_in_region ^ live_after_region
+            # create exit points
+            for var_name in killed:
+                # if var is not live
+                # check if dependency from within region to the outside exists for var_name
+                # if so, use ExitPointType.FROM_DEVICE
+                data_needed_after_cu: Set[str] = set()
+                data_live_in_cu: Set[str] = set()
+                for region_cu_id in region.contained_cu_ids:
+                    if region_cu_id in liveness[var_name]:
+                        data_live_in_cu.add(region_cu_id)
+                    in_raw_deps = [
+                        (s, t, dep)
+                        for (s, t, dep) in pet.in_edges(region_cu_id, EdgeType.DATA)
+                        if dep.dtype == DepType.RAW
+                        and dep.var_name == var_name
+                        and s not in region.contained_cu_ids
+                    ]
+                    # check if the dependency target is a predecessor of the source
+                    for s, t, dep in in_raw_deps:
+                        if pet.is_predecessor(t, s):
+                            data_needed_after_cu.add(t)
+
+                if len(data_needed_after_cu) > 0:
+                    ept = ExitPointType.FROM_DEVICE
+                else:
+                    ept = ExitPointType.DELETE
+
+                # get exit cu id's outside the region
+                outside_cu_ids: List[str] = []
+                for region_cu_id in set(list(data_needed_after_cu) + list(data_live_in_cu)):
+                    successors = self.__get_successors_outside_region(
+                        pet, region_cu_id, region.contained_cu_ids
+                    )
+                    # check if location data for exit_cu_id exists. may not be the case at the end of functions
+                    delete_from_successors: List[Tuple[str, str]] = []
+                    for (exit_cu_id, predecessor) in successors:
+                        exit_cu_node = pet.node_at(exit_cu_id)
+                        if (
+                            exit_cu_node.start_position() == "262143:16383"
+                            or exit_cu_node.end_position() == "262143:16383"
+                        ):
+                            # no valid location data
+                            # append the exit to the end of the predecessor / the loop which contains it instead of the exit_cu
+                            if pet.node_at(predecessor).type == NodeType.CU:
+                                # get parent loop node
+                                parent_loop = ""
+                                parents = [
+                                    s for s, t, d in pet.in_edges(predecessor, EdgeType.CHILD)
+                                ]
+                                for parent in parents:
+                                    if pet.node_at(parent).type == NodeType.LOOP:
+                                        parent_loop = parent
+                                        break
+                                exit_point = (
+                                    var_name,
+                                    predecessor,
+                                    ept,
+                                    pet.node_at(parent_loop).end_position(),
+                                    ExitPointPositioning.AFTER_CU,
+                                )
+                            else:
+                                exit_point = (
+                                    var_name,
+                                    predecessor,
+                                    ept,
+                                    pet.node_at(predecessor).end_position(),
+                                    ExitPointPositioning.AFTER_CU,
+                                )
+
+                            exit_points.append(exit_point)
+                            delete_from_successors.append((exit_cu_id, predecessor))
+                    for pair in delete_from_successors:
+                        successors.remove(pair)
+                    cleaned_successors = [a for (a, b) in successors]
+                    outside_cu_ids += cleaned_successors
+                outside_cu_ids = list(set(outside_cu_ids))
+
+                # create exit points outside the region
+                for exit_cu_id in outside_cu_ids:
+                    exit_point = (
+                        var_name,
+                        exit_cu_id,
+                        ept,
+                        pet.node_at(exit_cu_id).start_position(),
+                        ExitPointPositioning.BEFORE_CU,
+                    )
+                    exit_points.append(exit_point)
+
+        # remove duplicates
+        exit_points = list(set(exit_points))
+
+        return entry_points, exit_points
+
+    def __get_successors_outside_region(
+        self, pet: PETGraphX, root_node_id: str, region_node_ids: List[str]
+    ) -> List[Tuple[str, str]]:
+        """returns a list of tuples consisting of immediate successor nodes of the region and the last node within the region"""
+        queue: List[Tuple[str, str]] = [(root_node_id, "")]
+        visited: List[str] = []
+        successors: List[Tuple[str, str]] = []
+        while queue:
+            current, predecessor = queue.pop(0)
+            visited.append(current)
+            if current not in region_node_ids:
+                successors.append((current, predecessor))
+                continue
+            # add direct successors to queue
+            queue += [
+                (n.id, current)
+                for n in pet.direct_successors(pet.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add children to queue
+            queue += [
+                (n.id, current)
+                for n in pet.direct_children(pet.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+        return successors
+
     def __optimize_data_mapping_entries(
         self,
         pet: PETGraphX,
         entry_points: List[Tuple[str, str, EntryPointType, str]],
-        exit_points: List[Tuple[str, str, ExitPointType, str]],
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
         liveness: dict[str, list[str]],
     ):
         # optimize map to and map alloc
@@ -165,7 +314,6 @@ class CombinedGPURegion(PatternInfo):
         for entry_point in to_be_removed:
             entry_points.remove(entry_point)
         return entry_points, exit_points
-
 
     def __get_update_instructions(
         self, pet: PETGraphX
@@ -650,11 +798,12 @@ class CombinedGPURegion(PatternInfo):
     def __translate_mapping_to_explicit_data_entry_points(
         self, pet: PETGraphX
     ) -> Tuple[
-        List[Tuple[str, str, EntryPointType, str]], List[Tuple[str, str, ExitPointType, str]]
+        List[Tuple[str, str, EntryPointType, str]],
+        List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
     ]:
         """Returns a tuple containing the explicit entry and exit points of target data regions."""
         entry_points: List[Tuple[str, str, EntryPointType, str]] = []
-        exit_points: List[Tuple[str, str, ExitPointType, str]] = []
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
         # create entry points for contained loops
         for region in self.contained_regions:
             for gpu_loop in region.contained_loops:
