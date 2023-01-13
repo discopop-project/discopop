@@ -73,16 +73,17 @@ class CombinedGPURegion(PatternInfo):
         exit_points: List[Tuple[str, str, ExitPointType, str]] = []
 
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
-        entry_pints, exit_points = self.__optimize_data_mapping(pet, entry_points, exit_points)
 
         liveness = self.__populate_live_data(pet)
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
-        # todo identify map to
-        # todo identify map alloc
-        # todo identify map from
-        # todo identify map delete
+        entry_points, exit_points = self.__optimize_data_mapping_entries(
+            pet, entry_points, exit_points, liveness
+        )
+
+        # todo validate entry and exit points
+
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
@@ -135,10 +136,36 @@ class CombinedGPURegion(PatternInfo):
             f"Contained regions: {contained_regions_str}\n"
         )
 
-    def __optimize_data_mapping(self, pet, entry_points, exit_points):
-        # todo
-        pass
+    def __optimize_data_mapping_entries(
+        self,
+        pet: PETGraphX,
+        entry_points: List[Tuple[str, str, EntryPointType, str]],
+        exit_points: List[Tuple[str, str, ExitPointType, str]],
+        liveness: dict[str, list[str]],
+    ):
+        # optimize map to and map alloc
+        to_be_removed: List[Tuple[str, str, EntryPointType, str]] = []
+        for entry_point in entry_points:
+            # check if entered data is already known on the device
+            var_name, cu_id, ept, line_num = entry_point
+            predecessors = [s for s, _, _ in pet.in_edges(cu_id, EdgeType.SUCCESSOR)]
+            if len(predecessors) == 0 and len(pet.direct_children(pet.node_at(cu_id))) > 0:
+                # add predecessors of first child to predecessors list (e.g. required for loops)
+                first_child_id = pet.direct_children(pet.node_at(cu_id))[0].id
+                predecessors += [s for s, _, _ in pet.in_edges(first_child_id, EdgeType.SUCCESSOR)]
+
+            data_exists_on_all_predecessors = True
+            for pred_id in predecessors:
+                if pred_id not in liveness[var_name]:
+                    data_exists_on_all_predecessors = False
+                    break
+            if data_exists_on_all_predecessors:
+                to_be_removed.append(entry_point)
+        # remove entry points
+        for entry_point in to_be_removed:
+            entry_points.remove(entry_point)
         return entry_points, exit_points
+
 
     def __get_update_instructions(
         self, pet: PETGraphX
