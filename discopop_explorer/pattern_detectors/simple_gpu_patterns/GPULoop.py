@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from enum import IntEnum
 
 from numpy import long  # type: ignore
 from typing import List, Set, Optional, Union, Any, Dict
@@ -115,7 +116,17 @@ def omp_construct_str(name: str, line: long, clauses: List[str]) -> str:
     return result
 
 
-def omp_construct_dict(name: str, line: long, clauses: List[str]) -> dict:
+class OmpConstructPositioning(IntEnum):
+    BEFORE_LINE = 0
+    AFTER_LINE = 1
+
+
+def omp_construct_dict(
+    name: str,
+    line: long,
+    clauses: List[str],
+    positioning: OmpConstructPositioning = OmpConstructPositioning.BEFORE_LINE,
+) -> dict:
     """
 
     :param name:
@@ -127,6 +138,7 @@ def omp_construct_dict(name: str, line: long, clauses: List[str]) -> dict:
     result["name"] = name
     result["line"] = line
     result["clauses"] = clauses
+    result["positioning"] = positioning
     return result
 
 
@@ -299,7 +311,12 @@ class GPULoopPattern(PatternInfo):
                 omp_construct_dict("#pragma omp declare target", fn_node_start_line, [])
             )
             constructs.append(
-                omp_construct_dict("#pragma omp end declare target", fn_node_end_line, [])
+                omp_construct_dict(
+                    "#pragma omp end declare target",
+                    fn_node_end_line,
+                    [],
+                    positioning=OmpConstructPositioning.AFTER_LINE,
+                )
             )
         return constructs
 

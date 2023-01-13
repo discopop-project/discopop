@@ -15,6 +15,7 @@ from typing import List, Tuple, Dict
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
     ExitPointType, ExitPointPositioning
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
 from discopop_wizard.classes.CodePreview import CodePreview
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
@@ -215,6 +216,13 @@ class Suggestion(object):
                     # else, use construct line
                     start_line = construct_start_line
                     end_line = construct_start_line
+                # determine positioning of the pragma
+                if construct["positioning"] == OmpConstructPositioning.BEFORE_LINE:
+                    pragma.pragma_position = PragmaPosition.BEFORE_START
+                elif construct["positioning"] == OmpConstructPositioning.AFTER_LINE:
+                    pragma.pragma_position = PragmaPosition.AFTER_START
+                else:
+                    raise ValueError("Unsupported positioning information: ", construct["positioning"])
                 # create pragma for visualization
                 pragma.start_line = start_line
                 pragma.end_line = end_line
