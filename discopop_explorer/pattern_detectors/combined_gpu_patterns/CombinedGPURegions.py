@@ -152,105 +152,86 @@ class CombinedGPURegion(PatternInfo):
         liveness: dict[str, list[str]],
     ):
         for region in self.contained_regions:
-            exit_cus_inside, exit_cus_outside = region.get_exit_cus(pet)
-            # get killed data
-            live_in_region: Set[str] = set()
-            live_after_region: Set[str] = set()
-            for var_name in liveness:
-                for region_cu_id in region.contained_cu_ids:
-                    if region_cu_id in liveness[var_name]:
-                        live_in_region.add(var_name)
-            for var_name in liveness:
-                for exit_cu_id in exit_cus_outside:
-                    if exit_cu_id in liveness[var_name]:
-                        live_after_region.add(var_name)
-            killed = live_in_region ^ live_after_region
-            # create exit points
-            for var_name in killed:
-                # if var is not live
-                # check if dependency from within region to the outside exists for var_name
-                # if so, use ExitPointType.FROM_DEVICE
-                data_needed_after_cu: Set[str] = set()
-                data_live_in_cu: Set[str] = set()
-                for region_cu_id in region.contained_cu_ids:
-                    if region_cu_id in liveness[var_name]:
-                        data_live_in_cu.add(region_cu_id)
-                    in_raw_deps = [
-                        (s, t, dep)
-                        for (s, t, dep) in pet.in_edges(region_cu_id, EdgeType.DATA)
-                        if dep.dtype == DepType.RAW
-                        and dep.var_name == var_name
-                        and s not in region.contained_cu_ids
-                    ]
-                    # check if the dependency target is a predecessor of the source
-                    for s, t, dep in in_raw_deps:
-                        if pet.is_predecessor(t, s):
-                            data_needed_after_cu.add(t)
+            for gpu_loop in region.contained_loops:
+                loop_subtree = [
+                    n.id for n in pet.subtree_of_type(pet.node_at(gpu_loop.node_id), NodeType.CU)
+                ]
+                exit_cus_outside = [
+                    pair[0]
+                    for pair in self.__get_successors_outside_region(
+                        pet, gpu_loop.node_id, loop_subtree + [gpu_loop.node_id]
+                    )
+                ]
 
-                if len(data_needed_after_cu) > 0:
-                    ept = ExitPointType.FROM_DEVICE
-                else:
+                # get killed data
+                live_in_region: Set[Tuple[str, str]] = set()
+                live_after_region: Set[Tuple[str, str]] = set()
+                killing: Set[Tuple[str, str]] = set()
+                for var_name in liveness:
+                    for region_cu_id in loop_subtree:
+                        if region_cu_id in liveness[var_name]:
+                            live_in_region.add((var_name, region_cu_id))
+                for var_name in liveness:
+                    for exit_cu_id in exit_cus_outside:
+                        if exit_cu_id in liveness[var_name]:
+                            live_after_region.add((var_name, exit_cu_id))
+                        else:
+                            killing.add((var_name, exit_cu_id))
+
+                to_be_killed: Set[Tuple[str, str]] = live_in_region
+                for live_var_name_after_region, live_cu_id_after_region in live_after_region:
+                    do_not_kill: Set[Tuple[str, str]] = set()
+                    for var_name, in_cu_id in to_be_killed:
+                        if var_name == live_var_name_after_region:
+                            if pet.is_predecessor(in_cu_id, live_cu_id_after_region):
+                                do_not_kill.add((var_name, in_cu_id))
+                    to_be_killed = to_be_killed ^ do_not_kill
+
+                identified_exit_points: Set[Tuple[str, str]] = set()
+                for var_name, live_cu_id in to_be_killed:
+                    for killed_var_name, killing_cu_id in killing:
+                        if var_name == killed_var_name:
+                            if pet.is_predecessor(live_cu_id, killing_cu_id):
+                                identified_exit_points.add((var_name, killing_cu_id))
+
+                print("IEP: ", identified_exit_points)
+
+                # create exit points
+                for var_name, killing_cu_id in identified_exit_points:
+                    # todo identify ept
                     ept = ExitPointType.DELETE
 
-                # get exit cu id's outside the region
-                outside_cu_ids: List[str] = []
-                for region_cu_id in set(list(data_needed_after_cu) + list(data_live_in_cu)):
-                    successors = self.__get_successors_outside_region(
-                        pet, region_cu_id, region.contained_cu_ids
-                    )
-                    # check if location data for exit_cu_id exists. may not be the case at the end of functions
-                    delete_from_successors: List[Tuple[str, str]] = []
-                    for (exit_cu_id, predecessor) in successors:
-                        exit_cu_node = pet.node_at(exit_cu_id)
-                        if (
-                            exit_cu_node.start_position() == "262143:16383"
-                            or exit_cu_node.end_position() == "262143:16383"
-                        ):
-                            # no valid location data
-                            # append the exit to the end of the predecessor / the loop which contains it instead of the exit_cu
-                            if pet.node_at(predecessor).type == NodeType.CU:
-                                # get parent loop node
-                                parent_loop = ""
-                                parents = [
-                                    s for s, t, d in pet.in_edges(predecessor, EdgeType.CHILD)
-                                ]
-                                for parent in parents:
-                                    if pet.node_at(parent).type == NodeType.LOOP:
-                                        parent_loop = parent
-                                        break
-                                exit_point = (
-                                    var_name,
-                                    predecessor,
-                                    ept,
-                                    pet.node_at(parent_loop).end_position(),
-                                    ExitPointPositioning.AFTER_CU,
-                                )
-                            else:
-                                exit_point = (
-                                    var_name,
-                                    predecessor,
-                                    ept,
-                                    pet.node_at(predecessor).end_position(),
-                                    ExitPointPositioning.AFTER_CU,
-                                )
-
+                    exit_cu_node = pet.node_at(killing_cu_id)
+                    # check if location data for cu_id exists. may not be the case at the end of functions
+                    if (
+                        exit_cu_node.start_position() == "262143:16383"
+                        or exit_cu_node.end_position() == "262143:16383"
+                    ):
+                        # no valid location data for killing_cu, get end of predecessor instead
+                        predecessors = [
+                            s for s, t, d in pet.in_edges(killing_cu_id, EdgeType.SUCCESSOR)
+                        ]
+                        for predecessor_id in predecessors:
+                            predecessor_parent = [
+                                s for s, t, d in pet.in_edges(predecessor_id, EdgeType.CHILD)
+                            ][0]
+                            exit_point = (
+                                var_name,
+                                killing_cu_id,
+                                ept,
+                                pet.node_at(predecessor_parent).end_position(),
+                                ExitPointPositioning.AFTER_CU,
+                            )
                             exit_points.append(exit_point)
-                            delete_from_successors.append((exit_cu_id, predecessor))
-                    for pair in delete_from_successors:
-                        successors.remove(pair)
-                    cleaned_successors = [a for (a, b) in successors]
-                    outside_cu_ids += cleaned_successors
-                outside_cu_ids = list(set(outside_cu_ids))
-
-                # create exit points outside the region
-                for exit_cu_id in outside_cu_ids:
-                    exit_point = (
-                        var_name,
-                        exit_cu_id,
-                        ept,
-                        pet.node_at(exit_cu_id).start_position(),
-                        ExitPointPositioning.BEFORE_CU,
-                    )
+                    else:
+                        ept = ExitPointType.DELETE
+                        exit_point = (
+                            var_name,
+                            killing_cu_id,
+                            ept,
+                            pet.node_at(killing_cu_id).start_position(),
+                            ExitPointPositioning.BEFORE_CU,
+                        )
                     exit_points.append(exit_point)
 
         # remove duplicates
@@ -281,7 +262,12 @@ class CombinedGPURegion(PatternInfo):
             queue += [
                 (n.id, current)
                 for n in pet.direct_children(pet.node_at(current))
-                if n.id not in visited and n.id not in queue
+                if n.id not in visited
+                and n.id not in queue
+                and n.id
+                not in [
+                    t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)
+                ]  # do not consider called functions as children
             ]
         return successors
 
