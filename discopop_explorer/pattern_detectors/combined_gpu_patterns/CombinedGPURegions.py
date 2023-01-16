@@ -38,6 +38,11 @@ class ExitPointPositioning(IntEnum):
     AFTER_CU = 1
 
 
+class EntryPointPositioning(IntEnum):
+    BEFORE_CU = 0
+    AFTER_CU = 1
+
+
 class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
     update_instructions: List[
@@ -46,13 +51,17 @@ class CombinedGPURegion(PatternInfo):
     target_data_regions: Dict[str, List[Tuple[List[str], str, str, str, str]]]
     # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
     data_region_entry_points: List[
-        Tuple[str, str, EntryPointType, str]
+        Tuple[str, str, EntryPointType, str, EntryPointPositioning]
     ]  # [(var, cu_id, entry_point_type, meta_line_num)]
     data_region_exit_points: List[
         Tuple[str, str, ExitPointType, str, ExitPointPositioning]
     ]  # [(var, cu_id, exit_point_type, meta_line_num)]
-    data_region_depend_in: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
-    data_region_depend_out: List[Tuple[str, str, str]]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_in: List[
+        Tuple[str, str, str, EntryPointPositioning]
+    ]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_out: List[
+        Tuple[str, str, str, ExitPointPositioning]
+    ]  # [(var, cu_id, meta_line_num)]
     device_cu_ids: List[str]
     host_cu_ids: List[str]
     # meta information, mainly for display and overview purposes
@@ -74,7 +83,7 @@ class CombinedGPURegion(PatternInfo):
         self.host_cu_ids = self.__get_host_cu_ids(pet)
         self.update_instructions = self.__get_update_instructions(pet)
         pairwise_reachability = self.__get_pairwise_reachability(pet)
-        entry_points: List[Tuple[str, str, EntryPointType, str]] = []
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
         entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
@@ -94,30 +103,35 @@ class CombinedGPURegion(PatternInfo):
         # todo validate entry and exit points
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
-        #        entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
-        #        (
-        #            self.data_region_entry_points,
-        #            self.data_region_exit_points,
-        #            self.data_region_depend_in,
-        #            self.data_region_depend_out,
-        #        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
-        self.data_region_entry_points = entry_points
-        self.data_region_exit_points = exit_points
-        self.data_region_depend_in = []
-        self.data_region_depend_out = []
+        #    entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
+
+        # find asynchronous mapping points
+        (
+            self.data_region_entry_points,
+            self.data_region_exit_points,
+            self.data_region_depend_in,
+            self.data_region_depend_out,
+        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+
+        # todo re-enable, and disable async ?
+        #        self.data_region_entry_points = entry_points
+        #        self.data_region_exit_points = exit_points
+        #        self.data_region_depend_in = []
+        #        self.data_region_depend_out = []
+
         #        print("Entry Points:")
         #        print(entry_points)
         #        print("Exit Points:")
         #        print(exit_points)
-        #        print("Updated Entry Points:")
-        #        print(self.data_region_entry_points)
-        #        print("Updated Exit Points:")
-        #        print(self.data_region_exit_points)
+        print("Updated Entry Points:")
+        print(self.data_region_entry_points)
+        print("Updated Exit Points:")
+        print(self.data_region_exit_points)
 
-        #        print("Depend(in): ")
-        #        print(self.data_region_depend_in)
-        #        print("Depend(out):")
-        #        print(self.data_region_depend_out)
+        print("Depend(in): ")
+        print(self.data_region_depend_in)
+        print("Depend(out):")
+        print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
         self.__get_metadata(pet, liveness)
@@ -147,7 +161,7 @@ class CombinedGPURegion(PatternInfo):
     def __find_data_mapping_exits(
         self,
         pet: PETGraphX,
-        entry_points: List[Tuple[str, str, EntryPointType, str]],
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
         liveness: dict[str, list[str]],
     ):
@@ -298,15 +312,15 @@ class CombinedGPURegion(PatternInfo):
     def __optimize_data_mapping_entries(
         self,
         pet: PETGraphX,
-        entry_points: List[Tuple[str, str, EntryPointType, str]],
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
         liveness: dict[str, list[str]],
     ):
         # optimize map to and map alloc
-        to_be_removed: List[Tuple[str, str, EntryPointType, str]] = []
+        to_be_removed: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         for entry_point in entry_points:
             # check if entered data is already known on the device
-            var_name, cu_id, ept, line_num = entry_point
+            var_name, cu_id, ept, line_num, positioning = entry_point
             predecessors = [s for s, _, _ in pet.in_edges(cu_id, EdgeType.SUCCESSOR)]
             if len(predecessors) == 0 and len(pet.direct_children(pet.node_at(cu_id))) > 0:
                 # add predecessors of first child to predecessors list (e.g. required for loops)
@@ -808,11 +822,11 @@ class CombinedGPURegion(PatternInfo):
     def __translate_mapping_to_explicit_data_entry_points(
         self, pet: PETGraphX
     ) -> Tuple[
-        List[Tuple[str, str, EntryPointType, str]],
+        List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
         List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
     ]:
         """Returns a tuple containing the explicit entry and exit points of target data regions."""
-        entry_points: List[Tuple[str, str, EntryPointType, str]] = []
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
         # create entry points for contained loops
         for region in self.contained_regions:
@@ -822,10 +836,26 @@ class CombinedGPURegion(PatternInfo):
 
                 # create TO_DEVICE entry points
                 for var in gpu_loop.map_type_to + gpu_loop.map_type_tofrom:
-                    entry_points.append((var, cu_node_id, EntryPointType.TO_DEVICE, start_position))
+                    entry_points.append(
+                        (
+                            var,
+                            cu_node_id,
+                            EntryPointType.TO_DEVICE,
+                            start_position,
+                            EntryPointPositioning.BEFORE_CU,
+                        )
+                    )
                 # create ALLOC entry points
                 for var in gpu_loop.map_type_alloc:
-                    entry_points.append((var, cu_node_id, EntryPointType.ALLOCATE, start_position))
+                    entry_points.append(
+                        (
+                            var,
+                            cu_node_id,
+                            EntryPointType.ALLOCATE,
+                            start_position,
+                            EntryPointPositioning.BEFORE_CU,
+                        )
+                    )
         return entry_points, exit_points
 
     def __unused_get_explicit_data_entry_and_exit_points(
@@ -870,22 +900,22 @@ class CombinedGPURegion(PatternInfo):
     def __find_async_loading_points(
         self,
         pet: PETGraphX,
-        entry_points: List[Tuple[str, str, EntryPointType, str]],
-        exit_points: List[Tuple[str, str, ExitPointType, str]],
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
     ) -> Tuple[
-        List[Tuple[str, str, EntryPointType, str]],
-        List[Tuple[str, str, ExitPointType, str]],
-        List[Tuple[str, str, str]],
-        List[Tuple[str, str, str]],
+        List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
+        List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
+        List[Tuple[str, str, str, EntryPointPositioning]],
+        List[Tuple[str, str, str, ExitPointPositioning]],
     ]:
         """Checks if asynchronous preloading of data is possible. Returns the modified lists of entry_ and
         exit_points."""
-        updated_entry_points: List[Tuple[str, str, EntryPointType, str]] = []
-        updated_exit_points: List[Tuple[str, str, ExitPointType, str]] = []
-        in_dependencies: List[Tuple[str, str, str]] = []
-        out_dependencies: List[Tuple[str, str, str]] = []
+        updated_entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
+        updated_exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
+        in_dependencies: List[Tuple[str, str, str, EntryPointPositioning]] = []
+        out_dependencies: List[Tuple[str, str, str, ExitPointPositioning]] = []
         # find options for async H2D copying
-        for var, entry_point_cu, entry_point_type, meta_location in entry_points:
+        for var, entry_point_cu, entry_point_type, meta_location, entry_positioning in entry_points:
             if entry_point_type == EntryPointType.ALLOCATE:
                 updated_entry_points.append(
                     (
@@ -893,6 +923,7 @@ class CombinedGPURegion(PatternInfo):
                         entry_point_cu,
                         entry_point_type,
                         pet.node_at(entry_point_cu).start_position(),
+                        entry_positioning,
                     )
                 )
                 continue
@@ -905,21 +936,41 @@ class CombinedGPURegion(PatternInfo):
                         continue
                     if t in self.device_cu_ids:
                         continue
+                    print(
+                        "CHECKING VAR: ",
+                        var,
+                        " @ ",
+                        dev_cu_id,
+                        " against ",
+                        t,
+                        " --> is pred: ",
+                        pet.is_predecessor(t, entry_point_cu),
+                    )
                     # check if t is a predecessor of entry_point_cu
                     if pet.is_predecessor(t, entry_point_cu):
+                        print("FOUND UPDATE TO")
                         # update entry point
                         ept = (
                             EntryPointType.ASYNC_ALLOCATE
                             if entry_point_type == EntryPointType.ALLOCATE
                             else EntryPointType.ASYNC_TO_DEVICE
                         )
-                        updated_entry_points.append((var, t, ept, cast(str, dep.source)))
+                        updated_entry_points.append(
+                            (var, t, ept, cast(str, dep.source), EntryPointPositioning.AFTER_CU)
+                        )
                         found_update = True
                         # create dependency
                         in_dependencies.append(
-                            (var, entry_point_cu, pet.node_at(entry_point_cu).start_position())
+                            (
+                                var,
+                                entry_point_cu,
+                                pet.node_at(entry_point_cu).start_position(),
+                                EntryPointPositioning.BEFORE_CU,
+                            )
                         )
-                        out_dependencies.append((var, t, cast(str, dep.source)))
+                        out_dependencies.append(
+                            (var, t, cast(str, dep.source), ExitPointPositioning.AFTER_CU)
+                        )
                 if found_update:
                     break
             if not found_update:
@@ -929,11 +980,12 @@ class CombinedGPURegion(PatternInfo):
                         entry_point_cu,
                         entry_point_type,
                         pet.node_at(entry_point_cu).start_position(),
+                        entry_positioning,
                     )
                 )
 
         # find options for async D2H copying
-        for var, exit_point_cu, exit_point_type, meta_location in exit_points:
+        for var, exit_point_cu, exit_point_type, meta_location, exit_positioning in exit_points:
             if exit_point_type == ExitPointType.DELETE:
                 updated_exit_points.append(
                     (
@@ -941,6 +993,7 @@ class CombinedGPURegion(PatternInfo):
                         exit_point_cu,
                         exit_point_type,
                         pet.node_at(exit_point_cu).start_position(),
+                        exit_positioning,
                     )
                 )
             # todo estimate workload of skipped section and determine whether async copying is worth it
@@ -965,14 +1018,28 @@ class CombinedGPURegion(PatternInfo):
                                 exit_point_cu,
                                 ExitPointType.ASYNC_FROM_DEVICE,
                                 pet.node_at(exit_point_cu).start_position(),
+                                ExitPointPositioning.BEFORE_CU,
                             )
                         )
+                        print("FOUND UPDATE FROM: ", var)
                         found_update = True
                         # create dependency
                         out_dependencies.append(
-                            (var, exit_point_cu, pet.node_at(exit_point_cu).start_position())
+                            (
+                                var,
+                                exit_point_cu,
+                                pet.node_at(exit_point_cu).start_position(),
+                                ExitPointPositioning.AFTER_CU,
+                            )
                         )
-                        in_dependencies.append((var, s, pet.node_at(s).start_position()))
+                        in_dependencies.append(
+                            (
+                                var,
+                                s,
+                                pet.node_at(s).start_position(),
+                                EntryPointPositioning.BEFORE_CU,
+                            )
+                        )
                 if found_update:
                     break
             if not found_update:
@@ -982,6 +1049,7 @@ class CombinedGPURegion(PatternInfo):
                         exit_point_cu,
                         exit_point_type,
                         pet.node_at(exit_point_cu).start_position(),
+                        ExitPointPositioning.BEFORE_CU,
                     )
                 )
 
