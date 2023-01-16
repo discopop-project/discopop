@@ -274,6 +274,7 @@ log -i \
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
   makeFlags:  $MAKE_FLAGS
+  makeTarget: $MAKEFILE_TARGET
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG
   pythonPath: $PYTHONPATH_FLAG"
