@@ -998,6 +998,11 @@ class PETGraphX(object):
     def is_predecessor(self, source_id: str, target_id: str) -> bool:
         """returns true, if source is a predecessor of target.
         This analysis includes traversal of successor, child and calls edges."""
+        # if target is a loop node, get the first child of the loop, i.e. the entry node into the loop
+        target_node = self.node_at(target_id)
+        if target_node.type == NodeType.LOOP:
+            target_id = self.direct_children(target_node)[0].id
+
         # perform a bfs search for target
         queue: List[str] = [source_id]
         visited: List[str] = []
