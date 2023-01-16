@@ -179,7 +179,7 @@ class Suggestion(object):
             pragmas.append(pragma)
         return pragmas
 
-    def __get_simple_gpu_pragmas(self, region_start, region_end, contained_loops, map_to_vars, map_from_vars,
+    def     __get_simple_gpu_pragmas(self, region_start, region_end, contained_loops, map_to_vars, map_from_vars,
                                  map_to_from_vars, map_alloc_vars, map_delete_vars, consumed_vars, produced_vars,
                                  indentation: int = 0, ignore_mapping_clauses: bool = False
                                  ) -> List[Tuple[int, int, str, PragmaType, int]]:
@@ -197,6 +197,8 @@ class Suggestion(object):
                 construct_start_line = int(construct_start.split(":")[1])
                 pragma = Pragma()
                 pragma.pragma_str = construct["name"] + " "
+                if loop["collapse"] > 1:
+                    pragma.pragma_str += "collapse(" + str(loop["collapse"]) + ") "
                 for clause in construct["clauses"]:
                     if ignore_mapping_clauses:
                         if clause.startswith("map("):
