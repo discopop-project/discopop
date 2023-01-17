@@ -936,6 +936,10 @@ class CombinedGPURegion(PatternInfo):
                         continue
                     if t in self.device_cu_ids:
                         continue
+                    if entry_point_cu == t:
+                        # not checking this would result in asynchronous transfers without computation
+                        # inbetween in and out dependency location
+                        continue
                     print(
                         "CHECKING VAR: ",
                         var,
@@ -1007,6 +1011,10 @@ class CombinedGPURegion(PatternInfo):
                         # since value on device is not read, ignore the dependency
                         continue
                     if s in self.device_cu_ids:
+                        continue
+                    if exit_point_cu == s:
+                        # not checking this would result in asynchronous transfers without computation
+                        # inbetween in and out dependency location
                         continue
 
                     # check if s is a successor of exit_point_cu
