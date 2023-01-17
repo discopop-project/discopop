@@ -940,19 +940,8 @@ class CombinedGPURegion(PatternInfo):
                         # not checking this would result in asynchronous transfers without computation
                         # inbetween in and out dependency location
                         continue
-                    print(
-                        "CHECKING VAR: ",
-                        var,
-                        " @ ",
-                        dev_cu_id,
-                        " against ",
-                        t,
-                        " --> is pred: ",
-                        pet.is_predecessor(t, entry_point_cu),
-                    )
                     # check if t is a predecessor of entry_point_cu
                     if pet.is_predecessor(t, entry_point_cu):
-                        print("FOUND UPDATE TO")
                         # update entry point
                         ept = (
                             EntryPointType.ASYNC_ALLOCATE
@@ -1029,7 +1018,6 @@ class CombinedGPURegion(PatternInfo):
                                 ExitPointPositioning.BEFORE_CU,
                             )
                         )
-                        print("FOUND UPDATE FROM: ", var)
                         found_update = True
                         # create dependency
                         out_dependencies.append(
