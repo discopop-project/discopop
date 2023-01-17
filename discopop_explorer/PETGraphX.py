@@ -302,10 +302,7 @@ class PETGraphX(object):
                     ):
                         continue
                     if sink_cu_id and source_cu_id:
-                        if sink_cu_id != source_cu_id:
-                            print("Pre-parse dep")
-                            g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
-                            print("Post parse dep")
+                        g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         return cls(g, reduction_vars, pos)
 
     def show(self):
