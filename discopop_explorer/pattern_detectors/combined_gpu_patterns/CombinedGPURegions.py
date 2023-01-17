@@ -1029,7 +1029,7 @@ class CombinedGPURegion(PatternInfo):
                                 var,
                                 exit_point_cu,
                                 pet.node_at(exit_point_cu).start_position(),
-                                ExitPointPositioning.AFTER_CU,
+                                ExitPointPositioning.BEFORE_CU,
                             )
                         )
                         in_dependencies.append(
