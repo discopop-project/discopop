@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from enum import IntEnum
-from typing import List, Tuple, cast, Dict, Optional, Set
+from typing import List, Tuple, cast, Dict, Optional, Set, Any
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType, NodeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -105,6 +105,9 @@ class CombinedGPURegion(PatternInfo):
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #    entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
 
+        print("EXIT POINTS: ")
+        print(exit_points)
+
         # find asynchronous mapping points
         (
             self.data_region_entry_points,
@@ -167,6 +170,7 @@ class CombinedGPURegion(PatternInfo):
     ):
         for region in self.contained_regions:
             for gpu_loop in region.contained_loops:
+                print("GPU LOOP: ", gpu_loop.node_id)
                 loop_subtree = [
                     n.id for n in pet.subtree_of_type(pet.node_at(gpu_loop.node_id), NodeType.CU)
                 ]
@@ -176,6 +180,7 @@ class CombinedGPURegion(PatternInfo):
                         pet, gpu_loop.node_id, loop_subtree + [gpu_loop.node_id]
                     )
                 ]
+                print("EXIT CUS: ", exit_cus_outside)
 
                 # get killed data
                 live_in_region: Set[Tuple[str, str]] = set()
@@ -202,10 +207,74 @@ class CombinedGPURegion(PatternInfo):
                     to_be_killed = to_be_killed ^ do_not_kill
 
                 identified_exit_points: Set[Tuple[str, str, ExitPointType]] = set()
+                print("TO BE KILLED: ")
+                print(to_be_killed)
                 for var_name, live_cu_id in to_be_killed:
+                    print("VAR Name: ", var_name, " live_cu_id: ", live_cu_id)
                     ept = ExitPointType.DELETE
                     in_raw_deps = pet.in_edges(live_cu_id, EdgeType.DATA)
                     # ept = FROM if incoming RAW edge to var_name exists
+
+                    # TEST: check unfiltered deps for aliasing
+                    unfiltered_in_raw_deps = [
+                        (s, t, d)
+                        for (s, t, d) in in_raw_deps
+                        if d.dtype == DepType.RAW and s not in loop_subtree
+                    ]
+                    print("\t", [(str(s), str(t), str(d)) for s, t, d in unfiltered_in_raw_deps])
+
+                    alias_raw_deps = [
+                        (s, t, d)
+                        for (s, t, d) in unfiltered_in_raw_deps
+                        if pet.unused_check_alias(s, t, d, pet.node_at(gpu_loop.node_id))
+                    ]
+                    print(
+                        "\t ALIAS DEPS: ", [(str(s), str(t), str(d)) for s, t, d in alias_raw_deps]
+                    )
+                    # since the de-aliasing is not trivial, assume each variable written in the targeted line
+                    # is required to persist after the gpu region
+
+                    # check if var_name is written at the line of any alias dep
+                    alias_based_raw_deps: List[Tuple[Any, Any, Any]] = []
+                    for (s, t, d) in alias_raw_deps:
+                        line_num = d.source
+                        print("\t\tLine num: ", line_num)
+                        written_in_line: List[str] = []
+                        # get incoming RAW edges
+                        # get outgoing WAR / WAW edges
+
+                        # check if s has incoming RAW dependencies at line_num for var_name
+                        for dep_source, dep_target, in_dep in pet.in_edges(t, EdgeType.DATA):
+                            if in_dep.dtype != DepType.RAW:
+                                continue
+                            if in_dep.var_name != var_name:
+                                continue
+                            alias_based_raw_deps.append((dep_source, dep_target, in_dep))
+                            print(
+                                "\t\tIN DEP TO: ",
+                                dep_source,
+                                dep_target,
+                                in_dep.var_name,
+                                in_dep.dtype,
+                            )
+
+                        # check if s has outgoing WAR or WAW dependencies at line_num for var_name
+                        for dep_source, dep_target, out_dep in pet.out_edges(t, EdgeType.DATA):
+                            if not (out_dep.dtype == DepType.WAR or out_dep.dtype == DepType.WAW):
+                                continue
+                            if out_dep.var_name != var_name:
+                                continue
+                            print(
+                                "\t\tOUT DEP TO: ",
+                                dep_source,
+                                dep_target,
+                                out_dep.var_name,
+                                out_dep.dtype,
+                            )
+                            alias_based_raw_deps.append((dep_source, dep_target, out_dep))
+
+                    # END TEST
+
                     filtered_in_raw_deps = [
                         (s, t, d)
                         for (s, t, d) in in_raw_deps
@@ -213,7 +282,7 @@ class CombinedGPURegion(PatternInfo):
                         and d.var_name == var_name
                         and s not in loop_subtree
                     ]
-                    if len(filtered_in_raw_deps) > 0:
+                    if len(filtered_in_raw_deps + alias_based_raw_deps) > 0:
                         ept = ExitPointType.FROM_DEVICE
 
                     # determine killing cu
@@ -758,7 +827,10 @@ class CombinedGPURegion(PatternInfo):
         for region in self.contained_regions:
             for gpu_loop in region.contained_loops:
                 live_in_loop = (
-                    gpu_loop.map_type_to + gpu_loop.map_type_tofrom + gpu_loop.map_type_alloc
+                    gpu_loop.map_type_to
+                    + gpu_loop.map_type_tofrom
+                    + gpu_loop.map_type_alloc
+                    + [v.name for v in gpu_loop.reduction_vars_ids]
                 )
                 # set liveness within loop
                 subtree = pet.subtree_of_type(pet.node_at(gpu_loop.node_id), NodeType.CU)
