@@ -105,6 +105,11 @@ class CombinedGPURegion(PatternInfo):
             pet, entry_points, exit_points, liveness
         )
 
+        # replace updates with entries and exits, if no predecessor / successor exists
+        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
+            pet, entry_points, exit_points
+        )
+
         # todo validate entry and exit points
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
@@ -1168,6 +1173,86 @@ class CombinedGPURegion(PatternInfo):
         updated_exit_points = list(set(updated_exit_points))
 
         return updated_entry_points, updated_exit_points, in_dependencies, out_dependencies
+
+    def __replace_updates_with_entry_or_exit_points_if_possible(
+        self,
+        pet: PETGraphX,
+        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
+        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
+    ):
+        # separate entry points and exit points by variable name
+        entry_point_dict: Dict[
+            str, List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]]
+        ] = dict()
+        exit_point_dict: Dict[
+            str, List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]]
+        ] = dict()
+        for entry_point in entry_points:
+            if entry_point[0] not in entry_point_dict:
+                entry_point_dict[entry_point[0]] = []
+            entry_point_dict[entry_point[0]].append(entry_point)
+        for exit_point in exit_points:
+            if exit_point[0] not in exit_point_dict:
+                exit_point_dict[exit_point[0]] = []
+            exit_point_dict[exit_point[0]].append(exit_point)
+
+        to_be_removed = []
+        create_entry_from = []
+        create_exit_from = []
+        for update in self.update_instructions:
+            # unpack update
+            source_id, sink_id, update_type, var, meta_line_num = update
+            if update_type == UpdateType.TO_DEVICE:
+                # check if preceding entry point exists
+                preceding_ep_exists = False
+                if var in entry_point_dict:
+                    for entry_point in entry_point_dict[var]:
+                        if pet.is_predecessor(entry_point[1], source_id):
+                            preceding_ep_exists = True
+                            break
+                if not preceding_ep_exists:
+                    to_be_removed.append(update)
+                    create_entry_from.append(update)
+            elif update_type == UpdateType.FROM_DEVICE:
+                # check if successive exit point exists
+                successive_ep_exists = False
+                if var in exit_point_dict:
+                    for exit_point in exit_point_dict[var]:
+                        if pet.is_predecessor(sink_id, exit_point[1]):
+                            successive_ep_exists = True
+                            break
+                if not successive_ep_exists:
+                    to_be_removed.append(update)
+                    create_exit_from.append(update)
+        # apply identified changes
+        for update in to_be_removed:
+            self.update_instructions.remove(update)
+        for update in create_entry_from:
+            # unpack update
+            source_id, sink_id, update_type, var, meta_line_num = update
+            entry_points.append(
+                (
+                    var,
+                    source_id,
+                    EntryPointType.TO_DEVICE,
+                    meta_line_num,
+                    EntryPointPositioning.AFTER_CU,
+                )
+            )
+        for update in create_exit_from:
+            # unpack update
+            source_id, sink_id, update_type, var, meta_line_num = update
+            exit_points.append(
+                (
+                    var,
+                    sink_id,
+                    ExitPointType.FROM_DEVICE,
+                    meta_line_num,
+                    ExitPointPositioning.BEFORE_CU,
+                )
+            )
+
+        return entry_points, exit_points
 
 
 def find_combined_gpu_regions(
