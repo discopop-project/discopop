@@ -119,18 +119,18 @@ class CombinedGPURegion(PatternInfo):
         print(exit_points)
 
         # find asynchronous mapping points
-        (
-            self.data_region_entry_points,
-            self.data_region_exit_points,
-            self.data_region_depend_in,
-            self.data_region_depend_out,
-        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+        #        (
+        #            self.data_region_entry_points,
+        #            self.data_region_exit_points,
+        #            self.data_region_depend_in,
+        #            self.data_region_depend_out,
+        #        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
 
         # todo re-enable, and disable async ?
-        # self.data_region_entry_points = entry_points
-        # self.data_region_exit_points = exit_points
-        # self.data_region_depend_in = []
-        # self.data_region_depend_out = []
+        self.data_region_entry_points = entry_points
+        self.data_region_exit_points = exit_points
+        self.data_region_depend_in = []
+        self.data_region_depend_out = []
 
         #        print("Entry Points:")
         #        print(entry_points)
@@ -1250,7 +1250,7 @@ class CombinedGPURegion(PatternInfo):
                     source_id,
                     ExitPointType.FROM_DEVICE,
                     meta_line_num,
-                    ExitPointPositioning.AFTER_CU,
+                    ExitPointPositioning.BEFORE_CU,
                 )
             )
 
