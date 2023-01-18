@@ -81,6 +81,11 @@ class CombinedGPURegion(PatternInfo):
         self.start_line = min([l.start_line for l in contained_regions])
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
+        print("HOST CU IDS: ")
+        print(self.host_cu_ids)
+        print("DEVICE CU IDS: ")
+        print(self.device_cu_ids)
+        # todo restrict search for updates to function body, ignore called functions
         self.update_instructions = self.__get_update_instructions(pet)
         pairwise_reachability = self.__get_pairwise_reachability(pet)
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
@@ -109,23 +114,25 @@ class CombinedGPURegion(PatternInfo):
         print(exit_points)
 
         # find asynchronous mapping points
-        (
-            self.data_region_entry_points,
-            self.data_region_exit_points,
-            self.data_region_depend_in,
-            self.data_region_depend_out,
-        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+        #        (
+        #            self.data_region_entry_points,
+        #            self.data_region_exit_points,
+        #            self.data_region_depend_in,
+        #            self.data_region_depend_out,
+        #        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
 
         # todo re-enable, and disable async ?
-        #        self.data_region_entry_points = entry_points
-        #        self.data_region_exit_points = exit_points
-        #        self.data_region_depend_in = []
-        #        self.data_region_depend_out = []
+        self.data_region_entry_points = entry_points
+        self.data_region_exit_points = exit_points
+        self.data_region_depend_in = []
+        self.data_region_depend_out = []
 
         #        print("Entry Points:")
         #        print(entry_points)
         #        print("Exit Points:")
         #        print(exit_points)
+        print("Update instructions:")
+        print(self.update_instructions)
         print("Updated Entry Points:")
         print(self.data_region_entry_points)
         print("Updated Exit Points:")
@@ -408,6 +415,29 @@ class CombinedGPURegion(PatternInfo):
             entry_points.remove(entry_point)
         return entry_points, exit_points
 
+    def __get_function_body_cus_without_called_functions(
+        self, pet: PETGraphX, function_node: CUNode
+    ) -> List[str]:
+        print("FUNCTION NODE: ", function_node.id)
+        queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
+        visited: Set[str] = set()
+        while queue:
+            current = queue.pop(0)
+            visited.add(current)
+            current_node = pet.node_at(current)
+
+            # add children if they do not result from a call
+            children = [t for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
+            called = [t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
+            if len(called) > 0:
+                print("CURRENT TYPE: ", current_node.type)
+                print("\tchildren: ", children)
+                print("\tCalled: ", called)
+            queue += [
+                c for c in children if c not in visited and c not in called
+            ]  # todo add check for call
+        return list(visited)
+
     def __get_update_instructions(
         self, pet: PETGraphX
     ) -> List[Tuple[str, str, UpdateType, str, str]]:
@@ -445,11 +475,23 @@ class CombinedGPURegion(PatternInfo):
                         )
                     )
 
+        # determine all host CU's within the parent function (superset of self.host_cu_ids)
+        if not len(self.contained_regions) > 0:
+            raise ValueError("No region contained!")
+        parent_function = pet.get_parent_function(pet.node_at(self.contained_regions[0].node_id))
+        # get host cu ids without called function bodies
+        all_function_body_cu_ids = self.__get_function_body_cus_without_called_functions(
+            pet, parent_function
+        )
+        all_host_cu_ids = [
+            cu_id for cu_id in all_function_body_cu_ids if cu_id not in self.device_cu_ids
+        ]
+
         # determine device to host updates
-        determine_updates(self.device_cu_ids, self.host_cu_ids, UpdateType.FROM_DEVICE)
+        determine_updates(self.device_cu_ids, all_host_cu_ids, UpdateType.FROM_DEVICE)
 
         # determine host to device updates
-        determine_updates(self.host_cu_ids, self.device_cu_ids, UpdateType.TO_DEVICE)
+        determine_updates(all_host_cu_ids, self.device_cu_ids, UpdateType.TO_DEVICE)
 
         # cleanup update instructions (remove duplicates, combine updates of equal data for successors and children)
         # remove duplicates
@@ -484,9 +526,9 @@ class CombinedGPURegion(PatternInfo):
                         diff_device_predecessors += [
                             s
                             for s, _, _ in pet.in_edges(update_1[1], EdgeType.SUCCESSOR)
-                            if s in self.host_cu_ids
+                            if s in all_host_cu_ids
                         ]
-                    elif update_1[2] in self.host_cu_ids:
+                    elif update_1[2] in all_host_cu_ids:
                         diff_device_predecessors += [
                             s
                             for s, _, _ in pet.in_edges(update_1[1], EdgeType.SUCCESSOR)
