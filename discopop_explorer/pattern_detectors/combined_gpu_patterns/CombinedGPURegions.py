@@ -119,18 +119,18 @@ class CombinedGPURegion(PatternInfo):
         print(exit_points)
 
         # find asynchronous mapping points
-        #        (
-        #            self.data_region_entry_points,
-        #            self.data_region_exit_points,
-        #            self.data_region_depend_in,
-        #            self.data_region_depend_out,
-        #        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+        (
+            self.data_region_entry_points,
+            self.data_region_exit_points,
+            self.data_region_depend_in,
+            self.data_region_depend_out,
+        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
 
         # todo re-enable, and disable async ?
-        self.data_region_entry_points = entry_points
-        self.data_region_exit_points = exit_points
-        self.data_region_depend_in = []
-        self.data_region_depend_out = []
+        # self.data_region_entry_points = entry_points
+        # self.data_region_exit_points = exit_points
+        # self.data_region_depend_in = []
+        # self.data_region_depend_out = []
 
         #        print("Entry Points:")
         #        print(entry_points)
@@ -1134,7 +1134,7 @@ class CombinedGPURegion(PatternInfo):
                                 exit_point_cu,
                                 ExitPointType.ASYNC_FROM_DEVICE,
                                 pet.node_at(exit_point_cu).start_position(),
-                                ExitPointPositioning.BEFORE_CU,
+                                ExitPointPositioning.AFTER_CU,
                             )
                         )
                         found_update = True
@@ -1144,7 +1144,7 @@ class CombinedGPURegion(PatternInfo):
                                 var,
                                 exit_point_cu,
                                 pet.node_at(exit_point_cu).start_position(),
-                                ExitPointPositioning.BEFORE_CU,
+                                ExitPointPositioning.AFTER_CU,
                             )
                         )
                         in_dependencies.append(
@@ -1171,6 +1171,8 @@ class CombinedGPURegion(PatternInfo):
         # remove duplicates
         updated_entry_points = list(set(updated_entry_points))
         updated_exit_points = list(set(updated_exit_points))
+        in_dependencies = list(set(in_dependencies))
+        out_dependencies = list(set(out_dependencies))
 
         return updated_entry_points, updated_exit_points, in_dependencies, out_dependencies
 
@@ -1233,7 +1235,7 @@ class CombinedGPURegion(PatternInfo):
             entry_points.append(
                 (
                     var,
-                    source_id,
+                    sink_id,
                     EntryPointType.TO_DEVICE,
                     meta_line_num,
                     EntryPointPositioning.AFTER_CU,
@@ -1245,10 +1247,10 @@ class CombinedGPURegion(PatternInfo):
             exit_points.append(
                 (
                     var,
-                    sink_id,
+                    source_id,
                     ExitPointType.FROM_DEVICE,
                     meta_line_num,
-                    ExitPointPositioning.BEFORE_CU,
+                    ExitPointPositioning.AFTER_CU,
                 )
             )
 
