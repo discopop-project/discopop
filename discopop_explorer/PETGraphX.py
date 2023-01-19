@@ -80,8 +80,8 @@ class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
-    source: Optional[str] = None
-    sink: Optional[str] = None
+    source_line: Optional[str] = None
+    sink_line: Optional[str] = None
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -90,8 +90,11 @@ class Dependency:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
+NodeID = str
+
+
 class CUNode:
-    id: str
+    id: NodeID
     file_id: int
     node_id: int
     source_file: int
@@ -193,8 +196,8 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
 
 def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
-    d.source = dep.source
-    d.sink = dep.sink
+    d.source_line = dep.source
+    d.sink_line = dep.sink
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     return d
@@ -233,11 +236,6 @@ class PETGraphX(object):
 
         for node_id, node in cu_dict.items():
             source = node_id
-            if "childrenNodes" in dir(node):
-                for child in [n.text for n in node.childrenNodes]:
-                    if child not in g:
-                        print(f"WARNING: no child node {child} found")
-                    g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if "successors" in dir(node) and "CU" in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
@@ -249,6 +247,13 @@ class PETGraphX(object):
                     if nodeCalled not in g:
                         print(f"WARNING: no nodeCalled {nodeCalled} found")
                     g.add_edge(source, nodeCalled, data=Dependency(EdgeType.CALLSNODE))
+
+            if "childrenNodes" in dir(node):
+                for child in [n.text for n in node.childrenNodes]:
+                    if child not in g:
+                        print(f"WARNING: no child node {child} found")
+                    if not (source, child) in g.edges:
+                        g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
 
         print("Added edges...")
 
@@ -404,29 +409,37 @@ class PETGraphX(object):
         """
         return [n[1] for n in self.g.nodes(data="data") if type is None or n[1].type == type]
 
-    def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+    def out_edges(
+        self, node_id: str, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[str, str, Dependency]]:
         """Get outgoing edges of node of specified type
 
         :param node_id: id of the source node
         :param etype: type of edges
         :return: list of outgoing edges
         """
-        return [
-            t
-            for t in self.g.out_edges(node_id, data="data")
-            if etype is None or t[2].etype == etype
-        ]
+        if etype is None:
+            return [t for t in self.g.out_edges(node_id, data="data")]
+        elif type(etype) == list:
+            return [t for t in self.g.out_edges(node_id, data="data") if t[2].etype in etype]
+        else:
+            return [t for t in self.g.out_edges(node_id, data="data") if t[2].etype == etype]
 
-    def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+    def in_edges(
+        self, node_id: str, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[str, str, Dependency]]:
         """Get incoming edges of node of specified type
 
         :param node_id: id of the target node
         :param etype: type of edges
         :return: list of incoming edges
         """
-        return [
-            t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
-        ]
+        if etype is None:
+            return [t for t in self.g.in_edges(node_id, data="data")]
+        elif type(etype) == list:
+            return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype in etype]
+        else:
+            return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype == etype]
 
     def subtree_of_type(
         self, root: CUNode, type: Optional[Union[NodeType, Tuple[NodeType, ...]]]
@@ -465,11 +478,11 @@ class PETGraphX(object):
         visited.add(root)
 
         # enter recursion
-        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
+        for _, target, _ in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
             # prevent cycles
-            if self.node_at(t) in visited:
+            if self.node_at(target) in visited:
                 continue
-            res += self.subtree_of_type_rec(self.node_at(t), target_type, visited)
+            res += self.subtree_of_type_rec(self.node_at(target), target_type, visited)
 
         return res
 
@@ -496,7 +509,10 @@ class PETGraphX(object):
         :param root: root node
         :return: list of direct children
         """
-        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
+        return [
+            self.node_at(t)
+            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        ]
 
     def direct_children_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
         """Gets only direct children of specified type
@@ -507,7 +523,7 @@ class PETGraphX(object):
         """
         return [
             self.node_at(t)
-            for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
+            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
             if self.node_at(t).type == type
         ]
 
@@ -639,7 +655,7 @@ class PETGraphX(object):
                                 and e[0] in loop_node_ids
                                 and e[1] in loop_node_ids
                             ):
-                                if e[2].sink == i[2].source:
+                                if e[2].sink_line == i[2].source_line:
                                     fwVars.add(var)
 
         return fwVars
@@ -753,7 +769,7 @@ class PETGraphX(object):
                     return False
                 assert d.var_name is not None
                 if dep.var_name == d.var_name:
-                    if dep.source == d.sink:
+                    if dep.source_line == d.sink_line:
                         result = True
                         break
                 # None may occur because __get_variables doesn't check for actual elements
@@ -782,7 +798,7 @@ class PETGraphX(object):
                     if (
                         eraw[2].var_name == var
                         and any([n.id == e[1] for n in sub])
-                        and e[0] == eraw[2].sink
+                        and e[0] == eraw[2].sink_line
                     ):
                         res = True
                         break
@@ -811,8 +827,8 @@ class PETGraphX(object):
                 if d.dtype == DepType.RAW and d.var_name == var_name
             ]:
                 if (
-                    d.sink == d.source
-                    and d.source in loops_start_lines
+                    d.sink_line == d.source_line
+                    and d.source_line in loops_start_lines
                     and self.node_at(t) in children
                 ):
                     return True
@@ -843,14 +859,14 @@ class PETGraphX(object):
             ]:
                 # If there is a waw dependency for var, then var is written in loop
                 # (sink is always inside loop for waw/war)
-                if dep.var_name == d.var_name and not (d.sink in loops_start_lines):
+                if dep.var_name == d.var_name and not (d.sink_line in loops_start_lines):
                     return False
             for t, d in [
                 (t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW
             ]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
-                if dep.var_name == d.var_name and not (d.source in loops_start_lines):
+                if dep.var_name == d.var_name and not (d.source_line in loops_start_lines):
                     return False
         return True
 
@@ -860,13 +876,13 @@ class PETGraphX(object):
         :param node: current node
         :return: number of iterations
         """
-        parent = self.in_edges(node.id, EdgeType.CHILD)
+        parent = self.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
         while parent:
             node = self.node_at(parent[0][0])
             if node.type == NodeType.FUNC:
                 break
-            parent = self.in_edges(node.id, EdgeType.CHILD)
+            parent = self.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
         return node
 

@@ -55,7 +55,7 @@ class PatternDetectorX(object):
             if not loop_type or node.type == NodeType.LOOP:
                 if remove_dummies and node.type == NodeType.DUMMY:
                     continue
-                for s, t, e in self.pet.out_edges(node.id, EdgeType.CHILD):
+                for s, t, e in self.pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     if remove_dummies and self.pet.node_at(t).type == NodeType.DUMMY:
                         dummies_to_remove.add(t)
 

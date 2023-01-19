@@ -60,7 +60,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
         first_dependency_line_number = first_dependency_line[first_dependency_line.index(":") + 1 :]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
-                dep_line = cast(str, e.sink)
+                dep_line = cast(str, e.sink_line)
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
@@ -221,7 +221,10 @@ def correct_task_suggestions_in_loop_body(
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly
                         # if ts._node is a direct child of loop_cu
-                        if loop_cu.id in [e[0] for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]:
+                        if loop_cu.id in [
+                            e[0]
+                            for e in pet.in_edges(ts._node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+                        ]:
                             print(
                                 "Moving Pragma from: ",
                                 ts.pragma_line,
