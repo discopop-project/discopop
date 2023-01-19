@@ -76,12 +76,15 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
+NodeID = str # fileID:nodeID
+LineID = str # fileID:lineNr
+
 class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
-    source_line: Optional[str] = None
-    sink_line: Optional[str] = None
+    source_line: Optional[LineID] = None
+    sink_line: Optional[LineID] = None
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -89,15 +92,10 @@ class Dependency:
     def __str__(self):
         return self.var_name if self.var_name is not None else str(self.etype)
 
-
-NodeID = str
-
-
 class CUNode:
     id: NodeID
     file_id: int
     node_id: int
-    source_file: int
     start_line: int
     end_line: int
     type: NodeType
@@ -131,27 +129,27 @@ class CUNode:
             setattr(node, key, value)
         return node
 
-    def start_position(self) -> str:
+    def start_position(self) -> LineID:
         """Start position file_id:line
         e.g. 23:45
 
         :return:
         """
-        return f"{self.source_file}:{self.start_line}"
+        return f"{self.file_id}:{self.start_line}"
 
-    def end_position(self) -> str:
+    def end_position(self) -> LineID:
         """End position file_id:line
         e.g. 23:45
 
         :return:
         """
-        return f"{self.source_file}:{self.end_line}"
+        return f"{self.file_id}:{self.end_line}"
 
     def __str__(self):
         return self.id
 
     def __eq__(self, other):
-        return other.file_id == self.file_id and other.node_id == self.node_id
+        return isinstance(other, CUNode) and other.file_id == self.file_id and other.node_id == self.node_id
 
     def __hash__(self):
         return hash(self.id)
@@ -160,7 +158,7 @@ class CUNode:
 def parse_cu(node: ObjectifiedElement) -> CUNode:
     n = CUNode(node.get("id"))
     n.type = NodeType(int(node.get("type")))
-    n.source_file, n.start_line = parse_id(node.get("startsAtLine"))
+    _, n.start_line = parse_id(node.get("startsAtLine"))
     _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
     # n.instructions_count = node.get("instructionsCount", 0)
@@ -393,7 +391,7 @@ class PETGraphX(object):
         # plt.show()
         plt.savefig("graphX.svg")
 
-    def node_at(self, node_id: str) -> CUNode:
+    def node_at(self, node_id: NodeID) -> CUNode:
         """Gets node data by node id
 
         :param node_id: id of the node
@@ -410,8 +408,8 @@ class PETGraphX(object):
         return [n[1] for n in self.g.nodes(data="data") if type is None or n[1].type == type]
 
     def out_edges(
-        self, node_id: str, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
-    ) -> List[Tuple[str, str, Dependency]]:
+        self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Get outgoing edges of node of specified type
 
         :param node_id: id of the source node
@@ -426,8 +424,8 @@ class PETGraphX(object):
             return [t for t in self.g.out_edges(node_id, data="data") if t[2].etype == etype]
 
     def in_edges(
-        self, node_id: str, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
-    ) -> List[Tuple[str, str, Dependency]]:
+        self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Get incoming edges of node of specified type
 
         :param node_id: id of the target node
@@ -527,7 +525,7 @@ class PETGraphX(object):
             if self.node_at(t).type == type
         ]
 
-    def is_reduction_var(self, line: str, name: str) -> bool:
+    def is_reduction_var(self, line: LineID, name: str) -> bool:
         """Determines, whether or not the given variable is reduction variable
 
         :param line: loop line number
@@ -554,7 +552,7 @@ class PETGraphX(object):
         target_children_ids = [node.id for node in self.subtree_of_type(target, NodeType.CU)]
 
         # get required metadata
-        loop_start_lines: List[str] = []
+        loop_start_lines: List[LineID] = []
         root_children = self.subtree_of_type(root_loop, (NodeType.CU, NodeType.LOOP))
         root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
         root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
@@ -570,7 +568,11 @@ class PETGraphX(object):
                 elem
                 for elem in out_raw_deps
                 if not self.is_readonly_inside_loop_body(
-                    elem[2], root_loop, root_children_cus, root_children_loops
+                    elem[2],
+                    root_loop,
+                    root_children_cus,
+                    root_children_loops,
+                    loops_start_lines=loop_start_lines
                 )
             ]
             filtered_deps = [
@@ -587,7 +589,7 @@ class PETGraphX(object):
                 return True
         return False
 
-    def unused_check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
+    def unused_check_alias(self, s: NodeID, t: NodeID, d: Dependency, root_loop: CUNode) -> bool:
         sub = self.subtree_of_type(root_loop, NodeType.CU)
         parent_func_sink = self.get_parent_function(self.node_at(s))
         parent_func_source = self.get_parent_function(self.node_at(t))
@@ -662,7 +664,7 @@ class PETGraphX(object):
 
     def get_dep(
         self, node: CUNode, dep_type: DepType, reversed: bool
-    ) -> List[Tuple[str, str, Dependency]]:
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Searches all dependencies of specified type
 
         :param node: node
@@ -778,8 +780,8 @@ class PETGraphX(object):
     def is_first_written(
         self,
         var: str,
-        raw: Set[Tuple[str, str, Dependency]],
-        war: Set[Tuple[str, str, Dependency]],
+        raw: Set[Tuple[NodeID, NodeID, Dependency]],
+        war: Set[Tuple[NodeID, NodeID, Dependency]],
         sub: List[CUNode],
     ) -> bool:
         """Checks whether a variable is first written inside the current node
@@ -807,7 +809,7 @@ class PETGraphX(object):
         return False
 
     def is_loop_index(
-        self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]
+        self, var_name: Optional[str], loops_start_lines: List[LineID], children: List[CUNode]
     ) -> bool:
         """Checks, whether the variable is a loop index.
 
@@ -841,6 +843,7 @@ class PETGraphX(object):
         root_loop: CUNode,
         children_cus: List[CUNode],
         children_loops: List[CUNode],
+        loops_start_lines: Optional[LineID] = None
     ) -> bool:
         """Checks, whether a variable is read-only in loop body
 
@@ -848,8 +851,8 @@ class PETGraphX(object):
         :param root_loop: root loop
         :return: true if variable is read-only in loop body
         """
-        # TODO pass as param?
-        loops_start_lines = [v.start_position() for v in children_loops]
+        if loops_start_lines is None:
+            loops_start_lines = [v.start_position() for v in children_loops]
 
         for v in children_cus:
             for t, d in [
