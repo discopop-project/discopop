@@ -70,7 +70,7 @@ class PipelineInfo(PatternInfo):
 
         self._stages = [
             pet.node_at(t)
-            for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
+            for s, t, d in pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
             if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)
         ]
 
@@ -180,7 +180,7 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cac
 
     loop_subnodes = [
         pet.node_at(t)
-        for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+        for s, t, d in pet.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
     ]
 

@@ -71,7 +71,10 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, EdgeType.CHILD)]
+    subnodes = [
+        pet.node_at(t)
+        for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+    ]
 
     for i in range(0, len(subnodes)):
         children_cache: Dict[CUNode, List[CUNode]] = dict()

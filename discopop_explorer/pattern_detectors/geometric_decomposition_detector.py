@@ -154,7 +154,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
     :param node: current node
     :return: number of iterations
     """
-    parent = pet.in_edges(node.id, EdgeType.CHILD)
+    parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     max_iter = 1
     visited = []  # used to prevent looping
@@ -167,7 +167,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
         if node.type == NodeType.LOOP:
             max_iter = max(1, node.loop_iterations)
             break
-        parent = pet.in_edges(node.id, EdgeType.CHILD)
+        parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     return max_iter
 

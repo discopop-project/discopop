@@ -225,7 +225,9 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
         return False
     if "." not in var:
         return False
-    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    parents = [
+        pet.node_at(edge[0]) for edge in pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+    ]
     # add current node to parents, if it is of type FUNC
     if node.type == NodeType.FUNC:
         parents.append(node)
@@ -305,7 +307,7 @@ def is_first_written(
                 if (
                     eraw[2].var_name == var
                     and any([n.id == e[1] for n in sub])
-                    and e[0] == eraw[2].sink
+                    and e[0] == eraw[2].sink_line
                 ):
                     res = True
                     break
@@ -349,7 +351,7 @@ def is_first_written_new(
                 if (
                     var.name in warDep[2].var_name
                     and any([n.id == dep[1] for n in tree])
-                    and dep[2].source == warDep[2].sink
+                    and dep[2].source_line == warDep[2].sink_line
                 ):
                     result = False
                     break

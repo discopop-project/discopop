@@ -73,7 +73,7 @@ def __recursive_function_called_multiple_times_inside_function(
                 if cur_cu not in contained_cus:
                     contained_cus.append(cur_cu)
                 # append cur_cu children to queue
-                for child_edge in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+                for child_edge in pet.out_edges(cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     child_cu = pet.node_at(child_edge[1])
                     if child_cu not in queue and child_cu not in contained_cus:
                         queue.append(child_cu)
@@ -109,15 +109,15 @@ def __output_dependencies_of_type(
     for dep in pet.in_edges(child_id, EdgeType.DATA):
         if dep[2].dtype is not dep_type:
             continue
-        if dep[2].source is None or dep[2].var_name is None or dep[2].sink is None:
+        if dep[2].source_line is None or dep[2].var_name is None or dep[2].sink_line is None:
             continue
         # check if the CUid of the dep exists in children_ids
         if dep[0] in children_ids:
             # CUid found in children_ids. So print the line numbers of this dependence
             output_file.write(
-                cast(str, dep[2].sink)
+                cast(str, dep[2].sink_line)
                 + dep_identifier
-                + cast(str, dep[2].source)
+                + cast(str, dep[2].source_line)
                 + "|"
                 + cast(str, dep[2].var_name)
                 + ","

@@ -141,7 +141,7 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
             # cur_cu not contained in function body
             continue
         # append children to queue
-        for e in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+        for e in pet.out_edges(cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
             child_cu = pet.node_at(e[1])
             queue.append(child_cu)
     return result_list
