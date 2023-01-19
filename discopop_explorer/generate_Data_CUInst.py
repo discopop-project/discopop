@@ -9,11 +9,11 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
+from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, DepType, EdgeType
 from .parser import parse_inputs
 
 
-def __collect_children_ids(pet: PETGraphX, parent_id: str, children_ids: List[str]):
+def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List[NodeID]):
     if parent_id in children_ids:
         # this id has already been processed. No need to go through it again
         return children_ids
@@ -92,8 +92,8 @@ def __recursive_function_called_multiple_times_inside_function(
 
 def __output_dependencies_of_type(
     pet: PETGraphX,
-    child_id: str,
-    children_ids: List[str],
+    child_id: NodeID,
+    children_ids: List[NodeID],
     output_file: TextIO,
     dep_type: DepType,
     dep_identifier: str,
@@ -143,7 +143,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
 
         output_file.write(recursive_function_call + " ")
 
-        children_ids: List[str] = []
+        children_ids: List[NodeID] = []
         # Output RAW deps. First collect all children IDs of currently called
         # function. Then go through the CU type nodes in them and record all deps
         # that are on the cus in this list.
@@ -203,7 +203,7 @@ def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
     cu_instantiation_input_cpp(pet, output_dir)
 
 
-def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -> bool:
+def __line_contained_in_region(test_line: LineID, start_line: LineID, end_line: LineID) -> bool:
     """check if test_line is contained in [startLine, endLine].
     Return True if so. False else.
     :param test_line: <fileID>:<line>

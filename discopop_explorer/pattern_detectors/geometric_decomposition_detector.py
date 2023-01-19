@@ -11,11 +11,11 @@ import math
 from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..PETGraphX import NodeID, PETGraphX, NodeType, CUNode, EdgeType
 from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
-__loop_iterations: Dict[str, int] = {}
+__loop_iterations: Dict[NodeID, int] = {}
 
 
 class GDInfo(PatternInfo):
