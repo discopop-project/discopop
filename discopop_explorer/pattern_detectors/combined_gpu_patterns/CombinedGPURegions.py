@@ -922,20 +922,11 @@ class CombinedGPURegion(PatternInfo):
                                 path_node_id = path_node.id
                                 if path_node_id not in live_data[var_name]:
                                     new_entries.append((var_name, path_node_id))
-                                    print(
-                                        "FOUND ENTRY: ",
-                                        cu_id,
-                                        potential_successor_cu_id,
-                                        var_name,
-                                        "->",
-                                        path_node_id,
-                                    )
             new_entries = list(set(new_entries))
             if len(new_entries) > 0:
                 modification_found = True
             for var_name, new_cu_id in new_entries:
                 live_data[var_name].append(new_cu_id)
-                print("Extend: ", var_name, " -> ", new_cu_id)
         return live_data
 
     def __translate_mapping_to_explicit_data_entry_points(

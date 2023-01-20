@@ -295,15 +295,15 @@ class Suggestion(object):
         pragmas = []
         for var_name, cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
             pragma = Pragma()
-            pragma.pragma_str = "#enter data "
+            pragma.pragma_str = "#pragma omp target enter data "
             if entry_point_type == EntryPointType.TO_DEVICE:
-                pragma.pragma_str += "to("
+                pragma.pragma_str += "map(to: "
             elif entry_point_type == EntryPointType.ALLOCATE:
-                pragma.pragma_str += "alloc("
+                pragma.pragma_str += "map(alloc: "
             elif entry_point_type == EntryPointType.ASYNC_TO_DEVICE:
-                pragma.pragma_str += "async to("
+                pragma.pragma_str += "nowait map(to: "
             elif entry_point_type == EntryPointType.ASYNC_ALLOCATE:
-                pragma.pragma_str += "async alloc("
+                pragma.pragma_str += "nowait map(alloc:"
             else:
                 raise ValueError("Usupported EntryPointType: ", entry_point_type)
             pragma.pragma_str += var_name + ") "
@@ -321,13 +321,13 @@ class Suggestion(object):
 
         for var_name, cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
             pragma = Pragma()
-            pragma.pragma_str = "#exit data "
+            pragma.pragma_str = "#pragma omp target exit data "
             if exit_point_type == ExitPointType.FROM_DEVICE:
-                pragma.pragma_str += "from("
+                pragma.pragma_str += "map(from: "
             elif exit_point_type == ExitPointType.DELETE:
-                pragma.pragma_str += "delete("
+                pragma.pragma_str += "map(delete: "
             elif exit_point_type == ExitPointType.ASYNC_FROM_DEVICE:
-                pragma.pragma_str += "async from("
+                pragma.pragma_str += "nowait map(from: "
             else:
                 raise ValueError("Usupported ExitPointType: ", exit_point_type)
             pragma.pragma_str += var_name + ") "

@@ -283,10 +283,6 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    print("\nAdding Dep: ", idx, "/", len(dependencies_list))
-                    print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
-                    print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
-
                     sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
