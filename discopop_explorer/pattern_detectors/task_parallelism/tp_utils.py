@@ -120,30 +120,14 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
     :param function_cu: target function node
     :return: List[CUNode]"""
     queue: List[CUNode] = [function_cu]
-    visited: List[CUNode] = []
     result_list: List[CUNode] = []
     while len(queue) > 0:
         cur_cu = queue.pop(0)
-        # check if cur_cu was already visited
-        if cur_cu in visited:
-            continue
-        visited.append(cur_cu)
-        # check if cur_cu inside functions body
-        if line_contained_in_region(
-            cur_cu.start_position(), function_cu.start_position(), function_cu.end_position()
-        ) and line_contained_in_region(
-            cur_cu.end_position(), function_cu.start_position(), function_cu.end_position()
-        ):
-            # cur_cu contained in function body
-            if cur_cu not in result_list:
-                result_list.append(cur_cu)
-        else:
-            # cur_cu not contained in function body
-            continue
+        if cur_cu not in result_list:
+            result_list.append(cur_cu)
         # append children to queue
-        for e in pet.out_edges(cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
-            child_cu = pet.node_at(e[1])
-            queue.append(child_cu)
+        for e in pet.out_edges(cur_cu.id, [EdgeType.CHILD]):
+            queue.append(pet.node_at(e[1]))
     return result_list
 
 
