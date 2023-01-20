@@ -877,13 +877,13 @@ class PETGraphX(object):
         :param node: current node
         :return: number of iterations
         """
-        parent = self.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        parent = self.in_edges(node.id, EdgeType.CHILD)
 
         while parent:
             node = self.node_at(parent[0][0])
             if node.type == NodeType.FUNC:
-                break
-            parent = self.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+                return node
+            parent = self.in_edges(node.id, EdgeType.CHILD)
 
         return node
 

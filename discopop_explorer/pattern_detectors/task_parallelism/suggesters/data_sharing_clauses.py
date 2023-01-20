@@ -38,7 +38,7 @@ def suggest_shared_clauses_for_all_tasks_in_function_body(
             # iterate over parent function(s)
             for parent_function in [
                 pet.node_at(e[0])
-                for e in pet.in_edges(ts._node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+                for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                 if pet.node_at(e[0]).type == NodeType.FUNC
             ]:
                 # get task suggestions in parent functions scope
