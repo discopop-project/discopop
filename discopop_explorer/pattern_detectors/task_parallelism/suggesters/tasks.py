@@ -223,7 +223,7 @@ def correct_task_suggestions_in_loop_body(
                         # if ts._node is a direct child of loop_cu
                         if loop_cu.id in [
                             e[0]
-                            for e in pet.in_edges(ts._node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+                            for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
                         ]:
                             print(
                                 "Moving Pragma from: ",

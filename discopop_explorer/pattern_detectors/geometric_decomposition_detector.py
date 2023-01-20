@@ -163,10 +163,10 @@ def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
         # prevent looping
         if node in visited:
             break
-        visited.append(node)
         if node.type == NodeType.LOOP:
             max_iter = max(1, node.loop_iterations)
             break
+        visited.append(node)
         parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     return max_iter

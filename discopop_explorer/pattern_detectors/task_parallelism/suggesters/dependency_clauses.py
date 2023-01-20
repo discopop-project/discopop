@@ -424,7 +424,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
     :return: List of potential parents of sug (Function CU Nodes)"""
     potential_parent_functions = [
         pet.node_at(e[0])
-        for e in pet.in_edges(sug._node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
         if pet.node_at(e[0]).type == NodeType.FUNC
     ]
     if not potential_parent_functions:
@@ -432,7 +432,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
         # i.e. function which contains the CU.
         queue = [
             pet.node_at(e[0])
-            for e in pet.in_edges(sug._node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+            for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
         ]
         found_parent = None
         while len(queue) > 0 or not found_parent:
@@ -442,7 +442,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
                 break
             queue += [
                 pet.node_at(e[0])
-                for e in pet.in_edges(current.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+                for e in pet.in_edges(current.id, EdgeType.CHILD)
             ]
         potential_parent_functions = [found_parent]
     return potential_parent_functions
