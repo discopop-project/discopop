@@ -351,8 +351,7 @@ $LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABL
 
 # Run the instrumented application
 log -i "Running instrumented application to detect data dependencies..."
-tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
-[ ! -z "$var" ] && log -d "$tmp"
+log_or_fail -d "$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
 
 #####
 # run discopop_profiler to get parallelization suggestions
