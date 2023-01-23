@@ -221,10 +221,7 @@ def correct_task_suggestions_in_loop_body(
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly
                         # if ts._node is a direct child of loop_cu
-                        if loop_cu.id in [
-                            e[0]
-                            for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
-                        ]:
+                        if loop_cu.id in [e[0] for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]:
                             print(
                                 "Moving Pragma from: ",
                                 ts.pragma_line,

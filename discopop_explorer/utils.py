@@ -225,9 +225,7 @@ def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
         return False
     if "." not in var:
         return False
-    parents = [
-        pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)
-    ]
+    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
     # add current node to parents, if it is of type FUNC
     if node.type == NodeType.FUNC:
         parents.append(node)

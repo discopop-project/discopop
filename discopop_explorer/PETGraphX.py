@@ -76,8 +76,9 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
-NodeID = str # fileID:nodeID
-LineID = str # fileID:lineNr
+NodeID = str  # fileID:nodeID
+LineID = str  # fileID:lineNr
+
 
 class Dependency:
     etype: EdgeType
@@ -91,6 +92,7 @@ class Dependency:
 
     def __str__(self):
         return self.var_name if self.var_name is not None else str(self.etype)
+
 
 class CUNode:
     id: NodeID
@@ -149,7 +151,11 @@ class CUNode:
         return self.id
 
     def __eq__(self, other):
-        return isinstance(other, CUNode) and other.file_id == self.file_id and other.node_id == self.node_id
+        return (
+            isinstance(other, CUNode)
+            and other.file_id == self.file_id
+            and other.node_id == self.node_id
+        )
 
     def __hash__(self):
         return hash(self.id)
@@ -284,8 +290,8 @@ class PETGraphX(object):
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
                     print("Adding Dep: ", idx, "/", len(dependencies_list))
-                    #print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
-                    #print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
+                    # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
+                    # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
 
                     sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
@@ -570,7 +576,7 @@ class PETGraphX(object):
                     root_loop,
                     root_children_cus,
                     root_children_loops,
-                    loops_start_lines=loop_start_lines
+                    loops_start_lines=loop_start_lines,
                 )
             ]
             filtered_deps = [
@@ -841,7 +847,7 @@ class PETGraphX(object):
         root_loop: CUNode,
         children_cus: List[CUNode],
         children_loops: List[CUNode],
-        loops_start_lines: Optional[LineID] = None
+        loops_start_lines: Optional[List[LineID]] = None,
     ) -> bool:
         """Checks, whether a variable is read-only in loop body
 
