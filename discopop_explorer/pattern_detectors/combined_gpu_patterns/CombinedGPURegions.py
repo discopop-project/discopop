@@ -113,9 +113,9 @@ class CombinedGPURegion(PatternInfo):
         #       )
 
         # replace updates with entries and exits, if no predecessor / successor exists
-        #        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
-        #            pet, entry_points, exit_points
-        #        )
+        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
+            pet, entry_points, exit_points
+        )
 
         # todo validate entry and exit points
 
@@ -126,12 +126,12 @@ class CombinedGPURegion(PatternInfo):
         print(exit_points)
 
         # find asynchronous mapping points
-        #        (
-        #            self.data_region_entry_points,
-        #            self.data_region_exit_points,
-        #            self.data_region_depend_in,
-        #            self.data_region_depend_out,
-        #        ) = self.__find_async_loading_points(pet, entry_points, exit_points)
+        # (
+        #    self.data_region_entry_points,
+        #    self.data_region_exit_points,
+        #    self.data_region_depend_in,
+        #    self.data_region_depend_out,
+        # ) = self.__find_async_loading_points(pet, entry_points, exit_points)
 
         # todo re-enable, and disable async ?
         self.data_region_entry_points = entry_points
