@@ -10,6 +10,7 @@ from typing import List, Tuple, cast, Dict, Optional, Set, Any
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, Dependency, PETGraphX, DepType, NodeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
 
@@ -103,6 +104,9 @@ class CombinedGPURegion(PatternInfo):
 
         # todo note: cautious property: Encapsulate function calls until better solution has been found
         self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
+
+        # move update instructions out of gpu loops
+        self.__move_update_instructions_out_of_gpu_loops(pet)
 
         #       entry_points, exit_points = self.__find_data_mapping_exits(
         #           pet, entry_points, exit_points, liveness
@@ -1328,6 +1332,57 @@ class CombinedGPURegion(PatternInfo):
                             pet.node_at(succ).start_position(),
                         )
                     )
+        # remove duplicates
+        self.update_instructions = list(dict.fromkeys(self.update_instructions))
+
+    def __move_update_instructions_out_of_gpu_loops(self, pet: PETGraphX):
+        # gather contained gpu loop cu ids
+        gpu_loop_cu_ids: Dict[str, Set[str]] = dict()
+
+        for region in self.contained_regions:
+            for gl in region.contained_loops:
+                subtree = pet.subtree_of_type(pet.node_at(gl.node_id), NodeType.CU)
+                if gl.node_id not in gpu_loop_cu_ids:
+                    gpu_loop_cu_ids[gl.node_id] = set()
+                gpu_loop_cu_ids[gl.node_id].update([cu.id for cu in subtree])
+
+        # check if update instruction is located within gpu loop
+        to_be_removed = []
+        to_be_added = []
+        for update in self.update_instructions:
+            (source_id, sink_id, update_type, var, meta_line_num) = update
+            if update_type == UpdateType.TO_DEVICE:
+                for gpu_loop_id in gpu_loop_cu_ids:
+                    if sink_id in gpu_loop_cu_ids[gpu_loop_id]:
+                        to_be_removed.append(update)
+                        to_be_added.append(
+                            (
+                                source_id,
+                                gpu_loop_id,
+                                update_type,
+                                var,
+                                pet.node_at(gpu_loop_id).start_position(),
+                            )
+                        )
+
+            elif update_type == UpdateType.FROM_DEVICE:
+                for gpu_loop_id in gpu_loop_cu_ids:
+                    if source_id in gpu_loop_cu_ids[gpu_loop_id]:
+                        to_be_removed.append(update)
+                        to_be_added.append(
+                            (
+                                gpu_loop_id,
+                                sink_id,
+                                update_type,
+                                var,
+                                pet.node_at(gpu_loop_id).start_position(),
+                            )
+                        )
+        for update in to_be_removed:
+            if update in self.update_instructions:
+                self.update_instructions.remove(update)
+        for update in to_be_added:
+            self.update_instructions.append(update)
         # remove duplicates
         self.update_instructions = list(dict.fromkeys(self.update_instructions))
 
