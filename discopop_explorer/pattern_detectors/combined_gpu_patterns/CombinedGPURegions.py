@@ -113,6 +113,7 @@ class CombinedGPURegion(PatternInfo):
         #       )
 
         # replace updates with entries and exits, if no predecessor / successor exists
+        # TODO CURRENT WORKPACKAGE: NON-VALID EXIT FROM FOR SAXPY_ASYNC (X1)
         entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
             pet, entry_points, exit_points
         )
