@@ -456,12 +456,56 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         basicBlockCUVector.push_back(cu);
         BBIDToCUIDsMap.insert(
                 pair < string, vector < CU * >> (bb->getName(), basicBlockCUVector));
+        DILocalScope* scopeBuffer = NULL;
 
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName().str();
+            
+            // Do not allow to combine Instructions from different scopes in the source code.
+            if((&*instruction)->getDebugLoc()){
+                if ((&*instruction)->getDebugLoc()->getScope() != scopeBuffer){
+                    // scopes are not equal
+                    
+                    int scopeIsParentOfBuffer = 0;
+                    if(scopeBuffer){
+                        scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
+                    }
+
+                    if(scopeIsParentOfBuffer){
+                        // allow a combination of two CU's if the second scope is the parent of the first scope
+                    }
+                    else{
+                        // create a new CU. Do not allow to combine Instructions from different scopes in the source code.
+
+                        // create new CU if the old one contains any instruction
+                        if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
+                            cu->startLine = *(cu->instructionsLineNumbers.begin());
+                            cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+                    
+                            cu->basicBlockName = basicBlockName;
+                            CUVector.push_back(cu);
+                            suspiciousVariables.clear();
+                            CU *temp =
+                                    cu; // keep current CU to make a reference to the successor CU
+                            cu = new CU;
+
+                            cu->BBID = bb->getName().str();
+                            cu->BB = *bb;
+
+                            currentNode->childrenNodes.push_back(cu);
+                            temp->successorCUs.push_back(cu->ID);
+                            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+                        }   
+                    }
+                    // update scopeBuffer
+                        scopeBuffer = (&*instruction)->getDebugLoc()->getScope();
+                }
+            }
+            
+
             if (lid > 0) {
                 cu->instructionsLineNumbers.insert(lid);
                 cu->instructionsCount++;
