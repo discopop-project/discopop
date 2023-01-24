@@ -91,24 +91,27 @@ class CombinedGPURegion(PatternInfo):
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
-        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
+        #        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
 
         liveness = self.__populate_live_data(pet)
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
-        entry_points, exit_points = self.__optimize_data_mapping_entries(
-            pet, entry_points, exit_points, liveness
-        )
+        #       entry_points, exit_points = self.__optimize_data_mapping_entries(
+        #           pet, entry_points, exit_points, liveness
+        #       )
 
-        entry_points, exit_points = self.__find_data_mapping_exits(
-            pet, entry_points, exit_points, liveness
-        )
+        # todo note: cautious property: Encapsulate function calls until better solution has been found
+        self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
+
+        #       entry_points, exit_points = self.__find_data_mapping_exits(
+        #           pet, entry_points, exit_points, liveness
+        #       )
 
         # replace updates with entries and exits, if no predecessor / successor exists
-        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
-            pet, entry_points, exit_points
-        )
+        #        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
+        #            pet, entry_points, exit_points
+        #        )
 
         # todo validate entry and exit points
 
@@ -1246,6 +1249,87 @@ class CombinedGPURegion(PatternInfo):
             )
 
         return entry_points, exit_points
+
+    def __encapsulate_called_functions_which_share_data_with_device_cus(
+        self, pet: PETGraphX, liveness: Dict[str, List[str]]
+    ):
+        # identify host CUs which contain function calls
+        parent_function = pet.get_parent_function(pet.node_at(self.contained_regions[0].node_id))
+        all_function_body_cu_ids = self.__get_function_body_cus_without_called_functions(
+            pet, parent_function
+        )
+        all_host_cu_ids = [
+            cu_id for cu_id in all_function_body_cu_ids if cu_id not in self.device_cu_ids
+        ]
+        # detect called functions and calling cu's
+        calling_cu_ids: Set[str] = set()
+        called_functions_dict: Dict[str, Set[str]] = dict()
+        for host_cu_id in all_host_cu_ids:
+            calls_edges = pet.out_edges(host_cu_id, EdgeType.CALLSNODE)
+            if len(calls_edges) > 0:
+                calling_cu_ids.add(host_cu_id)
+                if not host_cu_id in called_functions_dict:
+                    called_functions_dict[host_cu_id] = set()
+                called_functions_dict[host_cu_id].update([t for s, t, d in calls_edges])
+
+        # surround calling cu ids with map type from and map type to for each live variable before / after the cu,
+        # if the called function shares data with any device CU
+        for calling_cu in calling_cu_ids:
+            # detect data sharing between the called function and device nodes
+            called_function_shares_data_with_device_cus = False
+            for called_function in called_functions_dict[calling_cu]:
+                subtree = pet.subtree_of_type(pet.node_at(called_function), NodeType.CU)
+                # check if a dependency between subtree and any device cu exists
+                for sub_node in subtree:
+                    deps_to: Set[str] = set()
+                    deps_to.update([s for s, t, d in pet.in_edges(sub_node.id, EdgeType.DATA)])
+                    deps_to.update([t for s, t, d in pet.out_edges(sub_node.id, EdgeType.DATA)])
+                    if len([cu_id for cu_id in deps_to if cu_id in self.device_cu_ids]) > 0:
+                        called_function_shares_data_with_device_cus = True
+                        break
+                if called_function_shares_data_with_device_cus:
+                    break
+            if not called_function_shares_data_with_device_cus:
+                continue
+            # called function shares data with device cu's
+            # cover it with update instructions
+            predecessor_cus = [s for s, t, d in pet.in_edges(calling_cu, EdgeType.SUCCESSOR)]
+            successor_cus = [t for s, t, d in pet.out_edges(calling_cu, EdgeType.SUCCESSOR)]
+            live_in_predecessors: Set[str] = set()
+            live_in_successors: Set[str] = set()
+            for pred in predecessor_cus:
+                for var_name in liveness:
+                    if pred in liveness[var_name]:
+                        live_in_predecessors.add(var_name)
+            for succ in successor_cus:
+                for var_name in liveness:
+                    if succ in liveness[var_name]:
+                        live_in_successors.add(var_name)
+            # create update instructions
+            for pred in predecessor_cus:
+                for var_name in live_in_predecessors:
+                    self.update_instructions.append(
+                        (
+                            pred,
+                            calling_cu,
+                            UpdateType.FROM_DEVICE,
+                            var_name,
+                            pet.node_at(calling_cu).start_position(),
+                        )
+                    )
+            for succ in successor_cus:
+                for var_name in live_in_successors:
+                    self.update_instructions.append(
+                        (
+                            calling_cu,
+                            succ,
+                            UpdateType.TO_DEVICE,
+                            var_name,
+                            pet.node_at(succ).start_position(),
+                        )
+                    )
+        # remove duplicates
+        self.update_instructions = list(dict.fromkeys(self.update_instructions))
 
 
 def find_combined_gpu_regions(
