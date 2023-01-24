@@ -472,9 +472,9 @@ class CombinedGPURegion(PatternInfo):
                 for source_cu_id, dep in filtered_deps:
                     # use Host code to handle updates
                     if update_type == UpdateType.TO_DEVICE:
-                        pragma_position = dep.source
-                    elif update_type == UpdateType.FROM_DEVICE:
                         pragma_position = dep.sink
+                    elif update_type == UpdateType.FROM_DEVICE:
+                        pragma_position = dep.source
                     else:
                         raise ValueError("Unsupported update type: ", update_type)
                     update_instructions.append(
@@ -898,8 +898,12 @@ class CombinedGPURegion(PatternInfo):
         for source_id, sink_id, update_type, var, meta_line_num in self.update_instructions:
             if var not in liveness:
                 liveness[var] = []
-            liveness[var].append(source_id)
-            liveness[var].append(sink_id)
+            if update_type == UpdateType.TO_DEVICE:
+                liveness[var].append(sink_id)
+            elif update_type == UpdateType.FROM_DEVICE:
+                liveness[var].append(source_id)
+            else:
+                raise ValueError("Unsupported Update type: ", update_type)
 
         return liveness
 
