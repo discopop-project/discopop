@@ -68,7 +68,8 @@ class CombinedGPURegion(PatternInfo):
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
-    meta_liveness: Dict[str, List[str]]
+    meta_device_liveness: Dict[str, List[str]]
+    meta_host_liveness: Dict[str, List[str]]
 
     def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
         node_id = sorted([region.node_id for region in contained_regions])[0]
@@ -96,7 +97,7 @@ class CombinedGPURegion(PatternInfo):
         )
 
         # calculate live data
-        liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
+        device_liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
 
         # discard current mapping information
         entry_points = []
@@ -105,10 +106,13 @@ class CombinedGPURegion(PatternInfo):
         # extend data liveness
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
-        liveness = self.__extend_data_lifespan(pet, liveness)
+        device_liveness = self.__extend_data_lifespan(pet, device_liveness)
 
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
-        liveness = self.__remove_liveness_for_calling_cus_if_required(pet, liveness)
+        device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
+
+        # calculate host liveness
+        host_liveness: Dict[str, List[str]] = self.__calculate_host_liveness(pet, device_liveness)
 
         #######################################
 
@@ -176,7 +180,7 @@ class CombinedGPURegion(PatternInfo):
         print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
-        self.__get_metadata(pet, liveness)
+        self.__get_metadata(pet, device_liveness, host_liveness)
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -597,7 +601,12 @@ class CombinedGPURegion(PatternInfo):
                 update_instructions.remove(update_1)
         return update_instructions
 
-    def __get_metadata(self, pet: PETGraphX, liveness: Dict[str, List[str]]):
+    def __get_metadata(
+        self,
+        pet: PETGraphX,
+        device_liveness: Dict[str, List[str]],
+        host_liveness: Dict[str, List[str]],
+    ):
         """Create metadata and store it in the respective fields."""
         for device_cu_id in self.device_cu_ids:
             device_cu = pet.node_at(device_cu_id)
@@ -617,15 +626,25 @@ class CombinedGPURegion(PatternInfo):
                     + self.__get_contained_lines(host_cu.start_position(), host_cu.end_position())
                 )
             )
-        # get liveness as metadata
-        self.meta_liveness = dict()
-        for var_name in liveness:
-            lines: Set[str] = set()
-            for cu_id in liveness[var_name]:
+        # get device liveness as metadata
+        self.meta_device_liveness = dict()
+        lines: Set[str] = set()
+        for var_name in device_liveness:
+            lines = set()
+            for cu_id in device_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
                     lines.add("" + str(cu_node.file_id) + ":" + str(line))
-            self.meta_liveness[var_name] = list(lines)
+            self.meta_device_liveness[var_name] = list(lines)
+        # get host liveness as metadata
+        self.meta_host_liveness = dict()
+        for var_name in host_liveness:
+            lines = set()
+            for cu_id in host_liveness[var_name]:
+                cu_node = pet.node_at(cu_id)
+                for line in range(cu_node.start_line, cu_node.end_line + 1):
+                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+            self.meta_host_liveness[var_name] = list(lines)
 
     def __get_contained_lines(self, start_line: str, end_line: str) -> List[str]:
         """Returns a list of line numbers inbetween start_line and end_line"""
@@ -1479,6 +1498,16 @@ class CombinedGPURegion(PatternInfo):
                 if calling_cu in liveness[key]:
                     liveness[key].remove(calling_cu)
         return liveness
+
+    def __calculate_host_liveness(
+        self, pet: PETGraphX, device_liveness: Dict[str, List[str]]
+    ) -> Dict[str, List[str]]:
+        host_liveness: Dict[str, List[str]] = dict()
+        for cu_id in self.host_cu_ids:
+            if not "x" in host_liveness:
+                host_liveness["x"] = []
+            host_liveness["x"].append(cu_id)
+        return host_liveness
 
 
 def find_combined_gpu_regions(

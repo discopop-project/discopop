@@ -84,8 +84,8 @@ class Suggestion(object):
             code_preview.add_pragma(pragma, [])
 
         # get and insert metadata
-        live_variables: Dict[int, List[str]] = self.__get_metadata_live_variables()
-        code_preview.add_live_variables(live_variables)
+        live_device_variables, live_host_variables = self.__get_metadata_live_variables()
+        code_preview.add_live_variables(live_device_variables, live_host_variables)
 
 
 
@@ -99,16 +99,27 @@ class Suggestion(object):
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def __get_metadata_live_variables(self):
-        live_variables: Dict[int, List[str]] = dict()
-        if "meta_liveness" in self.values:
-            for var_name in self.values["meta_liveness"]:
-                for line_num in self.values["meta_liveness"][var_name]:
+    def __get_metadata_live_variables(self) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+        live_device_variables: Dict[int, List[str]] = dict()
+        if "meta_device_liveness" in self.values:
+            for var_name in self.values["meta_device_liveness"]:
+                for line_num in self.values["meta_device_liveness"][var_name]:
                     int_line_num = int(line_num.split(":")[1])
-                    if int_line_num not in live_variables:
-                        live_variables[int_line_num] = []
-                    live_variables[int_line_num].append(var_name)
-        return live_variables
+                    if int_line_num not in live_device_variables:
+                        live_device_variables[int_line_num] = []
+                    live_device_variables[int_line_num].append(var_name)
+
+        live_host_variables: Dict[int, List[str]] = dict()
+        if "meta_host_liveness" in self.values:
+            for var_name in self.values["meta_host_liveness"]:
+                for line_num in self.values["meta_host_liveness"][var_name]:
+                    int_line_num = int(line_num.split(":")[1])
+                    if int_line_num not in live_host_variables:
+                        live_host_variables[int_line_num] = []
+                    live_host_variables[int_line_num].append(var_name)
+
+
+        return live_device_variables, live_host_variables
 
 
     def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:

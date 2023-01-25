@@ -28,6 +28,7 @@ class Line(object):
         self.line_num = line_num
         self.meta_information = []
         self.meta_live_device_variables = []
+        self.meta_live_host_variables = []
         self.content = content
         self.highlight_color = None
         self.owns_region = None
@@ -36,7 +37,16 @@ class Line(object):
 
     def get_metadata_live_device_variables_str(self, padded_length: int = 0) -> str:
         result = ""
-        result += "" if len(self.meta_live_device_variables) == 0 else "live(" + ",".join(self.meta_live_device_variables) + ")"
+        result += "" if len(self.meta_live_device_variables) == 0 else "D(" + ",".join(self.meta_live_device_variables) + ")"
+        # add padding
+        while len(result) < padded_length:
+            result = result + " "  # padding right
+        return result
+
+    def get_metadata_live_host_variables_str(self, padded_length: int = 0) -> str:
+        result = ""
+        result += "" if len(self.meta_live_host_variables) == 0 else "H(" + ",".join(
+            self.meta_live_host_variables) + ")"
         # add padding
         while len(result) < padded_length:
             result = result + " "  # padding right
@@ -52,7 +62,7 @@ class Line(object):
         result += regions_str
         return result
 
-    def display(self, parent_element: tk.Text, line_idx: int, max_line_num: int, max_region_metadata_len: int, max_live_variable_metadata_len: int):
+    def display(self, parent_element: tk.Text, line_idx: int, max_line_num: int, max_region_metadata_len: int, max_live_device_variable_metadata_len: int, max_live_host_variable_metadata_len: int):
         if not self.content.endswith("\n"):
             self.content += "\n"
 
@@ -73,8 +83,13 @@ class Line(object):
         # assemble live variables metadata string if requested
         live_variables_metadata_str = ""
         if self.wizard.settings.code_preview_show_metadata_live_device_variables == 1:
-            live_variables_metadata_str = self.get_metadata_live_device_variables_str(padded_length=max_live_variable_metadata_len)
+            live_device_variables_metadata_str = self.get_metadata_live_device_variables_str(padded_length=max_live_device_variable_metadata_len)
+            live_host_variables_metadata_str = self.get_metadata_live_host_variables_str(padded_length=max_live_host_variable_metadata_len)
+            live_variables_metadata_str += live_host_variables_metadata_str
+            live_variables_metadata_str += " | "  # separator
+            live_variables_metadata_str += live_device_variables_metadata_str
             live_variables_metadata_str += " | "  # padding right
+
 
         # assemble line for display
         line = ""
@@ -143,17 +158,23 @@ class CodePreview(object):
             tmp = line.get_metadata_regions_str()
             if len(tmp) > max_region_metadata_len:
                 max_region_metadata_len = len(tmp)
-        max_live_variable_metadata_len = 0
+
+        max_live_device_variable_metadata_len = 0
         for line in self.lines:
             tmp = line.get_metadata_live_device_variables_str()
-            if len(tmp) > max_live_variable_metadata_len:
-                max_live_variable_metadata_len = len(tmp)
+            if len(tmp) > max_live_device_variable_metadata_len:
+                max_live_device_variable_metadata_len = len(tmp)
 
+        max_live_host_variable_metadata_len = 0
+        for line in self.lines:
+            tmp = line.get_metadata_live_host_variables_str()
+            if len(tmp) > max_live_host_variable_metadata_len:
+                max_live_host_variable_metadata_len = len(tmp)
 
         for line_idx, line in enumerate(self.lines):
             # offset line_id to account for start with 1
             offset_line_id = line_idx + 1
-            line.display(parent_element, offset_line_id, self.max_line_num, max_region_metadata_len, max_live_variable_metadata_len)
+            line.display(parent_element, offset_line_id, self.max_line_num, max_region_metadata_len, max_live_device_variable_metadata_len, max_live_host_variable_metadata_len)
 
     def jump_to_first_modification(self, parent_element: tk.Text):
         """Jumps to the location of the first modified source code location."""
@@ -224,8 +245,13 @@ class CodePreview(object):
         for child_pragma in pragma.children:
             self.add_pragma(child_pragma, pragma_line.belongs_to_regions)
 
-    def add_live_variables(self, live_variables: Dict[int, List[str]]):
-        for line_num in live_variables:
+    def add_live_variables(self, live_device_variables: Dict[int, List[str]], live_host_variables: Dict[int, List[str]]):
+        for line_num in live_device_variables:
             for idx, line in enumerate(self.lines):
                 if line.line_num == line_num:
-                    self.lines[idx].meta_live_device_variables = live_variables[line_num]
+                    self.lines[idx].meta_live_device_variables = live_device_variables[line_num]
+
+        for line_num in live_host_variables:
+            for idx, line in enumerate(self.lines):
+                if line.line_num == line_num:
+                    self.lines[idx].meta_live_host_variables = live_host_variables[line_num]
