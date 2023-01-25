@@ -86,27 +86,39 @@ class CombinedGPURegion(PatternInfo):
         print(self.host_cu_ids)
         print("DEVICE CU IDS: ")
         print(self.device_cu_ids)
-        # todo restrict search for updates to function body, ignore called functions
-        self.update_instructions = self.__get_update_instructions(pet)
         pairwise_reachability = self.__get_pairwise_reachability(pet)
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
-        #        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_points(pet)
+        # get a representation of the currently available mapping information
+        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_and_exit_points(
+            pet
+        )
 
-        liveness = self.__populate_live_data(pet)
+        # calculate live data
+        liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
+
+        # discard current mapping information
+        entry_points = []
+        exit_points = []
+
+        # extend data liveness
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
-        #       entry_points, exit_points = self.__optimize_data_mapping_entries(
-        #           pet, entry_points, exit_points, liveness
-        #       )
+        entry_points, exit_points = self.__optimize_data_mapping_entries(
+            pet, entry_points, exit_points, liveness
+        )
+
+        # todo restrict search for updates to function body, ignore called functions
+        self.update_instructions = []
+        # self.update_instructions = self.__get_update_instructions(pet)
 
         # todo note: cautious property: Encapsulate function calls until better solution has been found
-        self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
+        #        self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
 
         # move update instructions out of gpu loops
-        self.__move_update_instructions_out_of_gpu_loops(pet)
+        #        self.__move_update_instructions_out_of_gpu_loops(pet)
 
         #       entry_points, exit_points = self.__find_data_mapping_exits(
         #           pet, entry_points, exit_points, liveness
@@ -122,6 +134,8 @@ class CombinedGPURegion(PatternInfo):
 
         # self.__optimize_data_mapping(pet, pairwise_reachability)
         #    entry_points, exit_points = self.__get_explicit_data_entry_and_exit_points(pet)
+
+        # todo: if incoming dependencies which can not be mapped to
 
         print("EXIT POINTS: ")
         print(exit_points)
@@ -858,7 +872,9 @@ class CombinedGPURegion(PatternInfo):
                     reachable_pairs.append((region_1, region_2))
         return reachable_pairs
 
-    def __populate_live_data(self, pet: PETGraphX) -> Dict[str, List[str]]:
+    def __populate_live_data(
+        self, pet: PETGraphX, ignore_update_instructions=False
+    ) -> Dict[str, List[str]]:
         """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
         The gathered information is used for the optimization / creation of data mapping instructions afterwards."""
         liveness: Dict[str, List[str]] = dict()
@@ -895,16 +911,17 @@ class CombinedGPURegion(PatternInfo):
                     for cu in subtree:
                         liveness[var].append(cu.id)
 
-        # populate liveness sets based on update instructions
-        for source_id, sink_id, update_type, var, meta_line_num in self.update_instructions:
-            if var not in liveness:
-                liveness[var] = []
-            if update_type == UpdateType.TO_DEVICE:
-                liveness[var].append(sink_id)
-            elif update_type == UpdateType.FROM_DEVICE:
-                liveness[var].append(source_id)
-            else:
-                raise ValueError("Unsupported Update type: ", update_type)
+        if not ignore_update_instructions:
+            # populate liveness sets based on update instructions
+            for source_id, sink_id, update_type, var, meta_line_num in self.update_instructions:
+                if var not in liveness:
+                    liveness[var] = []
+                if update_type == UpdateType.TO_DEVICE:
+                    liveness[var].append(sink_id)
+                elif update_type == UpdateType.FROM_DEVICE:
+                    liveness[var].append(source_id)
+                else:
+                    raise ValueError("Unsupported Update type: ", update_type)
 
         return liveness
 
@@ -941,7 +958,7 @@ class CombinedGPURegion(PatternInfo):
                 live_data[var_name].append(new_cu_id)
         return live_data
 
-    def __translate_mapping_to_explicit_data_entry_points(
+    def __translate_mapping_to_explicit_data_entry_and_exit_points(
         self, pet: PETGraphX
     ) -> Tuple[
         List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
@@ -950,7 +967,7 @@ class CombinedGPURegion(PatternInfo):
         """Returns a tuple containing the explicit entry and exit points of target data regions."""
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
-        # create entry points for contained loops
+        # create entry and exit points for contained loops
         for region in self.contained_regions:
             for gpu_loop in region.contained_loops:
                 cu_node_id = gpu_loop.node_id
@@ -978,6 +995,7 @@ class CombinedGPURegion(PatternInfo):
                             EntryPointPositioning.BEFORE_CU,
                         )
                     )
+
         return entry_points, exit_points
 
     def __unused_get_explicit_data_entry_and_exit_points(
