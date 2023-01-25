@@ -912,17 +912,12 @@ class PETGraphX(object):
         """Finds the parent of a node
 
         :param node: current node
-        :return: number of iterations
+        :return: node of parent function
         """
-        parent = self.in_edges(node.id, EdgeType.CHILD)
-
-        while parent:
-            node = self.node_at(parent[0][0])
-            if node.type == NodeType.FUNC:
-                return node
-            parent = self.in_edges(node.id, EdgeType.CHILD)
-
-        return node
+        if node.type == NodeType.FUNC:
+            return node
+        assert node.parent_function_id
+        return self.node_at(node.parent_function_id)
 
     def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
