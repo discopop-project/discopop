@@ -291,7 +291,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
                                         break;
                                     }
                                 }
-                                if (vn == varName || vn == varName + ".addr") {
+                                if (vn == varName) {
                                     varDefLine =
                                             to_string(fileID) + ":" + to_string(DV->getLine());
                                     break;
