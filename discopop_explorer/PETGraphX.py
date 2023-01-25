@@ -505,8 +505,8 @@ class PETGraphX(object):
         """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.SUCCESSOR)]
 
-    def direct_children(self, root: CUNode) -> List[CUNode]:
-        """Gets only direct children of any type
+    def direct_children_or_called_nodes(self, root: CUNode) -> List[CUNode]:
+        """Gets direct children of any type. Also includes nodes of called functions
 
         :param root: root node
         :return: list of direct children
@@ -515,9 +515,20 @@ class PETGraphX(object):
             self.node_at(t)
             for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         ]
+    
+    def direct_children(self, root: CUNode) -> List[CUNode]:
+        """Gets direct children of any type. This includes called nodes!
 
-    def direct_children_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
-        """Gets only direct children of specified type
+        :param root: root node
+        :return: list of direct children
+        """
+        return [
+            self.node_at(t)
+            for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
+        ]
+
+    def direct_children_or_called_nodes_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
+        """Gets only direct children of specified type. This includes called nodes!
 
         :param root: root node
         :param type: type of children
@@ -921,9 +932,9 @@ class PETGraphX(object):
                 visited.add(current)
 
             stack.extend(
-                self.direct_children(current)
+                self.direct_children_or_called_nodes(current)
                 if right_subtree
-                else reversed(self.direct_children(current))
+                else reversed(self.direct_children_or_called_nodes(current))
             )
         return res
 
@@ -947,7 +958,7 @@ class PETGraphX(object):
         if source == target:
             return [source]
 
-        for child in [c for c in self.direct_children(source) if c not in visited]:
+        for child in [c for c in self.direct_children_or_called_nodes(source) if c not in visited]:
             path = self.__path_rec(child, target, visited)
             if path:
                 path.insert(0, source)

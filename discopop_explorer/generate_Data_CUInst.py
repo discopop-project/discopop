@@ -20,7 +20,7 @@ def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List
     children_ids.append(parent_id)
     children_ids = list(set(children_ids))
     # collect all of its children
-    for child_node in pet.direct_children(pet.node_at(parent_id)):
+    for child_node in pet.direct_children_or_called_nodes(pet.node_at(parent_id)):
         children_ids += __collect_children_ids(pet, child_node.id, children_ids)
         children_ids = list(set(children_ids))
     return children_ids
