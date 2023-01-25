@@ -76,7 +76,7 @@ class PatternDetectorX(object):
     ):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
-
+        self.pet.calculateFunctionMetadata()
         res = DetectionResult()
 
         # reduction before doall!
