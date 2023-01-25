@@ -114,9 +114,9 @@ class CombinedGPURegion(PatternInfo):
 
         # replace updates with entries and exits, if no predecessor / successor exists
         # TODO CURRENT WORKPACKAGE: NON-VALID EXIT FROM FOR SAXPY_ASYNC (X1)
-        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
-            pet, entry_points, exit_points
-        )
+        #        entry_points, exit_points = self.__replace_updates_with_entry_or_exit_points_if_possible(
+        #            pet, entry_points, exit_points
+        #        )
 
         # todo validate entry and exit points
 
@@ -1380,7 +1380,7 @@ class CombinedGPURegion(PatternInfo):
                                 sink_id,
                                 update_type,
                                 var,
-                                pet.node_at(gpu_loop_id).start_position(),
+                                pet.node_at(sink_id).start_position(),
                             )
                         )
         for update in to_be_removed:

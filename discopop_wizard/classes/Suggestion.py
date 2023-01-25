@@ -241,7 +241,7 @@ class Suggestion(object):
 
             if update_type == UpdateType.TO_DEVICE:
                 # to device means host is writing, so update after the instruction
-                pragma.pragma_position = PragmaPosition.AFTER_END
+                pragma.pragma_position = PragmaPosition.BEFORE_START  # PragmaPosition.AFTER_END
                 pragma.pragma_str += "to("
             elif update_type == UpdateType.FROM_DEVICE:
                 # from device means host is reading, so update before the instruction
