@@ -120,6 +120,9 @@ class CUNode:
     tp_contains_taskwait: bool = False
     tp_omittable: bool = False
 
+    parent_function_id: Optional[NodeID] = None  # every node that is not a function node
+    children_cu_ids: Optional[List[NodeID]] = None  # function nodes only
+
     def __init__(self, node_id: str):
         self.id = node_id
         self.file_id, self.node_id = parse_id(node_id)
@@ -311,6 +314,26 @@ class PETGraphX(object):
                         if sink_cu_id != source_cu_id:
                             g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         return cls(g, reduction_vars, pos)
+
+    def calculateFunctionMetadata(self):
+        # store id of parent function in each node
+        # and store in each function node a list of all children ids
+        for func_node in self.all_nodes(NodeType.FUNC):
+            func_node.children_cu_ids = []
+            stack: List[CUNode] = self.direct_children(func_node)
+            while stack:
+                child = stack.pop()
+                child.parent_function_id = func_node.id
+                children = self.direct_children(child)
+                func_node.children_cu_ids.extend([node.id for node in children])
+                stack.extend(children)
+
+        # testing
+        # for node in self.all_nodes():
+        #    if node.type == NodeType.FUNC:
+        #        print(node.id, "is a function node with", len(node.children_cu_ids), "children:", node.children_cu_ids)
+        #    else:
+        #        print(node.id, "has the parent function", node.parent_function_id)
 
     def show(self):
         """Plots the graph
@@ -515,17 +538,14 @@ class PETGraphX(object):
             self.node_at(t)
             for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         ]
-    
+
     def direct_children(self, root: CUNode) -> List[CUNode]:
         """Gets direct children of any type. This includes called nodes!
 
         :param root: root node
         :return: list of direct children
         """
-        return [
-            self.node_at(t)
-            for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
-        ]
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
     def direct_children_or_called_nodes_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
         """Gets only direct children of specified type. This includes called nodes!
