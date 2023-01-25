@@ -106,16 +106,21 @@ class CombinedGPURegion(PatternInfo):
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         liveness = self.__extend_data_lifespan(pet, liveness)
-        entry_points, exit_points = self.__optimize_data_mapping_entries(
-            pet, entry_points, exit_points, liveness
-        )
+
+        # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
+        liveness = self.__remove_liveness_for_calling_cus_if_required(pet, liveness)
+
+        #######################################
+
+        # self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
+
+        # entry_points, exit_points = self.__optimize_data_mapping_entries(
+        #    pet, entry_points, exit_points, liveness
+        # )
 
         # todo restrict search for updates to function body, ignore called functions
         self.update_instructions = []
         # self.update_instructions = self.__get_update_instructions(pet)
-
-        # todo note: cautious property: Encapsulate function calls until better solution has been found
-        #        self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
 
         # move update instructions out of gpu loops
         #        self.__move_update_instructions_out_of_gpu_loops(pet)
@@ -1408,6 +1413,54 @@ class CombinedGPURegion(PatternInfo):
             self.update_instructions.append(update)
         # remove duplicates
         self.update_instructions = list(dict.fromkeys(self.update_instructions))
+
+    def __remove_liveness_for_calling_cus_if_required(
+        self, pet: PETGraphX, liveness: Dict[str, List[str]]
+    ) -> Dict[str, List[str]]:
+        # identify host CUs which contain function calls
+        parent_function = pet.get_parent_function(pet.node_at(self.contained_regions[0].node_id))
+        all_function_body_cu_ids = self.__get_function_body_cus_without_called_functions(
+            pet, parent_function
+        )
+        all_host_cu_ids = [
+            cu_id for cu_id in all_function_body_cu_ids if cu_id not in self.device_cu_ids
+        ]
+        # detect called functions and calling cu's
+        calling_cu_ids: Set[str] = set()
+        called_functions_dict: Dict[str, Set[str]] = dict()
+        for host_cu_id in all_host_cu_ids:
+            calls_edges = pet.out_edges(host_cu_id, EdgeType.CALLSNODE)
+            if len(calls_edges) > 0:
+                calling_cu_ids.add(host_cu_id)
+                if host_cu_id not in called_functions_dict:
+                    called_functions_dict[host_cu_id] = set()
+                called_functions_dict[host_cu_id].update([t for s, t, d in calls_edges])
+
+        # remove calling cu ids from all liveness sets, if the called function shares data with any device CU.
+        # This removal will lead to full Host <--> Device synchronization of all currently living device variables.
+        for calling_cu in calling_cu_ids:
+            # detect data sharing between the called function and device nodes
+            called_function_shares_data_with_device_cus = False
+            for called_function in called_functions_dict[calling_cu]:
+                subtree = pet.subtree_of_type(pet.node_at(called_function), NodeType.CU)
+                # check if a dependency between subtree and any device cu exists
+                for sub_node in subtree:
+                    deps_to: Set[str] = set()
+                    deps_to.update([s for s, t, d in pet.in_edges(sub_node.id, EdgeType.DATA)])
+                    deps_to.update([t for s, t, d in pet.out_edges(sub_node.id, EdgeType.DATA)])
+                    if len([cu_id for cu_id in deps_to if cu_id in self.device_cu_ids]) > 0:
+                        called_function_shares_data_with_device_cus = True
+                        break
+                if called_function_shares_data_with_device_cus:
+                    break
+            if not called_function_shares_data_with_device_cus:
+                continue
+            # called function shares data with device cu's
+            # remove it from all liveness sets
+            for key in liveness:
+                if calling_cu in liveness[key]:
+                    liveness[key].remove(calling_cu)
+        return liveness
 
 
 def find_combined_gpu_regions(
