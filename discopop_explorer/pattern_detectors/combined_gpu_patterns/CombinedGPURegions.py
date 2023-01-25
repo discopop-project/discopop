@@ -108,11 +108,11 @@ class CombinedGPURegion(PatternInfo):
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         device_liveness = self.__extend_data_lifespan(pet, device_liveness)
 
-        # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
-        device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
-
         # calculate host liveness
         host_liveness: Dict[str, List[str]] = self.__calculate_host_liveness(pet, device_liveness)
+
+        # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
+        # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
 
         #######################################
 
@@ -1502,11 +1502,46 @@ class CombinedGPURegion(PatternInfo):
     def __calculate_host_liveness(
         self, pet: PETGraphX, device_liveness: Dict[str, List[str]]
     ) -> Dict[str, List[str]]:
+        """
+        Variable is live on host, if a dependency between the host cu and any device cu for a given variable exists
+
+        """
+
+        host_liveness_sets: Dict[str, Set[str]] = dict()
+
+        all_function_cu_ids: Set[str] = set()
+        for region in self.contained_regions:
+            parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+            all_function_cu_ids.update(
+                self.__get_function_body_cus_without_called_functions(pet, parent_function)
+            )
+
+        all_function_host_cu_ids = [
+            cu_id for cu_id in all_function_cu_ids if cu_id not in self.host_cu_ids
+        ]
+
+        for cu_id in all_function_host_cu_ids:
+            shared_variables: Set[str] = set()
+            # get all data which is accessed by the cu_id and any device cu
+            out_data_edges = pet.out_edges(cu_id, EdgeType.DATA)
+            in_data_edges = pet.in_edges(cu_id, EdgeType.DATA)
+            for _, target, dep in out_data_edges:
+                if target in self.device_cu_ids:
+                    if dep.var_name is not None:
+                        shared_variables.add(cast(str, dep.var_name))
+            for source, _, dep in in_data_edges:
+                if source in self.device_cu_ids:
+                    if dep.var_name is not None:
+                        shared_variables.add(cast(str, dep.var_name))
+            for var_name in shared_variables:
+                if var_name not in host_liveness_sets:
+                    host_liveness_sets[var_name] = set()
+                host_liveness_sets[var_name].add(cu_id)
+
+        # convert sets to lists
         host_liveness: Dict[str, List[str]] = dict()
-        for cu_id in self.host_cu_ids:
-            if not "x" in host_liveness:
-                host_liveness["x"] = []
-            host_liveness["x"].append(cu_id)
+        for key in host_liveness_sets:
+            host_liveness[key] = list(host_liveness_sets[key])
         return host_liveness
 
 
