@@ -168,7 +168,6 @@ class GPURegions:
 
         loopFirstChild: CUNode = self.pet.direct_children(loop)[0]
         CUIDsofLoop = self.pet.out_edges(loopFirstChild.id, EdgeType.SUCCESSOR)
-        lastCUofLoop = map_node(self.pet, CUIDsofLoop[1][1])
         lastCUofLoop = map_node(self.pet, CUIDsofLoop[-1][1])
         nextLoopFirstChild: CUNode = self.pet.direct_children(nextLoop)[0]
         successors = self.pet.out_edges(lastCUofLoop.id, EdgeType.SUCCESSOR)
