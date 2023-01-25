@@ -941,7 +941,8 @@ class CombinedGPURegion(PatternInfo):
             new_entries: List[Tuple[str, str]] = []
             for var_name in live_data:
                 for cu_id in live_data[var_name]:
-                    # check if data is live in any successor. If so, set var_name to live in each of the encountered CUs.
+                    # check if data is live in any successor.
+                    # If so, set var_name to live in each of the encountered CUs.
                     for potential_successor_cu_id in live_data[var_name]:
                         if cu_id == potential_successor_cu_id:
                             continue
@@ -951,11 +952,28 @@ class CombinedGPURegion(PatternInfo):
                             [EdgeType.SUCCESSOR, EdgeType.CHILD],
                         )
                         if reachable:
-                            # mark var_name live in all path_nodes
+                            # mark var_name live in all path_nodes and their children
                             for path_node in path_nodes:
-                                path_node_id = path_node.id
-                                if path_node_id not in live_data[var_name]:
-                                    new_entries.append((var_name, path_node_id))
+                                # todo replace with subtree calculation after merging with refactoring changes
+                                # calculate subtree without including called functions
+                                subtree_without_called_functions = [
+                                    cu
+                                    for cu in pet.direct_children(path_node)
+                                    if cu
+                                    not in [
+                                        pet.node_at(t)
+                                        for s, t, d in pet.out_edges(
+                                            path_node.id, EdgeType.CALLSNODE
+                                        )
+                                    ]
+                                ]
+                                # add path_node itself to the subtree
+                                subtree_without_called_functions.append(path_node)
+                                # todo end of section to be replaced
+                                #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
+                                for subtree_node in subtree_without_called_functions:
+                                    if subtree_node.id not in live_data[var_name]:
+                                        new_entries.append((var_name, subtree_node.id))
             new_entries = list(set(new_entries))
             if len(new_entries) > 0:
                 modification_found = True
