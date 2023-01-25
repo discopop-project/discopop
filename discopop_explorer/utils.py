@@ -481,8 +481,8 @@ def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CU
         elif child.reduction:
             reduction.append(child)
 
-    for func_child in pet.direct_children_of_type(node, NodeType.FUNC):
-        for child in pet.direct_children_of_type(func_child, NodeType.LOOP):
+    for func_child in pet.direct_children_or_called_nodes_of_type(node, NodeType.FUNC):
+        for child in pet.direct_children_or_called_nodes_of_type(func_child, NodeType.LOOP):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -654,7 +654,7 @@ def classify_task_vars(
         loop_nodes.append(task)
 
     loops_start_lines = [n.start_position() for n in loop_nodes]
-    loop_children = [c for n in loop_nodes for c in pet.direct_children(n)]
+    loop_children = [c for n in loop_nodes for c in pet.direct_children_or_called_nodes(n)]
 
     for var in vars:
         var_is_loop_index = False
