@@ -10,9 +10,6 @@ from typing import List, cast
 
 from discopop_explorer.PETGraphX import NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
-    find_combined_gpu_regions,
-)
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegions,

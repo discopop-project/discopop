@@ -52,7 +52,6 @@ class EdgeType(Enum):
     SUCCESSOR = 1
     DATA = 2
     CALLSNODE = 3
-    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -415,14 +414,6 @@ class PETGraphX(object):
             pos,
             edge_color="yellow",
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
-        )
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edge_color="orange",
-            edgelist=[
-                e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME
-            ],
         )
 
         # plt.show()

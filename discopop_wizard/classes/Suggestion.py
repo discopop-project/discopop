@@ -244,137 +244,7 @@ class Suggestion(object):
 
         return pragmas
 
-    def __get_update_pragmas(self, update_instructions) -> List[Pragma]:
-        pragmas = []
-        for source_cu_id, sink_cu_id, update_type, target_var, pragma_line in update_instructions:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target update "
 
-            if update_type == UpdateType.TO_DEVICE:
-                # to device means host is writing, so update after the instruction
-                pragma.pragma_position = PragmaPosition.BEFORE_START  # PragmaPosition.AFTER_END
-                pragma.pragma_str += "to("
-            elif update_type == UpdateType.FROM_DEVICE:
-                # from device means host is reading, so update before the instruction
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-                pragma.pragma_str += "from("
-            else:
-                raise ValueError("Unsupported update type: ", update_type)
-            pragma.pragma_str += target_var + ") "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            pragmas.append(pragma)
-        return pragmas
-
-    def __get_data_region_dependencies(self, depend_in, depend_out) -> List[Pragma]:
-        pragmas = []
-        for var_name, cu_id, pragma_line, entry_point_positioning in depend_in:
-            pragma = Pragma()
-            pragma.pragma_str = "#depend in(" + var_name + ")"
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if entry_point_positioning == EntryPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif entry_point_positioning == EntryPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
-            pragmas.append(pragma)
-
-        for var_name, cu_id, pragma_line, exit_point_positioning in depend_out:
-            pragma = Pragma()
-            pragma.pragma_str = "#depend out(" + var_name + ")"
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if exit_point_positioning == ExitPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif exit_point_positioning == ExitPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", exit_point_positioning)
-            pragmas.append(pragma)
-
-        return pragmas
-
-    def __get_data_region_pragmas(self, entry_points, exit_points) -> List[Pragma]:
-        pragmas = []
-        for var_name, cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target enter data "
-            if entry_point_type == EntryPointType.TO_DEVICE:
-                pragma.pragma_str += "map(to: "
-            elif entry_point_type == EntryPointType.ALLOCATE:
-                pragma.pragma_str += "map(alloc: "
-            elif entry_point_type == EntryPointType.ASYNC_TO_DEVICE:
-                pragma.pragma_str += "nowait map(to: "
-            elif entry_point_type == EntryPointType.ASYNC_ALLOCATE:
-                pragma.pragma_str += "nowait map(alloc:"
-            else:
-                raise ValueError("Usupported EntryPointType: ", entry_point_type)
-            pragma.pragma_str += var_name + ") "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if entry_point_positioning == EntryPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif entry_point_positioning == EntryPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
-            pragmas.append(pragma)
-
-        for var_name, cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target exit data "
-            if exit_point_type == ExitPointType.FROM_DEVICE:
-                pragma.pragma_str += "map(from: "
-            elif exit_point_type == ExitPointType.DELETE:
-                pragma.pragma_str += "map(delete: "
-            elif exit_point_type == ExitPointType.ASYNC_FROM_DEVICE:
-                pragma.pragma_str += "nowait map(from: "
-            else:
-                raise ValueError("Usupported ExitPointType: ", exit_point_type)
-            pragma.pragma_str += var_name + ") "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if exit_point_positioning == ExitPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif exit_point_positioning == ExitPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", exit_point_positioning)
-            pragmas.append(pragma)
-        return pragmas
-
-    def __get_combined_gpu_pragmas(self) -> List[Pragma]:
-        pragmas = []
-        # add async data movement
-        pragmas += self.__get_data_region_pragmas(self.values["data_region_entry_points"],
-                                                  self.values["data_region_exit_points"])
-        # add dependencies
-        pragmas += self.__get_data_region_dependencies(self.values["data_region_depend_in"], self.values["data_region_depend_out"])
-
-        # add gpu loops
-        for region in self.values["contained_regions"]:
-            pragmas += self.__get_simple_gpu_pragmas(region["start_line"], region["end_line"],
-                                                     region["contained_loops"],
-                                                     region["map_to_vars"], region["map_from_vars"],
-                                                     region["map_to_from_vars"],
-                                                     region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=True)
-        # add update instructions to pragmas
-        pragmas += self.__get_update_pragmas(self.values["update_instructions"])
-
-        return pragmas
 
     def __get_pragmas(self) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
@@ -392,8 +262,6 @@ class Suggestion(object):
                                                      self.values["map_alloc_vars"], self.values["map_delete_vars"],
                                                      self.values["consumed_vars"], self.values["produced_vars"]
                                                      )
-        elif self.type == "combined_gpu":
-            pragmas += self.__get_combined_gpu_pragmas()
         else:
             pragma = Pragma()
             pragma.file_id = self.file_id
