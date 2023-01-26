@@ -76,8 +76,38 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
-NodeID = NewType("NodeID", str)  # fileID:nodeID
-LineID = NewType("LineID", str)  # fileID:lineNr
+class NodeID(str):
+    # simpler alternative:
+    # NodeID = NewType("NodeID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created NodeID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+
+
+class LineID(str):
+    # simpler alternative:
+    # LineID = NewType("LineID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created LineID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted LineID: ", id_string)
 
 
 class Dependency:
