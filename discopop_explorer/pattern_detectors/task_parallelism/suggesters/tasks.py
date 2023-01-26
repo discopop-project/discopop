@@ -8,7 +8,7 @@
 
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
+from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -60,7 +60,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
         first_dependency_line_number = first_dependency_line[first_dependency_line.index(":") + 1 :]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
-                dep_line = cast(str, e.sink_line)
+                dep_line = cast(LineID, e.sink_line)
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line

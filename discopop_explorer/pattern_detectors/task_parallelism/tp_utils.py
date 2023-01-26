@@ -10,7 +10,15 @@ import subprocess
 from typing import cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, MWType, DepType, PETGraphX
+from discopop_explorer.PETGraphX import (
+    CUNode,
+    NodeType,
+    EdgeType,
+    MWType,
+    DepType,
+    PETGraphX,
+    LineID,
+)
 from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
 from discopop_explorer.utils import depends
 
@@ -327,8 +335,10 @@ def recursive_function_call_contained_in_worker_cu(
         # check if file_id is equal
         if file_id == cur_w_file_id:
             # trim to line numbers only
-            cur_w_starts_at_line = cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1 :]
-            cur_w_ends_at_line = cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1 :]
+            cur_w_starts_at_line = LineID(
+                cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1 :]
+            )
+            cur_w_ends_at_line = LineID(cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1 :])
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
                 # check if cur_w is tighter than last result
@@ -369,13 +379,13 @@ def task_contained_in_reduction_loop(
         # check if task is actually contained in one of the parents
         for parent_loop, last_node in parents:
             p_start_line = parent_loop.start_position()
-            p_start_line = p_start_line[p_start_line.index(":") + 1 :]
+            p_start_line = LineID(p_start_line[p_start_line.index(":") + 1 :])
             p_end_line = parent_loop.end_position()
-            p_end_line = p_end_line[p_end_line.index(":") + 1 :]
+            p_end_line = LineID(p_end_line[p_end_line.index(":") + 1 :])
             t_start_line = task.start_line
-            t_start_line = t_start_line[t_start_line.index(":") + 1 :]
+            t_start_line = LineID(t_start_line[t_start_line.index(":") + 1 :])
             t_end_line = task.end_line
-            t_end_line = t_end_line[t_end_line.index(":") + 1 :]
+            t_end_line = LineID(t_end_line[t_end_line.index(":") + 1 :])
             if p_start_line <= t_start_line and p_end_line >= t_end_line:
                 contained_in.append(parent_loop)
     # check if task is contained in a reduction loop
