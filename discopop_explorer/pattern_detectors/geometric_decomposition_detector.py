@@ -11,11 +11,11 @@ import math
 from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..PETGraphX import NodeID, PETGraphX, NodeType, CUNode, EdgeType
 from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
-__loop_iterations: Dict[str, int] = {}
+__loop_iterations: Dict[NodeID, int] = {}
 
 
 class GDInfo(PatternInfo):
@@ -109,10 +109,10 @@ def __test_chunk_limit(pet: PETGraphX, node: CUNode) -> Tuple[bool, Optional[int
     min_iterations_count = None
     inner_loop_iter = {}
 
-    children = pet.direct_children_of_type(node, NodeType.LOOP)
+    children = pet.direct_children_or_called_nodes_of_type(node, NodeType.LOOP)
 
-    for func_child in pet.direct_children_of_type(node, NodeType.FUNC):
-        children.extend(pet.direct_children_of_type(func_child, NodeType.LOOP))
+    for func_child in pet.direct_children_or_called_nodes_of_type(node, NodeType.FUNC):
+        children.extend(pet.direct_children_or_called_nodes_of_type(func_child, NodeType.LOOP))
 
     for child in children:
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
@@ -154,7 +154,7 @@ def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
     :param node: current node
     :return: number of iterations
     """
-    parent = pet.in_edges(node.id, EdgeType.CHILD)
+    parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     max_iter = 1
     visited = []  # used to prevent looping
@@ -163,11 +163,11 @@ def __get_parent_iterations(pet: PETGraphX, node: CUNode) -> int:
         # prevent looping
         if node in visited:
             break
-        visited.append(node)
         if node.type == NodeType.LOOP:
             max_iter = max(1, node.loop_iterations)
             break
-        parent = pet.in_edges(node.id, EdgeType.CHILD)
+        visited.append(node)
+        parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     return max_iter
 
@@ -183,8 +183,8 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: CUNode) -> bool:
         if not (child.reduction or child.do_all):
             return False
 
-    for child in pet.direct_children_of_type(root, NodeType.FUNC):
-        for child2 in pet.direct_children_of_type(child, NodeType.LOOP):
+    for child in pet.direct_children_or_called_nodes_of_type(root, NodeType.FUNC):
+        for child2 in pet.direct_children_or_called_nodes_of_type(child, NodeType.LOOP):
             if not (child2.reduction or child2.do_all):
                 return False
 

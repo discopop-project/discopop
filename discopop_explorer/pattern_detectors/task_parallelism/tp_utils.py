@@ -120,30 +120,14 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
     :param function_cu: target function node
     :return: List[CUNode]"""
     queue: List[CUNode] = [function_cu]
-    visited: List[CUNode] = []
     result_list: List[CUNode] = []
     while len(queue) > 0:
         cur_cu = queue.pop(0)
-        # check if cur_cu was already visited
-        if cur_cu in visited:
-            continue
-        visited.append(cur_cu)
-        # check if cur_cu inside functions body
-        if line_contained_in_region(
-            cur_cu.start_position(), function_cu.start_position(), function_cu.end_position()
-        ) and line_contained_in_region(
-            cur_cu.end_position(), function_cu.start_position(), function_cu.end_position()
-        ):
-            # cur_cu contained in function body
-            if cur_cu not in result_list:
-                result_list.append(cur_cu)
-        else:
-            # cur_cu not contained in function body
-            continue
+        if cur_cu not in result_list:
+            result_list.append(cur_cu)
         # append children to queue
-        for e in pet.out_edges(cur_cu.id, EdgeType.CHILD):
-            child_cu = pet.node_at(e[1])
-            queue.append(child_cu)
+        for e in pet.out_edges(cur_cu.id, [EdgeType.CHILD]):
+            queue.append(pet.node_at(e[1]))
     return result_list
 
 
@@ -290,7 +274,7 @@ def create_task_tree_helper(
         else:
             visited_func.append(current)
 
-    for child in pet.direct_children(current):
+    for child in pet.direct_children_or_called_nodes(current):
         mw_type = child.mw_type
 
         if mw_type in [MWType.BARRIER, MWType.BARRIER_WORKER, MWType.WORKER]:
@@ -632,7 +616,7 @@ def detect_mw_types(pet: PETGraphX, main_node: CUNode):
     """
 
     # first insert all the direct children of main node in a queue to use it for the BFS
-    for node in pet.direct_children(main_node):
+    for node in pet.direct_children_or_called_nodes(main_node):
         # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
         if node.mw_type == MWType.NONE or node.mw_type == MWType.ROOT:
             node.mw_type = MWType.FORK
@@ -647,7 +631,7 @@ def detect_mw_types(pet: PETGraphX, main_node: CUNode):
         # the other node
 
         # create the copy vector so that it only contains the other nodes
-        other_nodes = pet.direct_children(main_node)
+        other_nodes = pet.direct_children_or_called_nodes(main_node)
         other_nodes.remove(node)
 
         for other_node in other_nodes:
@@ -677,7 +661,7 @@ def detect_mw_types(pet: PETGraphX, main_node: CUNode):
     # check for Barrier Worker pairs
     # if two barriers don't have any dependency to each other then they create a barrierWorker pair
     # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-    direct_subnodes = pet.direct_children(main_node)
+    direct_subnodes = pet.direct_children_or_called_nodes(main_node)
     for n1 in direct_subnodes:
         if n1.mw_type == MWType.BARRIER:
             for n2 in direct_subnodes:

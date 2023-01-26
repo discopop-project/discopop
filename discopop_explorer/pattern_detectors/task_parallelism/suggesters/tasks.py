@@ -60,7 +60,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
         first_dependency_line_number = first_dependency_line[first_dependency_line.index(":") + 1 :]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
-                dep_line = cast(str, e.sink)
+                dep_line = cast(str, e.sink_line)
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
@@ -235,7 +235,7 @@ def correct_task_suggestions_in_loop_body(
                             # protect RAW-Writes to shared variables with critical section
                             # i.e. find in-deps to shared variables and suggest critical section around CUs
                             # containing such cases
-                            for loop_cu_child in pet.direct_children(loop_cu):
+                            for loop_cu_child in pet.direct_children_or_called_nodes(loop_cu):
                                 for in_dep_var_name in list(
                                     set(
                                         [

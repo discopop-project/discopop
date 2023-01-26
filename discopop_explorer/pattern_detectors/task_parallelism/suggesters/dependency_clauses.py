@@ -448,7 +448,7 @@ def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode
     :param pet: PET Graph
     :param parent_function: function to be analyzed
     :return: List of CUNodes contained in functions body."""
-    queue = pet.direct_children(parent_function)
+    queue = pet.direct_children_or_called_nodes(parent_function)
     potential_children = []
     visited = []
     while queue:
@@ -465,7 +465,7 @@ def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode
             parent_function.end_position(),
         ):
             potential_children.append(cur_potential_child)
-        for tmp_child in pet.direct_children(cur_potential_child):
+        for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
             if (
                 tmp_child not in queue
                 and tmp_child not in potential_children
@@ -1101,7 +1101,7 @@ def get_function_call_parameter_rw_information_recursion_step(
 
     # get potential children of called function
     recursively_visited.append(called_function_cu)
-    queue_1 = pet.direct_children(called_function_cu)
+    queue_1 = pet.direct_children_or_called_nodes(called_function_cu)
     potential_children = []
     visited = []
     while queue_1:
@@ -1119,7 +1119,7 @@ def get_function_call_parameter_rw_information_recursion_step(
         ):
             if cur_potential_child not in potential_children:
                 potential_children.append(cur_potential_child)
-        for tmp_child in pet.direct_children(cur_potential_child):
+        for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
             if (
                 tmp_child not in queue_1
                 and tmp_child not in potential_children
@@ -1144,7 +1144,7 @@ def get_function_call_parameter_rw_information_recursion_step(
         )
     ]:
         # find called functions
-        for child_func in pet.direct_children_of_type(child, NodeType.FUNC):
+        for child_func in pet.direct_children_or_called_nodes_of_type(child, NodeType.FUNC):
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
                 ret_val = get_function_call_parameter_rw_information(
@@ -1208,7 +1208,7 @@ def get_function_call_parameter_rw_information_recursion_step(
                 ):
                     function_internal_cu_nodes.append(cur)
                 # add children to queue
-                for cur_child in pet.direct_children(cur):
+                for cur_child in pet.direct_children_or_called_nodes(cur):
                     if cur_child not in function_internal_cu_nodes and cur_child not in queue:
                         queue.append(cur_child)
             for child_cu in function_internal_cu_nodes:

@@ -9,18 +9,18 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import PETGraphX, NodeType, CUNode, DepType, EdgeType
+from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, DepType, EdgeType
 from .parser import parse_inputs
 
 
-def __collect_children_ids(pet: PETGraphX, parent_id: str, children_ids: List[str]):
+def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List[NodeID]):
     if parent_id in children_ids:
         # this id has already been processed. No need to go through it again
         return children_ids
     children_ids.append(parent_id)
     children_ids = list(set(children_ids))
     # collect all of its children
-    for child_node in pet.direct_children(pet.node_at(parent_id)):
+    for child_node in pet.direct_children_or_called_nodes(pet.node_at(parent_id)):
         children_ids += __collect_children_ids(pet, child_node.id, children_ids)
         children_ids = list(set(children_ids))
     return children_ids
@@ -73,7 +73,7 @@ def __recursive_function_called_multiple_times_inside_function(
                 if cur_cu not in contained_cus:
                     contained_cus.append(cur_cu)
                 # append cur_cu children to queue
-                for child_edge in pet.out_edges(cur_cu.id, EdgeType.CHILD):
+                for child_edge in pet.out_edges(cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     child_cu = pet.node_at(child_edge[1])
                     if child_cu not in queue and child_cu not in contained_cus:
                         queue.append(child_cu)
@@ -92,8 +92,8 @@ def __recursive_function_called_multiple_times_inside_function(
 
 def __output_dependencies_of_type(
     pet: PETGraphX,
-    child_id: str,
-    children_ids: List[str],
+    child_id: NodeID,
+    children_ids: List[NodeID],
     output_file: TextIO,
     dep_type: DepType,
     dep_identifier: str,
@@ -109,15 +109,15 @@ def __output_dependencies_of_type(
     for dep in pet.in_edges(child_id, EdgeType.DATA):
         if dep[2].dtype is not dep_type:
             continue
-        if dep[2].source is None or dep[2].var_name is None or dep[2].sink is None:
+        if dep[2].source_line is None or dep[2].var_name is None or dep[2].sink_line is None:
             continue
         # check if the CUid of the dep exists in children_ids
         if dep[0] in children_ids:
             # CUid found in children_ids. So print the line numbers of this dependence
             output_file.write(
-                cast(str, dep[2].sink)
+                cast(str, dep[2].sink_line)
                 + dep_identifier
-                + cast(str, dep[2].source)
+                + cast(str, dep[2].source_line)
                 + "|"
                 + cast(str, dep[2].var_name)
                 + ","
@@ -143,7 +143,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
 
         output_file.write(recursive_function_call + " ")
 
-        children_ids: List[str] = []
+        children_ids: List[NodeID] = []
         # Output RAW deps. First collect all children IDs of currently called
         # function. Then go through the CU type nodes in them and record all deps
         # that are on the cus in this list.
@@ -203,7 +203,7 @@ def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
     cu_instantiation_input_cpp(pet, output_dir)
 
 
-def __line_contained_in_region(test_line: str, start_line: str, end_line: str) -> bool:
+def __line_contained_in_region(test_line: LineID, start_line: LineID, end_line: LineID) -> bool:
     """check if test_line is contained in [startLine, endLine].
     Return True if so. False else.
     :param test_line: <fileID>:<line>

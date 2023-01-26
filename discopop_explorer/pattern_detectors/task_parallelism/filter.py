@@ -364,7 +364,7 @@ def __filter_sharing_clause(
                 to_be_removed.append(var)
                 continue
             # 2. check if task suggestion is child of same nodes as var_def_cu
-            for in_child_edge in pet.in_edges(var_def_cu.id, EdgeType.CHILD):
+            for in_child_edge in pet.in_edges(var_def_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                 parent_cu = pet.node_at(in_child_edge[0])
                 # check if task suggestion cu is reachable from parent via child edges
                 if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):

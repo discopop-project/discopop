@@ -10,7 +10,7 @@
 from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
+from ..PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
 from ..utils import correlation_coefficient, classify_task_vars, contains
 
 __pipeline_threshold = 0.9
@@ -70,14 +70,14 @@ class PipelineInfo(PatternInfo):
 
         self._stages = [
             pet.node_at(t)
-            for s, t, d in pet.out_edges(node.id, EdgeType.CHILD)
+            for s, t, d in pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
             if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)
         ]
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 
     def __in_dep(self, node: CUNode):
-        raw: List[Tuple[str, str, Dependency]] = []
+        raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend(
                 (s, t, d)
@@ -92,7 +92,7 @@ class PipelineInfo(PatternInfo):
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
     def __out_dep(self, node: CUNode):
-        raw: List[Tuple[str, str, Dependency]] = []
+        raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend(
                 (s, t, d)
@@ -123,7 +123,7 @@ class PipelineInfo(PatternInfo):
         )
 
 
-def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[LineID]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param root: root node
@@ -180,7 +180,7 @@ def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cac
 
     loop_subnodes = [
         pet.node_at(t)
-        for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+        for s, t, d in pet.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
     ]
 

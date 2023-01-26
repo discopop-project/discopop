@@ -424,7 +424,7 @@ def check_loop_scopes(pet: PETGraphX):
     (expand only) if necessary
     :param pet: PET graph"""
     for loop_cu in pet.all_nodes(NodeType.LOOP):
-        for child in pet.direct_children(loop_cu):
+        for child in pet.direct_children_or_called_nodes(loop_cu):
             if not line_contained_in_region(
                 child.start_position(), loop_cu.start_position(), loop_cu.end_position()
             ):
