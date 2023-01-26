@@ -236,8 +236,8 @@ class GPURegions:
                 # var is consumed, if incoming RAW dep exists
                 for sink_cu_id, source_cu_id, dep in in_dep_edges:
                     # unpack dep for sake of clarity
-                    sink_line = dep.sink
-                    source_line = dep.source
+                    sink_line = dep.sink_line
+                    source_line = dep.source_line
                     var_name = dep.var_name
 
                     if self.pet.node_at(source_cu_id) not in region_cus:
@@ -252,8 +252,8 @@ class GPURegions:
                 # var is produced, if outgoing RAW or WAW dep exists
                 for sink_cu_id, source_cu_id, dep in out_dep_edges:
                     # unpack dep for sake of clarity
-                    sink_line = dep.sink
-                    source_line = dep.source
+                    sink_line = dep.sink_line
+                    source_line = dep.source_line
                     var_name = dep.var_name
                     if self.pet.node_at(sink_cu_id) not in region_cus:
                         if dep.dtype in [DepType.RAW, DepType.WAW]:

@@ -209,7 +209,7 @@ class CombinedGPURegion(PatternInfo):
         pet: PETGraphX,
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
-        liveness: dict[str, list[str]],
+        liveness: Dict[str, List[str]],
     ):
         for region in self.contained_regions:
             for gpu_loop in region.contained_loops:
@@ -259,14 +259,14 @@ class CombinedGPURegion(PatternInfo):
                     # ept = FROM if incoming RAW edge to var_name exists
 
                     # TEST: check unfiltered deps for aliasing
-                    unfiltered_in_raw_deps = [
+                    unfiltered_in_raw_deps: List[Tuple[str, str, Dependency]] = [
                         (s, t, d)
                         for (s, t, d) in in_raw_deps
                         if d.dtype == DepType.RAW and s not in loop_subtree
                     ]
                     print("\t", [(str(s), str(t), str(d)) for s, t, d in unfiltered_in_raw_deps])
 
-                    alias_raw_deps = [
+                    alias_raw_deps: List[Tuple[str, str, Dependency]] = [
                         (s, t, d)
                         for (s, t, d) in unfiltered_in_raw_deps
                         if pet.unused_check_alias(s, t, d, pet.node_at(gpu_loop.node_id))
@@ -279,8 +279,8 @@ class CombinedGPURegion(PatternInfo):
 
                     # check if var_name is written at the line of any alias dep
                     alias_based_raw_deps: List[Tuple[Any, Any, Any]] = []
-                    for (s, t, d) in alias_raw_deps:
-                        line_num = d.source
+                    for s, t, d in alias_raw_deps:
+                        line_num = d.source_line
                         print("\t\tLine num: ", line_num)
                         written_in_line: List[str] = []
                         # get incoming RAW edges
@@ -426,7 +426,7 @@ class CombinedGPURegion(PatternInfo):
         pet: PETGraphX,
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]],
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]],
-        liveness: dict[str, list[str]],
+        liveness: Dict[str, List[str]],
     ):
         # optimize map to and map alloc
         to_be_removed: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
@@ -1131,7 +1131,13 @@ class CombinedGPURegion(PatternInfo):
                             else EntryPointType.ASYNC_TO_DEVICE
                         )
                         updated_entry_points.append(
-                            (var, t, ept, cast(str, dep.source), EntryPointPositioning.AFTER_CU)
+                            (
+                                var,
+                                t,
+                                ept,
+                                cast(str, dep.source_line),
+                                EntryPointPositioning.AFTER_CU,
+                            )
                         )
                         found_update = True
                         # create dependency
@@ -1144,7 +1150,7 @@ class CombinedGPURegion(PatternInfo):
                             )
                         )
                         out_dependencies.append(
-                            (var, t, cast(str, dep.source), ExitPointPositioning.AFTER_CU)
+                            (var, t, cast(str, dep.source_line), ExitPointPositioning.AFTER_CU)
                         )
                 if found_update:
                     break

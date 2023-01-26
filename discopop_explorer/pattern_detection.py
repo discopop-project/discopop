@@ -33,7 +33,7 @@ class DetectionResult(object):
     simple_gpu: List[PatternInfo]
     combined_gpu: List[PatternInfo]
 
-    def __init__(self, pet):
+    def __init__(self, pet: PETGraphX):
         self.pet = pet
         pass
 
@@ -95,7 +95,7 @@ class PatternDetectorX(object):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.calculateFunctionMetadata()
-        res = DetectionResult()
+        res = DetectionResult(self.pet)
 
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
