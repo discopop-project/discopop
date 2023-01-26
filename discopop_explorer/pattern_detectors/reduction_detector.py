@@ -12,6 +12,7 @@ from typing import List
 from .PatternInfo import PatternInfo
 from ..PETGraphX import PETGraphX, NodeType, CUNode
 from ..utils import is_reduction_var, classify_loop_variables, contains
+from ..variable import Variable
 
 
 class ReductionInfo(PatternInfo):
@@ -23,14 +24,14 @@ class ReductionInfo(PatternInfo):
         :param node: node, where reduction was detected
         """
         PatternInfo.__init__(self, node)
-        self.pragma = "#pragma omp parallel for"
+        self.pragma = "// POTENTIAL REDUCTION: "
 
         fp, p, lp, s, r = classify_loop_variables(pet, node)
-        self.first_private = fp
-        self.private = p
-        self.last_private = lp
-        self.shared = s
-        self.reduction = r
+        self.first_private: List[Variable] = []  # fp
+        self.private: List[Variable] = []  # p
+        self.last_private: List[Variable] = []  # lp
+        self.shared: List[Variable] = []  # s
+        self.reduction: List[Variable] = r
 
     def __str__(self):
         return (

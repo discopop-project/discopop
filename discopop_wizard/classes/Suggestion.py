@@ -115,7 +115,7 @@ class Suggestion(object):
     def __get_pragmas(self) -> List[Tuple[int, int, str]]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
-        if self.type == "do_all" or self.type == "reduction":
+        if self.type == "do_all":
             pragma = "#pragma omp parallel for "
             if len(self.values["first_private"]) > 0:
                 pragma += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
@@ -125,6 +125,21 @@ class Suggestion(object):
                 pragma += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
             if len(self.values["shared"]) > 0:
                 pragma += "shared(" + ",".join(self.values["shared"]) + ") "
+            if len(self.values["reduction"]) > 0:
+                reductions_dict = dict()
+                for entry in self.values["reduction"]:
+                    red_type = entry.split(":")[0]
+                    var = entry.split(":")[1]
+                    if red_type not in reductions_dict:
+                        reductions_dict[red_type] = []
+                    reductions_dict[red_type].append(var)
+                for red_type in reductions_dict:
+                    pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+            pragma_tuple = (self.start_line, self.end_line, pragma)
+            pragmas.append(pragma_tuple)
+            return pragmas
+        elif self.type == "reduction":
+            pragma = self.values["pragma"]
             if len(self.values["reduction"]) > 0:
                 reductions_dict = dict()
                 for entry in self.values["reduction"]:
