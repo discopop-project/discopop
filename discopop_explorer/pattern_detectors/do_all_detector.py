@@ -58,7 +58,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
         print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
-            if node.loop_iterations >= 0:
+            if node.loop_iterations >= 0:  # and not node.reduction:  keep old code for potential reversing
                 result.append(DoAllInfo(pet, node))
 
     return result

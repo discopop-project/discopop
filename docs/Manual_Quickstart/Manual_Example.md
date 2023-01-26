@@ -80,24 +80,25 @@ In order to generate parallelization suggestions from the [gathered data](../Pro
     discopop_explorer --path=. --dep-file=out_prof_dep.txt
 
 By default, the DiscoPoP Explorer outputs parallelization suggestions to the console.
-It should show three different suggestions in total.
-* The first should be a `Do-all` with the `Start line 1:19`.
-* The second should be  `Reduction` with the `Start line 1:23`.
-* The third should be a `Geometric Decomposition`.
+It should show four different suggestions in total.
+* Two `Do-all` suggestions, 
+* one `Reduction` suggestion,
+* and one `Geometric Decomposition`.
 
 ## Step 3: Interpreting and Implementing the Suggestions
 For detailed information on how to interpret and implement the created suggestions, please refer to the [pattern wiki](../Pattern_Detection/Patterns/Patterns.md).
 
 Looking at the created suggestions there are two ways that the code can be parallelized (the parallelized code can be found inside the example directory as `solution1.cpp` and `solution2.cpp`):
 
-* **Implementing the Do-All and Reduction Patterns**<br/> To implement the `Do-All` and `Reduction` patterns all we have to do is to add the suggested pragma before each loop. Make sure to add the `reduction` clause when implementing Reductions! The DiscoPoP Explorer also suggests classifications for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
-  - To implement the `Do-All` suggestion we add the following line before the corresponding loop.
+* **Implementing the Do-All and Reduction Patterns**<br/> 
+To implement the suggested `Do-All` patterns, all we have to do is to add the suggested pragma before each loop. One of the suggestions should contain a suggested `reduction` clause. Make sure to add the `reduction` clause when implementing this `Do-All` pattern! The suggested `Reduction` pattern does not provide a pragma to be inserted, as it relies on the previously mentioned `Do-All` and is only suggested as a possible hint towards the user. In addition, the DiscoPoP Explorer also suggests classifications for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
+  - To implement the first `Do-All` suggestion we add the following line before the corresponding loop.
       
         #pragma omp parallel for shared(Arr,N)
 
-  - To implement the `Reduction` suggestion we add the following line before the corresponding loop.
-    
-        # pragma omp parallel for reduction(+:sum) shared(Arr,N)
+  - To implement the second `Do-All` suggestion, which contains the `Reduction`, we add the following line before the corresponding loop.
+
+        #pragma omp parallel for reduction(+:sum) shared(Arr,N)
 
   - For this specific example, when we implement both patterns it is better to open only one parallel region with `#pragma omp parallel` and use the `pragma omp for` before each loop:
 
