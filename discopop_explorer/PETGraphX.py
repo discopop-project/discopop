@@ -75,7 +75,7 @@ class MWType(Enum):
 
 
 class NodeID(str):
-    # simpler alternative:
+    # simpler but still strong typing alternative:
     # NodeID = NewType("NodeID", str) or remove __init__
     def __init__(self, id_string: str):
         # check format of newly created NodeID's
@@ -92,7 +92,7 @@ class NodeID(str):
 
 
 class LineID(str):
-    # simpler alternative:
+    # simpler but still strong typing alternative:
     # LineID = NewType("LineID", str) or remove __init__
     def __init__(self, id_string: str):
         # check format of newly created LineID's
