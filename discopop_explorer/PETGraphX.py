@@ -6,9 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import itertools
 from enum import IntEnum, Enum
-from platform import node
-from typing import Dict, List, Tuple, Set, Optional, cast, Union, NewType
+from typing import Dict, List, Tuple, Set, Optional, cast, Union
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -16,8 +16,6 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
-import time
-import itertools
 
 node_props = [
     ("BasicBlockID", "string", "''"),
