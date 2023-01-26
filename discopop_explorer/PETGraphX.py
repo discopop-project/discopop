@@ -8,7 +8,7 @@
 
 from enum import IntEnum, Enum
 from platform import node
-from typing import Dict, List, Tuple, Set, Optional, cast, Union
+from typing import Dict, List, Tuple, Set, Optional, cast, Union, NewType
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -76,8 +76,8 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
-NodeID = str  # fileID:nodeID
-LineID = str  # fileID:lineNr
+NodeID = NewType("NodeID", str)  # fileID:nodeID
+LineID = NewType("LineID", str)  # fileID:lineNr
 
 
 class Dependency:
