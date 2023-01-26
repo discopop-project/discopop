@@ -7,16 +7,16 @@
 # directory for details.
 import json
 
-from ..PETGraphX import CUNode
+from ..PETGraphX import CUNode, NodeID, LineID
 
 
 class PatternInfo(object):
     """Base class for pattern detection info"""
 
     _node: CUNode
-    node_id: str
-    start_line: str
-    end_line: str
+    node_id: NodeID
+    start_line: LineID
+    end_line: LineID
     iterations_count: int
     instructions_count: int
     workload: int

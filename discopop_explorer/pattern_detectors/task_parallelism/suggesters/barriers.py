@@ -8,7 +8,7 @@
 
 from typing import List, cast, Tuple, Any
 
-from discopop_explorer.PETGraphX import CUNode, EdgeType, NodeType, PETGraphX
+from discopop_explorer.PETGraphX import CUNode, EdgeType, NodeType, PETGraphX, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
@@ -79,7 +79,7 @@ def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -
             out_dep_edges.remove(e)
 
         v_first_line = v.start_position()
-        v_first_line = v_first_line[v_first_line.index(":") + 1 :]
+        v_first_line = LineID(v_first_line[v_first_line.index(":") + 1 :])
 
         task_count, barrier_count, omittable_count, normal_count = __count_adjacent_nodes(
             pet, suggestions, out_dep_edges, task_nodes, barrier_nodes, omittable_nodes
@@ -110,16 +110,16 @@ def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -
             uncovered_task_exists = False
             for ct in child_tasks:
                 ct_start_line = ct.start_position()
-                ct_start_line = ct_start_line[ct_start_line.index(":") + 1 :]
+                ct_start_line = LineID(ct_start_line[ct_start_line.index(":") + 1 :])
                 ct_end_line = ct.end_position()
-                ct_end_line = ct_end_line[ct_end_line.index(":") + 1 :]
+                ct_end_line = LineID(ct_end_line[ct_end_line.index(":") + 1 :])
                 # check if ct covered by a barrier
                 for cb_id in child_barriers:
                     cb = pet.node_at(cb_id)
                     cb_start_line = cb.start_position()
-                    cb_start_line = cb_start_line[cb_start_line.index(":") + 1 :]
+                    cb_start_line = LineID(cb_start_line[cb_start_line.index(":") + 1 :])
                     cb_end_line = cb.end_position()
-                    cb_end_line = cb_end_line[cb_end_line.index(":") + 1 :]
+                    cb_end_line = LineID(cb_end_line[cb_end_line.index(":") + 1 :])
                     if not (cb_start_line > ct_start_line and cb_end_line > ct_end_line):
                         uncovered_task_exists = True
             if uncovered_task_exists:
@@ -363,7 +363,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(
             # actual change
             cu.tp_contains_taskwait = True
             pragma_line = cu.end_position()  # since return has to be the last statement in a CU
-            pragma_line = pragma_line[pragma_line.index(":") + 1 :]
+            pragma_line = LineID(pragma_line[pragma_line.index(":") + 1 :])
             tmp_suggestion = TaskParallelismInfo(
                 cu, TPIType.TASKWAIT, ["taskwait"], pragma_line, [], [], []
             )
@@ -520,7 +520,7 @@ def suggest_missing_barriers_for_global_vars(
                         # actual change
                         pet.node_at(succ_edge[1]).tp_contains_taskwait = True
                         first_line = pet.node_at(succ_edge[1]).start_position()
-                        first_line = first_line[first_line.index(":") + 1 :]
+                        first_line = LineID(first_line[first_line.index(":") + 1 :])
                         tmp_suggestion = TaskParallelismInfo(
                             pet.node_at(succ_edge[1]),
                             TPIType.TASKWAIT,

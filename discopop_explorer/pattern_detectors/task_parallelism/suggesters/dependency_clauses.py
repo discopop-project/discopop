@@ -9,7 +9,7 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX, NodeID, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -173,7 +173,7 @@ def get_alias_information(
         if s.type is TPIType.TASK
     ]
     # collect alias information
-    aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, str, str]]]] = dict()
+    aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]] = dict()
     called_function_cache: Dict = dict()
     for ts in task_suggestions:
         current_alias_entry = []
@@ -195,7 +195,7 @@ def get_alias_information(
                 function_call_string, ts._node.recursive_function_calls[0], ts._node
             )
             # get CU Node object of called function
-            called_function_cu_id = None
+            called_function_cu_id: Optional[NodeID] = None
             for recursive_function_call_entry in ts._node.recursive_function_calls:
                 if recursive_function_call_entry is None:
                     continue
@@ -215,7 +215,7 @@ def get_alias_information(
                     continue
                 if called_function_cu_id is None:
                     continue
-                called_function_cu_id_not_none = cast(str, called_function_cu_id)
+                called_function_cu_id_not_none = cast(NodeID, called_function_cu_id)
                 current_alias = [
                     (
                         param,
@@ -727,7 +727,7 @@ def get_alias_for_parameter_at_position(
     source_code_files: Dict[str, str],
     visited: List[Tuple[CUNode, int]],
     called_function_cache: Dict,
-) -> List[Tuple[str, str, str, str]]:
+) -> List[Tuple[str, str, LineID, LineID]]:
     """Returns alias information for a parameter at a specific position.
     :param pet: PET Graph
     :param function: CUNode of called function
@@ -920,9 +920,9 @@ def get_function_call_parameter_rw_information(
         raise ValueError("Unsufficient information!")
     # 5. get R/W information for scf's parameters based on CUInstResult.txt
     # 5.1. get CU object corresponding to called function
-    called_function_cu_id = None
+    called_function_cu_id: Optional[NodeID] = None
     if called_cu_id is not None:
-        called_function_cu_id = called_cu_id
+        called_function_cu_id = cast(NodeID, called_cu_id)
         if called_function_name is None:
             called_function_name = pet.node_at(called_function_cu_id).name
     else:

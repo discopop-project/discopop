@@ -33,7 +33,7 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     :return: True, if recursive call inside any loop body. False otherwise."""
     for tmp_cu in pet.all_nodes(NodeType.LOOP):
         if __line_contained_in_region(
-            recursive_function_call.split(" ")[-1].replace(",", ""),
+            LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
             tmp_cu.start_position(),
             tmp_cu.end_position(),
         ):
@@ -51,7 +51,7 @@ def __recursive_function_called_multiple_times_inside_function(
     for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
         # 1. get parent function of recursive function call
         if not __line_contained_in_region(
-            recursive_function_call.split(" ")[-1].replace(",", ""),
+            LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
             tmp_func_cu.start_position(),
             tmp_func_cu.end_position(),
         ):
