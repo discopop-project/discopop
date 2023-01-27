@@ -1561,7 +1561,7 @@ def find_combined_gpu_regions(
 
     # determine relations between single-element regions
     combinable_pairs: List[
-        Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]
+        Tuple[CombinedGPURegion, CombinedGPURegion]
     ] = __find_all_pairwise_gpu_region_combinations(combined_gpu_regions, pet)
 
     intra_function_combinations = __find_combinations_within_function_body(pet, combinable_pairs)
@@ -1631,13 +1631,13 @@ def __find_true_successor_combinations(
 
 
 def __find_combinations_within_function_body(
-    pet: PETGraphX, combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]]
+    pet: PETGraphX, combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
 ) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     """Check regions pairwise for reachability via successor edges.
     Only combinations within a function's body are possible in this way since successor edges only exist
     for function body's."""
     result = []
-    for region_1, region_2, _ in combinable_pairs:
+    for region_1, region_2 in combinable_pairs:
         if region_1 == region_2:
             continue
         # check reachability in both directions via successor edges
@@ -1661,32 +1661,18 @@ def __find_combinations_within_function_body(
 
 def __find_all_pairwise_gpu_region_combinations(
     gpu_regions: List[CombinedGPURegion], pet: PETGraphX
-) -> List[Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]]:
-    combinable_pairs: List[
-        Tuple[CombinedGPURegion, CombinedGPURegion, List[str]]
-    ] = []  # [(region1, region2, [common data])
-    # check pairwise if gpu regions can be combined
+) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
+    combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]] = []  # [(region1, region2)
+    # get all pairwise combinations of gpu regions
     for gpu_region_1 in gpu_regions:
         for gpu_region_2 in gpu_regions:
             if gpu_region_1 == gpu_region_2:
                 continue
-            # check if same data is accessed
-            if __common_data_accessed(
-                gpu_region_1.contained_regions[0], gpu_region_2.contained_regions[0], pet
-            ):
-                common_data = [
-                    var
-                    for var in gpu_region_1.contained_regions[0].consumed_vars
-                    + gpu_region_1.contained_regions[0].produced_vars
-                    if var
-                    in gpu_region_2.contained_regions[0].produced_vars
-                    + gpu_region_2.contained_regions[0].consumed_vars
-                ]
-                combinable_pairs.append((gpu_region_1, gpu_region_2, common_data))
+            combinable_pairs.append((gpu_region_1, gpu_region_2))
     return combinable_pairs
 
 
-def __common_data_accessed(
+def __unused_common_data_accessed(
     gpu_region_1: GPURegionInfo, gpu_region_2: GPURegionInfo, pet: PETGraphX
 ) -> bool:
     # common data is accessed, if a transitive RAW / WAR dependency from gpu_region_1 to gpu_region_2 or
