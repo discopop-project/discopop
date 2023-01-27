@@ -491,14 +491,16 @@ class CombinedGPURegion(PatternInfo):
                     for _, target_id, dep in pet.out_edges(sink_cu_id)
                     if dep.var_name is not None and dep.dtype == DepType.RAW
                 ]
-                filtered_deps = [(t, d) for (t, d) in out_deps if t in source_cu_ids]
+                filtered_deps: List[Tuple[str, Dependency]] = [
+                    (t, d) for (t, d) in out_deps if t in source_cu_ids
+                ]
                 # report UpdateInstructions
                 for source_cu_id, dep in filtered_deps:
                     # use Host code to handle updates
                     if update_type == UpdateType.TO_DEVICE:
-                        pragma_position = dep.sink
+                        pragma_position = dep.sink_line
                     elif update_type == UpdateType.FROM_DEVICE:
-                        pragma_position = dep.source
+                        pragma_position = dep.source_line
                     else:
                         raise ValueError("Unsupported update type: ", update_type)
                     update_instructions.append(
