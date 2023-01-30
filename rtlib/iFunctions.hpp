@@ -43,7 +43,7 @@ namespace __dp {
             depType;
 
     struct AccessInfo {
-        AccessInfo(bool isRead, LID lid, char *var, char* AAvar, ADDR addr, bool skip = false)
+        AccessInfo(bool isRead, LID lid, char *var, string AAvar, ADDR addr, bool skip = false)
                 : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
 
         AccessInfo() : lid(0) {}
@@ -54,18 +54,18 @@ namespace __dp {
         // End HA
         LID lid;
         char *var;
-        char *AAvar;  // name of allocated variable -> "Anti Aliased Variable"
+        string AAvar;  // name of allocated variable -> "Anti Aliased Variable"
         ADDR addr;
     };
 
     // For runtime dependency merging
     struct Dep {
-        Dep(depType T, LID dep, char *var, char *AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+        Dep(depType T, LID dep, char *var, string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
         depType type;
         LID depOn;
         char *var;
-        char *AAvar;
+        string AAvar;
     };
 
     struct compDep {
@@ -147,7 +147,7 @@ namespace __dp {
 
     void *analyzeDeps(void *arg);
 
-    char* getAllocatedVariable(char* fallback, ADDR addr);
+    string getAllocatedVariable(string fallback, ADDR addr);
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
 
@@ -168,6 +168,7 @@ namespace __dp {
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var);
     void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numElements);
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits);
     // End HA
 #endif
     // hybrid analysis

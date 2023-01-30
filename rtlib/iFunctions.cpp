@@ -63,7 +63,8 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, char*, int64_t, int64_t, int64_t>> allocatedVariables;
+    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedVariables;
+    int32_t nextFreeAllocaId = 0;
 
     /******* BEGIN: parallelization section *******/
 
@@ -87,7 +88,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var, char* AAvar) {
+    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -281,12 +282,12 @@ namespace __dp {
     }
 
     
-    char* getAllocatedVariable(char* fallback, ADDR addr){
+    string getAllocatedVariable(string fallback, ADDR addr){
         // TODO more efficient implementation
-        for(tuple<LID, char*, int64_t, int64_t, int64_t> entry : allocatedVariables){
+        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedVariables){
             if(get<2>(entry) <= addr && get<3>(entry) >= addr){
                 // TODO REMOVE PRINT
-                if(strcmp(fallback, get<1>(entry)) != 0){
+                if(fallback.compare(get<1>(entry)) != 0){
                     cout << "AAVAR: " << fallback << " --> " << get<1>(entry) << "\n";
                 }
                 return get<1>(entry);
@@ -634,8 +635,19 @@ namespace __dp {
         cout << "alloca: " << decodeLID(lid) << ", " << var << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumElements: %lld\n", numElements);
         // create entry to list of allocatedVariables
-        allocatedVariables.push_back(tuple<LID, char*, int64_t, int64_t, int64_t>{lid, var, startAddr, endAddr, numElements});
+        string var_name = var;
+        allocatedVariables.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
     }
+
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
+        string var_str = to_string(nextFreeAllocaId);
+        nextFreeAllocaId++;
+
+        cout << "new: " << decodeLID(lid) << ", " << var_str << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        printf(" NumBits: %lld\n", numBits);
+
+        allocatedVariables.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_str, startAddr, endAddr, numBits/8});
+    } 
 
     void __dp_report_bb(int32_t bbIndex) {
         bbList->insert(bbIndex);

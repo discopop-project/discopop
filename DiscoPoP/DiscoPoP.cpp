@@ -75,6 +75,11 @@ void DiscoPoP::setupCallbacks() {
                                                 Int32, CharPtr, Int64, Int64, Int64
     );
 
+    DpNew = ThisModule->getOrInsertFunction("__dp_new",
+                                                Void,
+                                                Int32, Int64, Int64, Int64
+    );
+
 /*    DpDecl = ThisModule->getOrInsertFunction("__dp_decl",
                                             Void,
 #ifdef SKIP_DUP_INSTR
@@ -2982,6 +2987,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     insertDpFinalize(&*BI);
                     continue;
                 }
+                if (fn.equals("_Znam") || fn.equals("_Znwm"))
+                {
+                    instrumentNew(cast<CallInst>(BI));
+                    continue;
+                }
 
             }
             int32_t lid = getLID(&*BI, fileID);
@@ -3056,6 +3066,41 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(endAddr);
     args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
+}
+
+void DiscoPoP::instrumentNew(CallInst *toInstrument) {
+    int32_t lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value* endAddr = startAddr;
+    Value* numElements = toInstrument->getArgOperand(0);
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);
+    args.push_back(numElements);
+
+    IRB.CreateCall(DpNew, args, "");
+    
+
+/*    bool isGlobal;
+    Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    args.push_back(startAddr);
+    
+    Value *endAddr = startAddr;
+    if(toInstrument->isArrayAllocation()){
+        // endAddr = startAddr + allocated size
+        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+    }
+    args.push_back(endAddr);
+    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    IRB.CreateCall(DpNew, args, "");   
+*/
 }
 
 // TODO instrument free

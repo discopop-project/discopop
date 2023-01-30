@@ -261,6 +261,8 @@ namespace {
         //void insertDpFinalize(Instruction *before);
         void instrumentAlloca(AllocaInst *toInstrument);
 
+        void instrumentNew(CallInst *toInstrument);
+
         void instrumentStore(StoreInst *toInstrument);
 
         void instrumentLoad(LoadInst *toInstrument);
@@ -278,7 +280,7 @@ namespace {
         // Callbacks to run-time library
         FunctionCallee DpInit, DpFinalize;
         FunctionCallee DpRead, DpWrite;
-        FunctionCallee DpAlloca; //, DpDecl;
+        FunctionCallee DpAlloca, DpNew; //, DpDecl;
         FunctionCallee DpCallOrInvoke;
         FunctionCallee DpFuncEntry, DpFuncExit;
         FunctionCallee DpLoopEntry, DpLoopExit;
