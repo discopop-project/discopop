@@ -43,8 +43,8 @@ namespace __dp {
             depType;
 
     struct AccessInfo {
-        AccessInfo(bool isRead, LID lid, char *var, ADDR addr, bool skip = false)
-                : isRead(isRead), lid(lid), var(var), addr(addr), skip(skip) {}
+        AccessInfo(bool isRead, LID lid, char *var, char* AAvar, ADDR addr, bool skip = false)
+                : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
 
         AccessInfo() : lid(0) {}
 
@@ -54,16 +54,18 @@ namespace __dp {
         // End HA
         LID lid;
         char *var;
+        char *AAvar;  // name of allocated variable -> "Anti Aliased Variable"
         ADDR addr;
     };
 
     // For runtime dependency merging
     struct Dep {
-        Dep(depType T, LID dep, char *var) : type(T), depOn(dep), var(var) {}
+        Dep(depType T, LID dep, char *var, char *AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
         depType type;
         LID depOn;
         char *var;
+        char *AAvar;
     };
 
     struct compDep {
@@ -129,7 +131,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var);
+    void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
 
     void outputDeps();
 
@@ -144,6 +146,8 @@ namespace __dp {
     void mergeDeps();
 
     void *analyzeDeps(void *arg);
+
+    char* getAllocatedVariable(char* fallback, ADDR addr);
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
 

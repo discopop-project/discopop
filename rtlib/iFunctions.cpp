@@ -14,6 +14,7 @@
 #include "shadow.hpp"
 #include "signature.hpp"
 #include <string>
+#include <list>
 #include <cstdio>
 
 #ifdef __linux__ // headers only available on Linux
@@ -62,7 +63,7 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    stack<tuple<LID, char*, int64_t, int64_t, int64_t>> allocatedVariables;
+    list<tuple<LID, char*, int64_t, int64_t, int64_t>> allocatedVariables;
 
     /******* BEGIN: parallelization section *******/
 
@@ -86,7 +87,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var) {
+    void addDep(depType type, LID curr, LID depOn, char *var, char* AAvar) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -94,10 +95,10 @@ namespace __dp {
         depMap::iterator posInDeps = myMap->find(curr);
         if (posInDeps == myMap->end()) {
             depSet *tmp_depSet = new depSet();
-            tmp_depSet->insert(Dep(type, depOn, var));
+            tmp_depSet->insert(Dep(type, depOn, var, AAvar));
             myMap->insert(pair<int32_t, depSet *>(curr, tmp_depSet));
         } else {
-            posInDeps->second->insert(Dep(type, depOn, var));
+            posInDeps->second->insert(Dep(type, depOn, var, AAvar));
         }
 
         if (DP_DEBUG) {
@@ -149,6 +150,7 @@ namespace __dp {
 
                     dep += " " + decodeLID(d.depOn);
                     dep += "|" + string(d.var);
+                    dep += "(" + string(d.AAvar) + ")";
                     lineDeps.insert(dep);
                 }
 
@@ -278,6 +280,21 @@ namespace __dp {
         pthread_attr_destroy(&attr);
     }
 
+    
+    char* getAllocatedVariable(char* fallback, ADDR addr){
+        // TODO more efficient implementation
+        for(tuple<LID, char*, int64_t, int64_t, int64_t> entry : allocatedVariables){
+            if(get<2>(entry) <= addr && get<3>(entry) >= addr){
+                // TODO REMOVE PRINT
+                if(strcmp(fallback, get<1>(entry)) != 0){
+                    cout << "AAVAR: " << fallback << " --> " << get<1>(entry) << "\n";
+                }
+                return get<1>(entry);
+            }
+        }
+        return fallback;
+    }
+
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
         int64_t workerID = addr % NUM_WORKERS;
         numAccesses[workerID]++;
@@ -285,6 +302,7 @@ namespace __dp {
         current.isRead = isRead;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getAllocatedVariable(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -368,23 +386,23 @@ namespace __dp {
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var);
+                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var);
+                            addDep(INIT, access.lid, 0, access.var, access.AAvar);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var);
+                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var);
+                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar);
                             }
                         }
                     }
@@ -503,6 +521,7 @@ namespace __dp {
         current.isRead = true;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getAllocatedVariable(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -549,6 +568,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getAllocatedVariable(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -595,6 +615,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = 0;
         current.var = var;
+        current.AAvar = getAllocatedVariable(var, addr);
         current.addr = addr;
         current.skip = true;
 
@@ -613,7 +634,7 @@ namespace __dp {
         cout << "alloca: " << decodeLID(lid) << ", " << var << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumElements: %lld\n", numElements);
         // create entry to list of allocatedVariables
-        allocatedVariables.push(tuple<LID, char*, int64_t, int64_t, int64_t>{lid, var, startAddr, endAddr, numElements});
+        allocatedVariables.push_back(tuple<LID, char*, int64_t, int64_t, int64_t>{lid, var, startAddr, endAddr, numElements});
     }
 
     void __dp_report_bb(int32_t bbIndex) {
