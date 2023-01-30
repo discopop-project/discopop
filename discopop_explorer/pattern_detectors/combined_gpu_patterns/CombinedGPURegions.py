@@ -114,6 +114,10 @@ class CombinedGPURegion(PatternInfo):
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
         # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
 
+        # mark dirty variables:
+        extended_device_liveness = self.__mark_dirty_variables(pet, device_liveness)
+        extended_host_liveness = self.__mark_dirty_variables(pet, host_liveness)
+
         #######################################
 
         # self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
@@ -180,7 +184,7 @@ class CombinedGPURegion(PatternInfo):
         print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
-        self.__get_metadata(pet, device_liveness, host_liveness)
+        self.__get_metadata(pet, extended_device_liveness, extended_host_liveness)
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -606,8 +610,8 @@ class CombinedGPURegion(PatternInfo):
     def __get_metadata(
         self,
         pet: PETGraphX,
-        device_liveness: Dict[str, List[str]],
-        host_liveness: Dict[str, List[str]],
+        device_liveness: Dict[str, List[Tuple[str, bool]]],
+        host_liveness: Dict[str, List[Tuple[str, bool]]],
     ):
         """Create metadata and store it in the respective fields."""
         for device_cu_id in self.device_cu_ids:
@@ -633,19 +637,23 @@ class CombinedGPURegion(PatternInfo):
         lines: Set[str] = set()
         for var_name in device_liveness:
             lines = set()
-            for cu_id in device_liveness[var_name]:
+            for cu_id, dirty in device_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
-                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+                    lines.add(
+                        "" + str(cu_node.file_id) + ":" + str(line) + ":" + ("*" if dirty else "")
+                    )
             self.meta_device_liveness[var_name] = list(lines)
         # get host liveness as metadata
         self.meta_host_liveness = dict()
         for var_name in host_liveness:
             lines = set()
-            for cu_id in host_liveness[var_name]:
+            for cu_id, dirty in host_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
-                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+                    lines.add(
+                        "" + str(cu_node.file_id) + ":" + str(line) + ":" + ("*" if dirty else "")
+                    )
             self.meta_host_liveness[var_name] = list(lines)
 
     def __get_contained_lines(self, start_line: str, end_line: str) -> List[str]:
@@ -1551,6 +1559,49 @@ class CombinedGPURegion(PatternInfo):
         for key in host_liveness_sets:
             host_liveness[key] = list(host_liveness_sets[key])
         return host_liveness
+
+    def __mark_dirty_variables(
+        self, pet: PETGraphX, liveness: Dict[str, List[str]]
+    ) -> Dict[str, List[Tuple[str, bool]]]:
+        extended_liveness: Dict[str, List[Tuple[str, bool]]] = dict()
+        for var_name in liveness:
+            for cu_id in liveness[var_name]:
+                cu_node = pet.node_at(cu_id)
+                dirty = False
+                # check if a statically identifiable write to var_name exists
+                cu_vars = cu_node.local_vars + cu_node.global_vars
+                for cu_var in cu_vars:
+                    if cu_var.name == var_name:
+                        if "W" in cu_var.accessMode:
+                            dirty = True
+                            break
+
+                if not dirty:
+                    # check if a dynamic dependency writes to var_name
+                    in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
+                    out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+
+                    written_vars = [
+                        d.var_name
+                        for s, t, d in in_dep_edges
+                        if d.dtype == DepType.RAW or d.dtype == DepType.WAW
+                    ]
+                    written_vars += [
+                        d.var_name
+                        for s, t, d in out_dep_edges
+                        if d.dtype == DepType.WAR or d.dtype == DepType.WAW
+                    ]
+                    written_vars = list(set(written_vars))
+
+                    if var_name in written_vars:
+                        dirty = True
+
+                # create entry in extended_liveness
+                if var_name not in extended_liveness:
+                    extended_liveness[var_name] = []
+                extended_liveness[var_name].append((cu_id, dirty))
+
+        return extended_liveness
 
 
 def find_combined_gpu_regions(

@@ -103,20 +103,22 @@ class Suggestion(object):
         live_device_variables: Dict[int, List[str]] = dict()
         if "meta_device_liveness" in self.values:
             for var_name in self.values["meta_device_liveness"]:
-                for line_num in self.values["meta_device_liveness"][var_name]:
-                    int_line_num = int(line_num.split(":")[1])
+                for raw_line in self.values["meta_device_liveness"][var_name]:
+                    int_line_num = int(raw_line.split(":")[1])
+                    dirty_marker = raw_line.split(":")[2]
                     if int_line_num not in live_device_variables:
                         live_device_variables[int_line_num] = []
-                    live_device_variables[int_line_num].append(var_name)
+                    live_device_variables[int_line_num].append(var_name + dirty_marker)
 
         live_host_variables: Dict[int, List[str]] = dict()
         if "meta_host_liveness" in self.values:
             for var_name in self.values["meta_host_liveness"]:
-                for line_num in self.values["meta_host_liveness"][var_name]:
-                    int_line_num = int(line_num.split(":")[1])
+                for raw_line in self.values["meta_host_liveness"][var_name]:
+                    int_line_num = int(raw_line.split(":")[1])
+                    dirty_marker = raw_line.split(":")[2]
                     if int_line_num not in live_host_variables:
                         live_host_variables[int_line_num] = []
-                    live_host_variables[int_line_num].append(var_name)
+                    live_host_variables[int_line_num].append(var_name + dirty_marker)
 
 
         return live_device_variables, live_host_variables
