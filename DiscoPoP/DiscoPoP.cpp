@@ -3058,6 +3058,8 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     IRB.CreateCall(DpAlloca, args, "");
 }
 
+// TODO instrument free
+
 
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 

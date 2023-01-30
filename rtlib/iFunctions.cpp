@@ -61,6 +61,9 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
+    // TODO: Replace with more efficient data structure for searching
+    stack<tuple<LID, char*, int64_t, int64_t, int64_t>> allocatedVariables;
+
     /******* BEGIN: parallelization section *******/
 
     pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
@@ -609,6 +612,8 @@ namespace __dp {
     void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
         cout << "alloca: " << decodeLID(lid) << ", " << var << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumElements: %lld\n", numElements);
+        // create entry to list of allocatedVariables
+        allocatedVariables.push(tuple<LID, char*, int64_t, int64_t, int64_t>{lid, var, startAddr, endAddr, numElements});
     }
 
     void __dp_report_bb(int32_t bbIndex) {
