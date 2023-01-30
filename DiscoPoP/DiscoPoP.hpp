@@ -259,6 +259,8 @@ namespace {
         // Callback Inserters
         //void insertDpInit(const vector<Value*> &args, Instruction *before);
         //void insertDpFinalize(Instruction *before);
+        void instrumentAlloca(AllocaInst *toInstrument);
+
         void instrumentStore(StoreInst *toInstrument);
 
         void instrumentLoad(LoadInst *toInstrument);
@@ -276,6 +278,7 @@ namespace {
         // Callbacks to run-time library
         FunctionCallee DpInit, DpFinalize;
         FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpAlloca; //, DpDecl;
         FunctionCallee DpCallOrInvoke;
         FunctionCallee DpFuncEntry, DpFuncExit;
         FunctionCallee DpLoopEntry, DpLoopExit;

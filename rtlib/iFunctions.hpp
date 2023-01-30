@@ -163,7 +163,7 @@ namespace __dp {
     void __dp_write(LID lid, ADDR addr, char *var);
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var);
-    void __dp_alloca(LID lid, ADDR addr, char *var);
+    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numElements);
     // End HA
 #endif
     // hybrid analysis

@@ -69,6 +69,22 @@ void DiscoPoP::setupCallbacks() {
 #endif
     );
 
+    DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
+                                                Void,
+                           
+                                                Int32, CharPtr, Int64, Int64, Int64
+    );
+
+/*    DpDecl = ThisModule->getOrInsertFunction("__dp_decl",
+                                            Void,
+#ifdef SKIP_DUP_INSTR
+            Int32, Int64, CharPtr, Int64, Int64
+#else
+                                            Int32, Int64, CharPtr
+#endif                                                        
+    );
+*/
+
     DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                                      Void,
                                                      Int32);
@@ -2508,6 +2524,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     {
         return determineVariableName_dynamic((Instruction *)(operand));
     }
+    if (isa<AllocaInst>(I)){
+        return getOrInsertVarName_dynamic(I->getName().str(), builder);
+    }
     // if we cannot determine the name, then return *
     return getOrInsertVarName_dynamic("*", builder);
 }
@@ -2911,6 +2930,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
             }
         }
+            // alloca instruction
+        else if (isa<AllocaInst>(BI)) {
+            AllocaInst *AI = cast<AllocaInst>(BI);
+                instrumentAlloca(cast<AllocaInst>(BI));
+        }
             // load instruction
         else if (isa<LoadInst>(BI)) {
             instrumentLoad(cast<LoadInst>(BI));
@@ -3006,6 +3030,35 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 }
 
 // Instrumentation function inserters.
+void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
+    int32_t lid = getLID(toInstrument, fileID);
+    if (lid == 0)
+        return;
+
+    // NOTE: manual memory management using malloc etc. not covered yet!
+
+
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+    args.push_back(determineVariableName_dynamic(toInstrument));
+
+    bool isGlobal;
+    Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    args.push_back(startAddr);
+    
+    Value *endAddr = startAddr;
+    if(toInstrument->isArrayAllocation()){
+        // endAddr = startAddr + allocated size
+        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+    }
+    args.push_back(endAddr);
+    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    IRB.CreateCall(DpAlloca, args, "");
+}
+
+
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
     int32_t lid = getLID(toInstrument, fileID);

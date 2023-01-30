@@ -606,51 +606,9 @@ namespace __dp {
         }
     }
 
-#ifdef SKIP_DUP_INSTR
-    void __dp_alloca(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count)
-    {
-#else
-    void __dp_alloca(LID lid, ADDR addr, char *var) {
-#endif
-        if (targetTerminated) {
-            if (DP_DEBUG) {
-                cout << "__dp_write() is not executed since target program has returned from main()." << endl;
-            }
-            return;
-        }
-        // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-        if (lastaddr == addr && count >= 2)
-        {
-             return;
-        }
-#endif
-        // For tracking function call or invoke
-        lastCallOrInvoke = 0;
-        lastProcessedLine = lid;
-
-        if (DP_DEBUG) {
-            cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr
-                 << endl;
-        }
-
-        int64_t workerID = addr % NUM_WORKERS;
-        AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-        current.isRead = false;
-        current.lid = 0;
-        current.var = var;
-        current.addr = addr;
-        current.skip = true;
-
-        if (tempAddrCount[workerID] == CHUNK_SIZE) {
-            pthread_mutex_lock(&addrChunkMutexes[workerID]);
-            addrChunkPresent[workerID] = true;
-            chunks[workerID].push(tempAddrChunks[workerID]);
-            pthread_cond_signal(&addrChunkPresentConds[workerID]);
-            pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-            tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-            tempAddrCount[workerID] = 0;
-        }
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
+        cout << "alloca: " << decodeLID(lid) << ", " << var << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        printf(" NumElements: %lld\n", numElements);
     }
 
     void __dp_report_bb(int32_t bbIndex) {
