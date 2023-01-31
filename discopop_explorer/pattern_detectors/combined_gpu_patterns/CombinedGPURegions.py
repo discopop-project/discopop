@@ -1565,7 +1565,7 @@ class CombinedGPURegion(PatternInfo):
         pet: PETGraphX,
     ) -> Dict[str, List[Tuple[str, Set[str]]]]:
         """
-        Variable is live on host, if a dependency between the host cu and any device cu for a given variable exists
+        Variable is live on host, if a dependency between the host cu or any of its children and any device cu for a given variable exists
 
         """
 
@@ -1579,7 +1579,7 @@ class CombinedGPURegion(PatternInfo):
             )
 
         all_function_host_cu_ids = [
-            cu_id for cu_id in all_function_cu_ids if cu_id not in self.host_cu_ids
+            cu_id for cu_id in all_function_cu_ids if cu_id not in self.device_cu_ids
         ]
 
         for cu_id in all_function_host_cu_ids:
@@ -1587,15 +1587,16 @@ class CombinedGPURegion(PatternInfo):
             shared_memory_regions: Set[str] = set()
             # get all data which is accessed by the cu_id and it's children and any device cu
             subtree = pet.subtree_of_type(pet.node_at(cu_id), NodeType.CU)
-            for subtree_node in [n.id for n in subtree]:
-                out_data_edges = pet.out_edges(cu_id, EdgeType.DATA)
-                in_data_edges = pet.in_edges(cu_id, EdgeType.DATA)
+            for subtree_node_id in [n.id for n in subtree]:
+                out_data_edges = pet.out_edges(subtree_node_id, EdgeType.DATA)
+                in_data_edges = pet.in_edges(subtree_node_id, EdgeType.DATA)
                 for _, target, dep in out_data_edges:
                     if target in self.device_cu_ids:
                         if dep.var_name is not None:
                             shared_variables.add(cast(str, dep.var_name))
                         if dep.aa_var_name is not None:
                             shared_memory_regions.add(cast(str, dep.aa_var_name))
+
                 for source, _, dep in in_data_edges:
                     if source in self.device_cu_ids:
                         if dep.var_name is not None:
