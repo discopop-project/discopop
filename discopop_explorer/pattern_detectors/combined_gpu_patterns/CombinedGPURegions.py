@@ -114,6 +114,13 @@ class CombinedGPURegion(PatternInfo):
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
         # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
 
+        # get written memory regions by CU
+        written_memory_regions_by_cu: Dict[str, Set[str]] = self.__get_written_memory_regions_by_cu(
+            pet
+        )
+        print("Dirtied: ")
+        print(written_memory_regions_by_cu)
+
         # mark dirty variables:
         extended_device_liveness = self.__mark_dirty_variables(pet, device_liveness)
         extended_host_liveness = self.__mark_dirty_variables(pet, host_liveness)
@@ -1602,6 +1609,39 @@ class CombinedGPURegion(PatternInfo):
                 extended_liveness[var_name].append((cu_id, dirty))
 
         return extended_liveness
+
+    def __get_written_memory_regions_by_cu(self, pet: PETGraphX) -> Dict[str, Set[str]]:
+        all_function_cu_ids: Set[str] = set()
+        for region in self.contained_regions:
+            parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+            subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+            all_function_cu_ids.update([n.id for n in subtree])
+
+        #            all_function_cu_ids.update(
+        #                self.__get_function_body_cus_without_called_functions(pet, parent_function)
+        #            )
+
+        written_memory_regions_by_cu_id: Dict[str, Set[str]] = dict()
+        for cu_id in all_function_cu_ids:
+            in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
+            out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+
+            written_memory_regions = [
+                cast(str, d.aa_var_name)
+                for s, t, d in in_dep_edges
+                if (d.dtype == DepType.RAW or d.dtype == DepType.WAW) and d.aa_var_name is not None
+            ]
+            written_memory_regions += [
+                cast(str, d.aa_var_name)
+                for s, t, d in out_dep_edges
+                if (d.dtype == DepType.WAR or d.dtype == DepType.WAW) and d.aa_var_name is not None
+            ]
+
+            if cu_id not in written_memory_regions_by_cu_id:
+                written_memory_regions_by_cu_id[cu_id] = set()
+            written_memory_regions_by_cu_id[cu_id] = set(written_memory_regions)
+        return written_memory_regions_by_cu_id
 
 
 def find_combined_gpu_regions(
