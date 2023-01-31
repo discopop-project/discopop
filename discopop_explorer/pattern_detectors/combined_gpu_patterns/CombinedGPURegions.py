@@ -136,7 +136,7 @@ class CombinedGPURegion(PatternInfo):
         print(device_liveness_plus_memory_regions)
 
         # calculate host liveness
-        #        host_liveness: Dict[str, List[str]] = self.__calculate_host_liveness(pet, device_liveness)
+        host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = self.__calculate_host_liveness(pet)
 
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
         # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
@@ -152,10 +152,12 @@ class CombinedGPURegion(PatternInfo):
         print("EXTENDED DEVICE LIVENESS:")
         print(extended_device_liveness)
 
-        #        extended_host_liveness = self.__mark_dirty_variables(
-        #            pet, host_liveness, written_memory_regions_by_cu, cu_and_variable_to_memory_regions
-        #        )
-        extended_host_liveness: Dict[str, List[Tuple[str, bool]]] = dict()
+        extended_host_liveness = self.__mark_dirty_variables(
+            pet, host_liveness, written_memory_regions_by_cu, cu_and_variable_to_memory_regions
+        )
+
+        print("EXTENDED HOST LIVENESS:")
+        print(extended_host_liveness)
 
         #######################################
 
@@ -650,7 +652,7 @@ class CombinedGPURegion(PatternInfo):
         self,
         pet: PETGraphX,
         device_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
-        host_liveness: Dict[str, List[Tuple[str, bool]]],
+        host_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
     ):
         """Create metadata and store it in the respective fields."""
         for device_cu_id in self.device_cu_ids:
@@ -687,7 +689,7 @@ class CombinedGPURegion(PatternInfo):
         self.meta_host_liveness = dict()
         for var_name in host_liveness:
             lines = set()
-            for cu_id, dirty in host_liveness[var_name]:
+            for cu_id, memory_regions, dirty in host_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
                     lines.add(
@@ -1559,14 +1561,15 @@ class CombinedGPURegion(PatternInfo):
         return liveness
 
     def __calculate_host_liveness(
-        self, pet: PETGraphX, device_liveness: Dict[str, List[str]]
-    ) -> Dict[str, List[str]]:
+        self,
+        pet: PETGraphX,
+    ) -> Dict[str, List[Tuple[str, Set[str]]]]:
         """
         Variable is live on host, if a dependency between the host cu and any device cu for a given variable exists
 
         """
 
-        host_liveness_sets: Dict[str, Set[str]] = dict()
+        host_liveness_lists: Dict[str, List[Tuple[str, Set[str]]]] = dict()
 
         all_function_cu_ids: Set[str] = set()
         for region in self.contained_regions:
@@ -1581,6 +1584,7 @@ class CombinedGPURegion(PatternInfo):
 
         for cu_id in all_function_host_cu_ids:
             shared_variables: Set[str] = set()
+            shared_memory_regions: Set[str] = set()
             # get all data which is accessed by the cu_id and it's children and any device cu
             subtree = pet.subtree_of_type(pet.node_at(cu_id), NodeType.CU)
             for subtree_node in [n.id for n in subtree]:
@@ -1590,19 +1594,23 @@ class CombinedGPURegion(PatternInfo):
                     if target in self.device_cu_ids:
                         if dep.var_name is not None:
                             shared_variables.add(cast(str, dep.var_name))
+                        if dep.aa_var_name is not None:
+                            shared_memory_regions.add(cast(str, dep.aa_var_name))
                 for source, _, dep in in_data_edges:
                     if source in self.device_cu_ids:
                         if dep.var_name is not None:
                             shared_variables.add(cast(str, dep.var_name))
+                        if dep.aa_var_name is not None:
+                            shared_memory_regions.add(cast(str, dep.aa_var_name))
             for var_name in shared_variables:
-                if var_name not in host_liveness_sets:
-                    host_liveness_sets[var_name] = set()
-                host_liveness_sets[var_name].add(cu_id)
+                if var_name not in host_liveness_lists:
+                    host_liveness_lists[var_name] = []
+                host_liveness_lists[var_name].append((cu_id, shared_memory_regions))
 
         # convert sets to lists
-        host_liveness: Dict[str, List[str]] = dict()
-        for key in host_liveness_sets:
-            host_liveness[key] = list(host_liveness_sets[key])
+        host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = dict()
+        for key in host_liveness_lists:
+            host_liveness[key] = host_liveness_lists[key]
         return host_liveness
 
     def __mark_dirty_variables(
