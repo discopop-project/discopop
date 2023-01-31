@@ -85,16 +85,6 @@ void DiscoPoP::setupCallbacks() {
                                                 Int32, Int64
     );
 
-/*    DpDecl = ThisModule->getOrInsertFunction("__dp_decl",
-                                            Void,
-#ifdef SKIP_DUP_INSTR
-            Int32, Int64, CharPtr, Int64, Int64
-#else
-                                            Int32, Int64, CharPtr
-#endif                                                        
-    );
-*/
-
     DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                                      Void,
                                                      Int32);
@@ -3116,9 +3106,6 @@ void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
 
     IRB.CreateCall(DpDelete, args, "");
 }
-
-// TODO instrument free
-// TODO instrument malloc
 
 
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
