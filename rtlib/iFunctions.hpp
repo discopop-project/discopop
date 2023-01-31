@@ -147,7 +147,7 @@ namespace __dp {
 
     void *analyzeDeps(void *arg);
 
-    string getAllocatedVariable(string fallback, ADDR addr);
+    string getMemoryRegionIdFromAddr(string fallback, ADDR addr);
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
 

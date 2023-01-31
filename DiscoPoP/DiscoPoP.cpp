@@ -3082,7 +3082,7 @@ void DiscoPoP::instrumentNew(CallInst *toInstrument) {
     Value* numElements = toInstrument->getArgOperand(0);
 
     args.push_back(startAddr);
-    args.push_back(endAddr);
+    args.push_back(endAddr);  // currently unused
     args.push_back(numElements);
 
     IRB.CreateCall(DpNew, args, "");

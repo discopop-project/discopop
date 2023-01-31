@@ -63,8 +63,8 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedVariables;
-    int32_t nextFreeAllocaId = 0;
+    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    int64_t nextFreeMemoryRegionId = 0;
 
     /******* BEGIN: parallelization section *******/
 
@@ -282,14 +282,10 @@ namespace __dp {
     }
 
     
-    string getAllocatedVariable(string fallback, ADDR addr){
+    string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
         // TODO more efficient implementation
-        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedVariables){
+        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
             if(get<2>(entry) <= addr && get<3>(entry) >= addr){
-                // TODO REMOVE PRINT
-                if(fallback.compare(get<1>(entry)) != 0){
-                    cout << "AAVAR: " << fallback << " --> " << get<1>(entry) << "\n";
-                }
                 return get<1>(entry);
             }
         }
@@ -303,7 +299,7 @@ namespace __dp {
         current.isRead = isRead;
         current.lid = lid;
         current.var = var;
-        current.AAvar = getAllocatedVariable(var, addr);
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -522,7 +518,7 @@ namespace __dp {
         current.isRead = true;
         current.lid = lid;
         current.var = var;
-        current.AAvar = getAllocatedVariable(var, addr);
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -569,7 +565,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = lid;
         current.var = var;
-        current.AAvar = getAllocatedVariable(var, addr);
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -616,7 +612,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = 0;
         current.var = var;
-        current.AAvar = getAllocatedVariable(var, addr);
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
         current.skip = true;
 
@@ -632,21 +628,28 @@ namespace __dp {
     }
 
     void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
-        cout << "alloca: " << decodeLID(lid) << ", " << var << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
+        // create entry to list of allocatedMemoryRegions
+        string var_name = allocId;
+        cout << "alloca: " << decodeLID(lid) << ", " << var_name << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumElements: %lld\n", numElements);
-        // create entry to list of allocatedVariables
-        string var_name = var;
-        allocatedVariables.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
     }
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
-        string var_str = to_string(nextFreeAllocaId);
-        nextFreeAllocaId++;
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
 
-        cout << "new: " << decodeLID(lid) << ", " << var_str << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        // calculate endAddr of memory region
+        endAddr = startAddr + numBits / 8;
+
+        cout << "new: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBits: %lld\n", numBits);
 
-        allocatedVariables.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_str, startAddr, endAddr, numBits/8});
+        
+
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
     } 
 
     void __dp_report_bb(int32_t bbIndex) {
