@@ -80,6 +80,11 @@ void DiscoPoP::setupCallbacks() {
                                                 Int32, Int64, Int64, Int64
     );
 
+    DpDelete = ThisModule->getOrInsertFunction("__dp_delete",
+                                                Void,
+                                                Int32, Int64
+    );
+
 /*    DpDecl = ThisModule->getOrInsertFunction("__dp_decl",
                                             Void,
 #ifdef SKIP_DUP_INSTR
@@ -2992,6 +2997,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     instrumentNew(cast<CallInst>(BI));
                     continue;
                 }
+                if (fn.equals("_ZdlPv"))
+                {
+                    instrumentDelete(cast<CallInst>(BI));
+                    continue;
+                }
 
             }
             int32_t lid = getLID(&*BI, fileID);
@@ -3086,24 +3096,27 @@ void DiscoPoP::instrumentNew(CallInst *toInstrument) {
     args.push_back(numElements);
 
     IRB.CreateCall(DpNew, args, "");
-    
+}
 
-/*    bool isGlobal;
-    Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+void DiscoPoP::instrumentDelete(CallInst *toInstrument) {
+    int32_t lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNonDebugInstruction());
+
     args.push_back(startAddr);
-    
-    Value *endAddr = startAddr;
-    if(toInstrument->isArrayAllocation()){
-        // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
-    }
-    args.push_back(endAddr);
-    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
-    IRB.CreateCall(DpNew, args, "");   
-*/
+
+    IRB.CreateCall(DpDelete, args, "");
 }
 
 // TODO instrument free
+// TODO instrument malloc
 
 
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {

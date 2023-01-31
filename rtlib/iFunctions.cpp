@@ -647,9 +647,22 @@ namespace __dp {
         cout << "new: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBits: %lld\n", numBits);
 
-        
-
         allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
+    }
+
+    void __dp_delete(LID lid, ADDR startAddr){
+        // TODO more efficient implementation
+
+        // find memory region to be deleted
+        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+            if(get<2>(entry) == startAddr){
+                // delete memory region
+                cout << "delete: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
+                allocatedMemoryRegions.remove(entry);
+                return;
+            }
+        }
+        cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
     } 
 
     void __dp_report_bb(int32_t bbIndex) {

@@ -169,6 +169,7 @@ namespace __dp {
     void __dp_decl(LID lid, ADDR addr, char *var);
     void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numElements);
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits);
+    void __dp_delete(LID lid, ADDR startAddr);
     // End HA
 #endif
     // hybrid analysis
