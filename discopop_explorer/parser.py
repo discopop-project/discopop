@@ -105,11 +105,15 @@ def __parse_dep_file(dep_fd):
             var_name = ""
             aa_var_name = ""
             if len(var_str) > 0:
-                split_var_str = var_str.split("(")
-                var_name = split_var_str[0]
-                aa_var_name = split_var_str[1][
-                    :-1
-                ]  # name of the allocated variable which is accessed, i.e. variable name after anti aliasing
+                if "(" in var_str:
+                    split_var_str = var_str.split("(")
+                    var_name = split_var_str[0]
+                    aa_var_name = split_var_str[1][
+                        :-1
+                    ]  # name of the allocated variable which is accessed, i.e. variable name after anti aliasing
+                else:
+                    # compatibility with results created without alias analysis
+                    var_name = var_str
             dependencies_list.append(
                 DependenceItem(sink, source_fields[0], type, var_name, aa_var_name)
             )
