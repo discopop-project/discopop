@@ -3055,7 +3055,8 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(determineVariableName_dynamic(toInstrument));
 
     bool isGlobal;
-    Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
     args.push_back(startAddr);
     
     Value *endAddr = startAddr;
