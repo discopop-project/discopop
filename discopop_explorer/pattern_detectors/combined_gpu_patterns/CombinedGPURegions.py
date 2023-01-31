@@ -118,8 +118,11 @@ class CombinedGPURegion(PatternInfo):
         written_memory_regions_by_cu: Dict[str, Set[str]] = self.__get_written_memory_regions_by_cu(
             pet
         )
-        print("Dirtied: ")
-        print(written_memory_regions_by_cu)
+
+        # get memory region and variable associations for each CU
+        cu_and_variable_to_memory_regions: Dict[
+            str, Dict[str, Set[str]]
+        ] = self.__get_memory_region_and_variable_associations(pet, written_memory_regions_by_cu)
 
         # mark dirty variables:
         extended_device_liveness = self.__mark_dirty_variables(pet, device_liveness)
@@ -1642,6 +1645,35 @@ class CombinedGPURegion(PatternInfo):
                 written_memory_regions_by_cu_id[cu_id] = set()
             written_memory_regions_by_cu_id[cu_id] = set(written_memory_regions)
         return written_memory_regions_by_cu_id
+
+    def __get_memory_region_and_variable_associations(
+        self, pet: PETGraphX, written_memory_regions_by_cu: Dict[str, Set[str]]
+    ) -> Dict[str, Dict[str, Set[str]]]:
+        # dict -> {Cu_ID: {var_name: [memory regions]}}
+        result_dict: Dict[str, Dict[str, Set[str]]] = dict()
+
+        all_function_cu_ids: Set[str] = set()
+        for region in self.contained_regions:
+            parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+            subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+            all_function_cu_ids.update([n.id for n in subtree])
+
+        for cu_id in all_function_cu_ids:
+            if cu_id not in result_dict:
+                result_dict[cu_id] = dict()
+
+            # only out_deps considered, as in_deps might use variable names
+            # which originate from different source code scopes
+            out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+            for _, _, dep in out_dep_edges:
+                if dep.var_name is None or dep.aa_var_name is None:
+                    continue
+                if dep.var_name not in result_dict[cu_id]:
+                    result_dict[cu_id][cast(str, dep.var_name)] = set()
+                result_dict[cu_id][cast(str, dep.var_name)].add(cast(str, dep.aa_var_name))
+
+        return result_dict
 
 
 def find_combined_gpu_regions(
