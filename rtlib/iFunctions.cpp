@@ -638,13 +638,15 @@ namespace __dp {
     }
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
+        // instrumentation function for new and malloc
+        
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
 
         // calculate endAddr of memory region
         endAddr = startAddr + numBits / 8;
 
-        cout << "new: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBits: %lld\n", numBits);
 
         allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
@@ -657,7 +659,7 @@ namespace __dp {
         for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
             if(get<2>(entry) == startAddr){
                 // delete memory region
-                cout << "delete: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
+                cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
                 allocatedMemoryRegions.remove(entry);
                 return;
             }

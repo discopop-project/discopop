@@ -261,9 +261,9 @@ namespace {
         //void insertDpFinalize(Instruction *before);
         void instrumentAlloca(AllocaInst *toInstrument);
 
-        void instrumentNew(CallInst *toInstrument);
+        void instrumentNewOrMalloc(CallInst *toInstrument);
 
-        void instrumentDelete(CallInst *toInstrument);
+        void instrumentDeleteOrFree(CallInst *toInstrument);
 
         void instrumentStore(StoreInst *toInstrument);
 
