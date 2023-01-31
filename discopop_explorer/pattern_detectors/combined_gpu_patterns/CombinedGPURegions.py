@@ -138,6 +138,9 @@ class CombinedGPURegion(PatternInfo):
         # calculate host liveness
         host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = self.__calculate_host_liveness(pet)
 
+        # extend host livespan
+        host_liveness = self.__extend_data_lifespan(pet, host_liveness)
+
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
         # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
 
