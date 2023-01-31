@@ -86,6 +86,7 @@ class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
+    aa_var_name: Optional[str] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
 
@@ -210,6 +211,7 @@ def parse_dependency(dep) -> Dependency:
     d.sink_line = dep.sink
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
+    d.aa_var_name = dep.aa_var_name
     return d
 
 
