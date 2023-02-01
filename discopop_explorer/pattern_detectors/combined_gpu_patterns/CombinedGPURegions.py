@@ -1026,6 +1026,23 @@ class CombinedGPURegion(PatternInfo):
                             [EdgeType.SUCCESSOR, EdgeType.CHILD],
                         )
                         if reachable:
+                            # if path_node is located within a loop, add the other loop cu's to the path as well
+                            to_be_added: List[CUNode] = []
+                            for path_node in path_nodes:
+                                parent_node = [
+                                    pet.node_at(s)
+                                    for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
+                                ][0]
+                                if parent_node.type == NodeType.LOOP:
+                                    for _, loop_cu_id, _ in pet.out_edges(
+                                        parent_node.id, EdgeType.CHILD
+                                    ):
+                                        loop_cu = pet.node_at(loop_cu_id)
+                                        if loop_cu not in path_nodes and loop_cu not in to_be_added:
+                                            to_be_added.append(loop_cu)
+                            for loop_cu in to_be_added:
+                                path_nodes.append(loop_cu)
+
                             # mark var_name live in all path_nodes and their children
                             for path_node in path_nodes:
                                 # todo replace with subtree calculation after merging with refactoring changes
