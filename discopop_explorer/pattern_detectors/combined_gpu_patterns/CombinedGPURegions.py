@@ -150,6 +150,7 @@ class CombinedGPURegion(PatternInfo):
             device_liveness_plus_memory_regions,
             written_memory_regions_by_cu,
             cu_and_variable_to_memory_regions,
+            considered_cu_ids=self.device_cu_ids,
         )
 
         print("EXTENDED DEVICE LIVENESS:")
@@ -1623,61 +1624,74 @@ class CombinedGPURegion(PatternInfo):
         liveness: Dict[str, List[Tuple[str, Set[str]]]],
         written_memory_regions_by_cu: Dict[str, Set[str]],
         cu_and_variable_to_memory_regions: Dict[str, Dict[str, Set[str]]],
+        considered_cu_ids: Optional[List[str]] = None,
     ) -> Dict[str, List[Tuple[str, Set[str], bool]]]:
         extended_liveness: Dict[str, List[Tuple[str, Set[str], bool]]] = dict()
         for var_name in liveness:
             for cu_id, memory_regions in liveness[var_name]:
-                cu_node = pet.node_at(cu_id)
                 dirty = False
-                # get subtree, to check if any child writes to a memory location
-                for subtree_node in pet.subtree_of_type(cu_node, NodeType.CU):
-                    # check if a statically identifiable write to var_name exists
-                    cu_vars = subtree_node.local_vars + subtree_node.global_vars
-                    for cu_var in cu_vars:
-                        if cu_var.name == var_name:
-                            if "W" in cu_var.accessMode:
+
+                # check if cu_id should be considered for marking
+                if considered_cu_ids is not None and cu_id not in cast(
+                    List[str], considered_cu_ids
+                ):
+                    # do not consider cu_id.
+                    pass
+                else:
+                    # cu_id should be considered. Determine marking
+                    cu_node = pet.node_at(cu_id)
+
+                    # get subtree, to check if any child writes to a memory location
+                    for subtree_node in pet.subtree_of_type(cu_node, NodeType.CU):
+                        # check if a statically identifiable write to var_name exists
+                        cu_vars = subtree_node.local_vars + subtree_node.global_vars
+                        for cu_var in cu_vars:
+                            if cu_var.name == var_name:
+                                if "W" in cu_var.accessMode:
+                                    dirty = True
+                                    break
+
+                        if not dirty:
+                            # check if a dynamic dependency writes to var_name or a memory region associated with var_name
+                            in_dep_edges = pet.in_edges(subtree_node.id, EdgeType.DATA)
+                            out_dep_edges = pet.out_edges(subtree_node.id, EdgeType.DATA)
+
+                            # todo remove this part as it may be incorrect? Variable names are not reliable.
+                            # check written variable names
+                            written_vars = [
+                                d.var_name
+                                for s, t, d in in_dep_edges
+                                if d.dtype == DepType.RAW or d.dtype == DepType.WAW
+                            ]
+                            written_vars += [
+                                d.var_name
+                                for s, t, d in out_dep_edges
+                                if d.dtype == DepType.WAR or d.dtype == DepType.WAW
+                            ]
+                            written_vars = list(set(written_vars))
+                            if var_name in written_vars:
                                 dirty = True
-                                break
 
-                    if not dirty:
-                        # check if a dynamic dependency writes to var_name or a memory region associated with var_name
-                        in_dep_edges = pet.in_edges(subtree_node.id, EdgeType.DATA)
-                        out_dep_edges = pet.out_edges(subtree_node.id, EdgeType.DATA)
-
-                        # todo remove this part as it may be incorrect? Variable names are not reliable.
-                        # check written variable names
-                        written_vars = [
-                            d.var_name
-                            for s, t, d in in_dep_edges
-                            if d.dtype == DepType.RAW or d.dtype == DepType.WAW
-                        ]
-                        written_vars += [
-                            d.var_name
-                            for s, t, d in out_dep_edges
-                            if d.dtype == DepType.WAR or d.dtype == DepType.WAW
-                        ]
-                        written_vars = list(set(written_vars))
-                        if var_name in written_vars:
-                            dirty = True
-
-                        # check written memory regions
-                        written_memory_regions = [
-                            cast(str, d.aa_var_name)
-                            for s, t, d in in_dep_edges
-                            if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
-                            and d.aa_var_name is not None
-                        ]
-                        written_memory_regions += [
-                            cast(str, d.aa_var_name)
-                            for s, t, d in out_dep_edges
-                            if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
-                            and d.aa_var_name is not None
-                        ]
-                        overlap = [reg for reg in written_memory_regions if reg in memory_regions]
-                        if len(overlap) > 0:
-                            dirty = True
-                    if dirty:
-                        break
+                            # check written memory regions
+                            written_memory_regions = [
+                                cast(str, d.aa_var_name)
+                                for s, t, d in in_dep_edges
+                                if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
+                                and d.aa_var_name is not None
+                            ]
+                            written_memory_regions += [
+                                cast(str, d.aa_var_name)
+                                for s, t, d in out_dep_edges
+                                if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
+                                and d.aa_var_name is not None
+                            ]
+                            overlap = [
+                                reg for reg in written_memory_regions if reg in memory_regions
+                            ]
+                            if len(overlap) > 0:
+                                dirty = True
+                        if dirty:
+                            break
                 # create entry in extended_liveness
                 if var_name not in extended_liveness:
                     extended_liveness[var_name] = []
