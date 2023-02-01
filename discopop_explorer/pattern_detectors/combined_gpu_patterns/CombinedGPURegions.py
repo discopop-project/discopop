@@ -83,6 +83,7 @@ class CombinedGPURegion(PatternInfo):
         self.start_line = min([l.start_line for l in contained_regions])
         self.end_line = max([l.end_line for l in contained_regions])
         self.host_cu_ids = self.__get_host_cu_ids(pet)
+        print("\n\n")
         print("HOST CU IDS: ")
         print(self.host_cu_ids)
         print("DEVICE CU IDS: ")
@@ -505,7 +506,6 @@ class CombinedGPURegion(PatternInfo):
     def __get_function_body_cus_without_called_functions(
         self, pet: PETGraphX, function_node: CUNode
     ) -> List[str]:
-        print("FUNCTION NODE: ", function_node.id)
         queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
         visited: Set[str] = set()
         while queue:
@@ -516,10 +516,6 @@ class CombinedGPURegion(PatternInfo):
             # add children if they do not result from a call
             children = [t for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
             called = [t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
-            if len(called) > 0:
-                print("CURRENT TYPE: ", current_node.type)
-                print("\tchildren: ", children)
-                print("\tCalled: ", called)
             queue += [
                 c for c in children if c not in visited and c not in called
             ]  # todo add check for call

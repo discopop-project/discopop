@@ -239,12 +239,12 @@ class PETGraphX(object):
     ):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
-        print("Creating graph...")
+        print("\tCreating graph...")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
-        print("Added nodes...")
+        print("\tAdded nodes...")
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -267,13 +267,13 @@ class PETGraphX(object):
                     if not (source, child) in g.edges:
                         g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
 
-        print("Added edges...")
+        print("\tAdded edges...")
 
         for _, node in g.nodes(data="data"):
             if node.type == NodeType.LOOP:
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
 
-        print("Added iterations")
+        print("\tAdded iterations...")
 
         # calculate position before dependencies affect them
         try:
@@ -284,7 +284,7 @@ class PETGraphX(object):
                 pos = nx.shell_layout(g)  # maybe
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        print("Calculated positions...")
+        print("\tCalculated positions...")
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
@@ -297,7 +297,7 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    print("Adding Dep: ", idx, "/", len(dependencies_list))
+                    # print("Adding Dep: ", idx, "/", len(dependencies_list))
                     # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
                     # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
 
@@ -317,6 +317,7 @@ class PETGraphX(object):
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+        print("\tAdded Dependencies...")
         return cls(g, reduction_vars, pos)
 
     def calculateFunctionMetadata(self):
