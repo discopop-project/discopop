@@ -91,13 +91,12 @@ class CombinedGPURegion(PatternInfo):
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
-        # get a representation of the currently available mapping information
-        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_and_exit_points(
-            pet
-        )
+        #        # get a representation of the currently available mapping information
+        #        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_and_exit_points(
+        #            pet
+        #        )
 
-        # calculate live data
-        device_liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
+        # ### STEP 1: INITIALIZATION
 
         # discard current mapping information
         entry_points = []
@@ -112,6 +111,11 @@ class CombinedGPURegion(PatternInfo):
         cu_and_variable_to_memory_regions: Dict[
             str, Dict[str, Set[str]]
         ] = self.__get_memory_region_and_variable_associations(pet, written_memory_regions_by_cu)
+
+        # ### STEP 2: CALCULATE LIVE DATA
+
+        # calculate live data
+        device_liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
 
         # extend device liveness with memory regions
         device_liveness_plus_memory_regions: Dict[
@@ -132,19 +136,15 @@ class CombinedGPURegion(PatternInfo):
             pet, device_liveness_plus_memory_regions
         )
 
-        print("DEVICE LIVENESS PLUS MEMORY REGIONS AFTER EXTENSION")
-        print(device_liveness_plus_memory_regions)
-
         # calculate host liveness
         host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = self.__calculate_host_liveness(pet)
 
         # extend host livespan
         host_liveness = self.__extend_data_lifespan(pet, host_liveness)
 
-        # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
-        # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
+        # ### STEP 3: MARK WRITTEN VARIABLES
 
-        # mark dirty variables:
+        # mark written variables for device
         extended_device_liveness = self.__mark_dirty_variables(
             pet,
             device_liveness_plus_memory_regions,
@@ -153,9 +153,7 @@ class CombinedGPURegion(PatternInfo):
             considered_cu_ids=self.device_cu_ids,
         )
 
-        print("EXTENDED DEVICE LIVENESS:")
-        print(extended_device_liveness)
-
+        # mark written variables for host
         extended_host_liveness = self.__mark_dirty_variables(
             pet,
             host_liveness,
@@ -164,10 +162,10 @@ class CombinedGPURegion(PatternInfo):
             not_considered_cu_ids=self.device_cu_ids,
         )
 
-        print("EXTENDED HOST LIVENESS:")
-        print(extended_host_liveness)
-
         #######################################
+
+        # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
+        # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
 
         # self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
 
