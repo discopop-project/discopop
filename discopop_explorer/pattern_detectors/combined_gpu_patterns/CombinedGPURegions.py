@@ -91,30 +91,81 @@ class CombinedGPURegion(PatternInfo):
         entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
-        # get a representation of the currently available mapping information
-        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_and_exit_points(
-            pet
-        )
+        #        # get a representation of the currently available mapping information
+        #        entry_points, exit_points = self.__translate_mapping_to_explicit_data_entry_and_exit_points(
+        #            pet
+        #        )
 
-        # calculate live data
-        device_liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
+        # ### STEP 1: INITIALIZATION
 
         # discard current mapping information
         entry_points = []
         exit_points = []
 
+        # get written memory regions by CU
+        written_memory_regions_by_cu: Dict[str, Set[str]] = self.__get_written_memory_regions_by_cu(
+            pet
+        )
+
+        # get memory region and variable associations for each CU
+        cu_and_variable_to_memory_regions: Dict[
+            str, Dict[str, Set[str]]
+        ] = self.__get_memory_region_and_variable_associations(pet, written_memory_regions_by_cu)
+
+        # ### STEP 2: CALCULATE LIVE DATA
+
+        # calculate live data
+        device_liveness = self.__populate_live_data(pet, ignore_update_instructions=True)
+
+        # extend device liveness with memory regions
+        device_liveness_plus_memory_regions: Dict[
+            str, List[Tuple[str, Set[str]]]
+        ] = self.__add_memory_regions_to_device_liveness(
+            device_liveness, cu_and_variable_to_memory_regions
+        )
+
+        # propagate memory regions
+        device_liveness_plus_memory_regions = self.__propagate_memory_regions(
+            device_liveness_plus_memory_regions
+        )
+
         # extend data liveness
         # todo add the option to create memory or data transmission optimal liveness and thus data mappings
         #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
-        device_liveness = self.__extend_data_lifespan(pet, device_liveness)
+        device_liveness_plus_memory_regions = self.__extend_data_lifespan(
+            pet, device_liveness_plus_memory_regions
+        )
 
         # calculate host liveness
-        host_liveness: Dict[str, List[str]] = self.__calculate_host_liveness(pet, device_liveness)
+        host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = self.__calculate_host_liveness(pet)
+
+        # extend host livespan
+        host_liveness = self.__extend_data_lifespan(pet, host_liveness)
+
+        # ### STEP 3: MARK WRITTEN VARIABLES
+
+        # mark written variables for device
+        extended_device_liveness = self.__mark_dirty_variables(
+            pet,
+            device_liveness_plus_memory_regions,
+            written_memory_regions_by_cu,
+            cu_and_variable_to_memory_regions,
+            considered_cu_ids=self.device_cu_ids,
+        )
+
+        # mark written variables for host
+        extended_host_liveness = self.__mark_dirty_variables(
+            pet,
+            host_liveness,
+            written_memory_regions_by_cu,
+            cu_and_variable_to_memory_regions,
+            not_considered_cu_ids=self.device_cu_ids,
+        )
+
+        #######################################
 
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
         # device_liveness = self.__remove_liveness_for_calling_cus_if_required(pet, device_liveness)
-
-        #######################################
 
         # self.__encapsulate_called_functions_which_share_data_with_device_cus(pet, liveness)
 
@@ -180,7 +231,7 @@ class CombinedGPURegion(PatternInfo):
         print(self.data_region_depend_out)
         self.meta_device_lines = []
         self.meta_host_lines = []
-        self.__get_metadata(pet, device_liveness, host_liveness)
+        self.__get_metadata(pet, extended_device_liveness, extended_host_liveness)
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -606,8 +657,8 @@ class CombinedGPURegion(PatternInfo):
     def __get_metadata(
         self,
         pet: PETGraphX,
-        device_liveness: Dict[str, List[str]],
-        host_liveness: Dict[str, List[str]],
+        device_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
+        host_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
     ):
         """Create metadata and store it in the respective fields."""
         for device_cu_id in self.device_cu_ids:
@@ -633,19 +684,23 @@ class CombinedGPURegion(PatternInfo):
         lines: Set[str] = set()
         for var_name in device_liveness:
             lines = set()
-            for cu_id in device_liveness[var_name]:
+            for cu_id, memory_regions, dirty in device_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
-                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+                    lines.add(
+                        "" + str(cu_node.file_id) + ":" + str(line) + ":" + ("*" if dirty else "")
+                    )
             self.meta_device_liveness[var_name] = list(lines)
         # get host liveness as metadata
         self.meta_host_liveness = dict()
         for var_name in host_liveness:
             lines = set()
-            for cu_id in host_liveness[var_name]:
+            for cu_id, memory_regions, dirty in host_liveness[var_name]:
                 cu_node = pet.node_at(cu_id)
                 for line in range(cu_node.start_line, cu_node.end_line + 1):
-                    lines.add("" + str(cu_node.file_id) + ":" + str(line))
+                    lines.add(
+                        "" + str(cu_node.file_id) + ":" + str(line) + ":" + ("*" if dirty else "")
+                    )
             self.meta_host_liveness[var_name] = list(lines)
 
     def __get_contained_lines(self, start_line: str, end_line: str) -> List[str]:
@@ -952,19 +1007,19 @@ class CombinedGPURegion(PatternInfo):
         return liveness
 
     def __extend_data_lifespan(
-        self, pet: PETGraphX, live_data: Dict[str, List[str]]
-    ) -> Dict[str, List[str]]:
+        self, pet: PETGraphX, live_data: Dict[str, List[Tuple[str, Set[str]]]]
+    ) -> Dict[str, List[Tuple[str, Set[str]]]]:
         """Extends the lifespan of the data on the device to allow as little data movement as possible."""
         # todo not very efficient
         modification_found = True
         while modification_found:
             modification_found = False
-            new_entries: List[Tuple[str, str]] = []
+            new_entries: List[Tuple[str, str, Tuple[str, ...]]] = []
             for var_name in live_data:
-                for cu_id in live_data[var_name]:
+                for cu_id, memory_regions in live_data[var_name]:
                     # check if data is live in any successor.
                     # If so, set var_name to live in each of the encountered CUs.
-                    for potential_successor_cu_id in live_data[var_name]:
+                    for potential_successor_cu_id, _ in live_data[var_name]:
                         if cu_id == potential_successor_cu_id:
                             continue
                         reachable, path_nodes = pet.check_reachability_and_get_path_nodes(
@@ -973,6 +1028,23 @@ class CombinedGPURegion(PatternInfo):
                             [EdgeType.SUCCESSOR, EdgeType.CHILD],
                         )
                         if reachable:
+                            # if path_node is located within a loop, add the other loop cu's to the path as well
+                            to_be_added: List[CUNode] = []
+                            for path_node in path_nodes:
+                                parent_node = [
+                                    pet.node_at(s)
+                                    for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
+                                ][0]
+                                if parent_node.type == NodeType.LOOP:
+                                    for _, loop_cu_id, _ in pet.out_edges(
+                                        parent_node.id, EdgeType.CHILD
+                                    ):
+                                        loop_cu = pet.node_at(loop_cu_id)
+                                        if loop_cu not in path_nodes and loop_cu not in to_be_added:
+                                            to_be_added.append(loop_cu)
+                            for loop_cu in to_be_added:
+                                path_nodes.append(loop_cu)
+
                             # mark var_name live in all path_nodes and their children
                             for path_node in path_nodes:
                                 # todo replace with subtree calculation after merging with refactoring changes
@@ -993,13 +1065,17 @@ class CombinedGPURegion(PatternInfo):
                                 # todo end of section to be replaced
                                 #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
                                 for subtree_node in subtree_without_called_functions:
-                                    if subtree_node.id not in live_data[var_name]:
-                                        new_entries.append((var_name, subtree_node.id))
+                                    if subtree_node.id not in [
+                                        cu_id for cu_id, _ in live_data[var_name]
+                                    ]:
+                                        new_entries.append(
+                                            (var_name, subtree_node.id, tuple(memory_regions))
+                                        )
             new_entries = list(set(new_entries))
             if len(new_entries) > 0:
                 modification_found = True
-            for var_name, new_cu_id in new_entries:
-                live_data[var_name].append(new_cu_id)
+            for var_name, new_cu_id, memory_regions_tuple in new_entries:
+                live_data[var_name].append((new_cu_id, set(memory_regions_tuple)))
         return live_data
 
     def __translate_mapping_to_explicit_data_entry_and_exit_points(
@@ -1508,14 +1584,15 @@ class CombinedGPURegion(PatternInfo):
         return liveness
 
     def __calculate_host_liveness(
-        self, pet: PETGraphX, device_liveness: Dict[str, List[str]]
-    ) -> Dict[str, List[str]]:
+        self,
+        pet: PETGraphX,
+    ) -> Dict[str, List[Tuple[str, Set[str]]]]:
         """
-        Variable is live on host, if a dependency between the host cu and any device cu for a given variable exists
+        Variable is live on host, if a dependency between the host cu or any of its children and any device cu for a given variable exists
 
         """
 
-        host_liveness_sets: Dict[str, Set[str]] = dict()
+        host_liveness_lists: Dict[str, List[Tuple[str, Set[str]]]] = dict()
 
         all_function_cu_ids: Set[str] = set()
         for region in self.contained_regions:
@@ -1525,32 +1602,227 @@ class CombinedGPURegion(PatternInfo):
             )
 
         all_function_host_cu_ids = [
-            cu_id for cu_id in all_function_cu_ids if cu_id not in self.host_cu_ids
+            cu_id for cu_id in all_function_cu_ids if cu_id not in self.device_cu_ids
         ]
 
         for cu_id in all_function_host_cu_ids:
             shared_variables: Set[str] = set()
-            # get all data which is accessed by the cu_id and any device cu
-            out_data_edges = pet.out_edges(cu_id, EdgeType.DATA)
-            in_data_edges = pet.in_edges(cu_id, EdgeType.DATA)
-            for _, target, dep in out_data_edges:
-                if target in self.device_cu_ids:
-                    if dep.var_name is not None:
-                        shared_variables.add(cast(str, dep.var_name))
-            for source, _, dep in in_data_edges:
-                if source in self.device_cu_ids:
-                    if dep.var_name is not None:
-                        shared_variables.add(cast(str, dep.var_name))
+            shared_memory_regions: Set[str] = set()
+            # get all data which is accessed by the cu_id and it's children and any device cu
+            subtree = pet.subtree_of_type(pet.node_at(cu_id), NodeType.CU)
+            for subtree_node_id in [n.id for n in subtree]:
+                out_data_edges = pet.out_edges(subtree_node_id, EdgeType.DATA)
+                in_data_edges = pet.in_edges(subtree_node_id, EdgeType.DATA)
+                for _, target, dep in out_data_edges:
+                    if target in self.device_cu_ids:
+                        if dep.var_name is not None:
+                            shared_variables.add(cast(str, dep.var_name))
+                        if dep.aa_var_name is not None:
+                            shared_memory_regions.add(cast(str, dep.aa_var_name))
+
+                for source, _, dep in in_data_edges:
+                    if source in self.device_cu_ids:
+                        if dep.var_name is not None:
+                            shared_variables.add(cast(str, dep.var_name))
+                        if dep.aa_var_name is not None:
+                            shared_memory_regions.add(cast(str, dep.aa_var_name))
             for var_name in shared_variables:
-                if var_name not in host_liveness_sets:
-                    host_liveness_sets[var_name] = set()
-                host_liveness_sets[var_name].add(cu_id)
+                if var_name not in host_liveness_lists:
+                    host_liveness_lists[var_name] = []
+                host_liveness_lists[var_name].append((cu_id, shared_memory_regions))
 
         # convert sets to lists
-        host_liveness: Dict[str, List[str]] = dict()
-        for key in host_liveness_sets:
-            host_liveness[key] = list(host_liveness_sets[key])
+        host_liveness: Dict[str, List[Tuple[str, Set[str]]]] = dict()
+        for key in host_liveness_lists:
+            host_liveness[key] = host_liveness_lists[key]
         return host_liveness
+
+    def __mark_dirty_variables(
+        self,
+        pet: PETGraphX,
+        liveness: Dict[str, List[Tuple[str, Set[str]]]],
+        written_memory_regions_by_cu: Dict[str, Set[str]],
+        cu_and_variable_to_memory_regions: Dict[str, Dict[str, Set[str]]],
+        considered_cu_ids: Optional[List[str]] = None,
+        not_considered_cu_ids: Optional[List[str]] = None,
+    ) -> Dict[str, List[Tuple[str, Set[str], bool]]]:
+        extended_liveness: Dict[str, List[Tuple[str, Set[str], bool]]] = dict()
+        for var_name in liveness:
+            for cu_id, memory_regions in liveness[var_name]:
+                dirty = False
+
+                # check if cu_id should be considered for marking
+                if considered_cu_ids is not None and cu_id not in cast(
+                    List[str], considered_cu_ids
+                ):
+                    # do not consider cu_id.
+                    pass
+                elif not_considered_cu_ids is not None and cu_id in cast(
+                    List[str], not_considered_cu_ids
+                ):
+                    # do not consider cu_id
+                    pass
+                else:
+                    # cu_id should be considered. Determine marking
+                    cu_node = pet.node_at(cu_id)
+
+                    # get subtree, to check if any child writes to a memory location
+                    for subtree_node in pet.subtree_of_type(cu_node, NodeType.CU):
+                        # check if a statically identifiable write to var_name exists
+                        cu_vars = subtree_node.local_vars + subtree_node.global_vars
+                        for cu_var in cu_vars:
+                            if cu_var.name == var_name:
+                                if "W" in cu_var.accessMode:
+                                    dirty = True
+                                    break
+
+                        if not dirty:
+                            # check if a dynamic dependency writes to var_name or a memory region associated with var_name
+                            in_dep_edges = pet.in_edges(subtree_node.id, EdgeType.DATA)
+                            out_dep_edges = pet.out_edges(subtree_node.id, EdgeType.DATA)
+
+                            # todo remove this part as it may be incorrect? Variable names are not reliable.
+                            # check written variable names
+                            written_vars = [
+                                d.var_name
+                                for s, t, d in in_dep_edges
+                                if d.dtype == DepType.RAW or d.dtype == DepType.WAW
+                            ]
+                            written_vars += [
+                                d.var_name
+                                for s, t, d in out_dep_edges
+                                if d.dtype == DepType.WAR or d.dtype == DepType.WAW
+                            ]
+                            written_vars = list(set(written_vars))
+                            if var_name in written_vars:
+                                dirty = True
+
+                            # check written memory regions
+                            written_memory_regions = [
+                                cast(str, d.aa_var_name)
+                                for s, t, d in in_dep_edges
+                                if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
+                                and d.aa_var_name is not None
+                            ]
+                            written_memory_regions += [
+                                cast(str, d.aa_var_name)
+                                for s, t, d in out_dep_edges
+                                if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
+                                and d.aa_var_name is not None
+                            ]
+                            overlap = [
+                                reg for reg in written_memory_regions if reg in memory_regions
+                            ]
+                            if len(overlap) > 0:
+                                dirty = True
+                        if dirty:
+                            break
+                # create entry in extended_liveness
+                if var_name not in extended_liveness:
+                    extended_liveness[var_name] = []
+                extended_liveness[var_name].append((cu_id, memory_regions, dirty))
+
+        return extended_liveness
+
+    def __get_written_memory_regions_by_cu(self, pet: PETGraphX) -> Dict[str, Set[str]]:
+        all_function_cu_ids: Set[str] = set()
+        for region in self.contained_regions:
+            parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+            subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+            all_function_cu_ids.update([n.id for n in subtree])
+
+        #            all_function_cu_ids.update(
+        #                self.__get_function_body_cus_without_called_functions(pet, parent_function)
+        #            )
+
+        written_memory_regions_by_cu_id: Dict[str, Set[str]] = dict()
+        for cu_id in all_function_cu_ids:
+            in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
+            out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+
+            written_memory_regions = [
+                cast(str, d.aa_var_name)
+                for s, t, d in in_dep_edges
+                if (d.dtype == DepType.RAW or d.dtype == DepType.WAW) and d.aa_var_name is not None
+            ]
+            written_memory_regions += [
+                cast(str, d.aa_var_name)
+                for s, t, d in out_dep_edges
+                if (d.dtype == DepType.WAR or d.dtype == DepType.WAW) and d.aa_var_name is not None
+            ]
+
+            if cu_id not in written_memory_regions_by_cu_id:
+                written_memory_regions_by_cu_id[cu_id] = set()
+            written_memory_regions_by_cu_id[cu_id] = set(written_memory_regions)
+        return written_memory_regions_by_cu_id
+
+    def __get_memory_region_and_variable_associations(
+        self, pet: PETGraphX, written_memory_regions_by_cu: Dict[str, Set[str]]
+    ) -> Dict[str, Dict[str, Set[str]]]:
+        # dict -> {Cu_ID: {var_name: [memory regions]}}
+        result_dict: Dict[str, Dict[str, Set[str]]] = dict()
+
+        all_function_cu_ids: Set[str] = set()
+        for region in self.contained_regions:
+            parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+            subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+            all_function_cu_ids.update([n.id for n in subtree])
+
+        for cu_id in all_function_cu_ids:
+            if cu_id not in result_dict:
+                result_dict[cu_id] = dict()
+
+            # only out_deps considered, as in_deps might use variable names
+            # which originate from different source code scopes
+            out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+            for _, _, dep in out_dep_edges:
+                if dep.var_name is None or dep.aa_var_name is None:
+                    continue
+                if dep.var_name not in result_dict[cu_id]:
+                    result_dict[cu_id][cast(str, dep.var_name)] = set()
+                result_dict[cu_id][cast(str, dep.var_name)].add(cast(str, dep.aa_var_name))
+
+        return result_dict
+
+    def __add_memory_regions_to_device_liveness(
+        self,
+        device_liveness: Dict[str, List[str]],
+        cu_and_variable_to_memory_regions: Dict[str, Dict[str, Set[str]]],
+    ) -> Dict[str, List[Tuple[str, Set[str]]]]:
+        extended_device_liveness: Dict[str, List[Tuple[str, Set[str]]]] = dict()
+
+        for var_name in device_liveness:
+            if var_name not in extended_device_liveness:
+                extended_device_liveness[var_name] = []
+            for cu_id in device_liveness[var_name]:
+                memory_regions: Set[str] = set()
+                if cu_id in cu_and_variable_to_memory_regions:
+                    if var_name in cu_and_variable_to_memory_regions[cu_id]:
+                        memory_regions.update(cu_and_variable_to_memory_regions[cu_id][var_name])
+                extended_device_liveness[var_name].append((cu_id, memory_regions))
+
+        return extended_device_liveness
+
+    def __propagate_memory_regions(
+        self, device_liveness_plus_memory_regions: Dict[str, List[Tuple[str, Set[str]]]]
+    ) -> Dict[str, List[Tuple[str, Set[str]]]]:
+        """Propagate memory regions for variables"""
+        result_dict: Dict[str, List[Tuple[str, Set[str]]]] = dict()
+        for var_name in device_liveness_plus_memory_regions:
+            cu_ids: List[str] = []
+            memory_regions: Set[str] = set()
+            for cu_id, mem_regs in device_liveness_plus_memory_regions[var_name]:
+                cu_ids.append(cu_id)
+                memory_regions.update(mem_regs)
+
+            if var_name not in result_dict:
+                result_dict[var_name] = []
+            for cu_id in cu_ids:
+                result_dict[var_name].append((cu_id, memory_regions))
+
+        return result_dict
 
 
 def find_combined_gpu_regions(

@@ -21,11 +21,12 @@ lineToCUIdMap = defaultdict(set)  # type: ignore
 
 
 class DependenceItem(object):
-    def __init__(self, sink, source, type, var_name):
+    def __init__(self, sink, source, type, var_name, aa_var_name):
         self.sink = sink
         self.source = source
         self.type = type
         self.var_name = var_name
+        self.aa_var_name = aa_var_name
 
 
 def __parse_xml_input(xml_fd):
@@ -101,7 +102,21 @@ def __parse_dep_file(dep_fd):
             type = dep_pair[0]
             source_fields = dep_pair[1].split("|")
             var_str = "" if len(source_fields) == 1 else source_fields[1]
-            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_str))
+            var_name = ""
+            aa_var_name = ""
+            if len(var_str) > 0:
+                if "(" in var_str:
+                    split_var_str = var_str.split("(")
+                    var_name = split_var_str[0]
+                    aa_var_name = split_var_str[1][
+                        :-1
+                    ]  # name of the allocated variable which is accessed, i.e. variable name after anti aliasing
+                else:
+                    # compatibility with results created without alias analysis
+                    var_name = var_str
+            dependencies_list.append(
+                DependenceItem(sink, source_fields[0], type, var_name, aa_var_name)
+            )
 
     return dependencies_list
 
