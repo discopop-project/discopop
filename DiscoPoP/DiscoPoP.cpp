@@ -2765,7 +2765,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<localVariables>" << endl;
             for (auto lvi: cu->localVariableNames) {
                 *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
+                        << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(lvi.name) << "</local>" << endl;
             }
             *outCUs << "\t\t</localVariables>" << endl;
