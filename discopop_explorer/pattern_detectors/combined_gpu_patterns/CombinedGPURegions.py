@@ -157,7 +157,11 @@ class CombinedGPURegion(PatternInfo):
         print(extended_device_liveness)
 
         extended_host_liveness = self.__mark_dirty_variables(
-            pet, host_liveness, written_memory_regions_by_cu, cu_and_variable_to_memory_regions
+            pet,
+            host_liveness,
+            written_memory_regions_by_cu,
+            cu_and_variable_to_memory_regions,
+            not_considered_cu_ids=self.device_cu_ids,
         )
 
         print("EXTENDED HOST LIVENESS:")
@@ -1642,6 +1646,7 @@ class CombinedGPURegion(PatternInfo):
         written_memory_regions_by_cu: Dict[str, Set[str]],
         cu_and_variable_to_memory_regions: Dict[str, Dict[str, Set[str]]],
         considered_cu_ids: Optional[List[str]] = None,
+        not_considered_cu_ids: Optional[List[str]] = None,
     ) -> Dict[str, List[Tuple[str, Set[str], bool]]]:
         extended_liveness: Dict[str, List[Tuple[str, Set[str], bool]]] = dict()
         for var_name in liveness:
@@ -1653,6 +1658,11 @@ class CombinedGPURegion(PatternInfo):
                     List[str], considered_cu_ids
                 ):
                     # do not consider cu_id.
+                    pass
+                elif not_considered_cu_ids is not None and cu_id in cast(
+                    List[str], not_considered_cu_ids
+                ):
+                    # do not consider cu_id
                     pass
                 else:
                     # cu_id should be considered. Determine marking
