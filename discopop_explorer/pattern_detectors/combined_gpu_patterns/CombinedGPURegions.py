@@ -1875,20 +1875,15 @@ class CombinedGPURegion(PatternInfo):
             #               determine update type (TO / FROM)
             #               create an update instruction
             #               delete the corresponding last_x_write entry for the given variable
-            # TODO start
             #               remove "written" mark for the now covered access
             #               restart the calculation from the start of the function using the
             #                  now simplified set of marked dirty live variables
-            # TODO end
             #       for each written variable:
             #           create / overwrite an entry in last_x_write
             #       next_nodes = current.getNextNodes()
-            #       if len(next_nodes) > 1:
-            #           for each next node:
-            #               if next_node not in visited:
-            #                   configurations_to_check.push(next_node)
-            #       else:
-            #           configurations_to_check.push(current_node.getNext())
+            #       for each next node:
+            #           if next_node not in visited:
+            #               configurations_to_check.push(next_node)
 
             def identify_updates(
                 initial_current_node: CUNode,
@@ -1929,19 +1924,7 @@ class CombinedGPURegion(PatternInfo):
                         tuple(list(last_host_writes.items())),
                         tuple(list(last_device_writes.items())),
                     ) in visited_configurations:
-                        import sys
-
-                        print("SKIP @", current_node.id, file=sys.stderr)
                         continue
-                    import sys
-
-                    print(
-                        "CHecking: ",
-                        current_node.id,
-                        tuple(list(last_host_writes.items())),
-                        tuple(list(last_device_writes.items())),
-                        file=sys.stderr,
-                    )
 
                     # get required node information
                     in_dep_edges = pet.in_edges(current_node.id, EdgeType.DATA)
@@ -2007,36 +1990,6 @@ class CombinedGPURegion(PatternInfo):
                         # check if update is required
                         update_required = read_dependency_exists and entry_in_last_write_exists
 
-                        # import sys
-                        # print(file=sys.stderr)
-                        # print("Node ID: ", current_node.id, file=sys.stderr)
-                        # print("Is Device Node: ", current_is_device_node, file=sys.stderr)
-                        # print("VAR NAME: ", var_name, file=sys.stderr)
-                        # print(
-                        #    "read dep: ",
-                        #    read_dependency_exists,
-                        #    " -- ",
-                        #    read_memory_regions,
-                        #    file=sys.stderr,
-                        # )
-                        # print("Last write: ", file=sys.stderr)
-                        # for key in (
-                        #     last_host_writes if current_is_device_node else last_device_writes
-                        # ):
-                        #     print(
-                        #         "\t",
-                        #         key,
-                        #         " --> ",
-                        #        (
-                        #            last_host_writes
-                        #            if current_is_device_node
-                        #            else last_device_writes
-                        #        )[key].id,
-                        #        file=sys.stderr,
-                        #    )
-                        # print("last_write: ", entry_in_last_write_exists, file=sys.stderr)
-                        # print("Update required: ", update_required, file=sys.stderr)
-
                         if update_required:
                             # determine update type
                             update_type = (
@@ -2100,45 +2053,28 @@ class CombinedGPURegion(PatternInfo):
 
                             #   remove "written" mark for the now covered memory access
                             for update_var_name in update_var_names:
-                                print("UPDATE VAR: ", update_var_name, file=sys.stderr)
-                                print("\tkeys: ", other_device_liveness.keys(), file=sys.stderr)
                                 for idx, (tmp_cu_id, tmp_mem_regs, _) in enumerate(
                                     other_device_liveness[update_var_name]
                                 ):
                                     if tmp_cu_id == last_writing_cu.id:
-                                        import sys
-
-                                        print(
-                                            "PRE: ",
-                                            other_device_liveness[update_var_name][idx],
-                                            file=sys.stderr,
-                                        )
                                         # remove "dirty" marking if present
                                         other_device_liveness[update_var_name][idx] = (
                                             tmp_cu_id,
                                             tmp_mem_regs,
                                             False,
                                         )
-                                        print(
-                                            "POST: ",
-                                            other_device_liveness[update_var_name][idx],
-                                            file=sys.stderr,
-                                        )
 
-                            # todo
                             #  restart the calculation from the start of the function using the
                             #  now simplified set of marked dirty live variables
-                            # clear configurations
-                            configurations_to_check = []
-                            # create new initial entry
-                            configurations_to_check.append(
+                            # clear configurations and create new initial entry
+                            configurations_to_check = [
                                 (
                                     initial_current_node,
                                     initial_last_host_writes,
                                     initial_last_device_writes,
                                     initial_visited_configurations,
                                 )
-                            )
+                            ]
 
                     # for each written variable
                     written_vars = [
