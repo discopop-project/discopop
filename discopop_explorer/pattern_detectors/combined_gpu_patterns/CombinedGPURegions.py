@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 from enum import IntEnum
 from typing import List, Tuple, cast, Dict, Optional, Set, Any
 
@@ -163,6 +164,16 @@ class CombinedGPURegion(PatternInfo):
             not_considered_cu_ids=self.device_cu_ids,
         )
 
+        print("Extended device liveness: ")
+        print(extended_device_liveness)
+
+        # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE INSTRUCTIONS
+
+        self.update_instructions = []
+        self.update_instructions = self.__get_update_instructions_based_on_liveness(
+            pet, extended_device_liveness, extended_host_liveness
+        )
+
         #######################################
 
         # cautious property: remove calling cu's from liveness, if the called function has dependencies to any gpu loop.
@@ -175,8 +186,6 @@ class CombinedGPURegion(PatternInfo):
         # )
 
         # todo restrict search for updates to function body, ignore called functions
-        self.update_instructions = []
-        # self.update_instructions = self.__get_update_instructions(pet)
 
         # move update instructions out of gpu loops
         #        self.__move_update_instructions_out_of_gpu_loops(pet)
@@ -1819,6 +1828,368 @@ class CombinedGPURegion(PatternInfo):
                 result_dict[var_name].append((cu_id, memory_regions))
 
         return result_dict
+
+    def __get_update_instructions_based_on_liveness(
+        self,
+        pet: PETGraphX,
+        extended_device_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
+        extended_host_liveness: Dict[str, List[Tuple[str, Set[str], bool]]],
+    ) -> List[Tuple[str, str, UpdateType, str, str]]:
+
+        update_instructions: List[Tuple[str, str, UpdateType, str, str]] = []
+
+        # identify parent functions
+        parent_functions: Set[CUNode] = set()
+        for region in self.contained_regions:
+            parent_functions.add(pet.get_parent_function(pet.node_at(region.node_id)))
+        # for every parent function
+        for parent_function in parent_functions:
+            print("PARENT FUNCTION: ", parent_function.name)
+            # start update detection at start of the function body
+            # entry cu is the only child of type CU with no incoming successor edge
+            children_cus = [
+                pet.node_at(t) for s, t, d in pet.out_edges(parent_function.id, EdgeType.CHILD)
+            ]
+            entry_cu = [
+                c
+                for c in children_cus
+                if c.type == NodeType.CU and len(pet.in_edges(c.id, EdgeType.SUCCESSOR)) == 0
+            ][0]
+            print("\tEntry CU: ", entry_cu, " @ ", entry_cu.start_line)
+
+            # traverse the function body to identify necessary updates
+            # save the CUs which have last written a given variable
+            # remove the entries in the dicts if an update instruction has been created
+            # todo replace last_host_writes and last_device_writes with more general, multi-device implementation
+
+            # Pseudocode:
+            # def identify_updates(current_node, last_host_writes, last_device_writes):
+            #    while len(configurations_to_check) > 0:
+            #       current_node = configurations_to_check.pop()
+            #       add current_node to visited_nodes
+            #       determine if current_node is on host or device (todo: change to device id)
+            #       get current_node_liveness
+            #       for each live variable:
+            #           check if update is required: reading dependency edge exists and entry in last_write exists?
+            #           if update required:
+            #               determine update type (TO / FROM)
+            #               create an update instruction
+            #               delete the corresponding last_x_write entry for the given variable
+            # TODO start
+            #               remove "written" mark for the now covered access
+            #               restart the calculation from the start of the function using the
+            #                  now simplified set of marked dirty live variables
+            # TODO end
+            #       for each written variable:
+            #           create / overwrite an entry in last_x_write
+            #       next_nodes = current.getNextNodes()
+            #       if len(next_nodes) > 1:
+            #           for each next node:
+            #               if next_node not in visited:
+            #                   configurations_to_check.push(next_node)
+            #       else:
+            #           configurations_to_check.push(current_node.getNext())
+
+            def identify_updates(
+                initial_current_node: CUNode,
+                initial_last_host_writes: Dict[str, str],
+                initial_last_device_writes: Dict[str, str],
+                initial_visited_configurations: Set[
+                    Tuple[str, Tuple[Tuple[str, str], ...], Tuple[Tuple[str, str], ...]]
+                ],
+            ):
+                # initialize configurations
+                configurations_to_check: List[
+                    Tuple[
+                        CUNode,
+                        Dict[str, str],
+                        Dict[str, str],
+                        Set[Tuple[str, Tuple[Tuple[str, str], ...], Tuple[Tuple[str, str], ...]]],
+                    ]
+                ] = [
+                    (
+                        initial_current_node,
+                        initial_last_host_writes,
+                        initial_last_device_writes,
+                        initial_visited_configurations,
+                    )
+                ]
+
+                while len(configurations_to_check) > 0:
+                    (
+                        current_node,
+                        last_host_writes,
+                        last_device_writes,
+                        visited_configurations,
+                    ) = configurations_to_check.pop(0)
+                    # break if current_node has already been visited
+
+                    if (
+                        current_node.id,
+                        tuple(list(last_host_writes.items())),
+                        tuple(list(last_device_writes.items())),
+                    ) in visited_configurations:
+                        import sys
+
+                        print("SKIP @", current_node.id, file=sys.stderr)
+                        continue
+                    import sys
+
+                    print(
+                        "CHecking: ",
+                        current_node.id,
+                        tuple(list(last_host_writes.items())),
+                        tuple(list(last_device_writes.items())),
+                        file=sys.stderr,
+                    )
+
+                    # get required node information
+                    in_dep_edges = pet.in_edges(current_node.id, EdgeType.DATA)
+                    out_dep_edges = pet.out_edges(current_node.id, EdgeType.DATA)
+                    # calculate memory regions which are read by the current_node or it's subtree
+                    # by analyzing all dependencies in the subtree
+                    subtree_in_dep_edges = []
+                    for subtree_node in pet.subtree_of_type(current_node, NodeType.CU):
+                        subtree_in_dep_edges += pet.in_edges(subtree_node.id, EdgeType.DATA)
+                    subtree_out_dep_edges = []
+                    for subtree_node in pet.subtree_of_type(current_node, NodeType.CU):
+                        subtree_out_dep_edges += pet.out_edges(subtree_node.id, EdgeType.DATA)
+
+                    read_memory_regions = [
+                        cast(str, d.aa_var_name)
+                        for s, t, d in subtree_in_dep_edges
+                        if d.dtype == DepType.WAR and d.aa_var_name is not None
+                    ]
+                    read_memory_regions += [
+                        cast(str, d.aa_var_name)
+                        for s, t, d in subtree_out_dep_edges
+                        if d.dtype == DepType.RAW and d.aa_var_name is not None
+                    ]
+                    read_memory_regions = list(set(read_memory_regions))
+
+                    # add current_node to visited_node_ids
+                    visited_configurations.add(
+                        (
+                            current_node.id,
+                            tuple(list(last_host_writes.items())),
+                            tuple(list(last_device_writes.items())),
+                        )
+                    )
+                    current_is_device_node = current_node.id in self.device_cu_ids
+                    liveness = (
+                        extended_device_liveness
+                        if current_is_device_node
+                        else extended_host_liveness
+                    )
+                    # get current_node_liveness
+                    current_node_live_vars: Dict[str, List[Tuple[str, Set[str], bool]]] = dict()
+                    for var_name in liveness:
+                        for t1, t2, t3 in liveness[var_name]:
+                            if t1 == current_node.id:
+                                if var_name not in current_node_live_vars:
+                                    current_node_live_vars[var_name] = []
+                                current_node_live_vars[var_name].append((t1, t2, t3))
+                    # for each live variable
+                    for var_name in current_node_live_vars:
+                        # check if reading dependency edge exists which overlaps with memory region
+                        overlapping_memory_regions = []
+                        for entry in current_node_live_vars[var_name]:
+                            overlapping_memory_regions += [
+                                mem_reg for mem_reg in read_memory_regions if mem_reg in entry[1]
+                            ]
+                        read_dependency_exists = len(overlapping_memory_regions) > 0
+
+                        # check if previous write exists in last_x_writes
+                        entry_in_last_write_exists = var_name in (
+                            last_host_writes if current_is_device_node else last_device_writes
+                        )
+
+                        # check if update is required
+                        update_required = read_dependency_exists and entry_in_last_write_exists
+
+                        # import sys
+                        # print(file=sys.stderr)
+                        # print("Node ID: ", current_node.id, file=sys.stderr)
+                        # print("Is Device Node: ", current_is_device_node, file=sys.stderr)
+                        # print("VAR NAME: ", var_name, file=sys.stderr)
+                        # print(
+                        #    "read dep: ",
+                        #    read_dependency_exists,
+                        #    " -- ",
+                        #    read_memory_regions,
+                        #    file=sys.stderr,
+                        # )
+                        # print("Last write: ", file=sys.stderr)
+                        # for key in (
+                        #     last_host_writes if current_is_device_node else last_device_writes
+                        # ):
+                        #     print(
+                        #         "\t",
+                        #         key,
+                        #         " --> ",
+                        #        (
+                        #            last_host_writes
+                        #            if current_is_device_node
+                        #            else last_device_writes
+                        #        )[key].id,
+                        #        file=sys.stderr,
+                        #    )
+                        # print("last_write: ", entry_in_last_write_exists, file=sys.stderr)
+                        # print("Update required: ", update_required, file=sys.stderr)
+
+                        if update_required:
+                            # determine update type
+                            update_type = (
+                                UpdateType.TO_DEVICE
+                                if current_is_device_node
+                                else UpdateType.FROM_DEVICE
+                            )
+                            # create update instruction
+                            meta_line_num = current_node.start_position()
+                            last_writing_cu = pet.node_at(
+                                (
+                                    last_host_writes
+                                    if current_is_device_node
+                                    else last_device_writes
+                                )[var_name]
+                            )
+                            # determine update var name by checking for overlaps in the list of live variables,
+                            # the current value of var_name and the identified, read memory regions.
+                            # Get variables names which are live in last_writing_cu and
+                            # are associated with the overlapping_memory_regions
+                            update_var_names: Set[str] = set()
+                            other_device_liveness = (
+                                extended_host_liveness
+                                if current_is_device_node
+                                else extended_device_liveness
+                            )
+                            for tmp_var_name in other_device_liveness:
+                                for tmp_cu_id, tmp_mem_regs, _ in other_device_liveness[
+                                    tmp_var_name
+                                ]:
+                                    # check if entry for last_writing_cu exists
+                                    if tmp_cu_id == last_writing_cu.id:
+                                        # check if relevant memory regions are targeted
+                                        if (
+                                            len(
+                                                [
+                                                    mr
+                                                    for mr in tmp_mem_regs
+                                                    if mr in overlapping_memory_regions
+                                                ]
+                                            )
+                                            > 0
+                                        ):
+                                            # tmp_var_name is a candidate to be updated
+                                            update_var_names.add(tmp_var_name)
+
+                            for update_var_name in update_var_names:
+                                update_instruction: Tuple[str, str, UpdateType, str, str] = (
+                                    str(last_writing_cu.id),
+                                    str(current_node.id),
+                                    update_type,
+                                    update_var_name,
+                                    meta_line_num,
+                                )
+                                update_instructions.append(update_instruction)
+
+                            # delete entry in last_x_write
+                            del (
+                                last_host_writes if current_is_device_node else last_device_writes
+                            )[var_name]
+
+                            #   remove "written" mark for the now covered memory access
+                            for update_var_name in update_var_names:
+                                print("UPDATE VAR: ", update_var_name, file=sys.stderr)
+                                print("\tkeys: ", other_device_liveness.keys(), file=sys.stderr)
+                                for idx, (tmp_cu_id, tmp_mem_regs, _) in enumerate(
+                                    other_device_liveness[update_var_name]
+                                ):
+                                    if tmp_cu_id == last_writing_cu.id:
+                                        import sys
+
+                                        print(
+                                            "PRE: ",
+                                            other_device_liveness[update_var_name][idx],
+                                            file=sys.stderr,
+                                        )
+                                        # remove "dirty" marking if present
+                                        other_device_liveness[update_var_name][idx] = (
+                                            tmp_cu_id,
+                                            tmp_mem_regs,
+                                            False,
+                                        )
+                                        print(
+                                            "POST: ",
+                                            other_device_liveness[update_var_name][idx],
+                                            file=sys.stderr,
+                                        )
+
+                            # todo
+                            #  restart the calculation from the start of the function using the
+                            #  now simplified set of marked dirty live variables
+                            # clear configurations
+                            configurations_to_check = []
+                            # create new initial entry
+                            configurations_to_check.append(
+                                (
+                                    initial_current_node,
+                                    initial_last_host_writes,
+                                    initial_last_device_writes,
+                                    initial_visited_configurations,
+                                )
+                            )
+
+                    # for each written variable
+                    written_vars = [
+                        cast(str, d.var_name)
+                        for s, t, d in in_dep_edges
+                        if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
+                        and d.var_name is not None
+                    ]
+                    written_vars += [
+                        cast(str, d.var_name)
+                        for s, t, d in out_dep_edges
+                        if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
+                        and d.var_name is not None
+                    ]
+                    written_vars = list(set(written_vars))
+                    for var_name in written_vars:
+                        # create entry in last_x_write of the device the CU is executed on
+                        tmp_dict_1 = (
+                            last_device_writes if current_is_device_node else last_host_writes
+                        )
+                        tmp_dict_1[var_name] = current_node.id
+
+                        # remove the entry if existent from the other dict
+                        tmp_dict_2 = (
+                            last_host_writes if current_is_device_node else last_device_writes
+                        )
+                        if var_name in tmp_dict_2:
+                            del tmp_dict_2[var_name]
+
+                    # proceed
+                    next_nodes = [
+                        pet.node_at(t)
+                        for _, t, _ in pet.out_edges(current_node.id, EdgeType.SUCCESSOR)
+                    ]
+
+                    for next_node in next_nodes:
+                        configurations_to_check.append(
+                            (
+                                next_node,
+                                copy.deepcopy(last_host_writes),
+                                copy.deepcopy(last_device_writes),
+                                copy.deepcopy(visited_configurations),
+                            )
+                        )
+
+            identify_updates(cast(CUNode, entry_cu), dict(), dict(), set())
+
+        # remove duplicates
+        update_instructions = list(dict.fromkeys(update_instructions))
+
+        return update_instructions
 
 
 def find_combined_gpu_regions(
