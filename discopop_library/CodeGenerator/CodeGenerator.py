@@ -28,7 +28,6 @@ def from_pattern_info(
     for type_str in patterns_by_type:
         for pattern in patterns_by_type[type_str]:
             pattern_json_strings_by_type[type_str] = pattern.to_json()
-    # return(from_json_string(file_mapping, to_json(patterns))
     return from_json_strings(file_mapping, pattern_json_strings_by_type)
 
 
