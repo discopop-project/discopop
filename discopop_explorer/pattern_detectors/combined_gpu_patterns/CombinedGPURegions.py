@@ -26,6 +26,14 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_1 import (
     get_cu_and_varname_to_memory_regions,
     get_memory_region_to_cu_and_variables_dict,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_2 import (
+    populate_live_data,
+    add_memory_regions_to_device_liveness,
+    propagate_memory_regions,
+    convert_liveness,
+    extend_data_lifespan,
+)
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import get_contained_lines
 
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
@@ -55,8 +63,8 @@ class CombinedGPURegion(PatternInfo):
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
-    meta_device_liveness: Dict[VarName, List[str]]
-    meta_host_liveness: Dict[VarName, List[str]]
+    meta_device_liveness: Dict[MemoryRegion, List[str]]
+    meta_host_liveness: Dict[MemoryRegion, List[str]]
 
     def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
         node_id = sorted([region.node_id for region in contained_regions])[0]
@@ -75,6 +83,16 @@ class CombinedGPURegion(PatternInfo):
         #        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
         #        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
+        # initialize object
+        self.update_instructions = []
+        self.data_region_entry_points = []
+        self.data_region_exit_points = []
+        self.data_region_depend_in = []
+        self.data_region_depend_out = []
+        self.meta_device_liveness: Dict[MemoryRegion, List[str]] = dict()
+        self.meta_host_liveness: Dict[MemoryRegion, List[str]] = dict()
+        self.meta_host_lines: Dict[VarName, List[str]]
+
         # ### STEP 1: INITIALIZATION
         # get written and read memory regions by CU
         written_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]]
@@ -83,12 +101,6 @@ class CombinedGPURegion(PatternInfo):
             written_memory_regions_by_cu,
             read_memory_regions_by_cu,
         ) = get_written_and_read_memory_regions_by_cu(self.contained_regions, pet)
-        print("Written memory regions:", file=sys.stderr)
-        print(written_memory_regions_by_cu, file=sys.stderr)
-        print(file=sys.stderr)
-        print("Read memory regions:", file=sys.stderr)
-        print(read_memory_regions_by_cu, file=sys.stderr)
-        print(file=sys.stderr)
 
         # get memory region and variable associations for each CU
         cu_and_variable_to_memory_regions: Dict[
@@ -97,35 +109,71 @@ class CombinedGPURegion(PatternInfo):
             self.contained_regions, pet, written_memory_regions_by_cu
         )
 
-        print("CU AND VARIABLE TO MEMORY REGIONS", file=sys.stderr)
-        print(
-            [
-                (str(key), str(cu_and_variable_to_memory_regions[key]))
-                for key in cu_and_variable_to_memory_regions
-            ],
-            file=sys.stderr,
-        )
-        print(file=sys.stderr)
-
         # get memory regions to cus and variables names
         memory_regions_to_cus_and_variables: Dict[
             MemoryRegion, Dict[CUID, Set[VarName]]
         ] = get_memory_region_to_cu_and_variables_dict(cu_and_variable_to_memory_regions)
 
-        print("MEMORY REGIONS TO CU AND VARIABLES", file=sys.stderr)
-        print(memory_regions_to_cus_and_variables, file=sys.stderr)
+        # ### STEP 2.1: INITIALIZE LIVE DATA USING MAPPING CLAUSES AND CONVERSION TO MEMORY REGIONS
+        live_device_variables = populate_live_data(self, pet, ignore_update_instructions=True)
+        print("LIVE DEVICE VARIABLES:", file=sys.stderr)
+        print(live_device_variables, file=sys.stderr)
         print(file=sys.stderr)
 
-        print("STEP ONE FINISHED", file=sys.stderr)
+        # extend device liveness with memory regions
+        device_liveness_plus_memory_regions: Dict[
+            VarName, List[Tuple[CUID, Set[MemoryRegion]]]
+        ] = add_memory_regions_to_device_liveness(
+            live_device_variables, cu_and_variable_to_memory_regions
+        )
+        print("LIVE DEVICE VARIABLES + MEMORY:", file=sys.stderr)
+        print(device_liveness_plus_memory_regions, file=sys.stderr)
+        print(file=sys.stderr)
 
-        # ### STEP 2: INITIALIZE LIVE DATA USING MAPPING CLAUSES AND CONVERSION TO MEMORY REGIONS
-        # device_live_variables = self.__populate_live_data(pet, ignore_update_instructions=True)
+        # ### STEP 2.2: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
 
-        # ### STEP 3: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
+        # propagate memory regions
+        device_liveness_plus_memory_regions = propagate_memory_regions(
+            device_liveness_plus_memory_regions
+        )
 
-        # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
+        print("PROPAGATED DEVICE VARIABLES + MEMORY:", file=sys.stderr)
+        print(device_liveness_plus_memory_regions, file=sys.stderr)
+        print(file=sys.stderr)
 
-        # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+        # convert liveness to memory regions as basis
+        memory_region_liveness = convert_liveness(device_liveness_plus_memory_regions)
+        print("CONVERTED DEVICE LIVENESS:", file=sys.stderr)
+        print(memory_region_liveness, file=sys.stderr)
+        print(file=sys.stderr)
+
+        # extend data liveness
+        # todo add the option to create memory or data transmission optimal liveness and thus data mappings
+        #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
+        extended_memory_region_liveness = extend_data_lifespan(pet, memory_region_liveness)
+
+        print("EXTENDED MEMORY REGION LIVENESS:", file=sys.stderr)
+        print(extended_memory_region_liveness, file=sys.stderr)
+        print(file=sys.stderr)
+
+        # ### STEP 3: IDENTIFY SYNCHRONOUS UPDATE POINTS
+
+        # ### STEP 4: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+
+        # ### PREPARE METADATA
+        # prepare device liveness
+        for mem_reg in extended_memory_region_liveness:
+            for cu_id in extended_memory_region_liveness[mem_reg]:
+                if mem_reg not in self.meta_device_liveness:
+                    self.meta_device_liveness[mem_reg] = []
+                cu_node = pet.node_at(cu_id)
+                for line in get_contained_lines(cu_node.start_position(), cu_node.end_position()):
+                    # todo replace once detecting writes works
+                    clean_line = line + ":"
+                    self.meta_device_liveness[mem_reg].append(clean_line)
+        # remove duplicates
+        for mem_reg in self.meta_device_liveness:
+            self.meta_device_liveness[mem_reg] = list(set(self.meta_device_liveness[mem_reg]))
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
