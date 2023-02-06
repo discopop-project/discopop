@@ -1,0 +1,106 @@
+from typing import Tuple, Dict, Set, cast
+
+from discopop_explorer import NodeType
+from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
+    MemoryRegion,
+    CUID,
+    VarName,
+)
+
+
+def get_written_and_read_memory_regions_by_cu(
+    contained_regions, pet: PETGraphX
+) -> Tuple[Dict[CUID, Set[MemoryRegion]], Dict[CUID, Set[MemoryRegion]]]:
+    all_function_cu_ids: Set[CUID] = set()
+    for region in contained_regions:
+        parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+        subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+        all_function_cu_ids.update([CUID(n.id) for n in subtree])
+
+    written_memory_regions_by_cu_id: Dict[CUID, Set[MemoryRegion]] = dict()
+    read_memory_regions_by_cu_id: Dict[CUID, Set[MemoryRegion]] = dict()
+    for cu_id in all_function_cu_ids:
+        in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
+        out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+
+        written_memory_regions = [
+            MemoryRegion(cast(str, d.aa_var_name))
+            for s, t, d in in_dep_edges
+            if (d.dtype == DepType.RAW or d.dtype == DepType.WAW) and d.aa_var_name is not None
+        ]
+        written_memory_regions += [
+            MemoryRegion(cast(str, d.aa_var_name))
+            for s, t, d in out_dep_edges
+            if (d.dtype == DepType.WAR or d.dtype == DepType.WAW) and d.aa_var_name is not None
+        ]
+
+        read_memory_regions = [
+            MemoryRegion(cast(str, d.aa_var_name))
+            for s, t, d in in_dep_edges
+            if (d.dtype == DepType.WAR) and d.aa_var_name is not None
+        ]
+        read_memory_regions += [
+            MemoryRegion(cast(str, d.aa_var_name))
+            for s, t, d in out_dep_edges
+            if (d.dtype == DepType.RAW) and d.aa_var_name is not None
+        ]
+
+        if cu_id not in written_memory_regions_by_cu_id:
+            written_memory_regions_by_cu_id[cu_id] = set()
+        written_memory_regions_by_cu_id[cu_id] = set(written_memory_regions)
+
+        if cu_id not in read_memory_regions_by_cu_id:
+            read_memory_regions_by_cu_id[cu_id] = set()
+        read_memory_regions_by_cu_id[cu_id] = set(read_memory_regions)
+    return written_memory_regions_by_cu_id, read_memory_regions_by_cu_id
+
+
+def get_cu_and_varname_to_memory_regions(
+    contained_regions, pet: PETGraphX, written_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]]
+) -> Dict[CUID, Dict[VarName, Set[MemoryRegion]]]:
+    # dict -> {Cu_ID: {var_name: [memory regions]}}
+    result_dict: Dict[CUID, Dict[VarName, Set[MemoryRegion]]] = dict()
+
+    all_function_cu_ids: Set[CUID] = set()
+    for region in contained_regions:
+        parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+
+        subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+        all_function_cu_ids.update([CUID(n.id) for n in subtree])
+
+    for cu_id in all_function_cu_ids:
+        if cu_id not in result_dict:
+            result_dict[cu_id] = dict()
+
+        # only out_deps considered, as in_deps might use variable names
+        # which originate from different source code scopes
+        out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+        for _, _, dep in out_dep_edges:
+            if dep.var_name is None or dep.aa_var_name is None:
+                continue
+            if dep.var_name not in result_dict[cu_id]:
+                result_dict[cu_id][VarName(cast(str, dep.var_name))] = set()
+            result_dict[cu_id][VarName(cast(str, dep.var_name))].add(
+                MemoryRegion(cast(str, dep.aa_var_name))
+            )
+
+    return result_dict
+
+
+def get_memory_region_to_cu_and_variables_dict(
+    cu_and_variable_to_memory_regions: Dict[CUID, Dict[VarName, Set[MemoryRegion]]]
+) -> Dict[MemoryRegion, Dict[CUID, Set[VarName]]]:
+    # inverts the given cu_and_variable_to_memory_regions dictionary
+    result_dict: Dict[MemoryRegion, Dict[CUID, Set[VarName]]] = dict()
+
+    for cu_id in cu_and_variable_to_memory_regions:
+        for var_name in cu_and_variable_to_memory_regions[cu_id]:
+            for mem_reg in cu_and_variable_to_memory_regions[cu_id][var_name]:
+                if mem_reg not in result_dict:
+                    result_dict[mem_reg] = dict()
+                if cu_id not in result_dict[mem_reg]:
+                    result_dict[mem_reg][cu_id] = set()
+                result_dict[mem_reg][cu_id].add(var_name)
+    return result_dict

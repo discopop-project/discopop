@@ -13,8 +13,8 @@ from enum import IntEnum
 from tkinter import ttk
 from typing import List, Tuple, Dict
 
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
-    ExitPointType, ExitPointPositioning, EntryPointPositioning
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
+    EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
 from discopop_wizard.classes.CodePreview import CodePreview
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
