@@ -135,6 +135,14 @@ class CombinedGPURegion(PatternInfo):
 
         print("STEP ONE FINISHED", file=sys.stderr)
 
+        # ### STEP 2: INITIALIZE LIVE DATA USING MAPPING CLAUSES AND CONVERSION TO MEMORY REGIONS
+
+        # ### STEP 3: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
+
+        # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
+
+        # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
