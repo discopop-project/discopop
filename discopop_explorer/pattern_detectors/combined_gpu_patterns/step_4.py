@@ -109,7 +109,7 @@ class Context(object):
             missing_write_identifiers = [
                 wid
                 for wid in self.seen_writes_by_device[device_id_1][mem_reg]
-                if wid not in self.seen_writes_by_device[device_id_2][mem_reg]
+                if wid not in self.seen_writes_by_device[device_id_2][mem_reg] and wid is not None
             ]
             if len(missing_write_identifiers) > 0:
                 required_updates.add((mem_reg, device_id_1, device_id_2))
