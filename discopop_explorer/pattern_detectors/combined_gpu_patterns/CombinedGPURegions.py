@@ -44,6 +44,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import ide
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     get_contained_lines,
     prepare_liveness_metadata,
+    propagate_variable_name_associations,
 )
 
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
@@ -132,6 +133,9 @@ class CombinedGPURegion(PatternInfo):
         memory_regions_to_cus_and_variables: Dict[
             MemoryRegion, Dict[CUID, Set[VarName]]
         ] = get_memory_region_to_cu_and_variables_dict(cu_and_variable_to_memory_regions)
+        print("MEMORY REGIONS TO CUS AND VARIABLES:", file=sys.stderr)
+        print(memory_regions_to_cus_and_variables, file=sys.stderr)
+        print(file=sys.stderr)
 
         # ### STEP 2.1: INITIALIZE LIVE DATA USING MAPPING CLAUSES AND CONVERSION TO MEMORY REGIONS
         live_device_variables = populate_live_data(self, pet, ignore_update_instructions=True)
@@ -168,6 +172,9 @@ class CombinedGPURegion(PatternInfo):
 
         # ### STEP 2.3: CALCULATE HOST LIVENESS
         host_liveness = calculate_host_liveness(self, pet)
+        print("HOST LIVENESS:", file=sys.stderr)
+        print(host_liveness, file=sys.stderr)
+        print(file=sys.stderr)
         host_memory_region_liveness = convert_liveness(host_liveness)
         extended_host_memory_region_liveness = extend_data_lifespan(
             pet, host_memory_region_liveness
@@ -200,6 +207,9 @@ class CombinedGPURegion(PatternInfo):
         # cleanup propagated writes (remove None entries if they are overwritten by at least one write)
         propagated_device_writes = cleanup_writes(propagated_device_writes)
         propagated_host_writes = cleanup_writes(propagated_host_writes)
+        print("CLEANED HOST WRITES:", file=sys.stderr)
+        print(propagated_host_writes, file=sys.stderr)
+        print(file=sys.stderr)
 
         # group by cus
         device_writes_by_cu = group_writes_by_cu(propagated_device_writes)
@@ -209,7 +219,7 @@ class CombinedGPURegion(PatternInfo):
 
         host_writes_by_cu = group_writes_by_cu(propagated_host_writes)
         print("HOST WRITES BY CU:", file=sys.stderr)
-        print(device_writes_by_cu, file=sys.stderr)
+        print(host_writes_by_cu, file=sys.stderr)
         print(file=sys.stderr)
 
         # todo is this a good idea?
@@ -224,6 +234,19 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+        # propagate memory region to variable name associations within function body
+        memory_regions_to_functions_and_variables: Dict[
+            MemoryRegion, Dict[CUID, Set[VarName]]
+        ] = propagate_variable_name_associations(pet, memory_regions_to_cus_and_variables)
+        print("MEMORY REGIONS TO FUNCTIONS AND VARIABLES:", file=sys.stderr)
+        print(memory_regions_to_functions_and_variables, file=sys.stderr)
+        print(file=sys.stderr)
+
+        # determine variable name for memory regions in update instructions
+        for update in issued_updates:
+            update.convert_memory_regions_to_variable_names(
+                pet, memory_regions_to_functions_and_variables
+            )
 
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
@@ -243,7 +266,9 @@ class CombinedGPURegion(PatternInfo):
             self.meta_host_liveness,
         )
         # prepare update instructions
-        self.update_instructions = [update.get_as_metadata(pet) for update in issued_updates]
+        self.update_instructions = [
+            update.get_as_metadata_using_variable_names(pet) for update in issued_updates
+        ]
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead

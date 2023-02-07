@@ -44,18 +44,34 @@ class Context(object):
 
     def update_writes(
         self, device_id_to_update: int, writes: Dict[MemoryRegion, Set[Optional[int]]]
-    ) -> Set[MemoryRegion]:
+    ) -> Set[Tuple[MemoryRegion, bool]]:
         """Returns the updated memory regions"""
-        updated_memory_regions: Set[MemoryRegion] = set()
+        updated_memory_regions: Set[tuple[MemoryRegion, bool]] = set()
 
         if device_id_to_update not in self.seen_writes_by_device:
             self.seen_writes_by_device[device_id_to_update] = dict()
         for mem_reg in writes:
+            is_initialization = (
+                True
+                if (mem_reg not in self.seen_writes_by_device[device_id_to_update])
+                and (mem_reg not in self.seen_writes_by_device[self.device_id])
+                else False
+            )
             if mem_reg not in self.seen_writes_by_device[device_id_to_update]:
                 self.seen_writes_by_device[device_id_to_update][mem_reg] = set()
+                print("==> added ", mem_reg, " to device: ", device_id_to_update, file=sys.stderr)
             for ident in writes[mem_reg]:
                 if ident not in self.seen_writes_by_device[device_id_to_update][mem_reg]:
-                    updated_memory_regions.add(mem_reg)
+                    updated_memory_regions.add((mem_reg, is_initialization))
+                    print(
+                        "--> adding memreg: ",
+                        mem_reg,
+                        " ident: ",
+                        ident,
+                        " initialization? ",
+                        is_initialization,
+                        file=sys.stderr,
+                    )
                 self.seen_writes_by_device[device_id_to_update][mem_reg].add(ident)
         return updated_memory_regions
 
@@ -65,6 +81,8 @@ class Context(object):
         comb_gpu_reg,
         writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
     ) -> Set[Update]:
+        print("UPDATE TO: ", next_cu_id, file=sys.stderr)
+
         required_updates: Set[Update] = set()
         # cuid is always the CUID currently saved in the context
 
@@ -85,20 +103,42 @@ class Context(object):
             # do not report the updated memory regions, as no update instructions need to be issued
             pass
         else:
+
+            moved_memory_regions = set([t[0] for t in updated_memory_regions if not t[1]])
+            initialized_memory_regions = set([t[0] for t in updated_memory_regions if t[1]])
             # report the identifed updates as a device switch has been performed
-            required_updates.add(
-                Update(
-                    self.cu_id,
-                    next_cu_id,
-                    updated_memory_regions,
-                    get_update_type(self.device_id, new_device_id),
+
+            # report data movement
+            update_direction = get_update_type(self.device_id, new_device_id)
+            if len(moved_memory_regions) > 0:
+                print(
+                    "REPORTED! ",
+                    update_direction,
+                    " -> ",
+                    str(moved_memory_regions),
+                    file=sys.stderr,
                 )
-            )
-            print("REPORTED! ", get_update_type(self.device_id, new_device_id), file=sys.stderr)
+                required_updates.add(
+                    Update(self.cu_id, next_cu_id, moved_memory_regions, update_direction)
+                )
+            # report allocations if update direction is TO_DEVICE
+            if len(initialized_memory_regions) > 0 and update_direction == UpdateType.TO_DEVICE:
+                print(
+                    "REPORTED! ",
+                    UpdateType.ALLOCATE,
+                    " -> ",
+                    str(initialized_memory_regions),
+                    file=sys.stderr,
+                )
+                required_updates.add(
+                    Update(self.cu_id, next_cu_id, initialized_memory_regions, UpdateType.ALLOCATE)
+                )
 
         # update the context
         self.cu_id = next_cu_id
         self.device_id = new_device_id
+
+        print("DONE: \n", file=sys.stderr)
 
         return required_updates
 

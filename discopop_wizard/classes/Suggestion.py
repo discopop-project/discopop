@@ -260,6 +260,10 @@ class Suggestion(object):
                 # from device means host is reading, so update before the instruction
                 pragma.pragma_position = PragmaPosition.BEFORE_START
                 pragma.pragma_str += "from("
+            elif update_type == UpdateType.ALLOCATE:
+                # allocate memory, not written to before
+                pragma.pragma_position = PragmaPosition.BEFORE_START
+                pragma.pragma_str += "alloc("
             else:
                 raise ValueError("Unsupported update type: ", update_type)
             pragma.pragma_str += target_var + ") "

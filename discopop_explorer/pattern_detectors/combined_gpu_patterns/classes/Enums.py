@@ -29,3 +29,4 @@ class UpdateType(IntEnum):
     FROM_DEVICE = 1
     # TO_FROM should not occur ideally, since data should only be modified either on the host or the device for now
     TO_FROM_DEVICE = 2
+    ALLOCATE = 3
