@@ -1,3 +1,4 @@
+import copy
 from typing import Dict, Set, Tuple, Optional, List, cast
 
 from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType
@@ -9,10 +10,12 @@ import sys
 
 
 class Context(object):
+    cu_id: CUID
     device_id: int
     seen_writes: Dict[MemoryRegion, Set[Optional[int]]]
 
-    def __init__(self, device_id: int):
+    def __init__(self, cu_id: CUID, device_id: int):
+        self.cu_id = cu_id
         self.device_id = device_id
         self.seen_writes = dict()
         self.print()
@@ -20,6 +23,7 @@ class Context(object):
     def __str__(self):
         result_str = ""
         result_str += "Context:\n"
+        result_str += "\tcu_id: " + str(self.cu_id) + "\n"
         result_str += "\tdevice: " + str(self.device_id) + "\n"
         result_str += "\twrites:"
         for mem_reg in self.seen_writes:
@@ -41,6 +45,52 @@ class Context(object):
                 self.seen_writes[mem_reg] = set()
             for ident in writes[mem_reg]:
                 self.seen_writes[mem_reg].add(ident)
+
+
+def get_device_id(comb_gpu_reg, cu_id: CUID) -> int:
+    if cu_id in comb_gpu_reg.device_cu_ids:
+        return 1
+    return 0
+
+
+def __identify_merge_node(pet, successors: List[CUID]) -> CUID:
+    paths: List[List[CUID]] = []
+
+    def construct_paths(current_node, current_path, visited):
+        visited.append(current_node)
+        # allow visiting a node twice to properly consider loops
+        succs = [cast(CUID, t) for s, t, d in pet.out_edges(current_node, EdgeType.SUCCESSOR)]
+
+        if len(succs) == 0:
+            return [current_path]
+        if len(succs) == 1:
+            current_path.append(succs[0])
+            if visited.count(succs[0]) < 2:
+                return construct_paths(
+                    succs[0], copy.deepcopy(current_path), copy.deepcopy(visited)
+                )
+            else:
+                # loop has not been exited. Discard the path
+                return []
+        result_paths = []
+        for succ in succs:
+            if visited.count(succ) < 2:
+                tmp_path = copy.deepcopy(current_path)
+                tmp_path.append(succ)
+                result_paths += construct_paths(succ, tmp_path, copy.deepcopy(visited))
+            else:
+                # loop has not been exited. Discard the path
+                pass
+        return result_paths
+
+    for successor_id in successors:
+        paths += construct_paths(successor_id, [successor_id], [])
+    print("PATHS: ", paths, file=sys.stderr)
+    for path in paths:
+        print("PATH: ", path, file=sys.stderr)
+
+    # identify first common node
+    return CUID("")
 
 
 def identify_updates(
@@ -77,8 +127,8 @@ def identify_updates(
 
             # create a new context
             # todo add multiple contexts for multiple devices
-            device_id = 1 if entry_point in comb_gpu_reg.device_cu_ids else 0
-            context = Context(device_id)
+            device_id = get_device_id(comb_gpu_reg, entry_point)
+            context = Context(entry_point, device_id)
 
             try:
                 entry_point_writes = (device_writes if device_id == 1 else host_writes)[entry_point]
@@ -86,9 +136,47 @@ def identify_updates(
                 entry_point_writes = dict()
 
             context.update_writes(entry_point_writes)
-            context.print()
 
             # follow successor path
+            end_reached = False
+            successors = [
+                cast(CUID, t) for s, t, d in pet.out_edges(context.cu_id, EdgeType.SUCCESSOR)
+            ]
+            visited: Set[CUID] = set()
+            visited.add(context.cu_id)
+
+            while not end_reached:
+                context.print()
+
+                if len(successors) == 0:
+                    end_reached = True
+                elif len(successors) == 1:
+                    # todo: check for context switch
+                    # todo: update context
+                    # update successors
+                    successors = [
+                        cast(CUID, t)
+                        for s, t, d in pet.out_edges(successors[0], EdgeType.SUCCESSOR)
+                    ]
+                else:
+                    # multiple successors exist
+
+                    # identify merge node
+                    print("SPAWN FOR: ", successors, file=sys.stderr)
+                    merge_node = __identify_merge_node(pet, successors)
+
+                    # follow successor paths until merge node has been encountered
+
+                    for successor_id in successors:
+                        # if no context switch happens, do nothing
+                        succ_device_id = get_device_id(comb_gpu_reg, successor_id)
+                        if succ_device_id == context.device_id:
+                            continue
+
+                    end_reached = True
+
+                # todo replace with more diversified approach
+                # treat branched sections as a single element
 
             # identify context switches
 
