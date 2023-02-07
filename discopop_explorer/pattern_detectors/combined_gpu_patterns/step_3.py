@@ -158,3 +158,18 @@ def cleanup_writes(
             if (cu_id, ident) in writes[mem_reg]:
                 writes[mem_reg].remove((cu_id, ident))
     return writes
+
+
+def group_writes_by_cu(
+    writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]
+) -> Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]:
+    result_dict: Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]] = dict()
+
+    for mem_reg in writes:
+        for cu_id, ident in writes[mem_reg]:
+            if cu_id not in result_dict:
+                result_dict[cu_id] = dict()
+            if mem_reg not in result_dict[cu_id]:
+                result_dict[cu_id][mem_reg] = set()
+            result_dict[cu_id][mem_reg].add(ident)
+    return result_dict

@@ -38,7 +38,9 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     initialize_writes,
     propagate_writes,
     cleanup_writes,
+    group_writes_by_cu,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     get_contained_lines,
     prepare_liveness_metadata,
@@ -199,14 +201,26 @@ class CombinedGPURegion(PatternInfo):
         propagated_device_writes = cleanup_writes(propagated_device_writes)
         propagated_host_writes = cleanup_writes(propagated_host_writes)
 
+        # group by cus
+        device_writes_by_cu = group_writes_by_cu(propagated_device_writes)
+        print("DEVICE WRITES BY CU:", file=sys.stderr)
+        print(device_writes_by_cu, file=sys.stderr)
+        print(file=sys.stderr)
+
+        host_writes_by_cu = group_writes_by_cu(propagated_host_writes)
+        print("HOST WRITES BY CU:", file=sys.stderr)
+        print(device_writes_by_cu, file=sys.stderr)
+        print(file=sys.stderr)
+
         # todo is this a good idea?
-        # ### STEP 4: REMOVE ALL INFORMATION NOT RELATED TO THE CONSIDERED FUNCTION BODY
+        # ### STEP (4): REMOVE ALL INFORMATION NOT RELATED TO THE CONSIDERED FUNCTION BODY
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
+        identify_updates(self, pet, device_writes_by_cu, host_writes_by_cu)
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
 
-        # ### FUTURE STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
+        # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### PREPARE METADATA
         # prepare device liveness
