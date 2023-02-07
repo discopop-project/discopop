@@ -62,6 +62,7 @@ class Context(object):
                 print("==> added ", mem_reg, " to device: ", device_id_to_update, file=sys.stderr)
             for ident in writes[mem_reg]:
                 if ident not in self.seen_writes_by_device[device_id_to_update][mem_reg]:
+                    # list of seen writes will be updated
                     updated_memory_regions.add((mem_reg, is_initialization))
                     print(
                         "--> adding memreg: ",
@@ -74,6 +75,61 @@ class Context(object):
                     )
                 self.seen_writes_by_device[device_id_to_update][mem_reg].add(ident)
         return updated_memory_regions
+
+    def find_required_updates(self, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int]]:
+        # update required, if seen writes of new device is not a superset of old device id
+        required_updates: Set[Tuple[MemoryRegion, int, int]] = set()
+
+        #        # check if new key needs to be added
+        #        required_mem_regs = [
+        #            mem_reg
+        #            for mem_reg in self.seen_writes_by_device[self.device_id]
+        #            if mem_reg not in self.seen_writes_by_device[new_device_id]
+        #        ]
+        #        for mem_reg in required_mem_regs:
+        #            required_updates.add((mem_reg, False))
+
+        # check if unsynchronized changes exist
+
+        device_id_1 = self.device_id
+        device_id_2 = new_device_id
+
+        # todo check if this is a good idea
+        # if device_id_1 == device_id_2:
+        # allow checking for updates after switching devices
+        #    continue
+
+        overlapping_mem_reg = [
+            mem_reg
+            for mem_reg in self.seen_writes_by_device[device_id_1]
+            if mem_reg in self.seen_writes_by_device[device_id_2]
+        ]
+        for mem_reg in overlapping_mem_reg:
+            # issue update, if writes of new device is not a superset of old device
+            missing_write_identifiers = [
+                wid
+                for wid in self.seen_writes_by_device[device_id_1][mem_reg]
+                if wid not in self.seen_writes_by_device[device_id_2][mem_reg]
+            ]
+            if len(missing_write_identifiers) > 0:
+                required_updates.add((mem_reg, device_id_1, device_id_2))
+
+        return required_updates
+
+    def synchronize_states(self, new_device_id: int):
+        overlapping_mem_reg = [
+            mem_reg
+            for mem_reg in self.seen_writes_by_device[self.device_id]
+            if mem_reg in self.seen_writes_by_device[new_device_id]
+        ]
+        for mem_reg in overlapping_mem_reg:
+            # synchronize from old to new device
+            for mem_reg in overlapping_mem_reg:
+                # issue update, if writes of new device is not a superset of old device
+                for write_identifier in self.seen_writes_by_device[self.device_id][mem_reg]:
+                    if write_identifier not in self.seen_writes_by_device[new_device_id][mem_reg]:
+                        print("SYNCHRONIZED: ", mem_reg, write_identifier, file=sys.stderr)
+                    self.seen_writes_by_device[new_device_id][mem_reg].add(write_identifier)
 
     def update_to(
         self,
@@ -96,43 +152,36 @@ class Context(object):
         writes_for_update = dict()
         if next_cu_id in writes_by_device[new_device_id]:
             writes_for_update = writes_by_device[new_device_id][next_cu_id]
-        updated_memory_regions = self.update_writes(new_device_id, writes_for_update)
-        print("UPDATED MEMORY REGIONS: ", updated_memory_regions, file=sys.stderr)
+        self_updated_memory_regions = self.update_writes(new_device_id, writes_for_update)
+        print("UPDATED MEMORY REGIONS: ", self_updated_memory_regions, file=sys.stderr)
+
+        # identify required updates
+        updated_memory_regions = self.find_required_updates(new_device_id)
+
+        # synchronize states
+        self.synchronize_states(new_device_id)
 
         if not device_switch_occurred:
             # do not report the updated memory regions, as no update instructions need to be issued
             pass
         else:
 
-            moved_memory_regions = set([t[0] for t in updated_memory_regions if not t[1]])
-            initialized_memory_regions = set([t[0] for t in updated_memory_regions if t[1]])
             # report the identifed updates as a device switch has been performed
 
             # report data movement
-            update_direction = get_update_type(self.device_id, new_device_id)
-            if len(moved_memory_regions) > 0:
+            for mem_reg, from_device, to_device in updated_memory_regions:
+                update_direction = get_update_type(from_device, to_device)
                 print(
                     "REPORTED! ",
                     update_direction,
                     " -> ",
-                    str(moved_memory_regions),
+                    str(mem_reg),
+                    from_device,
+                    "->",
+                    to_device,
                     file=sys.stderr,
                 )
-                required_updates.add(
-                    Update(self.cu_id, next_cu_id, moved_memory_regions, update_direction)
-                )
-            # report allocations if update direction is TO_DEVICE
-            if len(initialized_memory_regions) > 0 and update_direction == UpdateType.TO_DEVICE:
-                print(
-                    "REPORTED! ",
-                    UpdateType.ALLOCATE,
-                    " -> ",
-                    str(initialized_memory_regions),
-                    file=sys.stderr,
-                )
-                required_updates.add(
-                    Update(self.cu_id, next_cu_id, initialized_memory_regions, UpdateType.ALLOCATE)
-                )
+                required_updates.add(Update(self.cu_id, next_cu_id, {mem_reg}, update_direction))
 
         # update the context
         self.cu_id = next_cu_id
