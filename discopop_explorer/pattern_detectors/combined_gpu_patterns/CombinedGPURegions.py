@@ -216,7 +216,12 @@ class CombinedGPURegion(PatternInfo):
         # ### STEP (4): REMOVE ALL INFORMATION NOT RELATED TO THE CONSIDERED FUNCTION BODY
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
-        identify_updates(self, pet, device_writes_by_cu, host_writes_by_cu)
+        writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
+        issued_updates = identify_updates(self, pet, writes_by_device)
+        print("ISSUED UPDATES:", file=sys.stderr)
+        for update in issued_updates:
+            print(update, file=sys.stderr)
+        print(file=sys.stderr)
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
 
@@ -237,6 +242,8 @@ class CombinedGPURegion(PatternInfo):
             propagated_host_writes,
             self.meta_host_liveness,
         )
+        # prepare update instructions
+        self.update_instructions = [update.get_as_metadata(pet) for update in issued_updates]
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead

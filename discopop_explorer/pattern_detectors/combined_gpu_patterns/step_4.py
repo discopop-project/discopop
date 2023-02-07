@@ -8,16 +8,19 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 )
 import sys
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
+
 
 class Context(object):
     cu_id: CUID
     device_id: int
-    seen_writes: Dict[MemoryRegion, Set[Optional[int]]]
+    seen_writes_by_device: Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]
 
     def __init__(self, cu_id: CUID, device_id: int):
         self.cu_id = cu_id
         self.device_id = device_id
-        self.seen_writes = dict()
+        self.seen_writes_by_device = dict()
         self.print()
 
     def __str__(self):
@@ -25,26 +28,78 @@ class Context(object):
         result_str += "Context:\n"
         result_str += "\tcu_id: " + str(self.cu_id) + "\n"
         result_str += "\tdevice: " + str(self.device_id) + "\n"
-        result_str += "\twrites:"
-        for mem_reg in self.seen_writes:
-            result_str += "\t\t" + mem_reg + ": "
-            for ident in self.seen_writes[mem_reg]:
-                result_str += str(ident) + ", "
+        result_str += "\twrites:\n"
+        for device_id in self.seen_writes_by_device:
+            result_str += "\t\tDEVICE: " + str(device_id) + "\n"
+            for mem_reg in self.seen_writes_by_device[device_id]:
+                result_str += "\t\t\t" + mem_reg + ": "
+                for ident in self.seen_writes_by_device[device_id][mem_reg]:
+                    result_str += str(ident) + ", "
+                result_str += "\n"
             result_str += "\n"
-        result_str += "\n"
         return result_str
 
     def print(self):
-        print(file=sys.stderr)
         print(self, file=sys.stderr)
-        print(file=sys.stderr)
 
-    def update_writes(self, writes: Dict[MemoryRegion, Set[Optional[int]]]):
+    def update_writes(
+        self, device_id_to_update: int, writes: Dict[MemoryRegion, Set[Optional[int]]]
+    ) -> Set[MemoryRegion]:
+        """Returns the updated memory regions"""
+        updated_memory_regions: Set[MemoryRegion] = set()
+
+        if device_id_to_update not in self.seen_writes_by_device:
+            self.seen_writes_by_device[device_id_to_update] = dict()
         for mem_reg in writes:
-            if mem_reg not in self.seen_writes:
-                self.seen_writes[mem_reg] = set()
+            if mem_reg not in self.seen_writes_by_device[device_id_to_update]:
+                self.seen_writes_by_device[device_id_to_update][mem_reg] = set()
             for ident in writes[mem_reg]:
-                self.seen_writes[mem_reg].add(ident)
+                if ident not in self.seen_writes_by_device[device_id_to_update][mem_reg]:
+                    updated_memory_regions.add(mem_reg)
+                self.seen_writes_by_device[device_id_to_update][mem_reg].add(ident)
+        return updated_memory_regions
+
+    def update_to(
+        self,
+        next_cu_id: CUID,
+        comb_gpu_reg,
+        writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    ) -> Set[Update]:
+        required_updates: Set[Update] = set()
+        # cuid is always the CUID currently saved in the context
+
+        # calculate device id of new cu
+        new_device_id = get_device_id(comb_gpu_reg, next_cu_id)
+
+        # check for device switch
+        device_switch_occurred = True if new_device_id != self.device_id else False
+
+        # apply updates to written memory regions
+        writes_for_update = dict()
+        if next_cu_id in writes_by_device[new_device_id]:
+            writes_for_update = writes_by_device[new_device_id][next_cu_id]
+        updated_memory_regions = self.update_writes(new_device_id, writes_for_update)
+        print("UPDATED MEMORY REGIONS: ", updated_memory_regions, file=sys.stderr)
+
+        if not device_switch_occurred:
+            # do not report the updated memory regions, as no update instructions need to be issued
+            pass
+        else:
+            # report the identifed updates as a device switch has been performed
+            required_updates.add(
+                Update(
+                    self.cu_id,
+                    updated_memory_regions,
+                    get_update_type(self.device_id, new_device_id),
+                )
+            )
+            print("REPORTED! ", get_update_type(self.device_id, new_device_id), file=sys.stderr)
+
+        # update the context
+        self.cu_id = next_cu_id
+        self.device_id = new_device_id
+
+        return required_updates
 
 
 def get_device_id(comb_gpu_reg, cu_id: CUID) -> int:
@@ -107,9 +162,9 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
 def identify_updates(
     comb_gpu_reg,
     pet: PETGraphX,
-    device_writes: Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]],
-    host_writes: Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]],
-):
+    writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+) -> Set[Update]:
+    identified_updates: Set[Update] = set()
     # get parent functions
     parent_functions: Set[CUID] = set()
     for region in comb_gpu_reg.contained_regions:
@@ -137,58 +192,125 @@ def identify_updates(
             )
 
             # create a new context
-            # todo add multiple contexts for multiple devices
+            # todo add contexts support for multiple devices
             device_id = get_device_id(comb_gpu_reg, entry_point)
             context = Context(entry_point, device_id)
 
             try:
-                entry_point_writes = (device_writes if device_id == 1 else host_writes)[entry_point]
+                entry_point_writes = writes_by_device[device_id][entry_point]
             except KeyError:
                 entry_point_writes = dict()
 
-            context.update_writes(entry_point_writes)
+            context.update_writes(device_id, entry_point_writes)
 
-            # follow successor path
-            end_reached = False
-            successors = [
-                cast(CUID, t) for s, t, d in pet.out_edges(context.cu_id, EdgeType.SUCCESSOR)
-            ]
-            visited: Set[CUID] = set()
-            visited.add(context.cu_id)
+            # start calculation of updates for entry_point
+            identified_updates.update(
+                __calculate_updates(pet, comb_gpu_reg, context, entry_point, writes_by_device)
+            )
 
-            while not end_reached:
-                context.print()
+    return identified_updates
 
-                if len(successors) == 0:
-                    end_reached = True
-                elif len(successors) == 1:
-                    # todo: check for context switch
-                    # todo: update context
-                    # update successors
-                    successors = [
-                        cast(CUID, t)
-                        for s, t, d in pet.out_edges(successors[0], EdgeType.SUCCESSOR)
-                    ]
-                else:
-                    # multiple successors exist
 
-                    # identify merge node
-                    print("SPAWN FOR: ", successors, file=sys.stderr)
-                    merge_node = __identify_merge_node(pet, successors)
+def get_update_type(from_device_id: int, to_device_id: int) -> UpdateType:
+    if from_device_id == 0 and to_device_id != 0:
+        return UpdateType.TO_DEVICE
+    elif from_device_id != 0 and to_device_id == 0:
+        return UpdateType.FROM_DEVICE
+    raise ValueError(
+        "Unsupported update type requested for device IDS: "
+        + str(from_device_id)
+        + " -> "
+        + str(to_device_id)
+    )
 
-                    # follow successor paths until merge node has been encountered
 
-                    for successor_id in successors:
-                        # if no context switch happens, do nothing
-                        succ_device_id = get_device_id(comb_gpu_reg, successor_id)
-                        if succ_device_id == context.device_id:
-                            continue
+def __calculate_updates(
+    pet: PETGraphX,
+    comb_gpu_reg,
+    context: Context,
+    cur_node_id: CUID,
+    writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+) -> Set[Update]:
+    # calculate and return updates between ctx.cu_id and its immediate successor cur_node
+    identified_updates: Set[Update] = set()
 
-                    end_reached = True
+    # pass on calculation
+    end_reached = False
+    while not end_reached:
+        context.print()
 
-                # todo replace with more diversified approach
-                # treat branched sections as a single element
+        # todo: update context to current node and save required updates
+        required_updates = context.update_to(cur_node_id, comb_gpu_reg, writes_by_device)
+        identified_updates.update(required_updates)
 
-            # identify context switches
+        # calculate successors of current node
+        successors = [cast(CUID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
 
-            # determine update points using lookahead at path splits
+        if len(successors) == 0:
+            end_reached = True
+            continue
+        elif len(successors) == 1:
+            # start calculation for successor of current node
+            cur_node_id = successors[0]
+            print("PROCEED TO ", cur_node_id, file=sys.stderr)
+            continue
+        else:
+            # multiple successors exist
+
+            # determine merge node if existing
+            merge_node = __identify_merge_node(pet, successors)
+
+            # if merge node exists, skip branched section and treat it as a single node
+            if merge_node is not None:
+                cur_node_id = merge_node
+                print("PROCEED TO MERGE NODE ", cur_node_id, file=sys.stderr)
+                continue
+
+            # if no merge node exists, start recursion calculation of updates for each branch
+            if merge_node is None:
+                # recursive calculation will stop at the end of the funciton body, thus return identified updates
+                # without executing a new loop iteration
+                for successor in successors:
+                    # enter recursion
+                    print("ENTER RECURSION FOR: ", successor, file=sys.stderr)
+                    identified_updates.update(
+                        __calculate_updates(
+                            pet, comb_gpu_reg, copy.deepcopy(context), successor, writes_by_device
+                        )
+                    )
+                return identified_updates
+
+    return identified_updates
+
+
+#    else:
+#        # identify merge node
+#    print("SPAWN FOR: ", succs, file=sys.stderr)
+#        merge_node = __identify_merge_node(pet, succs)
+#        if merge_node is None:
+#            # no merge node exists (e.g. caused by a return in a branch)
+#            # todo implement
+#            raise NotImplementedError(
+#                "Currently unsupported program structure encountered. No merge node found in paths at CUID: " +
+#                str(context.cu_id)
+#            )
+#        else:
+#            # merge node exists
+#
+#            # follow successor paths until merge node has been encountered
+#            # gather updates for branched section
+#            gathered_updates = []
+#            for succ_id in succs:
+#                # if no context switch happens, do nothing
+#                succ_device_id = get_device_id(comb_gpu_reg, succ_id)
+#                if succ_device_id == context.device_id:
+#                    continue
+#
+#            # apply updates to context
+#
+#            end_reached = True
+#
+#        # todo replace with more diversified approach
+#        # treat each branch of a branched sections without merge node individually
+#
+#    return identified_updates
