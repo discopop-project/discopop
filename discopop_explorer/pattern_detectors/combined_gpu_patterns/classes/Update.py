@@ -9,24 +9,41 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
 
 
 class Update(object):
-    cu_id: CUID
+    source_cu_id: CUID
+    sink_cu_id: CUID
     memory_regions: Set[MemoryRegion]
     update_type: UpdateType
 
-    def __init__(self, cu_id: CUID, memory_regions: Set[MemoryRegion], update_type: UpdateType):
-        self.cu_id = cu_id
+    def __init__(
+        self,
+        cu_id: CUID,
+        sink_cu_id: CUID,
+        memory_regions: Set[MemoryRegion],
+        update_type: UpdateType,
+    ):
+        self.source_cu_id = cu_id
+        self.sink_cu_id = sink_cu_id
         self.memory_regions = memory_regions
         self.update_type = update_type
 
     def __str__(self):
         result_str = ""
-        result_str += str(self.update_type) + " @ " + self.cu_id + " : " + str(self.memory_regions)
+        result_str += (
+            str(self.update_type)
+            + " @ "
+            + self.source_cu_id
+            + " -> "
+            + self.sink_cu_id
+            + " : "
+            + str(self.memory_regions)
+        )
         return result_str
 
     def get_as_metadata(self, pet: PETGraphX):
         return [
-            self.cu_id,
+            self.source_cu_id,
+            self.sink_cu_id,
             self.update_type,
-            str(self.memory_regions),
-            pet.node_at(self.cu_id).end_position(),
+            str(self.memory_regions) + " @ " + self.source_cu_id + " -> " + self.sink_cu_id,
+            pet.node_at(self.source_cu_id).end_position(),
         ]

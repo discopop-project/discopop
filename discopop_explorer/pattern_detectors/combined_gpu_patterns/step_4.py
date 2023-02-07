@@ -89,6 +89,7 @@ class Context(object):
             required_updates.add(
                 Update(
                     self.cu_id,
+                    next_cu_id,
                     updated_memory_regions,
                     get_update_type(self.device_id, new_device_id),
                 )
