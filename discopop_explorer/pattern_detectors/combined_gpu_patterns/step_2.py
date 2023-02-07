@@ -7,6 +7,9 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
     MemoryRegion,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
+    get_function_body_cus_without_called_functions,
+)
 
 
 def populate_live_data(
@@ -158,12 +161,85 @@ def extend_data_lifespan(
                             # todo end of section to be replaced
                             #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
                             for subtree_node in subtree_without_called_functions:
-                                if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
+                                if CUID(subtree_node.id) not in [
+                                    cu_id for cu_id in live_data[mem_reg]
+                                ]:
                                     new_entries.append((mem_reg, cast(CUID, subtree_node.id)))
+
+                # set mem_reg to live in every child of CU
+                for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
+                    if CUID(child_id) not in live_data[mem_reg]:
+                        new_entries.append((mem_reg, cast(CUID, child_id)))
+
+                # set mem_reg to live in every called function of CU
+                for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
+                    if CUID(called_node) not in live_data[mem_reg]:
+                        new_entries.append((mem_reg, cast(CUID, called_node)))
 
         new_entries = list(set(new_entries))
         if len(new_entries) > 0:
             modification_found = True
         for mem_reg, new_cu_id in new_entries:
             live_data[mem_reg].append(new_cu_id)
+
+    # remove duplicates
+    for mem_reg in live_data:
+        live_data[mem_reg] = list(set(live_data[mem_reg]))
+
     return live_data
+
+
+def calculate_host_liveness(
+    comb_gpu_reg,
+    pet: PETGraphX,
+) -> Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]:
+
+    """
+    Variable is live on host, if a dependency between the host cu or any of its children and any device cu for a given variable exists
+
+    """
+
+    host_liveness_lists: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+
+    all_function_cu_ids: Set[CUID] = set()
+    for region in comb_gpu_reg.contained_regions:
+        parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+        all_function_cu_ids.update(
+            get_function_body_cus_without_called_functions(pet, parent_function)
+        )
+
+    all_function_host_cu_ids = [
+        cu_id for cu_id in all_function_cu_ids if cu_id not in comb_gpu_reg.device_cu_ids
+    ]
+
+    for cu_id in all_function_host_cu_ids:
+        shared_variables: Set[VarName] = set()
+        shared_memory_regions: Set[MemoryRegion] = set()
+        # get all data which is accessed by the cu_id and it's children and any device cu
+        subtree = pet.subtree_of_type(pet.node_at(cu_id), NodeType.CU)
+        for subtree_node_id in [n.id for n in subtree]:
+            out_data_edges = pet.out_edges(subtree_node_id, EdgeType.DATA)
+            in_data_edges = pet.in_edges(subtree_node_id, EdgeType.DATA)
+            for _, target, dep in out_data_edges:
+                if target in comb_gpu_reg.device_cu_ids:
+                    if dep.var_name is not None:
+                        shared_variables.add(VarName(cast(str, dep.var_name)))
+                    if dep.aa_var_name is not None:
+                        shared_memory_regions.add(MemoryRegion(cast(str, dep.aa_var_name)))
+
+            for source, _, dep in in_data_edges:
+                if source in comb_gpu_reg.device_cu_ids:
+                    if dep.var_name is not None:
+                        shared_variables.add(VarName(cast(str, dep.var_name)))
+                    if dep.aa_var_name is not None:
+                        shared_memory_regions.add(MemoryRegion(cast(str, dep.aa_var_name)))
+        for var_name in shared_variables:
+            if var_name not in host_liveness_lists:
+                host_liveness_lists[var_name] = []
+            host_liveness_lists[var_name].append((cu_id, shared_memory_regions))
+
+    # convert sets to lists
+    host_liveness: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+    for key in host_liveness_lists:
+        host_liveness[key] = host_liveness_lists[key]
+    return host_liveness

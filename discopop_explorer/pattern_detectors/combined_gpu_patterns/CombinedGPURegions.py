@@ -32,8 +32,17 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_2 import (
     propagate_memory_regions,
     convert_liveness,
     extend_data_lifespan,
+    calculate_host_liveness,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import get_contained_lines
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
+    initialize_writes,
+    propagate_writes,
+    cleanup_writes,
+)
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
+    get_contained_lines,
+    prepare_liveness_metadata,
+)
 
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
@@ -109,6 +118,14 @@ class CombinedGPURegion(PatternInfo):
             self.contained_regions, pet, written_memory_regions_by_cu
         )
 
+        print("WRITTEN MEMORY REGIONS BY CU: ", file=sys.stderr)
+        print(written_memory_regions_by_cu, file=sys.stderr)
+        print(file=sys.stderr)
+
+        print("READ MEMORY REGIONS BY CU: ", file=sys.stderr)
+        print(read_memory_regions_by_cu, file=sys.stderr)
+        print(file=sys.stderr)
+
         # get memory regions to cus and variables names
         memory_regions_to_cus_and_variables: Dict[
             MemoryRegion, Dict[CUID, Set[VarName]]
@@ -126,9 +143,6 @@ class CombinedGPURegion(PatternInfo):
         ] = add_memory_regions_to_device_liveness(
             live_device_variables, cu_and_variable_to_memory_regions
         )
-        print("LIVE DEVICE VARIABLES + MEMORY:", file=sys.stderr)
-        print(device_liveness_plus_memory_regions, file=sys.stderr)
-        print(file=sys.stderr)
 
         # ### STEP 2.2: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
 
@@ -143,37 +157,72 @@ class CombinedGPURegion(PatternInfo):
 
         # convert liveness to memory regions as basis
         memory_region_liveness = convert_liveness(device_liveness_plus_memory_regions)
-        print("CONVERTED DEVICE LIVENESS:", file=sys.stderr)
-        print(memory_region_liveness, file=sys.stderr)
-        print(file=sys.stderr)
-
         # extend data liveness
-        # todo add the option to create memory or data transmission optimal liveness and thus data mappings
-        #  For now, a minimal amount of data transmissions is targeted (by extending the data livespan).
         extended_memory_region_liveness = extend_data_lifespan(pet, memory_region_liveness)
 
-        print("EXTENDED MEMORY REGION LIVENESS:", file=sys.stderr)
+        print("EXTENDED DEVICE MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_memory_region_liveness, file=sys.stderr)
         print(file=sys.stderr)
 
-        # ### STEP 3: IDENTIFY SYNCHRONOUS UPDATE POINTS
+        # ### STEP 2.3: CALCULATE HOST LIVENESS
+        host_liveness = calculate_host_liveness(self, pet)
+        host_memory_region_liveness = convert_liveness(host_liveness)
+        extended_host_memory_region_liveness = extend_data_lifespan(
+            pet, host_memory_region_liveness
+        )
+        print("EXTENDED HOST MEMORY REGION LIVENESS:", file=sys.stderr)
+        print(extended_host_memory_region_liveness, file=sys.stderr)
+        print(file=sys.stderr)
+        # todo remove device_cus from the extended list?
 
-        # ### STEP 4: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+        # ### STEP 3: MARK WRITTEN VARIABLES
+        # initialize writes
+        device_writes = initialize_writes(
+            extended_memory_region_liveness, written_memory_regions_by_cu
+        )
+        host_writes = initialize_writes(
+            extended_host_memory_region_liveness, written_memory_regions_by_cu
+        )
+
+        # propagate writes to parents, successors and the children of successors
+        propagated_device_writes = propagate_writes(self, pet, device_writes)
+        print("PROPAGATED DEVICE WRITES:", file=sys.stderr)
+        print(propagated_device_writes, file=sys.stderr)
+        print(file=sys.stderr)
+
+        propagated_host_writes = propagate_writes(self, pet, host_writes)
+        print("PROPAGATED HOST WRITES:", file=sys.stderr)
+        print(propagated_host_writes, file=sys.stderr)
+        print(file=sys.stderr)
+
+        # cleanup propagated writes (remove None entries if they are overwritten by at least one write)
+        propagated_device_writes = cleanup_writes(propagated_device_writes)
+        propagated_host_writes = cleanup_writes(propagated_host_writes)
+
+        # todo is this a good idea?
+        # ### STEP 4: REMOVE ALL INFORMATION NOT RELATED TO THE CONSIDERED FUNCTION BODY
+
+        # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
+
+        # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
+
+        # ### FUTURE STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### PREPARE METADATA
         # prepare device liveness
-        for mem_reg in extended_memory_region_liveness:
-            for cu_id in extended_memory_region_liveness[mem_reg]:
-                if mem_reg not in self.meta_device_liveness:
-                    self.meta_device_liveness[mem_reg] = []
-                cu_node = pet.node_at(cu_id)
-                for line in get_contained_lines(cu_node.start_position(), cu_node.end_position()):
-                    # todo replace once detecting writes works
-                    clean_line = line + ":"
-                    self.meta_device_liveness[mem_reg].append(clean_line)
-        # remove duplicates
-        for mem_reg in self.meta_device_liveness:
-            self.meta_device_liveness[mem_reg] = list(set(self.meta_device_liveness[mem_reg]))
+        self.meta_device_liveness = prepare_liveness_metadata(
+            pet,
+            extended_memory_region_liveness,
+            propagated_device_writes,
+            self.meta_device_liveness,
+        )
+        # prepare host liveness
+        self.meta_host_liveness = prepare_liveness_metadata(
+            pet,
+            extended_host_memory_region_liveness,
+            propagated_host_writes,
+            self.meta_host_liveness,
+        )
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
