@@ -53,7 +53,7 @@ def get_device_id(comb_gpu_reg, cu_id: CUID) -> int:
     return 0
 
 
-def __identify_merge_node(pet, successors: List[CUID]) -> CUID:
+def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
     paths: List[List[CUID]] = []
 
     def construct_paths(current_node, current_path, visited):
@@ -85,12 +85,23 @@ def __identify_merge_node(pet, successors: List[CUID]) -> CUID:
 
     for successor_id in successors:
         paths += construct_paths(successor_id, [successor_id], [])
-    print("PATHS: ", paths, file=sys.stderr)
-    for path in paths:
-        print("PATH: ", path, file=sys.stderr)
 
-    # identify first common node
-    return CUID("")
+    # identify first common node if existing
+    # identify the shortest path
+    shortest_path_id = 0
+    for idx, path in enumerate(paths):
+        if len(path) < len(paths[shortest_path_id]):
+            shortest_path_id = idx
+    # check elements of the shortest path
+    for element in paths[shortest_path_id]:
+        contained_in_all_paths = True
+        for path in paths:
+            if element not in path:
+                contained_in_all_paths = False
+                break
+        if contained_in_all_paths:
+            return element
+    return None
 
 
 def identify_updates(
