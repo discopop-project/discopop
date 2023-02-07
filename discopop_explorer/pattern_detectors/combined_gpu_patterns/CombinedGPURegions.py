@@ -267,7 +267,8 @@ class CombinedGPURegion(PatternInfo):
         )
         # prepare update instructions
         self.update_instructions = [
-            update.get_as_metadata_using_variable_names(pet) for update in issued_updates
+            update.get_as_metadata_using_variable_names_and_memory_regions(pet)
+            for update in issued_updates
         ]
 
     def __str__(self):

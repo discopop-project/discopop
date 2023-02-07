@@ -59,6 +59,21 @@ class Update(object):
             pet.node_at(self.source_cu_id).end_position(),
         ]
 
+    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX):
+        return [
+            self.source_cu_id,
+            self.sink_cu_id,
+            self.update_type,
+            str(self.variable_names)
+            + "/"
+            + str(self.memory_regions)
+            + " @ "
+            + self.source_cu_id
+            + " -> "
+            + self.sink_cu_id,
+            pet.node_at(self.source_cu_id).end_position(),
+        ]
+
     def convert_memory_regions_to_variable_names(
         self,
         pet: PETGraphX,
