@@ -163,6 +163,10 @@ class CombinedGPURegion(PatternInfo):
 
         # convert liveness to memory regions as basis
         memory_region_liveness = convert_liveness(device_liveness_plus_memory_regions)
+        print("CONVERTED DEVICE MEMORY REGION LIVENESS:", file=sys.stderr)
+        print(memory_region_liveness, file=sys.stderr)
+        print(file=sys.stderr)
+
         # extend data liveness
         extended_memory_region_liveness = extend_data_lifespan(pet, memory_region_liveness)
 
