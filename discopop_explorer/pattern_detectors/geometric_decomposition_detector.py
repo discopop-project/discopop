@@ -11,7 +11,7 @@ import math
 from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import FunctionNode, NodeID, PETGraphX, NodeType, Node, EdgeType
+from ..PETGraphX import FunctionNode, LoopNode, NodeID, PETGraphX, NodeType, Node, EdgeType
 from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
@@ -179,8 +179,8 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: Node) -> bool:
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for child in pet.subtree_of_type(root, NodeType.LOOP):
-        if not (child.reduction or child.do_all):
+    for loop_child in pet.subtree_of_type(root, LoopNode):
+        if not (loop_child.reduction or loop_child.do_all):
             return False
 
     for child in pet.direct_children_or_called_nodes_of_type(root, NodeType.FUNC):

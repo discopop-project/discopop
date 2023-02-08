@@ -8,7 +8,7 @@
 from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import LoopNode, PETGraphX, Node, NodeType, EdgeType
+from ..PETGraphX import CUNode, LoopNode, PETGraphX, Node, NodeType, EdgeType
 from ..utils import classify_loop_variables, contains
 import time
 
@@ -77,7 +77,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: Node) -> bool:
     ]
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, NodeType.CU):
+    for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False

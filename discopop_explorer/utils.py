@@ -8,12 +8,15 @@
 import sys
 import time
 import itertools
-from typing import List, Set, Dict, Tuple, cast
+from typing import List, Sequence, Set, Dict, Tuple
 
 import numpy as np
 
 from .PETGraphX import (
+    CUNode,
+    FunctionNode,
     LineID,
+    LoopNode,
     NodeID,
     PETGraphX,
     NodeType,
@@ -67,9 +70,9 @@ def depends(pet: PETGraphX, source: Node, target: Node) -> bool:
     """
     if source == target:
         return False
-    target_nodes = pet.subtree_of_type(target, None)
+    target_nodes = pet.subtree_of_type(target)
 
-    for node in pet.subtree_of_type(source, NodeType.CU):
+    for node in pet.subtree_of_type(source, CUNode):
         for target in [
             pet.node_at(target_id)
             for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA)
@@ -88,10 +91,8 @@ def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, NodeType.LOOP)]
-    return pet.is_loop_index(
-        var_name, loops_start_lines, pet.subtree_of_type(root_loop, NodeType.CU)
-    )
+    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, LoopNode)]
+    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, CUNode))
 
 
 # NOTE: left old code as it may become relevant again in the near future
@@ -159,7 +160,7 @@ def __get_dep_of_type(
     ]
 
 
-def __get_variables(nodes: List[Node]) -> Set[Variable]:
+def __get_variables(nodes: Sequence[Node]) -> Set[Variable]:
     """Gets all variables in nodes
 
     :param nodes: nodes
@@ -276,7 +277,7 @@ def is_readonly(
     return True
 
 
-def is_global(var: str, tree: List[Node]) -> bool:
+def is_global(var: str, tree: Sequence[Node]) -> bool:
     """Checks if variable is global
 
     :param var: variable name
@@ -330,7 +331,7 @@ def is_first_written_new(
     war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
-    tree: List[Node],
+    tree: Sequence[Node],
 ):
     """Checks whether a variable is first written inside the current node
 
@@ -464,7 +465,7 @@ def is_read_in(
     war_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
-    tree: List[Node],
+    tree: Sequence[Node],
 ) -> bool:
     """Check all reverse RAW dependencies (since we know that var is written in loop, because
     is_first_written returned true)
@@ -503,17 +504,17 @@ def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]
     :param node: root node
     :return: list of do-all and list of reduction loop nodes
     """
-    do_all = []
-    reduction = []
+    do_all: List[Node] = []
+    reduction: List[Node] = []
 
-    for child in pet.subtree_of_type(node, NodeType.LOOP):
-        if child.do_all:
-            do_all.append(child)
-        elif child.reduction:
-            reduction.append(child)
+    for loop_child in pet.subtree_of_type(node, LoopNode):
+        if loop_child.do_all:
+            do_all.append(loop_child)
+        elif loop_child.reduction:
+            reduction.append(loop_child)
 
     for func_child in pet.direct_children_or_called_nodes_of_type(node, NodeType.FUNC):
-        for child in pet.direct_children_or_called_nodes_of_type(func_child, NodeType.LOOP):
+        for child in pet.direct_children_or_called_nodes_of_type(func_child, NodeType.CU):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -538,7 +539,7 @@ def classify_loop_variables(
     reduction = []
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
-    sub = pet.subtree_of_type(loop, NodeType.CU)
+    sub: List[Node] = pet.subtree_of_type(loop, CUNode)
 
     raw = set()
     war = set()
@@ -552,7 +553,7 @@ def classify_loop_variables(
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     vars = pet.get_undefined_variables_inside_loop(loop)
-    sub = pet.subtree_of_type(loop, NodeType.CU)
+    sub = pet.subtree_of_type(loop, CUNode)
     # vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
@@ -643,8 +644,8 @@ def classify_task_vars(
     left_sub_tree = pet.get_left_right_subtree(task, False)
 
     right_sub_tree = pet.get_left_right_subtree(task, True)
-    subtree = pet.subtree_of_type(task, NodeType.CU)
-    t_loop = pet.subtree_of_type(task, NodeType.LOOP)
+    subtree = pet.subtree_of_type(task, CUNode)
+    t_loop = pet.subtree_of_type(task, LoopNode)
 
     vars: Dict[Variable, Set[MemoryRegion]] = dict()
     if task.type == NodeType.FUNC:
@@ -694,7 +695,7 @@ def classify_task_vars(
         else:
             do_all_loops.append(task)
 
-    loop_nodes = [n for n in t_loop if n.reduction]
+    loop_nodes: List[Node] = [n for n in t_loop if n.reduction]
     if task.reduction:
         loop_nodes.append(task)
 

@@ -11,6 +11,7 @@ from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
+    CUNode,
     LineID,
     LoopNode,
     NodeID,
@@ -74,9 +75,7 @@ class PipelineInfo(PatternInfo):
         self._pet = pet
         self.coefficient = round(node.pipeline, 3)
 
-        children_start_lines = [
-            v.start_position() for v in pet.subtree_of_type(node, NodeType.LOOP)
-        ]
+        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, LoopNode)]
 
         self._stages = [
             pet.node_at(t)
@@ -88,7 +87,7 @@ class PipelineInfo(PatternInfo):
 
     def __in_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
-        for n in self._pet.subtree_of_type(node, NodeType.CU):
+        for n in self._pet.subtree_of_type(node, CUNode):
             raw.extend(
                 (s, t, d)
                 for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA)
@@ -97,13 +96,13 @@ class PipelineInfo(PatternInfo):
 
         nodes_before = [node]
         for i in range(self._stages.index(node)):
-            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
+            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], CUNode))
 
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
     def __out_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
-        for n in self._pet.subtree_of_type(node, NodeType.CU):
+        for n in self._pet.subtree_of_type(node, CUNode):
             raw.extend(
                 (s, t, d)
                 for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA)
@@ -112,7 +111,7 @@ class PipelineInfo(PatternInfo):
 
         nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
-            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], NodeType.CU))
+            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], CUNode))
 
         return [dep for dep in raw if dep[0] in [n.id for n in nodes_after]]
 
@@ -186,7 +185,7 @@ def __detect_pipeline(pet: PETGraphX, root: Node, children_cache=None, dep_cache
     :return: Pipeline scalar value
     """
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, LoopNode)]
 
     loop_subnodes = [
         pet.node_at(t)

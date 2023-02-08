@@ -10,7 +10,7 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import LoopNode, PETGraphX, NodeType, Node
+from ..PETGraphX import CUNode, LoopNode, PETGraphX, NodeType, Node
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -72,7 +72,7 @@ def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
     :return: true if is reduction loop
     """
     all_vars = []
-    for node in pet.subtree_of_type(root, NodeType.CU):
+    for node in pet.subtree_of_type(root, CUNode):
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 

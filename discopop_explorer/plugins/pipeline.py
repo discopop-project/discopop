@@ -44,7 +44,7 @@ def check_pipeline(pet: PETGraphX, root: Node):
     global before
     global after
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, LoopNode)]
 
     loop_subnodes = [
         pet.node_at(t)
@@ -128,8 +128,8 @@ def get_mergeable_nodes(matrix):
     return res
 
 
-def get_matrix(pet, root, loop_subnodes):
-    res = []
+def get_matrix(pet:PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
+    res : List[List[int]]= []
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):

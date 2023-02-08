@@ -7,7 +7,7 @@
 # directory for details.
 
 from __future__ import annotations
-from typing import Dict, List, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
+from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
 
@@ -518,16 +518,20 @@ class PETGraphX(object):
 
     # generic type for subclasses of Node
     NodeT = TypeVar("NodeT", bound=Node)
-    
+
     @overload
-    def all_nodes(self) -> List[Node]: ...
+    def all_nodes(self) -> List[Node]:
+        ...
+
     @overload
-    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
-    def all_nodes(self, type = Node):
+    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
+
+    def all_nodes(self, type=Node):
         """List of all nodes of specified type
 
         :param type: type(s) of nodes
-        :return: List of all nodes 
+        :return: List of all nodes
         """
         return [n[1] for n in self.g.nodes(data="data") if isinstance(n[1], type)]
 
@@ -563,37 +567,40 @@ class PETGraphX(object):
         else:
             return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype == etype]
 
+    @overload
+    def subtree_of_type(self, root: Node) -> List[Node]:
+        ...
+
+    @overload
     def subtree_of_type(
-        self, root: Node, type: Optional[Union[NodeType, Tuple[NodeType, ...]]]
-    ) -> List[Node]:
+        self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
+    ) -> List[NodeT]:
+        ...
+
+    def subtree_of_type(self, root, type=Node):
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
         :param type: type of children, None is equal to a wildcard
         :return: list of nodes in subtree
         """
-        return self.subtree_of_type_rec(root, type, set())
+        return self.subtree_of_type_rec(root, set(), type)
 
+    @overload
+    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]:
+        ...
+
+    @overload
     def subtree_of_type_rec(
-        self,
-        root: Node,
-        target_type: Optional[Union[NodeType, Tuple[NodeType, ...]]],
-        visited: Set[Node],
-    ) -> List[Node]:
-        """Gets all nodes in subtree of specified type including root
+        self, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
+    ) -> List[NodeT]:
+        ...
 
-        :param root: root node
-        :param target_type: type of children, None is equal to a wildcard
-        :param visited: set of visited nodes
-        :return: list of nodes in subtree
-        """
+    def subtree_of_type_rec(self, root, visited, type=Node):
+        """recursive helper function for subtree_of_type"""
         # check if root is of type target
-        res: List[Node] = []
-        if (
-            (type(target_type) == tuple and root.type in target_type)
-            or root.type == target_type
-            or target_type is None
-        ):
+        res: List = []
+        if isinstance(root, type):
             res.append(root)
 
         # append root to visited
@@ -604,7 +611,7 @@ class PETGraphX(object):
             # prevent cycles
             if self.node_at(target) in visited:
                 continue
-            res += self.subtree_of_type_rec(self.node_at(target), target_type, visited)
+            res += self.subtree_of_type_rec(self.node_at(target), visited, type)
 
         return res
 
@@ -680,12 +687,12 @@ class PETGraphX(object):
             return False
 
         # get recursive children of source and target
-        source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
-        target_children_ids = [node.id for node in self.subtree_of_type(target, NodeType.CU)]
+        source_children_ids = [node.id for node in self.subtree_of_type(source, CUNode)]
+        target_children_ids = [node.id for node in self.subtree_of_type(target, CUNode)]
 
         # get required metadata
         loop_start_lines: List[LineID] = []
-        root_children = self.subtree_of_type(root_loop, (NodeType.CU, NodeType.LOOP))
+        root_children = self.subtree_of_type(root_loop, (CUNode, LoopNode))
         root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
         root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
         for v in root_children_loops:
@@ -722,7 +729,7 @@ class PETGraphX(object):
         return False
 
     def unused_check_alias(self, s: NodeID, t: NodeID, d: Dependency, root_loop: Node) -> bool:
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        sub = self.subtree_of_type(root_loop, CUNode)
         parent_func_sink = self.get_parent_function(self.node_at(s))
         parent_func_source = self.get_parent_function(self.node_at(t))
 
@@ -736,7 +743,7 @@ class PETGraphX(object):
             return res
         return not res
 
-    def unused_is_global(self, var: str, tree: List[Node]) -> bool:
+    def unused_is_global(self, var: str, tree: Sequence[Node]) -> bool:
         """Checks if variable is global
 
         :param var: variable name
@@ -766,7 +773,7 @@ class PETGraphX(object):
     def unused_get_first_written_vars_in_loop(
         self, undefinedVarsInLoop: List[Variable], node: Node, root_loop: Node
     ) -> Set[Variable]:
-        root_children = self.subtree_of_type(root_loop, NodeType.CU)
+        root_children = self.subtree_of_type(root_loop, CUNode)
         loop_node_ids = [n.id for n in root_children]
         fwVars = set()
 
@@ -829,7 +836,7 @@ class PETGraphX(object):
                 return False
         raise ValueError("allVars must not be empty.")
 
-    def get_variables(self, nodes: List[Node]) -> Dict[Variable, Set[MemoryRegion]]:
+    def get_variables(self, nodes: Sequence[Node]) -> Dict[Variable, Set[MemoryRegion]]:
         """Gets all variables and corresponding memory regions in nodes
 
         :param nodes: nodes
@@ -859,7 +866,7 @@ class PETGraphX(object):
     def get_undefined_variables_inside_loop(
         self, root_loop: Node
     ) -> Dict[Variable, Set[MemoryRegion]]:
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        sub = self.subtree_of_type(root_loop, CUNode)
         vars = self.get_variables(sub)
         dummyVariables = []
         definedVarsInLoop = []
@@ -919,7 +926,7 @@ class PETGraphX(object):
         """
 
         result = False
-        children = self.subtree_of_type(root_loop, NodeType.CU)
+        children = self.subtree_of_type(root_loop, CUNode)
 
         for v in children:
             for t, d in [
