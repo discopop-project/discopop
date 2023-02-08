@@ -6,12 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import itertools
-import sys
-import copy
-from enum import IntEnum, Enum
+from __future__ import annotations
 from typing import Dict, List, Tuple, Set, Optional, cast, Union
-import jsonpickle  # type:ignore
+from enum import IntEnum, Enum
+import itertools
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -208,11 +206,47 @@ class Node:
 
     def __hash__(self):
         return hash(self.id)
+    
+class CUNode(Node):
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type=NodeType.CU
+
+
+class LoopNode(Node):
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type=NodeType.LOOP
+
+
+class DummyNode(Node):
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type=NodeType.DUMMY
+
+
+class FunctionNode(Node):
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type=NodeType.FUNC
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:
-    n = Node(node.get("id"))
-    n.type = NodeType(int(node.get("type")))
+    node_id = node.get("id")
+    node_type = NodeType(int(node.get("type")))
+
+    n: Node
+    if node_type == NodeType.CU:
+        n = CUNode(node_id)
+    elif node_type == NodeType.DUMMY:
+        n = DummyNode(node_id)
+    elif node_type == NodeType.FUNC:
+        n = FunctionNode(node_id)
+    elif node_type == NodeType.LOOP:
+        n = LoopNode(node_id)
+    else:
+        assert False, "invalid NodeType"
+
     _, n.start_line = parse_id(node.get("startsAtLine"))
     _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
