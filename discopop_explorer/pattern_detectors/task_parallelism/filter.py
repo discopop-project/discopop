@@ -8,7 +8,7 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PETGraphX import NodeType, EdgeType, Node, PETGraphX
+from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, Node, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -489,7 +489,7 @@ def __filter_in_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -558,7 +558,7 @@ def __filter_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -633,7 +633,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -657,7 +657,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node

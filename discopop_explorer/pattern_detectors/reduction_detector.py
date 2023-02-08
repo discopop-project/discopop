@@ -10,7 +10,7 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, Node
+from ..PETGraphX import LoopNode, PETGraphX, NodeType, Node
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -53,7 +53,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     :return: List of detected pattern info
     """
     result: List[ReductionInfo] = []
-    nodes = pet.all_nodes(NodeType.LOOP)
+    nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
         print("Reduction: ", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):

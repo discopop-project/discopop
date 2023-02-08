@@ -7,7 +7,7 @@
 # directory for details.
 
 from __future__ import annotations
-from typing import Dict, List, Tuple, Set, Optional, cast, Union
+from typing import Dict, List, Tuple, Set, Optional, Type, cast, Union
 from enum import IntEnum, Enum
 import itertools
 
@@ -407,7 +407,7 @@ class PETGraphX(object):
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
-        for func_node in self.all_nodes(NodeType.FUNC):
+        for func_node in self.all_nodes(FunctionNode):
             func_node.children_cu_ids = []
             stack: List[Node] = self.direct_children(func_node)
             while stack:
@@ -515,13 +515,13 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]["data"]
 
-    def all_nodes(self, type: Optional[NodeType] = None) -> List[Node]:
+    def all_nodes(self, type: Optional[Union[Type[Node], Tuple[Type[Node], ...]]] = None) -> List[Node]:
         """List of all nodes of specified type
 
-        :param type: type of node
+        :param type: type(s) of node
         :return: List of all nodes
         """
-        return [n[1] for n in self.g.nodes(data="data") if type is None or n[1].type == type]
+        return [n[1] for n in self.g.nodes(data="data") if type is None or isinstance(n[1], type)]
 
     def out_edges(
         self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None

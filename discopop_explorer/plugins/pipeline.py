@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from ..PETGraphX import LineID, PETGraphX, NodeType, Node, EdgeType
+from ..PETGraphX import LineID, LoopNode, PETGraphX, NodeType, Node, EdgeType
 from ..utils import correlation_coefficient
 
 total = 0
@@ -22,7 +22,7 @@ def run_before(pet: PETGraphX):
 
 
 def run_after(pet: PETGraphX):
-    for node in pet.all_nodes(NodeType.LOOP):
+    for node in pet.all_nodes(LoopNode):
         check_pipeline(pet, node)
 
     print(f"Total: {total}")

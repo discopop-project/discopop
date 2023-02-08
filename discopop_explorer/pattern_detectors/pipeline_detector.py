@@ -10,7 +10,7 @@
 from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import LineID, NodeID, PETGraphX, NodeType, Node, EdgeType, DepType, Dependency
+from ..PETGraphX import LineID, LoopNode, NodeID, PETGraphX, NodeType, Node, EdgeType, DepType, Dependency
 from ..utils import correlation_coefficient, classify_task_vars, contains
 
 __pipeline_threshold = 0.9
@@ -155,7 +155,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     result: List[PipelineInfo] = []
     children_cache: Dict[Node, List[Node]] = dict()
     dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
-    nodes = pet.all_nodes(NodeType.LOOP)
+    nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
         print("Pipeline:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id):

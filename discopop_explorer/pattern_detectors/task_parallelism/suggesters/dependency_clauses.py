@@ -9,7 +9,7 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, Node, PETGraphX, NodeID, LineID
+from discopop_explorer.PETGraphX import EdgeType, FunctionNode, NodeType, Node, PETGraphX, NodeID, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -206,7 +206,7 @@ def get_alias_information(
                 if int(recursive_function_call_line.split(":")[1]) == int(ts.pragma_line):
                     # correct function call found
                     # find corresponding function CU
-                    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                    for tmp_func_cu in pet.all_nodes(FunctionNode):
                         if tmp_func_cu.name == recursive_function_call_entry_split[0]:
                             called_function_cu_id = tmp_func_cu.id
             # get aliases for parameters
@@ -931,21 +931,21 @@ def get_function_call_parameter_rw_information(
             if int(call_position.split(":")[1]) == lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                for tmp_func_cu in pet.all_nodes(FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         elif not equal_lower_line_num and greater_lower_line_num:
             if int(call_position.split(":")[1]) > lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                for tmp_func_cu in pet.all_nodes(FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         else:
             if int(call_position.split(":")[1]) >= lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+                for tmp_func_cu in pet.all_nodes(FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         if called_function_cu_id is None:

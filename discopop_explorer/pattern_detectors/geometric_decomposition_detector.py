@@ -11,7 +11,7 @@ import math
 from typing import Dict, List, Tuple, Optional
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import NodeID, PETGraphX, NodeType, Node, EdgeType
+from ..PETGraphX import FunctionNode, NodeID, PETGraphX, NodeType, Node, EdgeType
 from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
 
@@ -84,7 +84,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     result: List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
-    nodes = pet.all_nodes(NodeType.FUNC)
+    nodes = pet.all_nodes(FunctionNode)
     for idx, node in enumerate(nodes):
         print("Geo. Dec.:", idx, "/", len(nodes))
         if not contains(

@@ -11,6 +11,7 @@ from typing import cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
 from discopop_explorer.PETGraphX import (
+    FunctionNode,
     Node,
     NodeType,
     EdgeType,
@@ -584,7 +585,7 @@ def get_called_functions_recursively(
             # CU contains a function call
             # if Dummy, map to Func
             if child.type == NodeType.DUMMY:
-                for function_cu in pet.all_nodes(NodeType.FUNC):
+                for function_cu in pet.all_nodes(FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu
             called_functions.append(child)

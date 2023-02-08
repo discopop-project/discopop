@@ -9,7 +9,7 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, Node, DepType, EdgeType
+from .PETGraphX import FunctionNode, LineID, LoopNode, NodeID, PETGraphX, NodeType, Node, DepType, EdgeType
 from .parser import parse_inputs
 
 
@@ -31,7 +31,7 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if recursive call inside any loop body. False otherwise."""
-    for tmp_cu in pet.all_nodes(NodeType.LOOP):
+    for tmp_cu in pet.all_nodes(LoopNode):
         if __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
             tmp_cu.start_position(),
@@ -48,7 +48,7 @@ def __recursive_function_called_multiple_times_inside_function(
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if multiple calls exists. False otherwise."""
-    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+    for tmp_func_cu in pet.all_nodes(FunctionNode):
         # 1. get parent function of recursive function call
         if not __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),

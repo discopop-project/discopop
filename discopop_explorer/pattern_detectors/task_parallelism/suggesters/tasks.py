@@ -8,7 +8,7 @@
 
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, Node, PETGraphX, LineID
+from discopop_explorer.PETGraphX import LoopNode, MWType, NodeType, EdgeType, Node, PETGraphX, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -159,7 +159,7 @@ def correct_task_suggestions_in_loop_body(
     for ts in task_suggestions:
         found_critical_cus: List[Node] = []
         found_atomic_cus: List[Node] = []
-        for loop_cu in pet.all_nodes(NodeType.LOOP):
+        for loop_cu in pet.all_nodes(LoopNode):
             # check if task suggestion inside do-all loop exists
             if line_contained_in_region(
                 ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()
