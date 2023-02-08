@@ -163,10 +163,6 @@ class Node:
     # properties of Loop Nodes
     loop_iterations: int = -1
 
-    # properties of Function Nodes
-    args: List[Variable] = []
-    children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
-
     # properties related to pattern analysis
     reduction: bool = False
     do_all: bool = False
@@ -220,25 +216,33 @@ class Node:
         return hash(self.id)
 
 
+# Data.xml: type="0"
 class CUNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.CU
 
 
+# Data.xml: type="2"
 class LoopNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.LOOP
 
 
+# Data.xml: type="3"
 class DummyNode(Node):
+    args: List[Variable] = []
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.DUMMY
 
 
+# Data.xml: type="1"
 class FunctionNode(Node):
+    args: List[Variable] = []
+    children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
+
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
@@ -249,29 +253,9 @@ def parse_cu(node: ObjectifiedElement) -> Node:
     node_type = NodeType(int(node.get("type")))
 
     n: Node
+    # CU Node
     if node_type == NodeType.CU:
         n = CUNode(node_id)
-    elif node_type == NodeType.DUMMY:
-        n = DummyNode(node_id)
-    elif node_type == NodeType.FUNC:
-        n = FunctionNode(node_id)
-    elif node_type == NodeType.LOOP:
-        n = LoopNode(node_id)
-    else:
-        assert False, "invalid NodeType"
-
-    _, n.start_line = parse_id(node.get("startsAtLine"))
-    _, n.end_line = parse_id(node.get("endsAtLine"))
-    n.name = node.get("name")
-    # n.instructions_count = node.get("instructionsCount", 0)
-
-    if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
-        n.args = [Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg]
-
-    if hasattr(node, "callsNode") and hasattr(node.callsNode, "recursiveFunctionCall"):
-        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
-
-    if node_type == NodeType.CU:
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
                 Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
@@ -292,12 +276,38 @@ def parse_cu(node: ObjectifiedElement) -> Node:
                 for v in getattr(node.callsNode, "nodeCalled")
                 if v.get("atLine") is not None
             ]
+        if hasattr(node, "callsNode") and hasattr(node.callsNode, "recursiveFunctionCall"):
+            n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
         if hasattr(node, "performsFileIO"):
             n.performs_file_io = True if int(getattr(node, "performsFileIO")) == 1 else False
+        # n.instructions_count = node.get("instructionsCount", 0)
+
+    # FUNC or DUMMY NODE
+    elif node_type == NodeType.DUMMY or node_type == NodeType.FUNC:
+        dummy_or_func: Union[DummyNode, FunctionNode]
+        if node_type == NodeType.DUMMY:
+            dummy_or_func = DummyNode(node_id)
+        else:
+            dummy_or_func = FunctionNode(node_id)
+        if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
+            dummy_or_func.args = [Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg]
+        n = dummy_or_func
+
+
+    # LOOP Node
+    elif node_type == NodeType.LOOP:
+        n = LoopNode(node_id)
+    else:
+        assert False, "invalid NodeType"
+
+    _, n.start_line = parse_id(node.get("startsAtLine"))
+    _, n.end_line = parse_id(node.get("endsAtLine"))
+    n.name = node.get("name")
+
     return n
 
 
-def parse_dependency(dep) -> Dependency:
+def parse_dependency(dep: DependenceItem) -> Dependency:
     d = Dependency(EdgeType.DATA)
     d.source_line = dep.source
     d.sink_line = dep.sink
@@ -604,7 +614,7 @@ class PETGraphX(object):
     def subtree_of_type_rec(self, root, visited, type=Node):
         """recursive helper function for subtree_of_type"""
         # check if root is of type target
-        res: List = []
+        res = []
         if isinstance(root, type):
             res.append(root)
 
@@ -771,10 +781,8 @@ class PETGraphX(object):
 
         for i in func.args:
             if i.name == dep.var_name:
-                res = True
-                break
-
-        return res
+                return True
+        return False
 
     def unused_get_first_written_vars_in_loop(
         self, undefinedVarsInLoop: List[Variable], node: Node, root_loop: Node
@@ -1160,7 +1168,7 @@ class PETGraphX(object):
         """Note: Destroys the PETGraph!"""
         # replace node data with label
         for node_id in self.g.nodes:
-            tmp_cu: Node = self.g.nodes[node_id]["data"]
+            tmp_cu= self.g.nodes[node_id]["data"]
             del self.g.nodes[node_id]["data"]
             self.g.nodes[node_id]["id"] = tmp_cu.id
             self.g.nodes[node_id]["type"] = str(tmp_cu.type)

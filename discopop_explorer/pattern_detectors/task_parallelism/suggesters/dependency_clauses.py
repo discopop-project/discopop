@@ -7,9 +7,10 @@
 # directory for details.
 
 import os
-from typing import List, Dict, Tuple, Optional, cast
+from typing import List, Dict, Tuple, Optional, Union, cast
 
 from discopop_explorer.PETGraphX import (
+    DummyNode,
     EdgeType,
     FunctionNode,
     NodeType,
@@ -234,7 +235,7 @@ def get_alias_information(
                 ]
                 current_alias += get_alias_for_parameter_at_position(
                     pet,
-                    pet.node_at(called_function_cu_id_not_none),
+                    cast(FunctionNode, pet.node_at(called_function_cu_id_not_none)),
                     idx,
                     source_code_files,
                     [],
@@ -730,7 +731,7 @@ def __perform_dependency_updates(
 
 def get_alias_for_parameter_at_position(
     pet: PETGraphX,
-    function: Node,
+    function: FunctionNode,
     parameter_position: int,
     source_code_files: Dict[str, str],
     visited: List[Tuple[Node, int]],
@@ -782,7 +783,7 @@ def get_alias_for_parameter_at_position(
                             # if not, start recursion
                             result += get_alias_for_parameter_at_position(
                                 pet,
-                                called_function,
+                                cast(FunctionNode, called_function),
                                 idx,
                                 source_code_files,
                                 visited,
@@ -962,7 +963,7 @@ def get_function_call_parameter_rw_information(
         raise ValueError("No valid called function could be found!")
     called_function_name_not_none = cast(str, called_function_name)
     # 5.2. get R/W information for successive called function's parameters based on CUInstResult.txt
-    called_function_cu = pet.node_at(called_function_cu_id)
+    called_function_cu = cast(FunctionNode, pet.node_at(called_function_cu_id))
     # get raw info concerning the scope of called_function_cu
     raw_info = cu_inst_result_dict["RAW"]
     filtered_raw_info = [
@@ -1082,7 +1083,7 @@ def get_function_call_parameter_rw_information(
 
 def get_function_call_parameter_rw_information_recursion_step(
     pet: PETGraphX,
-    called_function_cu: Node,
+    called_function_cu: FunctionNode,
     recursively_visited: List[Node],
     function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
     cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
