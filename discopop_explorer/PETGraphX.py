@@ -136,7 +136,10 @@ class Dependency:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
+# TODO make the Node class abstract
 class Node:
+
+    #properties of every Node
     id: NodeID
     file_id: int
     node_id: int
@@ -144,27 +147,36 @@ class Node:
     end_line: int
     type: NodeType
     name: str
+    parent_function_id: Optional[NodeID] = None # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
+    performs_file_io: bool = False
+
+    # properties of CU Nodes
+    # (not used: children, read/writeDataSize, instructionLines(count), read/writePhaseLines, successors)
+    basic_block_id = ""
     # instructions_count: int = -1
     return_instructions_count: int = -1
-    loop_iterations: int = -1
-    mw_type = MWType.FORK
-    basic_block_id = ""
-    recursive_function_calls: List[str] = []
+    local_vars: List[Variable] = []
+    global_vars: List[Variable] = []
     node_calls: List[Dict[str, str]] = []
+    recursive_function_calls: List[str] = []
+
+    # properties of Loop Nodes
+    loop_iterations: int = -1
+
+    # properties of Function Nodes
+    args: List[Variable] = []
+    children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
+
+    # properties related to pattern analysis
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
     pipeline: float = -1
-    local_vars: List[Variable] = []
-    global_vars: List[Variable] = []
-    args: List[Variable] = []
     tp_contains_task: bool = False
     tp_contains_taskwait: bool = False
     tp_omittable: bool = False
-    performs_file_io: bool = False
+    mw_type = MWType.FORK
 
-    parent_function_id: Optional[NodeID] = None  # every node that is not a function node
-    children_cu_ids: Optional[List[NodeID]] = None  # function nodes only
 
     def __init__(self, node_id: NodeID):
         self.id = node_id
