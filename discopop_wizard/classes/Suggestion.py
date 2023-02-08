@@ -13,8 +13,8 @@ from enum import IntEnum
 from tkinter import ttk
 from typing import List, Tuple, Dict
 
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import UpdateType, EntryPointType, \
-    ExitPointType, ExitPointPositioning, EntryPointPositioning
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
+    EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
 from discopop_wizard.classes.CodePreview import CodePreview
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
@@ -260,6 +260,10 @@ class Suggestion(object):
                 # from device means host is reading, so update before the instruction
                 pragma.pragma_position = PragmaPosition.BEFORE_START
                 pragma.pragma_str += "from("
+            elif update_type == UpdateType.ALLOCATE:
+                # allocate memory, not written to before
+                pragma.pragma_position = PragmaPosition.BEFORE_START
+                pragma.pragma_str += "alloc("
             else:
                 raise ValueError("Unsupported update type: ", update_type)
             pragma.pragma_str += target_var + ") "
