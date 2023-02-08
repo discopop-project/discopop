@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+import sys
 from typing import Dict, List, Set, Tuple, cast
 
 from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode
@@ -122,7 +122,9 @@ def extend_data_lifespan(
         new_entries: List[Tuple[MemoryRegion, CUID]] = []
 
         for mem_reg in live_data:
+            print("mem_reg: ", mem_reg, file=sys.stderr)
             for cu_id in live_data[mem_reg]:
+                print("\tCUID: ", cu_id, file=sys.stderr)
                 # check if data is live in any successor
                 # If so, set mem_reg to live in each of the encountered CUs.
                 for potential_successor_cu_id in live_data[mem_reg]:

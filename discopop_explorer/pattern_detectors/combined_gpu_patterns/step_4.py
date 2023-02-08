@@ -255,51 +255,94 @@ def get_device_id(comb_gpu_reg, cu_id: CUID) -> int:
 def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
     paths: List[List[CUID]] = []
 
-    def construct_paths(current_node, current_path, visited):
-        visited.append(current_node)
-        # allow visiting a node twice to properly consider loops
-        succs = [cast(CUID, t) for s, t, d in pet.out_edges(current_node, EdgeType.SUCCESSOR)]
-
-        if len(succs) == 0:
-            return [current_path]
-        if len(succs) == 1:
-            current_path.append(succs[0])
-            if visited.count(succs[0]) < 2:
-                return construct_paths(
-                    succs[0], copy.deepcopy(current_path), copy.deepcopy(visited)
-                )
-            else:
-                # loop has not been exited. Discard the path
-                return []
-        result_paths = []
-        for succ in succs:
-            if visited.count(succ) < 2:
-                tmp_path = copy.deepcopy(current_path)
-                tmp_path.append(succ)
-                result_paths += construct_paths(succ, tmp_path, copy.deepcopy(visited))
-            else:
-                # loop has not been exited. Discard the path
-                pass
-        return result_paths
-
+    # initialize
     for successor_id in successors:
-        paths += construct_paths(successor_id, [successor_id], [])
+        paths.append([successor_id])
 
-    # identify first common node if existing
-    # identify the shortest path
-    shortest_path_id = 0
-    for idx, path in enumerate(paths):
-        if len(path) < len(paths[shortest_path_id]):
-            shortest_path_id = idx
-    # check elements of the shortest path
-    for element in paths[shortest_path_id]:
-        contained_in_all_paths = True
-        for path in paths:
-            if element not in path:
-                contained_in_all_paths = False
+    # iteratively search for a merge node
+    progress_made = True
+    while progress_made:
+        progress_made = False
+        print("PATHS: ", file=sys.stderr)
+        for path_id, path in enumerate(paths):
+            print("\t", path_id, "\t", path, file=sys.stderr)
+        print(file=sys.stderr)
+
+        # terminate a path if the newly added CUID occurs more than 2 times in the path
+        for path_id, path in enumerate(paths):
+            if path.count(path[-1]) > 2:
+                del paths[path_id]
+                print("deleted path_id=", path_id, file=sys.stderr)
+                continue
+
+        #        # return none if a return instruction has been encountered
+        #        for path in paths:
+        #            if pet.node_at(path[-1]).return_instructions_count > 0:
+        #                print("return instruction @ ", path[-1], file=sys.stderr)
+        #                return None
+
+        # check if any CUID is contained in all paths
+        # initialize
+        contained_in_all_paths = set(paths[0])
+        for path_id, path in enumerate(paths):
+            contained_in_all_paths.intersection_update(set(path))
+            if len(contained_in_all_paths) == 0:
                 break
-        if contained_in_all_paths:
-            return element
+        if len(contained_in_all_paths) > 0:
+            # found merge node
+            if len(contained_in_all_paths) == 1:
+                return list(contained_in_all_paths)[0]
+            if len(contained_in_all_paths) > 1:
+                # search for the first occurring candidate merge node
+                first_occurring: Set[CUID] = set()
+                for path in paths:
+                    first_occurrence_position: int = 0
+                    first_occurrence_element: Optional[CUID] = None
+                    for candidate in contained_in_all_paths:
+                        if first_occurrence_element is None:
+                            first_occurrence_position = path.index(candidate)
+                            first_occurrence_element = candidate
+                        else:
+                            position = path.index(candidate)
+                            if position < first_occurrence_position:
+                                first_occurrence_position = position
+                                first_occurrence_element = candidate
+                    first_occurring.add(cast(CUID, first_occurrence_element))
+                # if first_occurring contains multiple elements, it is not decidable. Raise a ValueError.
+                if len(first_occurring) > 1:
+                    raise ValueError("First occurrence undecidable for: ", first_occurring)
+                else:
+                    # only a single element identified
+                    return list(first_occurring)[0]
+
+        # proceed one step on each path
+        to_be_deleted: List[int] = []
+        for path_id, path in enumerate(paths):
+            successors = [t for s, t, d in pet.out_edges(path[-1], EdgeType.SUCCESSOR)]
+            if len(successors) == 0:
+                # end of path reached without encountering a merge node
+                # do nothing. no progress made
+                pass
+            #                print("end of path reached: ", path, file=sys.stderr)
+            #                return None
+
+            elif len(successors) == 1:
+                # append successor to path
+                paths[path_id].append(successors[0])
+                progress_made = True
+            elif len(successors) > 1:
+                # a branching point is encountered, duplicate the path and continue with two separate paths
+                for successor in successors:
+                    paths.append(copy.deepcopy(path))
+                    paths[-1].append(successor)
+                    progress_made = True
+                # delete the original path
+                to_be_deleted.append(path_id)
+        # remove paths
+        to_be_deleted = list(dict.fromkeys(to_be_deleted))
+        for path_id in sorted(to_be_deleted, reverse=True):
+            del paths[path_id]
+
     return None
 
 
