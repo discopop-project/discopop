@@ -167,16 +167,10 @@ def group_writes_by_cu(
     result_dict: Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]] = dict()
 
     for mem_reg in writes:
-        print("MEM REG: ", mem_reg, file=sys.stderr)
         for cu_id, ident in writes[mem_reg]:
-            print("\tcu_id: ", cu_id, ident, file=sys.stderr)
             if cu_id not in result_dict:
                 result_dict[cu_id] = dict()
-                print("\t\tadded entry for cu: ", cu_id, file=sys.stderr)
             if mem_reg not in result_dict[cu_id]:
                 result_dict[cu_id][mem_reg] = set()
-                print("\t\tadded entry for mem_reg: ", mem_reg, file=sys.stderr)
-            print("\t\t\tbefore add: ", result_dict[cu_id][mem_reg], file=sys.stderr)
             result_dict[cu_id][mem_reg].add(ident)
-            print("\t\t\tafter add: ", result_dict[cu_id][mem_reg], file=sys.stderr)
     return result_dict
