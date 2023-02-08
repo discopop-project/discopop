@@ -54,7 +54,7 @@ class Context(object):
         self, device_id_to_update: int, writes: Dict[MemoryRegion, Set[Optional[int]]]
     ) -> Set[Tuple[MemoryRegion, bool]]:
         """Returns the updated memory regions"""
-        updated_memory_regions: Set[tuple[MemoryRegion, bool]] = set()
+        updated_memory_regions: Set[Tuple[MemoryRegion, bool]] = set()
 
         if device_id_to_update not in self.seen_writes_by_device:
             self.seen_writes_by_device[device_id_to_update] = dict()
