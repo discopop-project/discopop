@@ -41,8 +41,13 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     group_writes_by_cu,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
+    convert_updates_to_entry_and_exit_points,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
+)
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_5 import (
     propagate_variable_name_associations,
 )
 
@@ -248,6 +253,13 @@ class CombinedGPURegion(PatternInfo):
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### STEP 6: convert updates to entry / exit points if possible
+        memory_region_liveness_by_device = {
+            0: extended_host_memory_region_liveness,
+            1: extended_memory_region_liveness,
+        }
+        entry_points, exit_points, updates = convert_updates_to_entry_and_exit_points(
+            pet, issued_updates, memory_region_liveness_by_device
+        )
 
         # ### PREPARE METADATA
         # prepare device liveness
@@ -267,8 +279,15 @@ class CombinedGPURegion(PatternInfo):
         # prepare update instructions
         self.update_instructions = [
             update.get_as_metadata_using_variable_names_and_memory_regions(pet)
-            for update in issued_updates
+            for update in updates
         ]
+        # prepare entry points
+        self.data_region_entry_points = [
+            entry_point.get_as_metadata() for entry_point in entry_points
+        ]
+
+        # prepare exit points
+        self.data_region_exit_points = [exit_point.get_as_metadata() for exit_point in exit_points]
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead

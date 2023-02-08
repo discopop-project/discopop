@@ -54,7 +54,7 @@ class Update(object):
             self.source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(self.memory_regions) + " @ " + self.source_cu_id + " -> " + self.sink_cu_id,
+            str(self.memory_regions),
             pet.node_at(self.source_cu_id).end_position(),
         ]
 
@@ -63,7 +63,7 @@ class Update(object):
             self.source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(self.variable_names) + " @ " + self.source_cu_id + " -> " + self.sink_cu_id,
+            str(self.variable_names),
             pet.node_at(self.source_cu_id).end_position(),
         ]
 
@@ -72,13 +72,7 @@ class Update(object):
             self.source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(self.variable_names)
-            + "/"
-            + str(self.memory_regions)
-            + " @ "
-            + self.source_cu_id
-            + " -> "
-            + self.sink_cu_id,
+            str(self.variable_names) + "/" + str(self.memory_regions),
             pet.node_at(self.source_cu_id).end_position(),
         ]
 

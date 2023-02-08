@@ -267,6 +267,7 @@ class Suggestion(object):
             else:
                 raise ValueError("Unsupported update type: ", update_type)
             pragma.pragma_str += target_var + ") "
+            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
@@ -310,7 +311,7 @@ class Suggestion(object):
 
     def __get_data_region_pragmas(self, entry_points, exit_points) -> List[Pragma]:
         pragmas = []
-        for var_name, cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
+        for var_name, source_cu_id, sink_cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
             pragma = Pragma()
             pragma.pragma_str = "#pragma omp target enter data "
             if entry_point_type == EntryPointType.TO_DEVICE:
@@ -324,6 +325,7 @@ class Suggestion(object):
             else:
                 raise ValueError("Usupported EntryPointType: ", entry_point_type)
             pragma.pragma_str += var_name + ") "
+            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
@@ -336,7 +338,7 @@ class Suggestion(object):
                 raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
             pragmas.append(pragma)
 
-        for var_name, cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
+        for var_name, source_cu_id, sink_cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
             pragma = Pragma()
             pragma.pragma_str = "#pragma omp target exit data "
             if exit_point_type == ExitPointType.FROM_DEVICE:
@@ -348,6 +350,7 @@ class Suggestion(object):
             else:
                 raise ValueError("Usupported ExitPointType: ", exit_point_type)
             pragma.pragma_str += var_name + ") "
+            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
