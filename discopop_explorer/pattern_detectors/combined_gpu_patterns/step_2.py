@@ -116,15 +116,13 @@ def extend_data_lifespan(
     pet: PETGraphX, live_data: Dict[MemoryRegion, List[CUID]]
 ) -> Dict[MemoryRegion, List[CUID]]:
     """Extends the lifespan of the data on the device to allow as little data movement as possible."""
+    print("Extending data lifespan...", file=sys.stderr)
     modification_found = True
     while modification_found:
         modification_found = False
         new_entries: List[Tuple[MemoryRegion, CUID]] = []
-
         for mem_reg in live_data:
-            print("mem_reg: ", mem_reg, file=sys.stderr)
             for cu_id in live_data[mem_reg]:
-                print("\tCUID: ", cu_id, file=sys.stderr)
                 # check if data is live in any successor
                 # If so, set mem_reg to live in each of the encountered CUs.
                 for potential_successor_cu_id in live_data[mem_reg]:
@@ -196,6 +194,7 @@ def extend_data_lifespan(
     for mem_reg in live_data:
         live_data[mem_reg] = list(set(live_data[mem_reg]))
 
+    print("\tDone.", file=sys.stderr)
     return live_data
 
 

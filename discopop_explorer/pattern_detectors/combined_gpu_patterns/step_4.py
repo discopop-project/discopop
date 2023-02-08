@@ -263,23 +263,12 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
     progress_made = True
     while progress_made:
         progress_made = False
-        print("PATHS: ", file=sys.stderr)
-        for path_id, path in enumerate(paths):
-            print("\t", path_id, "\t", path, file=sys.stderr)
-        print(file=sys.stderr)
 
         # terminate a path if the newly added CUID occurs more than 2 times in the path
         for path_id, path in enumerate(paths):
             if path.count(path[-1]) > 2:
                 del paths[path_id]
-                print("deleted path_id=", path_id, file=sys.stderr)
                 continue
-
-        #        # return none if a return instruction has been encountered
-        #        for path in paths:
-        #            if pet.node_at(path[-1]).return_instructions_count > 0:
-        #                print("return instruction @ ", path[-1], file=sys.stderr)
-        #                return None
 
         # check if any CUID is contained in all paths
         # initialize
@@ -323,8 +312,6 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
                 # end of path reached without encountering a merge node
                 # do nothing. no progress made
                 pass
-            #                print("end of path reached: ", path, file=sys.stderr)
-            #                return None
 
             elif len(successors) == 1:
                 # append successor to path
