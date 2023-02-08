@@ -11,6 +11,7 @@ from typing import cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
 from discopop_explorer.PETGraphX import (
+    DummyNode,
     FunctionNode,
     Node,
     NodeType,
@@ -187,7 +188,7 @@ def get_predecessor_nodes(
     :return: Tuple[[predecessor nodes], [visited nodes]]"""
     result = [root]
     visited_nodes.append(root)
-    if root.type == NodeType.FUNC or root.tp_contains_taskwait is True:
+    if isinstance(root, FunctionNode) or root.tp_contains_taskwait is True:
         # root of type "function" or root is a barrier
         return result, visited_nodes
     in_succ_edges = [
@@ -275,7 +276,7 @@ def create_task_tree_helper(pet: PETGraphX, current: Node, root: Task, visited_f
     :param root: root task for subtree
     :param visited_func: visited function nodes
     """
-    if current.type == NodeType.FUNC:
+    if isinstance(current, FunctionNode):
         if current in visited_func:
             return
         else:
@@ -579,10 +580,10 @@ def get_called_functions_recursively(
     called_functions = []
     for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
         # check if type is Func or Dummy
-        if child.type == NodeType.FUNC or child.type == NodeType.DUMMY:
+        if isinstance(child, (FunctionNode, DummyNode)):
             # CU contains a function call
             # if Dummy, map to Func
-            if child.type == NodeType.DUMMY:
+            if isinstance(child, DummyNode):
                 for function_cu in pet.all_nodes(FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu

@@ -10,6 +10,7 @@ import os
 from typing import List, cast, TextIO
 
 from .PETGraphX import (
+    CUNode,
     FunctionNode,
     LineID,
     LoopNode,
@@ -135,7 +136,7 @@ def __output_dependencies_of_type(
 
 
 def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
-    if node.type != NodeType.CU:
+    if not isinstance(node, CUNode):
         return
     for recursive_function_call in node.recursive_function_calls:
         if recursive_function_call is None:
@@ -161,7 +162,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
 
         for child_id in children_ids:
             # node type is not cu so goto next node
-            if pet.node_at(child_id).type is not NodeType.CU:
+            if not isinstance(pet.node_at(child_id), CUNode):
                 continue
             __output_dependencies_of_type(
                 pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|"

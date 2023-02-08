@@ -109,10 +109,10 @@ def __test_chunk_limit(pet: PETGraphX, node: Node) -> Tuple[bool, Optional[int]]
     min_iterations_count = None
     inner_loop_iter = {}
 
-    children = pet.direct_children_or_called_nodes_of_type(node, NodeType.LOOP)
+    children = pet.direct_children_or_called_nodes_of_type(node, LoopNode)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, NodeType.FUNC):
-        children.extend(pet.direct_children_or_called_nodes_of_type(func_child, NodeType.LOOP))
+    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
+        children.extend(pet.direct_children_or_called_nodes_of_type(func_child, LoopNode))
 
     for child in children:
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
@@ -163,7 +163,7 @@ def __get_parent_iterations(pet: PETGraphX, node: Node) -> int:
         # prevent looping
         if node in visited:
             break
-        if node.type == NodeType.LOOP:
+        if isinstance(node, LoopNode):
             max_iter = max(1, node.loop_iterations)
             break
         visited.append(node)
@@ -183,8 +183,8 @@ def __detect_geometric_decomposition(pet: PETGraphX, root: Node) -> bool:
         if not (loop_child.reduction or loop_child.do_all):
             return False
 
-    for child in pet.direct_children_or_called_nodes_of_type(root, NodeType.FUNC):
-        for child2 in pet.direct_children_or_called_nodes_of_type(child, NodeType.LOOP):
+    for child in pet.direct_children_or_called_nodes_of_type(root, FunctionNode):
+        for child2 in pet.direct_children_or_called_nodes_of_type(child, LoopNode):
             if not (child2.reduction or child2.do_all):
                 return False
 

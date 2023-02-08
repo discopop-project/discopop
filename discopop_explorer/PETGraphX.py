@@ -259,7 +259,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
     if hasattr(node, "callsNode") and hasattr(node.callsNode, "recursiveFunctionCall"):
         n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
 
-    if n.type == NodeType.CU:
+    if node_type == NodeType.CU:
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
                 Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
@@ -350,7 +350,7 @@ class PETGraphX(object):
         print("\tAdded edges...")
 
         for _, node in g.nodes(data="data"):
-            if node.type == NodeType.LOOP:
+            if isinstance(node, LoopNode):
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
 
         print("\tAdded iterations...")
@@ -418,13 +418,6 @@ class PETGraphX(object):
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
 
-        # testing
-        # for node in self.all_nodes():
-        #    if node.type == NodeType.FUNC:
-        #        print(node.id, "is a function node with", len(node.children_cu_ids), "children:", node.children_cu_ids)
-        #    else:
-        #        print(node.id, "has the parent function", node.parent_function_id)
-
     def show(self):
         """Plots the graph
 
@@ -441,7 +434,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#2B85FD",
             node_shape="o",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.CU],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), CUNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -449,7 +442,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#ff5151",
             node_shape="d",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.LOOP],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), LoopNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -457,7 +450,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="grey",
             node_shape="s",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.DUMMY],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), DummyNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -465,7 +458,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#cf65ff",
             node_shape="s",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.FUNC],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), FunctionNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -651,18 +644,19 @@ class PETGraphX(object):
         """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
-    def direct_children_or_called_nodes_of_type(self, root: Node, type: NodeType) -> List[Node]:
+    def direct_children_or_called_nodes_of_type(self, root: Node, type: Type[NodeT]) -> List[NodeT]:
         """Gets only direct children of specified type. This includes called nodes!
 
         :param root: root node
         :param type: type of children
         :return: list of direct children
         """
-        return [
+        nodes = [
             self.node_at(t)
             for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
-            if self.node_at(t).type == type
         ]
+
+        return [t for t in nodes if isinstance(t, type)]
 
     def is_reduction_var(self, line: LineID, name: str) -> bool:
         """Determines, whether or not the given variable is reduction variable
@@ -693,8 +687,8 @@ class PETGraphX(object):
         # get required metadata
         loop_start_lines: List[LineID] = []
         root_children = self.subtree_of_type(root_loop, (CUNode, LoopNode))
-        root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
-        root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
+        root_children_cus = [cu for cu in root_children if isinstance(cu, CUNode)]
+        root_children_loops = [cu for cu in root_children if isinstance(cu, LoopNode)]
         for v in root_children_loops:
             loop_start_lines.append(v.start_position())
 
@@ -752,7 +746,7 @@ class PETGraphX(object):
         """
 
         for node in tree:
-            if node.type == NodeType.CU:
+            if isinstance(node, CUNode):
                 for gv in node.global_vars:
                     if gv.name == var:
                         # TODO from tmp global vars
@@ -945,7 +939,7 @@ class PETGraphX(object):
         return result
 
     def is_loop_index(
-        self, var_name: Optional[str], loops_start_lines: List[LineID], children: List[Node]
+        self, var_name: Optional[str], loops_start_lines: List[LineID], children: Sequence[Node]
     ) -> bool:
         """Checks, whether the variable is a loop index.
 
@@ -977,8 +971,8 @@ class PETGraphX(object):
         self,
         dep: Dependency,
         root_loop: Node,
-        children_cus: List[Node],
-        children_loops: List[Node],
+        children_cus: Sequence[Node],
+        children_loops: Sequence[Node],
         loops_start_lines: Optional[List[LineID]] = None,
     ) -> bool:
         """Checks, whether a variable is read-only in loop body
@@ -1011,16 +1005,16 @@ class PETGraphX(object):
                     return False
         return True
 
-    def get_parent_function(self, node: Node) -> Node:
+    def get_parent_function(self, node: Node) -> FunctionNode:
         """Finds the parent of a node
 
         :param node: current node
         :return: node of parent function
         """
-        if node.type == NodeType.FUNC:
+        if isinstance(node, FunctionNode):
             return node
         assert node.parent_function_id
-        return self.node_at(node.parent_function_id)
+        return cast(FunctionNode, self.node_at(node.parent_function_id))
 
     def get_left_right_subtree(
         self, target: Node, right_subtree: bool, ignore_called_nodes: bool = False
@@ -1043,7 +1037,7 @@ class PETGraphX(object):
 
             if current == target:
                 return res
-            if current.type == NodeType.CU:
+            if isinstance(current, CUNode):
                 res.append(current)
 
             if current in visited:  # suppress looping

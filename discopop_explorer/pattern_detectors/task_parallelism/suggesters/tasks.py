@@ -9,6 +9,8 @@
 from typing import List, Dict, cast
 
 from discopop_explorer.PETGraphX import (
+    CUNode,
+    FunctionNode,
     LoopNode,
     MWType,
     NodeType,
@@ -43,11 +45,11 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     suggestions: Dict[str, List[TaskParallelismInfo]] = dict()  # LID -> List[TaskParallelismInfo]
 
     # get a list of cus classified as WORKER
-    worker_cus = []
-    barrier_cus = []
-    barrier_worker_cus = []
+    worker_cus: List[Node] = []
+    barrier_cus: List[Node] = []
+    barrier_worker_cus: List[Node] = []
 
-    func_cus = []
+    func_cus: List[Node] = []
 
     for v in pet.all_nodes():
         if v.mw_type == MWType.WORKER:
@@ -56,7 +58,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
             barrier_cus.append(v)
         if v.mw_type == MWType.BARRIER_WORKER:
             barrier_worker_cus.append(v)
-        if v.type == NodeType.FUNC:
+        if isinstance(v, FunctionNode):
             func_cus.append(v)
 
     worker_cus = worker_cus + barrier_worker_cus + func_cus
@@ -102,12 +104,12 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
 
                 # only include cu and func nodes
-                if not (contained_in.type == NodeType.FUNC or contained_in.type == NodeType.CU):
+                if not isinstance(contained_in, (FunctionNode, CUNode)):
                     continue
                 if (
                     contained_in.mw_type == MWType.WORKER
                     or contained_in.mw_type == MWType.BARRIER_WORKER
-                    or contained_in.type == NodeType.FUNC
+                    or isinstance(contained_in, FunctionNode)
                 ):
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(

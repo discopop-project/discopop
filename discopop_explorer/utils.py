@@ -238,9 +238,9 @@ def is_func_arg(pet: PETGraphX, var: str, node: Node) -> bool:
         return False
     parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
     # add current node to parents, if it is of type FUNC
-    if node.type == NodeType.FUNC:
+    if isinstance(node, FunctionNode):
         parents.append(node)
-    parent_functions = [cu for cu in parents if cu.type == NodeType.FUNC]
+    parent_functions = [cu for cu in parents if isinstance(cu, FunctionNode)]
     for pf in parent_functions:
         for arg in pf.args:
             if var.startswith(arg.name):
@@ -286,7 +286,7 @@ def is_global(var: str, tree: Sequence[Node]) -> bool:
     """
 
     for node in tree:
-        if node.type == NodeType.CU:
+        if isinstance(node, CUNode):
             for gv in node.global_vars:
                 if gv.name == var:
                     # TODO from tmp global vars
@@ -513,8 +513,8 @@ def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]
         elif loop_child.reduction:
             reduction.append(loop_child)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, NodeType.FUNC):
-        for child in pet.direct_children_or_called_nodes_of_type(func_child, NodeType.CU):
+    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
+        for child in pet.direct_children_or_called_nodes_of_type(func_child, CUNode):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -648,7 +648,7 @@ def classify_task_vars(
     t_loop = pet.subtree_of_type(task, LoopNode)
 
     vars: Dict[Variable, Set[MemoryRegion]] = dict()
-    if task.type == NodeType.FUNC:
+    if isinstance(task, FunctionNode):
         tmp = pet.get_variables(subtree)
         vars_strings = []
         for v in task.args:
@@ -689,7 +689,7 @@ def classify_task_vars(
     do_all_loops, reduction_loops = get_child_loops(pet, task)
     # reduction_result = ""
 
-    if task.type == NodeType.LOOP:
+    if isinstance(task, LoopNode):
         if task.reduction:
             reduction_loops.append(task)
         else:

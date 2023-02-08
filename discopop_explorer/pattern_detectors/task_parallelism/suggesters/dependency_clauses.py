@@ -433,7 +433,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
     potential_parent_functions = [
         pet.node_at(e[0])
         for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
-        if pet.node_at(e[0]).type == NodeType.FUNC
+        if isinstance(pet.node_at(e[0]), FunctionNode)
     ]
     if not potential_parent_functions:
         # perform BFS search on incoming CHILD edges to find closest parent function,
@@ -442,7 +442,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
         found_parent = None
         while len(queue) > 0 or not found_parent:
             current = queue.pop(0)
-            if current.type == NodeType.FUNC:
+            if isinstance(current, FunctionNode):
                 found_parent = current
                 break
             queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
@@ -1152,7 +1152,7 @@ def get_function_call_parameter_rw_information_recursion_step(
         )
     ]:
         # find called functions
-        for child_func in pet.direct_children_or_called_nodes_of_type(child, NodeType.FUNC):
+        for child_func in pet.direct_children_or_called_nodes_of_type(child, FunctionNode):
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
                 ret_val = get_function_call_parameter_rw_information(
