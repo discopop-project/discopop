@@ -9,7 +9,15 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
-from discopop_explorer.PETGraphX import EdgeType, FunctionNode, NodeType, Node, PETGraphX, NodeID, LineID
+from discopop_explorer.PETGraphX import (
+    EdgeType,
+    FunctionNode,
+    NodeType,
+    Node,
+    PETGraphX,
+    NodeID,
+    LineID,
+)
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,

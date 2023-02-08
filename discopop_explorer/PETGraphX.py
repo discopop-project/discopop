@@ -206,29 +206,30 @@ class Node:
 
     def __hash__(self):
         return hash(self.id)
-    
+
+
 class CUNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
-        self.type=NodeType.CU
+        self.type = NodeType.CU
 
 
 class LoopNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
-        self.type=NodeType.LOOP
+        self.type = NodeType.LOOP
 
 
 class DummyNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
-        self.type=NodeType.DUMMY
+        self.type = NodeType.DUMMY
 
 
 class FunctionNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
-        self.type=NodeType.FUNC
+        self.type = NodeType.FUNC
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:
@@ -515,7 +516,9 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]["data"]
 
-    def all_nodes(self, type: Optional[Union[Type[Node], Tuple[Type[Node], ...]]] = None) -> List[Node]:
+    def all_nodes(
+        self, type: Optional[Union[Type[Node], Tuple[Type[Node], ...]]] = None
+    ) -> List[Node]:
         """List of all nodes of specified type
 
         :param type: type(s) of node

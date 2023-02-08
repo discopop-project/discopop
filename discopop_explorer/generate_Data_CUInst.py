@@ -9,7 +9,17 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import FunctionNode, LineID, LoopNode, NodeID, PETGraphX, NodeType, Node, DepType, EdgeType
+from .PETGraphX import (
+    FunctionNode,
+    LineID,
+    LoopNode,
+    NodeID,
+    PETGraphX,
+    NodeType,
+    Node,
+    DepType,
+    EdgeType,
+)
 from .parser import parse_inputs
 
 

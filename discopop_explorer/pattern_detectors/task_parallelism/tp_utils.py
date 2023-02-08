@@ -267,9 +267,7 @@ def create_task_tree(pet: PETGraphX, root: Node):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(
-    pet: PETGraphX, current: Node, root: Task, visited_func: List[Node]
-):
+def create_task_tree_helper(pet: PETGraphX, current: Node, root: Task, visited_func: List[Node]):
     """generates task tree data recursively
 
     :param pet: PET graph

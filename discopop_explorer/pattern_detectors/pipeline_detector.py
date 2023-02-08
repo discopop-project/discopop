@@ -10,7 +10,17 @@
 from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import LineID, LoopNode, NodeID, PETGraphX, NodeType, Node, EdgeType, DepType, Dependency
+from ..PETGraphX import (
+    LineID,
+    LoopNode,
+    NodeID,
+    PETGraphX,
+    NodeType,
+    Node,
+    EdgeType,
+    DepType,
+    Dependency,
+)
 from ..utils import correlation_coefficient, classify_task_vars, contains
 
 __pipeline_threshold = 0.9

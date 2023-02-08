@@ -407,9 +407,7 @@ def remove_useless_barrier_suggestions(
     relevant_function_bodies: Dict[Node, List[str]] = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent: Node = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][
-            0
-        ]
+        parent: Node = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][0]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:

@@ -8,7 +8,15 @@
 
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import LoopNode, MWType, NodeType, EdgeType, Node, PETGraphX, LineID
+from discopop_explorer.PETGraphX import (
+    LoopNode,
+    MWType,
+    NodeType,
+    EdgeType,
+    Node,
+    PETGraphX,
+    LineID,
+)
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
