@@ -130,24 +130,36 @@ class Context(object):
         required_updates: Set[Tuple[MemoryRegion, int, int]] = set()
         to_be_removed = set()
         for mem_reg in self.seen_writes_by_device[new_device_id]:
-            for write_identifier in self.seen_writes_by_device[new_device_id][mem_reg]:
-                if write_identifier is None:
-                    # check if updates on other devices exist
-                    for other_device_id in self.seen_writes_by_device:
-                        if other_device_id == new_device_id:
-                            continue
-                        if mem_reg not in self.seen_writes_by_device[other_device_id]:
-                            continue
-                        # update exist, if entries for new_device_id are not a superset of other_device_id
-                        missing_identifiers = [
-                            wid
-                            for wid in self.seen_writes_by_device[other_device_id][mem_reg]
-                            if wid not in self.seen_writes_by_device[new_device_id][mem_reg]
-                        ]
-                        if len(missing_identifiers) > 0:
-                            required_updates.add((mem_reg, other_device_id, new_device_id))
-                    # remove none identifier
-                    to_be_removed.add((new_device_id, mem_reg, write_identifier))
+            # check if updates on other devices exist
+            for other_device_id in self.seen_writes_by_device:
+                if other_device_id == new_device_id:
+                    continue
+                if mem_reg not in self.seen_writes_by_device[other_device_id]:
+                    continue
+                # update exist, if entries for new_device_id are not a superset of other_device_id
+                missing_identifiers = [
+                    wid
+                    for wid in self.seen_writes_by_device[other_device_id][mem_reg]
+                    if wid not in self.seen_writes_by_device[new_device_id][mem_reg]
+                ]
+                if len(missing_identifiers) > 0:
+                    required_updates.add((mem_reg, other_device_id, new_device_id))
+
+                # remove none identifier
+                if None in self.seen_writes_by_device[new_device_id][mem_reg]:
+                    to_be_removed.add((new_device_id, mem_reg, None))
+
+        # update seen writes according to required updates
+        for mem_reg, other_device_id, new_device_id in required_updates:
+            missing_identifiers = [
+                wid
+                for wid in self.seen_writes_by_device[other_device_id][mem_reg]
+                if wid not in self.seen_writes_by_device[new_device_id][mem_reg]
+            ]
+
+            print("ADDING: ", missing_identifiers, " TO ", mem_reg, file=sys.stderr)
+
+            self.seen_writes_by_device[new_device_id][mem_reg].update(missing_identifiers)
 
         for entry in to_be_removed:
             if entry[2] in self.seen_writes_by_device[entry[0]][entry[1]]:
