@@ -9,7 +9,7 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, DepType, EdgeType
+from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, Node, DepType, EdgeType
 from .parser import parse_inputs
 
 
@@ -60,8 +60,8 @@ def __recursive_function_called_multiple_times_inside_function(
         # 2. check if multiple calls to recursive function exist in tmp_func_cus body
         # by listing cu nodes in function body.
         # get cu's inside function by traversing child edges
-        queue: List[CUNode] = [tmp_func_cu]
-        contained_cus: List[CUNode] = []
+        queue: List[Node] = [tmp_func_cu]
+        contained_cus: List[Node] = []
         while len(queue) > 0:
             cur_cu = queue.pop(0)
             if __line_contained_in_region(
@@ -124,7 +124,7 @@ def __output_dependencies_of_type(
             )
 
 
-def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
+def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
     if node.type != NodeType.CU:
         return
     for recursive_function_call in node.recursive_function_calls:

@@ -10,14 +10,14 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode
+from ..PETGraphX import PETGraphX, NodeType, Node
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
 class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -64,7 +64,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     return result
 
 
-def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
+def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph

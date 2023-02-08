@@ -9,7 +9,7 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, CUNode, PETGraphX, NodeID, LineID
+from discopop_explorer.PETGraphX import EdgeType, NodeType, Node, PETGraphX, NodeID, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -416,7 +416,7 @@ def identify_dependencies_for_different_functions(
     return result_suggestions
 
 
-def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -> List[CUNode]:
+def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -> List[Node]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of potential parents (Function CU Nodes) for a given suggestion.
     :param pet: PET Graph
@@ -442,7 +442,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
     return potential_parent_functions
 
 
-def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode) -> List[CUNode]:
+def __get_potential_children_of_function(pet: PETGraphX, parent_function: Node) -> List[Node]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of CUNodes corresponding to the body of the given function.
     :param pet: PET Graph
@@ -476,7 +476,7 @@ def __get_potential_children_of_function(pet: PETGraphX, parent_function: CUNode
 
 
 def __get_recursive_calls_from_function(
-    potential_children: List[CUNode], parent_function: CUNode
+    potential_children: List[Node], parent_function: Node
 ) -> List[str]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of recursive function calls located inside the body of the given function.
@@ -722,10 +722,10 @@ def __perform_dependency_updates(
 
 def get_alias_for_parameter_at_position(
     pet: PETGraphX,
-    function: CUNode,
+    function: Node,
     parameter_position: int,
     source_code_files: Dict[str, str],
-    visited: List[Tuple[CUNode, int]],
+    visited: List[Tuple[Node, int]],
     called_function_cache: Dict,
 ) -> List[Tuple[str, str, LineID, LineID]]:
     """Returns alias information for a parameter at a specific position.
@@ -867,19 +867,19 @@ def check_dependence_of_task_pair(
 def get_function_call_parameter_rw_information(
     pet: PETGraphX,
     call_position: str,
-    parent_cu_node: CUNode,
+    parent_cu_node: Node,
     lower_line_num: int,
     equal_lower_line_num: bool,
     greater_lower_line_num: bool,
     cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
     source_code_files: Dict[str, str],
-    recursively_visited: List[CUNode],
+    recursively_visited: List[Node],
     function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
     function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
     called_cu_id: Optional[str] = None,
     called_function_name: Optional[str] = None,
 ) -> Optional[
-    Tuple[str, List[Tuple[str, bool, bool]], List[CUNode], Dict[str, List[Tuple[bool, bool]]]]
+    Tuple[str, List[Tuple[str, bool, bool]], List[Node], Dict[str, List[Tuple[bool, bool]]]]
 ]:
     """Retrieves the call_position and information whether the parameters of the target function are modified
     within the respective function, based on the contents of cu_inst_result_dict.
@@ -1074,13 +1074,13 @@ def get_function_call_parameter_rw_information(
 
 def get_function_call_parameter_rw_information_recursion_step(
     pet: PETGraphX,
-    called_function_cu: CUNode,
-    recursively_visited: List[CUNode],
+    called_function_cu: Node,
+    recursively_visited: List[Node],
     function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],
     cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
     function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
     source_code_files: Dict[str, str],
-) -> Tuple[List[CUNode], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
+) -> Tuple[List[Node], str, List[Tuple[bool, bool]], Dict[str, List[Tuple[bool, bool]]]]:
     """Wrapper to execute __get_function_call_parameter_rw_information recursively,
     i.e. for every function call in called functions body.
     The gathered information is aggregated via a logical disjunction on a per-variable level.
@@ -1192,10 +1192,10 @@ def get_function_call_parameter_rw_information_recursion_step(
             var_name_is_modified = False
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
-            function_internal_cu_nodes: List[CUNode] = []
-            queue: List[CUNode] = [called_function_cu]
+            function_internal_cu_nodes: List[Node] = []
+            queue: List[Node] = [called_function_cu]
             while len(queue) > 0:
-                cur: CUNode = queue.pop(0)
+                cur: Node = queue.pop(0)
                 # check if cur inside function body, append to function_internal_cu_nodes if so
                 if line_contained_in_region(
                     cur.start_position(),

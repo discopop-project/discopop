@@ -10,14 +10,14 @@
 from typing import List, Tuple, Dict, Set
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, EdgeType, DepType, Dependency
+from ..PETGraphX import LineID, NodeID, PETGraphX, NodeType, Node, EdgeType, DepType, Dependency
 from ..utils import correlation_coefficient, classify_task_vars, contains
 
 __pipeline_threshold = 0.9
 
 
 class PipelineStage(object):
-    def __init__(self, pet: PETGraphX, node: CUNode, in_dep, out_dep):
+    def __init__(self, pet: PETGraphX, node: Node, in_dep, out_dep):
         self.node = node.id
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
@@ -55,7 +55,7 @@ class PipelineInfo(PatternInfo):
 
     coefficient: float
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
@@ -76,7 +76,7 @@ class PipelineInfo(PatternInfo):
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 
-    def __in_dep(self, node: CUNode):
+    def __in_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend(
@@ -91,7 +91,7 @@ class PipelineInfo(PatternInfo):
 
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
-    def __out_dep(self, node: CUNode):
+    def __out_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, NodeType.CU):
             raw.extend(
@@ -106,7 +106,7 @@ class PipelineInfo(PatternInfo):
 
         return [dep for dep in raw if dep[0] in [n.id for n in nodes_after]]
 
-    def __output_stage(self, node: CUNode) -> PipelineStage:
+    def __output_stage(self, node: Node) -> PipelineStage:
         in_d = self.__in_dep(node)
         out_d = self.__out_dep(node)
 
@@ -123,7 +123,7 @@ class PipelineInfo(PatternInfo):
         )
 
 
-def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[LineID]) -> bool:
+def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[LineID]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param root: root node
@@ -153,8 +153,8 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :return: List of detected pattern info
     """
     result: List[PipelineInfo] = []
-    children_cache: Dict[CUNode, List[CUNode]] = dict()
-    dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
+    children_cache: Dict[Node, List[Node]] = dict()
+    dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(NodeType.LOOP)
     for idx, node in enumerate(nodes):
         print("Pipeline:", idx, "/", len(nodes))
@@ -166,7 +166,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     return result
 
 
-def __detect_pipeline(pet: PETGraphX, root: CUNode, children_cache=None, dep_cache=None) -> float:
+def __detect_pipeline(pet: PETGraphX, root: Node, children_cache=None, dep_cache=None) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph

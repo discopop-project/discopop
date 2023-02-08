@@ -8,7 +8,7 @@
 from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType
+from ..PETGraphX import PETGraphX, Node, NodeType, EdgeType
 from ..utils import classify_loop_variables, contains
 import time
 
@@ -16,7 +16,7 @@ import time
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
@@ -64,7 +64,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     return result
 
 
-def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
+def __detect_do_all(pet: PETGraphX, root_loop: Node) -> bool:
     """Calculate do-all value for node
 
     :param pet: PET graph
@@ -83,8 +83,8 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
             return False
 
     for i in range(0, len(subnodes)):
-        children_cache: Dict[CUNode, List[CUNode]] = dict()
-        dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
+        children_cache: Dict[Node, List[Node]] = dict()
+        dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
         for j in range(i, len(subnodes)):
             if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False

@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from ..PETGraphX import LineID, PETGraphX, NodeType, CUNode, EdgeType
+from ..PETGraphX import LineID, PETGraphX, NodeType, Node, EdgeType
 from ..utils import correlation_coefficient
 
 total = 0
@@ -31,7 +31,7 @@ def run_after(pet: PETGraphX):
     return pet
 
 
-def check_pipeline(pet: PETGraphX, root: CUNode):
+def check_pipeline(pet: PETGraphX, root: Node):
     """Tries to optimize dependencies for pipeline detection
     1. Deletes independent lines, that do not contribute to the pipeline
     2. Deletes similar CU (that have same dependencies), as those can be one step in the pipeline
@@ -165,7 +165,7 @@ def get_correlation_coefficient(matrix):
     return round(correlation_coefficient(graph_vector, pipeline_vector), 2)
 
 
-def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[LineID]) -> bool:
+def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[LineID]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param root: root node

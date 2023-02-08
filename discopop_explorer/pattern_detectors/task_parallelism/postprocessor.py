@@ -8,7 +8,7 @@
 
 from typing import List, cast, Dict, Optional, Tuple
 
-from discopop_explorer.PETGraphX import CUNode, EdgeType, PETGraphX
+from discopop_explorer.PETGraphX import Node, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -48,8 +48,8 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
-        relatives: List[CUNode] = [tws._node]
-        queue: List[CUNode] = [
+        relatives: List[Node] = [tws._node]
+        queue: List[Node] = [
             pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)
         ]
         while len(queue) > 0:

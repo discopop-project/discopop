@@ -9,7 +9,7 @@
 import copy
 from typing import List, Tuple, Optional, cast, Dict
 
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, PETGraphX
+from discopop_explorer.PETGraphX import Node, NodeType, EdgeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -38,7 +38,7 @@ def suggest_parallel_regions(
     # get task suggestions from suggestions
     task_suggestions = [s for s in suggestions if s.type is TPIType.TASK]
     # start search for each suggested task
-    parents: List[Tuple[CUNode, Optional[CUNode]]] = []
+    parents: List[Tuple[Node, Optional[Node]]] = []
     for ts in task_suggestions:
         parents += get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, False)
     # remove duplicates
@@ -64,7 +64,7 @@ def suggest_parallel_regions(
     for parent, last_node in outer_parents:
         if last_node is None:
             continue
-        last_node = cast(CUNode, last_node)
+        last_node = cast(Node, last_node)
         region_suggestions.append(
             ParallelRegionInfo(
                 parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position()
@@ -150,7 +150,7 @@ def detect_taskloop_reduction(
             output.append(s)
         else:
             red_vars_entry = cast(Dict[str, str], red_vars_entry)
-            red_loop = cast(CUNode, red_loop)
+            red_loop = cast(Node, red_loop)
             # s contained in reduction loop body
             # modify task s
             reduction_clause = "reduction("
@@ -224,7 +224,7 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
                 result.append(copy.copy(ts))
 
     # prepare dict to find target suggestions for combination
-    task_suggestions_dict: Dict[CUNode, List[TaskParallelismInfo]] = dict()
+    task_suggestions_dict: Dict[Node, List[TaskParallelismInfo]] = dict()
     for ts in task_suggestions:
         if ts._node in task_suggestions_dict:
             task_suggestions_dict[ts._node].append(ts)

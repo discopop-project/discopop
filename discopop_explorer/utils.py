@@ -17,7 +17,7 @@ from .PETGraphX import (
     NodeID,
     PETGraphX,
     NodeType,
-    CUNode,
+    Node,
     DepType,
     EdgeType,
     Dependency,
@@ -46,7 +46,7 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
 
 
-def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[CUNode]:
+def find_subnodes(pet: PETGraphX, node: Node, criteria: EdgeType) -> List[Node]:
     """Returns direct children of a given node
 
     :param pet: PET graph
@@ -57,7 +57,7 @@ def find_subnodes(pet: PETGraphX, node: CUNode, criteria: EdgeType) -> List[CUNo
     return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
 
 
-def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
+def depends(pet: PETGraphX, source: Node, target: Node) -> bool:
     """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
 
     :param pet: PET graph
@@ -80,7 +80,7 @@ def depends(pet: PETGraphX, source: CUNode, target: CUNode) -> bool:
     return False
 
 
-def is_loop_index2(pet: PETGraphX, root_loop: CUNode, var_name: str) -> bool:
+def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
     """Checks, whether the variable is a loop index.
 
     :param pet: CU graph
@@ -138,7 +138,7 @@ def get_loop_iterations(line: LineID) -> int:
 
 
 def __get_dep_of_type(
-    pet: PETGraphX, node: CUNode, dep_type: DepType, reversed: bool
+    pet: PETGraphX, node: Node, dep_type: DepType, reversed: bool
 ) -> List[Tuple[NodeID, NodeID, Dependency]]:
     """Searches all dependencies of specified type
 
@@ -159,7 +159,7 @@ def __get_dep_of_type(
     ]
 
 
-def __get_variables(nodes: List[CUNode]) -> Set[Variable]:
+def __get_variables(nodes: List[Node]) -> Set[Variable]:
     """Gets all variables in nodes
 
     :param nodes: nodes
@@ -206,7 +206,7 @@ def is_written_in_subtree(
     mem_regs: Set[MemoryRegion],
     raw: Set[Tuple[NodeID, NodeID, Dependency]],
     waw: Set[Tuple[NodeID, NodeID, Dependency]],
-    tree: List[CUNode],
+    tree: List[Node],
 ) -> bool:
     """Checks if variable is written in subtree
 
@@ -222,7 +222,7 @@ def is_written_in_subtree(
     return False
 
 
-def is_func_arg(pet: PETGraphX, var: str, node: CUNode) -> bool:
+def is_func_arg(pet: PETGraphX, var: str, node: Node) -> bool:
     """Checks if variable is a function argument
 
     :param pet: CU graph
@@ -276,7 +276,7 @@ def is_readonly(
     return True
 
 
-def is_global(var: str, tree: List[CUNode]) -> bool:
+def is_global(var: str, tree: List[Node]) -> bool:
     """Checks if variable is global
 
     :param var: variable name
@@ -297,7 +297,7 @@ def is_first_written(
     mem_regs: Set[MemoryRegion],
     raw: Set[Tuple[NodeID, NodeID, Dependency]],
     war: Set[Tuple[NodeID, NodeID, Dependency]],
-    sub: List[CUNode],
+    sub: List[Node],
 ) -> bool:
     """Checks whether a variable is first written inside the current node
 
@@ -330,7 +330,7 @@ def is_first_written_new(
     war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
-    tree: List[CUNode],
+    tree: List[Node],
 ):
     """Checks whether a variable is first written inside the current node
 
@@ -367,7 +367,7 @@ def is_first_written_new(
 
 
 def is_read_in_subtree(
-    mem_regs: Set[MemoryRegion], rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
+    mem_regs: Set[MemoryRegion], rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[Node]
 ) -> bool:
     """Checks if variable is read in subtree
 
@@ -383,7 +383,7 @@ def is_read_in_subtree(
 
 
 def is_read_in_right_subtree(
-    var: str, rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
+    var: str, rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[Node]
 ) -> bool:
     """Checks if variable is read in subtree
 
@@ -464,7 +464,7 @@ def is_read_in(
     war_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
-    tree: List[CUNode],
+    tree: List[Node],
 ) -> bool:
     """Check all reverse RAW dependencies (since we know that var is written in loop, because
     is_first_written returned true)
@@ -496,7 +496,7 @@ def is_read_in(
     return False
 
 
-def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CUNode]]:
+def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
     """Gets all do-all and reduction subloops
 
     :param pet: CU graph
@@ -523,7 +523,7 @@ def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CU
 
 
 def classify_loop_variables(
-    pet: PETGraphX, loop: CUNode
+    pet: PETGraphX, loop: Node
 ) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable]]:
     """Classifies variables inside the loop
 
@@ -608,7 +608,7 @@ def classify_loop_variables(
 
 def classify_task_vars(
     pet: PETGraphX,
-    task: CUNode,
+    task: Node,
     type: str,
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
@@ -788,7 +788,7 @@ def __apply_dealiasing(
     return cleaned
 
 
-def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> bool:
+def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: Node) -> bool:
     """Check if var has been written in predecessor of task.
 
     :param pet: CU graph
@@ -796,9 +796,9 @@ def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> b
     :param task: node
     """
     # get predecessors of task
-    queue: List[CUNode] = [task]
-    visited: List[CUNode] = []
-    predecessors: List[CUNode] = []
+    queue: List[Node] = [task]
+    visited: List[Node] = []
+    predecessors: List[Node] = []
     while queue:
         current = queue.pop()
         if current not in visited:
