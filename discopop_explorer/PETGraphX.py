@@ -7,7 +7,7 @@
 # directory for details.
 
 from __future__ import annotations
-from typing import Dict, List, Tuple, Set, Optional, Type, cast, Union
+from typing import Dict, List, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
 
@@ -516,15 +516,20 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]["data"]
 
-    def all_nodes(
-        self, type: Optional[Union[Type[Node], Tuple[Type[Node], ...]]] = None
-    ) -> List[Node]:
+    # generic type for subclasses of Node
+    NodeT = TypeVar("NodeT", bound=Node)
+    
+    @overload
+    def all_nodes(self) -> List[Node]: ...
+    @overload
+    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+    def all_nodes(self, type = Node):
         """List of all nodes of specified type
 
-        :param type: type(s) of node
-        :return: List of all nodes
+        :param type: type(s) of nodes
+        :return: List of all nodes 
         """
-        return [n[1] for n in self.g.nodes(data="data") if type is None or isinstance(n[1], type)]
+        return [n[1] for n in self.g.nodes(data="data") if isinstance(n[1], type)]
 
     def out_edges(
         self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
