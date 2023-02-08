@@ -88,17 +88,7 @@ class Context(object):
         # update required, if seen writes of new device is not a superset of old device id
         required_updates: Set[Tuple[MemoryRegion, int, int]] = set()
 
-        #        # check if new key needs to be added
-        #        required_mem_regs = [
-        #            mem_reg
-        #            for mem_reg in self.seen_writes_by_device[self.device_id]
-        #            if mem_reg not in self.seen_writes_by_device[new_device_id]
-        #        ]
-        #        for mem_reg in required_mem_regs:
-        #            required_updates.add((mem_reg, False))
-
         # check if unsynchronized changes exist
-
         device_id_1 = self.device_id
         device_id_2 = new_device_id
 
@@ -196,16 +186,6 @@ class Context(object):
 
         # check if update has to be requested from other device due to a read (identifier: None)
         requested_updates = self.request_updates_from_other_devices(new_device_id)
-
-        # remove None-identifier entries from lists of seen writes -> done in request_updates_from_other_devices
-        # self.remove_none_identifiers()
-
-        #        if not device_switch_occurred:
-        #            # do not report the updated memory regions, as no update instructions need to be issued
-        #            pass
-        #        else:
-
-        # report the identifed updates as a device switch has been performed
 
         # report data movement
         for mem_reg, from_device, to_device in updated_memory_regions:
@@ -455,36 +435,3 @@ def __calculate_updates(
                 return identified_updates
 
     return identified_updates
-
-
-#    else:
-#        # identify merge node
-#    print("SPAWN FOR: ", succs, file=sys.stderr)
-#        merge_node = __identify_merge_node(pet, succs)
-#        if merge_node is None:
-#            # no merge node exists (e.g. caused by a return in a branch)
-#            # todo implement
-#            raise NotImplementedError(
-#                "Currently unsupported program structure encountered. No merge node found in paths at CUID: " +
-#                str(context.cu_id)
-#            )
-#        else:
-#            # merge node exists
-#
-#            # follow successor paths until merge node has been encountered
-#            # gather updates for branched section
-#            gathered_updates = []
-#            for succ_id in succs:
-#                # if no context switch happens, do nothing
-#                succ_device_id = get_device_id(comb_gpu_reg, succ_id)
-#                if succ_device_id == context.device_id:
-#                    continue
-#
-#            # apply updates to context
-#
-#            end_reached = True
-#
-#        # todo replace with more diversified approach
-#        # treat each branch of a branched sections without merge node individually
-#
-#    return identified_updates

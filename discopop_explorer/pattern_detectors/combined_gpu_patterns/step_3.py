@@ -152,7 +152,8 @@ def propagate_writes(
 def cleanup_writes(
     writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]
 ) -> Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]:
-    """remove entries from the Sets with an second-element entry of None, if it is overwritten by a different memory write."""
+    """remove entries from the Sets with an second-element entry of None,
+    if it is overwritten by a different memory write."""
     for mem_reg in writes:
         to_be_removed: Set[Tuple[CUID, Optional[int]]] = set()
         # determine elements to be removed

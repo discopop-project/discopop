@@ -42,7 +42,6 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
-    get_contained_lines,
     prepare_liveness_metadata,
     propagate_variable_name_associations,
 )
@@ -92,8 +91,6 @@ class CombinedGPURegion(PatternInfo):
         print("\n\n", file=sys.stderr)
         print("DEVICE CU IDS: ", file=sys.stderr)
         print(self.device_cu_ids, file=sys.stderr)
-        #        entry_points: List[Tuple[str, str, EntryPointType, str, EntryPointPositioning]] = []
-        #        exit_points: List[Tuple[str, str, ExitPointType, str, ExitPointPositioning]] = []
 
         # initialize object
         self.update_instructions = []
@@ -186,7 +183,6 @@ class CombinedGPURegion(PatternInfo):
         print("EXTENDED HOST MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_host_memory_region_liveness, file=sys.stderr)
         print(file=sys.stderr)
-        # todo remove device_cus from the extended list?
 
         # ### STEP 3: MARK WRITTEN VARIABLES
         # initialize writes
@@ -226,9 +222,6 @@ class CombinedGPURegion(PatternInfo):
         print(host_writes_by_cu, file=sys.stderr)
         print(file=sys.stderr)
 
-        # todo is this a good idea?
-        # ### STEP (4): REMOVE ALL INFORMATION NOT RELATED TO THE CONSIDERED FUNCTION BODY
-
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
         writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
         issued_updates = identify_updates(self, pet, writes_by_device)
@@ -253,6 +246,8 @@ class CombinedGPURegion(PatternInfo):
             )
 
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
+
+        # ### STEP 6: convert updates to entry / exit points if possible
 
         # ### PREPARE METADATA
         # prepare device liveness
@@ -319,9 +314,6 @@ def find_combined_gpu_regions(
         combined_gpu_regions.remove(combinable_1)
         combined_gpu_regions.remove(combinable_2)
         combined_gpu_regions.append(combine_regions(pet, combinable_1, combinable_2))
-
-    # todo add update instructions
-    # todo merge data regions
 
     return combined_gpu_regions
 
