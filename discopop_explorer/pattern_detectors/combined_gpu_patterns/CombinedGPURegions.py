@@ -43,6 +43,8 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
+    identify_end_of_life_points,
+    add_aliases,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
@@ -253,12 +255,31 @@ class CombinedGPURegion(PatternInfo):
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### STEP 6: convert updates to entry / exit points if possible
+
+        # add aliases to updates
+        aliased_updates = add_aliases(
+            pet,
+            issued_updates,
+            memory_regions_to_functions_and_variables,
+        )
+
         memory_region_liveness_by_device = {
             0: extended_host_memory_region_liveness,
             1: extended_memory_region_liveness,
         }
         entry_points, exit_points, updates = convert_updates_to_entry_and_exit_points(
-            pet, issued_updates, memory_region_liveness_by_device
+            pet, aliased_updates, memory_region_liveness_by_device
+        )
+
+        # identify exit points
+        exit_points.update(
+            identify_end_of_life_points(
+                pet,
+                entry_points,
+                exit_points,
+                memory_region_liveness_by_device,
+                memory_regions_to_functions_and_variables,
+            )
         )
 
         # ### PREPARE METADATA

@@ -34,6 +34,7 @@ class Update(object):
         self.source_cu_id = cu_id
         self.sink_cu_id = sink_cu_id
         self.memory_regions = memory_regions
+        self.variable_names = set()
         self.update_type = update_type
 
     def __str__(self):
@@ -45,6 +46,8 @@ class Update(object):
             + " -> "
             + self.sink_cu_id
             + " : "
+            + str(self.variable_names)
+            + "/"
             + str(self.memory_regions)
         )
         return result_str

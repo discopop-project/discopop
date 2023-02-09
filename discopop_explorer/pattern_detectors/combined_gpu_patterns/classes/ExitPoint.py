@@ -46,6 +46,21 @@ class ExitPoint(object):
         self.pragma_line = pet.node_at(source_cu_id).end_position()
         self.exit_point_positioning = ExitPointPositioning.BEFORE_CU
 
+    def __str__(self):
+        return (
+            "ExitPoint("
+            + str(self.var_names)
+            + ", "
+            + str(self.memory_regions)
+            + ", @ "
+            + self.source_cu_id
+            + " -> "
+            + self.sink_cu_id
+            + " : "
+            + str(self.exit_point_type)
+            + ")"
+        )
+
     def get_as_metadata(self):
         return [
             str(self.var_names),
