@@ -183,9 +183,16 @@ def identify_end_of_life_points(
                         not in memory_region_liveness_by_device[device_id][mem_reg]
                     ):
                         # mem_reg is not live anymore. create an EOL point
-                        eol_points.add(
-                            (cu_id, cast(CUID, successor_node.id), tuple(mem_reg_aliases[mem_reg]))
-                        )
+                        if mem_reg in mem_reg_aliases:
+                            eol_points.add(
+                                (
+                                    cu_id,
+                                    cast(CUID, successor_node.id),
+                                    tuple(mem_reg_aliases[mem_reg]),
+                                )
+                            )
+                        else:
+                            eol_points.add((cu_id, cast(CUID, successor_node.id), tuple([mem_reg])))
 
     # remove eols which are covered by known exit points
     for exit_point in exit_points:
