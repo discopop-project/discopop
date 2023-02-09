@@ -222,6 +222,21 @@ class GPURegions:
                 region_cus += [
                     cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
                 ]
+                # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
+                loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
+                predecessors = [
+                    s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)
+                ]
+                for predecessor_id in predecessors:
+                    predecessor_node = self.pet.node_at(predecessor_id)
+                    if (
+                        predecessor_node.start_line >= loop_node.start_line
+                        and predecessor_node.end_line <= loop_node.end_line
+                    ):
+                        # predecessor is loop initialization
+                        if predecessor_node not in region_cus:
+                            region_cus.append(predecessor_node)
+
             self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
 
             # determine start and end line of region
