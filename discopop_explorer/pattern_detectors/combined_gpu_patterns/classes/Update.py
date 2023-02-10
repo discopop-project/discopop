@@ -45,36 +45,40 @@ class Update(object):
         self.update_type = update_type
         self.last_write_locations = last_write_locations
         self.dependencies = set()
+        self.asynchronous_possible = False
 
         # check if an asynchronous update is possible
-        import sys
+        # only allow asynchronous updates to the device in order to not get problems with
+        # enforcing dependencies on the host --> tasks etc. would be required to implement the waiting behavior
+        if self.update_type != UpdateType.FROM_DEVICE:
+            import sys
 
-        print("ORIGINAL SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
-        self.asynchronous_possible = True
-        asynchronous_source: Optional[CUID] = None
-        for mem_reg in self.memory_regions:
-            if self.last_write_locations[mem_reg] == self.synchronous_source_cu_id:
-                self.asynchronous_possible = False
-                break
-            if asynchronous_source is None:
-                asynchronous_source = self.last_write_locations[mem_reg]
-            if asynchronous_source != self.last_write_locations[mem_reg]:
-                self.asynchronous_possible = False
-                break
+            print("ORIGINAL SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
+            self.asynchronous_possible = True
+            asynchronous_source: Optional[CUID] = None
+            for mem_reg in self.memory_regions:
+                if self.last_write_locations[mem_reg] == self.synchronous_source_cu_id:
+                    self.asynchronous_possible = False
+                    break
+                if asynchronous_source is None:
+                    asynchronous_source = self.last_write_locations[mem_reg]
+                if asynchronous_source != self.last_write_locations[mem_reg]:
+                    self.asynchronous_possible = False
+                    break
 
-        if self.asynchronous_possible:
-            # update the asynchronous source cu
-            self.asynchronous_source_cu_id = cast(CUID, asynchronous_source)
+            if self.asynchronous_possible:
+                # update the asynchronous source cu
+                self.asynchronous_source_cu_id = cast(CUID, asynchronous_source)
 
-            # create a dependency to ensure correctness
-            self.dependencies.add(
-                Dependency(
-                    self.asynchronous_source_cu_id,
-                    self.sink_cu_id,
-                    self.variable_names,
-                    self.memory_regions,
+                # create a dependency to ensure correctness
+                self.dependencies.add(
+                    Dependency(
+                        self.asynchronous_source_cu_id,
+                        self.sink_cu_id,
+                        self.variable_names,
+                        self.memory_regions,
+                    )
                 )
-            )
 
     def __str__(self):
         result_str = ""
