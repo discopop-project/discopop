@@ -5,9 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+
+import itertools
 import copy
 from enum import IntEnum, Enum
-from platform import node
 from typing import Dict, List, Tuple, Set, Optional, cast, Union
 import jsonpickle  # type:ignore
 
@@ -17,8 +18,6 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
-import time
-import itertools
 
 node_props = [
     ("BasicBlockID", "string", "''"),
@@ -78,8 +77,38 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
-NodeID = str  # fileID:nodeID
-LineID = str  # fileID:lineNr
+class NodeID(str):
+    # simpler but still strong typing alternative:
+    # NodeID = NewType("NodeID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created NodeID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+
+
+class LineID(str):
+    # simpler but still strong typing alternative:
+    # LineID = NewType("LineID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created LineID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted LineID: ", id_string)
 
 
 class Dependency:
@@ -126,12 +155,12 @@ class CUNode:
     parent_function_id: Optional[NodeID] = None  # every node that is not a function node
     children_cu_ids: Optional[List[NodeID]] = None  # function nodes only
 
-    def __init__(self, node_id: str):
+    def __init__(self, node_id: NodeID):
         self.id = node_id
         self.file_id, self.node_id = parse_id(node_id)
 
     @classmethod
-    def from_kwargs(cls, node_id: str, **kwargs):
+    def from_kwargs(cls, node_id: NodeID, **kwargs):
         node = cls(node_id)
         for key, value in kwargs.items():
             setattr(node, key, value)
@@ -143,7 +172,8 @@ class CUNode:
 
         :return:
         """
-        return f"{self.file_id}:{self.start_line}"
+
+        return LineID(f"{self.file_id}:{self.start_line}")
 
     def end_position(self) -> LineID:
         """End position file_id:line
@@ -151,7 +181,7 @@ class CUNode:
 
         :return:
         """
-        return f"{self.file_id}:{self.end_line}"
+        return LineID(f"{self.file_id}:{self.end_line}")
 
     def __str__(self):
         return self.id
