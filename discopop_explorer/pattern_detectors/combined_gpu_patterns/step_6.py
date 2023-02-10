@@ -159,6 +159,10 @@ def add_aliases(
                     ]
                     len_pre = len(update.variable_names)
                     update.variable_names.update(alias_var_names)
+                    # add variable name to dependency if required
+                    for dependency in update.dependencies:
+                        if mem_reg in dependency.memory_regions:
+                            dependency.var_names.update(alias_var_names)
                     len_post = len(update.variable_names)
                     if len_pre != len_post:
                         modification_found = True

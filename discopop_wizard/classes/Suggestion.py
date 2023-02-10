@@ -277,34 +277,24 @@ class Suggestion(object):
 
     def __get_data_region_dependencies(self, depend_in, depend_out) -> List[Pragma]:
         pragmas = []
-        for var_name, cu_id, pragma_line, entry_point_positioning in depend_in:
+        for var_name, cu_id, pragma_line in depend_in:
             pragma = Pragma()
-            pragma.pragma_str = "#depend in(" + var_name + ")"
+            pragma.pragma_str = "#depend in(" + var_name + ") @ " + cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
             pragma.file_id = self.file_id
-            if entry_point_positioning == EntryPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif entry_point_positioning == EntryPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
+            pragma.pragma_position = PragmaPosition.BEFORE_START
             pragmas.append(pragma)
 
-        for var_name, cu_id, pragma_line, exit_point_positioning in depend_out:
+        for var_name, cu_id, pragma_line in depend_out:
             pragma = Pragma()
-            pragma.pragma_str = "#depend out(" + var_name + ")"
+            pragma.pragma_str = "#depend out(" + var_name + ") @ " + cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
             pragma.file_id = self.file_id
-            if exit_point_positioning == ExitPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif exit_point_positioning == ExitPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", exit_point_positioning)
+            pragma.pragma_position = PragmaPosition.BEFORE_START
             pragmas.append(pragma)
 
         return pragmas

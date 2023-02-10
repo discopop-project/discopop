@@ -9,6 +9,7 @@ from typing import List, Tuple, Dict, Set
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     ExitPointPositioning,
     EntryPointPositioning,
@@ -20,6 +21,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
     MemoryRegion,
     CUID,
     VarName,
+)
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.prepare_metadata import (
+    get_dependencies_as_metadata,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_1 import (
     get_written_and_read_memory_regions_by_cu,
@@ -71,12 +76,8 @@ class CombinedGPURegion(PatternInfo):
     data_region_exit_points: List[
         Tuple[VarName, CUID, ExitPointType, str, ExitPointPositioning]
     ]  # [(var, cu_id, exit_point_type, meta_line_num, positioning)]
-    data_region_depend_in: List[
-        Tuple[VarName, CUID, str, EntryPointPositioning]
-    ]  # [(var, cu_id, meta_line_num)]
-    data_region_depend_out: List[
-        Tuple[VarName, CUID, str, ExitPointPositioning]
-    ]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_in: List[Tuple[VarName, CUID, str]]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_out: List[Tuple[VarName, CUID, str]]  # [(var, cu_id, meta_line_num)]
     device_cu_ids: List[CUID]
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
@@ -309,6 +310,19 @@ class CombinedGPURegion(PatternInfo):
 
         # prepare exit points
         self.data_region_exit_points = [exit_point.get_as_metadata() for exit_point in exit_points]
+
+        # prepare dependencies
+        all_dependencies: Set[Dependency] = set()
+        for update in updates:
+            all_dependencies.update(update.dependencies)
+        for entry_point in entry_points:
+            all_dependencies.update(entry_point.dependencies)
+        for exit_point in exit_points:
+            all_dependencies.update(exit_point.dependencies)
+
+        self.data_region_depend_in, self.data_region_depend_out = get_dependencies_as_metadata(
+            pet, all_dependencies
+        )
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead

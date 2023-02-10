@@ -65,7 +65,7 @@ class Update(object):
         if self.asynchronous_possible:
             # update the asynchronous source cu
             self.asynchronous_source_cu_id = cast(CUID, asynchronous_source)
-            print("UPDATED SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
+
             # create a dependency to ensure correctness
             self.dependencies.add(
                 Dependency(

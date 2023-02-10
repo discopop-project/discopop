@@ -23,7 +23,7 @@ class Dependency(object):
 
     def __str__(self):
         return (
-            "Update("
+            "Dependency("
             + self.source
             + " -> "
             + self.sink
