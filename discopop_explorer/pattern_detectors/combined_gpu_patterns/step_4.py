@@ -23,7 +23,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update im
 class Context(object):
     cu_id: CUID
     device_id: int
-    seen_writes_by_device: Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]
+    seen_writes_by_device: Dict[int, Dict[MemoryRegion, Set[Tuple[Optional[int], Optional[CUID]]]]]
 
     def __init__(self, cu_id: CUID, device_id: int):
         self.cu_id = cu_id
@@ -51,7 +51,10 @@ class Context(object):
         print(self, file=sys.stderr)
 
     def update_writes(
-        self, device_id_to_update: int, writes: Dict[MemoryRegion, Set[Optional[int]]]
+        self,
+        device_id_to_update: int,
+        writes: Dict[MemoryRegion, Set[Optional[int]]],
+        origin_cu_id: CUID,
     ) -> Set[Tuple[MemoryRegion, bool]]:
         """Returns the updated memory regions"""
         updated_memory_regions: Set[Tuple[MemoryRegion, bool]] = set()
@@ -69,7 +72,9 @@ class Context(object):
                 self.seen_writes_by_device[device_id_to_update][mem_reg] = set()
                 print("==> added ", mem_reg, " to device: ", device_id_to_update, file=sys.stderr)
             for ident in writes[mem_reg]:
-                if ident not in self.seen_writes_by_device[device_id_to_update][mem_reg]:
+                if ident not in [
+                    t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]
+                ]:
                     # list of seen writes will be updated
                     updated_memory_regions.add((mem_reg, is_initialization))
                     print(
@@ -81,12 +86,22 @@ class Context(object):
                         is_initialization,
                         file=sys.stderr,
                     )
-                self.seen_writes_by_device[device_id_to_update][mem_reg].add(ident)
+                print("ADD : ", (ident, origin_cu_id), file=sys.stderr)
+                # todo: do not simply add, but replace current entry with origin_cu_id if it is a successor of the current entry
+                #  necessary, since relying on set behavior is not sufficient anymore
+                if ident not in [
+                    t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]
+                ]:
+                    self.seen_writes_by_device[device_id_to_update][mem_reg].add(
+                        (ident, origin_cu_id)
+                    )
         return updated_memory_regions
 
-    def find_required_updates(self, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int]]:
+    def find_required_updates(
+        self, pet: PETGraphX, new_device_id: int
+    ) -> Set[Tuple[MemoryRegion, int, int, CUID]]:
         # update required, if seen writes of new device is not a superset of old device id
-        required_updates: Set[Tuple[MemoryRegion, int, int]] = set()
+        required_updates: Set[Tuple[MemoryRegion, int, int, CUID]] = set()
 
         # check if unsynchronized changes exist
         device_id_1 = self.device_id
@@ -100,12 +115,23 @@ class Context(object):
         for mem_reg in overlapping_mem_reg:
             # issue update, if writes of new device is not a superset of old device
             missing_write_identifiers = [
-                wid
-                for wid in self.seen_writes_by_device[device_id_1][mem_reg]
-                if wid not in self.seen_writes_by_device[device_id_2][mem_reg] and wid is not None
+                (ident, origin)
+                for (ident, origin) in self.seen_writes_by_device[device_id_1][mem_reg]
+                if ident not in [t[0] for t in self.seen_writes_by_device[device_id_2][mem_reg]]
+                and ident is not None
             ]
             if len(missing_write_identifiers) > 0:
-                required_updates.add((mem_reg, device_id_1, device_id_2))
+                # get position of the last write
+                last_write_location: Optional[CUID] = None
+                for ident, origin in missing_write_identifiers:
+                    if last_write_location is None:
+                        last_write_location = origin
+                    if pet.is_predecessor(cast(CUID, last_write_location), cast(CUID, origin)):
+                        last_write_location = origin
+
+                required_updates.add(
+                    (mem_reg, device_id_1, device_id_2, cast(CUID, last_write_location))
+                )
 
         return required_updates
 
@@ -119,15 +145,17 @@ class Context(object):
             # synchronize from old to new device
             for mem_reg in overlapping_mem_reg:
                 # issue update, if writes of new device is not a superset of old device
-                for write_identifier in self.seen_writes_by_device[self.device_id][mem_reg]:
-                    if write_identifier not in self.seen_writes_by_device[new_device_id][mem_reg]:
-                        print("SYNCHRONIZED: ", mem_reg, write_identifier, file=sys.stderr)
-                    self.seen_writes_by_device[new_device_id][mem_reg].add(write_identifier)
+                for ident, origin in self.seen_writes_by_device[self.device_id][mem_reg]:
+                    if ident not in [
+                        t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]
+                    ]:
+                        print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
+                    self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
 
     def request_updates_from_other_devices(
-        self, new_device_id: int
-    ) -> Set[Tuple[MemoryRegion, int, int]]:
-        required_updates: Set[Tuple[MemoryRegion, int, int]] = set()
+        self, pet, new_device_id: int
+    ) -> Set[Tuple[MemoryRegion, int, int, CUID]]:
+        required_updates: Set[Tuple[MemoryRegion, int, int, CUID]] = set()
         to_be_removed = set()
         for mem_reg in self.seen_writes_by_device[new_device_id]:
             # check if updates on other devices exist
@@ -138,23 +166,35 @@ class Context(object):
                     continue
                 # update exist, if entries for new_device_id are not a superset of other_device_id
                 missing_identifiers = [
-                    wid
-                    for wid in self.seen_writes_by_device[other_device_id][mem_reg]
-                    if wid not in self.seen_writes_by_device[new_device_id][mem_reg]
+                    (ident, origin)
+                    for (ident, origin) in self.seen_writes_by_device[other_device_id][mem_reg]
+                    if ident
+                    not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]
                 ]
                 if len(missing_identifiers) > 0:
-                    required_updates.add((mem_reg, other_device_id, new_device_id))
+                    # get position of the last write
+                    last_write_location: Optional[CUID] = None
+                    for ident, origin in missing_identifiers:
+                        if last_write_location is None:
+                            last_write_location = origin
+                        if pet.is_predecessor(cast(CUID, last_write_location), cast(CUID, origin)):
+                            last_write_location = origin
+
+                    required_updates.add(
+                        (mem_reg, other_device_id, new_device_id, cast(CUID, last_write_location))
+                    )
 
                 # remove none identifier
-                if None in self.seen_writes_by_device[new_device_id][mem_reg]:
-                    to_be_removed.add((new_device_id, mem_reg, None))
+                for ident, origin in self.seen_writes_by_device[new_device_id][mem_reg]:
+                    if ident is None:
+                        to_be_removed.add((new_device_id, mem_reg, (ident, origin)))
 
         # update seen writes according to required updates
-        for mem_reg, other_device_id, new_device_id in required_updates:
+        for mem_reg, other_device_id, new_device_id, last_write_location in required_updates:
             missing_identifiers = [
-                wid
-                for wid in self.seen_writes_by_device[other_device_id][mem_reg]
-                if wid not in self.seen_writes_by_device[new_device_id][mem_reg]
+                (ident, origin)
+                for (ident, origin) in self.seen_writes_by_device[other_device_id][mem_reg]
+                if ident not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]
             ]
 
             print("ADDING: ", missing_identifiers, " TO ", mem_reg, file=sys.stderr)
@@ -168,6 +208,7 @@ class Context(object):
 
     def update_to(
         self,
+        pet: PETGraphX,
         next_cu_id: CUID,
         comb_gpu_reg,
         writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
@@ -187,20 +228,22 @@ class Context(object):
         writes_for_update = dict()
         if next_cu_id in writes_by_device[new_device_id]:
             writes_for_update = writes_by_device[new_device_id][next_cu_id]
-        self_updated_memory_regions = self.update_writes(new_device_id, writes_for_update)
+        self_updated_memory_regions = self.update_writes(
+            new_device_id, writes_for_update, next_cu_id
+        )
         print("UPDATED MEMORY REGIONS: ", self_updated_memory_regions, file=sys.stderr)
 
         # identify required updates
-        updated_memory_regions = self.find_required_updates(new_device_id)
+        updated_memory_regions = self.find_required_updates(pet, new_device_id)
 
         # synchronize states between old and new device
         self.synchronize_states(new_device_id)
 
         # check if update has to be requested from other device due to a read (identifier: None)
-        requested_updates = self.request_updates_from_other_devices(new_device_id)
+        requested_updates = self.request_updates_from_other_devices(pet, new_device_id)
 
         # report data movement
-        for mem_reg, from_device, to_device in updated_memory_regions:
+        for mem_reg, from_device, to_device, last_write_to_mem_reg in updated_memory_regions:
             update_direction = get_update_type(from_device, to_device)
             print(
                 "REPORTED! ",
@@ -210,12 +253,22 @@ class Context(object):
                 from_device,
                 "->",
                 to_device,
+                " last_write@",
+                last_write_to_mem_reg,
                 file=sys.stderr,
             )
-            required_updates.add(Update(self.cu_id, next_cu_id, {mem_reg}, update_direction))
+            required_updates.add(
+                Update(
+                    self.cu_id,
+                    next_cu_id,
+                    {mem_reg},
+                    update_direction,
+                    {mem_reg: last_write_to_mem_reg},
+                )
+            )
 
         # report data movement
-        for mem_reg, from_device, to_device in requested_updates:
+        for mem_reg, from_device, to_device, last_write_to_mem_reg in requested_updates:
             update_direction = get_update_type(from_device, to_device)
             print(
                 "REQUESTED! ",
@@ -225,9 +278,19 @@ class Context(object):
                 from_device,
                 "->",
                 to_device,
+                " last_write@",
+                last_write_to_mem_reg,
                 file=sys.stderr,
             )
-            required_updates.add(Update(self.cu_id, next_cu_id, {mem_reg}, update_direction))
+            required_updates.add(
+                Update(
+                    self.cu_id,
+                    next_cu_id,
+                    {mem_reg},
+                    update_direction,
+                    {mem_reg: last_write_to_mem_reg},
+                )
+            )
 
         # update the context
         self.cu_id = next_cu_id
@@ -367,7 +430,7 @@ def identify_updates(
             except KeyError:
                 entry_point_writes = dict()
 
-            context.update_writes(device_id, entry_point_writes)
+            context.update_writes(device_id, entry_point_writes, entry_point)
 
             # start calculation of updates for entry_point
             identified_updates.update(
@@ -406,7 +469,7 @@ def __calculate_updates(
         context.print()
 
         # todo: update context to current node and save required updates
-        required_updates = context.update_to(cur_node_id, comb_gpu_reg, writes_by_device)
+        required_updates = context.update_to(pet, cur_node_id, comb_gpu_reg, writes_by_device)
         identified_updates.update(required_updates)
 
         # calculate successors of current node

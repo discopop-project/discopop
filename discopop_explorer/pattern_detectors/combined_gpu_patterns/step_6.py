@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import Set, Tuple, Dict, List, cast
+from typing import Set, Tuple, Dict, List, cast, Optional
 
 from discopop_explorer.PETGraphX import PETGraphX, EdgeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
@@ -14,11 +14,14 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
     CUID,
     VarName,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.EntryPoint import EntryPoint
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     UpdateType,
     EntryPointType,
     ExitPointType,
+    EntryPointPositioning,
+    ExitPointPositioning,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.ExitPoint import ExitPoint
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
@@ -41,28 +44,48 @@ def convert_updates_to_entry_and_exit_points(
             # check if the memory region was live on the device before the update
             qualifies_as_entry = True
             for mem_reg in issued_update.memory_regions:
-                if issued_update.source_cu_id in memory_region_liveness_by_device[1][mem_reg]:
+                if (
+                    issued_update.synchronous_source_cu_id
+                    in memory_region_liveness_by_device[1][mem_reg]
+                ):
                     qualifies_as_entry = False
                     break
             if qualifies_as_entry:
                 if issued_update.update_type == UpdateType.TO_DEVICE:
-                    entry_points.add(
-                        EntryPoint(
+                    if issued_update.asynchronous_possible:
+                        # asynchronous entry possible
+                        enp = EntryPoint(
                             pet,
                             issued_update.variable_names,
                             issued_update.memory_regions,
-                            issued_update.source_cu_id,
+                            cast(CUID, issued_update.asynchronous_source_cu_id),
                             issued_update.sink_cu_id,
-                            EntryPointType.TO_DEVICE,
+                            EntryPointType.ASYNC_TO_DEVICE,
                         )
-                    )
+                        # add dependencies to EntryPoint
+                        for dependency in issued_update.dependencies:
+                            enp.dependencies.add(dependency)
+                        entry_points.add(enp)
+                    else:
+                        # asynchronous entry not possible
+                        # create a synchronous entry point
+                        entry_points.add(
+                            EntryPoint(
+                                pet,
+                                issued_update.variable_names,
+                                issued_update.memory_regions,
+                                issued_update.synchronous_source_cu_id,
+                                issued_update.sink_cu_id,
+                                EntryPointType.TO_DEVICE,
+                            )
+                        )
                 else:
                     entry_points.add(
                         EntryPoint(
                             pet,
                             issued_update.variable_names,
                             issued_update.memory_regions,
-                            issued_update.source_cu_id,
+                            issued_update.synchronous_source_cu_id,
                             issued_update.sink_cu_id,
                             EntryPointType.ALLOCATE,
                         )
@@ -78,19 +101,35 @@ def convert_updates_to_entry_and_exit_points(
                     qualifies_as_exit = False
                     break
             if qualifies_as_exit:
-                exit_points.add(
-                    ExitPoint(
+                # check if asynchronous exiting is possible
+                if issued_update.asynchronous_possible:
+                    # asynchronous exit possible
+                    exp = ExitPoint(
                         pet,
                         issued_update.variable_names,
                         issued_update.memory_regions,
-                        issued_update.source_cu_id,
+                        cast(CUID, issued_update.asynchronous_source_cu_id),
                         issued_update.sink_cu_id,
-                        ExitPointType.FROM_DEVICE,
+                        ExitPointType.ASYNC_FROM_DEVICE,
                     )
-                )
+                    # add dependencies to EntryPoint
+                    for dependency in issued_update.dependencies:
+                        exp.dependencies.add(dependency)
+                    exit_points.add(exp)
+                else:
+                    # asynchronous exiting not possible
+                    exit_points.add(
+                        ExitPoint(
+                            pet,
+                            issued_update.variable_names,
+                            issued_update.memory_regions,
+                            issued_update.synchronous_source_cu_id,
+                            issued_update.sink_cu_id,
+                            ExitPointType.FROM_DEVICE,
+                        )
+                    )
             else:
                 updates.add(issued_update)
-
         else:
             raise ValueError("Unsupported update type: ", issued_update.update_type)
 
@@ -104,7 +143,9 @@ def add_aliases(
 ) -> Set[Update]:
 
     for update in issued_updates:
-        source_parent_function_node = pet.get_parent_function(pet.node_at(update.source_cu_id))
+        source_parent_function_node = pet.get_parent_function(
+            pet.node_at(update.synchronous_source_cu_id)
+        )
         sink_parent_function_node = pet.get_parent_function(pet.node_at(update.sink_cu_id))
         if source_parent_function_node == sink_parent_function_node:
             # add alias information from function level
@@ -118,6 +159,10 @@ def add_aliases(
                     ]
                     len_pre = len(update.variable_names)
                     update.variable_names.update(alias_var_names)
+                    # add variable name to dependency if required
+                    for dependency in update.dependencies:
+                        if mem_reg in dependency.memory_regions:
+                            dependency.var_names.update(alias_var_names)
                     len_post = len(update.variable_names)
                     if len_pre != len_post:
                         modification_found = True
