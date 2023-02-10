@@ -14,6 +14,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
     CUID,
     MemoryRegion,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     ExitPointPositioning,
     ExitPointType,
@@ -28,6 +29,7 @@ class ExitPoint(object):
     exit_point_type: ExitPointType
     pragma_line: str
     exit_point_positioning: ExitPointPositioning
+    dependencies: Set[Dependency]
 
     def __init__(
         self,
@@ -45,6 +47,7 @@ class ExitPoint(object):
         self.exit_point_type = exit_point_type
         self.pragma_line = pet.node_at(source_cu_id).end_position()
         self.exit_point_positioning = ExitPointPositioning.BEFORE_CU
+        self.dependencies = set()
 
     def __str__(self):
         return (

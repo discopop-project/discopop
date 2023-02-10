@@ -14,6 +14,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
     CUID,
     MemoryRegion,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
     EntryPointPositioning,
@@ -28,6 +29,7 @@ class EntryPoint(object):
     entry_point_type: EntryPointType
     pragma_line: str
     entry_point_positioning: EntryPointPositioning
+    dependencies: Set[Dependency]
 
     def __init__(
         self,
@@ -45,6 +47,7 @@ class EntryPoint(object):
         self.entry_point_type = entry_point_type
         self.pragma_line = pet.node_at(source_cu_id).end_position()
         self.entry_point_positioning = EntryPointPositioning.BEFORE_CU
+        self.dependencies = set()
 
     def __str__(self):
         return (
