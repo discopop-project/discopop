@@ -9,11 +9,11 @@
 from enum import Enum
 from typing import List, Set
 from discopop_explorer.variable import Variable
-from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, DepType
+from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, DepType, NodeID
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 
 
-def map_node(pet: PETGraphX, nodeID: str) -> CUNode:
+def map_node(pet: PETGraphX, nodeID: NodeID) -> CUNode:
     return pet.node_at(nodeID)
 
 
@@ -53,8 +53,8 @@ def set_end(s: Set[str]) -> str:
 
 
 def getCalledFunctions(
-    pet: PETGraphX, node: CUNode, calledFunctions: Set[str], dummyFunctions: Set[str]
-) -> Set[str]:
+    pet: PETGraphX, node: CUNode, calledFunctions: Set[NodeID], dummyFunctions: Set[NodeID]
+) -> Set[NodeID]:
     """This function traverses all children nodes of 'node' and adds every
         encountered function (non-dummy) to the 'calledFunctions' set.
         Dummy functions (e.g. functions from linked libraries) are added to the
@@ -73,7 +73,7 @@ def getCalledFunctions(
     # unnecessary in this i think
     sub_dummy = pet.subtree_of_type(node, NodeType.DUMMY)
     for e in sub_dummy:
-        dummyFunctions.update(e.id)
+        dummyFunctions.add(e.id)
 
     return calledFunctions
 
@@ -113,7 +113,7 @@ def getDeps(
 
 def assignMapType(
     loop: CUNode,
-    loopCUs: List[str],
+    loopCUs: List[NodeID],
     var: Variable,
     isScalar: bool,
     pet: PETGraphX,

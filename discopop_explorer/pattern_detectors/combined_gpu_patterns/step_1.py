@@ -9,26 +9,25 @@
 from typing import Tuple, Dict, Set, cast
 
 from discopop_explorer import NodeType
-from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
-    CUID,
     VarName,
 )
 
 
 def get_written_and_read_memory_regions_by_cu(
     contained_regions, pet: PETGraphX
-) -> Tuple[Dict[CUID, Set[MemoryRegion]], Dict[CUID, Set[MemoryRegion]]]:
-    all_function_cu_ids: Set[CUID] = set()
+) -> Tuple[Dict[NodeID, Set[MemoryRegion]], Dict[NodeID, Set[MemoryRegion]]]:
+    all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
 
         subtree = pet.subtree_of_type(parent_function, NodeType.CU)
-        all_function_cu_ids.update([CUID(n.id) for n in subtree])
+        all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
-    written_memory_regions_by_cu_id: Dict[CUID, Set[MemoryRegion]] = dict()
-    read_memory_regions_by_cu_id: Dict[CUID, Set[MemoryRegion]] = dict()
+    written_memory_regions_by_cu_id: Dict[NodeID, Set[MemoryRegion]] = dict()
+    read_memory_regions_by_cu_id: Dict[NodeID, Set[MemoryRegion]] = dict()
     for cu_id in all_function_cu_ids:
         in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
         out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
@@ -70,17 +69,17 @@ def get_written_and_read_memory_regions_by_cu(
 
 
 def get_cu_and_varname_to_memory_regions(
-    contained_regions, pet: PETGraphX, written_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]]
-) -> Dict[CUID, Dict[VarName, Set[MemoryRegion]]]:
+    contained_regions, pet: PETGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
+) -> Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]:
     # dict -> {Cu_ID: {var_name: [memory regions]}}
-    result_dict: Dict[CUID, Dict[VarName, Set[MemoryRegion]]] = dict()
+    result_dict: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]] = dict()
 
-    all_function_cu_ids: Set[CUID] = set()
+    all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
 
         subtree = pet.subtree_of_type(parent_function, NodeType.CU)
-        all_function_cu_ids.update([CUID(n.id) for n in subtree])
+        all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
     for cu_id in all_function_cu_ids:
         if cu_id not in result_dict:
@@ -102,10 +101,10 @@ def get_cu_and_varname_to_memory_regions(
 
 
 def get_memory_region_to_cu_and_variables_dict(
-    cu_and_variable_to_memory_regions: Dict[CUID, Dict[VarName, Set[MemoryRegion]]]
-) -> Dict[MemoryRegion, Dict[CUID, Set[VarName]]]:
+    cu_and_variable_to_memory_regions: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]
+) -> Dict[MemoryRegion, Dict[NodeID, Set[VarName]]]:
     # inverts the given cu_and_variable_to_memory_regions dictionary
-    result_dict: Dict[MemoryRegion, Dict[CUID, Set[VarName]]] = dict()
+    result_dict: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]] = dict()
 
     for cu_id in cu_and_variable_to_memory_regions:
         for var_name in cu_and_variable_to_memory_regions[cu_id]:

@@ -8,21 +8,25 @@
 
 from typing import Set
 
+from discopop_explorer.PETGraphX import NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
-    CUID,
     MemoryRegion,
 )
 
 
 class Dependency(object):
-    source: CUID
-    sink: CUID
+    source: NodeID
+    sink: NodeID
     var_names: Set[VarName]
     memory_regions: Set[MemoryRegion]
 
     def __init__(
-        self, source: CUID, sink: CUID, var_names: Set[VarName], memory_regions: Set[MemoryRegion]
+        self,
+        source: NodeID,
+        sink: NodeID,
+        var_names: Set[VarName],
+        memory_regions: Set[MemoryRegion],
     ):
         self.source = source
         self.sink = sink

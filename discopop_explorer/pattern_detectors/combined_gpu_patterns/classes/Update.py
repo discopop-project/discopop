@@ -8,9 +8,8 @@
 import sys
 from typing import Set, Dict, cast, Optional
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_explorer.PETGraphX import PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    CUID,
     MemoryRegion,
     VarName,
 )
@@ -19,23 +18,23 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
 
 
 class Update(object):
-    synchronous_source_cu_id: CUID
-    asynchronous_source_cu_id: Optional[CUID]
-    sink_cu_id: CUID
+    synchronous_source_cu_id: NodeID
+    asynchronous_source_cu_id: Optional[NodeID]
+    sink_cu_id: NodeID
     memory_regions: Set[MemoryRegion]
     variable_names: Set[VarName]
     update_type: UpdateType
-    last_write_locations: Dict[MemoryRegion, CUID]
+    last_write_locations: Dict[MemoryRegion, NodeID]
     asynchronous_possible: bool
     dependencies: Set[Dependency]
 
     def __init__(
         self,
-        cu_id: CUID,
-        sink_cu_id: CUID,
+        cu_id: NodeID,
+        sink_cu_id: NodeID,
         memory_regions: Set[MemoryRegion],
         update_type: UpdateType,
-        last_write_locations: Dict[MemoryRegion, CUID],
+        last_write_locations: Dict[MemoryRegion, NodeID],
     ):
         self.synchronous_source_cu_id = cu_id
         self.asynchronous_source_cu_id = None
@@ -55,7 +54,7 @@ class Update(object):
 
             print("ORIGINAL SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
             self.asynchronous_possible = True
-            asynchronous_source: Optional[CUID] = None
+            asynchronous_source: Optional[NodeID] = None
             for mem_reg in self.memory_regions:
                 if self.last_write_locations[mem_reg] == self.synchronous_source_cu_id:
                     self.asynchronous_possible = False
@@ -68,7 +67,7 @@ class Update(object):
 
             if self.asynchronous_possible:
                 # update the asynchronous source cu
-                self.asynchronous_source_cu_id = cast(CUID, asynchronous_source)
+                self.asynchronous_source_cu_id = cast(NodeID, asynchronous_source)
 
                 # create a dependency to ensure correctness
                 self.dependencies.add(
@@ -130,12 +129,11 @@ class Update(object):
     def convert_memory_regions_to_variable_names(
         self,
         pet: PETGraphX,
-        memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[CUID, Set[VarName]]],
+        memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
     ):
         self.variable_names = set()
-        parent_function_id = cast(
-            CUID, pet.get_parent_function(pet.node_at(self.synchronous_source_cu_id)).id
-        )
+        parent_function_id = pet.get_parent_function(pet.node_at(self.synchronous_source_cu_id)).id
+
         for mem_reg in self.memory_regions:
             if parent_function_id in memory_regions_to_functions_and_variables[mem_reg]:
                 self.variable_names.update(

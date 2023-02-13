@@ -9,22 +9,21 @@
 import sys
 from typing import Dict, List, Tuple, Set, Optional, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
-    CUID,
 )
 
 global_write_unique_id = 0
 
 
 def initialize_writes(
-    memory_region_liveness: Dict[MemoryRegion, List[CUID]],
-    written_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]],
-) -> Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]:
+    memory_region_liveness: Dict[MemoryRegion, List[NodeID]],
+    written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]],
+) -> Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]:
     global global_write_unique_id
 
-    result_dict: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]] = dict()
+    result_dict: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]] = dict()
     for mem_reg in memory_region_liveness:
         if mem_reg not in result_dict:
             result_dict[mem_reg] = set()
@@ -44,15 +43,15 @@ def initialize_writes(
 
 
 def propagate_writes(
-    comb_gpu_reg, pet: PETGraphX, writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]
-) -> Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]:
+    comb_gpu_reg, pet: PETGraphX, writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+) -> Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]:
     """propagate writes to parents.
      propagate writes to successors and their children.
      propagate writes to calling functions if a return has been reached.
     Stop on the level of the base function"""
-    parent_functions: List[CUID] = []
+    parent_functions: List[NodeID] = []
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.append(cast(CUID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+        parent_functions.append(pet.get_parent_function(pet.node_at(region.node_id)).id)
 
     modification_found = True
     while modification_found:
@@ -71,8 +70,8 @@ def propagate_writes(
                         if parent_id in parent_functions:
                             # do not propagate above the function which contains the GPU Regions
                             continue
-                        if (cast(CUID, parent_id), write_identifier_1) not in writes[mem_reg]:
-                            writes[mem_reg].add((cast(CUID, parent_id), write_identifier_1))
+                        if (parent_id, write_identifier_1) not in writes[mem_reg]:
+                            writes[mem_reg].add((parent_id, write_identifier_1))
                             modification_found = True
                             # propagated to parent
                             break
@@ -92,29 +91,23 @@ def propagate_writes(
                         continue
                     # propagate to successors
                     for _, successor_id, _ in pet.out_edges(cu_id_1, EdgeType.SUCCESSOR):
-                        if (cast(CUID, successor_id), write_identifier_1) not in writes[mem_reg]:
-                            writes[mem_reg].add((cast(CUID, successor_id), write_identifier_1))
+                        if (successor_id, write_identifier_1) not in writes[mem_reg]:
+                            writes[mem_reg].add((successor_id, write_identifier_1))
                             modification_found = True
                             # propagated to successor
 
                             # propagate to children of successors
                             for _, child_id, _ in pet.out_edges(successor_id, EdgeType.CHILD):
-                                if (cast(CUID, child_id), write_identifier_1) not in writes[
-                                    mem_reg
-                                ]:
-                                    writes[mem_reg].add((cast(CUID, child_id), write_identifier_1))
+                                if (child_id, write_identifier_1) not in writes[mem_reg]:
+                                    writes[mem_reg].add((child_id, write_identifier_1))
                                     modification_found = True
                                     # propagated to children of successor
                             # propagate to called functions of successors
                             for _, called_node_id, _ in pet.out_edges(
                                 successor_id, EdgeType.CALLSNODE
                             ):
-                                if (cast(CUID, called_node_id), write_identifier_1) not in writes[
-                                    mem_reg
-                                ]:
-                                    writes[mem_reg].add(
-                                        (cast(CUID, called_node_id), write_identifier_1)
-                                    )
+                                if (called_node_id, write_identifier_1) not in writes[mem_reg]:
+                                    writes[mem_reg].add((called_node_id, write_identifier_1))
                                     modification_found = True
                                     # propagated to called nodes of successor
                             break
@@ -137,8 +130,8 @@ def propagate_writes(
                             s for s, t, d in pet.in_edges(parent_function.id, EdgeType.CALLSNODE)
                         ]
                         for callee_id in callees:
-                            if (cast(CUID, callee_id), write_identifier) not in writes[mem_reg]:
-                                writes[mem_reg].add((cast(CUID, callee_id), write_identifier))
+                            if (callee_id, write_identifier) not in writes[mem_reg]:
+                                writes[mem_reg].add((callee_id, write_identifier))
                                 modification_found = True
                                 # propagated to callee
                         if modification_found:
@@ -150,12 +143,12 @@ def propagate_writes(
 
 
 def cleanup_writes(
-    writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]
-) -> Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]:
+    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+) -> Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]:
     """remove entries from the Sets with an second-element entry of None,
     if it is overwritten by a different memory write."""
     for mem_reg in writes:
-        to_be_removed: Set[Tuple[CUID, Optional[int]]] = set()
+        to_be_removed: Set[Tuple[NodeID, Optional[int]]] = set()
         # determine elements to be removed
         for cu_id, ident in writes[mem_reg]:
             if ident is None:
@@ -171,9 +164,9 @@ def cleanup_writes(
 
 
 def group_writes_by_cu(
-    writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]]
-) -> Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]:
-    result_dict: Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]] = dict()
+    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+) -> Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]:
+    result_dict: Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]] = dict()
 
     for mem_reg in writes:
         for cu_id, ident in writes[mem_reg]:

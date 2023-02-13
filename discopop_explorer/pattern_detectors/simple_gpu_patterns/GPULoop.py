@@ -11,7 +11,15 @@ from numpy import long  # type: ignore
 from typing import List, Set, Optional, Union, Any, Dict
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
-from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, parse_id, DepType
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    CUNode,
+    NodeType,
+    parse_id,
+    DepType,
+    NodeID,
+    LineID,
+)
 from discopop_explorer.utils import get_loop_iterations, is_scalar_val, is_loop_index2
 from discopop_explorer.utils import (
     __get_variables as get_vars,
@@ -145,7 +153,7 @@ def omp_construct_dict(
 # inherits from class ParallelPattern (=PatternInfo)
 class GPULoopPattern(PatternInfo):
     # public:
-    called_functions: Set[str]
+    called_functions: Set[NodeID]
     map_type_to: List
     map_type_from: List
     map_type_tofrom: List
@@ -154,10 +162,10 @@ class GPULoopPattern(PatternInfo):
     reduction_vars_ids: List[Variable]
     iteration_count: int = 0
     has_scalar_reduction_var: bool
-    nodeID: str
+    nodeID: NodeID
     # new
-    nestedLoops: Set[str]
-    nextLoop: str
+    nestedLoops: Set[NodeID]
+    nextLoop: Optional[NodeID]
     parentLoop: str
     collapse: int
     scheduling: str
@@ -166,7 +174,7 @@ class GPULoopPattern(PatternInfo):
     def __init__(
         self,
         pet: PETGraphX,
-        nodeID: str,
+        nodeID: NodeID,
         startLine,
         endLine,
         iterationCount: int,
@@ -197,7 +205,7 @@ class GPULoopPattern(PatternInfo):
             ]
             self.reduction_vars_ids: List[Variable] = reduction_vars
         self.iteration_count = 0
-        self.nextLoop = ""
+        self.nextLoop = None
         self.parentLoop = ""
         self.collapse = 1
         self.scheduling = ""
@@ -376,7 +384,7 @@ class GPULoopPattern(PatternInfo):
         waw = set()
         rev_raw = set()
 
-        dummyFunctions: Set[str] = set()
+        dummyFunctions: Set[NodeID] = set()
         self.called_functions.update(
             getCalledFunctions(pet, loop, self.called_functions, dummyFunctions)
         )
@@ -422,7 +430,7 @@ class GPULoopPattern(PatternInfo):
         """
         self.parentLoop = pl
 
-    def getNestedLoops(self, pet: PETGraphX, node_id: str) -> None:
+    def getNestedLoops(self, pet: PETGraphX, node_id: NodeID) -> None:
         """
 
         :param node_id:
@@ -438,7 +446,7 @@ class GPULoopPattern(PatternInfo):
                 self.nestedLoops.add(cn_id.id)
                 self.getNestedLoops(pet, cn_id.id)
 
-    def getNextLoop(self, pet: PETGraphX, node_id: str) -> None:
+    def getNextLoop(self, pet: PETGraphX, node_id: NodeID) -> None:
         """
 
         :param node_id:
@@ -450,7 +458,7 @@ class GPULoopPattern(PatternInfo):
             if children.end_line > endLine:
                 endLine = children.end_line
 
-    def setCollapseClause(self, pet: PETGraphX, node_id: str):
+    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID):
         """
 
         :param node_id:
@@ -513,7 +521,9 @@ class GPULoopPattern(PatternInfo):
         for k in self.map_type_tofrom:
             print("    " + k)
 
-    def __add_sub_loops_rec(self, pet: PETGraphX, node_id: str, top_loop_iterations: long) -> str:
+    def __add_sub_loops_rec(
+        self, pet: PETGraphX, node_id: NodeID, top_loop_iterations: long
+    ) -> str:
         """This function adds information about the loop's child loops to the string
             stream 'ss'. This information contains the child loop's line number and
             its number of iterations divided by the number of iterations of the top loop.
@@ -526,7 +536,7 @@ class GPULoopPattern(PatternInfo):
         # calculate the number of iterations of this loop relative to the top loop
         n = map_node(pet, node_id)
         ll = n.start_line
-        total_i = get_loop_iterations(str(n.start_line))
+        total_i = get_loop_iterations(LineID(str(n.start_line)))
         i_cnt = 0 if top_loop_iterations == 0 else total_i / top_loop_iterations
 
         # extend the string stream with this information and scan all child nodes to

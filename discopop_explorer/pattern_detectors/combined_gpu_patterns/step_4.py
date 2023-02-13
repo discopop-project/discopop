@@ -9,10 +9,9 @@
 import copy
 from typing import Dict, Set, Tuple, Optional, List, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
-    CUID,
 )
 import sys
 
@@ -21,11 +20,13 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update im
 
 
 class Context(object):
-    cu_id: CUID
+    cu_id: NodeID
     device_id: int
-    seen_writes_by_device: Dict[int, Dict[MemoryRegion, Set[Tuple[Optional[int], Optional[CUID]]]]]
+    seen_writes_by_device: Dict[
+        int, Dict[MemoryRegion, Set[Tuple[Optional[int], Optional[NodeID]]]]
+    ]
 
-    def __init__(self, cu_id: CUID, device_id: int):
+    def __init__(self, cu_id: NodeID, device_id: int):
         self.cu_id = cu_id
         self.device_id = device_id
         self.seen_writes_by_device = dict()
@@ -54,7 +55,7 @@ class Context(object):
         self,
         device_id_to_update: int,
         writes: Dict[MemoryRegion, Set[Optional[int]]],
-        origin_cu_id: CUID,
+        origin_cu_id: NodeID,
     ) -> Set[Tuple[MemoryRegion, bool]]:
         """Returns the updated memory regions"""
         updated_memory_regions: Set[Tuple[MemoryRegion, bool]] = set()
@@ -99,9 +100,9 @@ class Context(object):
 
     def find_required_updates(
         self, pet: PETGraphX, new_device_id: int
-    ) -> Set[Tuple[MemoryRegion, int, int, CUID]]:
+    ) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
         # update required, if seen writes of new device is not a superset of old device id
-        required_updates: Set[Tuple[MemoryRegion, int, int, CUID]] = set()
+        required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
 
         # check if unsynchronized changes exist
         device_id_1 = self.device_id
@@ -122,15 +123,15 @@ class Context(object):
             ]
             if len(missing_write_identifiers) > 0:
                 # get position of the last write
-                last_write_location: Optional[CUID] = None
+                last_write_location: Optional[NodeID] = None
                 for ident, origin in missing_write_identifiers:
                     if last_write_location is None:
                         last_write_location = origin
-                    if pet.is_predecessor(cast(CUID, last_write_location), cast(CUID, origin)):
+                    if pet.is_predecessor(cast(NodeID, last_write_location), cast(NodeID, origin)):
                         last_write_location = origin
 
                 required_updates.add(
-                    (mem_reg, device_id_1, device_id_2, cast(CUID, last_write_location))
+                    (mem_reg, device_id_1, device_id_2, cast(NodeID, last_write_location))
                 )
 
         return required_updates
@@ -154,8 +155,8 @@ class Context(object):
 
     def request_updates_from_other_devices(
         self, pet, new_device_id: int
-    ) -> Set[Tuple[MemoryRegion, int, int, CUID]]:
-        required_updates: Set[Tuple[MemoryRegion, int, int, CUID]] = set()
+    ) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
+        required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
         to_be_removed = set()
         for mem_reg in self.seen_writes_by_device[new_device_id]:
             # check if updates on other devices exist
@@ -173,15 +174,17 @@ class Context(object):
                 ]
                 if len(missing_identifiers) > 0:
                     # get position of the last write
-                    last_write_location: Optional[CUID] = None
+                    last_write_location: Optional[NodeID] = None
                     for ident, origin in missing_identifiers:
                         if last_write_location is None:
                             last_write_location = origin
-                        if pet.is_predecessor(cast(CUID, last_write_location), cast(CUID, origin)):
+                        if pet.is_predecessor(
+                            cast(NodeID, last_write_location), cast(NodeID, origin)
+                        ):
                             last_write_location = origin
 
                     required_updates.add(
-                        (mem_reg, other_device_id, new_device_id, cast(CUID, last_write_location))
+                        (mem_reg, other_device_id, new_device_id, cast(NodeID, last_write_location))
                     )
 
                 # remove none identifier
@@ -209,9 +212,9 @@ class Context(object):
     def update_to(
         self,
         pet: PETGraphX,
-        next_cu_id: CUID,
+        next_cu_id: NodeID,
         comb_gpu_reg,
-        writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+        writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     ) -> Set[Update]:
         print("UPDATE TO: ", next_cu_id, file=sys.stderr)
 
@@ -301,14 +304,14 @@ class Context(object):
         return required_updates
 
 
-def get_device_id(comb_gpu_reg, cu_id: CUID) -> int:
+def get_device_id(comb_gpu_reg, cu_id: NodeID) -> int:
     if cu_id in comb_gpu_reg.device_cu_ids:
         return 1
     return 0
 
 
-def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
-    paths: List[List[CUID]] = []
+def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
+    paths: List[List[NodeID]] = []
 
     # initialize
     for successor_id in successors:
@@ -338,10 +341,10 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
                 return list(contained_in_all_paths)[0]
             if len(contained_in_all_paths) > 1:
                 # search for the first occurring candidate merge node
-                first_occurring: Set[CUID] = set()
+                first_occurring: Set[NodeID] = set()
                 for path in paths:
                     first_occurrence_position: int = 0
-                    first_occurrence_element: Optional[CUID] = None
+                    first_occurrence_element: Optional[NodeID] = None
                     for candidate in contained_in_all_paths:
                         if first_occurrence_element is None:
                             first_occurrence_position = path.index(candidate)
@@ -351,7 +354,7 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
                             if position < first_occurrence_position:
                                 first_occurrence_position = position
                                 first_occurrence_element = candidate
-                    first_occurring.add(cast(CUID, first_occurrence_element))
+                    first_occurring.add(cast(NodeID, first_occurrence_element))
                 # if first_occurring contains multiple elements, it is not decidable. Raise a ValueError.
                 if len(first_occurring) > 1:
                     raise ValueError("First occurrence undecidable for: ", first_occurring)
@@ -391,25 +394,25 @@ def __identify_merge_node(pet, successors: List[CUID]) -> Optional[CUID]:
 def identify_updates(
     comb_gpu_reg,
     pet: PETGraphX,
-    writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
 ) -> Set[Update]:
     identified_updates: Set[Update] = set()
     # get parent functions
-    parent_functions: Set[CUID] = set()
+    parent_functions: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.add(cast(CUID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+        parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
 
     for parent_function_id in parent_functions:
 
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
-        entry_points: List[CUID] = []
+        entry_points: List[NodeID] = []
         for function_child_id in [
             t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)
         ]:
             in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
-                entry_points.append(cast(CUID, function_child_id))
+                entry_points.append(cast(NodeID, function_child_id))
 
         for entry_point in entry_points:
             print(
@@ -457,8 +460,8 @@ def __calculate_updates(
     pet: PETGraphX,
     comb_gpu_reg,
     context: Context,
-    cur_node_id: CUID,
-    writes_by_device: Dict[int, Dict[CUID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    cur_node_id: NodeID,
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
 ) -> Set[Update]:
     # calculate and return updates between ctx.cu_id and its immediate successor cur_node
     identified_updates: Set[Update] = set()
@@ -473,7 +476,7 @@ def __calculate_updates(
         identified_updates.update(required_updates)
 
         # calculate successors of current node
-        successors = [cast(CUID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
 
         if len(successors) == 0:
             end_reached = True

@@ -8,9 +8,8 @@
 import sys
 from typing import Dict, List, Set, Tuple, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode
+from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    CUID,
     VarName,
     MemoryRegion,
 )
@@ -22,10 +21,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import 
 
 def populate_live_data(
     comb_gpu_reg, pet: PETGraphX, ignore_update_instructions=False
-) -> Dict[VarName, List[CUID]]:
+) -> Dict[VarName, List[NodeID]]:
     """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
     The gathered information is used for the optimization / creation of data mapping instructions afterwards."""
-    liveness: Dict[VarName, List[CUID]] = dict()
+    liveness: Dict[VarName, List[NodeID]] = dict()
 
     # populate liveness sets based on gpu loops
     for region in comb_gpu_reg.contained_regions:
@@ -42,7 +41,7 @@ def populate_live_data(
                 if var not in liveness:
                     liveness[var] = []
                 for cu in subtree:
-                    liveness[var].append(CUID(cu.id))
+                    liveness[var].append(cu.id)
 
     if not ignore_update_instructions:
         # populate liveness sets based on update instructions
@@ -60,10 +59,10 @@ def populate_live_data(
 
 
 def add_memory_regions_to_device_liveness(
-    device_liveness: Dict[VarName, List[CUID]],
-    cu_and_variable_to_memory_regions: Dict[CUID, Dict[VarName, Set[MemoryRegion]]],
-) -> Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]:
-    extended_device_liveness: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+    device_liveness: Dict[VarName, List[NodeID]],
+    cu_and_variable_to_memory_regions: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]],
+) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
+    extended_device_liveness: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = dict()
 
     for var_name in device_liveness:
         if var_name not in extended_device_liveness:
@@ -79,12 +78,12 @@ def add_memory_regions_to_device_liveness(
 
 
 def propagate_memory_regions(
-    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]
-) -> Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]:
+    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]
+) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
     """Propagate memory regions for variables"""
-    result_dict: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+    result_dict: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = dict()
     for var_name in device_liveness_plus_memory_regions:
-        cu_ids: List[CUID] = []
+        cu_ids: List[NodeID] = []
         memory_regions: Set[MemoryRegion] = set()
         for cu_id, mem_regs in device_liveness_plus_memory_regions[var_name]:
             cu_ids.append(cu_id)
@@ -99,9 +98,9 @@ def propagate_memory_regions(
 
 
 def convert_liveness(
-    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]
-) -> Dict[MemoryRegion, List[CUID]]:
-    result_dict: Dict[MemoryRegion, List[CUID]] = dict()
+    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]
+) -> Dict[MemoryRegion, List[NodeID]]:
+    result_dict: Dict[MemoryRegion, List[NodeID]] = dict()
 
     for var_name in device_liveness_plus_memory_regions:
         for cu_id, mem_regions in device_liveness_plus_memory_regions[var_name]:
@@ -113,14 +112,14 @@ def convert_liveness(
 
 
 def extend_data_lifespan(
-    pet: PETGraphX, live_data: Dict[MemoryRegion, List[CUID]]
-) -> Dict[MemoryRegion, List[CUID]]:
+    pet: PETGraphX, live_data: Dict[MemoryRegion, List[NodeID]]
+) -> Dict[MemoryRegion, List[NodeID]]:
     """Extends the lifespan of the data on the device to allow as little data movement as possible."""
     print("Extending data lifespan...", file=sys.stderr)
     modification_found = True
     while modification_found:
         modification_found = False
-        new_entries: List[Tuple[MemoryRegion, CUID]] = []
+        new_entries: List[Tuple[MemoryRegion, NodeID]] = []
         for mem_reg in live_data:
             for cu_id in live_data[mem_reg]:
                 # check if data is live in any successor
@@ -169,20 +168,18 @@ def extend_data_lifespan(
                             # todo end of section to be replaced
                             #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
                             for subtree_node in subtree_without_called_functions:
-                                if CUID(subtree_node.id) not in [
-                                    cu_id for cu_id in live_data[mem_reg]
-                                ]:
-                                    new_entries.append((mem_reg, cast(CUID, subtree_node.id)))
+                                if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
+                                    new_entries.append((mem_reg, subtree_node.id))
 
                 # set mem_reg to live in every child of CU
                 for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
-                    if CUID(child_id) not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, cast(CUID, child_id)))
+                    if child_id not in live_data[mem_reg]:
+                        new_entries.append((mem_reg, child_id))
 
                 # set mem_reg to live in every called function of CU
                 for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
-                    if CUID(called_node) not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, cast(CUID, called_node)))
+                    if called_node not in live_data[mem_reg]:
+                        new_entries.append((mem_reg, called_node))
 
         new_entries = list(set(new_entries))
         if len(new_entries) > 0:
@@ -201,16 +198,16 @@ def extend_data_lifespan(
 def calculate_host_liveness(
     comb_gpu_reg,
     pet: PETGraphX,
-) -> Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]]:
+) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
 
     """
     Variable is live on host, if a dependency between the host cu or any of its children and any device cu for a given variable exists
 
     """
 
-    host_liveness_lists: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+    host_liveness_lists: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = dict()
 
-    all_function_cu_ids: Set[CUID] = set()
+    all_function_cu_ids: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
         all_function_cu_ids.update(
@@ -248,7 +245,7 @@ def calculate_host_liveness(
             host_liveness_lists[var_name].append((cu_id, shared_memory_regions))
 
     # convert sets to lists
-    host_liveness: Dict[VarName, List[Tuple[CUID, Set[MemoryRegion]]]] = dict()
+    host_liveness: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = dict()
     for key in host_liveness_lists:
         host_liveness[key] = host_liveness_lists[key]
     return host_liveness

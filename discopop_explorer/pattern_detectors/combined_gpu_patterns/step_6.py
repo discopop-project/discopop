@@ -8,10 +8,9 @@
 import sys
 from typing import Set, Tuple, Dict, List, cast, Optional
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
-    CUID,
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
@@ -30,7 +29,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update im
 def convert_updates_to_entry_and_exit_points(
     pet: PETGraphX,
     issued_updates: Set[Update],
-    memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[CUID]]],
+    memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[NodeID]]],
 ) -> Tuple[Set[EntryPoint], Set[ExitPoint], Set[Update]]:
     entry_points: Set[EntryPoint] = set()
     exit_points: Set[ExitPoint] = set()
@@ -58,7 +57,7 @@ def convert_updates_to_entry_and_exit_points(
                             pet,
                             issued_update.variable_names,
                             issued_update.memory_regions,
-                            cast(CUID, issued_update.asynchronous_source_cu_id),
+                            cast(NodeID, issued_update.asynchronous_source_cu_id),
                             issued_update.sink_cu_id,
                             EntryPointType.ASYNC_TO_DEVICE,
                         )
@@ -108,7 +107,7 @@ def convert_updates_to_entry_and_exit_points(
                         pet,
                         issued_update.variable_names,
                         issued_update.memory_regions,
-                        cast(CUID, issued_update.asynchronous_source_cu_id),
+                        cast(NodeID, issued_update.asynchronous_source_cu_id),
                         issued_update.sink_cu_id,
                         ExitPointType.ASYNC_FROM_DEVICE,
                     )
@@ -139,7 +138,7 @@ def convert_updates_to_entry_and_exit_points(
 def add_aliases(
     pet: PETGraphX,
     issued_updates: Set[Update],
-    memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[CUID, Set[VarName]]],
+    memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[Update]:
 
     for update in issued_updates:
@@ -155,7 +154,7 @@ def add_aliases(
                 # add missing variable names
                 for mem_reg in update.memory_regions:
                     alias_var_names = memory_regions_to_functions_and_variables[mem_reg][
-                        cast(CUID, source_parent_function_node.id)
+                        source_parent_function_node.id
                     ]
                     len_pre = len(update.variable_names)
                     update.variable_names.update(alias_var_names)
@@ -171,12 +170,12 @@ def add_aliases(
                 for var_name in update.variable_names:
                     for mem_reg in memory_regions_to_functions_and_variables:
                         if (
-                            cast(CUID, source_parent_function_node.id)
+                            source_parent_function_node.id
                             not in memory_regions_to_functions_and_variables[mem_reg]
                         ):
                             continue
                         potential_aliases = memory_regions_to_functions_and_variables[mem_reg][
-                            cast(CUID, source_parent_function_node.id)
+                            source_parent_function_node.id
                         ]
                         if var_name in potential_aliases:
                             len_pre = len(update.memory_regions)
@@ -192,10 +191,10 @@ def identify_end_of_life_points(
     pet: PETGraphX,
     entry_points: Set[EntryPoint],
     exit_points: Set[ExitPoint],
-    memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[CUID]]],
-    memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[CUID, Set[VarName]]],
+    memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[NodeID]]],
+    memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[ExitPoint]:
-    eol_points: Set[Tuple[CUID, CUID, Tuple[MemoryRegion, ...]]] = set()
+    eol_points: Set[Tuple[NodeID, NodeID, Tuple[MemoryRegion, ...]]] = set()
 
     print("Identifying end of live for variables...", file=sys.stderr)
 
@@ -232,16 +231,16 @@ def identify_end_of_life_points(
                             eol_points.add(
                                 (
                                     cu_id,
-                                    cast(CUID, successor_node.id),
+                                    successor_node.id,
                                     tuple(mem_reg_aliases[mem_reg]),
                                 )
                             )
                         else:
-                            eol_points.add((cu_id, cast(CUID, successor_node.id), tuple([mem_reg])))
+                            eol_points.add((cu_id, successor_node.id, tuple([mem_reg])))
 
     # remove eols which are covered by known exit points
     for exit_point in exit_points:
-        to_be_removed: Set[Tuple[CUID, CUID, Tuple[MemoryRegion, ...]]] = set()
+        to_be_removed: Set[Tuple[NodeID, NodeID, Tuple[MemoryRegion, ...]]] = set()
         for eol in eol_points:
             # check if either exit_point is reachable from eol or vice versa.
             # in both cases, eol is covered by the exit_point and can be ignored
@@ -264,7 +263,7 @@ def identify_end_of_life_points(
 
     eol_exit_points: Set[ExitPoint] = set()
     for eol in eol_points:
-        parent_function_node_id = cast(CUID, pet.get_parent_function(pet.node_at(eol[0])).id)
+        parent_function_node_id = pet.get_parent_function(pet.node_at(eol[0])).id
         var_names: Set[VarName] = set()
         for mem_reg in eol[2]:
             var_names.update(

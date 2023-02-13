@@ -8,7 +8,7 @@
 
 from numpy import long  # type: ignore
 from typing import List, Set, Optional, cast, Dict, Tuple
-from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType
+from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType, NodeID
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
 from discopop_explorer.utils import is_loop_index2
@@ -20,7 +20,7 @@ class GPURegionInfo(PatternInfo):
     """Class, that represents an identified GPU Region"""
 
     contained_loops: List[GPULoopPattern]
-    contained_cu_ids: List[str]
+    contained_cu_ids: List[NodeID]
     map_from_vars: List[str]
     map_to_vars: List[str]
     map_to_from_vars: List[str]
@@ -33,7 +33,7 @@ class GPURegionInfo(PatternInfo):
         self,
         pet: PETGraphX,
         contained_loops: List[GPULoopPattern],
-        contained_cu_ids: List[str],
+        contained_cu_ids: List[NodeID],
         map_to_vars: List[str],
         map_from_vars: List[str],
         map_to_from_vars: List[str],
@@ -112,12 +112,12 @@ class GPURegionInfo(PatternInfo):
 
 
 class GPURegions:
-    cascadingLoopsInRegions: List[List[str]]
+    cascadingLoopsInRegions: List[List[NodeID]]
     gpu_loop_patterns: List[GPULoopPattern]
     loopsInRegion: List[str]
     pet: PETGraphX
     numRegions: int
-    cu_ids_by_region: Dict[Tuple[str, ...], List[str]]
+    cu_ids_by_region: Dict[Tuple[NodeID, ...], List[NodeID]]
     map_type_from_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_to_by_region: Dict[Tuple[str, ...], List[str]]
     map_type_tofrom_by_region: Dict[Tuple[str, ...], List[str]]
@@ -152,7 +152,7 @@ class GPURegions:
                 return i
         return None
 
-    def reachableCUs(self, cuID: str, nextCUID: str) -> bool:
+    def reachableCUs(self, cuID: NodeID, nextCUID: NodeID) -> bool:
         """
 
         :param cuID:
@@ -189,19 +189,20 @@ class GPURegions:
 
         self.cascadingLoopsInRegions[regionNum].append(self.gpu_loop_patterns[0].nodeID)
         for i in range(0, len(self.gpu_loop_patterns)):
-            if self.gpu_loop_patterns[i].nextLoop:
-                if map_node(self.pet, self.gpu_loop_patterns[i].nextLoop).type == 2:
+            if self.gpu_loop_patterns[i].nextLoop is not None:
+                if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
                     if self.reachableCUs(
-                        self.gpu_loop_patterns[i].nodeID, self.gpu_loop_patterns[i].nextLoop
+                        self.gpu_loop_patterns[i].nodeID,
+                        cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
                     ):
                         self.cascadingLoopsInRegions[regionNum].append(
-                            self.gpu_loop_patterns[i].nextLoop
+                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
                         )
                     else:
                         regionNum += 1
                         self.cascadingLoopsInRegions.append([])
                         self.cascadingLoopsInRegions[regionNum].append(
-                            self.gpu_loop_patterns[i].nextLoop
+                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
                         )
 
         self.numRegions = regionNum + 1

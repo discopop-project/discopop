@@ -8,9 +8,8 @@
 
 from typing import List, Set, Dict, Tuple, Optional
 
-from discopop_explorer.PETGraphX import CUNode, PETGraphX, EdgeType
+from discopop_explorer.PETGraphX import CUNode, PETGraphX, EdgeType, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    CUID,
     MemoryRegion,
 )
 
@@ -29,17 +28,17 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
 
 def get_function_body_cus_without_called_functions(
     pet: PETGraphX, function_node: CUNode
-) -> List[CUID]:
-    queue = [CUID(t) for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
-    visited: Set[CUID] = set()
+) -> List[NodeID]:
+    queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
+    visited: Set[NodeID] = set()
     while queue:
         current = queue.pop(0)
-        visited.add(CUID(current))
+        visited.add(current)
         current_node = pet.node_at(current)
 
         # add children if they do not result from a call
-        children = [CUID(t) for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
-        called = [CUID(t) for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
+        children = [t for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
+        called = [t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
         queue += [
             c for c in children if c not in visited and c not in called
         ]  # todo add check for call
@@ -48,8 +47,8 @@ def get_function_body_cus_without_called_functions(
 
 def prepare_liveness_metadata(
     pet: PETGraphX,
-    liveness: Dict[MemoryRegion, List[CUID]],
-    writes: Dict[MemoryRegion, Set[Tuple[CUID, Optional[int]]]],
+    liveness: Dict[MemoryRegion, List[NodeID]],
+    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]],
     meta_liveness: Dict[MemoryRegion, List[str]],
 ):
     for mem_reg in liveness:

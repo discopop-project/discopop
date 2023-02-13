@@ -373,7 +373,7 @@ def is_read_in_subtree(
 
 
 def is_read_in_right_subtree(
-    var: str, rev_raw: Set[Tuple[str, str, Dependency]], tree: List[CUNode]
+    var: str, rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
 ) -> bool:
     """Checks if variable is read in subtree
 

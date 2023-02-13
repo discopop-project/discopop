@@ -8,10 +8,9 @@
 
 from typing import Set
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_explorer.PETGraphX import PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
-    CUID,
     MemoryRegion,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
@@ -24,8 +23,8 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
 class ExitPoint(object):
     var_names: Set[VarName]
     memory_regions: Set[MemoryRegion]
-    source_cu_id: CUID
-    sink_cu_id: CUID
+    source_cu_id: NodeID
+    sink_cu_id: NodeID
     exit_point_type: ExitPointType
     pragma_line: str
     exit_point_positioning: ExitPointPositioning
@@ -36,8 +35,8 @@ class ExitPoint(object):
         pet: PETGraphX,
         var_names: Set[VarName],
         memory_regions: Set[MemoryRegion],
-        source_cu_id: CUID,
-        sink_cu_id: CUID,
+        source_cu_id: NodeID,
+        sink_cu_id: NodeID,
         exit_point_type: ExitPointType,
     ):
         self.var_names = var_names

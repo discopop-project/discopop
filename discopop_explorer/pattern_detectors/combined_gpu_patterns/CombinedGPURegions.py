@@ -7,7 +7,7 @@
 # directory for details.
 from typing import List, Tuple, Dict, Set
 
-from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
@@ -19,7 +19,6 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
-    CUID,
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
@@ -66,19 +65,19 @@ import sys
 class CombinedGPURegion(PatternInfo):
     contained_regions: List[GPURegionInfo]
     update_instructions: List[
-        Tuple[CUID, CUID, UpdateType, str, str]
+        Tuple[NodeID, NodeID, UpdateType, str, str]
     ]  # (source_cu_id, sink_cu_id, UpdateType, target_vars, meta_line_num)
-    target_data_regions: Dict[str, List[Tuple[List[CUID], CUID, CUID, str, str]]]
+    target_data_regions: Dict[str, List[Tuple[List[NodeID], NodeID, NodeID, str, str]]]
     # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
     data_region_entry_points: List[
-        Tuple[VarName, CUID, EntryPointType, str, EntryPointPositioning]
+        Tuple[VarName, NodeID, EntryPointType, str, EntryPointPositioning]
     ]  # [(var, cu_id, entry_point_type, meta_line_num, positioning)]
     data_region_exit_points: List[
-        Tuple[VarName, CUID, ExitPointType, str, ExitPointPositioning]
+        Tuple[VarName, NodeID, ExitPointType, str, ExitPointPositioning]
     ]  # [(var, cu_id, exit_point_type, meta_line_num, positioning)]
-    data_region_depend_in: List[Tuple[VarName, CUID, str]]  # [(var, cu_id, meta_line_num)]
-    data_region_depend_out: List[Tuple[VarName, CUID, str]]  # [(var, cu_id, meta_line_num)]
-    device_cu_ids: List[CUID]
+    data_region_depend_in: List[Tuple[VarName, NodeID, str]]  # [(var, cu_id, meta_line_num)]
+    data_region_depend_out: List[Tuple[VarName, NodeID, str]]  # [(var, cu_id, meta_line_num)]
+    device_cu_ids: List[NodeID]
     # meta information, mainly for display and overview purposes
     meta_device_lines: List[str]
     meta_host_lines: List[str]
@@ -87,9 +86,9 @@ class CombinedGPURegion(PatternInfo):
 
     def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
         node_id = sorted([region.node_id for region in contained_regions])[0]
-        device_cu_ids: List[CUID] = []
+        device_cu_ids: List[NodeID] = []
         for region in contained_regions:
-            device_cu_ids += [CUID(cu_id_str) for cu_id_str in region.contained_cu_ids]
+            device_cu_ids += [NodeID(cu_id_str) for cu_id_str in region.contained_cu_ids]
             device_cu_ids = list(set(device_cu_ids))
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_regions = contained_regions
@@ -112,8 +111,8 @@ class CombinedGPURegion(PatternInfo):
 
         # ### STEP 1: INITIALIZATION
         # get written and read memory regions by CU
-        written_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]]
-        read_memory_regions_by_cu: Dict[CUID, Set[MemoryRegion]]
+        written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
+        read_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
         (
             written_memory_regions_by_cu,
             read_memory_regions_by_cu,
@@ -121,7 +120,7 @@ class CombinedGPURegion(PatternInfo):
 
         # get memory region and variable associations for each CU
         cu_and_variable_to_memory_regions: Dict[
-            CUID, Dict[VarName, Set[MemoryRegion]]
+            NodeID, Dict[VarName, Set[MemoryRegion]]
         ] = get_cu_and_varname_to_memory_regions(
             self.contained_regions, pet, written_memory_regions_by_cu
         )
@@ -136,7 +135,7 @@ class CombinedGPURegion(PatternInfo):
 
         # get memory regions to cus and variables names
         memory_regions_to_cus_and_variables: Dict[
-            MemoryRegion, Dict[CUID, Set[VarName]]
+            MemoryRegion, Dict[NodeID, Set[VarName]]
         ] = get_memory_region_to_cu_and_variables_dict(cu_and_variable_to_memory_regions)
         print("MEMORY REGIONS TO CUS AND VARIABLES:", file=sys.stderr)
         print(memory_regions_to_cus_and_variables, file=sys.stderr)
@@ -150,7 +149,7 @@ class CombinedGPURegion(PatternInfo):
 
         # extend device liveness with memory regions
         device_liveness_plus_memory_regions: Dict[
-            VarName, List[Tuple[CUID, Set[MemoryRegion]]]
+            VarName, List[Tuple[NodeID, Set[MemoryRegion]]]
         ] = add_memory_regions_to_device_liveness(
             live_device_variables, cu_and_variable_to_memory_regions
         )
@@ -241,7 +240,7 @@ class CombinedGPURegion(PatternInfo):
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
         # propagate memory region to variable name associations within function body
         memory_regions_to_functions_and_variables: Dict[
-            MemoryRegion, Dict[CUID, Set[VarName]]
+            MemoryRegion, Dict[NodeID, Set[VarName]]
         ] = propagate_variable_name_associations(pet, memory_regions_to_cus_and_variables)
         print("MEMORY REGIONS TO FUNCTIONS AND VARIABLES:", file=sys.stderr)
         print(memory_regions_to_functions_and_variables, file=sys.stderr)

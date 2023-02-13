@@ -9,8 +9,8 @@
 import sys
 from typing import Set, List, Tuple
 
-from discopop_explorer.PETGraphX import PETGraphX
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName, CUID
+from discopop_explorer.PETGraphX import PETGraphX, NodeID
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointPositioning,
@@ -20,9 +20,9 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
 
 def get_dependencies_as_metadata(
     pet: PETGraphX, all_dependencies: Set[Dependency]
-) -> Tuple[List[Tuple[VarName, CUID, str]], List[Tuple[VarName, CUID, str]],]:
-    in_deps_metadata: Set[Tuple[VarName, CUID, str]] = set()
-    out_deps_metadata: Set[Tuple[VarName, CUID, str]] = set()
+) -> Tuple[List[Tuple[VarName, NodeID, str]], List[Tuple[VarName, NodeID, str]],]:
+    in_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()
+    out_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()
 
     for dependency in all_dependencies:
         # create out dependency metadata
