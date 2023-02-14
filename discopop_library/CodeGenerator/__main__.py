@@ -9,27 +9,22 @@
 """Discopop Code Generator
 
 Usage:
-    discopop_code_generator --fmap <path> --json <path> --outputdir <path>
+    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>]
 
 OPTIONAL ARGUMENTS:
     --fmap=<file>               File mapping
     --json=<file>               Json output of the DiscoPoP Explorer
     --outputdir=<path>          Directory for the modified source files
+    --patterns=<str>            Comma-separated list of pattern types to be applied
+                                Possible values: reduction, do_all
     -h --help                   Show this screen
 """
-import cProfile
-import io
-import json
 import os
-from typing import Dict
+from typing import Dict, List
 
 import pstats2  # type:ignore
-import sys
-import time
-
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
-from pathlib import Path
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings as generate_code_from_json_strings
 from discopop_library.FileMapping.FileMapping import load_file_mapping
@@ -39,6 +34,7 @@ docopt_schema = Schema(
     {
         "--fmap": Use(str),
         "--json": Use(str),
+        "--patterns": Use(str),
         "--outputdir": Use(str),
     }
 )
@@ -68,6 +64,8 @@ def main():
     file_mapping_file = get_path(os.getcwd(), arguments["--fmap"])
     json_file = get_path(os.getcwd(), arguments["--json"])
     outputdir = arguments["--outputdir"]
+    relevant_patterns: List[str] = [] if arguments["--patterns"] == "None" else (
+        arguments["--patterns"].split(",") if "," in arguments["--patterns"] else arguments["--patterns"])
 
     for file in [file_mapping_file, json_file]:
         if not os.path.isfile(file):
@@ -77,7 +75,7 @@ def main():
 
     file_mapping_dict = load_file_mapping(file_mapping_file)
 
-    identified_patterns = read_patterns_from_json_to_json(json_file)
+    identified_patterns = read_patterns_from_json_to_json(json_file, relevant_patterns)
 
     modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns)
 
@@ -93,8 +91,8 @@ def main():
             f.write(modified_code_by_new_location[file_path])
             f.close()
 
-
     print("Written modified source code to: ", outputdir)
+
 
 if __name__ == "__main__":
     main()
