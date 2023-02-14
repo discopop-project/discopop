@@ -3,7 +3,9 @@ import os.path
 from typing import Dict, List
 
 
-def read_patterns_from_json_to_json(json_path: str) -> Dict[str, List[str]]:
+def read_patterns_from_json_to_json(json_path: str, relevant_patterns: List[str]) -> Dict[str, List[str]]:
+    """relevant_patterns specifies the names of patterns which shall be returned.
+    An empty list acts as a wildcard."""
     pattern_json_strings_by_type: Dict[str, List[str]] = dict()
 
     if not os.path.exists(json_path):
@@ -12,6 +14,8 @@ def read_patterns_from_json_to_json(json_path: str) -> Dict[str, List[str]]:
     with open(json_path, "r") as f:
         data = json.load(f)
         for key in data:
+            if len(relevant_patterns) > 0 and key not in relevant_patterns:
+                continue
             if key not in pattern_json_strings_by_type:
                 pattern_json_strings_by_type[key] = []
             for entry in data[key]:
