@@ -7,6 +7,7 @@
 # directory for details.
 
 import itertools
+import sys
 from enum import IntEnum, Enum
 from typing import Dict, List, Tuple, Set, Optional, cast, Union
 
@@ -626,14 +627,10 @@ class PETGraphX(object):
         for source_child_id in source_children_ids:
             # get a list of filtered dependencies, outgoing from source_child
             out_deps = self.out_edges(source_child_id, EdgeType.DATA)
-            out_raw_war_deps = [
-                dep
-                for dep in out_deps
-                if dep[2].dtype == DepType.RAW or dep[2].dtype == DepType.WAR
-            ]
+            out_raw_deps = [dep for dep in out_deps if dep[2].dtype == DepType.RAW]
             filtered_deps = [
                 elem
-                for elem in out_raw_war_deps
+                for elem in out_raw_deps
                 if not self.is_readonly_inside_loop_body(
                     elem[2],
                     root_loop,
@@ -648,12 +645,50 @@ class PETGraphX(object):
                 if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
             # get a list of dependency targets
-            dep_targets = [(t if d.dtype == DepType.RAW else s) for s, t, d in filtered_deps]
+            dep_targets = [t for _, t, _ in filtered_deps]
             # check if overlap between dependency targets and target_children exists.
             overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
             if len(overlap) > 0:
-                # if so, a RAW or WAR dependency exists
+                # if so, a RAW dependency exists
                 return True
+
+        # check for WAR dependencies between any of the source_children and any of the target_children
+        # which do not occur within a single loop iteration
+        for source_child_id in source_children_ids:
+            # get a list of filtered dependencies, outgoing from source_child
+            out_deps = self.out_edges(source_child_id, EdgeType.DATA)
+            out_war_deps = [dep for dep in out_deps if dep[2].dtype == DepType.WAR]
+            filtered_deps = [
+                elem
+                for elem in out_war_deps
+                if not self.is_readonly_inside_loop_body(
+                    elem[2],
+                    root_loop,
+                    root_children_cus,
+                    root_children_loops,
+                    loops_start_lines=loop_start_lines,
+                )
+            ]
+            filtered_deps = [
+                elem
+                for elem in filtered_deps
+                if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
+            ]
+            # get a list of dependency targets
+            dep_targets = [t for _, t, _ in filtered_deps]
+            # check if overlap between dependency targets and target_children exists.
+            overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
+            if len(overlap) > 0:
+                for node_id in overlap:
+                    print("Source child ID: ", source_child_id, file=sys.stderr)
+                    print("Target ID: ", node_id, file=sys.stderr)
+                    print(file=sys.stderr)
+                # check if the dependency is located within a single iteration
+                # if so, ignore it
+
+                # if so, a WAR dependency between iterations exists
+                return True
+
         return False
 
     def unused_check_alias(self, s: NodeID, t: NodeID, d: Dependency, root_loop: CUNode) -> bool:
