@@ -683,11 +683,14 @@ class PETGraphX(object):
                     print("Source child ID: ", source_child_id, file=sys.stderr)
                     print("Target ID: ", node_id, file=sys.stderr)
                     print(file=sys.stderr)
-                # check if the dependency is located within a single iteration
-                # if so, ignore it
+                    # if a WAR dependency between iterations exists, it can be ignored if the variable is overwritten
+                    # by the successive iteration before being read
+                    if self.is_predecessor(source_child_id, node_id) and source_child_id != node_id:
+                        print("Write before read inbetween iterations", file=sys.stderr)
+                        continue
 
-                # if so, a WAR dependency between iterations exists
-                return True
+                    # a WAR within one iterations exists, i.e. a value written by the previous iteration is read
+                    return True
 
         return False
 
