@@ -340,8 +340,7 @@ class PETGraphX(object):
                     ):
                         continue
                     if sink_cu_id and source_cu_id:
-                        if sink_cu_id != source_cu_id:
-                            g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+                        g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         return cls(g, reduction_vars, pos)
 
     def calculateFunctionMetadata(self):
@@ -608,8 +607,6 @@ class PETGraphX(object):
         :param target: target of dependency (prior occurrence in the source code)
         :param root_loop: root loop
         :return: true, if there is RAW dependency"""
-        if source == target:
-            return False
 
         # get recursive children of source and target
         source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
