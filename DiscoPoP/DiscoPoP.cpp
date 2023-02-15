@@ -1016,7 +1016,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     continue;
                 }
@@ -1031,7 +1031,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We should ignore store instructions that are not associated with a load
                     // e.g., pbvc[i] = c1s;
@@ -1043,7 +1043,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We want to find max or min reduction operations
                     // We want to find the basicblock that contains the load instruction
@@ -1314,7 +1314,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
     }
 
     unsigned opcode = cur_instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(cur_instr);
     if (c != ' ') {
         reduction_operations.push_back(c);
     }
@@ -1349,7 +1349,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val)
     }
     llvm::Instruction *instr = llvm::cast<llvm::Instruction>(val);
     unsigned opcode = instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(instr);
     if (c != ' ') {
         return instr;
     } else if (opcode == llvm::Instruction::Load) {
@@ -1630,11 +1630,40 @@ bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
 }
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
-char DiscoPoP::dp_reduction_get_char_for_opcode(unsigned opcode) {
-    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd)
-        return '+';
-    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub)
-        return '-';
+// switches + and - if a negative constant is added or subtracted
+//(mainly used to support -- as reduction operation, might be implemented as 'add -1')
+char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction* instr) {
+    unsigned opcode = instr->getOpcode();
+
+    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if(operand_is_negative_constant)
+            return '-';
+        else
+            return '+';
+
+    }
+    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if (operand_is_negative_constant)
+            return '+';
+        else
+            return '-';
+    }
     if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul)
         return '*';
     if (opcode == llvm::Instruction::And) return '&';
