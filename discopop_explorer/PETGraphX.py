@@ -600,13 +600,15 @@ class PETGraphX(object):
         )
 
     def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
-        """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
+        """Detects if source node or one of it's children has a dependency to target node or one of its children.
+        In order to allow checking for loop-carried and loop-carried anti dependencies,
+        RAW and WAR dependencies are considered.
         The loop index and readonly variables are ignored.
 
         :param source: source node for dependency detection (later occurrence in the source code)
         :param target: target of dependency (prior occurrence in the source code)
         :param root_loop: root loop
-        :return: true, if there is RAW dependency"""
+        :return: true, if there is dependency"""
 
         # get recursive children of source and target
         source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
@@ -624,10 +626,14 @@ class PETGraphX(object):
         for source_child_id in source_children_ids:
             # get a list of filtered dependencies, outgoing from source_child
             out_deps = self.out_edges(source_child_id, EdgeType.DATA)
-            out_raw_deps = [dep for dep in out_deps if dep[2].dtype == DepType.RAW]
+            out_raw_war_deps = [
+                dep
+                for dep in out_deps
+                if dep[2].dtype == DepType.RAW or dep[2].dtype == DepType.WAR
+            ]
             filtered_deps = [
                 elem
-                for elem in out_raw_deps
+                for elem in out_raw_war_deps
                 if not self.is_readonly_inside_loop_body(
                     elem[2],
                     root_loop,
@@ -642,11 +648,11 @@ class PETGraphX(object):
                 if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
             # get a list of dependency targets
-            dep_targets = [t for _, t, _ in filtered_deps]
+            dep_targets = [(t if d.dtype == DepType.RAW else s) for s, t, d in filtered_deps]
             # check if overlap between dependency targets and target_children exists.
             overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
             if len(overlap) > 0:
-                # if so, a RAW dependency exists
+                # if so, a RAW or WAR dependency exists
                 return True
         return False
 
