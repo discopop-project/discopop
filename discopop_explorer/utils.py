@@ -301,11 +301,10 @@ def is_first_written(
         if e[2].var_name == var and any([n.id == e[1] for n in sub]):
             res = False
             for eraw in raw:
-                # TODO check
                 if (
                     eraw[2].var_name == var
                     and any([n.id == e[1] for n in sub])
-                    and e[0] == eraw[2].sink_line
+                    and e[2].source_line == eraw[2].sink_line
                 ):
                     res = True
                     break
