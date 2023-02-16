@@ -1021,6 +1021,42 @@ class PETGraphX(object):
                 return rv["operation"]
         return ""
 
+    def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
+        """returns true, if source is a predecessor of target.
+        This analysis includes traversal of successor, child and calls edges."""
+        # if target is a loop node, get the first child of the loop, i.e. the entry node into the loop
+        target_node = self.node_at(target_id)
+        if target_node.type == NodeType.LOOP:
+            target_id = self.direct_children(target_node)[0].id
+
+        # perform a bfs search for target
+        queue: List[NodeID] = [source_id]
+        visited: List[NodeID] = []
+        while queue:
+            current = queue.pop(0)
+            if current == target_id:
+                return True
+            visited.append(current)
+            # add direct successors to queue
+            queue += [
+                n.id
+                for n in self.direct_successors(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add children to queue
+            queue += [
+                n.id
+                for n in self.direct_children(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add called functions to queue
+            queue += [
+                t
+                for _, t, _ in self.out_edges(current, EdgeType.CALLSNODE)
+                if t not in visited and t not in queue
+            ]
+        return False
+
     def dump_to_gephi_file(self, name="pet.gexf"):
         """Note: Destroys the PETGraph!"""
         # replace node data with label
