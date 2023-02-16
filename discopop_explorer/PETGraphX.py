@@ -600,7 +600,13 @@ class PETGraphX(object):
             rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name
         )
 
-    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
+    def depends_ignore_readonly(
+        self,
+        source: CUNode,
+        target: CUNode,
+        root_loop: CUNode,
+        consider_intra_iteration_raws: bool = False,
+    ) -> bool:
         """Detects if source node or one of it's children has a dependency to target node or one of its children.
         In order to allow checking for loop-carried and loop-carried anti dependencies,
         RAW and WAR dependencies are considered.
@@ -609,6 +615,7 @@ class PETGraphX(object):
         :param source: source node for dependency detection (later occurrence in the source code)
         :param target: target of dependency (prior occurrence in the source code)
         :param root_loop: root loop
+        :param consider_intra_iteration_raws: used to differentiate behavior required for do-all and e.g. pipeline detection
         :return: true, if there is dependency"""
 
         # get recursive children of source and target
@@ -644,13 +651,23 @@ class PETGraphX(object):
                 for elem in filtered_deps
                 if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
+
             # get a list of dependency targets
             dep_targets = [t for _, t, _ in filtered_deps]
             # check if overlap between dependency targets and target_children exists.
             overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
             if len(overlap) > 0:
-                # if so, a RAW dependency exists
-                return True
+                # check if the RAW dependency happens within a single iteration
+                # if so, ignore it
+                for target_id in overlap:
+                    if (
+                        self.is_predecessor(target_id, source_child_id)
+                        and consider_intra_iteration_raws
+                    ):
+                        continue
+                    else:
+                        # a RAW dependency exists
+                        return True
 
         # check for WAR dependencies between any of the source_children and any of the target_children
         # which do not occur within a single loop iteration
@@ -680,13 +697,9 @@ class PETGraphX(object):
             overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
             if len(overlap) > 0:
                 for node_id in overlap:
-                    print("Source child ID: ", source_child_id, file=sys.stderr)
-                    print("Target ID: ", node_id, file=sys.stderr)
-                    print(file=sys.stderr)
                     # if a WAR dependency between iterations exists, it can be ignored if the variable is overwritten
                     # by the successive iteration before being read
                     if self.is_predecessor(source_child_id, node_id) and source_child_id != node_id:
-                        print("Write before read inbetween iterations", file=sys.stderr)
                         continue
 
                     # a WAR within one iterations exists, i.e. a value written by the previous iteration is read

@@ -80,7 +80,9 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
         children_cache: Dict[CUNode, List[CUNode]] = dict()
         dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
-            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
+            if pet.depends_ignore_readonly(
+                subnodes[i], subnodes[j], root_loop, consider_intra_iteration_raws=True
+            ):
                 return False
 
     return True
