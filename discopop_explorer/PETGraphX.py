@@ -713,7 +713,7 @@ class PETGraphX(object):
                 for node_id in overlap:
                     # if a WAR dependency between iterations exists, it can be ignored if the variable is overwritten
                     # by the successive iteration before being read
-                    if self.is_predecessor(source_child_id, node_id) and source_child_id != node_id:
+                    if self.is_predecessor(source_child_id, node_id):
                         continue
 
                     # a WAR within one iterations exists, i.e. a value written by the previous iteration is read
@@ -994,14 +994,14 @@ class PETGraphX(object):
             ]:
                 # If there is a waw dependency for var, then var is written in loop
                 # (sink is always inside loop for waw/war)
-                if dep.var_name == d.var_name and not (d.sink_line in loops_start_lines):
+                if dep.aa_var_name == d.aa_var_name and not (d.sink_line in loops_start_lines):
                     return False
             for t, d in [
                 (t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW
             ]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
-                if dep.var_name == d.var_name and not (d.source_line in loops_start_lines):
+                if dep.aa_var_name == d.aa_var_name and not (d.source_line in loops_start_lines):
                     return False
         return True
 
