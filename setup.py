@@ -15,6 +15,7 @@ from setuptools import setup, find_packages
 os.chdir(Path(__file__).parent)
 Explorer_SRC = Path("discopop_explorer")
 Wizard_SRC = Path("discopop_wizard")
+CodeGen_SRC = Path("discopop_library/CodeGenerator")
 
 
 def get_version():
@@ -55,6 +56,7 @@ setup(
             "discopop_explorer=discopop_explorer.__main__:main",
             "discopop_profiler=discopop_profiler.__main__:main",
             "discopop_wizard=discopop_wizard.__main__:main",
+            "discopop_code_generator=discopop_library.CodeGenerator.__main__:main"
         ]
     },
     zip_safe=True,
