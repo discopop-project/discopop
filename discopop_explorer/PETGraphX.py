@@ -1096,7 +1096,9 @@ class PETGraphX(object):
         source_parent_function = self.get_parent_function(self.node_at(source_id))
         target_parent_function = self.get_parent_function(self.node_at(target_id))
         if source_parent_function != target_parent_function:
-            for callee_id in [s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)]:
+            for callee_id in [
+                s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)
+            ]:
                 if self.is_predecessor(callee_id, target_id):
                     return True
 

@@ -51,6 +51,9 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     for i in gpu_patterns:
         i.setCollapseClause(pet, i.node_id)
 
+    if len(gpu_patterns) == 0:
+        return []
+
     regions.identifyGPURegions()
     # regions.old_mapData()
     regions.determineDataMapping()
