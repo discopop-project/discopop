@@ -1078,6 +1078,14 @@ class PETGraphX(object):
     def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
         """returns true, if source is a predecessor of target.
         This analysis includes traversal of successor, child and calls edges."""
+        # if source and target_id are located within differenct functions, consider the callees instead of source_id
+        source_parent_function = self.get_parent_function(self.node_at(source_id))
+        target_parent_function = self.get_parent_function(self.node_at(target_id))
+        if source_parent_function != target_parent_function:
+            for callee_id in [s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)]:
+                if self.is_predecessor(callee_id, target_id):
+                    return True
+
         # if target is a loop node, get the first child of the loop, i.e. the entry node into the loop
         target_node = self.node_at(target_id)
         if target_node.type == NodeType.LOOP:
