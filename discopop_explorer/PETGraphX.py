@@ -8,8 +8,10 @@
 
 import itertools
 import sys
+import copy
 from enum import IntEnum, Enum
 from typing import Dict, List, Tuple, Set, Optional, cast, Union
+import jsonpickle  # type:ignore
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -50,6 +52,7 @@ class EdgeType(Enum):
     SUCCESSOR = 1
     DATA = 2
     CALLSNODE = 3
+    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -113,6 +116,7 @@ class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
+    aa_var_name: Optional[str] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
 
@@ -211,11 +215,12 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
     if n.type == NodeType.CU:
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.localVariables.local
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                for v in node.localVariables.local
             ]
         if hasattr(node.globalVariables, "global"):
             n.global_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"))
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
@@ -237,6 +242,7 @@ def parse_dependency(dep) -> Dependency:
     d.sink_line = dep.sink
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
+    d.aa_var_name = dep.aa_var_name
     return d
 
 
@@ -264,12 +270,12 @@ class PETGraphX(object):
     ):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
-        print("Creating graph...")
+        print("\tCreating graph...")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
-        print("Added nodes...")
+        print("\tAdded nodes...")
 
         for node_id, node in cu_dict.items():
             source = node_id
@@ -292,13 +298,13 @@ class PETGraphX(object):
                     if not (source, child) in g.edges:
                         g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
 
-        print("Added edges...")
+        print("\tAdded edges...")
 
         for _, node in g.nodes(data="data"):
             if node.type == NodeType.LOOP:
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
 
-        print("Added iterations")
+        print("\tAdded iterations...")
 
         # calculate position before dependencies affect them
         try:
@@ -309,7 +315,7 @@ class PETGraphX(object):
                 pos = nx.shell_layout(g)  # maybe
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        print("Calculated positions...")
+        print("\tCalculated positions...")
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
@@ -322,7 +328,7 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    print("Adding Dep: ", idx, "/", len(dependencies_list))
+                    # print("Adding Dep: ", idx, "/", len(dependencies_list))
                     # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
                     # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
 
@@ -442,6 +448,14 @@ class PETGraphX(object):
             pos,
             edge_color="yellow",
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
+        )
+        nx.draw_networkx_edges(
+            self.g,
+            pos,
+            edge_color="orange",
+            edgelist=[
+                e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME
+            ],
         )
 
         # plt.show()
@@ -1118,6 +1132,81 @@ class PETGraphX(object):
                 if t not in visited and t not in queue
             ]
         return False
+
+    def dump_to_pickled_json(self) -> str:
+        """Encodes and returns the entire Object into a pickled json string.
+        The encoded string can be reconstructed into an object by using:
+        jsonpickle.decode(json_str)
+
+        :return: encoded string
+        """
+        return jsonpickle.encode(self)
+
+    def check_reachability(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> bool:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True
+        visited: List[str] = []
+        queue = [target]
+        while len(queue) > 0:
+            cur_node = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.in_edges(cur_node.id)
+                if s not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True
+                else:
+                    if e[0] not in visited:
+                        queue.append(self.node_at(e[0]))
+        return False
+
+    def check_reachability_and_get_path_nodes(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> Tuple[bool, List[CUNode]]:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True, []
+        visited: List[NodeID] = []
+        queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
+        while len(queue) > 0:
+            cur_node, cur_path = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.in_edges(cur_node.id)
+                if s not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True, cur_path
+                else:
+                    if e[0] not in visited:
+                        tmp_path = copy.deepcopy(cur_path)
+                        tmp_path.append(cur_node)
+                        queue.append((self.node_at(e[0]), tmp_path))
+        return False, []
 
     def dump_to_gephi_file(self, name="pet.gexf"):
         """Note: Destroys the PETGraph!"""

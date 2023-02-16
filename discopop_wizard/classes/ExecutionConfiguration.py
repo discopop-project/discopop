@@ -224,7 +224,7 @@ class ExecutionConfiguration(object):
         # check if suggestions can be loaded. If so, enable the button.
         # Else, disable it.
         try:
-            suggestions = get_suggestion_objects(self)
+            suggestions = get_suggestion_objects(self.wizard, self)
         except FileNotFoundError:
             return "disabled"
         except JSONDecodeError:

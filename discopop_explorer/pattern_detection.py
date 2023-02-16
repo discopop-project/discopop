@@ -10,28 +10,46 @@ from typing import List
 from .PETGraphX import PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
+from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from .pattern_detectors.combined_gpu_patterns.combined_gpu_pattern_detector import (
+    run_detection as detect_combined_gpu,
+)
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
 from .pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
 from .pattern_detectors.PatternInfo import PatternInfo
+from .variable import Variable
 
 
 class DetectionResult(object):
+    pet: PETGraphX
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
     task: List[PatternInfo]
+    simple_gpu: List[PatternInfo]
+    combined_gpu: List[PatternInfo]
 
-    def __init__(self):
+    def __init__(self, pet: PETGraphX):
+        self.pet = pet
         pass
 
     def __str__(self):
-        return "\n\n\n".join(
-            ["\n\n".join([str(v2) for v2 in v]) for v in self.__dict__.values() if v]
-        )
+        result_str = ""
+        for v in self.__dict__.values():
+            if type(v) == PETGraphX:
+                continue
+            value_str = "\n\n\n"
+            for entry in v:
+                try:
+                    value_str += str(entry) + "\n\n"
+                except NotImplementedError:
+                    value_str += entry.to_string(self.pet) + "\n\n"
+            result_str += value_str
+        return result_str
 
 
 class PatternDetectorX(object):
@@ -77,17 +95,17 @@ class PatternDetectorX(object):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.calculateFunctionMetadata()
-        res = DetectionResult()
+        res = DetectionResult(self.pet)
 
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
-        print("REDUCTION DONE.")
+        # print("REDUCTION DONE.")
         res.do_all = detect_do_all(self.pet)
-        print("DOALL DONE.")
+        # print("DOALL DONE.")
         res.pipeline = detect_pipeline(self.pet)
-        print("PIPELINE DONE.")
+        # print("PIPELINE DONE.")
         res.geometric_decomposition = detect_gd(self.pet)
-        print("GEO. DEC. DONE.")
+        # print("GEO. DEC. DONE.")
 
         # check if task pattern should be enabled
         if enable_task_pattern:
@@ -101,4 +119,11 @@ class PatternDetectorX(object):
                 llvm_cxxfilt_path,
                 discopop_build_path,
             )
+
+        # detect GPU patterns based on previously identified patterns
+        res.simple_gpu = detect_gpu(self.pet, res)
+
+        # detect combined GPU patterns
+        res.combined_gpu = detect_combined_gpu(self.pet, res)
+
         return res

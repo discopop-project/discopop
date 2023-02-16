@@ -147,7 +147,10 @@ def main():
     if arguments["--json"] == "None":
         print(str(res))
     else:
-        print(str(res))
+        # todo re-enable?
+        # print(str(res))
+        # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
+        del res.pet
         with open(arguments["--json"], "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 

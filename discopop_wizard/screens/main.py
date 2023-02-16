@@ -21,9 +21,12 @@ class MainScreen(object):
     details_frame: tk.Frame
     results_frame: tk.Frame
 
+    toggle_var_code_preview_show_metadata: tk.IntVar
+
     def __init__(self, wizard, window_frame: tk.Frame):
         self.wizard = wizard
         self.push_main_screen(wizard, window_frame)
+
 
     def push_main_screen(self, wizard, window_frame: tk.Frame):
         frame = tk.Frame(window_frame)
@@ -44,10 +47,23 @@ class MainScreen(object):
 
         self.build_configurations_frame(wizard)
 
+        self.__build_menu_bar(wizard)
+
+    def __build_menu_bar(self, wizard):
         # build menu bar
         optionsmenu = tk.Menu(wizard.menubar)
         wizard.menubar.add_cascade(label="Options", menu=optionsmenu)
         optionsmenu.add_command(label="Settings", command=lambda: show_settings_screen(wizard))
+        # build code preview menu
+        code_preview_menu = tk.Menu(optionsmenu)
+        optionsmenu.add_cascade(label="Code Preview", menu=code_preview_menu)
+        code_preview_menu.add_checkbutton(label="Show Metadata Regions", variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata_regions, onvalue=1, offvalue=0, command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+        code_preview_menu.add_checkbutton(label="Show Line Numbers", variable=wizard.tk_var_storage.toggle_var_code_preview_show_line_numbers, onvalue=1, offvalue=0, command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+        code_preview_menu.add_checkbutton(label="Show Live Variables",
+                                          variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata_live_device_variables,
+                                          onvalue=1, offvalue=0,
+                                          command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+
 
     def build_configurations_frame(self, wizard):
         # clear previous contents if existent
