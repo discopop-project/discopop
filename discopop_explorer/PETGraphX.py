@@ -147,6 +147,7 @@ class CUNode:
     tp_contains_task: bool = False
     tp_contains_taskwait: bool = False
     tp_omittable: bool = False
+    performs_file_io: bool = False
 
     parent_function_id: Optional[NodeID] = None  # every node that is not a function node
     children_cu_ids: Optional[List[NodeID]] = None  # function nodes only
@@ -227,6 +228,8 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
                 for v in getattr(node.callsNode, "nodeCalled")
                 if v.get("atLine") is not None
             ]
+        if hasattr(node, "performsFileIO"):
+            n.performs_file_io = True if int(getattr(node, "performsFileIO")) == 1 else False
     return n
 
 
