@@ -157,6 +157,8 @@ namespace {
         set <Variable> localVariableNames;
         set <Variable> globalVariableNames;
 
+        bool performsFileIO;
+
         // Map to record function call line numbers
         map<int, vector<Node *>> callLineTofunctionMap;
 
@@ -166,6 +168,7 @@ namespace {
             writeDataSize = 0;
             instructionsCount = 0;
             // BB = NULL;
+            performsFileIO = false;
         }
 
         void removeCU() {

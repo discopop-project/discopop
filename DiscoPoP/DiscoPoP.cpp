@@ -589,6 +589,22 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         }
                     }
                 }
+                else if (isa<CallInst>(instruction)){
+                    // get the name of the called function and check if a FileIO function is called
+                    CallInst *ci = cast<CallInst>(instruction);
+                    set<string> IOFunctions {"printf"};
+                    if(ci){
+                        if(ci->getCalledFunction()){
+                            if(ci->getCalledFunction()->hasName()){
+                                if(find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) != IOFunctions.end()){
+                                    // Called function performs FileIO
+                                    cu->performsFileIO = true;
+                                }
+                            }
+                            
+                        }
+                    }
+                }
             }
         }
         if (cu->instructionsLineNumbers.empty()) {
@@ -2789,6 +2805,8 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                     << endl;
             *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize
                     << "</writeDataSize>" << endl;
+            *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO
+                    << "</performsFileIO>" << endl;
 
             *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount
                     << "</instructionsCount>" << endl;
