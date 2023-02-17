@@ -409,15 +409,15 @@ class GPULoopPattern(PatternInfo):
             # TODO grouping
 
             if is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop):
-                if is_readonly(var.name, war, waw, rev_raw):
+                if is_readonly(vars[var], war, waw, rev_raw):
                     self.map_type_to.append(var.name)
                 elif is_read_in_right_subtree(var.name, rev_raw, sub):
                     self.map_type_tofrom.append(var.name)
                 elif is_written_in_subtree(var.name, raw, waw, sub):
                     self.map_type_alloc.append(var.name)
-            elif is_first_written(var.name, raw, war, sub):
+            elif is_first_written(vars[var], raw, war, sub):
                 # TODO simplify
-                if is_read_in_subtree(var.name, rev_raw, rst):
+                if is_read_in_subtree(vars[var], rev_raw, rst):
                     self.map_type_from.append(var.name)
                 else:
                     self.map_type_alloc.append(var.name)

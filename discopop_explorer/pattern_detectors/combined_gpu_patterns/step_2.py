@@ -230,15 +230,15 @@ def calculate_host_liveness(
                 if target in comb_gpu_reg.device_cu_ids:
                     if dep.var_name is not None:
                         shared_variables.add(VarName(cast(str, dep.var_name)))
-                    if dep.aa_var_name is not None:
-                        shared_memory_regions.add(MemoryRegion(cast(str, dep.aa_var_name)))
+                    if dep.memory_region is not None:
+                        shared_memory_regions.add(MemoryRegion(cast(str, dep.memory_region)))
 
             for source, _, dep in in_data_edges:
                 if source in comb_gpu_reg.device_cu_ids:
                     if dep.var_name is not None:
                         shared_variables.add(VarName(cast(str, dep.var_name)))
-                    if dep.aa_var_name is not None:
-                        shared_memory_regions.add(MemoryRegion(cast(str, dep.aa_var_name)))
+                    if dep.memory_region is not None:
+                        shared_memory_regions.add(MemoryRegion(cast(str, dep.memory_region)))
         for var_name in shared_variables:
             if var_name not in host_liveness_lists:
                 host_liveness_lists[var_name] = []

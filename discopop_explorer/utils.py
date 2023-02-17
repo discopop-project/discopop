@@ -5,14 +5,24 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+import sys
 import time
 import itertools
 from typing import List, Set, Dict, Tuple
 
 import numpy as np
 
-from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, DepType, EdgeType, Dependency
+from .PETGraphX import (
+    LineID,
+    NodeID,
+    PETGraphX,
+    NodeType,
+    CUNode,
+    DepType,
+    EdgeType,
+    Dependency,
+    MemoryRegion,
+)
 from .variable import Variable
 
 loop_data: Dict[LineID, int] = {}
@@ -193,21 +203,21 @@ def is_reduction_any(
 
 
 def is_written_in_subtree(
-    var_name: str,
+    mem_regs: Set[MemoryRegion],
     raw: Set[Tuple[NodeID, NodeID, Dependency]],
     waw: Set[Tuple[NodeID, NodeID, Dependency]],
     tree: List[CUNode],
 ) -> bool:
     """Checks if variable is written in subtree
 
-    :param var_name: variable name
+    :param mem_reg: memory region
     :param raw: raw dependencies of the loop
     :param waw: waw dependencies of the loop
     :param tree: subtree
     :return: true if is written
     """
     for e in itertools.chain(raw, waw):
-        if e[2].var_name == var_name and any([n.id == e[1] for n in tree]):
+        if e[2].memory_region in mem_regs and any([n.id == e[1] for n in tree]):
             return True
     return False
 
@@ -247,7 +257,7 @@ def is_scalar_val(var) -> bool:
 
 
 def is_readonly(
-    var: str,
+    mem_regs: Set[MemoryRegion],
     war: Set[Tuple[NodeID, NodeID, Dependency]],
     waw: Set[Tuple[NodeID, NodeID, Dependency]],
     rev_war: Set[Tuple[NodeID, NodeID, Dependency]],
@@ -261,7 +271,7 @@ def is_readonly(
     :return: trie if readonly
     """
     for e in itertools.chain(war, waw, rev_war):
-        if e[2].var_name == var:
+        if e[2].memory_region in mem_regs:
             return False
     return True
 
@@ -284,7 +294,7 @@ def is_global(var: str, tree: List[CUNode]) -> bool:
 
 
 def is_first_written(
-    var: str,
+    mem_regs: Set[MemoryRegion],
     raw: Set[Tuple[NodeID, NodeID, Dependency]],
     war: Set[Tuple[NodeID, NodeID, Dependency]],
     sub: List[CUNode],
@@ -298,11 +308,11 @@ def is_first_written(
     :return: true if first written
     """
     for e in war:
-        if e[2].var_name == var and any([n.id == e[1] for n in sub]):
+        if e[2].memory_region in mem_regs and any([n.id == e[1] for n in sub]):
             res = False
             for eraw in raw:
                 if (
-                    eraw[2].var_name == var
+                    eraw[2].memory_region in mem_regs
                     and any([n.id == e[1] for n in sub])
                     and e[2].source_line == eraw[2].sink_line
                 ):
@@ -356,7 +366,7 @@ def is_first_written_new(
 
 
 def is_read_in_subtree(
-    var: str, rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
+    mem_regs: Set[MemoryRegion], rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
 ) -> bool:
     """Checks if variable is read in subtree
 
@@ -366,7 +376,7 @@ def is_read_in_subtree(
     :return: true if read in right subtree
     """
     for e in rev_raw:
-        if e[2].var_name == var and any([n.id == e[0] for n in tree]):
+        if e[2].memory_region in mem_regs and any([n.id == e[0] for n in tree]):
             return True
     return False
 
@@ -547,16 +557,16 @@ def classify_loop_variables(
             var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
         elif (
-            is_written_in_subtree(var.name, raw, waw, lst)
+            is_written_in_subtree(vars[var], raw, waw, lst)
             or is_func_arg(pet, var.name, loop)
             and is_scalar_val(var)
         ):
-            if is_readonly(var.name, war, waw, rev_raw):
+            if is_readonly(vars[var], war, waw, rev_raw):
                 if is_global(var.name, sub):
                     shared.append(var)
                 else:
                     first_private.append(var)
-            elif is_read_in_subtree(var.name, rev_raw, rst):
+            elif is_read_in_subtree(vars[var], rev_raw, rst):
                 if is_scalar_val(var):
                     last_private.append(var)
                 else:
@@ -568,8 +578,8 @@ def classify_loop_variables(
                 else:
                     private.append(var)
 
-        elif is_first_written(var.name, raw, war, sub):
-            if is_read_in_subtree(var.name, rev_raw, rst):
+        elif is_first_written(vars[var], raw, war, sub):
+            if is_read_in_subtree(vars[var], rev_raw, rst):
                 if is_scalar_val(var):
                     last_private.append(var)
                 else:
