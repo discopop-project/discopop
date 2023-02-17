@@ -463,12 +463,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName().str();
-            
+
             // Do not allow to combine Instructions from different scopes in the source code.
             if((&*instruction)->getDebugLoc()){
                 if ((&*instruction)->getDebugLoc()->getScope() != scopeBuffer){
                     // scopes are not equal
-                    
+
                     int scopeIsParentOfBuffer = 0;
                     if(scopeBuffer){
                         scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
@@ -484,7 +484,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
-                    
+
                             cu->basicBlockName = basicBlockName;
                             CUVector.push_back(cu);
                             suspiciousVariables.clear();
@@ -498,13 +498,13 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             currentNode->childrenNodes.push_back(cu);
                             temp->successorCUs.push_back(cu->ID);
                             BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
-                        }   
+                        }
                     }
                     // update scopeBuffer
                         scopeBuffer = (&*instruction)->getDebugLoc()->getScope();
                 }
             }
-            
+
 
             if (lid > 0) {
                 cu->instructionsLineNumbers.insert(lid);
@@ -592,7 +592,22 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                 else if (isa<CallInst>(instruction)){
                     // get the name of the called function and check if a FileIO function is called
                     CallInst *ci = cast<CallInst>(instruction);
-                    set<string> IOFunctions {"printf"};
+                    set<string> IOFunctions {"fopen", "fopen_s", "freopen", "freopen_s", "fclose", "fflush", "setbuf",
+                                             "setvbuf", "fwide", "fread", "fwrite", "fgetc", "getc", "fgets", "fputc",
+                                             "putc", "fputs", "getchar", "gets", "gets_s", "putchar", "puts", "ungetc",
+                                             "fgetwc", "getwc", "fgetws", "fputwc", "putwc", "fputws", "getwchar",
+                                             "putwchar", "ungetwc", "scanf", "fscanf", "sscanf", "scanf_s", "fscanf_s",
+                                             "sscanf_s", "vscanf", "vfscanf", "vsscanf", "vscanf_s", "vfscanf_s",
+                                             "vsscanf_s", "printf", "fprintf", "sprintf", "snprintf", "printf_s",
+                                             "fprintf_s", "sprintf_s", "snprintf_s", "vprintf", "vfprintf", "vsprintf",
+                                             "vsnprintf", "vprintf_s", "vfprintf_s", "vsprintf_s", "vsnprintf_s",
+                                             "wscanf", "fwscanf", "swscanf", "wscanf_s", "fwscanf_s", "swscanf_s",
+                                             "vwscanf", "vfwscanf", "vswscanf", "vwscanf_s", "vfwscanf_s", "vswscanf_s",
+                                             "wprintf", "fwprintf", "swprintf", "wprintf_s", "wprintf_s", "swprintf_s",
+                                             "snwprintf_s", "vwprintf", "vfwprintf", "vswprintf", "vwprintf_s",
+                                             "vfwprintf_s", "vswprintf_s", "vsnwprintf_s", "ftell", "fgetpos", "fseek",
+                                             "fsetpos", "rewind", "clearerr", "feof", "ferror", "perror", "remove",
+                                             "rename", "tmpfile", "tmpfile_s", "tmpnam", "tmpnam_s"};
                     if(ci){
                         if(ci->getCalledFunction()){
                             if(ci->getCalledFunction()->hasName()){
@@ -601,7 +616,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                                     cu->performsFileIO = true;
                                 }
                             }
-                            
+
                         }
                     }
                 }
@@ -756,7 +771,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
-                }            
+                }
                 if (globalVariablesSet.count(varName) ||
                     programGlobalVariablesSet.count(varName)) {
                     (*bbCU)->globalVariableNames.insert(v);
@@ -2509,7 +2524,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     return ""; //getOrInsertVarName("*", builder);
 }
 
-  
+
    Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I)
 {
     assert(I && "Instruction cannot be NULL \n");
