@@ -565,6 +565,8 @@ def classify_loop_variables(
                 if not is_scalar_val(var):
                     # array type variable is written
                     shared.append(var)
+                else:
+                    private.append(var)
 
         elif is_first_written(var.name, raw, war, sub):
             if is_read_in_subtree(var.name, rev_raw, rst):
