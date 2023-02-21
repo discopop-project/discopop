@@ -524,7 +524,10 @@ def classify_loop_variables(
     # vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
-            private.append(var)
+            if is_read_in_subtree(var.name, rev_raw, rst):
+                last_private.append(var)
+            else:
+                private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
             var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
