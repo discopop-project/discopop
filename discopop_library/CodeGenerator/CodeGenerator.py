@@ -58,7 +58,8 @@ def from_json_strings(
         pragmas = suggestion.get_pragmas()
         # add pragmas to the ContentBuffer object which corresponds to the fileId specified in UnpackedSuggestions
         for pragma in pragmas:
-            file_id_to_content_buffer[suggestion.file_id].add_pragma(pragma, [])
+            file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [])
+
     # create the resulting dictionary by assembling the contents of the ContentBuffer objects
     result_dict: Dict[int, str] = dict()
     for file_id in file_id_to_content_buffer:
