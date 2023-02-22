@@ -607,7 +607,8 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                                              "snwprintf_s", "vwprintf", "vfwprintf", "vswprintf", "vwprintf_s",
                                              "vfwprintf_s", "vswprintf_s", "vsnwprintf_s", "ftell", "fgetpos", "fseek",
                                              "fsetpos", "rewind", "clearerr", "feof", "ferror", "perror", "remove",
-                                             "rename", "tmpfile", "tmpfile_s", "tmpnam", "tmpnam_s"};
+                                             "rename", "tmpfile", "tmpfile_s", "tmpnam", "tmpnam_s",
+                                             "__isoc99_fscanf"};
                     if(ci){
                         if(ci->getCalledFunction()){
                             if(ci->getCalledFunction()->hasName()){
