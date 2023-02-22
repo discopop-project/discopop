@@ -7,7 +7,9 @@
 # directory for details.
 
 import copy
-from typing import List
+import os
+import sys
+from typing import List, Dict
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
@@ -67,8 +69,11 @@ class ContentBuffer(object):
                     self.lines.append(line)
                 return
 
-    def add_pragma(self, pragma: Pragma, parent_regions: List[int]):
-        """insert pragma into the maintained list of source code lines"""
+    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int]) -> bool:
+        """insert pragma into the maintained list of source code lines.
+        Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
+        Returns False if compilation of the modified code was not possible.
+        In this case, no changes will be applied to the ContentBuffer Object."""
         if pragma.start_line is None or pragma.end_line is None:
             raise ValueError(
                 "Unsupported start or end line: ", pragma.start_line, "-", pragma.end_line
@@ -76,7 +81,13 @@ class ContentBuffer(object):
         if pragma.file_id is None:
             raise ValueError("Unsupported file_id: ", pragma.file_id)
         if pragma.file_id != self.file_id:
-            return  # incorrect target file, ignore the pragma
+            return True  # incorrect target file, ignore the pragma
+
+        # create backup of ContentBuffer
+        backup_lines = copy.deepcopy(self.lines)
+        backup_max_line_num = self.max_line_num
+        backup_file_id = self.file_id
+        backup_next_free_region_id = self.next_free_region_id
 
         # construct line
         pragma_line = Line(pragma.start_line)
@@ -118,3 +129,29 @@ class ContentBuffer(object):
         # append children to lines (mark as contained in region)
         for child_pragma in pragma.children:
             self.add_pragma(child_pragma, pragma_line.belongs_to_regions)
+
+        # check if the applied changes resulted in a compilable source code
+        # create a temporary file to store the modified file contents
+        if file_mapping[self.file_id].endswith(".c"):
+            compiler = "clang"
+            tmp_file_name = file_mapping[self.file_id] + ".discopop_tmp.c"
+        else:
+            compiler = "clang++"
+            tmp_file_name = file_mapping[self.file_id] + ".discopop_tmp.cpp"
+
+        with open(tmp_file_name, "w+") as f:
+            f.write(self.get_modified_source_code())
+            f.flush()
+            f.close()
+        compilation_successful = True if os.system(compiler + " -c -fopenmp " + tmp_file_name) == 0 else False
+        os.remove(tmp_file_name)
+
+        # if not, reset ContentBuffer to the backup and return False
+        if not compilation_successful:
+            print("==> Skipped pragma insertion due to potential compilation errors!\n")
+            self.lines = backup_lines
+            self.next_free_region_id = backup_next_free_region_id
+            self.file_id = backup_file_id
+            self.max_line_num = backup_max_line_num
+            return False
+        return True
