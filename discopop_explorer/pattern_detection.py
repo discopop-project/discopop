@@ -120,10 +120,4 @@ class PatternDetectorX(object):
                 discopop_build_path,
             )
 
-        # detect GPU patterns based on previously identified patterns
-        res.simple_gpu = detect_gpu(self.pet, res)
-
-        # detect combined GPU patterns
-        res.combined_gpu = detect_combined_gpu(self.pet, res)
-
         return res
