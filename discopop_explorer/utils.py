@@ -8,7 +8,7 @@
 import sys
 import time
 import itertools
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict, Tuple, cast
 
 import numpy as np
 
@@ -325,6 +325,7 @@ def is_first_written(
 
 def is_first_written_new(
     var: Variable,
+    mem_regs: Set[MemoryRegion],
     raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
@@ -345,18 +346,18 @@ def is_first_written_new(
     # None may occur because __get_variables doesn't check for actual elements
     if var.name is None:
         return False
-    is_read = is_read_in(var, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
+    is_read = is_read_in(mem_regs, raw_deps, war_deps, reverse_raw_deps, reverse_war_deps, tree)
     if var.name is None:
         print("Empty var.name found. Skipping.")
         return False
     for dep in raw_deps:
         assert dep[2].var_name is not None
-        if var.name in dep[2].var_name and any([n.id == dep[1] for n in tree]):
+        if dep[2].memory_region in mem_regs and any([n.id == dep[1] for n in tree]):
             result = True
             for warDep in war_deps:
                 assert warDep[2].var_name is not None
                 if (
-                    var.name in warDep[2].var_name
+                    warDep[2].memory_region in mem_regs
                     and any([n.id == dep[1] for n in tree])
                     and dep[2].source_line == warDep[2].sink_line
                 ):
@@ -400,7 +401,7 @@ def is_read_in_right_subtree(
 
 
 def is_depend_in_out(
-    var: Variable,
+    mem_regs: Set[MemoryRegion],
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
 ) -> bool:
@@ -413,13 +414,16 @@ def is_depend_in_out(
     """
     for in_dep in in_deps:
         for out_dep in out_deps:
-            if var.name == in_dep[2].var_name and in_dep[2].var_name == out_dep[2].var_name:
+            if (
+                in_dep[2].memory_region in mem_regs
+                and in_dep[2].memory_region == out_dep[2].memory_region
+            ):
                 return True
     return False
 
 
 def is_depend_in_var(
-    var: Variable,
+    mem_regs: Set[MemoryRegion],
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
 ) -> bool:
@@ -431,13 +435,13 @@ def is_depend_in_var(
     :return: true if variable is in dependency
     """
     for in_dep in in_deps:
-        if in_dep[2].var_name == var.name and in_dep in raw_deps_on:
+        if in_dep[2].memory_region in mem_regs and in_dep in raw_deps_on:
             return True
     return False
 
 
 def is_depend_out_var(
-    var: Variable,
+    mem_regs: Set[MemoryRegion],
     reverse_raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
 ) -> bool:
@@ -449,13 +453,13 @@ def is_depend_out_var(
     :return: true if variable is out dependency
     """
     for dep in out_deps:
-        if dep[2].var_name == var.name and dep in reverse_raw_deps_on:
+        if dep[2].memory_region in mem_regs and dep in reverse_raw_deps_on:
             return True
     return False
 
 
 def is_read_in(
-    var: Variable,
+    mem_regs: Set[MemoryRegion],
     raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     war_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_raw_deps_on: Set[Tuple[NodeID, NodeID, Dependency]],
@@ -476,18 +480,18 @@ def is_read_in(
     for dep in raw_deps_on:
         # If there is a reverse raw dependency for var and the sink cu is not part
         # of the loop, then var is read in rst
-        if var.name == dep[2].var_name:
+        if dep[2].memory_region in mem_regs:
             return True
     for dep in war_deps_on:
-        if var.name == dep[2].var_name and any([n.id == dep[1] for n in tree]):
+        if dep[2].memory_region in mem_regs and any([n.id == dep[1] for n in tree]):
             return True
     for dep in reverse_raw_deps_on:
         # If there is a reverse raw dependency for var and the sink cu is not part
         # of the loop, then var is read in rst
-        if var.name == dep[2].var_name and any([n.id == dep[1] for n in tree]):
+        if dep[2].memory_region in mem_regs and any([n.id == dep[1] for n in tree]):
             return True
     for dep in reverse_war_deps_on:
-        if var.name == dep[2].var_name:
+        if dep[2].memory_region in mem_regs:
             return True
     return False
 
@@ -552,7 +556,7 @@ def classify_loop_variables(
     # vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
-            if is_read_in_subtree(var.name, rev_raw, rst):
+            if is_read_in_subtree(vars[var], rev_raw, rst):
                 last_private.append(var)
             else:
                 private.append(var)
@@ -633,9 +637,10 @@ def classify_task_vars(
     subtree = pet.subtree_of_type(task, NodeType.CU)
     t_loop = pet.subtree_of_type(task, NodeType.LOOP)
 
-    vars: Set[Variable] = set()
+    vars: Dict[Variable, Set[MemoryRegion]] = dict()
     if task.type == NodeType.FUNC:
-        tmp = __get_variables(subtree)
+        print("TaskType FUNC", file=sys.stderr)
+        tmp = pet.get_variables(subtree)
         vars_strings = []
         for v in task.args:
             vars_strings.append(v.name)
@@ -650,9 +655,12 @@ def classify_task_vars(
                 name = v.name
 
             if name in vars_strings:
-                vars.add(v)
+                vars[v] = tmp[v]
+        print("\tvars: ", [v.name for v in vars], file=sys.stderr)
     else:
-        vars = __get_variables(pet.subtree_of_type(task, NodeType.CU))
+        print("TaskType ELSE", file=sys.stderr)
+        vars = pet.get_variables(pet.subtree_of_type(task, NodeType.CU))
+        print("\tvars: ", [(v.name, vars[v]) for v in vars], file=sys.stderr)
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()
@@ -691,7 +699,7 @@ def classify_task_vars(
     for var in vars:
         var_is_loop_index = False
         # get RAW dependencies for var
-        tmp_deps = [dep for dep in raw_deps_on if dep[2].var_name == var.name]
+        tmp_deps = [dep for dep in raw_deps_on if dep[2].memory_region in vars[var]]
         for edge in tmp_deps:
             if pet.is_loop_index(edge[2].var_name, loops_start_lines, loop_children):
                 var_is_loop_index = True
@@ -702,29 +710,35 @@ def classify_task_vars(
             loops_start_lines, var.name, pet.reduction_vars
         ):
             reduction_var_names.append(var.name)
-        elif is_depend_in_out(var, in_deps, out_deps):
+        elif is_depend_in_out(vars[var], in_deps, out_deps):
             depend_in_out.append(var)
-        elif is_depend_in_var(var, in_deps, raw_deps_on):
+        elif is_depend_in_var(vars[var], in_deps, raw_deps_on):
             depend_in.append(var)
-        elif is_depend_out_var(var, reverse_raw_deps_on, out_deps):
+        elif is_depend_out_var(vars[var], reverse_raw_deps_on, out_deps):
             depend_out.append(var)
         elif (
-            is_written_in_subtree(var.name, raw_deps_on, waw_deps_on, left_sub_tree)
+            is_written_in_subtree(vars[var], raw_deps_on, waw_deps_on, left_sub_tree)
             or (is_func_arg(pet, var.name, task) and is_scalar_val(var))
-        ) and is_readonly(var.name, war_deps_on, waw_deps_on, reverse_raw_deps_on):
+        ) and is_readonly(vars[var], war_deps_on, waw_deps_on, reverse_raw_deps_on):
             if is_global(var.name, subtree):
                 shared.append(var)
             else:
                 first_private.append(var)
         elif is_first_written_new(
-            var, raw_deps_on, war_deps_on, reverse_raw_deps_on, reverse_war_deps_on, subtree
+            var,
+            vars[var],
+            raw_deps_on,
+            war_deps_on,
+            reverse_raw_deps_on,
+            reverse_war_deps_on,
+            subtree,
         ):
             if is_scalar_val(var) and (
                 not used_in_task_parallelism_detection
                 or not __is_written_prior_to_task(pet, var, task)
             ):
                 if is_read_in(
-                    var,
+                    vars[var],
                     raw_deps_on,
                     war_deps_on,
                     reverse_raw_deps_on,
