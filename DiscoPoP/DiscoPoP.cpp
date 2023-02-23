@@ -3104,7 +3104,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
                                                      Int64, "", toInstrument);
     args.push_back(memAddr);
 
-    args.push_back(determineVariableName_dynamic(toInstrument));
+    args.push_back(getVariableNameAndDefLineValue(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
     Twine name = Twine("L").concat(Twine(uniqueNum));
@@ -3166,7 +3166,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
                                                      Int64, "", toInstrument);
     args.push_back(memAddr);
 
-    args.push_back(determineVariableName_dynamic(toInstrument));
+    args.push_back(getVariableNameAndDefLineValue(toInstrument));
 
 #ifdef SKIP_DUP_INSTR
     Twine name = Twine("S").concat(Twine(uniqueNum));
@@ -3214,6 +3214,16 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
     incCount->insertAfter(toInstrument);
     countUpdate->insertAfter(incCount);
 #endif
+}
+
+// returns variables in the form: varName/defLine
+Value *DiscoPoP::getVariableNameAndDefLineValue(Instruction *toInstrument) {
+    bool x;
+    string varName = this->determineVariableName_static(toInstrument, x, true) + "/";
+    varName += this->determineVariableDefLine(toInstrument);
+    IRBuilder<> builder(toInstrument);
+    Value *val = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
+    return val;
 }
 
 void DiscoPoP::insertDpFinalize(Instruction *before) {

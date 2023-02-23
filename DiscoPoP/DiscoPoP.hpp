@@ -250,6 +250,8 @@ namespace {
         
         string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/, bool disable_MetadataMap);
 
+        Value *getVariableNameAndDefLineValue(Instruction *I);
+
         void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
                                          std::map <string, string> *trueVarNamesFromMetadataMap);
 
