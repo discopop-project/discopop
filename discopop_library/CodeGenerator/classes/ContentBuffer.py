@@ -69,7 +69,7 @@ class ContentBuffer(object):
                     self.lines.append(line)
                 return
 
-    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int]) -> bool:
+    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
         Returns False if compilation of the modified code was not possible.
@@ -91,7 +91,12 @@ class ContentBuffer(object):
 
         # construct line
         pragma_line = Line(pragma.start_line)
-        pragma_line.content = pragma.pragma_str
+        if add_as_comment:
+            pragma_line.content = "//<DiscoPoP-IGNORED> "
+        else:
+            pragma_line.content = ""
+
+        pragma_line.content += pragma.pragma_str
         pragma_line.belongs_to_regions = copy.deepcopy(parent_regions)
         # create new region if necessary
         if len(pragma.children) > 0:
@@ -128,7 +133,15 @@ class ContentBuffer(object):
 
         # append children to lines (mark as contained in region)
         for child_pragma in pragma.children:
-            self.add_pragma(child_pragma, pragma_line.belongs_to_regions)
+            successful = self.add_pragma(child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment)
+
+            if not successful:
+                print("==> Skipped pragma insertion due to potential compilation errors!\n")
+                self.lines = backup_lines
+                self.next_free_region_id = backup_next_free_region_id
+                self.file_id = backup_file_id
+                self.max_line_num = backup_max_line_num
+                return False
 
         # check if the applied changes resulted in a compilable source code
         # create a temporary file to store the modified file contents
