@@ -613,7 +613,15 @@ def classify_task_vars(
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
     used_in_task_parallelism_detection=False,
-):
+) -> Tuple[
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[str],
+]:
     """Classify task variables
 
     :param pet: CU graph
@@ -623,12 +631,13 @@ def classify_task_vars(
     :param out_deps: out dependencies
     :param used_in_task_parallelism_detection: set True, if called in a task-parallelism detection context
     """
-    first_private: List[Variable] = []
-    private: List[Variable] = []
-    shared: List[Variable] = []
-    depend_in: List[Variable] = []
-    depend_out: List[Variable] = []
-    depend_in_out: List[Variable] = []
+
+    first_private: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    private: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    shared: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    depend_in: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    depend_out: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    depend_in_out: List[Tuple[Variable, Set[MemoryRegion]]] = []
     reduction_var_names: List[str] = []
 
     left_sub_tree = pet.get_left_right_subtree(task, False)
@@ -701,25 +710,25 @@ def classify_task_vars(
                 var_is_loop_index = True
                 break
         if var_is_loop_index:
-            private.append(var)
+            private.append((var, vars[var]))
         elif ("GeometricDecomposition" in type or "Pipeline" in type) and is_reduction_any(
             loops_start_lines, var.name, pet.reduction_vars
         ):
             reduction_var_names.append(var.name)
         elif is_depend_in_out(vars[var], in_deps, out_deps):
-            depend_in_out.append(var)
+            depend_in_out.append((var, vars[var]))
         elif is_depend_in_var(vars[var], in_deps, raw_deps_on):
-            depend_in.append(var)
+            depend_in.append((var, vars[var]))
         elif is_depend_out_var(vars[var], reverse_raw_deps_on, out_deps):
-            depend_out.append(var)
+            depend_out.append((var, vars[var]))
         elif (
             is_written_in_subtree(vars[var], raw_deps_on, waw_deps_on, left_sub_tree)
             or (is_func_arg(pet, var.name, task) and is_scalar_val(var))
         ) and is_readonly(vars[var], war_deps_on, waw_deps_on, reverse_raw_deps_on):
             if is_global(var.name, subtree):
-                shared.append(var)
+                shared.append((var, vars[var]))
             else:
-                first_private.append(var)
+                first_private.append((var, vars[var]))
         elif is_first_written_new(
             var,
             vars[var],
@@ -741,21 +750,42 @@ def classify_task_vars(
                     reverse_war_deps_on,
                     right_sub_tree,
                 ):
-                    shared.append(var)
+                    shared.append((var, vars[var]))
                 else:
-                    private.append(var)
+                    private.append((var, vars[var]))
             else:
-                shared.append(var)
+                shared.append((var, vars[var]))
+
+    # use known variables to reconstruct the correct variable names from the classified memory regions
+    left_subtree_without_called_nodes = pet.get_left_right_subtree(
+        task, False, ignore_called_nodes=True
+    )
+    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
 
     return (
-        sorted(first_private),
-        sorted(private),
-        sorted(shared),
-        sorted(depend_in),
-        sorted(depend_out),
-        sorted(depend_in_out),
+        sorted(__apply_dealiasing(first_private, prior_known_vars)),
+        sorted(__apply_dealiasing(private, prior_known_vars)),
+        sorted(__apply_dealiasing(shared, prior_known_vars)),
+        sorted(__apply_dealiasing(depend_in, prior_known_vars)),
+        sorted(__apply_dealiasing(depend_out, prior_known_vars)),
+        sorted(__apply_dealiasing(depend_in_out, prior_known_vars)),
         sorted(reduction_var_names),
     )
+
+
+def __apply_dealiasing(
+    input_list: List[Tuple[Variable, Set[MemoryRegion]]],
+    previously_known: Dict[Variable, Set[MemoryRegion]],
+) -> List[Variable]:
+    tmp_memory_regions = set()
+    for _, mem_regs in input_list:
+        tmp_memory_regions.update(mem_regs)
+    cleaned = [
+        pkv
+        for pkv in previously_known
+        if len(previously_known[pkv].intersection(tmp_memory_regions))
+    ]
+    return cleaned
 
 
 def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: CUNode) -> bool:
