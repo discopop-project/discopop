@@ -69,6 +69,22 @@ void DiscoPoP::setupCallbacks() {
 #endif
     );
 
+    DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
+                                                Void,
+                           
+                                                Int32, CharPtr, Int64, Int64, Int64
+    );
+
+    DpNew = ThisModule->getOrInsertFunction("__dp_new",
+                                                Void,
+                                                Int32, Int64, Int64, Int64
+    );
+
+    DpDelete = ThisModule->getOrInsertFunction("__dp_delete",
+                                                Void,
+                                                Int32, Int64
+    );
+
     DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                                      Void,
                                                      Int32);
@@ -695,7 +711,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             string type_str;
                             raw_string_ostream rso(type_str);
                             (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid);
+                            Variable v(string(it->getName()), rso.str(), lid, true, true);
                             n->argumentsList.push_back(v);
                         }
                     } else // get name of the indirect function which is called
@@ -768,7 +784,10 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 varType = determineVariableType(&*instruction);
                 varDefLine = determineVariableDefLine(&*instruction);
 
-                Variable v(varName, varType, varDefLine);
+                bool readAccess = isa<LoadInst>(instruction);
+                bool writeAccess = isa<StoreInst>(instruction);
+
+                Variable v(varName, varType, varDefLine, readAccess, writeAccess);
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
@@ -2009,7 +2028,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
+            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
@@ -2594,6 +2613,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     {
         return determineVariableName_dynamic((Instruction *)(operand));
     }
+    if (isa<AllocaInst>(I)){
+        return getOrInsertVarName_dynamic(I->getName().str(), builder);
+    }
     // if we cannot determine the name, then return *
     return getOrInsertVarName_dynamic("*", builder);
 }
@@ -2801,7 +2823,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai: root->argumentsList) {
                 *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
-                        << " defLine=\"" << xmlEscape(ai.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(ai.defLine) << "\""
+                        << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(ai.name) << "</arg>" << endl;
             }
             *outCUs << "\t\t</funcArguments>" << endl;
@@ -2851,7 +2875,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<localVariables>" << endl;
             for (auto lvi: cu->localVariableNames) {
                 *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
+                        << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(lvi.name) << "</local>" << endl;
             }
             *outCUs << "\t\t</localVariables>" << endl;
@@ -2859,7 +2885,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<globalVariables>" << endl;
             for (auto gvi: cu->globalVariableNames) {
                 *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
+                        << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(gvi.name) << "</global>" << endl;
             }
             *outCUs << "\t\t</globalVariables>" << endl;
@@ -2995,6 +3023,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
             }
         }
+            // alloca instruction
+        else if (isa<AllocaInst>(BI)) {
+            AllocaInst *AI = cast<AllocaInst>(BI);
+                instrumentAlloca(cast<AllocaInst>(BI));
+        }
             // load instruction
         else if (isa<LoadInst>(BI)) {
             instrumentLoad(cast<LoadInst>(BI));
@@ -3040,6 +3073,16 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 {
                     // only insert DpFinalize right before the main program exits
                     insertDpFinalize(&*BI);
+                    continue;
+                }
+                if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc"))
+                {
+                    instrumentNewOrMalloc(cast<CallInst>(BI));
+                    continue;
+                }
+                if (fn.equals("_ZdlPv") || fn.equals("free"))
+                {
+                    instrumentDeleteOrFree(cast<CallInst>(BI));
                     continue;
                 }
 
@@ -3090,6 +3133,75 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 }
 
 // Instrumentation function inserters.
+void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
+    int32_t lid = getLID(toInstrument, fileID);
+    if (lid == 0)
+        return;
+
+    // NOTE: manual memory management using malloc etc. not covered yet!
+
+
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+    args.push_back(determineVariableName_dynamic(toInstrument));
+
+    bool isGlobal;
+    //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
+    args.push_back(startAddr);
+    
+    Value *endAddr = startAddr;
+    if(toInstrument->isArrayAllocation()){
+        // endAddr = startAddr + allocated size
+        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+    }
+    args.push_back(endAddr);
+    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    IRB.CreateCall(DpAlloca, args, "");
+}
+
+void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
+    // add instrumentation for new instructions or calls to malloc
+    int32_t lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value* endAddr = startAddr;
+    Value* numElements = toInstrument->getArgOperand(0);
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numElements);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
+    // add instrumentation for delete instructions or calls to free
+    int32_t lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNonDebugInstruction());
+
+    args.push_back(startAddr);
+
+    IRB.CreateCall(DpDelete, args, "");
+}
+
+
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
     int32_t lid = getLID(toInstrument, fileID);

@@ -14,7 +14,9 @@
 #include "shadow.hpp"
 #include "signature.hpp"
 #include <string>
+#include <list>
 #include <cstdio>
+#include <limits>
 
 #ifdef __linux__ // headers only available on Linux
 #include <unistd.h>
@@ -61,6 +63,13 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
+    // TODO: Replace with more efficient data structure for searching
+    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    list<tuple<LID, string, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
+    ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
+    ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
+    int64_t nextFreeMemoryRegionId = 0;
+
     /******* BEGIN: parallelization section *******/
 
     pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
@@ -83,7 +92,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var) {
+    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -91,10 +100,10 @@ namespace __dp {
         depMap::iterator posInDeps = myMap->find(curr);
         if (posInDeps == myMap->end()) {
             depSet *tmp_depSet = new depSet();
-            tmp_depSet->insert(Dep(type, depOn, var));
+            tmp_depSet->insert(Dep(type, depOn, var, AAvar));
             myMap->insert(pair<int32_t, depSet *>(curr, tmp_depSet));
         } else {
-            posInDeps->second->insert(Dep(type, depOn, var));
+            posInDeps->second->insert(Dep(type, depOn, var, AAvar));
         }
 
         if (DP_DEBUG) {
@@ -146,6 +155,7 @@ namespace __dp {
 
                     dep += " " + decodeLID(d.depOn);
                     dep += "|" + string(d.var);
+                    dep += "(" + string(d.AAvar) + ")";
                     lineDeps.insert(dep);
                 }
 
@@ -275,6 +285,72 @@ namespace __dp {
         pthread_attr_destroy(&attr);
     }
 
+    
+    string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
+        // check if accessed addr in knwon range. If not, return fallback immediately
+        if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
+
+            bool search_forwards = true;
+            bool search_backwards = true;
+            auto fw_it = lastHitIterator;
+            auto bw_it = lastHitIterator;
+
+            // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
+            // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
+
+            while(true){
+                // search forward from lastHitIterator
+                if(search_forwards){
+                    if(*fw_it == allocatedMemoryRegions.back()){
+                        search_forwards = false;
+                    }
+                     // fw_it in range
+                    //cout << "Search for " << std::hex << addr << " in " << std::hex << get<2>(*fw_it) << " - " << std::hex << get<3>(*fw_it) << "\n";
+                    if(get<2>(*fw_it) <= addr && get<3>(*fw_it) >= addr){
+                        lastHitIterator = fw_it;
+                        return get<1>(*fw_it);
+                    }
+                    
+                    if(search_forwards){
+                        fw_it++;
+                    }
+                }
+                
+                // search backwards from lastHitIterator
+                if(search_backwards){
+                    if(*bw_it == allocatedMemoryRegions.front()){
+                        search_backwards = false;
+                    }
+
+                    //cout << "Search for BW " << std::hex << addr << " in " << std::hex << get<2>(*bw_it) << " - " << std::hex << get<3>(*bw_it) << "\n";
+                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
+                        lastHitIterator = bw_it;
+                        return get<1>(*bw_it);
+                    }
+
+                    if(search_backwards){
+                        bw_it--;
+                    }
+                }
+
+                if(!(search_forwards || search_backwards)){
+                    break;
+                }     
+
+            }
+
+//            for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+//                counter += 1;
+//                if(get<2>(entry) <= addr && get<3>(entry) >= addr){
+//                    cout << "HIT AT counter = " << std::to_string(counter) << "\n";
+//                    return get<1>(entry);
+//                }
+//            }
+        }
+        
+        return fallback;
+    }
+
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
         int64_t workerID = addr % NUM_WORKERS;
         numAccesses[workerID]++;
@@ -282,6 +358,7 @@ namespace __dp {
         current.isRead = isRead;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -365,23 +442,23 @@ namespace __dp {
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var);
+                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var);
+                            addDep(INIT, access.lid, 0, access.var, access.AAvar);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var);
+                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var);
+                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar);
                             }
                         }
                     }
@@ -500,6 +577,7 @@ namespace __dp {
         current.isRead = true;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -546,6 +624,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -592,6 +671,7 @@ namespace __dp {
         current.isRead = false;
         current.lid = 0;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
         current.skip = true;
 
@@ -606,52 +686,64 @@ namespace __dp {
         }
     }
 
-#ifdef SKIP_DUP_INSTR
-    void __dp_alloca(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count)
-    {
-#else
-    void __dp_alloca(LID lid, ADDR addr, char *var) {
-#endif
-        if (targetTerminated) {
-            if (DP_DEBUG) {
-                cout << "__dp_write() is not executed since target program has returned from main()." << endl;
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
+        // create entry to list of allocatedMemoryRegions
+        string var_name = allocId;
+        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
+        
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
+    }
+
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
+        // instrumentation function for new and malloc
+        
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
+
+        // calculate endAddr of memory region
+        endAddr = startAddr + numBits / 8;
+
+        cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        printf(" NumBits: %lld\n", numBits);
+
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
+        lastHitIterator = allocatedMemoryRegions.end();
+        lastHitIterator--;
+        cout << "LHI SET TO: " << &*lastHitIterator << "\n";
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
+    }
+
+    void __dp_delete(LID lid, ADDR startAddr){
+        // TODO more efficient implementation
+
+        // find memory region to be deleted
+        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+            if(get<2>(entry) == startAddr){
+                // delete memory region
+                cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
+                allocatedMemoryRegions.remove(entry);
+                return;
             }
-            return;
         }
-        // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-        if (lastaddr == addr && count >= 2)
-        {
-             return;
-        }
-#endif
-        // For tracking function call or invoke
-        lastCallOrInvoke = 0;
-        lastProcessedLine = lid;
-
-        if (DP_DEBUG) {
-            cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr
-                 << endl;
-        }
-
-        int64_t workerID = addr % NUM_WORKERS;
-        AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-        current.isRead = false;
-        current.lid = 0;
-        current.var = var;
-        current.addr = addr;
-        current.skip = true;
-
-        if (tempAddrCount[workerID] == CHUNK_SIZE) {
-            pthread_mutex_lock(&addrChunkMutexes[workerID]);
-            addrChunkPresent[workerID] = true;
-            chunks[workerID].push(tempAddrChunks[workerID]);
-            pthread_cond_signal(&addrChunkPresentConds[workerID]);
-            pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-            tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-            tempAddrCount[workerID] = 0;
-        }
-    }
+        cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
+    } 
 
     void __dp_report_bb(int32_t bbIndex) {
         bbList->insert(bbIndex);
@@ -775,6 +867,12 @@ namespace __dp {
             outPutDeps = new stringDepMap();
             bbList = new ReportedBBSet();
             // End HA
+
+            // initialize lastHitIterator to dummy element
+            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
+            lastHitIterator = allocatedMemoryRegions.end();
+            lastHitIterator--;
+            cout << "LHI SET TO: " << &*lastHitIterator << "\n";
 
 #ifdef __linux__
             // try to get an output file name w.r.t. the target application
