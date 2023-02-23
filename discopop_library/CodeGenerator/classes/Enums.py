@@ -17,8 +17,8 @@ class PragmaPosition(IntEnum):
 
 
 class OmpConstructPositioning(IntEnum):
-    BEFORE_LINE = 1
-    AFTER_LINE = 2
+    BEFORE_LINE = 0
+    AFTER_LINE = 1
 
 
 class PragmaType(IntEnum):

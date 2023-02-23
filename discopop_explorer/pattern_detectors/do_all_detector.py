@@ -76,6 +76,12 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
         for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
     ]
 
+    # check if all subnodes are parallelizable
+    for node in subnodes:
+        if node.performs_file_io:
+            # node is not reliably parallelizable as some kind of file-io is performed.
+            return False
+
     for i in range(0, len(subnodes)):
         children_cache: Dict[CUNode, List[CUNode]] = dict()
         dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
