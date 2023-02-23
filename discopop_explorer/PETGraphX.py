@@ -52,7 +52,6 @@ class EdgeType(Enum):
     SUCCESSOR = 1
     DATA = 2
     CALLSNODE = 3
-    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -341,7 +340,7 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    # print("Adding Dep: ", idx, "/", len(dependencies_list))
+                    print("Adding Dep: ", idx, "/", len(dependencies_list))
                     # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
                     # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
 
@@ -461,14 +460,6 @@ class PETGraphX(object):
             pos,
             edge_color="yellow",
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
-        )
-        nx.draw_networkx_edges(
-            self.g,
-            pos,
-            edge_color="orange",
-            edgelist=[
-                e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME
-            ],
         )
 
         # plt.show()
@@ -627,23 +618,16 @@ class PETGraphX(object):
             rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name
         )
 
-    def depends_ignore_readonly(
-        self,
-        source: CUNode,
-        target: CUNode,
-        root_loop: CUNode,
-        consider_intra_iteration_raws: bool = False,
-    ) -> bool:
-        """Detects if source node or one of it's children has a dependency to target node or one of its children.
-        In order to allow checking for loop-carried and loop-carried anti dependencies,
-        RAW and WAR dependencies are considered.
+    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
+        """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored.
 
         :param source: source node for dependency detection (later occurrence in the source code)
         :param target: target of dependency (prior occurrence in the source code)
         :param root_loop: root loop
-        :param consider_intra_iteration_raws: used to differentiate behavior required for do-all and e.g. pipeline detection
-        :return: true, if there is dependency"""
+        :return: true, if there is RAW dependency"""
+        if source == target:
+            return False
 
         # get recursive children of source and target
         source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
@@ -678,60 +662,13 @@ class PETGraphX(object):
                 for elem in filtered_deps
                 if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
-
             # get a list of dependency targets
             dep_targets = [t for _, t, _ in filtered_deps]
             # check if overlap between dependency targets and target_children exists.
             overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
             if len(overlap) > 0:
-                # check if the RAW dependency happens within a single iteration
-                # if so, ignore it
-                for target_id in overlap:
-                    if (
-                        self.is_predecessor(target_id, source_child_id)
-                        and consider_intra_iteration_raws
-                    ):
-                        continue
-                    else:
-                        # a RAW dependency exists
-                        return True
-
-        # check for WAR dependencies between any of the source_children and any of the target_children
-        # which do not occur within a single loop iteration
-        for source_child_id in source_children_ids:
-            # get a list of filtered dependencies, outgoing from source_child
-            out_deps = self.out_edges(source_child_id, EdgeType.DATA)
-            out_war_deps = [dep for dep in out_deps if dep[2].dtype == DepType.WAR]
-            filtered_deps = [
-                elem
-                for elem in out_war_deps
-                if not self.is_readonly_inside_loop_body(
-                    elem[2],
-                    root_loop,
-                    root_children_cus,
-                    root_children_loops,
-                    loops_start_lines=loop_start_lines,
-                )
-            ]
-            filtered_deps = [
-                elem
-                for elem in filtered_deps
-                if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
-            ]
-            # get a list of dependency targets
-            dep_targets = [t for _, t, _ in filtered_deps]
-            # check if overlap between dependency targets and target_children exists.
-            overlap = [node_id for node_id in dep_targets if node_id in target_children_ids]
-            if len(overlap) > 0:
-                for node_id in overlap:
-                    # if a WAR dependency between iterations exists, it can be ignored if the variable is overwritten
-                    # by the successive iteration before being read
-                    if self.is_predecessor(source_child_id, node_id):
-                        continue
-
-                    # a WAR within one iterations exists, i.e. a value written by the previous iteration is read
-                    return True
-
+                # if so, a RAW dependency exists
+                return True
         return False
 
     def unused_check_alias(self, s: NodeID, t: NodeID, d: Dependency, root_loop: CUNode) -> bool:
@@ -1169,81 +1106,6 @@ class PETGraphX(object):
                 if t not in visited and t not in queue
             ]
         return False
-
-    def dump_to_pickled_json(self) -> str:
-        """Encodes and returns the entire Object into a pickled json string.
-        The encoded string can be reconstructed into an object by using:
-        jsonpickle.decode(json_str)
-
-        :return: encoded string
-        """
-        return jsonpickle.encode(self)
-
-    def check_reachability(
-        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
-    ) -> bool:
-        """check if target is reachable from source via edges of types edge_type.
-        :param pet: PET graph
-        :param source: CUNode
-        :param target: CUNode
-        :param edge_types: List[EdgeType]
-        :return: Boolean"""
-        if source == target:
-            return True
-        visited: List[str] = []
-        queue = [target]
-        while len(queue) > 0:
-            cur_node = queue.pop(0)
-            if type(cur_node) == list:
-                cur_node_list = cast(List[CUNode], cur_node)
-                cur_node = cur_node_list[0]
-            visited.append(cur_node.id)
-            tmp_list = [
-                (s, t, e)
-                for s, t, e in self.in_edges(cur_node.id)
-                if s not in visited and e.etype in edge_types
-            ]
-            for e in tmp_list:
-                if self.node_at(e[0]) == source:
-                    return True
-                else:
-                    if e[0] not in visited:
-                        queue.append(self.node_at(e[0]))
-        return False
-
-    def check_reachability_and_get_path_nodes(
-        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
-    ) -> Tuple[bool, List[CUNode]]:
-        """check if target is reachable from source via edges of types edge_type.
-        :param pet: PET graph
-        :param source: CUNode
-        :param target: CUNode
-        :param edge_types: List[EdgeType]
-        :return: Boolean"""
-        if source == target:
-            return True, []
-        visited: List[NodeID] = []
-        queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
-        while len(queue) > 0:
-            cur_node, cur_path = queue.pop(0)
-            if type(cur_node) == list:
-                cur_node_list = cast(List[CUNode], cur_node)
-                cur_node = cur_node_list[0]
-            visited.append(cur_node.id)
-            tmp_list = [
-                (s, t, e)
-                for s, t, e in self.in_edges(cur_node.id)
-                if s not in visited and e.etype in edge_types
-            ]
-            for e in tmp_list:
-                if self.node_at(e[0]) == source:
-                    return True, cur_path
-                else:
-                    if e[0] not in visited:
-                        tmp_path = copy.deepcopy(cur_path)
-                        tmp_path.append(cur_node)
-                        queue.append((self.node_at(e[0]), tmp_path))
-        return False, []
 
     def dump_to_gephi_file(self, name="pet.gexf"):
         """Note: Destroys the PETGraph!"""

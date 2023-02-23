@@ -86,7 +86,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     __loop_iterations = {}
     nodes = pet.all_nodes(NodeType.FUNC)
     for idx, node in enumerate(nodes):
-        # print("Geo. Dec.:", idx, "/", len(nodes))
+        print("Geo. Dec.:", idx, "/", len(nodes))
         if not contains(
             result, lambda x: x.node_id == node.id
         ) and __detect_geometric_decomposition(pet, node):

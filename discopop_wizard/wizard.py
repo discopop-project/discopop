@@ -18,7 +18,6 @@ from discopop_wizard.classes.Arguments import Arguments
 from discopop_wizard.classes.Console import Console
 from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
-from discopop_wizard.classes.TKVarStorage import TKVarStorage
 from discopop_wizard.screens.main import MainScreen
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
@@ -59,7 +58,6 @@ class DiscoPoPConfigurationWizard(object):
     config_dir: str
     menubar: tk.Menu
     profiling_container: Optional[ProfilingContainer] = None
-    tk_var_storage: TKVarStorage
 
     ## font styles
     style_font_bold: str = "Helvetica 12 bold"
@@ -120,9 +118,6 @@ class DiscoPoPConfigurationWizard(object):
         self.console_frame.columnconfigure(1, weight=1)
         self.console_frame.rowconfigure(1, weight=1)
         self.console = Console(self.console_frame)
-
-        # create TKVarStorage
-        self.tk_var_storage = TKVarStorage(self)
 
         MainScreen(self, self.window_frame)
 

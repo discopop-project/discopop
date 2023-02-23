@@ -55,7 +55,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(NodeType.LOOP)
     for idx, node in enumerate(nodes):
-        # print("Do-all:", idx, "/", len(nodes))
+        print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
             if not node.reduction and node.loop_iterations >= 0:
@@ -86,9 +86,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
         children_cache: Dict[CUNode, List[CUNode]] = dict()
         dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
-            if pet.depends_ignore_readonly(
-                subnodes[i], subnodes[j], root_loop, consider_intra_iteration_raws=True
-            ):
+            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
 
     return True

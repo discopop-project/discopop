@@ -9,20 +9,8 @@
 import os
 
 import tkinter as tk
-from enum import IntEnum
 from tkinter import ttk
-from typing import List, Tuple, Dict
-
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
-    EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
-from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
-from discopop_wizard.classes.CodePreview import CodePreview
-from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
-
-
-class PragmaType(IntEnum):
-    PRAGMA = 1
-    REGION = 2
+from typing import List, Tuple
 
 
 class Suggestion(object):
@@ -32,8 +20,7 @@ class Suggestion(object):
     start_line: int
     end_line: int
 
-    def __init__(self, wizard, type: str, values: dict):
-        self.wizard = wizard
+    def __init__(self, type: str, values: dict):
         self.type = type
         self.values = values
 
@@ -75,331 +62,112 @@ class Suggestion(object):
                 path = split_line[1]
                 file_mapping[id] = path
 
-        # create CodePreview object
-        code_preview = CodePreview(self.wizard, self.file_id, file_mapping[self.file_id])
-
-        # get and insert pragmas
+        # load source code to content window
+        source_code_path = file_mapping[self.file_id]
+        with open(source_code_path, "r") as f:
+            for idx, line in enumerate(f.readlines()):
+                idx = idx + 1  # start with line number 1
+                source_code.insert(tk.END, str(idx) + "    " + line)
+        # get list of pragmas to be inserted
         pragmas = self.__get_pragmas()
-        for pragma in pragmas:
-            code_preview.add_pragma(pragma, [])
 
-        # get and insert metadata
-        live_device_variables, live_host_variables = self.__get_metadata_live_variables()
-        code_preview.add_live_variables(live_device_variables, live_host_variables)
-
-
-
-
-        # show CodePreview
-        code_preview.show_in(source_code)
+        # insert pragmas to code preview and add highlights
+        highlight_start_positions = self.__insert_pragmas(source_code, pragmas)
 
         # show targeted code section
-        code_preview.jump_to_first_modification(source_code)
+        source_code.see(highlight_start_positions[0])
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def __get_metadata_live_variables(self) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
-        live_device_variables: Dict[int, List[str]] = dict()
-        if "meta_device_liveness" in self.values:
-            for var_name in self.values["meta_device_liveness"]:
-                for raw_line in self.values["meta_device_liveness"][var_name]:
-                    int_line_num = int(raw_line.split(":")[1])
-                    dirty_marker = raw_line.split(":")[2]
-                    if int_line_num not in live_device_variables:
-                        live_device_variables[int_line_num] = []
-                    live_device_variables[int_line_num].append(var_name + dirty_marker)
-
-        live_host_variables: Dict[int, List[str]] = dict()
-        if "meta_host_liveness" in self.values:
-            for var_name in self.values["meta_host_liveness"]:
-                for raw_line in self.values["meta_host_liveness"][var_name]:
-                    int_line_num = int(raw_line.split(":")[1])
-                    dirty_marker = raw_line.split(":")[2]
-                    if int_line_num not in live_host_variables:
-                        live_host_variables[int_line_num] = []
-                    live_host_variables[int_line_num].append(var_name + dirty_marker)
-
-
-        return live_device_variables, live_host_variables
-
-
-    def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
-        return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],
+    def get_as_button(self, scrollable_frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
+        return tk.Button(scrollable_frame, text=self.type + " @ " + self.values["start_line"],
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
 
-    def __get_do_all_and_reduction_pragmas(self) -> List[Pragma]:
+    def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str]]):
+        highlight_start_positions = []
+
+        idx = 0
+        for start_line, end_line, pragma_str in sorted(pragmas, reverse=True,
+                                                       key=lambda v: int(v[0])):  # sort reverse by line num
+            # add pragma string
+            source_code.insert(str(start_line) + ".0", "    " + pragma_str + "\n")
+            # highlight inserted pragmas and their target code sections
+            pos = self.__highlight_code(source_code, start_line, end_line + 1,
+                                        idx)  # +1 to account for added pragma line
+            highlight_start_positions.append(pos)
+            idx += 1
+
+        return sorted(highlight_start_positions, key=lambda value: int(value.split(".")[0]))
+
+    def __highlight_code(self, source_code: tk.Text, start_line: int, end_line: int, index):
+        """highlights the specified lines in the source code preview and returns the used start position.
+        index is used to determine the color."""
+        end_line_length = 200
+        background_color = "#e5f2b3" if index % 2 == 0 else "#a4ed9a"
+        # highlight code
+        start_pos = str(start_line) + ".0"
+        end_pos = str(end_line) + "." + str(end_line_length)
+        source_code.tag_add("start" + str(index), start_pos, end_pos)
+        source_code.tag_config("start" + str(index), background=background_color, foreground="black")
+        return start_pos
+
+    def __get_pragmas(self) -> List[Tuple[int, int, str]]:
+        """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
-        pragma = Pragma()
-        pragma.pragma_str = "#pragma omp parallel for "
-        if len(self.values["first_private"]) > 0:
-            pragma.pragma_str += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
-        if len(self.values["private"]) > 0:
-            pragma.pragma_str += "private(" + ",".join(self.values["private"]) + ") "
-        if len(self.values["last_private"]) > 0:
-            pragma.pragma_str += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
-        if len(self.values["shared"]) > 0:
-            pragma.pragma_str += "shared(" + ",".join(self.values["shared"]) + ") "
-        if len(self.values["reduction"]) > 0:
-            reductions_dict = dict()
-            for entry in self.values["reduction"]:
-                red_type = entry.split(":")[0]
-                var = entry.split(":")[1]
-                if red_type not in reductions_dict:
-                    reductions_dict[red_type] = []
-                reductions_dict[red_type].append(var)
-            for red_type in reductions_dict:
-                pragma.pragma_str += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
-
-        pragma.file_id = self.file_id
-        pragma.start_line = self.start_line
-        pragma.end_line = self.end_line
-
-        pragmas.append(pragma)
-        return pragmas
-
-    def __get_pipeline_pragmas(self) -> List[Pragma]:
-        pragmas = []
-
-        for stage in self.values["stages"]:
-            pragma = Pragma()
-            pragma.file_id = self.file_id
-            pragma.start_line = int(stage["startsAtLine"].split(":")[1])
-            pragma.end_line = int(stage["endsAtLine"].split(":")[1])
-            pragma.pragma_str = "#pragma omp task "
-            if len(stage["first_private"]) > 0:
-                pragma.pragma_str += "firstprivate(" + ",".join(stage["first_private"]) + ") "
-            if len(stage["private"]) > 0:
-                pragma.pragma_str += "private(" + ",".join(stage["private"]) + ") "
-            if len(stage["shared"]) > 0:
-                pragma.pragma_str += "shared(" + ",".join(stage["shared"]) + ") "
-            if len(stage["reduction"]) > 0:
+        if self.type == "do_all" or self.type == "reduction":
+            pragma = "#pragma omp parallel for "
+            if len(self.values["first_private"]) > 0:
+                pragma += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
+            if len(self.values["private"]) > 0:
+                pragma += "private(" + ",".join(self.values["private"]) + ") "
+            if len(self.values["last_private"]) > 0:
+                pragma += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
+            if len(self.values["shared"]) > 0:
+                pragma += "shared(" + ",".join(self.values["shared"]) + ") "
+            if len(self.values["reduction"]) > 0:
                 reductions_dict = dict()
-                for entry in stage["reduction"]:
+                for entry in self.values["reduction"]:
                     red_type = entry.split(":")[0]
                     var = entry.split(":")[1]
                     if red_type not in reductions_dict:
                         reductions_dict[red_type] = []
                     reductions_dict[red_type].append(var)
                 for red_type in reductions_dict:
-                    pragma.pragma_str += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
-            if len(stage["in_deps"]) > 0:
-                pragma.pragma_str += "depends(in:" + ",".join(stage["in_deps"]) + ") "
-            if len(stage["out_deps"]) > 0:
-                pragma.pragma_str += "depends(out:" + ",".join(stage["out_deps"]) + ") "
-            if len(stage["in_out_deps"]) > 0:
-                pragma.pragma_str += "depends(inout:" + ",".join(stage["in_out_deps"]) + ") "
-            pragmas.append(pragma)
-        return pragmas
-
-    def     __get_simple_gpu_pragmas(self, region_start, region_end, contained_loops, map_to_vars, map_from_vars,
-                                 map_to_from_vars, map_alloc_vars, map_delete_vars, consumed_vars, produced_vars,
-                                 indentation: int = 0, ignore_mapping_clauses: bool = False
-                                 ) -> List[Tuple[int, int, str, PragmaType, int]]:
-        pragmas = []
-
-        region_start_line = int(region_start.split(":")[1])
-        region_end_line = int(region_end.split(":")[1])
-        for loop in contained_loops:
-            loop_start = loop["start_line"]
-            loop_start_line = int(loop_start.split(":")[1])
-            loop_end = loop["end_line"]
-            loop_end_line = int(loop_end.split(":")[1])
-            for construct in loop["constructs"]:
-                construct_start = construct["line"]
-                construct_start_line = int(construct_start.split(":")[1])
-                pragma = Pragma()
-                pragma.pragma_str = construct["name"] + " "
-                if loop["collapse"] > 1:
-                    pragma.pragma_str += "collapse(" + str(loop["collapse"]) + ") "
-                for clause in construct["clauses"]:
-                    if ignore_mapping_clauses:
-                        if clause.startswith("map("):
-                            continue
-                    pragma.pragma_str += clause + " "
-                # determine start_line and end_line
-                if construct_start_line == loop_start_line:
-                    # if construct targets loop, use loop scope
-                    start_line = loop_start_line
-                    end_line = loop_end_line
-                elif loop_start_line <= construct_start_line <= loop_end_line:
-                    # if construct is inside loop scope, start at construct line and end at loop scope
-                    # (should not be used currently)
-                    start_line = construct_start_line
-                    end_line = loop_end_line
-                else:
-                    # else, use construct line
-                    start_line = construct_start_line
-                    end_line = construct_start_line
-                # determine positioning of the pragma
-                if construct["positioning"] == OmpConstructPositioning.BEFORE_LINE:
-                    pragma.pragma_position = PragmaPosition.BEFORE_START
-                elif construct["positioning"] == OmpConstructPositioning.AFTER_LINE:
-                    pragma.pragma_position = PragmaPosition.AFTER_START
-                else:
-                    raise ValueError("Unsupported positioning information: ", construct["positioning"])
-                # create pragma for visualization
-                pragma.start_line = start_line
-                pragma.end_line = end_line
-                pragma.file_id = self.file_id
-                pragmas.append(pragma)
-
-        return pragmas
-
-    def __get_update_pragmas(self, update_instructions) -> List[Pragma]:
-        pragmas = []
-        for source_cu_id, sink_cu_id, update_type, target_var, pragma_line in update_instructions:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target update "
-
-            if update_type == UpdateType.TO_DEVICE:
-                # to device means host is writing, so update after the instruction
-                pragma.pragma_position = PragmaPosition.BEFORE_START  # PragmaPosition.AFTER_END
-                pragma.pragma_str += "to("
-            elif update_type == UpdateType.FROM_DEVICE:
-                # from device means host is reading, so update before the instruction
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-                pragma.pragma_str += "from("
-            elif update_type == UpdateType.ALLOCATE:
-                # allocate memory, not written to before
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-                pragma.pragma_str += "alloc("
-            else:
-                raise ValueError("Unsupported update type: ", update_type)
-            pragma.pragma_str += target_var + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            pragmas.append(pragma)
-        return pragmas
-
-    def __get_data_region_dependencies(self, depend_in, depend_out) -> List[Pragma]:
-        pragmas = []
-        for var_name, cu_id, pragma_line in depend_in:
-            pragma = Pragma()
-            pragma.pragma_str = "#depend in(" + var_name + ") @ " + cu_id + " "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            pragma.pragma_position = PragmaPosition.BEFORE_START
-            pragmas.append(pragma)
-
-        for var_name, cu_id, pragma_line in depend_out:
-            pragma = Pragma()
-            pragma.pragma_str = "#depend out(" + var_name + ") @ " + cu_id + " "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            pragma.pragma_position = PragmaPosition.BEFORE_START
-            pragmas.append(pragma)
-
-        return pragmas
-
-    def __get_data_region_pragmas(self, entry_points, exit_points) -> List[Pragma]:
-        pragmas = []
-        for var_name, source_cu_id, sink_cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target enter data "
-            if entry_point_type == EntryPointType.TO_DEVICE:
-                pragma.pragma_str += "map(to: "
-            elif entry_point_type == EntryPointType.ALLOCATE:
-                pragma.pragma_str += "map(alloc: "
-            elif entry_point_type == EntryPointType.ASYNC_TO_DEVICE:
-                pragma.pragma_str += "nowait map(to: "
-            elif entry_point_type == EntryPointType.ASYNC_ALLOCATE:
-                pragma.pragma_str += "nowait map(alloc:"
-            else:
-                raise ValueError("Usupported EntryPointType: ", entry_point_type)
-            pragma.pragma_str += var_name + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if entry_point_positioning == EntryPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif entry_point_positioning == EntryPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
-            pragmas.append(pragma)
-
-        for var_name, source_cu_id, sink_cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
-            pragma = Pragma()
-            pragma.pragma_str = "#pragma omp target exit data "
-            if exit_point_type == ExitPointType.FROM_DEVICE:
-                pragma.pragma_str += "map(from: "
-            elif exit_point_type == ExitPointType.DELETE:
-                pragma.pragma_str += "map(delete: "
-            elif exit_point_type == ExitPointType.ASYNC_FROM_DEVICE:
-                pragma.pragma_str += "nowait map(from: "
-            else:
-                raise ValueError("Usupported ExitPointType: ", exit_point_type)
-            pragma.pragma_str += var_name + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
-            pragma_line_num = int(pragma_line.split(":")[1])
-            pragma.start_line = pragma_line_num
-            pragma.end_line = pragma_line_num
-            pragma.file_id = self.file_id
-            if exit_point_positioning == ExitPointPositioning.BEFORE_CU:
-                pragma.pragma_position = PragmaPosition.BEFORE_START
-            elif exit_point_positioning == ExitPointPositioning.AFTER_CU:
-                pragma.pragma_position = PragmaPosition.AFTER_END
-            else:
-                raise ValueError("Usupported ExitPointPositioning: ", exit_point_positioning)
-            pragmas.append(pragma)
-        return pragmas
-
-    def __get_combined_gpu_pragmas(self) -> List[Pragma]:
-        pragmas = []
-        # add async data movement
-        pragmas += self.__get_data_region_pragmas(self.values["data_region_entry_points"],
-                                                  self.values["data_region_exit_points"])
-        # add dependencies
-        pragmas += self.__get_data_region_dependencies(self.values["data_region_depend_in"], self.values["data_region_depend_out"])
-
-        # add gpu loops
-        for region in self.values["contained_regions"]:
-            pragmas += self.__get_simple_gpu_pragmas(region["start_line"], region["end_line"],
-                                                     region["contained_loops"],
-                                                     region["map_to_vars"], region["map_from_vars"],
-                                                     region["map_to_from_vars"],
-                                                     region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=True)
-        # add update instructions to pragmas
-        pragmas += self.__get_update_pragmas(self.values["update_instructions"])
-
-        return pragmas
-
-    def __get_pragmas(self) -> List[Pragma]:
-        """returns a list of source code lines and pragmas to be inserted into the code preview"""
-        pragmas = []
-        if self.type == "do_all" or self.type == "reduction":
-            pragmas += self.__get_do_all_and_reduction_pragmas()
+                    pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+            pragma_tuple = (self.start_line, self.end_line, pragma)
+            pragmas.append(pragma_tuple)
             return pragmas
         elif self.type == "pipeline":
-            pragmas += self.__get_pipeline_pragmas()
-        elif self.type == "simple_gpu":
-            pragmas += self.__get_simple_gpu_pragmas(self.values["start_line"], self.values["end_line"],
-                                                     self.values["contained_loops"],
-                                                     self.values["map_to_vars"], self.values["map_from_vars"],
-                                                     self.values["map_to_from_vars"],
-                                                     self.values["map_alloc_vars"], self.values["map_delete_vars"],
-                                                     self.values["consumed_vars"], self.values["produced_vars"]
-                                                     )
-        elif self.type == "combined_gpu":
-            pragmas += self.__get_combined_gpu_pragmas()
+            for stage in self.values["stages"]:
+                pragma = "#pragma omp task "
+                if len(stage["first_private"]) > 0:
+                    pragma += "firstprivate(" + ",".join(stage["first_private"]) + ") "
+                if len(stage["private"]) > 0:
+                    pragma += "private(" + ",".join(stage["private"]) + ") "
+                if len(stage["shared"]) > 0:
+                    pragma += "shared(" + ",".join(stage["shared"]) + ") "
+                if len(stage["reduction"]) > 0:
+                    reductions_dict = dict()
+                    for entry in stage["reduction"]:
+                        red_type = entry.split(":")[0]
+                        var = entry.split(":")[1]
+                        if red_type not in reductions_dict:
+                            reductions_dict[red_type] = []
+                        reductions_dict[red_type].append(var)
+                    for red_type in reductions_dict:
+                        pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+                if len(stage["in_deps"]) > 0:
+                    pragma += "depends(in:" + ",".join(stage["in_deps"]) + ") "
+                if len(stage["out_deps"]) > 0:
+                    pragma += "depends(out:" + ",".join(stage["out_deps"]) + ") "
+                if len(stage["in_out_deps"]) > 0:
+                    pragma += "depends(inout:" + ",".join(stage["inout_deps"]) + ") "
+                pragma_tuple = (
+                int(stage["startsAtLine"].split(":")[1]), int(stage["endsAtLine"].split(":")[1]), pragma)
+                pragmas.append(pragma_tuple)
         else:
-            pragma = Pragma()
-            pragma.file_id = self.file_id
-            pragma.start_line = self.start_line
-            pragma.end_line = self.end_line
-            pragma.pragma_str = "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type
-            pragmas.append(pragma)
+            pragmas.append((self.start_line, self.end_line, "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type))
         return pragmas
 
     def get_details(self) -> str:

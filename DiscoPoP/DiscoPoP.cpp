@@ -3157,10 +3157,6 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
         // endAddr = startAddr + allocated size
         endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
     }
-//    if(toInstrument->isStaticAlloca()){
-//        // only consider "true" memory allocation to reduce overhead
-//        return;
-//    }
     args.push_back(endAddr);
     args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
