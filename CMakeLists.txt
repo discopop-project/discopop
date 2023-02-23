@@ -78,6 +78,7 @@ if(${DP_INSTALLATION_EXIT_CODE})
 endif()
 
 # save build configuration to build/build_config.txt
+file(REMOVE "${DiscoPoP_BINARY_DIR}/build_config.txt")
 file(TOUCH "${DiscoPoP_BINARY_DIR}/build_config.txt")
 file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_BUILD=${DiscoPoP_BINARY_DIR}\n")
 file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_SOURCE=${DiscoPoP_SOURCE_DIR}\n")
