@@ -301,11 +301,10 @@ def is_first_written(
         if e[2].var_name == var and any([n.id == e[1] for n in sub]):
             res = False
             for eraw in raw:
-                # TODO check
                 if (
                     eraw[2].var_name == var
                     and any([n.id == e[1] for n in sub])
-                    and e[0] == eraw[2].sink_line
+                    and e[2].source_line == eraw[2].sink_line
                 ):
                     res = True
                     break
@@ -543,7 +542,10 @@ def classify_loop_variables(
     # vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):
-            private.append(var)
+            if is_read_in_subtree(var.name, rev_raw, rst):
+                last_private.append(var)
+            else:
+                private.append(var)
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
             var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
@@ -566,6 +568,8 @@ def classify_loop_variables(
                 if not is_scalar_val(var):
                     # array type variable is written
                     shared.append(var)
+                else:
+                    private.append(var)
 
         elif is_first_written(var.name, raw, war, sub):
             if is_read_in_subtree(var.name, rev_raw, rst):

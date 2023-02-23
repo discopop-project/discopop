@@ -479,12 +479,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName().str();
-            
+
             // Do not allow to combine Instructions from different scopes in the source code.
             if((&*instruction)->getDebugLoc()){
                 if ((&*instruction)->getDebugLoc()->getScope() != scopeBuffer){
                     // scopes are not equal
-                    
+
                     int scopeIsParentOfBuffer = 0;
                     if(scopeBuffer){
                         scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
@@ -500,7 +500,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
-                    
+
                             cu->basicBlockName = basicBlockName;
                             CUVector.push_back(cu);
                             suspiciousVariables.clear();
@@ -514,13 +514,13 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             currentNode->childrenNodes.push_back(cu);
                             temp->successorCUs.push_back(cu->ID);
                             BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
-                        }   
+                        }
                     }
                     // update scopeBuffer
                         scopeBuffer = (&*instruction)->getDebugLoc()->getScope();
                 }
             }
-            
+
 
             if (lid > 0) {
                 cu->instructionsLineNumbers.insert(lid);
@@ -602,6 +602,38 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             programGlobalVariablesSet.count(varName)) {
                             if (lid > 0)
                                 cu->readPhaseLineNumbers.insert(lid);
+                        }
+                    }
+                }
+                else if (isa<CallInst>(instruction)){
+                    // get the name of the called function and check if a FileIO function is called
+                    CallInst *ci = cast<CallInst>(instruction);
+                    set<string> IOFunctions {"fopen", "fopen_s", "freopen", "freopen_s", "fclose", "fflush", "setbuf",
+                                             "setvbuf", "fwide", "fread", "fwrite", "fgetc", "getc", "fgets", "fputc",
+                                             "putc", "fputs", "getchar", "gets", "gets_s", "putchar", "puts", "ungetc",
+                                             "fgetwc", "getwc", "fgetws", "fputwc", "putwc", "fputws", "getwchar",
+                                             "putwchar", "ungetwc", "scanf", "fscanf", "sscanf", "scanf_s", "fscanf_s",
+                                             "sscanf_s", "vscanf", "vfscanf", "vsscanf", "vscanf_s", "vfscanf_s",
+                                             "vsscanf_s", "printf", "fprintf", "sprintf", "snprintf", "printf_s",
+                                             "fprintf_s", "sprintf_s", "snprintf_s", "vprintf", "vfprintf", "vsprintf",
+                                             "vsnprintf", "vprintf_s", "vfprintf_s", "vsprintf_s", "vsnprintf_s",
+                                             "wscanf", "fwscanf", "swscanf", "wscanf_s", "fwscanf_s", "swscanf_s",
+                                             "vwscanf", "vfwscanf", "vswscanf", "vwscanf_s", "vfwscanf_s", "vswscanf_s",
+                                             "wprintf", "fwprintf", "swprintf", "wprintf_s", "wprintf_s", "swprintf_s",
+                                             "snwprintf_s", "vwprintf", "vfwprintf", "vswprintf", "vwprintf_s",
+                                             "vfwprintf_s", "vswprintf_s", "vsnwprintf_s", "ftell", "fgetpos", "fseek",
+                                             "fsetpos", "rewind", "clearerr", "feof", "ferror", "perror", "remove",
+                                             "rename", "tmpfile", "tmpfile_s", "tmpnam", "tmpnam_s",
+                                             "__isoc99_fscanf"};
+                    if(ci){
+                        if(ci->getCalledFunction()){
+                            if(ci->getCalledFunction()->hasName()){
+                                if(find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) != IOFunctions.end()){
+                                    // Called function performs FileIO
+                                    cu->performsFileIO = true;
+                                }
+                            }
+
                         }
                     }
                 }
@@ -759,7 +791,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
-                }            
+                }
                 if (globalVariablesSet.count(varName) ||
                     programGlobalVariablesSet.count(varName)) {
                     (*bbCU)->globalVariableNames.insert(v);
@@ -1035,7 +1067,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     continue;
                 }
@@ -1050,7 +1082,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We should ignore store instructions that are not associated with a load
                     // e.g., pbvc[i] = c1s;
@@ -1062,7 +1094,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We want to find max or min reduction operations
                     // We want to find the basicblock that contains the load instruction
@@ -1333,7 +1365,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
     }
 
     unsigned opcode = cur_instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(cur_instr);
     if (c != ' ') {
         reduction_operations.push_back(c);
     }
@@ -1368,7 +1400,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val)
     }
     llvm::Instruction *instr = llvm::cast<llvm::Instruction>(val);
     unsigned opcode = instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(instr);
     if (c != ' ') {
         return instr;
     } else if (opcode == llvm::Instruction::Load) {
@@ -1649,11 +1681,40 @@ bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
 }
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
-char DiscoPoP::dp_reduction_get_char_for_opcode(unsigned opcode) {
-    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd)
-        return '+';
-    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub)
-        return '-';
+// switches + and - if a negative constant is added or subtracted
+//(mainly used to support -- as reduction operation, might be implemented as 'add -1')
+char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction* instr) {
+    unsigned opcode = instr->getOpcode();
+
+    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if(operand_is_negative_constant)
+            return '-';
+        else
+            return '+';
+
+    }
+    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if (operand_is_negative_constant)
+            return '+';
+        else
+            return '-';
+    }
     if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul)
         return '*';
     if (opcode == llvm::Instruction::And) return '&';
@@ -2483,7 +2544,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     return ""; //getOrInsertVarName("*", builder);
 }
 
-  
+
    Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I)
 {
     assert(I && "Instruction cannot be NULL \n");
@@ -2784,6 +2845,8 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                     << endl;
             *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize
                     << "</writeDataSize>" << endl;
+            *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO
+                    << "</performsFileIO>" << endl;
 
             *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount
                     << "</instructionsCount>" << endl;

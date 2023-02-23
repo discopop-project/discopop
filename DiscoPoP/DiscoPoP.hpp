@@ -160,6 +160,8 @@ namespace {
         set <Variable> localVariableNames;
         set <Variable> globalVariableNames;
 
+        bool performsFileIO;
+
         // Map to record function call line numbers
         map<int, vector<Node *>> callLineTofunctionMap;
 
@@ -169,6 +171,7 @@ namespace {
             writeDataSize = 0;
             instructionsCount = 0;
             // BB = NULL;
+            performsFileIO = false;
         }
 
         void removeCU() {
@@ -415,7 +418,7 @@ namespace {
         }
         unsigned dp_reduction_get_file_id(llvm::Function *func);
         bool dp_reduction_init_util(std::string fmap_path);
-        char dp_reduction_get_char_for_opcode(unsigned opcode);
+        char dp_reduction_get_char_for_opcode(llvm::Instruction *instr);
         bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
         int dp_reduction_get_op_order(char c);
         Type *dp_reduction_pointsToStruct(PointerType *PTy);
