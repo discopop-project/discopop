@@ -100,8 +100,11 @@ def __parse_dep_file(dep_fd):
         for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:
             type = dep_pair[0]
             source_fields = dep_pair[1].split("|")
-            var_str = "" if len(source_fields) == 1 else source_fields[1]
-            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_str))
+            assert len(source_fields) != 1, "There was code to handle len==1 but it was deemed unneccessary and removed"
+            #var_str = "" if len(source_fields) == 1 else source_fields[1]
+            var_str = source_fields[1]
+            print(var_str)
+            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_str.split("/")[0]))# TODO read defLine from var_str.split("/")[1]
 
     return dependencies_list
 
