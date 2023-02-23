@@ -121,9 +121,9 @@ class PatternDetectorX(object):
             )
 
         # detect GPU patterns based on previously identified patterns
-        #        res.simple_gpu = detect_gpu(self.pet, res)
+        res.simple_gpu = detect_gpu(self.pet, res)
 
         # detect combined GPU patterns
-        #        res.combined_gpu = detect_combined_gpu(self.pet, res)
+        res.combined_gpu = detect_combined_gpu(self.pet, res)
 
         return res
