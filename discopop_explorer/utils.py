@@ -639,7 +639,6 @@ def classify_task_vars(
 
     vars: Dict[Variable, Set[MemoryRegion]] = dict()
     if task.type == NodeType.FUNC:
-        print("TaskType FUNC", file=sys.stderr)
         tmp = pet.get_variables(subtree)
         vars_strings = []
         for v in task.args:
@@ -656,11 +655,8 @@ def classify_task_vars(
 
             if name in vars_strings:
                 vars[v] = tmp[v]
-        print("\tvars: ", [v.name for v in vars], file=sys.stderr)
     else:
-        print("TaskType ELSE", file=sys.stderr)
-        vars = pet.get_variables(pet.subtree_of_type(task, NodeType.CU))
-        print("\tvars: ", [(v.name, vars[v]) for v in vars], file=sys.stderr)
+        vars = pet.get_variables(subtree)
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()
