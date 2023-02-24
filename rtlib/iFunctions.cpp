@@ -704,19 +704,19 @@ namespace __dp {
         }
     }
 
-    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
         // instrumentation function for new and malloc
         
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
 
         // calculate endAddr of memory region
-        endAddr = startAddr + numBits / 8;
+        endAddr = startAddr + numBytes;
 
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
-        printf(" NumBits: %lld\n", numBits);
+        printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
         lastHitIterator = allocatedMemoryRegions.end();
         lastHitIterator--;
         cout << "LHI SET TO: " << &*lastHitIterator << "\n";

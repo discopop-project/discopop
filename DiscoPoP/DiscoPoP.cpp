@@ -3174,11 +3174,11 @@ void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
 
     Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
     Value* endAddr = startAddr;
-    Value* numElements = toInstrument->getArgOperand(0);
+    Value* numBytes = toInstrument->getArgOperand(0);
 
     args.push_back(startAddr);
     args.push_back(endAddr);  // currently unused
-    args.push_back(numElements);
+    args.push_back(numBytes);
 
     IRB.CreateCall(DpNew, args, "");
 }
