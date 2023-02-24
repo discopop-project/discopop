@@ -162,7 +162,7 @@ class Suggestion(object):
                 if len(stage["out_deps"]) > 0:
                     pragma += "depends(out:" + ",".join(stage["out_deps"]) + ") "
                 if len(stage["in_out_deps"]) > 0:
-                    pragma += "depends(inout:" + ",".join(stage["inout_deps"]) + ") "
+                    pragma += "depends(inout:" + ",".join(stage["in_out_deps"]) + ") "
                 pragma_tuple = (
                 int(stage["startsAtLine"].split(":")[1]), int(stage["endsAtLine"].split(":")[1]), pragma)
                 pragmas.append(pragma_tuple)
