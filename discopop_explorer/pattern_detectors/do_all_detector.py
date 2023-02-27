@@ -77,7 +77,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     ]
 
     # check if all subnodes are parallelizable
-    for node in subnodes:
+    for node in pet.subtree_of_type(root_loop, NodeType.CU):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False
