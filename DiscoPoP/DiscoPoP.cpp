@@ -3159,7 +3159,8 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     }
     else if(toInstrument->getAllocatedType()->isArrayTy()){
         // endAddr = startAddr + allocated size
-        auto array_size = cast<ArrayType>(toInstrument->getAllocatedType())->getElementType()->getScalarSizeInBits() * cast<ArrayType>(toInstrument->getAllocatedType())->getNumElements();
+        auto elementSizeInBytes = cast<ArrayType>(toInstrument->getAllocatedType())->getElementType()->getScalarSizeInBits() / 8;
+        auto array_size = elementSizeInBytes * cast<ArrayType>(toInstrument->getAllocatedType())->getNumElements();
         endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, array_size));
     }       
 

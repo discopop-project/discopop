@@ -686,13 +686,13 @@ namespace __dp {
         }
     }
 
-    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes});
         
 
         // update known min and max ADDR
