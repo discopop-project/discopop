@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from enum import IntEnum
 
 from numpy import long  # type: ignore
@@ -408,19 +409,24 @@ class GPULoopPattern(PatternInfo):
                 reduction.append(var)
             # TODO grouping
 
-            if is_written_in_subtree(var.name, raw, waw, lst) or is_func_arg(pet, var.name, loop):
-                if is_readonly(var.name, war, waw, rev_raw):
+            if is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop):
+                if is_readonly(vars[var], war, waw, rev_raw):
                     self.map_type_to.append(var.name)
-                elif is_read_in_right_subtree(var.name, rev_raw, sub):
+                elif is_read_in_right_subtree(vars[var], rev_raw, sub):
                     self.map_type_tofrom.append(var.name)
-                elif is_written_in_subtree(var.name, raw, waw, sub):
+                elif is_written_in_subtree(vars[var], raw, waw, sub):
                     self.map_type_alloc.append(var.name)
-            elif is_first_written(var.name, raw, war, sub):
+                else:
+                    pass
+
+            elif is_first_written(vars[var], raw, war, sub):
                 # TODO simplify
-                if is_read_in_subtree(var.name, rev_raw, rst):
+                if is_read_in_subtree(vars[var], rev_raw, rst):
                     self.map_type_from.append(var.name)
                 else:
                     self.map_type_alloc.append(var.name)
+            else:
+                pass
 
     def setParentLoop(self, pl: str) -> None:
         """
