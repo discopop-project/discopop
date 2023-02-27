@@ -9,7 +9,7 @@ import sys
 from enum import IntEnum
 
 from numpy import long  # type: ignore
-from typing import List, Set, Optional, Union, Any, Dict
+from typing import List, Set, Optional, Union, Any, Dict, Tuple
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from discopop_explorer.PETGraphX import (
@@ -20,6 +20,7 @@ from discopop_explorer.PETGraphX import (
     DepType,
     NodeID,
     LineID,
+    MemoryRegion,
 )
 from discopop_explorer.utils import (
     get_loop_iterations,
@@ -160,10 +161,10 @@ def omp_construct_dict(
 class GPULoopPattern(PatternInfo):
     # public:
     called_functions: Set[NodeID]
-    map_type_to: List
-    map_type_from: List
-    map_type_tofrom: List
-    map_type_alloc: List
+    map_type_to: List[Variable]
+    map_type_from: List[Variable]
+    map_type_tofrom: List[Variable]
+    map_type_alloc: List[Variable]
     reduction_vars_str: List[str]
     reduction_vars_ids: List[Variable]
     iteration_count: int = 0
@@ -281,25 +282,33 @@ class GPULoopPattern(PatternInfo):
         clauses: List[str] = []
         var_names: List[str] = []
         if self.map_type_to:
-            for var_id in self.map_type_to:
+            for var_id in [
+                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_to
+            ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(to: args)", var_names))
             var_names = []
 
         if self.map_type_from:
-            for var_id in self.map_type_from:
+            for var_id in [
+                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_from
+            ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(from: args)", var_names))
             var_names = []
 
         if self.map_type_tofrom:
-            for var_id in self.map_type_tofrom:
+            for var_id in [
+                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_tofrom
+            ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(tofrom: args)", var_names))
             var_names = []
 
         if self.map_type_alloc:
-            for var_id in self.map_type_alloc:
+            for var_id in [
+                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_alloc
+            ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(alloc: args)", var_names))
             var_names = []
@@ -405,6 +414,12 @@ class GPULoopPattern(PatternInfo):
 
         _, private_vars, _, _, _ = classify_loop_variables(pet, loop)
 
+        # define temporaray classification lists
+        map_type_to: List[Tuple[Variable, Set[MemoryRegion]]] = []
+        map_type_tofrom: List[Tuple[Variable, Set[MemoryRegion]]] = []
+        map_type_from: List[Tuple[Variable, Set[MemoryRegion]]] = []
+        map_type_alloc: List[Tuple[Variable, Set[MemoryRegion]]] = []
+
         for var in vars:
             if var in private_vars:
                 continue
@@ -420,22 +435,51 @@ class GPULoopPattern(PatternInfo):
 
             if is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop):
                 if is_readonly(vars[var], war, waw, rev_raw):
-                    self.map_type_to.append(var.name)
+                    map_type_to.append((var, vars[var]))
                 elif is_read_in_right_subtree(vars[var], rev_raw, sub):
-                    self.map_type_tofrom.append(var.name)
+                    map_type_tofrom.append((var, vars[var]))
                 elif is_written_in_subtree(vars[var], raw, waw, sub):
-                    self.map_type_alloc.append(var.name)
+                    map_type_alloc.append((var, vars[var]))
                 else:
                     pass
 
             elif is_first_written(vars[var], raw, war, sub):
                 # TODO simplify
                 if is_read_in_subtree(vars[var], rev_raw, rst):
-                    self.map_type_from.append(var.name)
+                    map_type_from.append((var, vars[var]))
                 else:
-                    self.map_type_alloc.append(var.name)
+                    map_type_alloc.append((var, vars[var]))
             else:
                 pass
+
+        # use known variables to reconstruct the correct variable names from the classified memory regions
+        left_subtree_without_called_nodes = pet.get_left_right_subtree(
+            loop, False, ignore_called_nodes=True
+        )
+        prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+
+        # de-alias and store identified mapping information
+        self.map_type_to = self.__apply_dealiasing(map_type_to, prior_known_vars)
+        self.map_type_tofrom = self.__apply_dealiasing(map_type_tofrom, prior_known_vars)
+
+        self.map_type_alloc = self.__apply_dealiasing(map_type_alloc, prior_known_vars)
+
+        self.map_type_from = self.__apply_dealiasing(map_type_from, prior_known_vars)
+
+    def __apply_dealiasing(
+        self,
+        input_list: List[Tuple[Variable, Set[MemoryRegion]]],
+        previously_known: Dict[Variable, Set[MemoryRegion]],
+    ) -> List[Variable]:
+        tmp_memory_regions = set()
+        for _, mem_regs in input_list:
+            tmp_memory_regions.update(mem_regs)
+        cleaned = [
+            pkv
+            for pkv in previously_known
+            if len(previously_known[pkv].intersection(tmp_memory_regions))
+        ]
+        return cleaned
 
     def setParentLoop(self, pl: str) -> None:
         """
@@ -524,16 +568,16 @@ class GPULoopPattern(PatternInfo):
         print(self.node_id + " = " + self.start_line + " " + self.end_line)
         # long ll = determineLineNumber(firstGPULoop.getStartLine());
         print("map_type_alloc: ")
-        for k in self.map_type_alloc:
+        for k in [v.name for v in self.map_type_alloc]:
             print("    " + k)
         print("map_type_to: ")
-        for k in self.map_type_to:
+        for k in [v.name for v in self.map_type_to]:
             print("    " + k)
         print("map_type_from: ")
-        for k in self.map_type_from:
+        for k in [v.name for v in self.map_type_from]:
             print("    " + k)
         print("map_type_tofrom: ")
-        for k in self.map_type_tofrom:
+        for k in [v.name for v in self.map_type_tofrom]:
             print("    " + k)
 
     def __add_sub_loops_rec(

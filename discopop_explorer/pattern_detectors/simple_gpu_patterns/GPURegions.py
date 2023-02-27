@@ -279,19 +279,21 @@ class GPURegions:
             # gather consumed, produced, allocated and deleted variables from mapping information
             map_to_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
-                map_to_vars += [v for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom]
+                map_to_vars += [
+                    v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
+                ]
             map_to_vars = list(set(map_to_vars))
 
             map_from_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
                 map_from_vars += [
-                    v for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
+                    v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
                 ]
             map_from_vars = list(set(map_from_vars))
 
             map_alloc_vars: List[str] = []
             for loop_pattern in region_loop_patterns:
-                map_alloc_vars += [v for v in loop_pattern.map_type_alloc]
+                map_alloc_vars += [v.name for v in loop_pattern.map_type_alloc]
             map_alloc_vars = list(set(map_alloc_vars))
 
             map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
