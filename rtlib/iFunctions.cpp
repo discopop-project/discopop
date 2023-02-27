@@ -16,6 +16,7 @@
 #include <string>
 #include <list>
 #include <cstdio>
+#include <limits>
 
 #ifdef __linux__ // headers only available on Linux
 #include <unistd.h>
@@ -64,6 +65,9 @@ namespace __dp {
 
     // TODO: Replace with more efficient data structure for searching
     list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    list<tuple<LID, string, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
+    ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
+    ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
     int64_t nextFreeMemoryRegionId = 0;
 
     /******* BEGIN: parallelization section *******/
@@ -283,12 +287,67 @@ namespace __dp {
 
     
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
-        // TODO more efficient implementation
-        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
-            if(get<2>(entry) <= addr && get<3>(entry) >= addr){
-                return get<1>(entry);
+        // check if accessed addr in knwon range. If not, return fallback immediately
+        if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
+
+            bool search_forwards = true;
+            bool search_backwards = true;
+            auto fw_it = lastHitIterator;
+            auto bw_it = lastHitIterator;
+
+            // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
+            // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
+
+            while(true){
+                // search forward from lastHitIterator
+                if(search_forwards){
+                    if(*fw_it == allocatedMemoryRegions.back()){
+                        search_forwards = false;
+                    }
+                     // fw_it in range
+                    //cout << "Search for " << std::hex << addr << " in " << std::hex << get<2>(*fw_it) << " - " << std::hex << get<3>(*fw_it) << "\n";
+                    if(get<2>(*fw_it) <= addr && get<3>(*fw_it) >= addr){
+                        lastHitIterator = fw_it;
+                        return get<1>(*fw_it);
+                    }
+                    
+                    if(search_forwards){
+                        fw_it++;
+                    }
+                }
+                
+                // search backwards from lastHitIterator
+                if(search_backwards){
+                    if(*bw_it == allocatedMemoryRegions.front()){
+                        search_backwards = false;
+                    }
+
+                    //cout << "Search for BW " << std::hex << addr << " in " << std::hex << get<2>(*bw_it) << " - " << std::hex << get<3>(*bw_it) << "\n";
+                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
+                        lastHitIterator = bw_it;
+                        return get<1>(*bw_it);
+                    }
+
+                    if(search_backwards){
+                        bw_it--;
+                    }
+                }
+
+                if(!(search_forwards || search_backwards)){
+                    break;
+                }     
+
             }
+
+//            for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+//                counter += 1;
+//                if(get<2>(entry) <= addr && get<3>(entry) >= addr){
+//                    cout << "HIT AT counter = " << std::to_string(counter) << "\n";
+//                    return get<1>(entry);
+//                }
+//            }
         }
+        
         return fallback;
     }
 
@@ -632,24 +691,43 @@ namespace __dp {
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
-        cout << "alloca: " << decodeLID(lid) << ", " << var_name << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
-        printf(" NumElements: %lld\n", numElements);
+        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
         allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
+        
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
     }
 
-    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits){
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
         // instrumentation function for new and malloc
         
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
 
         // calculate endAddr of memory region
-        endAddr = startAddr + numBits / 8;
+        endAddr = startAddr + numBytes;
 
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
-        printf(" NumBits: %lld\n", numBits);
+        printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBits/8});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
+        lastHitIterator = allocatedMemoryRegions.end();
+        lastHitIterator--;
+        cout << "LHI SET TO: " << &*lastHitIterator << "\n";
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
     }
 
     void __dp_delete(LID lid, ADDR startAddr){
@@ -789,6 +867,12 @@ namespace __dp {
             outPutDeps = new stringDepMap();
             bbList = new ReportedBBSet();
             // End HA
+
+            // initialize lastHitIterator to dummy element
+            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
+            lastHitIterator = allocatedMemoryRegions.end();
+            lastHitIterator--;
+            cout << "LHI SET TO: " << &*lastHitIterator << "\n";
 
 #ifdef __linux__
             // try to get an output file name w.r.t. the target application

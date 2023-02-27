@@ -7,6 +7,7 @@
 # directory for details.
 
 import itertools
+import sys
 import copy
 from enum import IntEnum, Enum
 from typing import Dict, List, Tuple, Set, Optional, cast, Union
@@ -111,11 +112,21 @@ class LineID(str):
             raise ValueError("Mal-formatted LineID: ", id_string)
 
 
+class MemoryRegion(str):
+    # simpler but still strong typing alternative:
+    def __init__(self, id_string: str):
+        # check format of newly created MemoryRegion
+        try:
+            int(id_string)
+        except ValueError:
+            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
+
+
 class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
-    aa_var_name: Optional[str] = None
+    memory_region: Optional[MemoryRegion] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
 
@@ -244,7 +255,7 @@ def parse_dependency(dep) -> Dependency:
     d.sink_line = dep.sink
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
-    d.aa_var_name = dep.aa_var_name
+    d.memory_region = dep.memory_region
     return d
 
 
@@ -350,7 +361,6 @@ class PETGraphX(object):
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
-        print("\tAdded Dependencies...")
         return cls(g, reduction_vars, pos)
 
     def calculateFunctionMetadata(self):
@@ -778,24 +788,34 @@ class PETGraphX(object):
                 return False
         raise ValueError("allVars must not be empty.")
 
-    def get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
-        """Gets all variables in nodes
+    def get_variables(self, nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
+        """Gets all variables and corresponding memory regions in nodes
 
         :param nodes: nodes
         :return: Set of variables
         """
-        res = set()
+        res: Dict[Variable, Set[MemoryRegion]] = dict()
         for node in nodes:
             for v in node.local_vars:
-                res.add(v)
+                if v not in res:
+                    res[v] = set()
             for v in node.global_vars:
-                res.add(v)
+                if v not in res:
+                    res[v] = set()
+            # try to identify memory regions
+            for var_name in res:
+                for _, _, dep in self.out_edges(node.id, EdgeType.DATA):
+                    if dep.var_name == var_name.name:
+                        if dep.memory_region is not None:
+                            res[var_name].add(cast(MemoryRegion, dep.memory_region))
         return res
 
-    def get_undefined_variables_inside_loop(self, root_loop: CUNode) -> List[Variable]:
+    def get_undefined_variables_inside_loop(
+        self, root_loop: CUNode
+    ) -> Dict[Variable, Set[MemoryRegion]]:
 
         sub = self.subtree_of_type(root_loop, NodeType.CU)
-        vars = list(self.get_variables(sub))
+        vars = self.get_variables(sub)
         dummyVariables = []
         definedVarsInLoop = []
         definedVarsInCalledFunctions = []
@@ -805,7 +825,11 @@ class PETGraphX(object):
             if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
                 dummyVariables.append(var)
 
-        vars = list(set(vars) ^ set(dummyVariables))
+        # vars = list(set(vars) ^ set(dummyVariables))
+        for key in set(dummyVariables):
+            if key in vars:
+                del vars[key]
+
         # Exclude variables which are defined inside the loop
         for var in vars:
             if (
@@ -814,7 +838,10 @@ class PETGraphX(object):
             ):
                 definedVarsInLoop.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInLoop))
+        # vars = list(set(vars) ^ set(definedVarsInLoop))
+        for key in set(definedVarsInLoop):
+            if key in vars:
+                del vars[key]
 
         # Also, exclude variables which are defined inside
         # functions that are called within the loop
@@ -823,7 +850,10 @@ class PETGraphX(object):
                 if var.defLine >= s.start_position() and var.defLine <= s.end_position():
                     definedVarsInCalledFunctions.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInCalledFunctions))
+        # vars = list(set(vars) ^ set(definedVarsInCalledFunctions))
+        for key in set(definedVarsInCalledFunctions):
+            if key in vars:
+                del vars[key]
 
         return vars
 
@@ -943,14 +973,16 @@ class PETGraphX(object):
             ]:
                 # If there is a waw dependency for var, then var is written in loop
                 # (sink is always inside loop for waw/war)
-                if dep.var_name == d.var_name and not (d.sink_line in loops_start_lines):
+                if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
                     return False
             for t, d in [
                 (t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW
             ]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
-                if dep.var_name == d.var_name and not (d.source_line in loops_start_lines):
+                if dep.memory_region == d.memory_region and not (
+                    d.source_line in loops_start_lines
+                ):
                     return False
         return True
 
@@ -1082,6 +1114,16 @@ class PETGraphX(object):
     def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
         """returns true, if source is a predecessor of target.
         This analysis includes traversal of successor, child and calls edges."""
+        # if source and target_id are located within differenct functions, consider the callees instead of source_id
+        source_parent_function = self.get_parent_function(self.node_at(source_id))
+        target_parent_function = self.get_parent_function(self.node_at(target_id))
+        if source_parent_function != target_parent_function:
+            for callee_id in [
+                s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)
+            ]:
+                if self.is_predecessor(callee_id, target_id):
+                    return True
+
         # if target is a loop node, get the first child of the loop, i.e. the entry node into the loop
         target_node = self.node_at(target_id)
         if target_node.type == NodeType.LOOP:

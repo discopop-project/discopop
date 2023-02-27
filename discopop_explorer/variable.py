@@ -12,7 +12,7 @@ class Variable(object):
 
     def __init__(self, type, name, defLine, accessMode=""):
         self.type = type
-        self.name = name
+        self.name: str = name
         self.defLine = defLine
         self.operation = None
         self.accessMode = accessMode

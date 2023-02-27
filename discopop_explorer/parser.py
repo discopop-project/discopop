@@ -21,12 +21,12 @@ lineToCUIdMap = defaultdict(set)  # type: ignore
 
 
 class DependenceItem(object):
-    def __init__(self, sink, source, type, var_name, aa_var_name):
+    def __init__(self, sink, source, type, var_name, memory_region):
         self.sink = sink
         self.source = source
         self.type = type
         self.var_name = var_name
-        self.aa_var_name = aa_var_name
+        self.memory_region = memory_region
 
 
 def __parse_xml_input(xml_fd):

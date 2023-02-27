@@ -36,9 +36,9 @@ class MainScreen(object):
         horizontal_paned_window = ttk.PanedWindow(frame, orient="horizontal")
         horizontal_paned_window.pack(fill=tk.BOTH, expand=True)
         self.configuration_frame = tk.Frame(horizontal_paned_window)
-        horizontal_paned_window.add(self.configuration_frame, weight=1)
+        horizontal_paned_window.add(self.configuration_frame)
         self.notebook = ttk.Notebook(horizontal_paned_window)
-        horizontal_paned_window.add(self.notebook, weight=5)
+        horizontal_paned_window.add(self.notebook, weight=1)
 
         self.details_frame = tk.Frame(self.notebook)
         self.results_frame = tk.Frame(self.notebook)

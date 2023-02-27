@@ -16,6 +16,7 @@ import jsons
 
 from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
+from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
 
 def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_configuration_obj):
@@ -35,6 +36,32 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
     tmp_frame = tk.Frame(scrollable_list_frame)
     tmp_frame.pack(fill=tk.BOTH, expand=True)
+
+    # define notebook widget to show generated CUs and dependencies
+    separator = ttk.Separator(scrollable_list_frame, orient="horizontal")
+    separator.pack(fill=tk.X)
+    result_browser_frame = tk.Frame(scrollable_list_frame)
+    result_browser_frame.pack(fill=tk.BOTH, expand=True)
+    result_notebook = ttk.Notebook(result_browser_frame)
+    result_notebook.pack(fill=tk.BOTH, expand=True)
+    # add CU preview
+    cu_display_widget = ScrollableTextWidget(result_notebook)
+    with open(execution_configuration_obj.value_dict["working_copy_path"] + "/Data.xml", "r") as f:
+        cu_display_widget.set_text(f.read())
+    result_notebook.add(cu_display_widget.frame, text="CU's")
+    # add Dependency preview
+    dep_display_widget = ScrollableTextWidget(result_notebook)
+    with open(execution_configuration_obj.value_dict["working_copy_path"] + "/" + execution_configuration_obj.value_dict["executable_name"] + "_dp_dep.txt", "r") as f:
+        dep_display_widget.set_text(f.read())
+    result_notebook.add(dep_display_widget.frame, text="DEP's")
+    # add instrumented LLVM IR preview
+    instrumented_llvm_ir_display_widget = ScrollableTextWidget(result_notebook)
+    with open(
+            execution_configuration_obj.value_dict["working_copy_path"] + "/" + execution_configuration_obj.value_dict[
+                "executable_name"] + "_dp.ll", "r") as f:
+        instrumented_llvm_ir_display_widget.set_text(f.read())
+    result_notebook.add(instrumented_llvm_ir_display_widget.frame, text="LLVM IR")
+
 
     # create scrollable list of suggestions
     canvas = tk.Canvas(tmp_frame)
