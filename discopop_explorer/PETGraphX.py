@@ -813,7 +813,11 @@ class PETGraphX(object):
 
         # Remove llvm temporary variables
         for var in vars:
-            if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
+            if var.defLine == "LineNotFound" or "0:" in var.defLine:
+                dummyVariables.append(var)
+            elif var.defLine == "GlobalVar" and not self.is_reduction_var(
+                root_loop.start_position(), var.name
+            ):
                 dummyVariables.append(var)
 
         # vars = list(set(vars) ^ set(dummyVariables))
