@@ -33,29 +33,33 @@ def get_written_and_read_memory_regions_by_cu(
         out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
 
         written_memory_regions = [
-            MemoryRegion(cast(str, d.aa_var_name))
+            MemoryRegion(cast(str, d.memory_region))
             for s, t, d in in_dep_edges
             if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
-            and d.aa_var_name is not None
-            and len(d.aa_var_name) != 0
+            and d.memory_region is not None
+            and len(d.memory_region) != 0
         ]
         written_memory_regions += [
-            MemoryRegion(cast(str, d.aa_var_name))
+            MemoryRegion(cast(str, d.memory_region))
             for s, t, d in out_dep_edges
             if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
-            and d.aa_var_name is not None
-            and len(d.aa_var_name) != 0
+            and d.memory_region is not None
+            and len(d.memory_region) != 0
         ]
 
         read_memory_regions = [
-            MemoryRegion(cast(str, d.aa_var_name))
+            MemoryRegion(cast(str, d.memory_region))
             for s, t, d in in_dep_edges
-            if (d.dtype == DepType.WAR) and d.aa_var_name is not None and len(d.aa_var_name) != 0
+            if (d.dtype == DepType.WAR)
+            and d.memory_region is not None
+            and len(d.memory_region) != 0
         ]
         read_memory_regions += [
-            MemoryRegion(cast(str, d.aa_var_name))
+            MemoryRegion(cast(str, d.memory_region))
             for s, t, d in out_dep_edges
-            if (d.dtype == DepType.RAW) and d.aa_var_name is not None and len(d.aa_var_name) != 0
+            if (d.dtype == DepType.RAW)
+            and d.memory_region is not None
+            and len(d.memory_region) != 0
         ]
 
         if cu_id not in written_memory_regions_by_cu_id:
@@ -89,12 +93,12 @@ def get_cu_and_varname_to_memory_regions(
         # which originate from different source code scopes
         out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
         for _, _, dep in out_dep_edges:
-            if dep.var_name is None or dep.aa_var_name is None or len(dep.aa_var_name) == 0:
+            if dep.var_name is None or dep.memory_region is None or len(dep.memory_region) == 0:
                 continue
             if dep.var_name not in result_dict[cu_id]:
                 result_dict[cu_id][VarName(cast(str, dep.var_name))] = set()
             result_dict[cu_id][VarName(cast(str, dep.var_name))].add(
-                MemoryRegion(cast(str, dep.aa_var_name))
+                MemoryRegion(cast(str, dep.memory_region))
             )
 
     return result_dict

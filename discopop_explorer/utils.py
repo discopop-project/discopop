@@ -383,7 +383,7 @@ def is_read_in_subtree(
 
 
 def is_read_in_right_subtree(
-    var: str, rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
+    mem_regs: Set[MemoryRegion], rev_raw: Set[Tuple[NodeID, NodeID, Dependency]], tree: List[CUNode]
 ) -> bool:
     """Checks if variable is read in subtree
 
@@ -393,7 +393,7 @@ def is_read_in_right_subtree(
     :return: true if read in right subtree
     """
     for e in rev_raw:
-        if e[2].var_name == var:
+        if e[2].memory_region in mem_regs:
             if any([n.id == e[1] for n in tree]):
                 if not any([k.id == e[0] for k in tree]):
                     return True
