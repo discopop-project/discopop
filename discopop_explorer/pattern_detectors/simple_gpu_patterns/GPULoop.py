@@ -21,7 +21,12 @@ from discopop_explorer.PETGraphX import (
     NodeID,
     LineID,
 )
-from discopop_explorer.utils import get_loop_iterations, is_scalar_val, is_loop_index2
+from discopop_explorer.utils import (
+    get_loop_iterations,
+    is_scalar_val,
+    is_loop_index2,
+    classify_loop_variables,
+)
 from discopop_explorer.utils import (
     __get_variables as get_vars,
     __get_dep_of_type as get_dep_of_type,
@@ -398,7 +403,11 @@ class GPULoopPattern(PatternInfo):
 
         vars = pet.get_undefined_variables_inside_loop(loop)
 
+        _, private_vars, _, _, _ = classify_loop_variables(pet, loop)
+
         for var in vars:
+            if var in private_vars:
+                continue
             if is_scalar_val(var) and var.accessMode == "R" and False:
                 # will be implicitly mapped as firstprivate
                 continue
