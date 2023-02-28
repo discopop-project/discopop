@@ -64,9 +64,10 @@
 #include <assert.h>
 
 #define LIDSIZE 14       // Number of bits for holding LID
+#define LIDMETADATASIZE 32  // Number of bits for holding LID Metadata (Column + Loop ID + Loop Iteration)
 #define MAXLNO 16384     // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
 
-typedef int32_t LID;
+typedef int64_t LID;
 typedef int64_t ADDR;
 using namespace std;
 using namespace llvm;
@@ -74,12 +75,13 @@ using namespace llvm;
 extern cl::opt <string> FileMappingPath;
 namespace dputil {
 
-    inline string decodeLID(int32_t lid) {
+    inline string decodeLID(int64_t lid) {
         if (lid == 0)
             return "*";
 
         stringstream ss;
         uint32_t ulid = (uint32_t) lid;
+
         ss << (ulid >> LIDSIZE) << ":" << ulid % MAXLNO;
         return ss.str();
     }
@@ -107,7 +109,7 @@ namespace dputil {
 
     int32_t getFileID(string fileMapping, string fullPathName);
 
-    int32_t getLID(Instruction *BI, int32_t &fileID);
+    int64_t getLID(Instruction *BI, int32_t &fileID);
 
     void determineFileID(Function &F, int32_t &fileID);
 

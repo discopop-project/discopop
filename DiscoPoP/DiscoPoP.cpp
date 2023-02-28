@@ -656,7 +656,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             // Note: Don't create nodes for library functions (c++/llvm).
-            int32_t lid = getLID(&*instruction, fileID);
+            LID lid = getLID(&*instruction, fileID);
             if (lid > 0) {
                 if (isa<CallInst>(instruction)) {
                     CallInst* ci = cast<CallInst>(instruction);
@@ -828,7 +828,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
                 if (i->type == nodeTypes::cu) {
                     Loop *loop = LI.getLoopFor(i->BB);
                     DebugLoc dl = loop->getStartLoc();
-                    int32_t lid = 0;
+                    LID lid = 0;
                     lid = (fileID << LIDSIZE) + dl->getLine();
                     loopStartLines[root->ID] = dputil::decodeLID(lid);
                     break;
@@ -1611,11 +1611,11 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
                      EI != END; ++EI) {
                     BasicBlock *currentBB = *EI;
                     vector < Value * > args;
-                    int32_t lid = 0;
+                    LID lid = 0;
 
                     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
                         lid = dp_reduction_getLID(&*BI, file_id);
-                        uint32_t ulid = (uint32_t) lid;
+                        uint64_t ulid = (uint64_t) lid;
                         if (ulid != 0) {
                             return to_string(ulid % 16384);
                         }
@@ -1652,7 +1652,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-int32_t DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
+LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
     int32_t lno;
 
     const DebugLoc &location = BI->getDebugLoc();
@@ -1665,12 +1665,12 @@ int32_t DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
     if (lno == 0) {
         return 0;
     }
-
-    return lno;
+    LID lid = lno;
+    return lid;
 }
 
 bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
-    int32_t lid;
+    LID lid;
     for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
         lid = dp_reduction_getLID(&*BI, file_id);
         if (lid > 0) {
@@ -1797,7 +1797,7 @@ bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
 }
 
 bool DiscoPoP::sanityCheck(BasicBlock *BB) {
-    int32_t lid;
+    LID lid;
     for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
         lid = getLID(&*BI, fileID);
         if (lid > 0) {
@@ -3087,7 +3087,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
 
             }
-            int32_t lid = getLID(&*BI, fileID);
+            LID lid = getLID(&*BI, fileID);
             if (lid > 0)                   // calls on non-user code are not instrumented
             {
                 IRBuilder<> IRBCall(&*BI);
@@ -3109,7 +3109,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         }
             // return
         else if (isa<ReturnInst>(BI)) {
-            int32_t lid = getLID(&*BI, fileID);
+            LID lid = getLID(&*BI, fileID);
             assert((lid > 0) && "Returning on LID = 0!");
 
             Function *parent = BB.getParent();
@@ -3134,7 +3134,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 
 // Instrumentation function inserters.
 void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if (lid == 0)
         return;
 
@@ -3164,7 +3164,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
 
 void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
     IRBuilder<> IRB(toInstrument->getNextNode());
@@ -3185,7 +3185,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
 
 void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
     // add instrumentation for delete instructions or calls to free
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
     IRBuilder<> IRB(toInstrument->getNextNode());
@@ -3204,7 +3204,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
 
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if (lid == 0)
         return;
 
@@ -3268,7 +3268,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
 void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if (lid == 0) return;
 
     vector < Value * > args;
@@ -3329,7 +3329,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 }
 
 void DiscoPoP::insertDpFinalize(Instruction *before) {
-    int32_t lid = getLID(before, fileID);
+    LID lid = getLID(before, fileID);
     assert((lid > 0) && "Returning on an invalid LID.");
     IRBuilder<> IRB(before);
     IRB.CreateCall(DpFinalize, ConstantInt::get(Int32, lid));
@@ -3337,7 +3337,7 @@ void DiscoPoP::insertDpFinalize(Instruction *before) {
 
 void DiscoPoP::instrumentFuncEntry(Function &F) {
     BasicBlock &entryBB = F.getEntryBlock();
-    int32_t lid = 0;
+    LID lid = 0;
     int32_t isStart = 0;
 
     StringRef fn = F.getName();
@@ -3366,7 +3366,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     BasicBlock *currentBB = bb;
     vector < Value * > args;
-    int32_t lid = 0;
+    LID lid = 0;
 
     // Take care of the order of instrumentation functions for loop entry
     // and exit. Loop exit must appear before the next loop entry.
@@ -3394,7 +3394,7 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
 void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
     BasicBlock *currentBB = bb;
     vector < Value * > args;
-    int32_t lid = 0;
+    LID lid = 0;
 
     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
         lid = getLID(&*BI, fileID);

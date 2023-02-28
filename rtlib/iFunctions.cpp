@@ -30,7 +30,7 @@ bool DP_DEBUG = false; // debug flag
 
 bool USE_PERFECT = true;
 // Shadow memory parameters
-int32_t SIG_ELEM_BIT = 24;
+int32_t SIG_ELEM_BIT = 56;
 int32_t SIG_NUM_ELEM = 270000;
 int32_t SIG_NUM_HASH = 2;
 
@@ -97,6 +97,14 @@ namespace __dp {
         if (depOn == 0 && type == WAW)
             type = INIT;
         // End HA
+
+        // TODO Extract metadata from LID's
+
+
+        // Remove metadata to preserve result correctness and add metadata to `Dep` object
+        curr &= 0x00000000FFFFFFFF;
+        depOn &= 0x00000000FFFFFFFF;
+
         depMap::iterator posInDeps = myMap->find(curr);
         if (posInDeps == myMap->end()) {
             depSet *tmp_depSet = new depSet();
@@ -360,6 +368,13 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -579,6 +594,13 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -626,6 +648,13 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata if present (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -674,6 +703,13 @@ namespace __dp {
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
         current.skip = true;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
