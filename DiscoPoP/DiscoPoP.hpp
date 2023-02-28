@@ -424,7 +424,7 @@ namespace {
         Type *dp_reduction_pointsToStruct(PointerType *PTy);
         string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
-        int32_t dp_reduction_getLID(Instruction *BI, int32_t &fileID);
+        LID dp_reduction_getLID(Instruction *BI, int32_t &fileID);
         void dp_reduction_insert_functions();
         llvm::LLVMContext *ctx_;
         llvm::Module *module_;
