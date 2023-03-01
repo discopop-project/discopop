@@ -38,6 +38,9 @@ namespace __dp {
         RAW,
         WAR,
         WAW,
+        RAW_II,
+        WAR_II,
+        WAW_II,
         INIT
     }
             depType;
