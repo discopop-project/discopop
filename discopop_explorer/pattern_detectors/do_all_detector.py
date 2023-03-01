@@ -144,23 +144,13 @@ def __check_loop_dependencies(
                 if s in node_1_children_ids + node_2_children_ids
             ]
         )
-    #        deps.update(
-    #            [
-    #                (s, t, d)
-    #                for s, t, d in pet.out_edges(n, EdgeType.DATA)
-    #                if t in node_1_children_ids + node_2_children_ids
-    #            ]
-    #        )
-    # filter deps
-
-    #    removed_deps = [
-    #        (s, t, d)
-    #        for s, t, d in deps
-    #        if s not in node_1_children_ids + node_2_children_ids
-    #        and t not in node_1_children_ids + node_2_children_ids
-    #    ]
-    #    for dep in removed_deps:
-    #        print("Removed dep: ", dep, file=sys.stderr)
+        deps.update(
+            [
+                (s, t, d)
+                for s, t, d in pet.out_edges(n, EdgeType.DATA)
+                if t in node_1_children_ids + node_2_children_ids
+            ]
+        )
 
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop
