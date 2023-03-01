@@ -336,8 +336,14 @@ class PETGraphX(object):
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
-                for s in sink:
-                    g.add_edge(s, s, data=parse_dependency(dep))
+                if len(sink) > 0:
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
+                else:
+                    # check for write lines
+                    sink = writelineToCUIdMap[dep.sink]
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
                 continue
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
@@ -800,7 +806,12 @@ class PETGraphX(object):
                     res[v] = set()
             # try to identify memory regions
             for var_name in res:
-                for _, _, dep in self.out_edges(node.id, EdgeType.DATA):
+                # since the variable name is checked for equality afterwards,
+                # it is safe to consider incoming dependencies at this point as well.
+                # Note that INIT type edges are considered as well!
+                for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
+                    node.id, EdgeType.DATA
+                ):
                     if dep.var_name == var_name.name:
                         if dep.memory_region is not None:
                             res[var_name].add(cast(MemoryRegion, dep.memory_region))
@@ -966,7 +977,9 @@ class PETGraphX(object):
         assert node.parent_function_id
         return self.node_at(node.parent_function_id)
 
-    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
+    def get_left_right_subtree(
+        self, target: CUNode, right_subtree: bool, ignore_called_nodes: bool = False
+    ) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
@@ -993,11 +1006,18 @@ class PETGraphX(object):
             else:
                 visited.add(current)
 
-            stack.extend(
-                self.direct_children_or_called_nodes(current)
-                if right_subtree
-                else reversed(self.direct_children_or_called_nodes(current))
-            )
+            if not ignore_called_nodes:
+                stack.extend(
+                    self.direct_children_or_called_nodes(current)
+                    if right_subtree
+                    else reversed(self.direct_children_or_called_nodes(current))
+                )
+            else:
+                stack.extend(
+                    self.direct_children(current)
+                    if right_subtree
+                    else reversed(self.direct_children(current))
+                )
         return res
 
     def path(self, source: CUNode, target: CUNode) -> List[CUNode]:
