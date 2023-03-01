@@ -101,9 +101,6 @@ namespace __dp {
             type = INIT;
         // End HA
 
-        cout << "VAR: " << var << " dep: " << type << " \n";
-        cout << "\tcurr: " << std::hex << curr << "\n\tdepOn: " << std::hex << depOn << "\n";
-
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
