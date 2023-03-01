@@ -128,6 +128,7 @@ class Dependency:
     memory_region: Optional[MemoryRegion] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
+    intra_iteration: bool = False
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -252,6 +253,10 @@ def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
     d.source_line = dep.source
     d.sink_line = dep.sink
+    # check for intra-iteration dependencies
+    if dep.type.endswith("_II"):
+        d.intra_iteration = True
+        dep.type = dep.type[0:-3]  # remove _II tag
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
