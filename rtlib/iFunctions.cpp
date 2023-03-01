@@ -336,16 +336,41 @@ namespace __dp {
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
         // check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
+            // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
+            if(allocatedMemoryRegions.size() != 0){
+                // search backwards in the list
+                auto bw_it = allocatedMemoryRegions.end();
+                bw_it--;
+                bool search_backwards = true;
 
-            bool search_forwards = true;
-            bool search_backwards = true;
-            auto fw_it = lastHitIterator;
-            auto bw_it = lastHitIterator;
+                while(true){
+                    if(*bw_it == allocatedMemoryRegions.front()){
+                        search_backwards = false;
+                    }
+                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
+                        lastHitIterator = bw_it;
+                        return get<1>(*bw_it);
+                    }
+
+                    if(search_backwards){
+                        bw_it--;
+                    }
+                    else{
+                        break;
+                    }
+                }
+            }
+
+
+//            bool search_forwards = true;
+//            bool search_backwards = true;
+//            auto fw_it = lastHitIterator;
+//            auto bw_it = lastHitIterator;
 
             // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
             // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
 
-            while(true){
+/*            while(true){
                 // search forward from lastHitIterator
                 if(search_forwards){
                     if(*fw_it == allocatedMemoryRegions.back()){
@@ -385,14 +410,7 @@ namespace __dp {
                 }     
 
             }
-
-//            for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
-//                counter += 1;
-//                if(get<2>(entry) <= addr && get<3>(entry) >= addr){
-//                    cout << "HIT AT counter = " << std::to_string(counter) << "\n";
-//                    return get<1>(entry);
-//                }
-//            }
+*/
         }
         
         return fallback;
@@ -761,13 +779,13 @@ namespace __dp {
         }
     }
 
-    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numElements) {
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numElements});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes});
         
 
         // update known min and max ADDR

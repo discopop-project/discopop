@@ -818,7 +818,11 @@ class PETGraphX(object):
 
         # Remove llvm temporary variables
         for var in vars:
-            if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
+            if var.defLine == "LineNotFound" or "0:" in var.defLine:
+                dummyVariables.append(var)
+            elif var.defLine == "GlobalVar" and not self.is_reduction_var(
+                root_loop.start_position(), var.name
+            ):
                 dummyVariables.append(var)
 
         # vars = list(set(vars) ^ set(dummyVariables))
@@ -883,37 +887,6 @@ class PETGraphX(object):
                         break
                 # None may occur because __get_variables doesn't check for actual elements
         return result
-
-    def is_first_written(
-        self,
-        var: str,
-        raw: Set[Tuple[NodeID, NodeID, Dependency]],
-        war: Set[Tuple[NodeID, NodeID, Dependency]],
-        sub: List[CUNode],
-    ) -> bool:
-        """Checks whether a variable is first written inside the current node
-
-        :param var: variable name
-        :param raw: raw dependencies of the loop
-        :param war: war dependencies of the loop
-        :param sub: subtree of the loop
-        :return: true if first written
-        """
-        for e in war:
-            if e[2].var_name == var and any([n.id == e[1] for n in sub]):
-                res = False
-                for eraw in raw:
-                    # TODO check
-                    if (
-                        eraw[2].var_name == var
-                        and any([n.id == e[1] for n in sub])
-                        and e[0] == eraw[2].sink_line
-                    ):
-                        res = True
-                        break
-                if not res:
-                    return False
-        return False
 
     def is_loop_index(
         self, var_name: Optional[str], loops_start_lines: List[LineID], children: List[CUNode]
