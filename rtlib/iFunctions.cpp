@@ -102,13 +102,6 @@ namespace __dp {
         // End HA
 
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are != 0 and check for intra-iteration dependencies
-
-        LID curr_loop_id = unpackLIDMetadata_getLoopID(curr);
-        LID curr_loop_iteration = unpackLIDMetadata_getLoopIteration(curr);
-
-        LID depOn_loop_id = unpackLIDMetadata_getLoopID(depOn);
-        LID depOn_loop_iteration = unpackLIDMetadata_getLoopIteration(depOn);
-
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != 0 && unpackLIDMetadata_getLoopID(depOn) != 0){
             if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn) && 
