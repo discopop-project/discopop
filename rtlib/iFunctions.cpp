@@ -26,6 +26,9 @@
 using namespace std;
 using namespace dputil;
 
+#define unpackLIDMetadata_getLoopID(lid) (lid >> 56)
+#define unpackLIDMetadata_getLoopIteration(lid) ((lid >> 48) & 0xFF)
+
 bool DP_DEBUG = false; // debug flag
 
 bool USE_PERFECT = true;
@@ -98,7 +101,34 @@ namespace __dp {
             type = INIT;
         // End HA
 
-        // TODO Extract metadata from LID's
+        // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are != 0 and check for intra-iteration dependencies
+
+        LID curr_loop_id = unpackLIDMetadata_getLoopID(curr);
+        LID curr_loop_iteration = unpackLIDMetadata_getLoopIteration(curr);
+
+        LID depOn_loop_id = unpackLIDMetadata_getLoopID(depOn);
+        LID depOn_loop_iteration = unpackLIDMetadata_getLoopIteration(depOn);
+
+        // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
+        if(unpackLIDMetadata_getLoopID(curr) != 0 && unpackLIDMetadata_getLoopID(depOn) != 0){
+            if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn) && 
+               unpackLIDMetadata_getLoopIteration(curr) == unpackLIDMetadata_getLoopIteration(depOn)){
+                // modify depType if intraIterationDependency identified
+                switch(type) {
+                    case RAW:
+                        type = RAW_II;
+                        break;
+                    case WAR:
+                        type = WAR_II;
+                        break;
+                    case WAW:
+                        type = WAW_II;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
 
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
@@ -153,6 +183,15 @@ namespace __dp {
                             break;
                         case WAW:
                             dep += "WAW";
+                            break;
+                        case RAW_II:
+                            dep += "RAW_II";
+                            break;
+                        case WAR_II:
+                            dep += "WAR_II";
+                            break;
+                        case WAW_II:
+                            dep += "WAW_II";
                             break;
                         case INIT:
                             dep += "INIT";
