@@ -9,7 +9,7 @@ import sys
 from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, LineID, DepType
+from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, LineID, DepType, Variable
 from ..utils import classify_loop_variables, contains
 import time
 
@@ -84,6 +84,11 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
+    fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
+    import sys
+
+    print("PRIVATES: ", [v.name for v in p], file=sys.stderr)
+    print("FirstPrivates: ", [v.name for v in fp], file=sys.stderr)
 
     # check if all subnodes are parallelizable
     for node in pet.subtree_of_type(root_loop, NodeType.CU):
@@ -103,6 +108,8 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
                 root_children_cus,
                 root_children_loops,
                 loop_start_lines,
+                fp,
+                p,
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
@@ -118,6 +125,8 @@ def __check_loop_dependencies(
     root_children_cus: List[CUNode],
     root_children_loops: List[CUNode],
     loop_start_lines: List[LineID],
+    first_privates: List[Variable],
+    privates: List[Variable],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
@@ -167,6 +176,10 @@ def __check_loop_dependencies(
 
         # check if targeted variable is loop index
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+            continue
+
+        # check if targeted variable is private or firstprivate
+        if dep.var_name in [v.name for v in privates + first_privates]:
             continue
 
         # targeted variable is not read-only

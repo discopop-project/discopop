@@ -101,9 +101,12 @@ namespace __dp {
             type = INIT;
         // End HA
 
-        // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are != 0 and check for intra-iteration dependencies
+        cout << "VAR: " << var << " dep: " << type << " \n";
+        cout << "\tcurr: " << std::hex << curr << "\n\tdepOn: " << std::hex << depOn << "\n";
+
+        // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
-        if(unpackLIDMetadata_getLoopID(curr) != 0 && unpackLIDMetadata_getLoopID(depOn) != 0){
+        if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
             if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn) && 
                unpackLIDMetadata_getLoopIteration(curr) == unpackLIDMetadata_getLoopIteration(depOn)){
                 // modify depType if intraIterationDependency identified
@@ -425,6 +428,10 @@ namespace __dp {
             current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
             current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
         }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -651,6 +658,10 @@ namespace __dp {
             current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
             current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
         }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -704,6 +715,10 @@ namespace __dp {
         if (loopStack->size() > 0){
             current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
             current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
@@ -759,6 +774,10 @@ namespace __dp {
         if (loopStack->size() > 0){
             current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
             current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {

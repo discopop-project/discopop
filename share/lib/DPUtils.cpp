@@ -94,6 +94,7 @@ namespace dputil {
             // 8 bits reserved for loop id (added dynamically)
             // 8 bits reserved for loop iteration (added dynamically)
             // 16 bits unused
+        // initialize loop id
 
         return lid;
     }
