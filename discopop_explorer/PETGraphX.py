@@ -256,6 +256,7 @@ def parse_dependency(dep) -> Dependency:
     # check for intra-iteration dependencies
     if dep.type.endswith("_II"):
         d.intra_iteration = True
+        print("II ", dep.type, dep.var_name, file=sys.stderr)
         dep.type = dep.type[0:-3]  # remove _II tag
     d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
