@@ -168,10 +168,6 @@ def __check_loop_dependencies(
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
             continue
 
-        # check if targeted variable is private or firstprivate
-        if dep.var_name in [v.name for v in privates + first_privates]:
-            continue
-
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -182,9 +178,10 @@ def __check_loop_dependencies(
                 return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
-            # WAR problematic, if it is not an intra-iteration WAR
+            # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
-                return True
+                if dep.var_name not in [v.name for v in first_privates + privates]:
+                    return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
