@@ -10,7 +10,7 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -76,6 +76,40 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
-    return bool(
-        [v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)]
-    )
+    reduction_vars = [
+        v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
+    ]
+    reduction_var_names = [v.name for v in reduction_vars]
+
+    # Reductions are only valid, if the value of the reduction variable is not stored in a shared variable.
+    # This property is violated if a RAW dependency for the reduction variable between different CUs exist
+    # since CUs follow the Read-Compute-Write pattern.
+    loop_children_ids = [n.id for n in pet.subtree_of_type(root, NodeType.CU)]
+    raw_deps = set()
+    for n in loop_children_ids:
+        raw_deps.update(
+            [
+                (s, t, d)
+                for s, t, d in pet.out_edges(n, EdgeType.DATA)
+                if s in loop_children_ids and t in loop_children_ids and d.dtype == DepType.RAW
+            ]
+        )
+        raw_deps.update(
+            [
+                (s, t, d)
+                for s, t, d in pet.in_edges(n, EdgeType.DATA)
+                if s in loop_children_ids and t in loop_children_ids and d.dtype == DepType.RAW
+            ]
+        )
+    # filter RAW dependencies for reduction variables
+    filtered_raw_deps = [(s, t, d) for s, t, d in raw_deps if d.var_name in reduction_var_names]
+    # filter out cyclic RAW dependencies, since they are not problematic
+    filtered_raw_deps = [(s, t, d) for s, t, d in filtered_raw_deps if s != t]
+
+    # if raw_deps for reduction variables between different CU's exist, the above described property is violated
+    # --> not a valid reduction
+    if len(filtered_raw_deps) > 0:
+        return False
+
+    # if the loop contains any reduction variable, create a reduction suggestion
+    return bool(reduction_vars)
