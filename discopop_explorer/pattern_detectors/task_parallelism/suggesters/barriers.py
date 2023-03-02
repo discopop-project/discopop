@@ -157,7 +157,7 @@ def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -
                     # if tp_omittable is set, a omittable_suggestion has to exists.
                     # find this suggestion and extract combine_with_node
                     found_cwn = False
-                    for (tmp_omit, tmp_cwn) in omittable_nodes:
+                    for tmp_omit, tmp_cwn in omittable_nodes:
                         tmp_cwn_list = cast(List[CUNode], tmp_cwn)
                         if pet.node_at(e[1]) == tmp_omit:
                             if len(tmp_cwn_list) == 1:
