@@ -7,7 +7,7 @@
 # directory for details.
 import json
 
-from ..PETGraphX import Node, NodeID, LineID
+from ..PETGraphX import LoopNode, Node, NodeID, LineID
 
 
 class PatternInfo(object):
@@ -29,7 +29,7 @@ class PatternInfo(object):
         self.node_id = node.id
         self.start_line = node.start_position()
         self.end_line = node.end_position()
-        self.iterations_count = node.loop_iterations
+        self.iterations_count = node.loop_iterations if isinstance(node, LoopNode) else -1
         # TODO self.instructions_count = total_instructions_count(pet, node)
         self.instructions_count = 0
         self.workload = 0

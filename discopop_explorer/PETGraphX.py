@@ -161,9 +161,6 @@ class Node:
     node_calls: List[Dict[str, str]] = []
     recursive_function_calls: List[str] = []
 
-    # properties of Loop Nodes
-    loop_iterations: int = -1
-
     # properties related to pattern analysis
     reduction: bool = False
     do_all: bool = False
@@ -225,6 +222,10 @@ class CUNode(Node):
 
 # Data.xml: type="2"
 class LoopNode(Node):
+
+    # properties of Loop Nodes
+    loop_iterations: int = -1
+
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.LOOP

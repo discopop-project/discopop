@@ -126,7 +126,7 @@ def __test_chunk_limit(pet: PETGraphX, node: Node) -> Tuple[bool, Optional[int]]
     )
 
 
-def __iterations_count(pet: PETGraphX, node: Node) -> int:
+def __iterations_count(pet: PETGraphX, node: LoopNode) -> int:
     """Counts the iterations in the specified node
 
     :param pet: PET graph
