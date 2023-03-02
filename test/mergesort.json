@@ -42,23 +42,6 @@
         "A.addr"
       ],
       "reduction": []
-    },
-    {
-      "node_id": "2:32",
-      "start_line": "2:55",
-      "end_line": "2:57",
-      "iterations_count": 10,
-      "instructions_count": 0,
-      "workload": 0,
-      "first_private": [
-        "array"
-      ],
-      "private": [
-        "i"
-      ],
-      "last_private": [],
-      "shared": [],
-      "reduction": []
     }
   ],
   "pipeline": [],
