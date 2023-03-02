@@ -332,7 +332,8 @@ def __filter_sharing_clause(
     :param suggestion: suggestion to be checked
     :param var_def_line_dict: dictionary containing: var_name -> [definition lines]
     :param parent_function_cu: CUNode corresponding to the function which contains the suggestion
-    :param target_clause_list: One of: ['FP', 'PR', 'SH'], used to control which list of variables is filtered"""
+    :param target_clause_list: One of: ['FP', 'PR', 'SH'], used to control which list of variables is filtered
+    """
     to_be_removed = []
     if target_clause_list == "FP":
         sharing_clause_list = suggestion.first_private

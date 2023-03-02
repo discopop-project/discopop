@@ -662,7 +662,7 @@ def identify_dependencies_for_same_functions(
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for (intersection_var, is_pessimistic) in [
+                        for intersection_var, is_pessimistic in [
                             (e[0], e[2]) for e in intersection if e[1]
                         ]:
                             if ts_1 not in out_dep_updates:
@@ -695,7 +695,7 @@ def __perform_dependency_updates(
     :return: modified result_suggestions list"""
     for ts in task_suggestions:
         if ts in out_dep_updates:
-            for (out_dep_var, is_pessimistic) in out_dep_updates[ts]:
+            for out_dep_var, is_pessimistic in out_dep_updates[ts]:
                 if out_dep_var not in ts.out_dep and is_pessimistic:
                     print(
                         "TPDet: Warning: Pessimistic Dependency:: CUid:",
@@ -706,7 +706,7 @@ def __perform_dependency_updates(
                 ts.out_dep.append(out_dep_var)
             ts.out_dep = list(set(ts.out_dep))
         if ts in in_dep_updates:
-            for (in_dep_var, is_pessimistic) in in_dep_updates[ts]:
+            for in_dep_var, is_pessimistic in in_dep_updates[ts]:
                 if in_dep_var not in ts.in_dep and is_pessimistic:
                     print(
                         "TPDet: Warning: Pessimistic Dependency:: CUid:",
@@ -807,7 +807,6 @@ def check_dependence_of_task_pair(
         parameter = cast(str, parameter_potential_none)
         # get aliases for parameter
         for alias_entry in aliases[task_suggestion_1]:
-
             # skip wrong alias entries
             if not alias_entry[0][0] == parameter:
                 continue
@@ -906,7 +905,8 @@ def get_function_call_parameter_rw_information(
              Otherwise, (call_position, parameter_names_raw_information,
              recursively_visited, function_raw_information_cache),
              with parameter_names_raw_infotation being a list of Tuples containing the parameter names of the
-             called function and the information wheter the respective parameter is modified by the function."""
+             called function and the information wheter the respective parameter is modified by the function.
+    """
     ###############
     # 5. get R/W information for called function´s (cf) parameters based on CUInstResult.txt
     # 5.1.get CU object corresponding to cf
@@ -1188,7 +1188,7 @@ def get_function_call_parameter_rw_information_recursion_step(
     # if parameter alias entry for parent function exists:
     if called_function_cu.name in function_parameter_alias_dict:
         alias_entries = function_parameter_alias_dict[called_function_cu.name]
-        for (var_name, alias_name) in alias_entries:
+        for var_name, alias_name in alias_entries:
             var_name_is_modified = False
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
