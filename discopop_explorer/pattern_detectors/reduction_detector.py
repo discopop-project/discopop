@@ -10,7 +10,7 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, LineID
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -76,40 +76,103 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
+    # get required metadata
+    loop_start_lines: List[LineID] = []
+    root_children = pet.subtree_of_type(root, (NodeType.CU, NodeType.LOOP))
+    root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
+    root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
+    for v in root_children_loops:
+        loop_start_lines.append(v.start_position())
     reduction_vars = [
         v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
     ]
     reduction_var_names = [v.name for v in reduction_vars]
 
-    # Reductions are only valid, if the value of the reduction variable is not stored in a shared variable.
-    # This property is violated if a RAW dependency for the reduction variable between different CUs exist
-    # since CUs follow the Read-Compute-Write pattern.
-    loop_children_ids = [n.id for n in pet.subtree_of_type(root, NodeType.CU)]
-    raw_deps = set()
-    for n in loop_children_ids:
-        raw_deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.out_edges(n, EdgeType.DATA)
-                if s in loop_children_ids and t in loop_children_ids and d.dtype == DepType.RAW
-            ]
-        )
-        raw_deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.in_edges(n, EdgeType.DATA)
-                if s in loop_children_ids and t in loop_children_ids and d.dtype == DepType.RAW
-            ]
-        )
-    # filter RAW dependencies for reduction variables
-    filtered_raw_deps = [(s, t, d) for s, t, d in raw_deps if d.var_name in reduction_var_names]
-    # filter out cyclic RAW dependencies, since they are not problematic
-    filtered_raw_deps = [(s, t, d) for s, t, d in filtered_raw_deps if s != t]
 
-    # if raw_deps for reduction variables between different CU's exist, the above described property is violated
-    # --> not a valid reduction
-    if len(filtered_raw_deps) > 0:
+    if __check_loop_dependencies(pet, root, root_children_cus, root_children_loops, loop_start_lines, reduction_var_names):
         return False
 
     # if the loop contains any reduction variable, create a reduction suggestion
     return bool(reduction_vars)
+
+
+def __check_loop_dependencies(
+    pet: PETGraphX,
+    root_loop: CUNode,
+    root_children_cus: List[CUNode],
+    root_children_loops: List[CUNode],
+    loop_start_lines: List[LineID],
+        reduction_var_names: List[str],
+) -> bool:
+    """Returns True, if dependencies between the respective subgraphs chave been found.
+    Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
+    # get recursive children of source and target
+    loop_children_ids = [node.id for node in pet.subtree_of_type(root_loop, NodeType.CU)]
+
+    # get dependency edges between children nodes
+    deps = set()
+    for n in loop_children_ids:
+        deps.update(
+            [
+                (s, t, d)
+                for s, t, d in pet.in_edges(n, EdgeType.DATA)
+                if s in loop_children_ids
+            ]
+        )
+        deps.update(
+            [
+                (s, t, d)
+                for s, t, d in pet.out_edges(n, EdgeType.DATA)
+                if t in loop_children_ids
+            ]
+        )
+
+    for source, target, dep in deps:
+        # check if targeted variable is readonly inside loop
+        if pet.is_readonly_inside_loop_body(
+            dep,
+            root_loop,
+            root_children_cus,
+            root_children_loops,
+            loops_start_lines=loop_start_lines,
+        ):
+            # variable is readonly -> no problem
+            continue
+
+        # check if targeted variable is loop index
+        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+            continue
+
+        # targeted variable is not read-only
+        if dep.dtype == DepType.INIT:
+            continue
+        elif dep.dtype == DepType.RAW:
+            # check RAW dependencies
+            # Reductions are only valid, if the value of the reduction variable is not stored in a shared variable.
+            # This property is violated if a RAW dependency for the reduction variable between different CUs exist
+            # since CUs follow the Read-Compute-Write pattern.
+            if dep.var_name in reduction_var_names:
+                if source != target:
+                    # if raw_deps for reduction variables between different CU's exist,
+                    # the above described property is violated
+                    # --> not a valid reduction
+                    return True
+            else:
+                # RAW does not target a reduction variable.
+                # RAW problematic, if it is not an intra-iteration RAW.
+                if not dep.intra_iteration:
+                    return True
+        elif dep.dtype == DepType.WAR:
+            # check WAR dependencies
+            # WAR problematic, if it is not an intra-iteration WAR
+            if not dep.intra_iteration:
+                return True
+        elif dep.dtype == DepType.WAW:
+            # check WAW dependencies
+            # handled by variable classification
+            pass
+        else:
+            raise ValueError("Unsupported dependency type: ", dep.dtype)
+
+    # no problem found. Potentially suggest reduction
+    return False
