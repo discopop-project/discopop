@@ -711,7 +711,6 @@ class PETGraphX(object):
         return False
 
     def is_passed_by_reference(self, dep: Dependency, func: CUNode) -> bool:
-
         res = False
 
         for i in func.args:
@@ -817,7 +816,6 @@ class PETGraphX(object):
     def get_undefined_variables_inside_loop(
         self, root_loop: CUNode
     ) -> Dict[Variable, Set[MemoryRegion]]:
-
         sub = self.subtree_of_type(root_loop, NodeType.CU)
         vars = self.get_variables(sub)
         dummyVariables = []
