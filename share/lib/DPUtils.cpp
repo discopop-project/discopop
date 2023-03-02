@@ -44,9 +44,10 @@ namespace dputil {
     }
 
 // Encode the fileID and line number of BI as LID.
+// Encode metadata regarding the instruction in the first LIDMETADATASIZE bits
 // This is needed to support multiple files in a project.
-    int32_t getLID(Instruction *BI, int32_t &fileID) {
-        int32_t lid = 0;
+    int64_t getLID(Instruction *BI, int32_t &fileID) {
+        int64_t lid = 0;
         int32_t lno = 0;
 
         const DebugLoc &location = BI->getDebugLoc();
@@ -87,6 +88,14 @@ namespace dputil {
 
         }
         lid = (fileID << LIDSIZE) + lno;
+        
+        // get and store metadata in the first 32 Bits if necessary
+        // Layout metadata:
+            // 8 bits reserved for loop id (added dynamically)
+            // 8 bits reserved for loop iteration (added dynamically)
+            // 16 bits unused
+        // initialize loop id
+
         return lid;
     }
 

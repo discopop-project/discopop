@@ -553,6 +553,19 @@ def classify_loop_variables(
 
     vars = pet.get_undefined_variables_inside_loop(loop)
     sub = pet.subtree_of_type(loop, NodeType.CU)
+
+    # only consider memory regions which are know at the current code location.
+    # ignore memory regions which stem from called functions.
+    left_subtree_without_called_nodes = pet.get_left_right_subtree(
+        loop, False, ignore_called_nodes=True
+    )
+    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+    prior_known_mem_regs = set()
+    for pkv in prior_known_vars:
+        prior_known_mem_regs.update(prior_known_vars[pkv])
+    for var in vars:
+        vars[var] = set([mem_reg for mem_reg in vars[var] if mem_reg in prior_known_mem_regs])
+
     # vars = list(pet.get_variables(sub))
     for var in vars:
         if is_loop_index2(pet, loop, var.name):

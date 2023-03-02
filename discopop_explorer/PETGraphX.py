@@ -128,6 +128,7 @@ class Dependency:
     memory_region: Optional[MemoryRegion] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
+    intra_iteration: bool = False
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -252,7 +253,12 @@ def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
     d.source_line = dep.source
     d.sink_line = dep.sink
-    d.dtype = DepType[dep.type]
+    # check for intra-iteration dependencies
+    if dep.type.endswith("_II"):
+        d.intra_iteration = True
+        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+    else:
+        d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
     return d
@@ -346,10 +352,6 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    print("Adding Dep: ", idx, "/", len(dependencies_list))
-                    # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
-                    # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
-
                     sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
