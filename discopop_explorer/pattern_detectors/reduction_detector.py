@@ -98,6 +98,7 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
         reduction_var_names,
         fp,
         p,
+        lp,
     ):
         return False
 
@@ -114,6 +115,7 @@ def __check_loop_dependencies(
     reduction_var_names: List[str],
     first_privates: List[Variable],
     privates: List[Variable],
+    last_privates: List[Variable],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
@@ -169,7 +171,7 @@ def __check_loop_dependencies(
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
-                if dep.var_name not in [v.name for v in first_privates + privates]:
+                if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
