@@ -7,12 +7,13 @@
 # directory for details.
 
 import subprocess
-from typing import cast, IO, Dict, List, Tuple, Optional
+from typing import Union, cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
 from discopop_explorer.PETGraphX import (
     DummyNode,
     FunctionNode,
+    CUNode,
     Node,
     NodeType,
     EdgeType,
@@ -476,7 +477,7 @@ def get_function_call_from_source_code(
 
 
 def get_called_function_and_parameter_names_from_function_call(
-    source_code_line: str, mangled_function_name: str, node: Node
+    source_code_line: str, mangled_function_name: str, node: CUNode
 ) -> Tuple[Optional[str], List[Optional[str]]]:
     """Returns the name of the called function and the names of the variables used as parameters in a list,
     if any are used.
@@ -574,10 +575,10 @@ def set_global_llvm_cxxfilt_path(value: str):
 
 def get_called_functions_recursively(
     pet: PETGraphX, root: Node, visited: List[Node], cache: Dict
-) -> List[Node]:
+) -> List[FunctionNode | DummyNode]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
-    called_functions = []
+    called_functions: List[FunctionNode | DummyNode] = []
     for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
         # check if type is Func or Dummy
         if isinstance(child, (FunctionNode, DummyNode)):
@@ -587,16 +588,13 @@ def get_called_functions_recursively(
                 for function_cu in pet.all_nodes(FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu
-            called_functions.append(child)
+            called_functions.append(cast(Union[FunctionNode, DummyNode], child))
         elif child not in visited:
             if child in cache:
                 called_functions += cache[child]
             else:
                 # recursion step
                 called_functions += get_called_functions_recursively(pet, child, visited, cache)
-        else:
-            # suppress endless recursion
-            continue
     if root not in cache:
         cache[root] = called_functions
     return called_functions

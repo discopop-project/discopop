@@ -8,7 +8,7 @@
 
 from typing import List, cast, Tuple, Any
 
-from discopop_explorer.PETGraphX import Node, EdgeType, NodeType, PETGraphX, LineID
+from discopop_explorer.PETGraphX import Node, CUNode, EdgeType, NodeType, PETGraphX, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
@@ -350,7 +350,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(
                 # stop search on this path
                 continue
             # check if returnInstructionCount > 0
-            if current_node.return_instructions_count > 0:
+            if isinstance(current_node, CUNode) and current_node.return_instructions_count > 0:
                 # taskwait missing -> add current node to targets
                 targets.append(current_node)
                 continue
@@ -504,10 +504,11 @@ def suggest_missing_barriers_for_global_vars(
             if pet.node_at(succ_edge[1]).tp_contains_taskwait is True:
                 continue
             # if edge.target has common global variable with task
+            succ = pet.node_at(succ_edge[1])
             common_vars = [
                 var
-                for var in pet.node_at(succ_edge[1]).global_vars
-                if var in task_sug._node.global_vars
+                for var in (succ.global_vars if isinstance(succ, CUNode) else [])
+                if var in cast(CUNode, task_sug._node).global_vars
             ]
             if len(common_vars) > 0:
                 # if cu is a task suggestion, continue

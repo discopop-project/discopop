@@ -168,6 +168,8 @@ def __get_variables(nodes: Sequence[Node]) -> Set[Variable]:
     """
     res = set()
     for node in nodes:
+        if not isinstance(node, CUNode):
+            continue
         for v in node.local_vars:
             res.add(v)
         for v in node.global_vars:

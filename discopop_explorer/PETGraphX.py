@@ -13,9 +13,7 @@ import itertools
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
-from lxml.objectify import ObjectifiedElement
-
-from discopop_explorer.PETGraphX import FunctionNode
+from lxml.objectify import ObjectifiedElement # type:ignore
 
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -149,15 +147,8 @@ class Node:
     parent_function_id: Optional[
         NodeID
     ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
-    performs_file_io: bool = False
 
     # properties of CU Nodes
-    # (not used: children, read/writeDataSize, instructionLines(count), read/writePhaseLines, successors)
-    basic_block_id = ""
-    # instructions_count: int = -1
-    return_instructions_count: int = -1
-    local_vars: List[Variable] = []
-    global_vars: List[Variable] = []
     node_calls: List[Dict[str, str]] = []
     recursive_function_calls: List[str] = []
 
@@ -215,6 +206,13 @@ class Node:
 
 # Data.xml: type="0"
 class CUNode(Node):
+    # instructions_count: int = -1
+    basic_block_id = ""
+    return_instructions_count: int = -1
+    local_vars: List[Variable] = []
+    global_vars: List[Variable] = []
+    performs_file_io: bool = False
+
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.CU
@@ -222,8 +220,6 @@ class CUNode(Node):
 
 # Data.xml: type="2"
 class LoopNode(Node):
-
-    # properties of Loop Nodes
     loop_iterations: int = -1
 
     def __init__(self, node_id: NodeID):
@@ -861,23 +857,24 @@ class PETGraphX(object):
         """
         res: Dict[Variable, Set[MemoryRegion]] = dict()
         for node in nodes:
-            for v in node.local_vars:
-                if v not in res:
-                    res[v] = set()
-            for v in node.global_vars:
-                if v not in res:
-                    res[v] = set()
-            # try to identify memory regions
-            for var_name in res:
-                # since the variable name is checked for equality afterwards,
-                # it is safe to consider incoming dependencies at this point as well.
-                # Note that INIT type edges are considered as well!
-                for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
-                    node.id, EdgeType.DATA
-                ):
-                    if dep.var_name == var_name.name:
-                        if dep.memory_region is not None:
-                            res[var_name].add(cast(MemoryRegion, dep.memory_region))
+            if isinstance(node, CUNode):
+                for v in node.local_vars:
+                    if v not in res:
+                        res[v] = set()
+                for v in node.global_vars:
+                    if v not in res:
+                        res[v] = set()
+                # try to identify memory regions
+                for var_name in res:
+                    # since the variable name is checked for equality afterwards,
+                    # it is safe to consider incoming dependencies at this point as well.
+                    # Note that INIT type edges are considered as well!
+                    for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
+                        node.id, EdgeType.DATA
+                    ):
+                        if dep.var_name == var_name.name:
+                            if dep.memory_region is not None:
+                                res[var_name].add(cast(MemoryRegion, dep.memory_region))
         return res
 
     def get_undefined_variables_inside_loop(

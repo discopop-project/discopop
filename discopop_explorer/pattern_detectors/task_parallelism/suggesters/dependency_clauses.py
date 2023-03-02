@@ -10,6 +10,7 @@ import os
 from typing import List, Dict, Tuple, Optional, Union, cast
 
 from discopop_explorer.PETGraphX import (
+    CUNode,
     DummyNode,
     EdgeType,
     FunctionNode,
@@ -201,7 +202,7 @@ def get_alias_information(
                 function_name,
                 parameter_names,
             ) = get_called_function_and_parameter_names_from_function_call(
-                function_call_string, ts._node.recursive_function_calls[0], ts._node
+                function_call_string, ts._node.recursive_function_calls[0], cast(CUNode, ts._node)
             )
             # get CU Node object of called function
             called_function_cu_id: Optional[NodeID] = None
@@ -321,7 +322,7 @@ def identify_dependencies_for_different_functions(
     """
     # wrapper to start __check_dependence_of_task_pair for all viable combinations of suggested tasks
     result_suggestions: List[PatternInfo] = []
-    task_suggestions = []
+    task_suggestions: List[TaskParallelismInfo] = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
             s = cast(TaskParallelismInfo, s)
@@ -352,7 +353,9 @@ def identify_dependencies_for_different_functions(
                 function_name_1,
                 parameter_names_1,
             ) = get_called_function_and_parameter_names_from_function_call(
-                function_call_string_1, ts_1._node.recursive_function_calls[0], ts_1._node
+                function_call_string_1,
+                ts_1._node.recursive_function_calls[0],
+                cast(CUNode, ts_1._node),
             )
             for ts_2 in [s for s in task_suggestions if not s == ts_1]:
                 # get parent function
@@ -370,7 +373,7 @@ def identify_dependencies_for_different_functions(
                         ) = get_called_function_and_parameter_names_from_function_call(
                             function_call_string_2,
                             ts_2._node.recursive_function_calls[0],
-                            ts_2._node,
+                            cast(CUNode, ts_2._node),
                         )
                         # exclude pairs of same function from dependency detection
                         if function_name_1 == function_name_2:
@@ -773,7 +776,7 @@ def get_alias_for_parameter_at_position(
                     function_name,
                     call_parameters,
                 ) = get_called_function_and_parameter_names_from_function_call(
-                    source_code_line, called_function.name, cu
+                    source_code_line, called_function.name, cast(CUNode, cu)
                 )
                 # check if parameter_name is contained
                 for idx, pn in enumerate(call_parameters):
@@ -1009,7 +1012,7 @@ def get_function_call_parameter_rw_information(
         return None
     # get function parameter names from recursive function call
     function_name, parameter_names = get_called_function_and_parameter_names_from_function_call(
-        function_call_string, called_function_name_not_none, parent_cu_node
+        function_call_string, called_function_name_not_none, cast(CUNode, parent_cu_node)
     )
 
     # 5.4. start recursion step
