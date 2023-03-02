@@ -138,8 +138,7 @@ class Dependency:
 
 # TODO make the Node class abstract
 class Node:
-
-    #properties of every Node
+    # properties of every Node
     id: NodeID
     file_id: int
     node_id: int
@@ -147,7 +146,9 @@ class Node:
     end_line: int
     type: NodeType
     name: str
-    parent_function_id: Optional[NodeID] = None # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
+    parent_function_id: Optional[
+        NodeID
+    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
     performs_file_io: bool = False
 
     # properties of CU Nodes
@@ -172,7 +173,6 @@ class Node:
     tp_contains_taskwait: bool = False
     tp_omittable: bool = False
     mw_type = MWType.FORK
-
 
     def __init__(self, node_id: NodeID):
         self.id = node_id
@@ -233,6 +233,7 @@ class LoopNode(Node):
 # Data.xml: type="3"
 class DummyNode(Node):
     args: List[Variable] = []
+
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.DUMMY
@@ -290,9 +291,10 @@ def parse_cu(node: ObjectifiedElement) -> Node:
         else:
             dummy_or_func = FunctionNode(node_id)
         if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
-            dummy_or_func.args = [Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg]
+            dummy_or_func.args = [
+                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg
+            ]
         n = dummy_or_func
-
 
     # LOOP Node
     elif node_type == NodeType.LOOP:
@@ -1168,7 +1170,7 @@ class PETGraphX(object):
         """Note: Destroys the PETGraph!"""
         # replace node data with label
         for node_id in self.g.nodes:
-            tmp_cu= self.g.nodes[node_id]["data"]
+            tmp_cu = self.g.nodes[node_id]["data"]
             del self.g.nodes[node_id]["data"]
             self.g.nodes[node_id]["id"] = tmp_cu.id
             self.g.nodes[node_id]["type"] = str(tmp_cu.type)

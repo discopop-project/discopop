@@ -128,8 +128,8 @@ def get_mergeable_nodes(matrix):
     return res
 
 
-def get_matrix(pet:PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
-    res : List[List[int]]= []
+def get_matrix(pet: PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
+    res: List[List[int]] = []
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
