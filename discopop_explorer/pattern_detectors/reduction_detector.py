@@ -118,7 +118,7 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
     # get recursive children of source and target
-    loop_children_ids = [node.id for node in pet.subtree_of_type(root_loop, NodeType.CU)]
+    loop_children_ids = [node.id for node in root_children_cus]
 
     # get dependency edges between children nodes
     deps = set()
