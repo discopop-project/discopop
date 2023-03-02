@@ -85,10 +85,6 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
-    import sys
-
-    print("PRIVATES: ", [v.name for v in p], file=sys.stderr)
-    print("FirstPrivates: ", [v.name for v in fp], file=sys.stderr)
 
     # check if all subnodes are parallelizable
     for node in pet.subtree_of_type(root_loop, NodeType.CU):
@@ -110,6 +106,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
                 loop_start_lines,
                 fp,
                 p,
+                lp,
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
@@ -127,6 +124,7 @@ def __check_loop_dependencies(
     loop_start_lines: List[LineID],
     first_privates: List[Variable],
     privates: List[Variable],
+    last_privates: List[Variable],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
@@ -180,7 +178,7 @@ def __check_loop_dependencies(
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
-                if dep.var_name not in [v.name for v in first_privates + privates]:
+                if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
