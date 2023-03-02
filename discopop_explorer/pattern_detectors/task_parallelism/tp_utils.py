@@ -575,10 +575,10 @@ def set_global_llvm_cxxfilt_path(value: str):
 
 def get_called_functions_recursively(
     pet: PETGraphX, root: Node, visited: List[Node], cache: Dict
-) -> List[FunctionNode | DummyNode]:
+) -> List[Union[FunctionNode, DummyNode]]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
-    called_functions: List[FunctionNode | DummyNode] = []
+    called_functions: List[Union[FunctionNode, DummyNode]] = []
     for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
         # check if type is Func or Dummy
         if isinstance(child, (FunctionNode, DummyNode)):

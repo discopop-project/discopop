@@ -13,7 +13,7 @@ import itertools
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
-from lxml.objectify import ObjectifiedElement # type:ignore
+from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -775,7 +775,6 @@ class PETGraphX(object):
         return False
 
     def is_passed_by_reference(self, dep: Dependency, func: FunctionNode) -> bool:
-
         res = False
 
         for i in func.args:
