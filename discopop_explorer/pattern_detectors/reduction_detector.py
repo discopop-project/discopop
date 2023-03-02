@@ -10,7 +10,7 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, LineID
+from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, LineID, Variable
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -87,9 +87,18 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
         v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
     ]
     reduction_var_names = [v.name for v in reduction_vars]
+    fp, p, lp, s, r = classify_loop_variables(pet, root)
 
-
-    if __check_loop_dependencies(pet, root, root_children_cus, root_children_loops, loop_start_lines, reduction_var_names):
+    if __check_loop_dependencies(
+        pet,
+        root,
+        root_children_cus,
+        root_children_loops,
+        loop_start_lines,
+        reduction_var_names,
+        fp,
+        p,
+    ):
         return False
 
     # if the loop contains any reduction variable, create a reduction suggestion
@@ -102,7 +111,9 @@ def __check_loop_dependencies(
     root_children_cus: List[CUNode],
     root_children_loops: List[CUNode],
     loop_start_lines: List[LineID],
-        reduction_var_names: List[str],
+    reduction_var_names: List[str],
+    first_privates: List[Variable],
+    privates: List[Variable],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
@@ -113,18 +124,10 @@ def __check_loop_dependencies(
     deps = set()
     for n in loop_children_ids:
         deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.in_edges(n, EdgeType.DATA)
-                if s in loop_children_ids
-            ]
+            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids]
         )
         deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.out_edges(n, EdgeType.DATA)
-                if t in loop_children_ids
-            ]
+            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids]
         )
 
     for source, target, dep in deps:
@@ -164,9 +167,10 @@ def __check_loop_dependencies(
                     return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
-            # WAR problematic, if it is not an intra-iteration WAR
+            # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
-                return True
+                if dep.var_name not in [v.name for v in first_privates + privates]:
+                    return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
