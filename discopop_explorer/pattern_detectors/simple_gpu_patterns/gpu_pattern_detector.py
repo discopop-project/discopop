@@ -31,8 +31,11 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     gpu_patterns: List[GPULoopPattern] = []
 
     for node in pet.all_nodes(NodeType.LOOP):
-        if any(node.id == d.node_id for d in res.do_all) or any(
-            node.id == r.node_id for r in res.reduction
+        # check for lastprivates, since they are not supported by the suggested pragma:
+        #  pragma omp target teams distribute
+        # todo: instead of omitting, suggest #pragma omp target parallel for instead
+        if any(node.id == d.node_id for d in res.do_all if len(d.last_private) == 0) or any(
+            node.id == r.node_id for r in res.reduction if len(r.last_private) == 0
         ):
             reduction_vars: List[Variable] = []
             if node.id in [r.node_id for r in res.reduction]:
@@ -45,6 +48,9 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
             gpulp.setParentLoop(node.id)
             gpulp.classifyLoopVars(pet, node)
             gpu_patterns.append(gpulp)
+
+    if len(gpu_patterns) == 0:
+        return []
 
     regions = GPURegions(pet, gpu_patterns)
 
