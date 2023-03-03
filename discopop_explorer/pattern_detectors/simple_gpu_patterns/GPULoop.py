@@ -283,7 +283,9 @@ class GPULoopPattern(PatternInfo):
         var_names: List[str] = []
         if self.map_type_to:
             for var_id in [
-                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_to
+                # add [..] since length can not be determined reliably
+                (v.name + "[..]" if "**" in v.type else v.name)
+                for v in self.map_type_to
             ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(to: args)", var_names))
@@ -291,7 +293,9 @@ class GPULoopPattern(PatternInfo):
 
         if self.map_type_from:
             for var_id in [
-                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_from
+                # add [..] since length can not be determined reliably
+                (v.name + "[..]" if "**" in v.type else v.name)
+                for v in self.map_type_from
             ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(from: args)", var_names))
@@ -299,7 +303,9 @@ class GPULoopPattern(PatternInfo):
 
         if self.map_type_tofrom:
             for var_id in [
-                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_tofrom
+                # add [..] since length can not be determined reliably
+                (v.name + "[..]" if "**" in v.type else v.name)
+                for v in self.map_type_tofrom
             ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(tofrom: args)", var_names))
@@ -307,7 +313,9 @@ class GPULoopPattern(PatternInfo):
 
         if self.map_type_alloc:
             for var_id in [
-                (v.name + "[..]" if "**" in v.type else v.name) for v in self.map_type_alloc
+                # add [..] since length can not be determined reliably
+                (v.name + "[..]" if "**" in v.type else v.name)
+                for v in self.map_type_alloc
             ]:
                 var_names.append(var_id)
             clauses.append(omp_clause_str("map(alloc: args)", var_names))
