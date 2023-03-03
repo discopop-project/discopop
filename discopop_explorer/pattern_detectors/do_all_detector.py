@@ -9,7 +9,16 @@ import sys
 from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, LineID, DepType, Variable
+from ..PETGraphX import (
+    PETGraphX,
+    CUNode,
+    NodeType,
+    EdgeType,
+    LineID,
+    DepType,
+    Variable,
+    MemoryRegion,
+)
 from ..utils import classify_loop_variables, contains
 import time
 
@@ -85,6 +94,12 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
+    # get variables which are defined inside the loop
+    defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    tmp_loop_variables = pet.get_variables(root_children_cus)
+    for var in tmp_loop_variables:
+        if var.defLine >= root_loop.start_position() and var.defLine <= root_loop.end_position():
+            defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
     for node in pet.subtree_of_type(root_loop, NodeType.CU):
@@ -107,6 +122,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
                 fp,
                 p,
                 lp,
+                defined_inside_loop,
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
@@ -125,6 +141,7 @@ def __check_loop_dependencies(
     first_privates: List[Variable],
     privates: List[Variable],
     last_privates: List[Variable],
+    defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
@@ -150,6 +167,11 @@ def __check_loop_dependencies(
             ]
         )
 
+    # get memory regions which are defined inside the loop
+    memory_regions_defined_in_loop = set()
+    for var, mem_regs in defined_inside_loop:
+        memory_regions_defined_in_loop.update(mem_regs)
+
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop
         if pet.is_readonly_inside_loop_body(
@@ -164,6 +186,10 @@ def __check_loop_dependencies(
 
         # check if targeted variable is loop index
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+            continue
+
+        # check if variable is defined inside loop
+        if dep.memory_region in memory_regions_defined_in_loop:
             continue
 
         # targeted variable is not read-only
