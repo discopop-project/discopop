@@ -129,6 +129,7 @@ class Dependency:
     memory_region: Optional[MemoryRegion] = None
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
+    intra_iteration: bool = False
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -253,7 +254,12 @@ def parse_dependency(dep) -> Dependency:
     d = Dependency(EdgeType.DATA)
     d.source_line = dep.source
     d.sink_line = dep.sink
-    d.dtype = DepType[dep.type]
+    # check for intra-iteration dependencies
+    if dep.type.endswith("_II"):
+        d.intra_iteration = True
+        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+    else:
+        d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
     return d
@@ -332,8 +338,14 @@ class PETGraphX(object):
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
-                for s in sink:
-                    g.add_edge(s, s, data=parse_dependency(dep))
+                if len(sink) > 0:
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
+                else:
+                    # check for write lines
+                    sink = writelineToCUIdMap[dep.sink]
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
                 continue
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
@@ -341,10 +353,6 @@ class PETGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    # print("Adding Dep: ", idx, "/", len(dependencies_list))
-                    # print("sink: ", sink_cu_id, idx_1, "/", len(sink_cu_ids))
-                    # print("source: ", source_cu_id, idx_2, "/", len(source_cu_ids))
-
                     sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
@@ -712,7 +720,6 @@ class PETGraphX(object):
         return False
 
     def is_passed_by_reference(self, dep: Dependency, func: CUNode) -> bool:
-
         res = False
 
         for i in func.args:
@@ -804,7 +811,12 @@ class PETGraphX(object):
                     res[v] = set()
             # try to identify memory regions
             for var_name in res:
-                for _, _, dep in self.out_edges(node.id, EdgeType.DATA):
+                # since the variable name is checked for equality afterwards,
+                # it is safe to consider incoming dependencies at this point as well.
+                # Note that INIT type edges are considered as well!
+                for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
+                    node.id, EdgeType.DATA
+                ):
                     if dep.var_name == var_name.name:
                         if dep.memory_region is not None:
                             res[var_name].add(cast(MemoryRegion, dep.memory_region))
@@ -813,7 +825,6 @@ class PETGraphX(object):
     def get_undefined_variables_inside_loop(
         self, root_loop: CUNode
     ) -> Dict[Variable, Set[MemoryRegion]]:
-
         sub = self.subtree_of_type(root_loop, NodeType.CU)
         vars = self.get_variables(sub)
         dummyVariables = []
@@ -822,7 +833,11 @@ class PETGraphX(object):
 
         # Remove llvm temporary variables
         for var in vars:
-            if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
+            if var.defLine == "LineNotFound" or "0:" in var.defLine:
+                dummyVariables.append(var)
+            elif var.defLine == "GlobalVar" and not self.is_reduction_var(
+                root_loop.start_position(), var.name
+            ):
                 dummyVariables.append(var)
 
         # vars = list(set(vars) ^ set(dummyVariables))
@@ -887,37 +902,6 @@ class PETGraphX(object):
                         break
                 # None may occur because __get_variables doesn't check for actual elements
         return result
-
-    def is_first_written(
-        self,
-        var: str,
-        raw: Set[Tuple[NodeID, NodeID, Dependency]],
-        war: Set[Tuple[NodeID, NodeID, Dependency]],
-        sub: List[CUNode],
-    ) -> bool:
-        """Checks whether a variable is first written inside the current node
-
-        :param var: variable name
-        :param raw: raw dependencies of the loop
-        :param war: war dependencies of the loop
-        :param sub: subtree of the loop
-        :return: true if first written
-        """
-        for e in war:
-            if e[2].var_name == var and any([n.id == e[1] for n in sub]):
-                res = False
-                for eraw in raw:
-                    # TODO check
-                    if (
-                        eraw[2].var_name == var
-                        and any([n.id == e[1] for n in sub])
-                        and e[0] == eraw[2].sink_line
-                    ):
-                        res = True
-                        break
-                if not res:
-                    return False
-        return False
 
     def is_loop_index(
         self, var_name: Optional[str], loops_start_lines: List[LineID], children: List[CUNode]
@@ -997,7 +981,9 @@ class PETGraphX(object):
         assert node.parent_function_id
         return self.node_at(node.parent_function_id)
 
-    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
+    def get_left_right_subtree(
+        self, target: CUNode, right_subtree: bool, ignore_called_nodes: bool = False
+    ) -> List[CUNode]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
@@ -1024,11 +1010,18 @@ class PETGraphX(object):
             else:
                 visited.add(current)
 
-            stack.extend(
-                self.direct_children_or_called_nodes(current)
-                if right_subtree
-                else reversed(self.direct_children_or_called_nodes(current))
-            )
+            if not ignore_called_nodes:
+                stack.extend(
+                    self.direct_children_or_called_nodes(current)
+                    if right_subtree
+                    else reversed(self.direct_children_or_called_nodes(current))
+                )
+            else:
+                stack.extend(
+                    self.direct_children(current)
+                    if right_subtree
+                    else reversed(self.direct_children(current))
+                )
         return res
 
     def path(self, source: CUNode, target: CUNode) -> List[CUNode]:

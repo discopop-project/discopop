@@ -38,6 +38,9 @@ namespace __dp {
         RAW,
         WAR,
         WAW,
+        RAW_II,
+        WAR_II,
+        WAW_II,
         INIT
     }
             depType;
@@ -167,7 +170,7 @@ namespace __dp {
     void __dp_write(LID lid, ADDR addr, char *var);
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var);
-    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numElements);
+    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes);
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits);
     void __dp_delete(LID lid, ADDR startAddr);
     // End HA

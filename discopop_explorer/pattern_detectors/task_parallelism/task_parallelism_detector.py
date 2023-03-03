@@ -148,7 +148,6 @@ def run_detection(
     result: List[PatternInfo] = []
 
     for node in pet.all_nodes():
-
         if node.type == NodeType.DUMMY:
             continue
         if pet.direct_children_or_called_nodes(node):

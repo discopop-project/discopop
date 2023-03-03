@@ -200,6 +200,7 @@ class ExecutionConfiguration(object):
         # show buttons
         button_canvas = tk.Canvas(frame)
         button_canvas.grid(row=2)
+        # Create "Save" button
         save_button = tk.Button(button_canvas, text="Save",
                                 command=lambda: self.save_changes(wizard, main_screen_obj, label,
                                                                   description, executable_name,
@@ -207,10 +208,22 @@ class ExecutionConfiguration(object):
                                                                   project_path, project_linker_flags, make_target,
                                                                   additional_notes))
         save_button.grid(row=1, column=1)
+
+        # Create "Delete" button
         delete_button = tk.Button(button_canvas, text="Delete",
                                   command=lambda: self.delete_configuration(wizard, main_screen_obj, frame))
         delete_button.grid(row=1, column=2)
 
+        # Create "Open Folder" button
+        if os.path.exists(os.path.join(project_path.get(), ".discopop")):
+            target_path = os.path.join(project_path.get(), ".discopop")
+        else:
+            target_path = project_path.get()
+        open_project_folder_button = tk.Button(button_canvas, text="Open Folder",
+                                   command=lambda: os.system("xdg-open " + str(os.path.join(project_path.get(), ".discopop") if os.path.exists(os.path.join(project_path.get(), ".discopop")) else project_path.get())))
+        open_project_folder_button.grid(row=1, column=3)
+
+        # Create "Execute" button
         execute_button = tk.Button(button_canvas, text="Execute",
                                    command=lambda: self.execute_configuration(wizard, main_screen_obj, label,
                                                                               description, executable_name,
@@ -218,7 +231,8 @@ class ExecutionConfiguration(object):
                                                                               project_path, project_linker_flags,
                                                                               make_target,
                                                                               additional_notes))
-        execute_button.grid(row=1, column=3)
+        execute_button.grid(row=1, column=4)
+
 
     def __button_state_from_result_existence(self) -> str:
         # check if suggestions can be loaded. If so, enable the button.

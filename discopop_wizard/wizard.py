@@ -9,6 +9,7 @@
 import os
 import pathlib
 import tkinter as tk
+import warnings
 from tkinter import ttk
 from enum import IntEnum
 from os.path import dirname
@@ -93,9 +94,12 @@ class DiscoPoPConfigurationWizard(object):
         self.window = tk.Tk()
         self.window.title("DiscoPoP Wizard")
 
-        photo = tk.PhotoImage(
-            file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
-        self.window.iconphoto(False, photo)
+        try:
+            photo = tk.PhotoImage(
+                file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
+            self.window.iconphoto(False, photo)
+        except tk.TclError:
+            warnings.warn("Loading the window icon was not successful.")
 
         # set window to full screen
         self.window.attributes('-zoomed', True)

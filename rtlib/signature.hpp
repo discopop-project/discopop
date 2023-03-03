@@ -17,7 +17,7 @@
 #include <iostream>
 
 using namespace std;
-typedef int32_t sigElement;
+typedef int64_t sigElement;
 
 namespace __dp {
     class Signature {
