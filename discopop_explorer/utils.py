@@ -522,6 +522,19 @@ def get_child_loops(pet: PETGraphX, node: CUNode) -> Tuple[List[CUNode], List[CU
     return do_all, reduction
 
 
+def get_initialized_memory_regions_in(pet: PETGraphX, cu_nodes: List[CUNode]) -> Set[MemoryRegion]:
+    initialized_memory_regions: Set[MemoryRegion] = set()
+    for cu in cu_nodes:
+        initialized_memory_regions.update(
+            [
+                cast(MemoryRegion, d.memory_region)
+                for s, t, d in pet.out_edges(cu.id, EdgeType.DATA)
+                if d.dtype == DepType.INIT and d.memory_region is not None
+            ]
+        )
+    return initialized_memory_regions
+
+
 def classify_loop_variables(
     pet: PETGraphX, loop: CUNode
 ) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable]]:
@@ -563,8 +576,15 @@ def classify_loop_variables(
     prior_known_mem_regs = set()
     for pkv in prior_known_vars:
         prior_known_mem_regs.update(prior_known_vars[pkv])
+    initialized_in_loop = get_initialized_memory_regions_in(pet, sub)
     for var in vars:
-        vars[var] = set([mem_reg for mem_reg in vars[var] if mem_reg in prior_known_mem_regs])
+        vars[var] = set(
+            [
+                mem_reg
+                for mem_reg in vars[var]
+                if mem_reg in prior_known_mem_regs or mem_reg in initialized_in_loop
+            ]
+        )
 
     # vars = list(pet.get_variables(sub))
     for var in vars:
