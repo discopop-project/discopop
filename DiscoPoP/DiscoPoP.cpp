@@ -1106,7 +1106,14 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     if (bbName.find("if") != std::string::npos ||
                         bbName.find("for") != std::string::npos) {
                         // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if ( dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  = indx ; }}"
-                        candidate.operation_ = '>';
+
+                        // check if loaded value is used in the store instruction to prevent "false positives"
+                        if(check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))){
+                            candidate.operation_ = '>';
+                        }
+                        else{
+                            continue;
+                        }                  
                     } else {
                         continue;
                     }
@@ -1116,6 +1123,28 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
         instructions_.push_back(candidate);
     }
 }
+
+bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue){
+    // Return true, if searchedValue is used within the computation of parentValue
+    if(parentValue == searchedValue){
+        return true;
+    }
+
+    // check operands recursively, if parentValue is not a constant yet
+    if(isa<Constant>(parentValue)){
+        return false;
+    }
+    llvm::Instruction* parentInstruction = cast<Instruction>(parentValue);
+    for(int idx = 0; idx < parentInstruction->getNumOperands(); idx++){
+        if(check_value_usage(parentInstruction->getOperand(idx), searchedValue)){
+            return true;
+        }
+    }
+    
+    return false;
+    
+}
+
 
 bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
     std::ifstream fmap_file;
@@ -1410,6 +1439,12 @@ llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val)
     } else if (opcode == llvm::Instruction::Store) {
         return dp_reduction_find_reduction_instr(instr->getOperand(0));
     }
+    // enter recursion if the instruction has only a single operand to accomodate for type conversions etc.
+    if(instr->getNumOperands() == 1){
+        // unpack instruction
+        return dp_reduction_find_reduction_instr(instr->getOperand(0));
+    }
+    // no reduction instruction found
     return nullptr;
 }
 

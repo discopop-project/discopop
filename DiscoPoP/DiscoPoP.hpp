@@ -426,6 +426,7 @@ namespace {
         bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
         LID dp_reduction_getLID(Instruction *BI, int32_t &fileID);
         void dp_reduction_insert_functions();
+        bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
         llvm::LLVMContext *ctx_;
         llvm::Module *module_;
         std::ofstream *reduction_file;
