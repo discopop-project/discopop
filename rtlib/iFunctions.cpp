@@ -80,7 +80,7 @@ namespace __dp {
     pthread_mutex_t allDepsLock;
     pthread_t *workers = nullptr; // worker threads
 
-    int32_t NUM_WORKERS = 3;               // default number of worker threads
+    int32_t NUM_WORKERS = 1;               // default number of worker threads (multiple workers can potentially lead to non-deterministic results)
     int32_t CHUNK_SIZE = 500;              // default number of addresses in each chunk
     queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
     bool *addrChunkPresent = nullptr;      // addrChunkPresent[thread_id] denotes whether or not a new chunk is available for the corresponding thread
