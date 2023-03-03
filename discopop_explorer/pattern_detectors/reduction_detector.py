@@ -84,7 +84,10 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     reduction_vars = [
-        v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
+        v
+        for v in all_vars
+        if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
+        and "**" not in v.type
     ]
     reduction_var_names = [v.name for v in reduction_vars]
     fp, p, lp, s, r = classify_loop_variables(pet, root)
