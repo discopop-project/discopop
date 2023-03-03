@@ -3193,11 +3193,28 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
         endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
     }
     else if(toInstrument->getAllocatedType()->isArrayTy()){
+        // unpack potentially multidimensional allocations
+        uint64_t numElements = 1;
+        Type *typeToParse = toInstrument->getAllocatedType();
+        Type *elementType;
+
+        // unpack multidimensional allocations
+        while(typeToParse->isArrayTy()){
+            // extract size from current dimension and multiply to numElements
+            numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+            // proceed one dimension
+            typeToParse = typeToParse->getArrayElementType();
+        }
+        // typeToParse now contains the element type
+        elementType = typeToParse;
+
+        // allocated size = Element size in Bytes * Number of elements
+        auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
+        auto allocatedSize = elementSizeInBytes * numElements;
+
         // endAddr = startAddr + allocated size
-        auto elementSizeInBytes = cast<ArrayType>(toInstrument->getAllocatedType())->getElementType()->getScalarSizeInBits() / 8;
-        auto array_size = elementSizeInBytes * cast<ArrayType>(toInstrument->getAllocatedType())->getNumElements();
-        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, array_size));
-    }       
+        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+    }
 
     args.push_back(endAddr);
     args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));

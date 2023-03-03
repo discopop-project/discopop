@@ -821,7 +821,6 @@ namespace __dp {
         allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
         lastHitIterator = allocatedMemoryRegions.end();
         lastHitIterator--;
-        cout << "LHI SET TO: " << &*lastHitIterator << "\n";
 
         // update known min and max ADDR
         if(startAddr < smallestAllocatedADDR){
@@ -974,7 +973,6 @@ namespace __dp {
             allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
             lastHitIterator = allocatedMemoryRegions.end();
             lastHitIterator--;
-            cout << "LHI SET TO: " << &*lastHitIterator << "\n";
 
 #ifdef __linux__
             // try to get an output file name w.r.t. the target application
