@@ -275,7 +275,13 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
     if (programGlobalVariablesSet.count(varName)) {
         varDefLine = "GlobalVar";
-        // TODO: Find definition line of global variables
+        // Find definition line of global variables
+        GlobalVariable *globalVariable = I->getParent()->getParent()->getParent()->getGlobalVariable(StringRef(varName));
+        if(globalVariable){
+            if(isa<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))){ 
+                varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
+            }
+        }
     }
 
     // Start from the beginning of a function and look for the variable
