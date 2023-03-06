@@ -61,6 +61,12 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
                 "executable_name"] + "_dp.ll", "r") as f:
         instrumented_llvm_ir_display_widget.set_text(f.read())
     result_notebook.add(instrumented_llvm_ir_display_widget.frame, text="LLVM IR")
+    # add patterns.json preview
+    patterns_json_display_widget = ScrollableTextWidget(result_notebook)
+    with open(
+            execution_configuration_obj.value_dict["working_copy_path"] + "/" + "patterns.json", "r") as f:
+        patterns_json_display_widget.set_text(f.read())
+    result_notebook.add(patterns_json_display_widget.frame, text="patterns.json")
 
 
     # create scrollable list of suggestions
