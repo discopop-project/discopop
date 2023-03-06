@@ -7,10 +7,20 @@
 # directory for details.
 
 
-from typing import List
+from typing import List, cast
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import CUNode, LoopNode, PETGraphX, NodeType, Node
+from ..PETGraphX import (
+    CUNode,
+    LoopNode,
+    PETGraphX,
+    NodeType,
+    Node,
+    LineID,
+    Variable,
+    DepType,
+    EdgeType,
+)
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
@@ -64,7 +74,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     return result
 
 
-def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
+def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph
@@ -78,9 +88,13 @@ def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = pet.subtree_of_type(root, (NodeType.CU, NodeType.LOOP))
-    root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
-    root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
+    root_children = pet.subtree_of_type(root, (CUNode, LoopNode))
+    root_children_cus: List[CUNode] = [
+        cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU
+    ]
+    root_children_loops: List[LoopNode] = [
+        cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP
+    ]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     reduction_vars = [
@@ -111,9 +125,9 @@ def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
 
 def __check_loop_dependencies(
     pet: PETGraphX,
-    root_loop: CUNode,
+    root_loop: LoopNode,
     root_children_cus: List[CUNode],
-    root_children_loops: List[CUNode],
+    root_children_loops: List[LoopNode],
     loop_start_lines: List[LineID],
     reduction_var_names: List[str],
     first_privates: List[Variable],

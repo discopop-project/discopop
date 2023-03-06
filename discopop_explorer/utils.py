@@ -8,7 +8,7 @@
 import sys
 import time
 import itertools
-from typing import List, Sequence, Set, Dict, Tuple
+from typing import List, Sequence, Set, Dict, Tuple, cast
 
 import numpy as np
 
@@ -300,7 +300,7 @@ def is_first_written(
     mem_regs: Set[MemoryRegion],
     raw: Set[Tuple[NodeID, NodeID, Dependency]],
     war: Set[Tuple[NodeID, NodeID, Dependency]],
-    sub: List[Node],
+    sub: List[CUNode],
 ) -> bool:
     """Checks whether a variable is first written inside the current node
 
@@ -554,7 +554,7 @@ def classify_loop_variables(
     reduction = []
     lst = pet.get_left_right_subtree(loop, False)
     rst = pet.get_left_right_subtree(loop, True)
-    sub: List[Node] = pet.subtree_of_type(loop, CUNode)
+    sub: List[CUNode] = pet.subtree_of_type(loop, CUNode)
 
     raw = set()
     war = set()
@@ -568,7 +568,6 @@ def classify_loop_variables(
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
     vars = pet.get_undefined_variables_inside_loop(loop)
-    sub = pet.subtree_of_type(loop, CUNode)
 
     # only consider memory regions which are know at the current code location.
     # ignore memory regions which stem from called functions.
