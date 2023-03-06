@@ -422,11 +422,12 @@ class GPULoopPattern(PatternInfo):
             waw.update(get_dep_of_type(pet, sub_node, DepType.WAW, False))
             rev_raw.update(get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-        vars = pet.get_undefined_variables_inside_loop(loop)
+        # global vars need to be considered as well since mapping / updates may be required
+        vars = pet.get_undefined_variables_inside_loop(loop, include_global_vars=True)
 
         _, private_vars, _, _, _ = classify_loop_variables(pet, loop)
 
-        # define temporaray classification lists
+        # define temporary classification lists
         map_type_to: List[Tuple[Variable, Set[MemoryRegion]]] = []
         map_type_tofrom: List[Tuple[Variable, Set[MemoryRegion]]] = []
         map_type_from: List[Tuple[Variable, Set[MemoryRegion]]] = []
