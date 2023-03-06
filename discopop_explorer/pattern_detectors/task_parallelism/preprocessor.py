@@ -12,7 +12,7 @@ from typing import List
 
 from lxml import objectify, etree  # type: ignore
 
-from discopop_explorer.PETGraphX import NodeType, PETGraphX
+from discopop_explorer.PETGraphX import LoopNode, NodeType, PETGraphX
 
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
@@ -423,7 +423,7 @@ def check_loop_scopes(pet: PETGraphX):
     """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
     (expand only) if necessary
     :param pet: PET graph"""
-    for loop_cu in pet.all_nodes(NodeType.LOOP):
+    for loop_cu in pet.all_nodes(LoopNode):
         for child in pet.direct_children_or_called_nodes(loop_cu):
             if not line_contained_in_region(
                 child.start_position(), loop_cu.start_position(), loop_cu.end_position()

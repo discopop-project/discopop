@@ -9,16 +9,7 @@ import sys
 from typing import List, Dict, Set, Tuple
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import (
-    PETGraphX,
-    CUNode,
-    NodeType,
-    EdgeType,
-    LineID,
-    DepType,
-    Variable,
-    MemoryRegion,
-)
+from ..PETGraphX import CUNode, LoopNode, PETGraphX, Node, NodeType, EdgeType
 from ..utils import classify_loop_variables, contains
 import time
 
@@ -26,7 +17,7 @@ import time
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
@@ -63,7 +54,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :return: List of detected pattern info
     """
     result: List[DoAllInfo] = []
-    nodes = pet.all_nodes(NodeType.LOOP)
+    nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
         print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
@@ -74,7 +65,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     return result
 
 
-def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
+def __detect_do_all(pet: PETGraphX, root_loop: Node) -> bool:
     """Calculate do-all value for node
 
     :param pet: PET graph
@@ -102,14 +93,14 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
             defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, NodeType.CU):
+    for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False
 
     for i in range(0, len(subnodes)):
-        children_cache: Dict[CUNode, List[CUNode]] = dict()
-        dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
+        children_cache: Dict[Node, List[Node]] = dict()
+        dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
         for j in range(i, len(subnodes)):
             if __check_loop_dependencies(
                 pet,

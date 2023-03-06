@@ -10,14 +10,14 @@
 from typing import List
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType, DepType, LineID, Variable
+from ..PETGraphX import CUNode, LoopNode, PETGraphX, NodeType, Node
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
 class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -53,7 +53,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     :return: List of detected pattern info
     """
     result: List[ReductionInfo] = []
-    nodes = pet.all_nodes(NodeType.LOOP)
+    nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
         print("Reduction: ", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
@@ -64,7 +64,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     return result
 
 
-def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
+def __detect_reduction(pet: PETGraphX, root: Node) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph
@@ -72,7 +72,7 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
     :return: true if is reduction loop
     """
     all_vars = []
-    for node in pet.subtree_of_type(root, NodeType.CU):
+    for node in pet.subtree_of_type(root, CUNode):
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
