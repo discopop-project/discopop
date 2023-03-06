@@ -525,16 +525,21 @@ def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]
     return do_all, reduction
 
 
-def get_initialized_memory_regions_in(pet: PETGraphX, cu_nodes: List[CUNode]) -> Set[MemoryRegion]:
-    initialized_memory_regions: Set[MemoryRegion] = set()
+def get_initialized_memory_regions_in(
+    pet: PETGraphX, cu_nodes: List[CUNode]
+) -> Dict[Variable, Set[MemoryRegion]]:
+    initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
-        initialized_memory_regions.update(
-            [
-                cast(MemoryRegion, d.memory_region)
-                for s, t, d in pet.out_edges(cu.id, EdgeType.DATA)
-                if d.dtype == DepType.INIT and d.memory_region is not None
-            ]
-        )
+        for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
+            if d.dtype == DepType.INIT and d.memory_region is not None:
+                # get variable object from cu
+                for var in cu.global_vars + cu.local_vars:
+                    if var.name == d.var_name:
+                        if var not in initialized_memory_regions:
+                            initialized_memory_regions[var] = set()
+                        # create entry for initialized variable
+                        initialized_memory_regions[var].add(d.memory_region)
+
     return initialized_memory_regions
 
 
@@ -579,12 +584,16 @@ def classify_loop_variables(
     for pkv in prior_known_vars:
         prior_known_mem_regs.update(prior_known_vars[pkv])
     initialized_in_loop = get_initialized_memory_regions_in(pet, sub)
+    initialized_memory_regions: Set[MemoryRegion] = set()
+    for var in initialized_in_loop:
+        initialized_memory_regions.update(initialized_in_loop[var])
+
     for var in vars:
         vars[var] = set(
             [
                 mem_reg
                 for mem_reg in vars[var]
-                if mem_reg in prior_known_mem_regs or mem_reg in initialized_in_loop
+                if mem_reg in prior_known_mem_regs or mem_reg in initialized_memory_regions
             ]
         )
 

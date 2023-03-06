@@ -30,6 +30,7 @@ from discopop_explorer.utils import (
     is_scalar_val,
     is_loop_index2,
     classify_loop_variables,
+    get_initialized_memory_regions_in,
 )
 from discopop_explorer.utils import (
     __get_variables as get_vars,
@@ -468,20 +469,34 @@ class GPULoopPattern(PatternInfo):
             loop, False, ignore_called_nodes=True
         )
         prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+        # get memory regions which are initialized in the loop and treat them like prior known vars wrt. de-aliasing
+        initilized_in_loop = get_initialized_memory_regions_in(pet, sub)
+        combined_know_vars: Dict[Variable, Set[MemoryRegion]] = dict()
+        for var in prior_known_vars:
+            if var not in combined_know_vars:
+                combined_know_vars[var] = set()
+            combined_know_vars[var].update(prior_known_vars[var])
+        for var in initilized_in_loop:
+            if var not in combined_know_vars:
+                combined_know_vars[var] = set()
+            combined_know_vars[var].update(initilized_in_loop[var])
 
         # de-alias and store identified mapping information
-        self.map_type_to = self.__apply_dealiasing(map_type_to, prior_known_vars)
-        self.map_type_tofrom = self.__apply_dealiasing(map_type_tofrom, prior_known_vars)
+        self.map_type_to = self.__apply_dealiasing(map_type_to, combined_know_vars)
+        self.map_type_tofrom = self.__apply_dealiasing(map_type_tofrom, combined_know_vars)
 
-        self.map_type_alloc = self.__apply_dealiasing(map_type_alloc, prior_known_vars)
+        self.map_type_alloc = self.__apply_dealiasing(map_type_alloc, combined_know_vars)
 
-        self.map_type_from = self.__apply_dealiasing(map_type_from, prior_known_vars)
+        self.map_type_from = self.__apply_dealiasing(map_type_from, combined_know_vars)
 
     def __apply_dealiasing(
         self,
         input_list: List[Tuple[Variable, Set[MemoryRegion]]],
         previously_known: Dict[Variable, Set[MemoryRegion]],
     ) -> List[Variable]:
+        """Apply de-aliasing such that only valid (i.e. known) variable names are returned.
+        Memory Regions specified in initialized_memory_regions will be ignored respectively passed through."""
+
         tmp_memory_regions = set()
         for _, mem_regs in input_list:
             tmp_memory_regions.update(mem_regs)
