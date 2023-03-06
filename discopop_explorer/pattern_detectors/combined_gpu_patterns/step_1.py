@@ -9,7 +9,7 @@
 from typing import Tuple, Dict, Set, cast
 
 from discopop_explorer import NodeType
-from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID
+from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID, CUNode
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
     VarName,
@@ -23,7 +23,7 @@ def get_written_and_read_memory_regions_by_cu(
     for region in contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
 
-        subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+        subtree = pet.subtree_of_type(parent_function, CUNode)
         all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
     written_memory_regions_by_cu_id: Dict[NodeID, Set[MemoryRegion]] = dict()
@@ -82,7 +82,7 @@ def get_cu_and_varname_to_memory_regions(
     for region in contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
 
-        subtree = pet.subtree_of_type(parent_function, NodeType.CU)
+        subtree = pet.subtree_of_type(parent_function, CUNode)
         all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
     for cu_id in all_function_cu_ids:

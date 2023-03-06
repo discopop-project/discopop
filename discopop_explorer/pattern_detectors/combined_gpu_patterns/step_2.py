@@ -8,7 +8,7 @@
 import sys
 from typing import Dict, List, Set, Tuple, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode, NodeID, Node
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
     MemoryRegion,
@@ -36,7 +36,7 @@ def populate_live_data(
                 + [v.name for v in gpu_loop.reduction_vars_ids]
             )
             # set liveness within loop
-            subtree = pet.subtree_of_type(pet.node_at(gpu_loop.node_id), NodeType.CU)
+            subtree = pet.subtree_of_type(pet.node_at(gpu_loop.node_id), CUNode)
             for var in live_in_loop:
                 if var not in liveness:
                     liveness[var] = []
@@ -128,8 +128,8 @@ def extend_data_lifespan(
                     if cu_id == potential_successor_cu_id:
                         continue
                     reachable, path_nodes = pet.check_reachability_and_get_path_nodes(
-                        pet.node_at(potential_successor_cu_id),
-                        pet.node_at(cu_id),
+                        cast(CUNode, pet.node_at(potential_successor_cu_id)),
+                        cast(CUNode, pet.node_at(cu_id)),
                         [EdgeType.SUCCESSOR, EdgeType.CHILD],
                     )
                     if reachable:
@@ -144,7 +144,7 @@ def extend_data_lifespan(
                                 for _, loop_cu_id, _ in pet.out_edges(
                                     parent_node.id, EdgeType.CHILD
                                 ):
-                                    loop_cu = pet.node_at(loop_cu_id)
+                                    loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
                                     if loop_cu not in path_nodes and loop_cu not in to_be_added:
                                         to_be_added.append(loop_cu)
                         for loop_cu in to_be_added:
@@ -222,7 +222,7 @@ def calculate_host_liveness(
         shared_variables: Set[VarName] = set()
         shared_memory_regions: Set[MemoryRegion] = set()
         # get all data which is accessed by the cu_id and it's children and any device cu
-        subtree = pet.subtree_of_type(pet.node_at(cu_id), NodeType.CU)
+        subtree = pet.subtree_of_type(pet.node_at(cu_id), CUNode)
         for subtree_node_id in [n.id for n in subtree]:
             out_data_edges = pet.out_edges(subtree_node_id, EdgeType.DATA)
             in_data_edges = pet.in_edges(subtree_node_id, EdgeType.DATA)

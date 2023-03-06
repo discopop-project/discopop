@@ -9,7 +9,7 @@ import sys
 from enum import IntEnum
 
 from numpy import long  # type: ignore
-from typing import List, Set, Optional, Union, Any, Dict, Tuple
+from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from discopop_explorer.PETGraphX import (
@@ -21,6 +21,9 @@ from discopop_explorer.PETGraphX import (
     NodeID,
     LineID,
     MemoryRegion,
+    FunctionNode,
+    Node,
+    LoopNode,
 )
 from discopop_explorer.utils import (
     get_loop_iterations,
@@ -335,7 +338,7 @@ class GPULoopPattern(PatternInfo):
 
         # == additional constructs ==
         for node_id in self.called_functions:
-            fn_node: CUNode = map_node(pet, node_id)
+            fn_node: FunctionNode = cast(FunctionNode, map_node(pet, node_id))
             fn_node_start_line = str(fn_node.file_id) + ":" + str(fn_node.start_line)
             fn_node_end_line = str(fn_node.file_id) + ":" + str(fn_node.end_line + 1)
             constructs.append(
@@ -384,14 +387,14 @@ class GPULoopPattern(PatternInfo):
 
         # The final part of this string contains information about the loop's nested
         # loops including their iteration numbers.
-        n: CUNode = map_node(pet, self.nodeID)
+        n: LoopNode = cast(LoopNode, map_node(pet, self.nodeID))
         total_i: long = n.loop_iterations
         for cn_id in pet.direct_children(n):
             if cn_id.type == 2:  # type loop
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, total_i)
         return ss
 
-    def classifyLoopVars(self, pet: PETGraphX, loop: CUNode) -> None:
+    def classifyLoopVars(self, pet: PETGraphX, loop: LoopNode) -> None:
         """Classify the variables that are accessed in this loop, e.g. assign them
             to a map-type vector and find reduction variables
 
@@ -400,7 +403,7 @@ class GPULoopPattern(PatternInfo):
         reduction = []
         lst = pet.get_left_right_subtree(loop, False)
         rst = pet.get_left_right_subtree(loop, True)
-        sub = pet.subtree_of_type(loop, NodeType.CU)
+        sub = pet.subtree_of_type(loop, CUNode)
 
         raw = set()
         war = set()
@@ -446,7 +449,7 @@ class GPULoopPattern(PatternInfo):
                     map_type_to.append((var, vars[var]))
                 elif is_read_in_right_subtree(vars[var], rev_raw, sub):
                     map_type_tofrom.append((var, vars[var]))
-                elif is_written_in_subtree(vars[var], raw, waw, sub):
+                elif is_written_in_subtree(vars[var], raw, waw, cast(List[Node], sub)):
                     map_type_alloc.append((var, vars[var]))
                 else:
                     pass
@@ -532,7 +535,7 @@ class GPULoopPattern(PatternInfo):
         :return:
         """
         # calculate the number of iterations of this loop relative to the top loop
-        n: CUNode = map_node(pet, node_id)
+        n: LoopNode = cast(LoopNode, map_node(pet, node_id))
 
         for cn_id in pet.direct_children(n):
             if cn_id.type == 2:

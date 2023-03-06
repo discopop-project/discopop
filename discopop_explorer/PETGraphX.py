@@ -7,10 +7,13 @@
 # directory for details.
 
 from __future__ import annotations
+
+import copy
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
 
+import jsonpickle  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
@@ -1137,9 +1140,7 @@ class PETGraphX(object):
         """
         return jsonpickle.encode(self)
 
-    def check_reachability(
-        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
-    ) -> bool:
+    def check_reachability(self, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
         """check if target is reachable from source via edges of types edge_type.
         :param pet: PET graph
         :param source: CUNode
@@ -1153,7 +1154,7 @@ class PETGraphX(object):
         while len(queue) > 0:
             cur_node = queue.pop(0)
             if type(cur_node) == list:
-                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node_list = cast(List[Node], cur_node)
                 cur_node = cur_node_list[0]
             visited.append(cur_node.id)
             tmp_list = [
@@ -1166,7 +1167,7 @@ class PETGraphX(object):
                     return True
                 else:
                     if e[0] not in visited:
-                        queue.append(self.node_at(e[0]))
+                        queue.append(cast(Node, self.node_at(e[0])))
         return False
 
     def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
@@ -1246,7 +1247,7 @@ class PETGraphX(object):
                     if e[0] not in visited:
                         tmp_path = copy.deepcopy(cur_path)
                         tmp_path.append(cur_node)
-                        queue.append((self.node_at(e[0]), tmp_path))
+                        queue.append((cast(CUNode, self.node_at(e[0])), tmp_path))
         return False, []
 
     def dump_to_gephi_file(self, name="pet.gexf"):

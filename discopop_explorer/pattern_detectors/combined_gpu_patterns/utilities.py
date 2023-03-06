@@ -8,7 +8,7 @@
 
 from typing import List, Set, Dict, Tuple, Optional
 
-from discopop_explorer.PETGraphX import CUNode, PETGraphX, EdgeType, NodeID
+from discopop_explorer.PETGraphX import CUNode, PETGraphX, EdgeType, NodeID, FunctionNode
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
 )
@@ -27,7 +27,7 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
 
 
 def get_function_body_cus_without_called_functions(
-    pet: PETGraphX, function_node: CUNode
+    pet: PETGraphX, function_node: FunctionNode
 ) -> List[NodeID]:
     queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
     visited: Set[NodeID] = set()

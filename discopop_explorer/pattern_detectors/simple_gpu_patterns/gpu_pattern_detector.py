@@ -8,7 +8,7 @@
 
 from typing import List, cast
 
-from discopop_explorer.PETGraphX import NodeType, PETGraphX
+from discopop_explorer.PETGraphX import NodeType, PETGraphX, LoopNode
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
     find_combined_gpu_regions,
@@ -30,7 +30,7 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     """
     gpu_patterns: List[GPULoopPattern] = []
 
-    for node in pet.all_nodes(NodeType.LOOP):
+    for node in pet.all_nodes(type=LoopNode):
         # check for lastprivates, since they are not supported by the suggested pragma:
         #  pragma omp target teams distribute
         # todo: instead of omitting, suggest #pragma omp target parallel for instead

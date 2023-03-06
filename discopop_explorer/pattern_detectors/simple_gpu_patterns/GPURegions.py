@@ -8,7 +8,16 @@
 
 from numpy import long  # type: ignore
 from typing import List, Set, Optional, cast, Dict, Tuple
-from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, EdgeType, DepType, NodeID
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    CUNode,
+    NodeType,
+    EdgeType,
+    DepType,
+    NodeID,
+    LoopNode,
+    Node,
+)
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
 from discopop_explorer.utils import is_loop_index2
@@ -159,17 +168,17 @@ class GPURegions:
         :param nextCUID:
         :return:
         """
-        loop: CUNode = map_node(self.pet, cuID)
-        nextLoop: CUNode = map_node(self.pet, nextCUID)
+        loop: LoopNode = cast(LoopNode, map_node(self.pet, cuID))
+        nextLoop: LoopNode = cast(LoopNode, map_node(self.pet, nextCUID))
 
         # next loop is not a loop!
         if nextLoop.type != 2:
             return False
 
-        loopFirstChild: CUNode = self.pet.direct_children(loop)[0]
+        loopFirstChild: Node = self.pet.direct_children(loop)[0]
         CUIDsofLoop = self.pet.out_edges(loopFirstChild.id, EdgeType.SUCCESSOR)
         lastCUofLoop = map_node(self.pet, CUIDsofLoop[-1][1])
-        nextLoopFirstChild: CUNode = self.pet.direct_children(nextLoop)[0]
+        nextLoopFirstChild: Node = self.pet.direct_children(nextLoop)[0]
         successors = self.pet.out_edges(lastCUofLoop.id, EdgeType.SUCCESSOR)
         if successors:
             if nextLoopFirstChild.id == successors[0][1]:
@@ -212,16 +221,16 @@ class GPURegions:
 
         for region in self.cascadingLoopsInRegions:
             # determine CUs which belong to the region (= which are located inside the region)
-            region_cus: List[CUNode] = []
+            region_cus: List[Node] = []
             region_loop_patterns: List[GPULoopPattern] = []
             for loop_id in region:
-                loop_node: CUNode = self.pet.node_at(loop_id)
+                loop_node: LoopNode = cast(LoopNode, self.pet.node_at(loop_id))
                 gpu_lp: GPULoopPattern = [
                     p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
                 ][0]
                 region_loop_patterns.append(gpu_lp)
                 region_cus += [
-                    cu for cu in self.pet.subtree_of_type(loop_node, None) if cu not in region_cus
+                    cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus
                 ]
                 # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
                 loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
@@ -450,8 +459,8 @@ class GPURegions:
         :param node:
         :return:
         """
-        main: CUNode = self.pet.main
-        path: List[CUNode] = self.pet.path(map_node(self.pet, main.id), node)
+        main: Node = self.pet.main
+        path: List[Node] = self.pet.path(map_node(self.pet, main.id), node)
         path.reverse()
 
         for parent in path:

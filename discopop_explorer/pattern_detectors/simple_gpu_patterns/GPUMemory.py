@@ -7,13 +7,23 @@
 # directory for details.
 
 from enum import Enum
-from typing import List, Set
+from typing import List, Set, cast
 from discopop_explorer.variable import Variable
-from discopop_explorer.PETGraphX import PETGraphX, CUNode, NodeType, DepType, NodeID
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    CUNode,
+    NodeType,
+    DepType,
+    NodeID,
+    Node,
+    DummyNode,
+    FunctionNode,
+    LoopNode,
+)
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 
 
-def map_node(pet: PETGraphX, nodeID: NodeID) -> CUNode:
+def map_node(pet: PETGraphX, nodeID: NodeID) -> Node:
     return pet.node_at(nodeID)
 
 
@@ -53,7 +63,7 @@ def set_end(s: Set[str]) -> str:
 
 
 def getCalledFunctions(
-    pet: PETGraphX, node: CUNode, calledFunctions: Set[NodeID], dummyFunctions: Set[NodeID]
+    pet: PETGraphX, node: Node, calledFunctions: Set[NodeID], dummyFunctions: Set[NodeID]
 ) -> Set[NodeID]:
     """This function traverses all children nodes of 'node' and adds every
         encountered function (non-dummy) to the 'calledFunctions' set.
@@ -67,13 +77,13 @@ def getCalledFunctions(
     :param dummyFunctions:
     :return:
     """
-    sub_func = pet.subtree_of_type(node, NodeType.FUNC)
-    for e in sub_func:
-        calledFunctions.add(e.id)
+    sub_func = pet.subtree_of_type(node, FunctionNode)
+    for f in sub_func:
+        calledFunctions.add(f.id)
     # unnecessary in this i think
-    sub_dummy = pet.subtree_of_type(node, NodeType.DUMMY)
-    for e in sub_dummy:
-        dummyFunctions.add(e.id)
+    sub_dummy = pet.subtree_of_type(node, DummyNode)
+    for d in sub_dummy:
+        dummyFunctions.add(d.id)
 
     return calledFunctions
 
@@ -139,9 +149,9 @@ def assignMapType(
     copy_from: bool = False
 
     # is_global takes list of nodes, not ids
-    loop_nodes: List[CUNode] = []
+    loop_nodes: List[LoopNode] = []
     for i in loopCUs:
-        loop_nodes.append(map_node(pet, i))  # for later
+        loop_nodes.append(cast(LoopNode, map_node(pet, i)))  # for later
 
     # a variable need to be copied to target memory if there exists a RAW
     # dependency for this variable with the sink inside the loop and the source

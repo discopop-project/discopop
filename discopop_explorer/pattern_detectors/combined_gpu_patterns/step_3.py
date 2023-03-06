@@ -9,7 +9,7 @@
 import sys
 from typing import Dict, List, Tuple, Set, Optional, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, CUNode
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     MemoryRegion,
 )
@@ -122,7 +122,10 @@ def propagate_writes(
             modification_found = False
             for mem_reg in writes:
                 for cu_id, write_identifier in writes[mem_reg]:
-                    cu_node = pet.node_at(cu_id)
+                    pet_node = pet.node_at(cu_id)
+                    if type(pet_node) != CUNode:
+                        continue
+                    cu_node = cast(CUNode, pet_node)
                     if cu_node.return_instructions_count > 0:
                         # propagate write to calling cus
                         parent_function = pet.get_parent_function(cu_node)
