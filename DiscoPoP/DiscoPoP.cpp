@@ -3400,8 +3400,56 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
     int32_t isStart = 0;
 
     StringRef fn = F.getName();
-    if (fn.equals("main"))
+    if (fn.equals("main")){
         isStart = 1;
+
+        // insert 'allocations' of global variables
+        Instruction *insertBefore = &*entryBB.begin();
+
+        auto tmp_end = F.getParent()->getGlobalList().end();
+        tmp_end--;  // necessary, since the list of Globals is modified when e.g. new strings are created.
+        for(auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++){
+            IRBuilder<> IRB(insertBefore->getNextNode());
+
+            vector < Value * > args;
+            args.push_back(ConstantInt::get(Int32, lid));
+            args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
+
+            bool isGlobal;
+            //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+            Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
+            args.push_back(startAddr);
+            
+            Value *endAddr = startAddr;
+            if(Global_it->getValueType()->isArrayTy()){
+                // unpack potentially multidimensional allocations
+                uint64_t numElements = 1;
+                Type *typeToParse = Global_it->getValueType();
+                Type *elementType;
+
+                // unpack multidimensional allocations
+                while(typeToParse->isArrayTy()){
+                    // extract size from current dimension and multiply to numElements
+                    numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+                    // proceed one dimension
+                    typeToParse = typeToParse->getArrayElementType();
+                }
+                // typeToParse now contains the element type
+                elementType = typeToParse;
+
+                // allocated size = Element size in Bytes * Number of elements
+                auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
+                auto allocatedSize = elementSizeInBytes * numElements;
+
+                // endAddr = startAddr + allocated size
+                endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+            }
+
+            args.push_back(endAddr);
+            args.push_back(ConstantInt::get(Int64, 0));
+            IRB.CreateCall(DpAlloca, args, "");
+        }
+    }
 
     // We always want to insert __dp_func_entry at the beginning
     // of the basic block, but we need the first valid LID to
