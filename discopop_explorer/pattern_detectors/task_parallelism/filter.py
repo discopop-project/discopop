@@ -8,7 +8,7 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PETGraphX import NodeType, EdgeType, CUNode, PETGraphX
+from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, Node, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -252,7 +252,7 @@ def __filter_firstprivate_clauses(
 
 
 def __reverse_reachable_w_o_breaker(
-    pet: PETGraphX, root: CUNode, target: CUNode, breaker_cu: CUNode, visited: List[CUNode]
+    pet: PETGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]
 ):
     """Helper function for filter_data_sharing_clauses_by_scope.
     Checks if target is reachable by traversing the successor graph in reverse, starting from root,
@@ -348,7 +348,7 @@ def __filter_sharing_clause(
                 # accept global vars
                 continue
             # get CU which contains var_def_line
-            optional_var_def_cu: Optional[CUNode] = None
+            optional_var_def_cu: Optional[Node] = None
             for child_cu in get_cus_inside_function(pet, parent_function_cu):
                 if line_contained_in_region(
                     var_def_line, child_cu.start_position(), child_cu.end_position()
@@ -356,7 +356,7 @@ def __filter_sharing_clause(
                     optional_var_def_cu = child_cu
             if optional_var_def_cu is None:
                 continue
-            var_def_cu = cast(CUNode, optional_var_def_cu)
+            var_def_cu = cast(Node, optional_var_def_cu)
             # 1. check control flow (reverse BFS from suggestion._node to parent_function
             if __reverse_reachable_w_o_breaker(
                 pet, pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []
@@ -404,12 +404,10 @@ def remove_useless_barrier_suggestions(
             result_suggestions.append(single_suggestion)
     # get map of function body cus containing task suggestions to line number
     # of task pragmas
-    relevant_function_bodies: Dict[CUNode, List[str]] = {}
+    relevant_function_bodies: Dict[Node, List[str]] = {}
     for ts in task_suggestions:
         # get first parent cu with type function using bfs
-        parent: CUNode = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][
-            0
-        ]
+        parent: Node = get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, True)[0][0]
         if parent not in relevant_function_bodies:
             relevant_function_bodies[parent] = [ts.pragma_line]
         else:
@@ -454,7 +452,7 @@ def __filter_in_dependencies(
     pet: PETGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
-    parent_function: CUNode,
+    parent_function: Node,
     out_dep_vars: Dict[str, List[str]],
 ) -> bool:
     """Helper function for filter_data_depend_clauses.
@@ -489,7 +487,7 @@ def __filter_in_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -523,7 +521,7 @@ def __filter_out_dependencies(
     pet: PETGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
-    parent_function: CUNode,
+    parent_function: Node,
     in_dep_vars: Dict[str, List[str]],
 ) -> bool:
     """Helper function for filter_data_depend_clauses.
@@ -558,7 +556,7 @@ def __filter_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -592,7 +590,7 @@ def __filter_in_out_dependencies(
     pet: PETGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
-    parent_function: CUNode,
+    parent_function: Node,
     in_dep_vars: Dict[str, List[str]],
     out_dep_vars: Dict[str, List[str]],
 ) -> bool:
@@ -633,7 +631,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -657,7 +655,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(NodeType.CU):
+                            for cu_node in pet.all_nodes(CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node

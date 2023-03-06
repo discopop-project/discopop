@@ -9,7 +9,18 @@
 import os
 from typing import List, cast, TextIO
 
-from .PETGraphX import LineID, NodeID, PETGraphX, NodeType, CUNode, DepType, EdgeType
+from .PETGraphX import (
+    CUNode,
+    FunctionNode,
+    LineID,
+    LoopNode,
+    NodeID,
+    PETGraphX,
+    NodeType,
+    Node,
+    DepType,
+    EdgeType,
+)
 from .parser import parse_inputs
 
 
@@ -31,7 +42,7 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if recursive call inside any loop body. False otherwise."""
-    for tmp_cu in pet.all_nodes(NodeType.LOOP):
+    for tmp_cu in pet.all_nodes(LoopNode):
         if __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
             tmp_cu.start_position(),
@@ -48,7 +59,7 @@ def __recursive_function_called_multiple_times_inside_function(
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if multiple calls exists. False otherwise."""
-    for tmp_func_cu in pet.all_nodes(NodeType.FUNC):
+    for tmp_func_cu in pet.all_nodes(FunctionNode):
         # 1. get parent function of recursive function call
         if not __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
@@ -60,8 +71,8 @@ def __recursive_function_called_multiple_times_inside_function(
         # 2. check if multiple calls to recursive function exist in tmp_func_cus body
         # by listing cu nodes in function body.
         # get cu's inside function by traversing child edges
-        queue: List[CUNode] = [tmp_func_cu]
-        contained_cus: List[CUNode] = []
+        queue: List[Node] = [tmp_func_cu]
+        contained_cus: List[Node] = []
         while len(queue) > 0:
             cur_cu = queue.pop(0)
             if __line_contained_in_region(
@@ -124,8 +135,8 @@ def __output_dependencies_of_type(
             )
 
 
-def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
-    if node.type != NodeType.CU:
+def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
+    if not isinstance(node, CUNode):
         return
     for recursive_function_call in node.recursive_function_calls:
         if recursive_function_call is None:
@@ -151,7 +162,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: CUNode):
 
         for child_id in children_ids:
             # node type is not cu so goto next node
-            if pet.node_at(child_id).type is not NodeType.CU:
+            if not isinstance(pet.node_at(child_id), CUNode):
                 continue
             __output_dependencies_of_type(
                 pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|"

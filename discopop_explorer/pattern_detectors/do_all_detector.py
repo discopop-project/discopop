@@ -6,18 +6,20 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, cast
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
-    PETGraphX,
     CUNode,
+    LoopNode,
+    PETGraphX,
+    Node,
     NodeType,
     EdgeType,
     LineID,
-    DepType,
-    Variable,
     MemoryRegion,
+    Variable,
+    DepType,
 )
 from ..utils import classify_loop_variables, contains
 import time
@@ -26,7 +28,7 @@ import time
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
@@ -63,7 +65,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     :return: List of detected pattern info
     """
     result: List[DoAllInfo] = []
-    nodes = pet.all_nodes(NodeType.LOOP)
+    nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
         # print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
@@ -74,7 +76,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     return result
 
 
-def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
+def __detect_do_all(pet: PETGraphX, root_loop: LoopNode) -> bool:
     """Calculate do-all value for node
 
     :param pet: PET graph
@@ -88,9 +90,9 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = pet.subtree_of_type(root_loop, (NodeType.CU, NodeType.LOOP))
-    root_children_cus = [cu for cu in root_children if cu.type == NodeType.CU]
-    root_children_loops = [cu for cu in root_children if cu.type == NodeType.LOOP]
+    root_children = pet.subtree_of_type(root_loop, (CUNode, LoopNode))
+    root_children_cus = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
+    root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
@@ -102,14 +104,14 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
             defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, NodeType.CU):
+    for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False
 
     for i in range(0, len(subnodes)):
-        children_cache: Dict[CUNode, List[CUNode]] = dict()
-        dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
+        children_cache: Dict[Node, List[Node]] = dict()
+        dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
         for j in range(i, len(subnodes)):
             if __check_loop_dependencies(
                 pet,
@@ -132,11 +134,11 @@ def __detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
 
 def __check_loop_dependencies(
     pet: PETGraphX,
-    node_1: CUNode,
-    node_2: CUNode,
-    root_loop: CUNode,
+    node_1: Node,
+    node_2: Node,
+    root_loop: LoopNode,
     root_children_cus: List[CUNode],
-    root_children_loops: List[CUNode],
+    root_children_loops: List[LoopNode],
     loop_start_lines: List[LineID],
     first_privates: List[Variable],
     privates: List[Variable],
@@ -146,8 +148,8 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
     # get recursive children of source and target
-    node_1_children_ids = [node.id for node in pet.subtree_of_type(node_1, NodeType.CU)]
-    node_2_children_ids = [node.id for node in pet.subtree_of_type(node_2, NodeType.CU)]
+    node_1_children_ids = [node.id for node in pet.subtree_of_type(node_1, CUNode)]
+    node_2_children_ids = [node.id for node in pet.subtree_of_type(node_2, CUNode)]
 
     # get dependency edges between children nodes
     deps = set()
@@ -230,7 +232,7 @@ def __old_detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     ]
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, NodeType.CU):
+    for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False

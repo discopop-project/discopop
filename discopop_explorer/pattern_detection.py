@@ -7,7 +7,7 @@
 # directory for details.
 from typing import List
 
-from .PETGraphX import PETGraphX, NodeType, EdgeType
+from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
@@ -70,11 +70,11 @@ class PatternDetectorX(object):
         """
         dummies_to_remove = set()
         for node in self.pet.all_nodes():
-            if not loop_type or node.type == NodeType.LOOP:
-                if remove_dummies and node.type == NodeType.DUMMY:
+            if not loop_type or isinstance(node, LoopNode):
+                if remove_dummies and isinstance(node, DummyNode):
                     continue
                 for s, t, e in self.pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
-                    if remove_dummies and self.pet.node_at(t).type == NodeType.DUMMY:
+                    if remove_dummies and isinstance(self.pet.node_at(t), DummyNode):
                         dummies_to_remove.add(t)
 
         for n in dummies_to_remove:

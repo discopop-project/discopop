@@ -7,11 +7,14 @@
 # directory for details.
 
 import subprocess
-from typing import cast, IO, Dict, List, Tuple, Optional
+from typing import Union, cast, IO, Dict, List, Tuple, Optional
 
 from lxml import objectify  # type: ignore
 from discopop_explorer.PETGraphX import (
+    DummyNode,
+    FunctionNode,
     CUNode,
+    Node,
     NodeType,
     EdgeType,
     MWType,
@@ -84,8 +87,8 @@ def line_contained_in_region(test_line: str, start_line: str, end_line: str) -> 
 
 
 def get_parent_of_type(
-    pet: PETGraphX, node: CUNode, parent_type: NodeType, edge_type: EdgeType, only_first: bool
-) -> List[Tuple[CUNode, Optional[CUNode]]]:
+    pet: PETGraphX, node: Node, parent_type: NodeType, edge_type: EdgeType, only_first: bool
+) -> List[Tuple[Node, Optional[Node]]]:
     """return parent cu nodes and the last node of the path to them as a tuple
     for the given node with type parent_type
     accessible via edges of type edge_type.
@@ -97,8 +100,8 @@ def get_parent_of_type(
         Else, return first parent for each incoming edge of node.
     :return: [(CUNode, CUNode)]"""
     visited = []
-    queue: List[Tuple[CUNode, Optional[CUNode]]] = [(node, None)]
-    res: List[Tuple[CUNode, Optional[CUNode]]] = []
+    queue: List[Tuple[Node, Optional[Node]]] = [(node, None)]
+    res: List[Tuple[Node, Optional[Node]]] = []
     while len(queue) > 0:
         tmp = queue.pop(0)
         (cur_node, last_node) = tmp
@@ -122,13 +125,13 @@ def get_parent_of_type(
     return res
 
 
-def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]:
+def get_cus_inside_function(pet: PETGraphX, function_cu: Node) -> List[Node]:
     """Returns cus contained in function-body as a list.
     :param pet: PET Graph
     :param function_cu: target function node
     :return: List[CUNode]"""
-    queue: List[CUNode] = [function_cu]
-    result_list: List[CUNode] = []
+    queue: List[Node] = [function_cu]
+    result_list: List[Node] = []
     while len(queue) > 0:
         cur_cu = queue.pop(0)
         if cur_cu not in result_list:
@@ -140,7 +143,7 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: CUNode) -> List[CUNode]
 
 
 def check_reachability(
-    pet: PETGraphX, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    pet: PETGraphX, target: Node, source: Node, edge_types: List[EdgeType]
 ) -> bool:
     """check if target is reachable from source via edges of types edge_type.
     :param pet: PET graph
@@ -155,7 +158,7 @@ def check_reachability(
     while len(queue) > 0:
         cur_node = queue.pop(0)
         if type(cur_node) == list:
-            cur_node_list = cast(List[CUNode], cur_node)
+            cur_node_list = cast(List[Node], cur_node)
             cur_node = cur_node_list[0]
         visited.append(cur_node.id)
         tmp_list = [
@@ -173,8 +176,8 @@ def check_reachability(
 
 
 def get_predecessor_nodes(
-    pet: PETGraphX, root: CUNode, visited_nodes: List[CUNode]
-) -> Tuple[List[CUNode], List[CUNode]]:
+    pet: PETGraphX, root: Node, visited_nodes: List[Node]
+) -> Tuple[List[Node], List[Node]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -186,7 +189,7 @@ def get_predecessor_nodes(
     :return: Tuple[[predecessor nodes], [visited nodes]]"""
     result = [root]
     visited_nodes.append(root)
-    if root.type == NodeType.FUNC or root.tp_contains_taskwait is True:
+    if isinstance(root, FunctionNode) or root.tp_contains_taskwait is True:
         # root of type "function" or root is a barrier
         return result, visited_nodes
     in_succ_edges = [
@@ -255,7 +258,7 @@ def check_neighbours(first: Task, second: Task):
 #            pass
 
 
-def create_task_tree(pet: PETGraphX, root: CUNode):
+def create_task_tree(pet: PETGraphX, root: Node):
     """generates task tree data from root node
 
     :param pet: PET graph
@@ -266,9 +269,7 @@ def create_task_tree(pet: PETGraphX, root: CUNode):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(
-    pet: PETGraphX, current: CUNode, root: Task, visited_func: List[CUNode]
-):
+def create_task_tree_helper(pet: PETGraphX, current: Node, root: Task, visited_func: List[Node]):
     """generates task tree data recursively
 
     :param pet: PET graph
@@ -276,7 +277,7 @@ def create_task_tree_helper(
     :param root: root task for subtree
     :param visited_func: visited function nodes
     """
-    if current.type == NodeType.FUNC:
+    if isinstance(current, FunctionNode):
         if current in visited_func:
             return
         else:
@@ -298,8 +299,8 @@ def create_task_tree_helper(
 
 
 def recursive_function_call_contained_in_worker_cu(
-    function_call_string: str, worker_cus: List[CUNode]
-) -> CUNode:
+    function_call_string: str, worker_cus: List[Node]
+) -> Node:
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -357,12 +358,12 @@ def recursive_function_call_contained_in_worker_cu(
                     tightest_worker_cu = cur_w
     if tightest_worker_cu is None:
         raise ValueError("No surrounding worker CU could be found.")
-    return cast(CUNode, tightest_worker_cu)
+    return cast(Node, tightest_worker_cu)
 
 
 def task_contained_in_reduction_loop(
     pet: PETGraphX, task: TaskParallelismInfo
-) -> Tuple[Optional[Dict[str, str]], Optional[CUNode]]:
+) -> Tuple[Optional[Dict[str, str]], Optional[Node]]:
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
     else, return reduction_vars entry of parent reduction loop and loop CU Node.
@@ -573,36 +574,33 @@ def set_global_llvm_cxxfilt_path(value: str):
 
 
 def get_called_functions_recursively(
-    pet: PETGraphX, root: CUNode, visited: List[CUNode], cache: Dict
-) -> List[CUNode]:
+    pet: PETGraphX, root: Node, visited: List[Node], cache: Dict
+) -> List[Union[FunctionNode, DummyNode]]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
-    called_functions = []
+    called_functions: List[Union[FunctionNode, DummyNode]] = []
     for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
         # check if type is Func or Dummy
-        if child.type == NodeType.FUNC or child.type == NodeType.DUMMY:
+        if isinstance(child, (FunctionNode, DummyNode)):
             # CU contains a function call
             # if Dummy, map to Func
-            if child.type == NodeType.DUMMY:
-                for function_cu in pet.all_nodes(NodeType.FUNC):
+            if isinstance(child, DummyNode):
+                for function_cu in pet.all_nodes(FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu
-            called_functions.append(child)
+            called_functions.append(cast(Union[FunctionNode, DummyNode], child))
         elif child not in visited:
             if child in cache:
                 called_functions += cache[child]
             else:
                 # recursion step
                 called_functions += get_called_functions_recursively(pet, child, visited, cache)
-        else:
-            # suppress endless recursion
-            continue
     if root not in cache:
         cache[root] = called_functions
     return called_functions
 
 
-def contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
+def contains_reduction(pet: PETGraphX, node: Node) -> bool:
     """Checks if node contains a reduction operation.
     :param pet: PET Graph
     :param node: CUNode
@@ -615,7 +613,7 @@ def contains_reduction(pet: PETGraphX, node: CUNode) -> bool:
     return False
 
 
-def detect_mw_types(pet: PETGraphX, main_node: CUNode):
+def detect_mw_types(pet: PETGraphX, main_node: Node):
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before

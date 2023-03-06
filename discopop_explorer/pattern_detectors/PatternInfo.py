@@ -7,13 +7,13 @@
 # directory for details.
 import json
 
-from ..PETGraphX import CUNode, NodeID, LineID
+from ..PETGraphX import LoopNode, Node, NodeID, LineID
 
 
 class PatternInfo(object):
     """Base class for pattern detection info"""
 
-    _node: CUNode
+    _node: Node
     node_id: NodeID
     start_line: LineID
     end_line: LineID
@@ -21,7 +21,7 @@ class PatternInfo(object):
     instructions_count: int
     workload: int
 
-    def __init__(self, node: CUNode):
+    def __init__(self, node: Node):
         """
         :param node: node, where pipeline was detected
         """
@@ -29,7 +29,7 @@ class PatternInfo(object):
         self.node_id = node.id
         self.start_line = node.start_position()
         self.end_line = node.end_position()
-        self.iterations_count = node.loop_iterations
+        self.iterations_count = node.loop_iterations if isinstance(node, LoopNode) else -1
         # TODO self.instructions_count = total_instructions_count(pet, node)
         self.instructions_count = 0
         self.workload = 0
