@@ -195,6 +195,15 @@ class Node:
         """
         return LineID(f"{self.file_id}:{self.end_line}")
 
+    def contains_line(self, other_line: LineID) -> bool:
+        other_file_id = int(other_line.split(":")[0])
+        other_line_num = int(other_line.split(":")[1])
+        if other_file_id != self.file_id:
+            return False
+        if other_line_num >= self.start_line and other_line_num <= self.end_line:
+            return True
+        return False
+
     def __str__(self):
         return self.id
 

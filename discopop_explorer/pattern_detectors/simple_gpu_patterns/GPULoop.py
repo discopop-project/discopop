@@ -221,6 +221,7 @@ class GPULoopPattern(PatternInfo):
         self.collapse = 1
         self.scheduling = ""
         self.constructs = []
+        self.declared_global_variables: Set[Variable] = set()
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -338,6 +339,7 @@ class GPULoopPattern(PatternInfo):
         )
 
         # == additional constructs ==
+        used_global_vars: Set[Variable] = set()
         for node_id in self.called_functions:
             fn_node: FunctionNode = cast(FunctionNode, map_node(pet, node_id))
             fn_node_start_line = str(fn_node.file_id) + ":" + str(fn_node.start_line)
@@ -353,6 +355,37 @@ class GPULoopPattern(PatternInfo):
                     positioning=OmpConstructPositioning.AFTER_LINE,
                 )
             )
+            # get used global variables
+            cu_nodes: List[CUNode] = pet.subtree_of_type(fn_node, CUNode)
+            tmp_global_vars: Set[Variable] = set()
+            for cu_node in cu_nodes:
+                tmp_global_vars.update(cu_node.global_vars)
+
+            # check if global var is defined outside fn_node's body and update used_global_vars
+            used_global_vars.update(
+                global_var
+                for global_var in tmp_global_vars
+                if global_var.defLine
+                if not fn_node.contains_line(global_var.defLine)
+            )
+
+        # declare all global variables used in called functions
+        self.declared_global_variables.update(used_global_vars)
+        for global_var in used_global_vars:
+            constructs.append(
+                omp_construct_dict(
+                    "#pragma omp declare target  // " + global_var.name, global_var.defLine, []
+                )
+            )
+            constructs.append(
+                omp_construct_dict(
+                    "#pragma omp end declare target  // " + global_var.name,
+                    global_var.defLine,
+                    [],
+                    positioning=OmpConstructPositioning.AFTER_LINE,
+                )
+            )
+
         return constructs
 
     def getDataStr(self, pet: PETGraphX) -> str:
