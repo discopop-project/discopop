@@ -27,8 +27,8 @@ class Settings(object):
     use_docker_container_for_profiling: bool = True
 
     # code preview settings
-    code_preview_show_metadata_regions: int = 1  # 1 = True, 0 = False
-    code_preview_show_metadata_live_device_variables: int = 1  # 1 = True, 0 = False
+    code_preview_show_metadata_regions: int = 0  # 1 = True, 0 = False
+    code_preview_show_metadata_live_device_variables: int = 0  # 1 = True, 0 = False
     code_preview_show_line_numbers: int = 1  # 1 = True, 0 = False
 
     def __init__(self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True) -> None:
