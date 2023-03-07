@@ -9,7 +9,7 @@
 import copy
 import os
 import sys
-from typing import List, Dict
+from typing import List, Dict, Sequence, Any
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
@@ -21,8 +21,10 @@ class ContentBuffer(object):
     max_line_num: int  # used to determine width of padding
     file_id: int
     next_free_region_id = 0
+    line_type: Any
 
-    def __init__(self, file_id: int, source_code_path: str, tab_width: int = 4):
+    def __init__(self, file_id: int, source_code_path: str, tab_width: int = 4, line_type=Line):
+        self.line_type = line_type
         self.file_id = file_id
         self.lines = []
         self.max_line_num = 0
@@ -32,7 +34,7 @@ class ContentBuffer(object):
             for idx, line in enumerate(lines):
                 idx = idx + 1  # start with line number 1
                 self.max_line_num = idx
-                line_obj = Line(idx, line_num=idx, content=line)
+                line_obj = self.line_type(idx, line_num=idx, content=line)
                 self.lines.append(line_obj)
 
     def print_lines(self):
@@ -90,7 +92,7 @@ class ContentBuffer(object):
         backup_next_free_region_id = self.next_free_region_id
 
         # construct line
-        pragma_line = Line(pragma.start_line)
+        pragma_line = self.line_type(pragma.start_line)
         if add_as_comment:
             pragma_line.content = "//<DiscoPoP-IGNORED> "
         else:
