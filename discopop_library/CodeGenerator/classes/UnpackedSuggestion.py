@@ -126,18 +126,22 @@ class UnpackedSuggestion(object):
             loop_start_line = int(loop_start.split(":")[1])
             loop_end = loop["end_line"]
             loop_end_line = int(loop_end.split(":")[1])
+            loop_pragma = Pragma()
+            loop_pragma.start_line = loop_start_line
+            loop_pragma.end_line = loop_end_line
+            loop_pragma.file_id = int(loop_start.split(":")[0])
             for construct in loop["constructs"]:
                 construct_start = construct["line"]
                 construct_start_line = int(construct_start.split(":")[1])
-                pragma = Pragma()
-                pragma.pragma_str = construct["name"] + " "
+                child_pragma = Pragma()
+                child_pragma.pragma_str = construct["name"] + " "
                 if loop["collapse"] > 1:
-                    pragma.pragma_str += "collapse(" + str(loop["collapse"]) + ") "
+                    child_pragma.pragma_str += "collapse(" + str(loop["collapse"]) + ") "
                 for clause in construct["clauses"]:
                     if ignore_mapping_clauses:
                         if clause.startswith("map("):
                             continue
-                    pragma.pragma_str += clause + " "
+                    child_pragma.pragma_str += clause + " "
                 # determine start_line and end_line
                 if construct_start_line == loop_start_line:
                     # if construct targets loop, use loop scope
@@ -154,19 +158,19 @@ class UnpackedSuggestion(object):
                     end_line = construct_start_line
                 # determine positioning of the pragma
                 if construct["positioning"] == OmpConstructPositioning.BEFORE_LINE:
-                    pragma.pragma_position = PragmaPosition.BEFORE_START
+                    child_pragma.pragma_position = PragmaPosition.BEFORE_START
                 elif construct["positioning"] == OmpConstructPositioning.AFTER_LINE:
-                    pragma.pragma_position = PragmaPosition.AFTER_START
+                    child_pragma.pragma_position = PragmaPosition.AFTER_START
                 else:
                     raise ValueError(
                         "Unsupported positioning information: ", construct["positioning"]
                     )
                 # create pragma for visualization
-                pragma.start_line = start_line
-                pragma.end_line = end_line
-                pragma.file_id = self.file_id
-                pragmas.append(pragma)
-
+                child_pragma.start_line = start_line
+                child_pragma.end_line = end_line
+                child_pragma.file_id = self.file_id
+                loop_pragma.children.append(child_pragma)
+            pragmas.append(loop_pragma)
         return pragmas
 
     def get_pragmas(self) -> List[Pragma]:

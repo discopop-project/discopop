@@ -8,7 +8,6 @@
 
 import copy
 import os
-import sys
 from typing import List, Dict
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
@@ -133,7 +132,10 @@ class ContentBuffer(object):
 
         # append children to lines (mark as contained in region)
         for child_pragma in pragma.children:
-            successful = self.add_pragma(child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment)
+            #print("\tChild: ", child_pragma, file=sys.stderr)
+            # set skip_compilation_check to true since compiling children pragmas on their own might not be successful.
+            # As an example for that, '#pragma omp declare target' can be mentioned
+            successful = self.add_pragma(file_mapping, child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment, skip_compilation_check=True)
 
             if not successful:
                 print("==> Skipped pragma insertion due to potential compilation errors!\n")
