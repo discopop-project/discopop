@@ -479,7 +479,16 @@ class GPULoopPattern(PatternInfo):
                 reduction.append(var)
             # TODO grouping
 
-            if is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop):
+            if (
+                is_written_in_subtree(vars[var], raw, waw, lst)
+                or is_func_arg(pet, var.name, loop)
+                or (
+                    # "manual" triggering of "map(to)" required for true global variables since initialization of global
+                    # variables might not occur in dependencies since the initializations are not instrumented
+                    is_global(var.name, sub)
+                    and not pet.get_parent_function(loop).contains_line(var.defLine)
+                )
+            ):
                 if is_readonly(vars[var], war, waw, rev_raw):
                     map_type_to.append((var, vars[var]))
                 elif is_read_in_right_subtree(vars[var], rev_raw, sub):
