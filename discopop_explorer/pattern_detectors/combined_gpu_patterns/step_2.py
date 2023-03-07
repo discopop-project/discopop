@@ -30,9 +30,10 @@ def populate_live_data(
     for region in comb_gpu_reg.contained_regions:
         for gpu_loop in region.contained_loops:
             live_in_loop = (
-                gpu_loop.map_type_to
-                + gpu_loop.map_type_tofrom
-                + gpu_loop.map_type_alloc
+                [v.name for v in gpu_loop.map_type_to]
+                + [v.name for v in gpu_loop.map_type_tofrom]
+                + [v.name for v in gpu_loop.map_type_from]
+                + [v.name for v in gpu_loop.map_type_alloc]
                 + [v.name for v in gpu_loop.reduction_vars_ids]
             )
             # set liveness within loop
