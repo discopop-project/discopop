@@ -278,8 +278,11 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
         // Find definition line of global variables
         GlobalVariable *globalVariable = I->getParent()->getParent()->getParent()->getGlobalVariable(StringRef(varName));
         if(globalVariable){
-            if(isa<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))){ 
-                varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
+            MDNode *metadata = globalVariable->getMetadata("dbg");
+            if(metadata){
+                if(isa<DIGlobalVariableExpression>(metadata)){ 
+                    varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
+                }
             }
         }
     }
