@@ -18,26 +18,28 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 
-node_props = [
-    ("BasicBlockID", "string", "''"),
-    ("pipeline", "float", "0"),
-    ("doAll", "bool", "False"),
-    ("geomDecomp", "bool", "False"),
-    ("reduction", "bool", "False"),
-    ("mwType", "int", "2"),
-    ("localVars", "object", "[]"),
-    ("globalVars", "object", "[]"),
-    ("args", "object", "[]"),
-    ("recursiveFunctionCalls", "object", "[]"),
-]
 
-edge_props = [
-    ("type", "string"),
-    ("source", "string"),
-    ("sink", "string"),
-    ("var", "string"),
-    ("dtype", "string"),
-]
+# unused
+# node_props = [
+#    ("BasicBlockID", "string", "''"),
+#    ("pipeline", "float", "0"),
+#    ("doAll", "bool", "False"),
+#    ("geomDecomp", "bool", "False"),
+#    ("reduction", "bool", "False"),
+#    ("mwType", "int", "2"),
+#    ("localVars", "object", "[]"),
+#    ("globalVars", "object", "[]"),
+#    ("args", "object", "[]"),
+#    ("recursiveFunctionCalls", "object", "[]"),
+# ]
+
+# edge_props = [
+#    ("type", "string"),
+#    ("source", "string"),
+#    ("sink", "string"),
+#    ("var", "string"),
+#    ("dtype", "string"),
+# ]
 
 
 def parse_id(node_id: str) -> Tuple[int, int]:
