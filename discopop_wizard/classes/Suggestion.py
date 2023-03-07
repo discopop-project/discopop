@@ -16,7 +16,7 @@ from typing import List, Tuple, Dict
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
     EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
-from discopop_wizard.classes.CodePreview import CodePreview
+from discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
 
@@ -76,19 +76,15 @@ class Suggestion(object):
                 file_mapping[id] = path
 
         # create CodePreview object
-        code_preview = CodePreview(self.wizard, self.file_id, file_mapping[self.file_id])
+        code_preview = CodePreviewContentBuffer(self.wizard, self.file_id, file_mapping[self.file_id])
 
         # get and insert pragmas
         pragmas = self.__get_pragmas()
         for pragma in pragmas:
-            code_preview.add_pragma(pragma, [])
-
-        # get and insert metadata
-        live_device_variables, live_host_variables = self.__get_metadata_live_variables()
-        code_preview.add_live_variables(live_device_variables, live_host_variables)
-
-
-
+            successful = code_preview.add_pragma(file_mapping, pragma, [])
+            # if the addition resulted in a non-compilable file, add the pragma as a comment
+            if not successful:
+                code_preview.add_pragma(file_mapping, pragma, [], add_as_comment=True)
 
         # show CodePreview
         code_preview.show_in(source_code)
@@ -98,31 +94,6 @@ class Suggestion(object):
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
-
-    def __get_metadata_live_variables(self) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
-        live_device_variables: Dict[int, List[str]] = dict()
-        if "meta_device_liveness" in self.values:
-            for var_name in self.values["meta_device_liveness"]:
-                for raw_line in self.values["meta_device_liveness"][var_name]:
-                    int_line_num = int(raw_line.split(":")[1])
-                    dirty_marker = raw_line.split(":")[2]
-                    if int_line_num not in live_device_variables:
-                        live_device_variables[int_line_num] = []
-                    live_device_variables[int_line_num].append(var_name + dirty_marker)
-
-        live_host_variables: Dict[int, List[str]] = dict()
-        if "meta_host_liveness" in self.values:
-            for var_name in self.values["meta_host_liveness"]:
-                for raw_line in self.values["meta_host_liveness"][var_name]:
-                    int_line_num = int(raw_line.split(":")[1])
-                    dirty_marker = raw_line.split(":")[2]
-                    if int_line_num not in live_host_variables:
-                        live_host_variables[int_line_num] = []
-                    live_host_variables[int_line_num].append(var_name + dirty_marker)
-
-
-        return live_device_variables, live_host_variables
-
 
     def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
         return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],
