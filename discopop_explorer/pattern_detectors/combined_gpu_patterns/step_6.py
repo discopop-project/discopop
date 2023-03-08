@@ -43,6 +43,8 @@ def convert_updates_to_entry_and_exit_points(
             # check if the memory region was live on the device before the update
             qualifies_as_entry = True
             for mem_reg in issued_update.memory_regions:
+                if mem_reg not in memory_region_liveness_by_device[1]:
+                    continue
                 if (
                     issued_update.synchronous_source_cu_id
                     in memory_region_liveness_by_device[1][mem_reg]
@@ -96,6 +98,8 @@ def convert_updates_to_entry_and_exit_points(
             # check if the memory region is live on the device after the update
             qualifies_as_exit = True
             for mem_reg in issued_update.memory_regions:
+                if mem_reg not in memory_region_liveness_by_device[1]:
+                    continue
                 if issued_update.sink_cu_id in memory_region_liveness_by_device[1][mem_reg]:
                     qualifies_as_exit = False
                     break

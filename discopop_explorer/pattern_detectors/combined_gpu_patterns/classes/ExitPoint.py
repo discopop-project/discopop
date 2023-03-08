@@ -43,8 +43,10 @@ class ExitPoint(object):
         self.memory_regions = memory_regions
         self.source_cu_id = source_cu_id
         self.sink_cu_id = sink_cu_id
+
+        # todo handle async
         self.exit_point_type = exit_point_type
-        self.pragma_line = pet.node_at(source_cu_id).end_position()
+        self.pragma_line = pet.node_at(sink_cu_id).start_position()
         self.exit_point_positioning = ExitPointPositioning.BEFORE_CU
         self.dependencies = set()
 
@@ -65,7 +67,7 @@ class ExitPoint(object):
 
     def get_as_metadata(self):
         return [
-            str(self.var_names),
+            ",".join(self.var_names),
             self.source_cu_id,
             self.sink_cu_id,
             self.exit_point_type,

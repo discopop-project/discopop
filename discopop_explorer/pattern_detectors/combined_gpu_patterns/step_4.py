@@ -313,6 +313,20 @@ def get_device_id(comb_gpu_reg, cu_id: NodeID) -> int:
 def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
     paths: List[List[NodeID]] = []
 
+    def check_validity_of_potential_merge_node(node_id: NodeID):
+        # return True if the given node is a valid merge node.
+        # return False otherwise.
+        # do not allow return BB's as merge nodes, since this would be trivially true for every path split
+        potential_merge_node = pet.node_at(node_id)
+        if (
+            "return" in str(potential_merge_node.basic_block_id)
+            and potential_merge_node.end_position()
+            == pet.get_parent_function(potential_merge_node).end_position()
+        ):
+            # do not consider return BB as merge node
+            return False
+        return True
+
     # initialize
     for successor_id in successors:
         paths.append([successor_id])
@@ -338,7 +352,11 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
         if len(contained_in_all_paths) > 0:
             # found merge node
             if len(contained_in_all_paths) == 1:
-                return list(contained_in_all_paths)[0]
+                potential_merge_node_id = list(contained_in_all_paths)[0]
+                if check_validity_of_potential_merge_node(potential_merge_node_id):
+                    return potential_merge_node_id
+                else:
+                    return None
             if len(contained_in_all_paths) > 1:
                 # search for the first occurring candidate merge node
                 first_occurring: Set[NodeID] = set()
@@ -360,7 +378,11 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
                     raise ValueError("First occurrence undecidable for: ", first_occurring)
                 else:
                     # only a single element identified
-                    return list(first_occurring)[0]
+                    potential_merge_node_id = list(first_occurring)[0]
+                    if check_validity_of_potential_merge_node(potential_merge_node_id):
+                        return potential_merge_node_id
+                    else:
+                        return None
 
         # proceed one step on each path
         to_be_deleted: List[int] = []
