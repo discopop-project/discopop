@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import Set, Dict, cast, Optional
+from typing import Set, Dict, cast, Optional, List, Tuple
 
 from discopop_explorer.PETGraphX import PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
@@ -111,20 +111,40 @@ class Update(object):
         ]
 
     def get_as_metadata_using_variable_names(self, pet: PETGraphX):
+        # get type of mapped variables
+        var_names_and_types: List[Tuple[VarName, str]] = []
+        for var_name in self.var_names:
+            var_type = pet.get_variable_type(self.sink_cu_id, var_name)
+            if var_type == "":
+                var_type = pet.get_variable_type(self.source_cu_id, var_name)
+            var_names_and_types.append((var_name, var_type))
+        # add [..] to variable name if required (type contains "**")
+        modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
+
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(self.variable_names),
+            str(modified_var_names),
             pet.node_at(self.synchronous_source_cu_id).end_position(),
         ]
 
     def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX):
+        # get type of mapped variables
+        var_names_and_types: List[Tuple[VarName, str]] = []
+        for var_name in self.var_names:
+            var_type = pet.get_variable_type(self.sink_cu_id, var_name)
+            if var_type == "":
+                var_type = pet.get_variable_type(self.source_cu_id, var_name)
+            var_names_and_types.append((var_name, var_type))
+        # add [..] to variable name if required (type contains "**")
+        modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
+
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(self.variable_names) + "/" + str(self.memory_regions),
+            str(modified_var_names) + "/" + str(self.memory_regions),
             pet.node_at(self.synchronous_source_cu_id).end_position(),
         ]
 
