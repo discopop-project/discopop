@@ -65,7 +65,7 @@ class ExitPoint(object):
 
     def get_as_metadata(self):
         return [
-            str(self.var_names),
+            ",".join(self.var_names),
             self.source_cu_id,
             self.sink_cu_id,
             self.exit_point_type,
