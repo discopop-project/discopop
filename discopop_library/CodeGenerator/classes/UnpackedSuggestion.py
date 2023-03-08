@@ -238,7 +238,7 @@ class UnpackedSuggestion(object):
             else:
                 raise ValueError("Usupported EntryPointType: ", entry_point_type)
             pragma.pragma_str += var_name + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
+            pragma.pragma_str += " // @CU " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
@@ -263,7 +263,7 @@ class UnpackedSuggestion(object):
             else:
                 raise ValueError("Usupported ExitPointType: ", exit_point_type)
             pragma.pragma_str += var_name + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
+            pragma.pragma_str += " // @CU " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
