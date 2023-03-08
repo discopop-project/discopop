@@ -304,11 +304,13 @@ class CombinedGPURegion(PatternInfo):
         ]
         # prepare entry points
         self.data_region_entry_points = [
-            entry_point.get_as_metadata() for entry_point in entry_points
+            entry_point.get_as_metadata(pet) for entry_point in entry_points
         ]
 
         # prepare exit points
-        self.data_region_exit_points = [exit_point.get_as_metadata() for exit_point in exit_points]
+        self.data_region_exit_points = [
+            exit_point.get_as_metadata(pet) for exit_point in exit_points
+        ]
 
         # prepare dependencies
         all_dependencies: Set[Dependency] = set()

@@ -1276,3 +1276,23 @@ class PETGraphX(object):
                 self.g.edges[edge]["var"] = dep.var_name
                 self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
         nx.write_gexf(self.g, name)
+
+    def get_variable_type(self, root_node_id: NodeID, var_name: str) -> str:
+        """Search for the type of the given variable by BFS searching through successor edges in reverse, starting from
+        the given root node, and checking the global and local vars of each encountered CU node."""
+        queue: List[NodeID] = [root_node_id]
+        visited: Set[NodeID] = set()
+        while queue:
+            current = queue.pop(0)
+            current_node = cast(CUNode, self.node_at(current))
+            visited.add(current)
+            variables = current_node.local_vars + current_node.global_vars
+            for v in variables:
+                if v.name == var_name:
+                    return v.type
+            # add predecessors of current to the list
+            predecessors = [s for s, t, d in self.in_edges(current, EdgeType.SUCCESSOR)]
+            for pred in predecessors:
+                if pred not in visited and pred not in queue:
+                    queue.append(pred)
+        return ""
