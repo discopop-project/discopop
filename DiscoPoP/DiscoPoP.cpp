@@ -720,7 +720,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             string type_str;
                             raw_string_ostream rso(type_str);
                             (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid, true, true);
+                            Type *variableType = it->getType();
+                            while(variableType->isPointerTy()){
+                                variableType = variableType->getPointerElementType();
+                            }
+                            Variable v(string(it->getName()), rso.str(), lid, true, true, to_string(variableType->getScalarSizeInBits()/8));
                             n->argumentsList.push_back(v);
                         }
                     } else // get name of the indirect function which is called
@@ -791,12 +795,21 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
                 varName = determineVariableName_static(&*instruction, isGlobalVar, false);
                 varType = determineVariableType(&*instruction);
+
+                int index = isa<StoreInst>(&*instruction) ? 1 : 0;
+                Type *variableType = (&*instruction)->getOperand(index)->getType();
+                while(variableType->isPointerTy()){
+                    variableType = variableType->getPointerElementType();
+                }
+
+                string varSizeInBytes = to_string(variableType->getScalarSizeInBits()/8);
+                
                 varDefLine = determineVariableDefLine(&*instruction);
 
                 bool readAccess = isa<LoadInst>(instruction);
                 bool writeAccess = isa<StoreInst>(instruction);
 
-                Variable v(varName, varType, varDefLine, readAccess, writeAccess);
+                Variable v(varName, varType, varDefLine, readAccess, writeAccess, varSizeInBytes);
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
@@ -2072,7 +2085,11 @@ bool DiscoPoP::runOnFunction(Function &F) {
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
+            Type *variableType = it->getType();
+            while(variableType->isPointerTy()){
+                variableType = variableType->getPointerElementType();
+            }
+            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true, to_string(variableType->getScalarSizeInBits()/8));
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
@@ -2868,6 +2885,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto ai: root->argumentsList) {
                 *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                         << " defLine=\"" << xmlEscape(ai.defLine) << "\""
+                        << " sizeInByte=\"" << ai.sizeInBytes << "\""
                         << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(ai.name) << "</arg>" << endl;
@@ -2920,6 +2938,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto lvi: cu->localVariableNames) {
                 *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
                         << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
+                        << " sizeInByte=\"" << lvi.sizeInBytes << "\""
                         << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(lvi.name) << "</local>" << endl;
@@ -2930,6 +2949,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto gvi: cu->globalVariableNames) {
                 *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                         << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
+                        << " sizeInByte=\"" << gvi.sizeInBytes << "\""
                         << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(gvi.name) << "</global>" << endl;
