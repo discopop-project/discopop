@@ -246,13 +246,13 @@ namespace __dp {
 
     void outputAllocations() {
         auto allocationsFileStream = new ofstream();
-        allocationsFileStream->open("alloca_memory_regions.txt", ios::out);
+        allocationsFileStream->open("memory_regions.txt", ios::out);
         for(auto memoryRegion : allocatedMemoryRegions){
             string position = decodeLID(get<0>(memoryRegion));
             string id = get<1>(memoryRegion);
-            string numElements = to_string(get<5>(memoryRegion));
+            string numBytes = to_string(get<4>(memoryRegion));
 
-            *allocationsFileStream << id << " " << position << " " << numElements << endl;
+            *allocationsFileStream << id << " " << position << " " << numBytes << endl;
         }
         allocationsFileStream->flush();
         allocationsFileStream->close();
@@ -847,10 +847,12 @@ namespace __dp {
     }
 
     void __dp_delete(LID lid, ADDR startAddr){
+        // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
+
         // TODO more efficient implementation
 
         // find memory region to be deleted
-        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+/*        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
             if(get<2>(entry) == startAddr){
                 // delete memory region
                 cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
@@ -859,6 +861,8 @@ namespace __dp {
             }
         }
         cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
+*/
+        return;
     } 
 
     void __dp_report_bb(int32_t bbIndex) {
