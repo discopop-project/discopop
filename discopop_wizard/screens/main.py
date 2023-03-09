@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import functools
 import os.path
 import tkinter as tk
 from tkinter import ttk
@@ -13,6 +12,8 @@ from typing import List
 
 from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
 from discopop_wizard.screens.settings import show_settings_screen
+
+from discopop_wizard.utils import support_scrolling
 
 
 class MainScreen(object):
@@ -94,25 +95,11 @@ class MainScreen(object):
             button.pack(fill=tk.BOTH, expand=True)
             all_buttons.append(button)
 
-        # add support for mouse wheel scrolling (on linux systems)
-        def _on_mousewheel(event, scroll):
-            canvas.yview_scroll(int(scroll), "units")
-
-        def _bind_to_mousewheel(event):
-            canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
-            canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
-
-        def _unbind_from_mousewheel(event):
-            canvas.unbind_all("<Button-4>")
-            canvas.unbind_all("<Button-5>")
-
-        canvas.bind('<Enter>', _bind_to_mousewheel)
-        canvas.bind('<Leave>', _unbind_from_mousewheel)
+        # support scrolling on all platforms (linux, windows, macOS)
+        support_scrolling(canvas)
 
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-
-
 
     def load_execution_configurations(self, config_dir: str) -> List[ExecutionConfiguration]:
         execution_configs: List[ExecutionConfiguration] = []

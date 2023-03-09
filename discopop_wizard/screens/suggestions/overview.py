@@ -18,6 +18,8 @@ from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
+from discopop_wizard.utils import support_scrolling
+
 
 def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_configuration_obj):
     # close elements on details_frame
@@ -89,17 +91,8 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
         # register hover message (suggestion details)
         create_tool_tip(button, text=suggestion.get_details())
 
-    # add support for mouse wheel scrolling (on linux systems)
-    def _on_mousewheel(event, scroll):
-        canvas.yview_scroll(int(scroll), "units")
-    def _bind_to_mousewheel(event):
-        canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
-        canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
-    def _unbind_from_mousewheel(event):
-        canvas.unbind_all("<Button-4>")
-        canvas.unbind_all("<Button-5>")
-    canvas.bind('<Enter>', _bind_to_mousewheel)
-    canvas.bind('<Leave>', _unbind_from_mousewheel)
+    # add support for mouse wheel scrolling
+    support_scrolling(canvas)
 
     # add label
     tk.Label(tmp_frame, text="Suggestions", font=wizard.style_font_bold).pack(side="top", pady=10)
