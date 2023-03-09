@@ -299,8 +299,7 @@ class CombinedGPURegion(PatternInfo):
         )
         # prepare update instructions
         self.update_instructions = [
-            update.get_as_metadata_using_variable_names(pet)
-            for update in updates
+            update.get_as_metadata_using_variable_names(pet) for update in updates
         ]
         # prepare entry points
         self.data_region_entry_points = [

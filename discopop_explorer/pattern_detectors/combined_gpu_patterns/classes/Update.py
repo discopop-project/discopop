@@ -113,10 +113,15 @@ class Update(object):
     def get_as_metadata_using_variable_names(self, pet: PETGraphX):
         # get type of mapped variables
         var_names_and_types: List[Tuple[VarName, str]] = []
-        for var_name in self.var_names:
+        for var_name in self.variable_names:
             var_type = pet.get_variable_type(self.sink_cu_id, var_name)
             if var_type == "":
-                var_type = pet.get_variable_type(self.source_cu_id, var_name)
+                if self.asynchronous_possible:
+                    var_type = pet.get_variable_type(
+                        cast(NodeID, self.asynchronous_source_cu_id), var_name
+                    )
+                else:
+                    var_type = pet.get_variable_type(self.synchronous_source_cu_id, var_name)
             var_names_and_types.append((var_name, var_type))
         # add [..] to variable name if required (type contains "**")
         modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
@@ -132,10 +137,15 @@ class Update(object):
     def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX):
         # get type of mapped variables
         var_names_and_types: List[Tuple[VarName, str]] = []
-        for var_name in self.var_names:
+        for var_name in self.variable_names:
             var_type = pet.get_variable_type(self.sink_cu_id, var_name)
             if var_type == "":
-                var_type = pet.get_variable_type(self.source_cu_id, var_name)
+                if self.asynchronous_possible:
+                    var_type = pet.get_variable_type(
+                        cast(NodeID, self.asynchronous_source_cu_id), var_name
+                    )
+                else:
+                    var_type = pet.get_variable_type(self.synchronous_source_cu_id, var_name)
             var_names_and_types.append((var_name, var_type))
         # add [..] to variable name if required (type contains "**")
         modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
