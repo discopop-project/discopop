@@ -8,7 +8,7 @@
 import sys
 from typing import Set, Tuple, Dict, List, cast, Optional
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, MemoryRegion
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, MemoryRegion, DepType, CUNode
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -273,9 +273,34 @@ def identify_end_of_life_points(
                 memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
             )
         memory_regions = set(eol[2])
-        eol_exit_points.add(
-            ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.DELETE)
+        # check if the exited data is required by another function
+        # if so, mark the exit point as ExitPointType.FROM
+        path_nodes = pet.get_path_nodes_between(
+            cast(CUNode, pet.node_at(eol[1])),
+            cast(CUNode, pet.node_at(eol[0])),
+            [EdgeType.SUCCESSOR, EdgeType.CHILD],
         )
+
+        in_raw_edges_from_outside = []
+        for path_node in path_nodes:
+            in_raw_edges_from_outside += [
+                (s, t, d)
+                for s, t, d in pet.in_edges(path_node.id, EdgeType.DATA)
+                if d.dtype == DepType.RAW
+                and d.memory_region in memory_regions
+                and pet.get_parent_function(pet.node_at(s))
+                != pet.get_parent_function(pet.node_at(t))
+            ]
+        if len(in_raw_edges_from_outside) > 0:
+            # value is read -> Copy back to the host so the value does not get discarded
+            eol_exit_points.add(
+                ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.FROM_DEVICE)
+            )
+        else:
+            # otherwise, mark it as ExitPointType.DELETE
+            eol_exit_points.add(
+                ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.DELETE)
+            )
 
     print("\tDone.", file=sys.stderr)
     print(file=sys.stderr)

@@ -1328,3 +1328,41 @@ class PETGraphX(object):
                     if d.memory_region is not None:
                         mem_regs.add(cast(MemoryRegion, d.memory_region))
         return mem_regs
+
+    def get_path_nodes_between(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> List[CUNode]:
+        """get all nodes of all patch which allow reaching target from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: List of encountered nodes"""
+
+        visited: List[NodeID] = []
+        queue: List[Tuple[CUNode, List[CUNode]]] = [
+            (cast(CUNode, self.node_at(t)), [])
+            for s, t, d in self.out_edges(source.id, edge_types)
+            if type(self.node_at(t)) == CUNode
+        ]
+
+        while len(queue) > 0:
+            cur_node, cur_path = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.out_edges(cur_node.id)
+                if t not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[1]) == target or self.node_at(e[1]) == source:
+                    continue
+                else:
+                    if e[1] not in visited:
+                        tmp_path = copy.deepcopy(cur_path)
+                        tmp_path.append(cur_node)
+                        queue.append((cast(CUNode, self.node_at(e[1])), tmp_path))
+        return [cast(CUNode, self.node_at(nid)) for nid in set(visited)]
