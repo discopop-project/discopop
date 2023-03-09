@@ -25,6 +25,8 @@ from discopop_wizard.screens.main import MainScreen
 # todo add command line option to execute run configuration (by name)
 from discopop_wizard.screens.settings import show_settings_screen, save_settings
 
+from discopop_wizard.utils import get_platform, Platform
+
 
 def main(arguments: Arguments):
     print("starting DiscoPoP Wizard...\n")
@@ -113,10 +115,10 @@ class DiscoPoPConfigurationWizard(object):
             warnings.warn("Loading the window icon was not successful.")
 
         # set window to full screen
-        try:
-            self.window.attributes('-zoomed', True)
-        except tk.TclError: # above does not work on macOS
+        if get_platform() in (Platform.OSX, Platform.WINDOWS):
             self.window.state("zoomed")
+        else:
+            self.window.attributes('-zoomed', True)
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(1, weight=1)
         paned_window = ttk.PanedWindow(self.window, orient=tk.VERTICAL)
