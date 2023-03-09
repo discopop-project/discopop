@@ -21,7 +21,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
 from discopop_explorer.variable import Variable
 
 
-def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
+def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -62,6 +62,6 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     regions.determineDataMapping()
 
     # construct GPURegions
-    gpu_region_info: List[GPURegionInfo] = regions.get_gpu_region_info(pet)
+    gpu_region_info: List[GPURegionInfo] = regions.get_gpu_region_info(pet, project_folder_path)
 
     return cast(List[PatternInfo], gpu_region_info)

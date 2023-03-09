@@ -5,12 +5,14 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import os
 import sys
 from enum import IntEnum
 
 from numpy import long  # type: ignore
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
+from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -226,8 +228,8 @@ class GPULoopPattern(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX) -> str:
-        constructs = self.__get_constructs(pet)
+    def to_string(self, pet: PETGraphX, project_folder_path: str) -> str:
+        constructs = self.__get_constructs(pet, project_folder_path)
         construct_str = "\n" if len(constructs) > 0 else ""
         for entry in constructs:
             for key in entry:
@@ -246,12 +248,12 @@ class GPULoopPattern(PatternInfo):
             f"OpenMP constructs: {construct_str}\n"
         )
 
-    def save_omp_constructs(self, pet: PETGraphX):
+    def save_omp_constructs(self, pet: PETGraphX, project_folder_path: str):
         """Save OpenMP constructs such that they are included in the exported JSON file."""
-        constructs = self.__get_constructs(pet)
+        constructs = self.__get_constructs(pet, project_folder_path)
         self.constructs = constructs
 
-    def toJson(self, pet: PETGraphX) -> str:
+    def toJson(self, pet: PETGraphX, project_folder_path: str) -> str:
         """Generates a json-string which contains the information about how to
             implement this pattern using OpenMP constructs
 
@@ -270,7 +272,7 @@ class GPULoopPattern(PatternInfo):
         # == == Constructs == ==
         json_output += '"constructs":['
 
-        constructs: List[Any] = self.__get_constructs(pet)
+        constructs: List[Any] = self.__get_constructs(pet, project_folder_path)
 
         # add all constructs to the output string
         json_output += constructs[0]
@@ -280,50 +282,113 @@ class GPULoopPattern(PatternInfo):
         json_output += "]}"
         return json_output
 
-    def __get_constructs(self, pet: PETGraphX) -> List[dict]:
+    def __get_constructs(self, pet: PETGraphX, project_folder_path: str) -> List[dict]:
         constructs: List[dict] = []
 
         # == default construct ==
         clauses: List[str] = []
         var_names: List[str] = []
+        modified_var_names: List[str] = []
+        subnodes = pet.subtree_of_type(pet.node_at(self.node_id), CUNode)
         if self.map_type_to:
-            for var_id in [
-                # add [..] since length can not be determined reliably
-                (v.name + "[..]" if "**" in v.type else v.name)
-                for v in self.map_type_to
-            ]:
-                var_names.append(var_id)
-            clauses.append(omp_clause_str("map(to: args)", var_names))
+            modified_var_names = []
+            for var in self.map_type_to:
+                memory_regions = pet.get_memory_regions(subnodes, var.name)
+
+                # get size of memory region
+                memory_region_sizes = get_sizes_of_memory_regions(
+                    memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+                )
+                if len(memory_region_sizes) > 0:
+                    max_mem_reg_size = max(memory_region_sizes.values())
+                    # divide memory region size by size of variable
+                    # construct new list of modified var names
+                    modified_var_names.append(
+                        (
+                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            if "**" in var.type
+                            else var.name
+                        )
+                    )
+                else:
+                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+
+            clauses.append(omp_clause_str("map(to: args)", modified_var_names))
             var_names = []
 
         if self.map_type_from:
-            for var_id in [
-                # add [..] since length can not be determined reliably
-                (v.name + "[..]" if "**" in v.type else v.name)
-                for v in self.map_type_from
-            ]:
-                var_names.append(var_id)
-            clauses.append(omp_clause_str("map(from: args)", var_names))
+            modified_var_names = []
+            for var in self.map_type_from:
+                memory_regions = pet.get_memory_regions(subnodes, var.name)
+
+                # get size of memory region
+                memory_region_sizes = get_sizes_of_memory_regions(
+                    memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+                )
+                if len(memory_region_sizes) > 0:
+                    max_mem_reg_size = max(memory_region_sizes.values())
+                    # divide memory region size by size of variable
+                    # construct new list of modified var names
+                    modified_var_names.append(
+                        (
+                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            if "**" in var.type
+                            else var.name
+                        )
+                    )
+                else:
+                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+            clauses.append(omp_clause_str("map(from: args)", modified_var_names))
             var_names = []
 
         if self.map_type_tofrom:
-            for var_id in [
-                # add [..] since length can not be determined reliably
-                (v.name + "[..]" if "**" in v.type else v.name)
-                for v in self.map_type_tofrom
-            ]:
-                var_names.append(var_id)
-            clauses.append(omp_clause_str("map(tofrom: args)", var_names))
+            modified_var_names = []
+            for var in self.map_type_tofrom:
+                memory_regions = pet.get_memory_regions(subnodes, var.name)
+
+                # get size of memory region
+                memory_region_sizes = get_sizes_of_memory_regions(
+                    memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+                )
+                if len(memory_region_sizes) > 0:
+                    max_mem_reg_size = max(memory_region_sizes.values())
+                    # divide memory region size by size of variable
+                    # construct new list of modified var names
+                    modified_var_names.append(
+                        (
+                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            if "**" in var.type
+                            else var.name
+                        )
+                    )
+                else:
+                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+            clauses.append(omp_clause_str("map(tofrom: args)", modified_var_names))
             var_names = []
 
         if self.map_type_alloc:
-            for var_id in [
-                # add [..] since length can not be determined reliably
-                (v.name + "[..]" if "**" in v.type else v.name)
-                for v in self.map_type_alloc
-            ]:
-                var_names.append(var_id)
-            clauses.append(omp_clause_str("map(alloc: args)", var_names))
+            modified_var_names = []
+            for var in self.map_type_alloc:
+                memory_regions = pet.get_memory_regions(subnodes, var.name)
+
+                # get size of memory region
+                memory_region_sizes = get_sizes_of_memory_regions(
+                    memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+                )
+                if len(memory_region_sizes) > 0:
+                    max_mem_reg_size = max(memory_region_sizes.values())
+                    # divide memory region size by size of variable
+                    # construct new list of modified var names
+                    modified_var_names.append(
+                        (
+                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            if "**" in var.type
+                            else var.name
+                        )
+                    )
+                else:
+                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+            clauses.append(omp_clause_str("map(alloc: args)", modified_var_names))
             var_names = []
 
         if self.reduction_vars_str:

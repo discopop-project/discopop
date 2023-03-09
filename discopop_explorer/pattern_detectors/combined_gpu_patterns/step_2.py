@@ -8,10 +8,17 @@
 import sys
 from typing import Dict, List, Set, Tuple, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeType, EdgeType, CUNode, NodeID, Node
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    NodeType,
+    EdgeType,
+    CUNode,
+    NodeID,
+    Node,
+    MemoryRegion,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
-    MemoryRegion,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (

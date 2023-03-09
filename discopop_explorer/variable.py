@@ -10,12 +10,13 @@
 class Variable(object):
     operation: str
 
-    def __init__(self, type, name, defLine, accessMode=""):
+    def __init__(self, type, name, defLine, accessMode="", sizeInByte=0):
         self.type = type
         self.name: str = name
         self.defLine = defLine
         self.operation = None
         self.accessMode = accessMode
+        self.sizeInByte = sizeInByte
 
     def __hash__(self):
         return hash(self.name)

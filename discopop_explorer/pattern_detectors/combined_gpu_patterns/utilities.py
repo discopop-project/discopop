@@ -8,8 +8,12 @@
 
 from typing import List, Set, Dict, Tuple, Optional
 
-from discopop_explorer.PETGraphX import CUNode, PETGraphX, EdgeType, NodeID, FunctionNode
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
+from discopop_explorer.PETGraphX import (
+    CUNode,
+    PETGraphX,
+    EdgeType,
+    NodeID,
+    FunctionNode,
     MemoryRegion,
 )
 

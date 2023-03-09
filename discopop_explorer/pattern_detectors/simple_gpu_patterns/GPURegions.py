@@ -68,10 +68,10 @@ class GPURegionInfo(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX):
+    def to_string(self, pet: PETGraphX, project_folder_path: str):
         contained_loops_str = "\n" if len(self.contained_loops) > 0 else ""
         for loop in self.contained_loops:
-            loop_str = loop.to_string(pet)
+            loop_str = loop.to_string(pet, project_folder_path)
             # pretty printing
             loop_str = "".join(["\t" + s + "\n" for s in loop_str.split("\n")])
             contained_loops_str += loop_str
@@ -468,7 +468,7 @@ class GPURegions:
                 return True
         return False
 
-    def get_gpu_region_info(self, pet: PETGraphX) -> List[GPURegionInfo]:
+    def get_gpu_region_info(self, pet: PETGraphX, project_folder_path: str) -> List[GPURegionInfo]:
         """Construct GPURegionInfo representations of all identified GPU Regions and return them in a list"""
         gpu_region_info: List[GPURegionInfo] = []
         for region in self.cascadingLoopsInRegions:
@@ -477,7 +477,7 @@ class GPURegions:
             ]
             # save OpenMP constructs in GPULoops for the exporting to JSON
             for loop in contained_loop_patterns:
-                loop.save_omp_constructs(pet)
+                loop.save_omp_constructs(pet, project_folder_path)
             device_cu_ids = self.cu_ids_by_region[tuple(region)]
             for loop in contained_loop_patterns:
                 for func_node_id in loop.called_functions:

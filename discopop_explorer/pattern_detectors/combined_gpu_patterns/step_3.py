@@ -9,10 +9,7 @@
 import sys
 from typing import Dict, List, Tuple, Set, Optional, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, CUNode
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
-)
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, CUNode, MemoryRegion
 
 global_write_unique_id = 0
 

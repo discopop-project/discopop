@@ -9,9 +9,8 @@
 from typing import Tuple, Dict, Set, cast
 
 from discopop_explorer import NodeType
-from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID, CUNode
+from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID, CUNode, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
     VarName,
 )
 

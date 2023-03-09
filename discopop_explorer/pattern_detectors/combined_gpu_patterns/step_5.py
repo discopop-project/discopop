@@ -8,9 +8,8 @@
 
 from typing import Dict, Set, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
     VarName,
 )
 

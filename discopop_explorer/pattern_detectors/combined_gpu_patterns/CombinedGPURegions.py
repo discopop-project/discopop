@@ -5,9 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import os.path
 from typing import List, Tuple, Dict, Set
 
-from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID
+from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
@@ -18,7 +19,6 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
     UpdateType,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
@@ -83,8 +83,12 @@ class CombinedGPURegion(PatternInfo):
     meta_host_lines: List[str]
     meta_device_liveness: Dict[MemoryRegion, List[str]]
     meta_host_liveness: Dict[MemoryRegion, List[str]]
+    project_folder_path: str
 
-    def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo]):
+    def __init__(
+        self, pet: PETGraphX, contained_regions: List[GPURegionInfo], project_folder_path: str
+    ):
+        self.project_folder_path = project_folder_path
         node_id = sorted([region.node_id for region in contained_regions])[0]
         device_cu_ids: List[NodeID] = []
         for region in contained_regions:
@@ -299,16 +303,18 @@ class CombinedGPURegion(PatternInfo):
         )
         # prepare update instructions
         self.update_instructions = [
-            update.get_as_metadata_using_variable_names(pet) for update in updates
+            update.get_as_metadata_using_variable_names(pet, self.project_folder_path)
+            for update in updates
         ]
         # prepare entry points
         self.data_region_entry_points = [
-            entry_point.get_as_metadata(pet) for entry_point in entry_points
+            entry_point.get_as_metadata(pet, self.project_folder_path)
+            for entry_point in entry_points
         ]
 
         # prepare exit points
         self.data_region_exit_points = [
-            exit_point.get_as_metadata(pet) for exit_point in exit_points
+            exit_point.get_as_metadata(pet, self.project_folder_path) for exit_point in exit_points
         ]
 
         # prepare dependencies
@@ -330,7 +336,7 @@ class CombinedGPURegion(PatternInfo):
     def to_string(self, pet: PETGraphX):
         contained_regions_str = "\n" if len(self.contained_regions) > 0 else ""
         for region in self.contained_regions:
-            region_str = region.to_string(pet)
+            region_str = region.to_string(pet, self.project_folder_path)
             # pretty printing
             region_str = "".join(["\t" + s + "\n" for s in region_str.split("\n")])
             contained_regions_str += region_str
@@ -347,12 +353,12 @@ class CombinedGPURegion(PatternInfo):
 
 
 def find_combined_gpu_regions(
-    pet: PETGraphX, gpu_regions: List[GPURegionInfo]
+    pet: PETGraphX, gpu_regions: List[GPURegionInfo], project_folder_path: str
 ) -> List[CombinedGPURegion]:
     # create combined gpu regions from original gpu regions
     combined_gpu_regions = []
     for gpu_region in gpu_regions:
-        combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region]))
+        combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region], project_folder_path))
 
     # determine relations between single-element regions
     combinable_pairs: List[
@@ -367,7 +373,9 @@ def find_combined_gpu_regions(
     for combinable_1, combinable_2 in true_successor_combinations:
         combined_gpu_regions.remove(combinable_1)
         combined_gpu_regions.remove(combinable_2)
-        combined_gpu_regions.append(combine_regions(pet, combinable_1, combinable_2))
+        combined_gpu_regions.append(
+            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
+        )
 
     return combined_gpu_regions
 
@@ -452,11 +460,14 @@ def find_true_successor_combinations(
 
 
 def combine_regions(
-    pet: PETGraphX, region_1: CombinedGPURegion, region_2: CombinedGPURegion
+    pet: PETGraphX,
+    region_1: CombinedGPURegion,
+    region_2: CombinedGPURegion,
+    project_folder_path: str,
 ) -> CombinedGPURegion:
     """Combines regions. Individual contained regions are not yet merged!
     Analysis of Live-data and necessary update pragmas needs ti happen in a subsequent step."""
     combined_region = CombinedGPURegion(
-        pet, region_1.contained_regions + region_2.contained_regions
+        pet, region_1.contained_regions + region_2.contained_regions, project_folder_path
     )
     return combined_region

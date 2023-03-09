@@ -9,10 +9,7 @@
 import copy
 from typing import Dict, Set, Tuple, Optional, List, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
-)
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID, MemoryRegion
 import sys
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType

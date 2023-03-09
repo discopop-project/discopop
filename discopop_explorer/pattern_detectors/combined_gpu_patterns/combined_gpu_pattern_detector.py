@@ -15,7 +15,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegion
 )
 
 
-def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
+def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:
     """Search for combined gpu patterns
 
     :param pet: PET graph
@@ -24,6 +24,6 @@ def run_detection(pet: PETGraphX, res) -> List[PatternInfo]:
     """
 
     # construct Combined GPU Regions
-    combined_gpu_regions = find_combined_gpu_regions(pet, res.simple_gpu)
+    combined_gpu_regions = find_combined_gpu_regions(pet, res.simple_gpu, project_folder_path)
 
     return cast(List[PatternInfo], combined_gpu_regions)

@@ -116,11 +116,15 @@ class LineID(str):
 class MemoryRegion(str):
     # simpler but still strong typing alternative:
     def __init__(self, id_string: str):
-        # check format of newly created MemoryRegion
-        try:
-            int(id_string)
-        except ValueError:
-            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
+        super().__init__()
+        pass
+
+
+#        # check format of newly created MemoryRegion
+#        try:
+#            int(id_string)
+#        except ValueError:
+#            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
 
 
 class Dependency:
@@ -272,12 +276,24 @@ def parse_cu(node: ObjectifiedElement) -> Node:
         n = CUNode(node_id)
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                Variable(
+                    v.get("type"),
+                    v.text,
+                    v.get("defLine"),
+                    v.get("accessMode"),
+                    int(v.get("sizeInByte")),
+                )
                 for v in node.localVariables.local
             ]
         if hasattr(node.globalVariables, "global"):
             n.global_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                Variable(
+                    v.get("type"),
+                    v.text,
+                    v.get("defLine"),
+                    v.get("accessMode"),
+                    int(v.get("sizeInByte")),
+                )
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
@@ -305,7 +321,10 @@ def parse_cu(node: ObjectifiedElement) -> Node:
             dummy_or_func = FunctionNode(node_id)
         if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
             dummy_or_func.args = [
-                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg
+                Variable(
+                    v.get("type"), v.text, v.get("defLine"), sizeInByte=int(v.get("sizeInByte"))
+                )
+                for v in node.funcArguments.arg
             ]
         n = dummy_or_func
 
@@ -1279,7 +1298,7 @@ class PETGraphX(object):
                 self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
         nx.write_gexf(self.g, name)
 
-    def get_variable_type(self, root_node_id: NodeID, var_name: str) -> str:
+    def get_variable(self, root_node_id: NodeID, var_name: str) -> Optional[Variable]:
         """Search for the type of the given variable by BFS searching through successor edges in reverse, starting from
         the given root node, and checking the global and local vars of each encountered CU node."""
         queue: List[NodeID] = [root_node_id]
@@ -1291,10 +1310,21 @@ class PETGraphX(object):
             variables = current_node.local_vars + current_node.global_vars
             for v in variables:
                 if v.name == var_name:
-                    return v.type
+                    return v
             # add predecessors of current to the list
             predecessors = [s for s, t, d in self.in_edges(current, EdgeType.SUCCESSOR)]
             for pred in predecessors:
                 if pred not in visited and pred not in queue:
                     queue.append(pred)
-        return ""
+        return None
+
+    def get_memory_regions(self, nodes: List[CUNode], var_name: str) -> Set[MemoryRegion]:
+        """check dependencies of nodes for usages of 'var_name' and extract memory regions related to this name"""
+        mem_regs: Set[MemoryRegion] = set()
+        for node in nodes:
+            out_deps = self.out_edges(node.id, EdgeType.DATA)
+            for s, t, d in out_deps:
+                if d.var_name == var_name:
+                    if d.memory_region is not None:
+                        mem_regs.add(cast(MemoryRegion, d.memory_region))
+        return mem_regs

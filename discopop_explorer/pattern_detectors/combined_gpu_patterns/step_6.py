@@ -8,9 +8,8 @@
 import sys
 from typing import Set, Tuple, Dict, List, cast, Optional
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency

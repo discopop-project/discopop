@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import os
 from typing import List
 
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
@@ -120,10 +121,12 @@ class PatternDetectorX(object):
                 discopop_build_path,
             )
 
+        project_folder_path = os.path.dirname(os.path.abspath(file_mapping))
+
         # detect GPU patterns based on previously identified patterns
-        res.simple_gpu = detect_gpu(self.pet, res)
+        res.simple_gpu = detect_gpu(self.pet, res, project_folder_path)
 
         # detect combined GPU patterns
-        res.combined_gpu = detect_combined_gpu(self.pet, res)
+        res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
         return res

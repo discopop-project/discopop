@@ -5,16 +5,17 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import os
 import sys
 from typing import Set, Dict, cast, Optional, List, Tuple
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    MemoryRegion,
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
+from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 
 
 class Update(object):
@@ -110,45 +111,75 @@ class Update(object):
             pet.node_at(self.synchronous_source_cu_id).end_position(),
         ]
 
-    def get_as_metadata_using_variable_names(self, pet: PETGraphX):
+    def get_as_metadata_using_variable_names(self, pet: PETGraphX, project_folder_path: str):
         # get type of mapped variables
-        var_names_and_types: List[Tuple[VarName, str]] = []
+        var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_type = pet.get_variable_type(self.sink_cu_id, var_name)
-            if var_type == "":
-                if self.asynchronous_possible:
-                    var_type = pet.get_variable_type(
-                        cast(NodeID, self.asynchronous_source_cu_id), var_name
-                    )
-                else:
-                    var_type = pet.get_variable_type(self.synchronous_source_cu_id, var_name)
-            var_names_and_types.append((var_name, var_type))
+            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            source_cu_id = (
+                self.asynchronous_source_cu_id
+                if self.asynchronous_possible
+                else self.synchronous_source_cu_id
+            )
+            if var_obj is None:
+                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+            if var_obj is None:
+                var_names_types_and_sizes.append((var_name, "", 1))
+            else:
+                var_names_types_and_sizes.append((var_name, var_obj.type, var_obj.sizeInByte))
         # add [..] to variable name if required (type contains "**")
-        modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
+
+        # get size of memory region
+        memory_region_sizes = get_sizes_of_memory_regions(
+            self.memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+        )
+        max_mem_reg_size = max(memory_region_sizes.values())
+        # divide memory region size by size of variable
+        # construct new list of modified var names
+        modified_var_names = [
+            (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+            for vn, t, s in var_names_types_and_sizes
+        ]
 
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
-            str(modified_var_names),
+            ",".join(modified_var_names),
             pet.node_at(self.synchronous_source_cu_id).end_position(),
         ]
 
-    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX):
+    def get_as_metadata_using_variable_names_and_memory_regions(
+        self, pet: PETGraphX, project_folder_path: str
+    ):
         # get type of mapped variables
-        var_names_and_types: List[Tuple[VarName, str]] = []
+        var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_type = pet.get_variable_type(self.sink_cu_id, var_name)
-            if var_type == "":
-                if self.asynchronous_possible:
-                    var_type = pet.get_variable_type(
-                        cast(NodeID, self.asynchronous_source_cu_id), var_name
-                    )
-                else:
-                    var_type = pet.get_variable_type(self.synchronous_source_cu_id, var_name)
-            var_names_and_types.append((var_name, var_type))
+            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            source_cu_id = (
+                self.asynchronous_source_cu_id
+                if self.asynchronous_possible
+                else self.synchronous_source_cu_id
+            )
+            if var_obj is None:
+                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+            if var_obj is None:
+                var_names_types_and_sizes.append((var_name, "", 1))
+            else:
+                var_names_types_and_sizes.append((var_name, var_obj.type, var_obj.sizeInByte))
         # add [..] to variable name if required (type contains "**")
-        modified_var_names = [(vn + "[..]" if "**" in t else vn) for vn, t in var_names_and_types]
+
+        # get size of memory region
+        memory_region_sizes = get_sizes_of_memory_regions(
+            self.memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+        )
+        max_mem_reg_size = max(memory_region_sizes.values())
+        # divide memory region size by size of variable
+        # construct new list of modified var names
+        modified_var_names = [
+            (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+            for vn, t, s in var_names_types_and_sizes
+        ]
 
         return [
             self.synchronous_source_cu_id,
