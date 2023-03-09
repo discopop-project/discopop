@@ -72,7 +72,7 @@ void DiscoPoP::setupCallbacks() {
     DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
                                                 Void,
                            
-                                                Int32, CharPtr, Int64, Int64, Int64
+                                                Int32, CharPtr, Int64, Int64, Int64, Int64
     );
 
     DpNew = ThisModule->getOrInsertFunction("__dp_new",
@@ -3197,13 +3197,15 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(startAddr);
     
     Value *endAddr = startAddr;
+    uint64_t numElements = 1;
+    uint64_t allocatedSize = toInstrument->getAllocatedType()->getScalarSizeInBits();
     if(toInstrument->isArrayAllocation()){
         // endAddr = startAddr + allocated size
         endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
     }
     else if(toInstrument->getAllocatedType()->isArrayTy()){
         // unpack potentially multidimensional allocations
-        uint64_t numElements = 1;
+
         Type *typeToParse = toInstrument->getAllocatedType();
         Type *elementType;
 
@@ -3219,16 +3221,17 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
 
         // allocated size = Element size in Bytes * Number of elements
         auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-        auto allocatedSize = elementSizeInBytes * numElements;
+        allocatedSize = elementSizeInBytes * numElements;
 
         // endAddr = startAddr + allocated size
         endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
     }
 
     args.push_back(endAddr);
-    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    args.push_back(ConstantInt::get(Int64, allocatedSize));
+    args.push_back(ConstantInt::get(Int64, numElements));
     IRB.CreateCall(DpAlloca, args, "");
-}
+}   
 
 void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
@@ -3430,9 +3433,10 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
             args.push_back(startAddr);
             
             Value *endAddr = startAddr;
+            uint64_t numElements = 1;
+            uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();
             if(Global_it->getValueType()->isArrayTy()){
                 // unpack potentially multidimensional allocations
-                uint64_t numElements = 1;
                 Type *typeToParse = Global_it->getValueType();
                 Type *elementType;
 
@@ -3448,14 +3452,15 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 
                 // allocated size = Element size in Bytes * Number of elements
                 auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-                auto allocatedSize = elementSizeInBytes * numElements;
+                allocatedSize = elementSizeInBytes * numElements;
 
                 // endAddr = startAddr + allocated size
                 endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
             }
 
             args.push_back(endAddr);
-            args.push_back(ConstantInt::get(Int64, 0));
+            args.push_back(ConstantInt::get(Int64, allocatedSize));
+            args.push_back(ConstantInt::get(Int64, numElements));
             IRB.CreateCall(DpAlloca, args, "");
         }
     }
