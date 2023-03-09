@@ -71,7 +71,7 @@ class ContentBuffer(object):
                     self.lines.append(line)
                 return
 
-    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False) -> bool:
+    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False, skip_compilation_check: bool = False) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
         Returns False if compilation of the modified code was not possible.
@@ -135,7 +135,9 @@ class ContentBuffer(object):
 
         # append children to lines (mark as contained in region)
         for child_pragma in pragma.children:
-            successful = self.add_pragma(child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment)
+            # set skip_compilation_check to true since compiling children pragmas on their own might not be successful.
+            # As an example for that, '#pragma omp declare target' can be mentioned
+            successful = self.add_pragma(file_mapping, child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment, skip_compilation_check=True)
 
             if not successful:
                 print("==> Skipped pragma insertion due to potential compilation errors!\n")
@@ -144,6 +146,9 @@ class ContentBuffer(object):
                 self.file_id = backup_file_id
                 self.max_line_num = backup_max_line_num
                 return False
+
+        if skip_compilation_check:
+            return True
 
         # check if the applied changes resulted in a compilable source code
         # create a temporary file to store the modified file contents
