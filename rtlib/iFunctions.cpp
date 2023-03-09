@@ -67,8 +67,9 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
-    list<tuple<LID, string, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
     int64_t nextFreeMemoryRegionId = 0;
@@ -241,6 +242,20 @@ namespace __dp {
         for (auto fe: *endFuncs) {
             *out << decodeLID(fe) << " END func" << endl;
         }
+    }
+
+    void outputAllocations() {
+        auto allocationsFileStream = new ofstream();
+        allocationsFileStream->open("alloca_memory_regions.txt", ios::out);
+        for(auto memoryRegion : allocatedMemoryRegions){
+            string position = decodeLID(get<0>(memoryRegion));
+            string id = get<1>(memoryRegion);
+            string numElements = to_string(get<5>(memoryRegion));
+
+            *allocationsFileStream << id << " " << position << " " << numElements << endl;
+        }
+        allocationsFileStream->flush();
+        allocationsFileStream->close();
     }
 
     void readRuntimeInfo() {
@@ -788,13 +803,13 @@ namespace __dp {
         }
     }
 
-    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
         
 
         // update known min and max ADDR
@@ -818,7 +833,7 @@ namespace __dp {
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
         lastHitIterator = allocatedMemoryRegions.end();
         lastHitIterator--;
 
@@ -835,7 +850,7 @@ namespace __dp {
         // TODO more efficient implementation
 
         // find memory region to be deleted
-        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
             if(get<2>(entry) == startAddr){
                 // delete memory region
                 cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
@@ -878,6 +893,7 @@ namespace __dp {
         finalizeParallelization();
         outputLoops();
         outputFuncs();
+        outputAllocations();
         // hybrid analysis
         generateStringDepMap();
         // End HA
@@ -970,7 +986,7 @@ namespace __dp {
             // End HA
 
             // initialize lastHitIterator to dummy element
-            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
+            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
             lastHitIterator = allocatedMemoryRegions.end();
             lastHitIterator--;
 

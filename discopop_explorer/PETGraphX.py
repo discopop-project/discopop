@@ -195,7 +195,9 @@ class Node:
         """
         return LineID(f"{self.file_id}:{self.end_line}")
 
-    def contains_line(self, other_line: LineID) -> bool:
+    def contains_line(self, other_line) -> bool:
+        if other_line == "GlobalVar":
+            return False
         other_file_id = int(other_line.split(":")[0])
         other_line_num = int(other_line.split(":")[1])
         if other_file_id != self.file_id:
