@@ -3217,11 +3217,11 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(startAddr);
     
     Value *endAddr = startAddr;
-    uint64_t numElements = 1;
-    uint64_t allocatedSize = toInstrument->getAllocatedType()->getScalarSizeInBits();
+    uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
+    Value *numElements = toInstrument->getOperand(0);
     if(toInstrument->isArrayAllocation()){
         // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+        endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
     }
     else if(toInstrument->getAllocatedType()->isArrayTy()){
         // unpack potentially multidimensional allocations
@@ -3229,10 +3229,12 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
         Type *typeToParse = toInstrument->getAllocatedType();
         Type *elementType;
 
+        uint64_t tmp_numElements = 1;
+
         // unpack multidimensional allocations
         while(typeToParse->isArrayTy()){
             // extract size from current dimension and multiply to numElements
-            numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+            tmp_numElements *= cast<ArrayType>(typeToParse)->getNumElements();
             // proceed one dimension
             typeToParse = typeToParse->getArrayElementType();
         }
@@ -3240,16 +3242,16 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
         elementType = typeToParse;
 
         // allocated size = Element size in Bytes * Number of elements
-        auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-        allocatedSize = elementSizeInBytes * numElements;
+        elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
 
         // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+        numElements = ConstantInt::get(Int64, tmp_numElements);
+        endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
     }
 
     args.push_back(endAddr);
-    args.push_back(ConstantInt::get(Int64, allocatedSize));
-    args.push_back(ConstantInt::get(Int64, numElements));
+    args.push_back(IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true), ConstantInt::get(Int64, elementSizeInBytes)));
+    args.push_back(IRB.CreateIntCast(numElements, Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
 }   
 
