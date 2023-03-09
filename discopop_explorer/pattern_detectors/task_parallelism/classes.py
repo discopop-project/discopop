@@ -9,7 +9,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PETGraphX import CUNode, MWType, PETGraphX
+from discopop_explorer.PETGraphX import Node, MWType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
@@ -19,12 +19,12 @@ from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 class Task(object):
     """This class represents task in task parallelism pattern"""
 
-    nodes: List[CUNode]
+    nodes: List[Node]
     child_tasks: List["Task"]
     start_line: str
     end_line: str
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         self.node_id = node.id
         self.nodes = [node]
         self.start_line = node.start_position()
@@ -72,7 +72,7 @@ class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result"""
 
     def __init__(
-        self, node: CUNode, type: TPIType, pragma, pragma_line, first_private, private, shared
+        self, node: Node, type: TPIType, pragma, pragma_line, first_private, private, shared
     ):
         """
         :param node: node, where task parallelism was detected
@@ -126,7 +126,7 @@ class TaskParallelismInfo(PatternInfo):
 class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info."""
 
-    def __init__(self, node: CUNode, type: TPIType, region_start_line, region_end_line):
+    def __init__(self, node: Node, type: TPIType, region_start_line, region_end_line):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
@@ -151,7 +151,7 @@ class OmittableCuInfo(PatternInfo):
     final suggestions.
     """
 
-    def __init__(self, node: CUNode, combine_with_node: CUNode):
+    def __init__(self, node: Node, combine_with_node: Node):
         PatternInfo.__init__(self, node)
         self.combine_with_node = combine_with_node
         # only for printing

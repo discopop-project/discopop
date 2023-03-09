@@ -40,6 +40,7 @@ OPTIONAL ARGUMENTS:
                           if not specified the default make target is used.
  --make-flags <string>     specify flags which will be passed through to make.
  --explorer-flags <string> will be passed through to the DiscoPoP Explorer.
+ --exit-after-compilation construct and compile the instrumented code, but do not execute and analyze it.
  --python-path <dir>     path to python binary folder
  --help or -h,            show this text and exit.
  --verbose or -v,         show verbose output.
@@ -197,6 +198,10 @@ while [[ $# -gt 0 ]]; do
       EXPLORER_FLAGS="$2"
       shift; shift # past argument and value
       ;;
+    --exit-after-compilation)
+      EXIT_AFTER_COMPILATION=true
+      shift # past argument
+      ;;
     --python-path)
       PYTHONPATH_FLAG="$2"
       shift; shift # past argument and value
@@ -274,6 +279,7 @@ log -i \
   execName:   $EXECUTABLE_NAME
   execArgs:   $EXECUTABLE_ARGUMENTS
   makeFlags:  $MAKE_FLAGS
+  makeTarget: $MAKEFILE_TARGET
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG
   pythonPath: $PYTHONPATH_FLAG"
@@ -345,13 +351,17 @@ log -i "Creating Executable..."
 $LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o
 $LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.o -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
 
+if [ "$EXIT_AFTER_COMPILATION" = true ]; then
+  log -i "Exiting after compilation."
+  exit 0
+fi
+
 # another way to get the executable from the .ll file without going via the .o object file:
 #$LLVM_CLANGPP ${EXECUTABLE_NAME}_dp.ll -Wl,--export-dynamic -O0 -g -o ${EXECUTABLE_NAME}_dp -L$DP_BUILD/rtlib -lDiscoPoP_RT -lpthread $LINKER_FLAGS
 
 # Run the instrumented application
 log -i "Running instrumented application to detect data dependencies..."
-tmp="$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
-[ ! -z "$var" ] && log -d "$tmp"
+log_or_fail -d "$(./${EXECUTABLE_NAME}_dp ${EXECUTABLE_ARGUMENTS})"
 
 #####
 # run discopop_profiler to get parallelization suggestions

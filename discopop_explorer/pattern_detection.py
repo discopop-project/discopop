@@ -7,7 +7,7 @@
 # directory for details.
 from typing import List
 
-from .PETGraphX import PETGraphX, NodeType, EdgeType
+from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
@@ -16,22 +16,34 @@ from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detec
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
 from .pattern_detectors.PatternInfo import PatternInfo
+from .variable import Variable
 
 
 class DetectionResult(object):
+    pet: PETGraphX
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
     geometric_decomposition: List[GDInfo]
     task: List[PatternInfo]
 
-    def __init__(self):
+    def __init__(self, pet: PETGraphX):
+        self.pet = pet
         pass
 
     def __str__(self):
-        return "\n\n\n".join(
-            ["\n\n".join([str(v2) for v2 in v]) for v in self.__dict__.values() if v]
-        )
+        result_str = ""
+        for v in self.__dict__.values():
+            if type(v) == PETGraphX:
+                continue
+            value_str = "\n\n\n"
+            for entry in v:
+                try:
+                    value_str += str(entry) + "\n\n"
+                except NotImplementedError:
+                    value_str += entry.to_string(self.pet) + "\n\n"
+            result_str += value_str
+        return result_str
 
 
 class PatternDetectorX(object):
@@ -52,11 +64,11 @@ class PatternDetectorX(object):
         """
         dummies_to_remove = set()
         for node in self.pet.all_nodes():
-            if not loop_type or node.type == NodeType.LOOP:
-                if remove_dummies and node.type == NodeType.DUMMY:
+            if not loop_type or isinstance(node, LoopNode):
+                if remove_dummies and isinstance(node, DummyNode):
                     continue
-                for s, t, e in self.pet.out_edges(node.id, EdgeType.CHILD):
-                    if remove_dummies and self.pet.node_at(t).type == NodeType.DUMMY:
+                for s, t, e in self.pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+                    if remove_dummies and isinstance(self.pet.node_at(t), DummyNode):
                         dummies_to_remove.add(t)
 
         for n in dummies_to_remove:
@@ -76,14 +88,18 @@ class PatternDetectorX(object):
     ):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
-
-        res = DetectionResult()
+        self.pet.calculateFunctionMetadata()
+        res = DetectionResult(self.pet)
 
         # reduction before doall!
         res.reduction = detect_reduction(self.pet)
+        print("REDUCTION DONE.")
         res.do_all = detect_do_all(self.pet)
+        print("DOALL DONE.")
         res.pipeline = detect_pipeline(self.pet)
+        print("PIPELINE DONE.")
         res.geometric_decomposition = detect_gd(self.pet)
+        print("GEO. DEC. DONE.")
 
         # check if task pattern should be enabled
         if enable_task_pattern:

@@ -8,7 +8,7 @@
 
 from typing import List, cast
 
-from discopop_explorer.PETGraphX import EdgeType, NodeType, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, FunctionNode, NodeType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -39,7 +39,7 @@ def suggest_shared_clauses_for_all_tasks_in_function_body(
             for parent_function in [
                 pet.node_at(e[0])
                 for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
-                if pet.node_at(e[0]).type == NodeType.FUNC
+                if isinstance(pet.node_at(e[0]), FunctionNode)
             ]:
                 # get task suggestions in parent functions scope
                 for other_suggestion in task_suggestions:

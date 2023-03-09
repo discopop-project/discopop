@@ -8,7 +8,17 @@
 
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import MWType, NodeType, EdgeType, CUNode, PETGraphX
+from discopop_explorer.PETGraphX import (
+    CUNode,
+    FunctionNode,
+    LoopNode,
+    MWType,
+    NodeType,
+    EdgeType,
+    Node,
+    PETGraphX,
+    LineID,
+)
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -35,11 +45,11 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     suggestions: Dict[str, List[TaskParallelismInfo]] = dict()  # LID -> List[TaskParallelismInfo]
 
     # get a list of cus classified as WORKER
-    worker_cus = []
-    barrier_cus = []
-    barrier_worker_cus = []
+    worker_cus: List[Node] = []
+    barrier_cus: List[Node] = []
+    barrier_worker_cus: List[Node] = []
 
-    func_cus = []
+    func_cus: List[Node] = []
 
     for v in pet.all_nodes():
         if v.mw_type == MWType.WORKER:
@@ -48,7 +58,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
             barrier_cus.append(v)
         if v.mw_type == MWType.BARRIER_WORKER:
             barrier_worker_cus.append(v)
-        if v.type == NodeType.FUNC:
+        if isinstance(v, FunctionNode):
             func_cus.append(v)
 
     worker_cus = worker_cus + barrier_worker_cus + func_cus
@@ -60,7 +70,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
         first_dependency_line_number = first_dependency_line[first_dependency_line.index(":") + 1 :]
         for s, t, e in pet.out_edges(v.id):
             if e.etype == EdgeType.DATA:
-                dep_line = cast(str, e.sink)
+                dep_line = cast(LineID, e.sink_line)
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
@@ -94,12 +104,12 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 pragma_line = pragma_line.replace(",", "").replace(" ", "")
 
                 # only include cu and func nodes
-                if not (contained_in.type == NodeType.FUNC or contained_in.type == NodeType.CU):
+                if not isinstance(contained_in, (FunctionNode, CUNode)):
                     continue
                 if (
                     contained_in.mw_type == MWType.WORKER
                     or contained_in.mw_type == MWType.BARRIER_WORKER
-                    or contained_in.type == NodeType.FUNC
+                    or isinstance(contained_in, FunctionNode)
                 ):
                     # suggest task
                     fpriv, priv, shared, in_dep, out_dep, in_out_dep, red = classify_task_vars(
@@ -157,15 +167,15 @@ def correct_task_suggestions_in_loop_body(
         if s.type is TPIType.TASK
     ]
     for ts in task_suggestions:
-        found_critical_cus: List[CUNode] = []
-        found_atomic_cus: List[CUNode] = []
-        for loop_cu in pet.all_nodes(NodeType.LOOP):
+        found_critical_cus: List[Node] = []
+        found_atomic_cus: List[Node] = []
+        for loop_cu in pet.all_nodes(LoopNode):
             # check if task suggestion inside do-all loop exists
             if line_contained_in_region(
                 ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()
             ):
 
-                def find_taskwaits(cu_node: CUNode, visited: List[CUNode]):
+                def find_taskwaits(cu_node: Node, visited: List[Node]):
                     if cu_node.tp_contains_taskwait:
                         return [cu_node]
                     result = []
@@ -235,7 +245,7 @@ def correct_task_suggestions_in_loop_body(
                             # protect RAW-Writes to shared variables with critical section
                             # i.e. find in-deps to shared variables and suggest critical section around CUs
                             # containing such cases
-                            for loop_cu_child in pet.direct_children(loop_cu):
+                            for loop_cu_child in pet.direct_children_or_called_nodes(loop_cu):
                                 for in_dep_var_name in list(
                                     set(
                                         [

@@ -68,6 +68,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Profiling reports
+profiling_stats.txt
+
 # Translations
 *.mo
 *.pot

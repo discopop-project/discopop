@@ -8,7 +8,9 @@
 
 import os
 import pathlib
+import signal
 import tkinter as tk
+import warnings
 from tkinter import ttk
 from enum import IntEnum
 from os.path import dirname
@@ -91,9 +93,24 @@ class DiscoPoPConfigurationWizard(object):
         self.window = tk.Tk()
         self.window.title("DiscoPoP Wizard")
 
-        photo = tk.PhotoImage(
-            file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
-        self.window.iconphoto(False, photo)
+        # enable closing by pressing CTRL+C in the command line or the interface
+        def handler(event):
+            self.window.destroy()
+            print('caught ^C')
+        def check():
+            self.window.after(500, check)
+        signal.signal(signal.SIGINT, lambda x,y : print('terminal ^C') or handler(None))
+        self.window.after(500, check)
+        #self.window.bind_all('<Control-c>', handler) # uncomment to close with CTRL+C from interface
+
+
+        # load window icon
+        try:
+            photo = tk.PhotoImage(
+                file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
+            self.window.iconphoto(False, photo)
+        except tk.TclError:
+            warnings.warn("Loading the window icon was not successful.")
 
         # set window to full screen
         self.window.attributes('-zoomed', True)

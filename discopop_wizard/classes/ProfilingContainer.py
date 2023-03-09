@@ -84,6 +84,7 @@ class ProfilingContainer(object):
         command += "--executable-name \"" + execution_view.execution_configuration.value_dict["executable_name"] + "\" "
         command += "--executable-arguments \"" + execution_view.execution_configuration.value_dict["executable_arguments"] + "\" "
         command += "--make-flags \"" + execution_view.execution_configuration.value_dict["make_flags"] + "\" "
+        command += "--make-target \"" + execution_view.execution_configuration.value_dict["make_target"] + "\" "
         command += "--explorer-flags \"" + execution_view.execution_configuration.value_dict["explorer_flags"] + "\" "
 
         self.__execute_command("docker exec -it discopop_container " + command)

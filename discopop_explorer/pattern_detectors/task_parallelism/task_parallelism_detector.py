@@ -9,7 +9,7 @@
 
 from typing import List, Optional, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeType, MWType
+from discopop_explorer.PETGraphX import DummyNode, PETGraphX, NodeType, MWType
 from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -148,10 +148,9 @@ def run_detection(
     result: List[PatternInfo] = []
 
     for node in pet.all_nodes():
-
-        if node.type == NodeType.DUMMY:
+        if isinstance(node, DummyNode):
             continue
-        if pet.direct_children(node):
+        if pet.direct_children_or_called_nodes(node):
             detect_mw_types(pet, node)
 
         if node.mw_type == MWType.NONE:

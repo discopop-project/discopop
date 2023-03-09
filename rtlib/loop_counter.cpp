@@ -50,48 +50,9 @@ void loop_counter_output() {
 
     std::cout << "Outputting instrumentation results... ";
 
-    // get meta information about the variables
-    std::vector <var_info_t> var_infos;
-    var_infos.push_back(var_info_t()); // dummy
     std::ifstream ifile;
-    ifile.open("reduction_meta.txt");
     std::string line;
-    while (std::getline(ifile, line)) {
-        char var_name[512];
-        var_info_t var_info;
-        int cnt = sscanf(line.c_str(), "%d %d %s %d %d %c", &var_info.file_id_,
-                         &var_info.instr_id_, var_name, &var_info.loop_line_nr_,
-                         &var_info.instr_line_, &var_info.operation_);
-        if (cnt == 6) {
-            var_info.var_name_ = std::string(var_name);
-            var_infos.push_back(var_info);
-        }
-    }
-    ifile.close();
-
-    std::vector <size_t> reduction_vars;
-    if (lc.var_counters_.size() < var_infos.size()) {
-        lc.var_counters_.resize(var_infos.size());
-    }
-    for (size_t i = 1; i < var_infos.size(); ++i) {
-        if (lc.var_counters_[i].valid_ && (lc.var_counters_[i].counters_[0] ==
-                                           lc.var_counters_[i].counters_[1])) {
-            reduction_vars.push_back(i);
-        }
-    }
-
-    // output information about the reduction variables
     std::ofstream ofile;
-    ofile.open("reduction.txt");
-    for (auto var_id: reduction_vars) {
-        var_info_t const &var = var_infos[var_id];
-        ofile << " FileID : " << var.file_id_;
-        ofile << " Loop Line Number : " << var.loop_line_nr_;
-        ofile << " Reduction Line Number : " << var.instr_line_;
-        ofile << " Variable Name : " << var.var_name_;
-        ofile << " Operation Name : " << var.operation_ << "\n";
-    }
-    ofile.close();
 
     // get meta information about the loops
     std::vector <loop_info_t> loop_infos;

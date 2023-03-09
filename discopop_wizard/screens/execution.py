@@ -58,6 +58,7 @@ class ExecutionView(object):
         command += "--executable-name \"" + self.execution_configuration.value_dict["executable_name"] + "\" "
         command += "--executable-arguments \"" + self.execution_configuration.value_dict["executable_arguments"] + "\" "
         command += "--make-flags \"" + self.execution_configuration.value_dict["make_flags"] + "\" "
+        command += "--make-target \"" + self.execution_configuration.value_dict["make_target"] + "\" "
         command += "--explorer-flags \"" + self.execution_configuration.value_dict["explorer_flags"] + "\" "
 
         return command

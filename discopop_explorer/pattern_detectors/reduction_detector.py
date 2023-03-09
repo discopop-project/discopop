@@ -7,17 +7,27 @@
 # directory for details.
 
 
-from typing import List
+from typing import List, cast
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import PETGraphX, NodeType, CUNode
+from ..PETGraphX import (
+    CUNode,
+    LoopNode,
+    PETGraphX,
+    NodeType,
+    Node,
+    LineID,
+    Variable,
+    DepType,
+    EdgeType,
+)
 from ..utils import is_reduction_var, classify_loop_variables, contains
 
 
 class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result"""
 
-    def __init__(self, pet: PETGraphX, node: CUNode):
+    def __init__(self, pet: PETGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -53,8 +63,9 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     :return: List of detected pattern info
     """
     result: List[ReductionInfo] = []
-
-    for node in pet.all_nodes(NodeType.LOOP):
+    nodes = pet.all_nodes(LoopNode)
+    for idx, node in enumerate(nodes):
+        print("Reduction: ", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
             node.reduction = True
             if node.loop_iterations >= 0:
@@ -63,7 +74,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     return result
 
 
-def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
+def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph
@@ -71,10 +82,120 @@ def __detect_reduction(pet: PETGraphX, root: CUNode) -> bool:
     :return: true if is reduction loop
     """
     all_vars = []
-    for node in pet.subtree_of_type(root, NodeType.CU):
+    for node in pet.subtree_of_type(root, CUNode):
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
-    return bool(
-        [v for v in all_vars if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)]
-    )
+    # get required metadata
+    loop_start_lines: List[LineID] = []
+    root_children = pet.subtree_of_type(root, (CUNode, LoopNode))
+    root_children_cus: List[CUNode] = [
+        cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU
+    ]
+    root_children_loops: List[LoopNode] = [
+        cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP
+    ]
+    for v in root_children_loops:
+        loop_start_lines.append(v.start_position())
+    reduction_vars = [
+        v
+        for v in all_vars
+        if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
+        and "**" not in v.type
+    ]
+    reduction_var_names = [v.name for v in reduction_vars]
+    fp, p, lp, s, r = classify_loop_variables(pet, root)
+
+    if __check_loop_dependencies(
+        pet,
+        root,
+        root_children_cus,
+        root_children_loops,
+        loop_start_lines,
+        reduction_var_names,
+        fp,
+        p,
+        lp,
+    ):
+        return False
+
+    # if the loop contains any reduction variable, create a reduction suggestion
+    return bool(reduction_vars)
+
+
+def __check_loop_dependencies(
+    pet: PETGraphX,
+    root_loop: LoopNode,
+    root_children_cus: List[CUNode],
+    root_children_loops: List[LoopNode],
+    loop_start_lines: List[LineID],
+    reduction_var_names: List[str],
+    first_privates: List[Variable],
+    privates: List[Variable],
+    last_privates: List[Variable],
+) -> bool:
+    """Returns True, if dependencies between the respective subgraphs chave been found.
+    Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
+    # get recursive children of source and target
+    loop_children_ids = [node.id for node in root_children_cus]
+
+    # get dependency edges between children nodes
+    deps = set()
+    for n in loop_children_ids:
+        deps.update(
+            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids]
+        )
+        deps.update(
+            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids]
+        )
+
+    for source, target, dep in deps:
+        # check if targeted variable is readonly inside loop
+        if pet.is_readonly_inside_loop_body(
+            dep,
+            root_loop,
+            root_children_cus,
+            root_children_loops,
+            loops_start_lines=loop_start_lines,
+        ):
+            # variable is readonly -> no problem
+            continue
+
+        # check if targeted variable is loop index
+        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+            continue
+
+        # targeted variable is not read-only
+        if dep.dtype == DepType.INIT:
+            continue
+        elif dep.dtype == DepType.RAW:
+            # check RAW dependencies
+            # Reductions are only valid, if the value of the reduction variable is not stored in a shared variable.
+            # This property is violated if a RAW dependency for the reduction variable between different CUs exist
+            # since CUs follow the Read-Compute-Write pattern.
+            if dep.var_name in reduction_var_names:
+                if source != target:
+                    # if raw_deps for reduction variables between different CU's exist,
+                    # the above described property is violated
+                    # --> not a valid reduction
+                    return True
+            else:
+                # RAW does not target a reduction variable.
+                # RAW problematic, if it is not an intra-iteration RAW.
+                if not dep.intra_iteration:
+                    return True
+        elif dep.dtype == DepType.WAR:
+            # check WAR dependencies
+            # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
+            if not dep.intra_iteration:
+                if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
+                    return True
+        elif dep.dtype == DepType.WAW:
+            # check WAW dependencies
+            # handled by variable classification
+            pass
+        else:
+            raise ValueError("Unsupported dependency type: ", dep.dtype)
+
+    # no problem found. Potentially suggest reduction
+    return False

@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from ..PETGraphX import PETGraphX, NodeType, CUNode, EdgeType
+from ..PETGraphX import LineID, LoopNode, PETGraphX, NodeType, Node, EdgeType
 from ..utils import correlation_coefficient
 
 total = 0
@@ -22,7 +22,7 @@ def run_before(pet: PETGraphX):
 
 
 def run_after(pet: PETGraphX):
-    for node in pet.all_nodes(NodeType.LOOP):
+    for node in pet.all_nodes(LoopNode):
         check_pipeline(pet, node)
 
     print(f"Total: {total}")
@@ -31,7 +31,7 @@ def run_after(pet: PETGraphX):
     return pet
 
 
-def check_pipeline(pet: PETGraphX, root: CUNode):
+def check_pipeline(pet: PETGraphX, root: Node):
     """Tries to optimize dependencies for pipeline detection
     1. Deletes independent lines, that do not contribute to the pipeline
     2. Deletes similar CU (that have same dependencies), as those can be one step in the pipeline
@@ -44,11 +44,11 @@ def check_pipeline(pet: PETGraphX, root: CUNode):
     global before
     global after
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, NodeType.LOOP)]
+    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, LoopNode)]
 
     loop_subnodes = [
         pet.node_at(t)
-        for s, t, d in pet.out_edges(root.id, EdgeType.CHILD)
+        for s, t, d in pet.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
     ]
 
@@ -128,8 +128,8 @@ def get_mergeable_nodes(matrix):
     return res
 
 
-def get_matrix(pet, root, loop_subnodes):
-    res = []
+def get_matrix(pet: PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
+    res: List[List[int]] = []
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
@@ -165,7 +165,7 @@ def get_correlation_coefficient(matrix):
     return round(correlation_coefficient(graph_vector, pipeline_vector), 2)
 
 
-def is_pipeline_subnode(root: CUNode, current: CUNode, children_start_lines: List[str]) -> bool:
+def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[LineID]) -> bool:
     """Checks if node is a valid subnode for pipeline
 
     :param root: root node

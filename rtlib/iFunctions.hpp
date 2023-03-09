@@ -38,13 +38,16 @@ namespace __dp {
         RAW,
         WAR,
         WAW,
+        RAW_II,
+        WAR_II,
+        WAW_II,
         INIT
     }
             depType;
 
     struct AccessInfo {
-        AccessInfo(bool isRead, LID lid, char *var, ADDR addr, bool skip = false)
-                : isRead(isRead), lid(lid), var(var), addr(addr), skip(skip) {}
+        AccessInfo(bool isRead, LID lid, char *var, string AAvar, ADDR addr, bool skip = false)
+                : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
 
         AccessInfo() : lid(0) {}
 
@@ -54,16 +57,18 @@ namespace __dp {
         // End HA
         LID lid;
         char *var;
+        string AAvar;  // name of allocated variable -> "Anti Aliased Variable"
         ADDR addr;
     };
 
     // For runtime dependency merging
     struct Dep {
-        Dep(depType T, LID dep, char *var) : type(T), depOn(dep), var(var) {}
+        Dep(depType T, LID dep, char *var, string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
         depType type;
         LID depOn;
         char *var;
+        string AAvar;
     };
 
     struct compDep {
@@ -129,7 +134,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var);
+    void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
 
     void outputDeps();
 
@@ -144,6 +149,8 @@ namespace __dp {
     void mergeDeps();
 
     void *analyzeDeps(void *arg);
+
+    string getMemoryRegionIdFromAddr(string fallback, ADDR addr);
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
 
@@ -163,7 +170,9 @@ namespace __dp {
     void __dp_write(LID lid, ADDR addr, char *var);
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var);
-    void __dp_alloca(LID lid, ADDR addr, char *var);
+    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes);
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits);
+    void __dp_delete(LID lid, ADDR startAddr);
     // End HA
 #endif
     // hybrid analysis

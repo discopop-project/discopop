@@ -80,8 +80,8 @@ class Suggestion(object):
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def get_as_button(self, canvas: tk.Canvas, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
-        return tk.Button(canvas, text=self.type + " @ " + self.values["start_line"],
+    def get_as_button(self, scrollable_frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
+        return tk.Button(scrollable_frame, text=self.type + " @ " + self.values["start_line"],
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
 
     def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str]]):
@@ -162,7 +162,7 @@ class Suggestion(object):
                 if len(stage["out_deps"]) > 0:
                     pragma += "depends(out:" + ",".join(stage["out_deps"]) + ") "
                 if len(stage["in_out_deps"]) > 0:
-                    pragma += "depends(inout:" + ",".join(stage["inout_deps"]) + ") "
+                    pragma += "depends(inout:" + ",".join(stage["in_out_deps"]) + ") "
                 pragma_tuple = (
                 int(stage["startsAtLine"].split(":")[1]), int(stage["endsAtLine"].split(":")[1]), pragma)
                 pragmas.append(pragma_tuple)

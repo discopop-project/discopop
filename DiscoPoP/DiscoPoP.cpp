@@ -69,6 +69,22 @@ void DiscoPoP::setupCallbacks() {
 #endif
     );
 
+    DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
+                                                Void,
+                           
+                                                Int32, CharPtr, Int64, Int64, Int64
+    );
+
+    DpNew = ThisModule->getOrInsertFunction("__dp_new",
+                                                Void,
+                                                Int32, Int64, Int64, Int64
+    );
+
+    DpDelete = ThisModule->getOrInsertFunction("__dp_delete",
+                                                Void,
+                                                Int32, Int64
+    );
+
     DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call",
                                                      Void,
                                                      Int32);
@@ -259,7 +275,16 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
     if (programGlobalVariablesSet.count(varName)) {
         varDefLine = "GlobalVar";
-        // TODO: Find definition line of global variables
+        // Find definition line of global variables
+        GlobalVariable *globalVariable = I->getParent()->getParent()->getParent()->getGlobalVariable(StringRef(varName));
+        if(globalVariable){
+            MDNode *metadata = globalVariable->getMetadata("dbg");
+            if(metadata){
+                if(isa<DIGlobalVariableExpression>(metadata)){ 
+                    varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
+                }
+            }
+        }
     }
 
     // Start from the beginning of a function and look for the variable
@@ -291,7 +316,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
                                         break;
                                     }
                                 }
-                                if (vn == varName) {
+                                if (vn == varName || vn == varName + ".addr") {
                                     varDefLine =
                                             to_string(fileID) + ":" + to_string(DV->getLine());
                                     break;
@@ -456,12 +481,56 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         basicBlockCUVector.push_back(cu);
         BBIDToCUIDsMap.insert(
                 pair < string, vector < CU * >> (bb->getName(), basicBlockCUVector));
+        DILocalScope* scopeBuffer = NULL;
 
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
             basicBlockName = bb->getName().str();
+
+            // Do not allow to combine Instructions from different scopes in the source code.
+            if((&*instruction)->getDebugLoc()){
+                if ((&*instruction)->getDebugLoc()->getScope() != scopeBuffer){
+                    // scopes are not equal
+
+                    int scopeIsParentOfBuffer = 0;
+                    if(scopeBuffer){
+                        scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
+                    }
+
+                    if(scopeIsParentOfBuffer){
+                        // allow a combination of two CU's if the second scope is the parent of the first scope
+                    }
+                    else{
+                        // create a new CU. Do not allow to combine Instructions from different scopes in the source code.
+
+                        // create new CU if the old one contains any instruction
+                        if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
+                            cu->startLine = *(cu->instructionsLineNumbers.begin());
+                            cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+
+                            cu->basicBlockName = basicBlockName;
+                            CUVector.push_back(cu);
+                            suspiciousVariables.clear();
+                            CU *temp =
+                                    cu; // keep current CU to make a reference to the successor CU
+                            cu = new CU;
+
+                            cu->BBID = bb->getName().str();
+                            cu->BB = *bb;
+
+                            currentNode->childrenNodes.push_back(cu);
+                            temp->successorCUs.push_back(cu->ID);
+                            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+                        }
+                    }
+                    // update scopeBuffer
+                        scopeBuffer = (&*instruction)->getDebugLoc()->getScope();
+                }
+            }
+
+
             if (lid > 0) {
                 cu->instructionsLineNumbers.insert(lid);
                 cu->instructionsCount++;
@@ -545,6 +614,38 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         }
                     }
                 }
+                else if (isa<CallInst>(instruction)){
+                    // get the name of the called function and check if a FileIO function is called
+                    CallInst *ci = cast<CallInst>(instruction);
+                    set<string> IOFunctions {"fopen", "fopen_s", "freopen", "freopen_s", "fclose", "fflush", "setbuf",
+                                             "setvbuf", "fwide", "fread", "fwrite", "fgetc", "getc", "fgets", "fputc",
+                                             "putc", "fputs", "getchar", "gets", "gets_s", "putchar", "puts", "ungetc",
+                                             "fgetwc", "getwc", "fgetws", "fputwc", "putwc", "fputws", "getwchar",
+                                             "putwchar", "ungetwc", "scanf", "fscanf", "sscanf", "scanf_s", "fscanf_s",
+                                             "sscanf_s", "vscanf", "vfscanf", "vsscanf", "vscanf_s", "vfscanf_s",
+                                             "vsscanf_s", "printf", "fprintf", "sprintf", "snprintf", "printf_s",
+                                             "fprintf_s", "sprintf_s", "snprintf_s", "vprintf", "vfprintf", "vsprintf",
+                                             "vsnprintf", "vprintf_s", "vfprintf_s", "vsprintf_s", "vsnprintf_s",
+                                             "wscanf", "fwscanf", "swscanf", "wscanf_s", "fwscanf_s", "swscanf_s",
+                                             "vwscanf", "vfwscanf", "vswscanf", "vwscanf_s", "vfwscanf_s", "vswscanf_s",
+                                             "wprintf", "fwprintf", "swprintf", "wprintf_s", "wprintf_s", "swprintf_s",
+                                             "snwprintf_s", "vwprintf", "vfwprintf", "vswprintf", "vwprintf_s",
+                                             "vfwprintf_s", "vswprintf_s", "vsnwprintf_s", "ftell", "fgetpos", "fseek",
+                                             "fsetpos", "rewind", "clearerr", "feof", "ferror", "perror", "remove",
+                                             "rename", "tmpfile", "tmpfile_s", "tmpnam", "tmpnam_s",
+                                             "__isoc99_fscanf"};
+                    if(ci){
+                        if(ci->getCalledFunction()){
+                            if(ci->getCalledFunction()->hasName()){
+                                if(find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) != IOFunctions.end()){
+                                    // Called function performs FileIO
+                                    cu->performsFileIO = true;
+                                }
+                            }
+
+                        }
+                    }
+                }
             }
         }
         if (cu->instructionsLineNumbers.empty()) {
@@ -564,7 +665,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             // Note: Don't create nodes for library functions (c++/llvm).
-            int32_t lid = getLID(&*instruction, fileID);
+            LID lid = getLID(&*instruction, fileID);
             if (lid > 0) {
                 if (isa<CallInst>(instruction)) {
                     CallInst* ci = cast<CallInst>(instruction);
@@ -619,7 +720,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             string type_str;
                             raw_string_ostream rso(type_str);
                             (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid);
+                            Variable v(string(it->getName()), rso.str(), lid, true, true);
                             n->argumentsList.push_back(v);
                         }
                     } else // get name of the indirect function which is called
@@ -692,11 +793,14 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 varType = determineVariableType(&*instruction);
                 varDefLine = determineVariableDefLine(&*instruction);
 
-                Variable v(varName, varType, varDefLine);
+                bool readAccess = isa<LoadInst>(instruction);
+                bool writeAccess = isa<StoreInst>(instruction);
+
+                Variable v(varName, varType, varDefLine, readAccess, writeAccess);
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
-                }            
+                }
                 if (globalVariablesSet.count(varName) ||
                     programGlobalVariablesSet.count(varName)) {
                     (*bbCU)->globalVariableNames.insert(v);
@@ -733,7 +837,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
                 if (i->type == nodeTypes::cu) {
                     Loop *loop = LI.getLoopFor(i->BB);
                     DebugLoc dl = loop->getStartLoc();
-                    int32_t lid = 0;
+                    LID lid = 0;
                     lid = (fileID << LIDSIZE) + dl->getLine();
                     loopStartLines[root->ID] = dputil::decodeLID(lid);
                     break;
@@ -972,7 +1076,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     continue;
                 }
@@ -987,7 +1091,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We should ignore store instructions that are not associated with a load
                     // e.g., pbvc[i] = c1s;
@@ -999,7 +1103,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr->getOpcode());
+                    candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
                 } else {
                     // We want to find max or min reduction operations
                     // We want to find the basicblock that contains the load instruction
@@ -1011,7 +1115,14 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     if (bbName.find("if") != std::string::npos ||
                         bbName.find("for") != std::string::npos) {
                         // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if ( dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  = indx ; }}"
-                        candidate.operation_ = '>';
+
+                        // check if loaded value is used in the store instruction to prevent "false positives"
+                        if(check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))){
+                            candidate.operation_ = '>';
+                        }
+                        else{
+                            continue;
+                        }                  
                     } else {
                         continue;
                     }
@@ -1021,6 +1132,28 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
         instructions_.push_back(candidate);
     }
 }
+
+bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue){
+    // Return true, if searchedValue is used within the computation of parentValue
+    if(parentValue == searchedValue){
+        return true;
+    }
+
+    // check operands recursively, if parentValue is not a constant yet
+    if(isa<Constant>(parentValue)){
+        return false;
+    }
+    llvm::Instruction* parentInstruction = cast<Instruction>(parentValue);
+    for(int idx = 0; idx < parentInstruction->getNumOperands(); idx++){
+        if(check_value_usage(parentInstruction->getOperand(idx), searchedValue)){
+            return true;
+        }
+    }
+    
+    return false;
+    
+}
+
 
 bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
     std::ifstream fmap_file;
@@ -1270,7 +1403,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
     }
 
     unsigned opcode = cur_instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(cur_instr);
     if (c != ' ') {
         reduction_operations.push_back(c);
     }
@@ -1305,7 +1438,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val)
     }
     llvm::Instruction *instr = llvm::cast<llvm::Instruction>(val);
     unsigned opcode = instr->getOpcode();
-    char c = dp_reduction_get_char_for_opcode(opcode);
+    char c = dp_reduction_get_char_for_opcode(instr);
     if (c != ' ') {
         return instr;
     } else if (opcode == llvm::Instruction::Load) {
@@ -1315,6 +1448,12 @@ llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val)
     } else if (opcode == llvm::Instruction::Store) {
         return dp_reduction_find_reduction_instr(instr->getOperand(0));
     }
+    // enter recursion if the instruction has only a single operand to accomodate for type conversions etc.
+    if(instr->getNumOperands() == 1){
+        // unpack instruction
+        return dp_reduction_find_reduction_instr(instr->getOperand(0));
+    }
+    // no reduction instruction found
     return nullptr;
 }
 
@@ -1516,11 +1655,11 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
                      EI != END; ++EI) {
                     BasicBlock *currentBB = *EI;
                     vector < Value * > args;
-                    int32_t lid = 0;
+                    LID lid = 0;
 
                     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
                         lid = dp_reduction_getLID(&*BI, file_id);
-                        uint32_t ulid = (uint32_t) lid;
+                        uint64_t ulid = (uint64_t) lid;
                         if (ulid != 0) {
                             return to_string(ulid % 16384);
                         }
@@ -1557,7 +1696,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-int32_t DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
+LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
     int32_t lno;
 
     const DebugLoc &location = BI->getDebugLoc();
@@ -1570,12 +1709,12 @@ int32_t DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
     if (lno == 0) {
         return 0;
     }
-
-    return lno;
+    LID lid = lno;
+    return lid;
 }
 
 bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
-    int32_t lid;
+    LID lid;
     for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
         lid = dp_reduction_getLID(&*BI, file_id);
         if (lid > 0) {
@@ -1586,11 +1725,40 @@ bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
 }
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
-char DiscoPoP::dp_reduction_get_char_for_opcode(unsigned opcode) {
-    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd)
-        return '+';
-    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub)
-        return '-';
+// switches + and - if a negative constant is added or subtracted
+//(mainly used to support -- as reduction operation, might be implemented as 'add -1')
+char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction* instr) {
+    unsigned opcode = instr->getOpcode();
+
+    if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if(operand_is_negative_constant)
+            return '-';
+        else
+            return '+';
+
+    }
+    if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub){
+        bool operand_is_negative_constant = false;
+        if(instr->getNumOperands() >= 1){
+            Value* rhs_value = instr->getOperand(1);
+            if(isa<ConstantInt>(rhs_value)){
+                operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+        }
+
+        if (operand_is_negative_constant)
+            return '+';
+        else
+            return '-';
+    }
     if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul)
         return '*';
     if (opcode == llvm::Instruction::And) return '&';
@@ -1624,17 +1792,45 @@ void DiscoPoP::dp_reduction_insert_functions() {
     }
 
     // insert function calls to monitor loop iterations
-    std::ofstream loop_counter_file;
-    loop_counter_file.open("loop_counter_output.txt");
-    for (auto const &loop_info: loops_) {
-        loop_counter_file << loop_info.file_id_ << " ";
-        loop_counter_file << loop_info.line_nr_ << " ";
-        // TODO: Replace 1000 with actual loop iterations
-        // TODO: Check if number of load and store instructions on a
-        //       reduction variable is the same
-        loop_counter_file << "1000" << "\n";
-    }
+    std::ofstream loop_metadata_file;
+    loop_metadata_file.open("loop_meta.txt");
+    int loop_id = 1;
+    llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
+    llvm::ArrayRef<llvm::Type*> loop_incr_fn_args(loop_incr_fn_arg_type);
+    llvm::FunctionType* loop_incr_fn_type = llvm::FunctionType::get(
+            llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
+    FunctionCallee incr_loop_counter_callee = module_->getOrInsertFunction("incr_loop_counter", loop_incr_fn_type);
 
+    for (auto const& loop_info : loops_) {
+        llvm::Value* val =
+                llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
+        llvm::ArrayRef<llvm::Value*> args(val);
+        llvm::CallInst::Create(incr_loop_counter_callee, args, "",
+                               loop_info.first_body_instr_);
+        loop_metadata_file << loop_info.file_id_ << " ";
+        loop_metadata_file << loop_id++ << " ";
+        loop_metadata_file << loop_info.line_nr_ << "\n";
+    }
+    loop_metadata_file.close();
+
+    // add a function to output the final data
+    // loop_counter_output
+    llvm::FunctionType* output_fn_type =
+            llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
+    FunctionCallee loop_counter_output_callee = module_->getOrInsertFunction("loop_counter_output", output_fn_type);
+    llvm::Function* main_fn = module_->getFunction("main");
+    if (main_fn) {
+        for (auto it = llvm::inst_begin(main_fn); it != llvm::inst_end(main_fn);
+             ++it) {
+            if (llvm::isa<llvm::ReturnInst>(&(*it))) {
+                llvm::IRBuilder<> ir_builder(&(*it));
+                ir_builder.CreateCall(loop_counter_output_callee);
+                break;
+            }
+        }
+    } else {
+        llvm::errs() << "Error : Could not find a main function\n";
+    }
 }
 
 // DPReduction end
@@ -1645,7 +1841,7 @@ bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
 }
 
 bool DiscoPoP::sanityCheck(BasicBlock *BB) {
-    int32_t lid;
+    LID lid;
     for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
         lid = getLID(&*BI, fileID);
         if (lid > 0) {
@@ -1876,7 +2072,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid);
+            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
@@ -2392,7 +2588,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     return ""; //getOrInsertVarName("*", builder);
 }
 
-  
+
    Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I)
 {
     assert(I && "Instruction cannot be NULL \n");
@@ -2460,6 +2656,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
     if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand))
     {
         return determineVariableName_dynamic((Instruction *)(operand));
+    }
+    if (isa<AllocaInst>(I)){
+        return getOrInsertVarName_dynamic(I->getName().str(), builder);
     }
     // if we cannot determine the name, then return *
     return getOrInsertVarName_dynamic("*", builder);
@@ -2668,7 +2867,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai: root->argumentsList) {
                 *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
-                        << " defLine=\"" << xmlEscape(ai.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(ai.defLine) << "\""
+                        << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(ai.name) << "</arg>" << endl;
             }
             *outCUs << "\t\t</funcArguments>" << endl;
@@ -2688,6 +2889,8 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                     << endl;
             *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize
                     << "</writeDataSize>" << endl;
+            *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO
+                    << "</performsFileIO>" << endl;
 
             *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount
                     << "</instructionsCount>" << endl;
@@ -2716,7 +2919,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<localVariables>" << endl;
             for (auto lvi: cu->localVariableNames) {
                 *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
+                        << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(lvi.name) << "</local>" << endl;
             }
             *outCUs << "\t\t</localVariables>" << endl;
@@ -2724,7 +2929,9 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             *outCUs << "\t\t<globalVariables>" << endl;
             for (auto gvi: cu->globalVariableNames) {
                 *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
-                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\">"
+                        << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
+                        << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "")
+                        << "\">"
                         << xmlEscape(gvi.name) << "</global>" << endl;
             }
             *outCUs << "\t\t</globalVariables>" << endl;
@@ -2860,6 +3067,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
             }
         }
+            // alloca instruction
+        else if (isa<AllocaInst>(BI)) {
+            AllocaInst *AI = cast<AllocaInst>(BI);
+                instrumentAlloca(cast<AllocaInst>(BI));
+        }
             // load instruction
         else if (isa<LoadInst>(BI)) {
             instrumentLoad(cast<LoadInst>(BI));
@@ -2907,9 +3119,19 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     insertDpFinalize(&*BI);
                     continue;
                 }
+                if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc"))
+                {
+                    instrumentNewOrMalloc(cast<CallInst>(BI));
+                    continue;
+                }
+                if (fn.equals("_ZdlPv") || fn.equals("free"))
+                {
+                    instrumentDeleteOrFree(cast<CallInst>(BI));
+                    continue;
+                }
 
             }
-            int32_t lid = getLID(&*BI, fileID);
+            LID lid = getLID(&*BI, fileID);
             if (lid > 0)                   // calls on non-user code are not instrumented
             {
                 IRBuilder<> IRBCall(&*BI);
@@ -2931,7 +3153,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         }
             // return
         else if (isa<ReturnInst>(BI)) {
-            int32_t lid = getLID(&*BI, fileID);
+            LID lid = getLID(&*BI, fileID);
             assert((lid > 0) && "Returning on LID = 0!");
 
             Function *parent = BB.getParent();
@@ -2955,9 +3177,102 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 }
 
 // Instrumentation function inserters.
+void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
+    LID lid = getLID(toInstrument, fileID);
+    if (lid == 0)
+        return;
+
+    // NOTE: manual memory management using malloc etc. not covered yet!
+
+
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+    args.push_back(determineVariableName_dynamic(toInstrument));
+
+    bool isGlobal;
+    //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
+    args.push_back(startAddr);
+    
+    Value *endAddr = startAddr;
+    if(toInstrument->isArrayAllocation()){
+        // endAddr = startAddr + allocated size
+        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+    }
+    else if(toInstrument->getAllocatedType()->isArrayTy()){
+        // unpack potentially multidimensional allocations
+        uint64_t numElements = 1;
+        Type *typeToParse = toInstrument->getAllocatedType();
+        Type *elementType;
+
+        // unpack multidimensional allocations
+        while(typeToParse->isArrayTy()){
+            // extract size from current dimension and multiply to numElements
+            numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+            // proceed one dimension
+            typeToParse = typeToParse->getArrayElementType();
+        }
+        // typeToParse now contains the element type
+        elementType = typeToParse;
+
+        // allocated size = Element size in Bytes * Number of elements
+        auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
+        auto allocatedSize = elementSizeInBytes * numElements;
+
+        // endAddr = startAddr + allocated size
+        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+    }
+
+    args.push_back(endAddr);
+    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    IRB.CreateCall(DpAlloca, args, "");
+}
+
+void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
+    // add instrumentation for new instructions or calls to malloc
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value* endAddr = startAddr;
+    Value* numBytes = toInstrument->getArgOperand(0);
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numBytes);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
+    // add instrumentation for delete instructions or calls to free
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNonDebugInstruction());
+
+    args.push_back(startAddr);
+
+    IRB.CreateCall(DpDelete, args, "");
+}
+
+
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if (lid == 0)
         return;
 
@@ -3021,7 +3336,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
 void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 
-    int32_t lid = getLID(toInstrument, fileID);
+    LID lid = getLID(toInstrument, fileID);
     if (lid == 0) return;
 
     vector < Value * > args;
@@ -3082,7 +3397,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 }
 
 void DiscoPoP::insertDpFinalize(Instruction *before) {
-    int32_t lid = getLID(before, fileID);
+    LID lid = getLID(before, fileID);
     assert((lid > 0) && "Returning on an invalid LID.");
     IRBuilder<> IRB(before);
     IRB.CreateCall(DpFinalize, ConstantInt::get(Int32, lid));
@@ -3090,12 +3405,60 @@ void DiscoPoP::insertDpFinalize(Instruction *before) {
 
 void DiscoPoP::instrumentFuncEntry(Function &F) {
     BasicBlock &entryBB = F.getEntryBlock();
-    int32_t lid = 0;
+    LID lid = 0;
     int32_t isStart = 0;
 
     StringRef fn = F.getName();
-    if (fn.equals("main"))
+    if (fn.equals("main")){
         isStart = 1;
+
+        // insert 'allocations' of global variables
+        Instruction *insertBefore = &*entryBB.begin();
+
+        auto tmp_end = F.getParent()->getGlobalList().end();
+        tmp_end--;  // necessary, since the list of Globals is modified when e.g. new strings are created.
+        for(auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++){
+            IRBuilder<> IRB(insertBefore->getNextNode());
+
+            vector < Value * > args;
+            args.push_back(ConstantInt::get(Int32, lid));
+            args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
+
+            bool isGlobal;
+            //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+            Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
+            args.push_back(startAddr);
+            
+            Value *endAddr = startAddr;
+            if(Global_it->getValueType()->isArrayTy()){
+                // unpack potentially multidimensional allocations
+                uint64_t numElements = 1;
+                Type *typeToParse = Global_it->getValueType();
+                Type *elementType;
+
+                // unpack multidimensional allocations
+                while(typeToParse->isArrayTy()){
+                    // extract size from current dimension and multiply to numElements
+                    numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+                    // proceed one dimension
+                    typeToParse = typeToParse->getArrayElementType();
+                }
+                // typeToParse now contains the element type
+                elementType = typeToParse;
+
+                // allocated size = Element size in Bytes * Number of elements
+                auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
+                auto allocatedSize = elementSizeInBytes * numElements;
+
+                // endAddr = startAddr + allocated size
+                endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+            }
+
+            args.push_back(endAddr);
+            args.push_back(ConstantInt::get(Int64, 0));
+            IRB.CreateCall(DpAlloca, args, "");
+        }
+    }
 
     // We always want to insert __dp_func_entry at the beginning
     // of the basic block, but we need the first valid LID to
@@ -3119,7 +3482,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     BasicBlock *currentBB = bb;
     vector < Value * > args;
-    int32_t lid = 0;
+    LID lid = 0;
 
     // Take care of the order of instrumentation functions for loop entry
     // and exit. Loop exit must appear before the next loop entry.
@@ -3147,7 +3510,7 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
 void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
     BasicBlock *currentBB = bb;
     vector < Value * > args;
-    int32_t lid = 0;
+    LID lid = 0;
 
     for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
         lid = getLID(&*BI, fileID);

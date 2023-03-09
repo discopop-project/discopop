@@ -14,7 +14,9 @@
 #include "shadow.hpp"
 #include "signature.hpp"
 #include <string>
+#include <list>
 #include <cstdio>
+#include <limits>
 
 #ifdef __linux__ // headers only available on Linux
 #include <unistd.h>
@@ -24,11 +26,14 @@
 using namespace std;
 using namespace dputil;
 
+#define unpackLIDMetadata_getLoopID(lid) (lid >> 56)
+#define unpackLIDMetadata_getLoopIteration(lid) ((lid >> 48) & 0xFF)
+
 bool DP_DEBUG = false; // debug flag
 
 bool USE_PERFECT = true;
 // Shadow memory parameters
-int32_t SIG_ELEM_BIT = 24;
+int32_t SIG_ELEM_BIT = 56;
 int32_t SIG_NUM_ELEM = 270000;
 int32_t SIG_NUM_HASH = 2;
 
@@ -61,6 +66,13 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
+    // TODO: Replace with more efficient data structure for searching
+    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    list<tuple<LID, string, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
+    ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
+    ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
+    int64_t nextFreeMemoryRegionId = 0;
+
     /******* BEGIN: parallelization section *******/
 
     pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
@@ -68,7 +80,7 @@ namespace __dp {
     pthread_mutex_t allDepsLock;
     pthread_t *workers = nullptr; // worker threads
 
-    int32_t NUM_WORKERS = 3;               // default number of worker threads
+    int32_t NUM_WORKERS = 1;               // default number of worker threads (multiple workers can potentially lead to non-deterministic results)
     int32_t CHUNK_SIZE = 500;              // default number of addresses in each chunk
     queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
     bool *addrChunkPresent = nullptr;      // addrChunkPresent[thread_id] denotes whether or not a new chunk is available for the corresponding thread
@@ -83,18 +95,46 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var) {
+    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
         // End HA
+
+        // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
+        // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
+        if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
+            if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn) && 
+               unpackLIDMetadata_getLoopIteration(curr) == unpackLIDMetadata_getLoopIteration(depOn)){
+                // modify depType if intraIterationDependency identified
+                switch(type) {
+                    case RAW:
+                        type = RAW_II;
+                        break;
+                    case WAR:
+                        type = WAR_II;
+                        break;
+                    case WAW:
+                        type = WAW_II;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+
+        // Remove metadata to preserve result correctness and add metadata to `Dep` object
+        curr &= 0x00000000FFFFFFFF;
+        depOn &= 0x00000000FFFFFFFF;
+
         depMap::iterator posInDeps = myMap->find(curr);
         if (posInDeps == myMap->end()) {
             depSet *tmp_depSet = new depSet();
-            tmp_depSet->insert(Dep(type, depOn, var));
+            tmp_depSet->insert(Dep(type, depOn, var, AAvar));
             myMap->insert(pair<int32_t, depSet *>(curr, tmp_depSet));
         } else {
-            posInDeps->second->insert(Dep(type, depOn, var));
+            posInDeps->second->insert(Dep(type, depOn, var, AAvar));
         }
 
         if (DP_DEBUG) {
@@ -137,6 +177,15 @@ namespace __dp {
                         case WAW:
                             dep += "WAW";
                             break;
+                        case RAW_II:
+                            dep += "RAW_II";
+                            break;
+                        case WAR_II:
+                            dep += "WAR_II";
+                            break;
+                        case WAW_II:
+                            dep += "WAW_II";
+                            break;
                         case INIT:
                             dep += "INIT";
                             break;
@@ -146,6 +195,7 @@ namespace __dp {
 
                     dep += " " + decodeLID(d.depOn);
                     dep += "|" + string(d.var);
+                    dep += "(" + string(d.AAvar) + ")";
                     lineDeps.insert(dep);
                 }
 
@@ -275,6 +325,90 @@ namespace __dp {
         pthread_attr_destroy(&attr);
     }
 
+    
+    string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
+        // check if accessed addr in knwon range. If not, return fallback immediately
+        if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
+            // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
+            if(allocatedMemoryRegions.size() != 0){
+                // search backwards in the list
+                auto bw_it = allocatedMemoryRegions.end();
+                bw_it--;
+                bool search_backwards = true;
+
+                while(true){
+                    if(*bw_it == allocatedMemoryRegions.front()){
+                        search_backwards = false;
+                    }
+                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
+                        lastHitIterator = bw_it;
+                        return get<1>(*bw_it);
+                    }
+
+                    if(search_backwards){
+                        bw_it--;
+                    }
+                    else{
+                        break;
+                    }
+                }
+            }
+
+
+//            bool search_forwards = true;
+//            bool search_backwards = true;
+//            auto fw_it = lastHitIterator;
+//            auto bw_it = lastHitIterator;
+
+            // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
+            // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
+
+/*            while(true){
+                // search forward from lastHitIterator
+                if(search_forwards){
+                    if(*fw_it == allocatedMemoryRegions.back()){
+                        search_forwards = false;
+                    }
+                     // fw_it in range
+                    //cout << "Search for " << std::hex << addr << " in " << std::hex << get<2>(*fw_it) << " - " << std::hex << get<3>(*fw_it) << "\n";
+                    if(get<2>(*fw_it) <= addr && get<3>(*fw_it) >= addr){
+                        lastHitIterator = fw_it;
+                        return get<1>(*fw_it);
+                    }
+                    
+                    if(search_forwards){
+                        fw_it++;
+                    }
+                }
+                
+                // search backwards from lastHitIterator
+                if(search_backwards){
+                    if(*bw_it == allocatedMemoryRegions.front()){
+                        search_backwards = false;
+                    }
+
+                    //cout << "Search for BW " << std::hex << addr << " in " << std::hex << get<2>(*bw_it) << " - " << std::hex << get<3>(*bw_it) << "\n";
+                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
+                        lastHitIterator = bw_it;
+                        return get<1>(*bw_it);
+                    }
+
+                    if(search_backwards){
+                        bw_it--;
+                    }
+                }
+
+                if(!(search_forwards || search_backwards)){
+                    break;
+                }     
+
+            }
+*/
+        }
+        
+        return fallback;
+    }
+
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
         int64_t workerID = addr % NUM_WORKERS;
         numAccesses[workerID]++;
@@ -282,7 +416,19 @@ namespace __dp {
         current.isRead = isRead;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -365,23 +511,23 @@ namespace __dp {
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var);
+                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var);
+                            addDep(INIT, access.lid, 0, access.var, access.AAvar);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var);
+                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var);
+                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar);
                             }
                         }
                     }
@@ -500,7 +646,19 @@ namespace __dp {
         current.isRead = true;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -546,7 +704,19 @@ namespace __dp {
         current.isRead = false;
         current.lid = lid;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        // store loop iteration metadata if present (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -592,8 +762,20 @@ namespace __dp {
         current.isRead = false;
         current.lid = 0;
         current.var = var;
+        current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
         current.skip = true;
+        // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
+        // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
+        // first 32 bits of current.lid are reserved for metadata and thus empty
+        if (loopStack->size() > 0){
+            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
+            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+        }
+        else{
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            current.lid = current.lid | (((LID) 0xFF) << 56);
+        }
 
         if (tempAddrCount[workerID] == CHUNK_SIZE) {
             pthread_mutex_lock(&addrChunkMutexes[workerID]);
@@ -606,52 +788,63 @@ namespace __dp {
         }
     }
 
-#ifdef SKIP_DUP_INSTR
-    void __dp_alloca(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count)
-    {
-#else
-    void __dp_alloca(LID lid, ADDR addr, char *var) {
-#endif
-        if (targetTerminated) {
-            if (DP_DEBUG) {
-                cout << "__dp_write() is not executed since target program has returned from main()." << endl;
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
+        // create entry to list of allocatedMemoryRegions
+        string var_name = allocId;
+        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes});
+        
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
+    }
+
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
+        // instrumentation function for new and malloc
+        
+        string allocId = to_string(nextFreeMemoryRegionId);
+        nextFreeMemoryRegionId++;
+
+        // calculate endAddr of memory region
+        endAddr = startAddr + numBytes;
+
+        cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+        printf(" NumBytes: %lld\n", numBytes);
+
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
+        lastHitIterator = allocatedMemoryRegions.end();
+        lastHitIterator--;
+
+        // update known min and max ADDR
+        if(startAddr < smallestAllocatedADDR){
+            smallestAllocatedADDR = startAddr;
+        }
+        if(endAddr > largestAllocatedADDR){
+            largestAllocatedADDR = endAddr;
+        }
+    }
+
+    void __dp_delete(LID lid, ADDR startAddr){
+        // TODO more efficient implementation
+
+        // find memory region to be deleted
+        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+            if(get<2>(entry) == startAddr){
+                // delete memory region
+                cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
+                allocatedMemoryRegions.remove(entry);
+                return;
             }
-            return;
         }
-        // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-        if (lastaddr == addr && count >= 2)
-        {
-             return;
-        }
-#endif
-        // For tracking function call or invoke
-        lastCallOrInvoke = 0;
-        lastProcessedLine = lid;
-
-        if (DP_DEBUG) {
-            cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr
-                 << endl;
-        }
-
-        int64_t workerID = addr % NUM_WORKERS;
-        AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-        current.isRead = false;
-        current.lid = 0;
-        current.var = var;
-        current.addr = addr;
-        current.skip = true;
-
-        if (tempAddrCount[workerID] == CHUNK_SIZE) {
-            pthread_mutex_lock(&addrChunkMutexes[workerID]);
-            addrChunkPresent[workerID] = true;
-            chunks[workerID].push(tempAddrChunks[workerID]);
-            pthread_cond_signal(&addrChunkPresentConds[workerID]);
-            pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-            tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-            tempAddrCount[workerID] = 0;
-        }
-    }
+        cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
+    } 
 
     void __dp_report_bb(int32_t bbIndex) {
         bbList->insert(bbIndex);
@@ -775,6 +968,11 @@ namespace __dp {
             outPutDeps = new stringDepMap();
             bbList = new ReportedBBSet();
             // End HA
+
+            // initialize lastHitIterator to dummy element
+            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
+            lastHitIterator = allocatedMemoryRegions.end();
+            lastHitIterator--;
 
 #ifdef __linux__
             // try to get an output file name w.r.t. the target application

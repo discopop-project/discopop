@@ -89,12 +89,15 @@ namespace {
         string type;
         string defLine;
         string isArray;
+        bool readAccess;
+        bool writeAccess;
 
         Variable_struct(const Variable_struct &other)
-                : name(other.name), type(other.type), defLine(other.defLine) {}
+                : name(other.name), type(other.type), defLine(other.defLine),
+                readAccess(other.readAccess), writeAccess(other.writeAccess) {}
 
-        Variable_struct(string n, string t, string d)
-                : name(n), type(t), defLine(d) {}
+        Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess)
+                : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess){}
 
         // We have a set of this struct. The set doesn't know how to order the
         // elements.
@@ -157,6 +160,8 @@ namespace {
         set <Variable> localVariableNames;
         set <Variable> globalVariableNames;
 
+        bool performsFileIO;
+
         // Map to record function call line numbers
         map<int, vector<Node *>> callLineTofunctionMap;
 
@@ -166,6 +171,7 @@ namespace {
             writeDataSize = 0;
             instructionsCount = 0;
             // BB = NULL;
+            performsFileIO = false;
         }
 
         void removeCU() {
@@ -256,6 +262,12 @@ namespace {
         // Callback Inserters
         //void insertDpInit(const vector<Value*> &args, Instruction *before);
         //void insertDpFinalize(Instruction *before);
+        void instrumentAlloca(AllocaInst *toInstrument);
+
+        void instrumentNewOrMalloc(CallInst *toInstrument);
+
+        void instrumentDeleteOrFree(CallInst *toInstrument);
+
         void instrumentStore(StoreInst *toInstrument);
 
         void instrumentLoad(LoadInst *toInstrument);
@@ -273,6 +285,7 @@ namespace {
         // Callbacks to run-time library
         FunctionCallee DpInit, DpFinalize;
         FunctionCallee DpRead, DpWrite;
+        FunctionCallee DpAlloca, DpNew, DpDelete; //, DpDecl;
         FunctionCallee DpCallOrInvoke;
         FunctionCallee DpFuncEntry, DpFuncExit;
         FunctionCallee DpLoopEntry, DpLoopExit;
@@ -405,14 +418,15 @@ namespace {
         }
         unsigned dp_reduction_get_file_id(llvm::Function *func);
         bool dp_reduction_init_util(std::string fmap_path);
-        char dp_reduction_get_char_for_opcode(unsigned opcode);
+        char dp_reduction_get_char_for_opcode(llvm::Instruction *instr);
         bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
         int dp_reduction_get_op_order(char c);
         Type *dp_reduction_pointsToStruct(PointerType *PTy);
         string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
         bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
-        int32_t dp_reduction_getLID(Instruction *BI, int32_t &fileID);
+        LID dp_reduction_getLID(Instruction *BI, int32_t &fileID);
         void dp_reduction_insert_functions();
+        bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
         llvm::LLVMContext *ctx_;
         llvm::Module *module_;
         std::ofstream *reduction_file;

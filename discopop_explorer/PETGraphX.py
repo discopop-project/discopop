@@ -6,9 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from __future__ import annotations
+from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
-from platform import node
-from typing import Dict, List, Tuple, Set, Optional, cast
+import itertools
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
@@ -16,8 +17,6 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
-import time
-import itertools
 
 node_props = [
     ("BasicBlockID", "string", "''"),
@@ -76,12 +75,58 @@ class MWType(Enum):
     BARRIER_WORKER = 5
 
 
+class NodeID(str):
+    # simpler but still strong typing alternative:
+    # NodeID = NewType("NodeID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created NodeID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted NodeID: ", id_string)
+
+
+class LineID(str):
+    # simpler but still strong typing alternative:
+    # LineID = NewType("LineID", str) or remove __init__
+    def __init__(self, id_string: str):
+        # check format of newly created LineID's
+        if ":" not in id_string:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        split_id: List[str] = id_string.split(":")
+        if len(split_id) != 2:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+        try:
+            int(split_id[0])
+            int(split_id[1])
+        except ValueError:
+            raise ValueError("Mal-formatted LineID: ", id_string)
+
+
+class MemoryRegion(str):
+    # simpler but still strong typing alternative:
+    def __init__(self, id_string: str):
+        # check format of newly created MemoryRegion
+        try:
+            int(id_string)
+        except ValueError:
+            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
+
+
 class Dependency:
     etype: EdgeType
     dtype: Optional[DepType] = None
     var_name: Optional[str] = None
-    source: Optional[str] = None
-    sink: Optional[str] = None
+    memory_region: Optional[MemoryRegion] = None
+    source_line: Optional[LineID] = None
+    sink_line: Optional[LineID] = None
+    intra_iteration: bool = False
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -90,95 +135,134 @@ class Dependency:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
-class CUNode:
-    id: str
+# TODO make the Node class abstract
+class Node:
+    # properties of every Node
+    id: NodeID
     file_id: int
     node_id: int
-    source_file: int
     start_line: int
     end_line: int
     type: NodeType
     name: str
-    # instructions_count: int = -1
-    return_instructions_count: int = -1
-    loop_iterations: int = -1
-    mw_type = MWType.FORK
-    basic_block_id = ""
-    recursive_function_calls: List[str] = []
+    parent_function_id: Optional[
+        NodeID
+    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
+
+    # properties of CU Nodes
     node_calls: List[Dict[str, str]] = []
+    recursive_function_calls: List[str] = []
+
+    # properties related to pattern analysis
     reduction: bool = False
     do_all: bool = False
     geometric_decomposition: bool = False
     pipeline: float = -1
-    local_vars: List[Variable] = []
-    global_vars: List[Variable] = []
-    args: List[Variable] = []
     tp_contains_task: bool = False
     tp_contains_taskwait: bool = False
     tp_omittable: bool = False
+    mw_type = MWType.FORK
 
-    def __init__(self, node_id: str):
+    def __init__(self, node_id: NodeID):
         self.id = node_id
         self.file_id, self.node_id = parse_id(node_id)
 
     @classmethod
-    def from_kwargs(cls, node_id: str, **kwargs):
+    def from_kwargs(cls, node_id: NodeID, **kwargs):
         node = cls(node_id)
         for key, value in kwargs.items():
             setattr(node, key, value)
         return node
 
-    def start_position(self) -> str:
+    def start_position(self) -> LineID:
         """Start position file_id:line
         e.g. 23:45
 
         :return:
         """
-        return f"{self.source_file}:{self.start_line}"
 
-    def end_position(self) -> str:
+        return LineID(f"{self.file_id}:{self.start_line}")
+
+    def end_position(self) -> LineID:
         """End position file_id:line
         e.g. 23:45
 
         :return:
         """
-        return f"{self.source_file}:{self.end_line}"
+        return LineID(f"{self.file_id}:{self.end_line}")
 
     def __str__(self):
         return self.id
 
     def __eq__(self, other):
-        if isinstance(other, CUNode):
-            return other.id == self.id
-        else:
-            return False
+        return (
+            isinstance(other, Node)
+            and other.file_id == self.file_id
+            and other.node_id == self.node_id
+        )
 
     def __hash__(self):
-        return hash(id)
+        return hash(self.id)
 
 
-def parse_cu(node: ObjectifiedElement) -> CUNode:
-    n = CUNode(node.get("id"))
-    n.type = NodeType(int(node.get("type")))
-    n.source_file, n.start_line = parse_id(node.get("startsAtLine"))
-    _, n.end_line = parse_id(node.get("endsAtLine"))
-    n.name = node.get("name")
-    # n.instructions_count = node.get("instructionsCount", 0)
+# Data.xml: type="0"
+class CUNode(Node):
+    # instructions_count: int = -1
+    basic_block_id = ""
+    return_instructions_count: int = -1
+    local_vars: List[Variable] = []
+    global_vars: List[Variable] = []
+    performs_file_io: bool = False
 
-    if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
-        n.args = [Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg]
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type = NodeType.CU
 
-    if hasattr(node, "callsNode") and hasattr(node.callsNode, "recursiveFunctionCall"):
-        n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
 
-    if n.type == NodeType.CU:
+# Data.xml: type="2"
+class LoopNode(Node):
+    loop_iterations: int = -1
+
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type = NodeType.LOOP
+
+
+# Data.xml: type="3"
+class DummyNode(Node):
+    args: List[Variable] = []
+
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type = NodeType.DUMMY
+
+
+# Data.xml: type="1"
+class FunctionNode(Node):
+    args: List[Variable] = []
+    children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
+
+    def __init__(self, node_id: NodeID):
+        super().__init__(node_id)
+        self.type = NodeType.FUNC
+
+
+def parse_cu(node: ObjectifiedElement) -> Node:
+    node_id = node.get("id")
+    node_type = NodeType(int(node.get("type")))
+
+    n: Node
+    # CU Node
+    if node_type == NodeType.CU:
+        n = CUNode(node_id)
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.localVariables.local
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                for v in node.localVariables.local
             ]
         if hasattr(node.globalVariables, "global"):
             n.global_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"))
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
@@ -191,22 +275,57 @@ def parse_cu(node: ObjectifiedElement) -> CUNode:
                 for v in getattr(node.callsNode, "nodeCalled")
                 if v.get("atLine") is not None
             ]
+        if hasattr(node, "callsNode") and hasattr(node.callsNode, "recursiveFunctionCall"):
+            n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
+        if hasattr(node, "performsFileIO"):
+            n.performs_file_io = True if int(getattr(node, "performsFileIO")) == 1 else False
+        # n.instructions_count = node.get("instructionsCount", 0)
+
+    # FUNC or DUMMY NODE
+    elif node_type == NodeType.DUMMY or node_type == NodeType.FUNC:
+        dummy_or_func: Union[DummyNode, FunctionNode]
+        if node_type == NodeType.DUMMY:
+            dummy_or_func = DummyNode(node_id)
+        else:
+            dummy_or_func = FunctionNode(node_id)
+        if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
+            dummy_or_func.args = [
+                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg
+            ]
+        n = dummy_or_func
+
+    # LOOP Node
+    elif node_type == NodeType.LOOP:
+        n = LoopNode(node_id)
+    else:
+        assert False, "invalid NodeType"
+
+    _, n.start_line = parse_id(node.get("startsAtLine"))
+    _, n.end_line = parse_id(node.get("endsAtLine"))
+    n.name = node.get("name")
+
     return n
 
 
-def parse_dependency(dep) -> Dependency:
+def parse_dependency(dep: DependenceItem) -> Dependency:
     d = Dependency(EdgeType.DATA)
-    d.source = dep.source
-    d.sink = dep.sink
-    d.dtype = DepType[dep.type]
+    d.source_line = dep.source
+    d.sink_line = dep.sink
+    # check for intra-iteration dependencies
+    if dep.type.endswith("_II"):
+        d.intra_iteration = True
+        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+    else:
+        d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
+    d.memory_region = dep.memory_region
     return d
 
 
 class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
-    main: CUNode
+    main: Node
     pos: Dict
 
     def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
@@ -227,18 +346,15 @@ class PETGraphX(object):
     ):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
+        print("\tCreating graph...")
 
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
+        print("\tAdded nodes...")
 
         for node_id, node in cu_dict.items():
             source = node_id
-            if "childrenNodes" in dir(node):
-                for child in [n.text for n in node.childrenNodes]:
-                    if child not in g:
-                        print(f"WARNING: no child node {child} found")
-                    g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
             if "successors" in dir(node) and "CU" in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
@@ -251,9 +367,20 @@ class PETGraphX(object):
                         print(f"WARNING: no nodeCalled {nodeCalled} found")
                     g.add_edge(source, nodeCalled, data=Dependency(EdgeType.CALLSNODE))
 
+            if "childrenNodes" in dir(node):
+                for child in [n.text for n in node.childrenNodes]:
+                    if child not in g:
+                        print(f"WARNING: no child node {child} found")
+                    if not (source, child) in g.edges:
+                        g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
+
+        print("\tAdded edges...")
+
         for _, node in g.nodes(data="data"):
-            if node.type == NodeType.LOOP:
+            if isinstance(node, LoopNode):
                 node.loop_iterations = loop_data.get(node.start_position(), 0)
+
+        print("\tAdded iterations...")
 
         # calculate position before dependencies affect them
         try:
@@ -264,19 +391,25 @@ class PETGraphX(object):
                 pos = nx.shell_layout(g)  # maybe
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        for dep in dependencies_list:
+        print("\tCalculated positions...")
+        for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
-                for s in sink:
-                    g.add_edge(s, s, data=parse_dependency(dep))
+                if len(sink) > 0:
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
+                else:
+                    # check for write lines
+                    sink = writelineToCUIdMap[dep.sink]
+                    for s in sink:
+                        g.add_edge(s, s, data=parse_dependency(dep))
                 continue
 
             sink_cu_ids = readlineToCUIdMap[dep.sink]
             source_cu_ids = writelineToCUIdMap[dep.source]
 
-            for sink_cu_id in sink_cu_ids:
-                for source_cu_id in source_cu_ids:
-
+            for idx_1, sink_cu_id in enumerate(sink_cu_ids):
+                for idx_2, source_cu_id in enumerate(source_cu_ids):
                     sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
@@ -295,6 +428,19 @@ class PETGraphX(object):
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         return cls(g, reduction_vars, pos)
 
+    def calculateFunctionMetadata(self) -> None:
+        # store id of parent function in each node
+        # and store in each function node a list of all children ids
+        for func_node in self.all_nodes(FunctionNode):
+            func_node.children_cu_ids = []
+            stack: List[Node] = self.direct_children(func_node)
+            while stack:
+                child = stack.pop()
+                child.parent_function_id = func_node.id
+                children = self.direct_children(child)
+                func_node.children_cu_ids.extend([node.id for node in children])
+                stack.extend(children)
+
     def show(self):
         """Plots the graph
 
@@ -311,7 +457,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#2B85FD",
             node_shape="o",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.CU],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), CUNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -319,7 +465,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#ff5151",
             node_shape="d",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.LOOP],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), LoopNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -327,7 +473,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="grey",
             node_shape="s",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.DUMMY],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), DummyNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -335,7 +481,7 @@ class PETGraphX(object):
             node_size=200,
             node_color="#cf65ff",
             node_shape="s",
-            nodelist=[n for n in self.g.nodes if self.node_at(n).type == NodeType.FUNC],
+            nodelist=[n for n in self.g.nodes if isinstance(self.node_at(n), FunctionNode)],
         )
         nx.draw_networkx_nodes(
             self.g,
@@ -375,10 +521,10 @@ class PETGraphX(object):
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
         )
 
-        plt.show()
+        # plt.show()
         plt.savefig("graphX.svg")
 
-    def node_at(self, node_id: str) -> CUNode:
+    def node_at(self, node_id: NodeID) -> Node:
         """Gets node data by node id
 
         :param node_id: id of the node
@@ -386,78 +532,115 @@ class PETGraphX(object):
         """
         return self.g.nodes[node_id]["data"]
 
-    def all_nodes(self, type: NodeType = None) -> List[CUNode]:
+    # generic type for subclasses of Node
+    NodeT = TypeVar("NodeT", bound=Node)
+
+    @overload
+    def all_nodes(self) -> List[Node]:
+        ...
+
+    @overload
+    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
+
+    def all_nodes(self, type=Node):
         """List of all nodes of specified type
 
-        :param type: type of node
+        :param type: type(s) of nodes
         :return: List of all nodes
         """
-        return [n[1] for n in self.g.nodes(data="data") if type is None or n[1].type == type]
+        return [n[1] for n in self.g.nodes(data="data") if isinstance(n[1], type)]
 
-    def out_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+    def out_edges(
+        self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Get outgoing edges of node of specified type
 
         :param node_id: id of the source node
         :param etype: type of edges
         :return: list of outgoing edges
         """
-        return [
-            t
-            for t in self.g.out_edges(node_id, data="data")
-            if etype is None or t[2].etype == etype
-        ]
+        if etype is None:
+            return [t for t in self.g.out_edges(node_id, data="data")]
+        elif type(etype) == list:
+            return [t for t in self.g.out_edges(node_id, data="data") if t[2].etype in etype]
+        else:
+            return [t for t in self.g.out_edges(node_id, data="data") if t[2].etype == etype]
 
-    def in_edges(self, node_id: str, etype: EdgeType = None) -> List[Tuple[str, str, Dependency]]:
+    def in_edges(
+        self, node_id: NodeID, etype: Optional[Union[EdgeType, List[EdgeType]]] = None
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Get incoming edges of node of specified type
 
         :param node_id: id of the target node
         :param etype: type of edges
         :return: list of incoming edges
         """
-        return [
-            t for t in self.g.in_edges(node_id, data="data") if etype is None or t[2].etype == etype
-        ]
+        if etype is None:
+            return [t for t in self.g.in_edges(node_id, data="data")]
+        elif type(etype) == list:
+            return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype in etype]
+        else:
+            return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype == etype]
 
-    def subtree_of_type(self, root: CUNode, type: Optional[NodeType]) -> List[CUNode]:
+    @overload
+    def subtree_of_type(self, root: Node) -> List[Node]:
+        ...
+
+    @overload
+    def subtree_of_type(
+        self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
+    ) -> List[NodeT]:
+        ...
+
+    def subtree_of_type(self, root, type=Node):
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
         :param type: type of children, None is equal to a wildcard
         :return: list of nodes in subtree
         """
-        return self.__subtree_of_type_rec(root, type, set())
+        return self.subtree_of_type_rec(root, set(), type)
 
-    def __subtree_of_type_rec(
-        self, root: CUNode, type: Optional[NodeType], visited: Set[CUNode]
-    ) -> List[CUNode]:
-        """Gets all nodes in subtree of specified type including root
+    @overload
+    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]:
+        ...
 
-        :param root: root node
-        :param type: type of children, None is equal to a wildcard
-        :param visited: set of visited nodes
-        :return: list of nodes in subtree
-        """
-        res: List[CUNode] = []
-        for visited_cu in visited:
-            if self.__cu_equal__(root, visited_cu):
-                return res
-        visited.add(root)
-        if root.type == type or type is None:
+    @overload
+    def subtree_of_type_rec(
+        self, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
+    ) -> List[NodeT]:
+        ...
+
+    def subtree_of_type_rec(self, root, visited, type=Node):
+        """recursive helper function for subtree_of_type"""
+        # check if root is of type target
+        res = []
+        if isinstance(root, type):
             res.append(root)
-        for s, t, e in self.out_edges(root.id, EdgeType.CHILD):
-            res.extend(self.__subtree_of_type_rec(self.node_at(t), type, visited))
+
+        # append root to visited
+        visited.add(root)
+
+        # enter recursion
+        for _, target, _ in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+            # prevent cycles
+            if self.node_at(target) in visited:
+                continue
+            res += self.subtree_of_type_rec(self.node_at(target), visited, type)
+
         return res
 
-    def __cu_equal__(self, cu_1: CUNode, cu_2: CUNode):
+    def __cu_equal__(self, cu_1: Node, cu_2: Node):
         """Alternative to CUNode.__eq__, bypasses the isinstance-check and relies on MyPy for type safety.
         :param cu_1: CUNode 1
         :param cu_2: CUNode 2
         :return: True, if cu_1 == cu_2. False, else"""
-        if cu_1.id == cu_2.id:
+        if cu_1.file_id == cu_2.file_id and cu_1.node_id == cu_2.node_id:
             return True
         return False
 
-    def direct_successors(self, root: CUNode) -> List[CUNode]:
+    def direct_successors(self, root: Node) -> List[Node]:
         """Gets only direct successors of any type
 
         :param root: root node
@@ -465,28 +648,40 @@ class PETGraphX(object):
         """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.SUCCESSOR)]
 
-    def direct_children(self, root: CUNode) -> List[CUNode]:
-        """Gets only direct children of any type
+    def direct_children_or_called_nodes(self, root: Node) -> List[Node]:
+        """Gets direct children of any type. Also includes nodes of called functions
+
+        :param root: root node
+        :return: list of direct children
+        """
+        return [
+            self.node_at(t)
+            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        ]
+
+    def direct_children(self, root: Node) -> List[Node]:
+        """Gets direct children of any type. This includes called nodes!
 
         :param root: root node
         :return: list of direct children
         """
         return [self.node_at(t) for s, t, d in self.out_edges(root.id, EdgeType.CHILD)]
 
-    def direct_children_of_type(self, root: CUNode, type: NodeType) -> List[CUNode]:
-        """Gets only direct children of specified type
+    def direct_children_or_called_nodes_of_type(self, root: Node, type: Type[NodeT]) -> List[NodeT]:
+        """Gets only direct children of specified type. This includes called nodes!
 
         :param root: root node
         :param type: type of children
         :return: list of direct children
         """
-        return [
+        nodes = [
             self.node_at(t)
-            for s, t, d in self.out_edges(root.id, EdgeType.CHILD)
-            if self.node_at(t).type == type
+            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         ]
 
-    def is_reduction_var(self, line: str, name: str) -> bool:
+        return [t for t in nodes if isinstance(t, type)]
+
+    def is_reduction_var(self, line: LineID, name: str) -> bool:
         """Determines, whether or not the given variable is reduction variable
 
         :param line: loop line number
@@ -497,7 +692,7 @@ class PETGraphX(object):
             rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name
         )
 
-    def depends_ignore_readonly(self, source: CUNode, target: CUNode, root_loop: CUNode) -> bool:
+    def depends_ignore_readonly(self, source: Node, target: Node, root_loop: Node) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
         The loop index and readonly variables are ignored.
 
@@ -509,12 +704,15 @@ class PETGraphX(object):
             return False
 
         # get recursive children of source and target
-        source_children_ids = [node.id for node in self.subtree_of_type(source, NodeType.CU)]
-        target_children_ids = [node.id for node in self.subtree_of_type(target, NodeType.CU)]
+        source_children_ids = [node.id for node in self.subtree_of_type(source, CUNode)]
+        target_children_ids = [node.id for node in self.subtree_of_type(target, CUNode)]
 
         # get required metadata
-        loop_start_lines: List[str] = []
-        for v in self.subtree_of_type(root_loop, NodeType.LOOP):
+        loop_start_lines: List[LineID] = []
+        root_children = self.subtree_of_type(root_loop, (CUNode, LoopNode))
+        root_children_cus = [cu for cu in root_children if isinstance(cu, CUNode)]
+        root_children_loops = [cu for cu in root_children if isinstance(cu, LoopNode)]
+        for v in root_children_loops:
             loop_start_lines.append(v.start_position())
 
         # check for RAW dependencies between any of source_children and any of target_children
@@ -525,14 +723,18 @@ class PETGraphX(object):
             filtered_deps = [
                 elem
                 for elem in out_raw_deps
-                if not self.is_readonly_inside_loop_body(elem[2], root_loop)
+                if not self.is_readonly_inside_loop_body(
+                    elem[2],
+                    root_loop,
+                    root_children_cus,
+                    root_children_loops,
+                    loops_start_lines=loop_start_lines,
+                )
             ]
             filtered_deps = [
                 elem
                 for elem in filtered_deps
-                if not self.is_loop_index(
-                    elem[2].var_name, loop_start_lines, self.subtree_of_type(root_loop, NodeType.CU)
-                )
+                if not self.is_loop_index(elem[2].var_name, loop_start_lines, root_children_cus)
             ]
             # get a list of dependency targets
             dep_targets = [t for _, t, _ in filtered_deps]
@@ -543,22 +745,22 @@ class PETGraphX(object):
                 return True
         return False
 
-    def check_alias(self, s: str, t: str, d: Dependency, root_loop: CUNode) -> bool:
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
+    def unused_check_alias(self, s: NodeID, t: NodeID, d: Dependency, root_loop: Node) -> bool:
+        sub = self.subtree_of_type(root_loop, CUNode)
         parent_func_sink = self.get_parent_function(self.node_at(s))
         parent_func_source = self.get_parent_function(self.node_at(t))
 
         res = False
         d_var_name_str = cast(str, str(d.var_name))
 
-        if self.is_global(d_var_name_str, sub) and not (
+        if self.unused_is_global(d_var_name_str, sub) and not (
             self.is_passed_by_reference(d, parent_func_sink)
             and self.is_passed_by_reference(d, parent_func_source)
         ):
             return res
         return not res
 
-    def is_global(self, var: str, tree: List[CUNode]) -> bool:
+    def unused_is_global(self, var: str, tree: Sequence[Node]) -> bool:
         """Checks if variable is global
 
         :param var: variable name
@@ -567,34 +769,32 @@ class PETGraphX(object):
         """
 
         for node in tree:
-            if node.type == NodeType.CU:
+            if isinstance(node, CUNode):
                 for gv in node.global_vars:
                     if gv.name == var:
                         # TODO from tmp global vars
                         return False
         return False
 
-    def is_passed_by_reference(self, dep: Dependency, func: CUNode) -> bool:
-
+    def is_passed_by_reference(self, dep: Dependency, func: FunctionNode) -> bool:
         res = False
 
         for i in func.args:
             if i.name == dep.var_name:
-                res = True
-                break
+                return True
+        return False
 
-        return res
-
-    def get_first_written_vars_in_loop(
-        self, undefinedVarsInLoop: List[Variable], node: CUNode, root_loop: CUNode
+    def unused_get_first_written_vars_in_loop(
+        self, undefinedVarsInLoop: List[Variable], node: Node, root_loop: Node
     ) -> Set[Variable]:
-        loop_node_ids = [n.id for n in self.subtree_of_type(root_loop, NodeType.CU)]
+        root_children = self.subtree_of_type(root_loop, CUNode)
+        loop_node_ids = [n.id for n in root_children]
         fwVars = set()
 
         raw = set()
         war = set()
         waw = set()
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
+        sub = root_children
         for sub_node in sub:
             raw.update(self.get_dep(sub_node, DepType.RAW, False))
             war.update(self.get_dep(sub_node, DepType.WAR, False))
@@ -610,14 +810,14 @@ class PETGraphX(object):
                                 and e[0] in loop_node_ids
                                 and e[1] in loop_node_ids
                             ):
-                                if e[2].sink == i[2].source:
+                                if e[2].sink_line == i[2].source_line:
                                     fwVars.add(var)
 
         return fwVars
 
     def get_dep(
-        self, node: CUNode, dep_type: DepType, reversed: bool
-    ) -> List[Tuple[str, str, Dependency]]:
+        self, node: Node, dep_type: DepType, reversed: bool
+    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Searches all dependencies of specified type
 
         :param node: node
@@ -650,34 +850,57 @@ class PETGraphX(object):
                 return False
         raise ValueError("allVars must not be empty.")
 
-    def get_variables(self, nodes: List[CUNode]) -> Set[Variable]:
-        """Gets all variables in nodes
+    def get_variables(self, nodes: Sequence[Node]) -> Dict[Variable, Set[MemoryRegion]]:
+        """Gets all variables and corresponding memory regions in nodes
 
         :param nodes: nodes
         :return: Set of variables
         """
-        res = set()
+        res: Dict[Variable, Set[MemoryRegion]] = dict()
         for node in nodes:
-            for v in node.local_vars:
-                res.add(v)
-            for v in node.global_vars:
-                res.add(v)
+            if isinstance(node, CUNode):
+                for v in node.local_vars:
+                    if v not in res:
+                        res[v] = set()
+                for v in node.global_vars:
+                    if v not in res:
+                        res[v] = set()
+                # try to identify memory regions
+                for var_name in res:
+                    # since the variable name is checked for equality afterwards,
+                    # it is safe to consider incoming dependencies at this point as well.
+                    # Note that INIT type edges are considered as well!
+                    for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
+                        node.id, EdgeType.DATA
+                    ):
+                        if dep.var_name == var_name.name:
+                            if dep.memory_region is not None:
+                                res[var_name].add(cast(MemoryRegion, dep.memory_region))
         return res
 
-    def get_undefined_variables_inside_loop(self, root_loop: CUNode) -> List[Variable]:
-
-        sub = self.subtree_of_type(root_loop, NodeType.CU)
-        vars = list(self.get_variables(sub))
+    def get_undefined_variables_inside_loop(
+        self, root_loop: Node
+    ) -> Dict[Variable, Set[MemoryRegion]]:
+        sub = self.subtree_of_type(root_loop, CUNode)
+        vars = self.get_variables(sub)
         dummyVariables = []
         definedVarsInLoop = []
         definedVarsInCalledFunctions = []
 
         # Remove llvm temporary variables
         for var in vars:
-            if var.defLine == "LineNotFound" or var.defLine == "GlobalVar" or "0:" in var.defLine:
+            if var.defLine == "LineNotFound" or "0:" in var.defLine:
+                dummyVariables.append(var)
+            elif var.defLine == "GlobalVar" and not self.is_reduction_var(
+                root_loop.start_position(), var.name
+            ):
                 dummyVariables.append(var)
 
-        vars = list(set(vars) ^ set(dummyVariables))
+        # vars = list(set(vars) ^ set(dummyVariables))
+        for key in set(dummyVariables):
+            if key in vars:
+                del vars[key]
+
         # Exclude variables which are defined inside the loop
         for var in vars:
             if (
@@ -686,7 +909,10 @@ class PETGraphX(object):
             ):
                 definedVarsInLoop.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInLoop))
+        # vars = list(set(vars) ^ set(definedVarsInLoop))
+        for key in set(definedVarsInLoop):
+            if key in vars:
+                del vars[key]
 
         # Also, exclude variables which are defined inside
         # functions that are called within the loop
@@ -695,11 +921,14 @@ class PETGraphX(object):
                 if var.defLine >= s.start_position() and var.defLine <= s.end_position():
                     definedVarsInCalledFunctions.append(var)
 
-        vars = list(set(vars) ^ set(definedVarsInCalledFunctions))
+        # vars = list(set(vars) ^ set(definedVarsInCalledFunctions))
+        for key in set(definedVarsInCalledFunctions):
+            if key in vars:
+                del vars[key]
 
         return vars
 
-    def is_first_written_in_loop(self, dep: Dependency, root_loop: CUNode):
+    def unused_is_first_written_in_loop(self, dep: Dependency, root_loop: Node):
         """Checks whether a variable is first written inside the current node
 
         :param var:
@@ -712,7 +941,7 @@ class PETGraphX(object):
         """
 
         result = False
-        children = self.subtree_of_type(root_loop, NodeType.CU)
+        children = self.subtree_of_type(root_loop, CUNode)
 
         for v in children:
             for t, d in [
@@ -724,45 +953,14 @@ class PETGraphX(object):
                     return False
                 assert d.var_name is not None
                 if dep.var_name == d.var_name:
-                    if dep.source == d.sink:
+                    if dep.source_line == d.sink_line:
                         result = True
                         break
                 # None may occur because __get_variables doesn't check for actual elements
         return result
 
-    def is_first_written(
-        self,
-        var: str,
-        raw: Set[Tuple[str, str, Dependency]],
-        war: Set[Tuple[str, str, Dependency]],
-        sub: List[CUNode],
-    ) -> bool:
-        """Checks whether a variable is first written inside the current node
-
-        :param var: variable name
-        :param raw: raw dependencies of the loop
-        :param war: war dependencies of the loop
-        :param sub: subtree of the loop
-        :return: true if first written
-        """
-        for e in war:
-            if e[2].var_name == var and any([n.id == e[1] for n in sub]):
-                res = False
-                for eraw in raw:
-                    # TODO check
-                    if (
-                        eraw[2].var_name == var
-                        and any([n.id == e[1] for n in sub])
-                        and e[0] == eraw[2].sink
-                    ):
-                        res = True
-                        break
-                if not res:
-                    return False
-        return False
-
     def is_loop_index(
-        self, var_name: Optional[str], loops_start_lines: List[str], children: List[CUNode]
+        self, var_name: Optional[str], loops_start_lines: List[LineID], children: Sequence[Node]
     ) -> bool:
         """Checks, whether the variable is a loop index.
 
@@ -782,28 +980,32 @@ class PETGraphX(object):
                 if d.dtype == DepType.RAW and d.var_name == var_name
             ]:
                 if (
-                    d.sink == d.source
-                    and d.source in loops_start_lines
+                    d.sink_line == d.source_line
+                    and d.source_line in loops_start_lines
                     and self.node_at(t) in children
                 ):
                     return True
 
         return False
 
-    def is_readonly_inside_loop_body(self, dep: Dependency, root_loop: CUNode) -> bool:
+    def is_readonly_inside_loop_body(
+        self,
+        dep: Dependency,
+        root_loop: Node,
+        children_cus: Sequence[Node],
+        children_loops: Sequence[Node],
+        loops_start_lines: Optional[List[LineID]] = None,
+    ) -> bool:
         """Checks, whether a variable is read-only in loop body
 
         :param dep: dependency variable
         :param root_loop: root loop
         :return: true if variable is read-only in loop body
         """
-        # TODO pass as param?
-        loops_start_lines = [
-            v.start_position() for v in self.subtree_of_type(root_loop, NodeType.LOOP)
-        ]
-        children = self.subtree_of_type(root_loop, NodeType.CU)
+        if loops_start_lines is None:
+            loops_start_lines = [v.start_position() for v in children_loops]
 
-        for v in children:
+        for v in children_cus:
             for t, d in [
                 (t, d)
                 for s, t, d in self.out_edges(v.id, EdgeType.DATA)
@@ -811,43 +1013,42 @@ class PETGraphX(object):
             ]:
                 # If there is a waw dependency for var, then var is written in loop
                 # (sink is always inside loop for waw/war)
-                if dep.var_name == d.var_name and not (d.sink in loops_start_lines):
+                if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
                     return False
             for t, d in [
                 (t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW
             ]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
-                if dep.var_name == d.var_name and not (d.source in loops_start_lines):
+                if dep.memory_region == d.memory_region and not (
+                    d.source_line in loops_start_lines
+                ):
                     return False
         return True
 
-    def get_parent_function(self, node: CUNode) -> CUNode:
+    def get_parent_function(self, node: Node) -> FunctionNode:
         """Finds the parent of a node
 
         :param node: current node
-        :return: number of iterations
+        :return: node of parent function
         """
-        parent = self.in_edges(node.id, EdgeType.CHILD)
+        if isinstance(node, FunctionNode):
+            return node
+        assert node.parent_function_id
+        return cast(FunctionNode, self.node_at(node.parent_function_id))
 
-        while parent:
-            node = self.node_at(parent[0][0])
-            if node.type == NodeType.FUNC:
-                break
-            parent = self.in_edges(node.id, EdgeType.CHILD)
-
-        return node
-
-    def get_left_right_subtree(self, target: CUNode, right_subtree: bool) -> List[CUNode]:
+    def get_left_right_subtree(
+        self, target: Node, right_subtree: bool, ignore_called_nodes: bool = False
+    ) -> List[Node]:
         """Searches for all subnodes of main which are to the left or to the right of the specified node
 
         :param target: node that divides the tree
         :param right_subtree: true - right subtree, false - left subtree
         :return: list of nodes in the subtree
         """
-        stack: List[CUNode] = []
-        res: List[CUNode] = []
-        visited = []
+        stack: List[Node] = []
+        res: List[Node] = []
+        visited = set()
 
         parent_func = self.get_parent_function(target)
         stack.append(parent_func)
@@ -857,22 +1058,29 @@ class PETGraphX(object):
 
             if current == target:
                 return res
-            if current.type == NodeType.CU:
+            if isinstance(current, CUNode):
                 res.append(current)
 
             if current in visited:  # suppress looping
                 continue
             else:
-                visited.append(current)
+                visited.add(current)
 
-            stack.extend(
-                self.direct_children(current)
-                if right_subtree
-                else reversed(self.direct_children(current))
-            )
+            if not ignore_called_nodes:
+                stack.extend(
+                    self.direct_children_or_called_nodes(current)
+                    if right_subtree
+                    else reversed(self.direct_children_or_called_nodes(current))
+                )
+            else:
+                stack.extend(
+                    self.direct_children(current)
+                    if right_subtree
+                    else reversed(self.direct_children(current))
+                )
         return res
 
-    def path(self, source: CUNode, target: CUNode) -> List[CUNode]:
+    def path(self, source: Node, target: Node) -> List[Node]:
         """DFS from source to target over edges of child type
 
         :param source: source node
@@ -881,7 +1089,7 @@ class PETGraphX(object):
         """
         return self.__path_rec(source, target, set())
 
-    def __path_rec(self, source: CUNode, target: CUNode, visited: Set[CUNode]) -> List[CUNode]:
+    def __path_rec(self, source: Node, target: Node, visited: Set[Node]) -> List[Node]:
         """DFS from source to target over edges of child type
 
         :param source: source node
@@ -892,7 +1100,7 @@ class PETGraphX(object):
         if source == target:
             return [source]
 
-        for child in [c for c in self.direct_children(source) if c not in visited]:
+        for child in [c for c in self.direct_children_or_called_nodes(source) if c not in visited]:
             path = self.__path_rec(child, target, visited)
             if path:
                 path.insert(0, source)
@@ -910,3 +1118,66 @@ class PETGraphX(object):
             if rv["loop_line"] == line and rv["name"] == name:
                 return rv["operation"]
         return ""
+
+    def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
+        """returns true, if source is a predecessor of target.
+        This analysis includes traversal of successor, child and calls edges."""
+        # if source and target_id are located within differenct functions, consider the callees instead of source_id
+        source_parent_function = self.get_parent_function(self.node_at(source_id))
+        target_parent_function = self.get_parent_function(self.node_at(target_id))
+        if source_parent_function != target_parent_function:
+            for callee_id in [
+                s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)
+            ]:
+                if self.is_predecessor(callee_id, target_id):
+                    return True
+
+        # if target is a loop node, get the first child of the loop, i.e. the entry node into the loop
+        target_node = self.node_at(target_id)
+        if target_node.type == NodeType.LOOP:
+            target_id = self.direct_children(target_node)[0].id
+
+        # perform a bfs search for target
+        queue: List[NodeID] = [source_id]
+        visited: List[NodeID] = []
+        while queue:
+            current = queue.pop(0)
+            if current == target_id:
+                return True
+            visited.append(current)
+            # add direct successors to queue
+            queue += [
+                n.id
+                for n in self.direct_successors(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add children to queue
+            queue += [
+                n.id
+                for n in self.direct_children(self.node_at(current))
+                if n.id not in visited and n.id not in queue
+            ]
+            # add called functions to queue
+            queue += [
+                t
+                for _, t, _ in self.out_edges(current, EdgeType.CALLSNODE)
+                if t not in visited and t not in queue
+            ]
+        return False
+
+    def dump_to_gephi_file(self, name="pet.gexf"):
+        """Note: Destroys the PETGraph!"""
+        # replace node data with label
+        for node_id in self.g.nodes:
+            tmp_cu = self.g.nodes[node_id]["data"]
+            del self.g.nodes[node_id]["data"]
+            self.g.nodes[node_id]["id"] = tmp_cu.id
+            self.g.nodes[node_id]["type"] = str(tmp_cu.type)
+        for edge in self.g.edges:
+            dep: Dependency = self.g.edges[edge]["data"]
+            del self.g.edges[edge]["data"]
+            self.g.edges[edge]["edge_type"] = str(dep.etype.name)
+            if dep.etype == EdgeType.DATA:
+                self.g.edges[edge]["var"] = dep.var_name
+                self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
+        nx.write_gexf(self.g, name)
