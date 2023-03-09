@@ -113,7 +113,10 @@ class DiscoPoPConfigurationWizard(object):
             warnings.warn("Loading the window icon was not successful.")
 
         # set window to full screen
-        self.window.attributes('-zoomed', True)
+        try:
+            self.window.attributes('-zoomed', True)
+        except tk.TclError: # above does not work on macOS
+            self.window.state("zoomed")
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(1, weight=1)
         paned_window = ttk.PanedWindow(self.window, orient=tk.VERTICAL)
