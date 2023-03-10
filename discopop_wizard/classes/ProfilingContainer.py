@@ -112,14 +112,17 @@ class ProfilingContainer(object):
 
     def __execute_command(self, command: str) -> int:
         with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-            for line in p.stdout:
-                line = line.replace("\n", "")
-                print(line)
-                try:
-                    self.wizard.console.print(line)
-                except tkinter.TclError:
-                    # happens when container is still shutting down but interface already closed.
-                    pass
+            if p.stdout is None:
+                print("executing command was not successfull")
+            else:
+                for line in p.stdout:
+                    line = line.replace("\n", "")
+                    print(line)
+                    try:
+                        self.wizard.console.print(line)
+                    except tkinter.TclError:
+                        # happens when container is still shutting down but interface already closed.
+                        pass
         if p.returncode != 0:
             print("An error occurred during the execution!")  # Error message
             self.wizard.console.print("An error occurred during the execution!")

@@ -12,8 +12,6 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List
 
-import jsons
-
 from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget

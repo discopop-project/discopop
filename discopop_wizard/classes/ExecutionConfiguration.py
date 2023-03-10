@@ -15,7 +15,7 @@ from json import JSONDecodeError
 from tkinter import filedialog
 from typing import TextIO, List, Dict, Tuple
 
-import jsons
+import jsons # type:ignore
 
 from discopop_wizard.screens.execution import ExecutionView
 from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen, get_suggestion_objects
@@ -112,7 +112,7 @@ class ExecutionConfiguration(object):
         if self.__button_state_from_result_existence() == "normal":
             show_suggestions_overview_screen(wizard, main_screen_obj.results_frame, self)
 
-    def show_details_screen(self, wizard, main_screen_obj) -> tk.Frame:
+    def show_details_screen(self, wizard, main_screen_obj):
         # delete previous frame contents
         for c in main_screen_obj.details_frame.winfo_children():
             c.destroy()
