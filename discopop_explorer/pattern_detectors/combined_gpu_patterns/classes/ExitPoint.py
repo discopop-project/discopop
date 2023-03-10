@@ -82,13 +82,18 @@ class ExitPoint(object):
         memory_region_sizes = get_sizes_of_memory_regions(
             self.memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
         )
-        max_mem_reg_size = max(memory_region_sizes.values())
-        # divide memory region size by size of variable
-        # construct new list of modified var names
-        modified_var_names = [
-            (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
-            for vn, t, s in var_names_types_and_sizes
-        ]
+        if len(memory_region_sizes) > 0:
+            max_mem_reg_size = max(memory_region_sizes.values())
+            # divide memory region size by size of variable
+            # construct new list of modified var names
+            modified_var_names = [
+                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                for vn, t, s in var_names_types_and_sizes
+            ]
+        else:
+            modified_var_names = [
+                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+            ]
 
         return [
             ",".join(modified_var_names),

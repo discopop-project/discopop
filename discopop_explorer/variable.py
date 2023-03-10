@@ -16,6 +16,11 @@ class Variable(object):
         self.defLine = defLine
         self.operation = None
         self.accessMode = accessMode
+        # To prevent potentially dividing by 0, set the sizeInByte to 8 in case it is unknown.
+        # Sizes are mainly unknown if the underlying variable is a pointer type.
+        # Since Pointers in 64-bit architectures occupy 8 bytes, this size is chosen as the "default" at this point.
+        if sizeInByte == 0:
+            sizeInByte = 8
         self.sizeInByte = sizeInByte
 
     def __hash__(self):
