@@ -66,8 +66,14 @@ jobs:
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: python -m mypy -p discopop_explorer
 
+      - name: "Run MyPy Type Checker - DiscoPoP Library"
+        run: python -m mypy -p discopop_wizard
+
       - name: "Run MyPy Type Checker - DiscoPoP Profiler"
         run: python -m mypy -p discopop_profiler
+
+      - name: "Run MyPy Type Checker - DiscoPoP Wizard"
+        run: python -m mypy -p discopop_library
 
       - name: "Check formatting of DiscoPoP Explorer"
         run: python -m black -l 100 --check discopop_explorer
