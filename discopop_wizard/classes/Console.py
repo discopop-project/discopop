@@ -15,7 +15,6 @@ class Console(object):
     log_screen: tk.Text
 
     def __init__(self, parent_frame: tk.Frame):
-        self.content = []
         self.parent_frame = tk.Frame(parent_frame, bg="red")
         self.parent_frame.grid(row=1, column=1, sticky="nsew")
         self.__show_console()

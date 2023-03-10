@@ -65,10 +65,13 @@ class ExecutionView(object):
 
     def __execute_command(self, command: str) -> int:
         with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
-            for line in p.stdout:
-                line = line.replace("\n", "")
-                self.__print_to_console(line)
-                self.wizard.console.print(line)
+            if p.stdout is None:
+                print("command execution was not successfull")
+            else:
+                for line in p.stdout:
+                    line = line.replace("\n", "")
+                    self.__print_to_console(line)
+                    self.wizard.console.print(line)
         if p.returncode != 0:
             self.__print_to_console("An error occurred during the execution!")  # Error message
             self.wizard.console.print("An error occurred during the execution!")

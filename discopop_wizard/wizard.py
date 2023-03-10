@@ -11,6 +11,7 @@ import pathlib
 import signal
 import tkinter as tk
 import warnings
+from tkinter import messagebox, filedialog
 from tkinter import ttk
 from enum import IntEnum
 from os.path import dirname
@@ -56,7 +57,7 @@ class ConsoleStyles(IntEnum):
 
 class DiscoPoPConfigurationWizard(object):
     arguments: Arguments
-    settings: Optional[Settings]
+    settings: Settings
     window: tk.Tk
     window_frame: tk.Frame
     config_dir: str
@@ -73,12 +74,12 @@ class DiscoPoPConfigurationWizard(object):
         # check if settings exist
         if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
             # no settings exist
-            prompt_result = tk.messagebox.askyesno("DiscoPoP Wizard",
+            prompt_result = messagebox.askyesno("DiscoPoP Wizard",
                                                    "Do you want to make use of a docker container for the profiling?")
             if not prompt_result:
                 # ask user for path to discopop_build and go/bin directory
-                discopop_build_dir = tk.filedialog.askdirectory(title="Select DiscoPoP build folder")
-                go_bin_dir = tk.filedialog.askdirectory(title="Select go/bin folder (Go installation)")
+                discopop_build_dir = filedialog.askdirectory(title="Select DiscoPoP build folder")
+                go_bin_dir = filedialog.askdirectory(title="Select go/bin folder (Go installation)")
             else:
                 discopop_build_dir = ""
                 go_bin_dir = ""

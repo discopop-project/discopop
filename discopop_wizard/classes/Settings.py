@@ -9,7 +9,7 @@
 import os
 import shutil
 
-import jsons
+import jsons # type:ignore
 
 
 
@@ -45,37 +45,36 @@ class Settings(object):
         if os.path.exists(os.path.join(llvm_bin_dir, "clang")):
             self.clang = os.path.join(llvm_bin_dir, "clang")
         else:
-            self.clang = "" if shutil.which("clang") is None else shutil.which("clang")
-
+            self.clang = shutil.which("clang") or ""
         if os.path.exists(os.path.join(llvm_bin_dir, "clang++")):
             self.clangpp = os.path.join(llvm_bin_dir, "clang++")
         else:
-            self.clangpp = "" if shutil.which("clang++") is None else shutil.which("clang++")
+            self.clangpp = shutil.which("clang++") or ""
 
         if os.path.exists(os.path.join(llvm_bin_dir, "llvm-ar")):
             self.llvm_ar = os.path.join(llvm_bin_dir, "llvm-ar")
         else:
-            self.llvm_ar = "" if shutil.which("llvm-ar-11") is None else shutil.which("llvm-ar-11")
+            self.llvm_ar = shutil.which("llvm-ar-11") or ""
 
         if os.path.exists(os.path.join(llvm_bin_dir, "llvm-link")):
             self.llvm_link = os.path.join(llvm_bin_dir, "llvm-link")
         else:
-            self.llvm_link = "" if shutil.which("llvm-link-11") is None else shutil.which("llvm-link-11")
+            self.llvm_link = shutil.which("llvm-link-11") or ""
 
         if os.path.exists(os.path.join(llvm_bin_dir, "llvm-dis")):
             self.llvm_dis = os.path.join(llvm_bin_dir, "llvm-dis")
         else:
-            self.llvm_dis = "" if shutil.which("llvm-dis-11") is None else shutil.which("llvm-dis-11")
+            self.llvm_dis = shutil.which("llvm-dis-11") or ""
 
         if os.path.exists(os.path.join(llvm_bin_dir, "opt")):
             self.llvm_opt = os.path.join(llvm_bin_dir, "opt")
         else:
-            self.llvm_opt = "" if shutil.which("opt-11") is None else shutil.which("opt-11")
+            self.llvm_opt = shutil.which("opt-11") or ""
 
         if os.path.exists(os.path.join(llvm_bin_dir, "llc")):
             self.llvm_llc = os.path.join(llvm_bin_dir, "llc")
         else:
-            self.llvm_llc = "" if shutil.which("llc-11") is None else shutil.which("llc-11")
+            self.llvm_llc = shutil.which("llc-11") or ""
 
         # validate settings
         settings_valid = settings_valid and len(self.clang) > 0 and len(self.clangpp) > 0 and len(self.llvm_ar) > 0 \

@@ -10,7 +10,8 @@ import os
 
 import tkinter as tk
 from tkinter import ttk
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
+
 
 
 class Suggestion(object):
@@ -53,7 +54,7 @@ class Suggestion(object):
         source_code['xscrollcommand'] = x_scrollbar.set
 
         # load file mapping from project path
-        file_mapping: dict[int, str] = dict()
+        file_mapping: Dict[int, str] = dict()
         with open(os.path.join(execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"), "r") as f:
             for line in f.readlines():
                 line = line.replace("\n", "")
@@ -126,7 +127,7 @@ class Suggestion(object):
             if len(self.values["shared"]) > 0:
                 pragma += "shared(" + ",".join(self.values["shared"]) + ") "
             if len(self.values["reduction"]) > 0:
-                reductions_dict = dict()
+                reductions_dict: Dict[Any, Any] = dict()
                 for entry in self.values["reduction"]:
                     red_type = entry.split(":")[0]
                     var = entry.split(":")[1]
