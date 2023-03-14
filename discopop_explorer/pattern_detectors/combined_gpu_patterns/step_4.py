@@ -9,7 +9,7 @@
 import copy
 from typing import Dict, Set, Tuple, Optional, List, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID, MemoryRegion
+from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID, MemoryRegion, CUNode
 import sys
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
@@ -324,89 +324,35 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             return False
         return True
 
-    # initialize
-    for successor_id in successors:
-        paths.append([successor_id])
+    visited_shared_dominators: Set[NodeID] = set()
+    found_refinement: bool = True
+    while found_refinement:
+        found_refinement = False
+        # check if any shared dominator nodes are known
+        shared_refined_dominators: Set[NodeID] = set(
+            cast(CUNode, pet.node_at(successors[0])).refined_dominator_nodes
+        )
+        shared_refined_dominators.add(successors[0])
+        for succ in successors:
+            shared_refined_dominators.intersection_update(
+                cast(CUNode, pet.node_at(succ)).refined_dominator_nodes.union({succ})
+            )
+        # remove already visited nodes from the list
+        for elem in visited_shared_dominators:
+            if elem in shared_refined_dominators:
+                shared_refined_dominators.remove(elem)
 
-    # iteratively search for a merge node
-    progress_made = True
-    while progress_made:
-        progress_made = False
-
-        # terminate a path if the newly added CUID occurs more than 2 times in the path
-        for path_id, path in enumerate(paths):
-            if path.count(path[-1]) > 2:
-                del paths[path_id]
-                continue
-
-        # check if any CUID is contained in all paths
-        # initialize
-        contained_in_all_paths = set(paths[0])
-        for path_id, path in enumerate(paths):
-            contained_in_all_paths.intersection_update(set(path))
-            if len(contained_in_all_paths) == 0:
-                break
-        if len(contained_in_all_paths) > 0:
-            # found merge node
-            if len(contained_in_all_paths) == 1:
-                potential_merge_node_id = list(contained_in_all_paths)[0]
+        if len(shared_refined_dominators) == 0:
+            # perform a refinement step and try again or return None if no refinement could be applied
+            for succ in successors:
+                found_refinement = found_refinement or cast(
+                    CUNode, pet.node_at(succ)
+                ).refine_dominator_nodes(pet)
+        else:
+            # check if any of the shared dominators is a valid option
+            for potential_merge_node_id in shared_refined_dominators:
                 if check_validity_of_potential_merge_node(potential_merge_node_id):
                     return potential_merge_node_id
-                else:
-                    return None
-            if len(contained_in_all_paths) > 1:
-                # search for the first occurring candidate merge node
-                first_occurring: Set[NodeID] = set()
-                for path in paths:
-                    first_occurrence_position: int = 0
-                    first_occurrence_element: Optional[NodeID] = None
-                    for candidate in contained_in_all_paths:
-                        if first_occurrence_element is None:
-                            first_occurrence_position = path.index(candidate)
-                            first_occurrence_element = candidate
-                        else:
-                            position = path.index(candidate)
-                            if position < first_occurrence_position:
-                                first_occurrence_position = position
-                                first_occurrence_element = candidate
-                    first_occurring.add(cast(NodeID, first_occurrence_element))
-                # if first_occurring contains multiple elements, it is not decidable. Raise a ValueError.
-                if len(first_occurring) > 1:
-                    raise ValueError("First occurrence undecidable for: ", first_occurring)
-                else:
-                    # only a single element identified
-                    potential_merge_node_id = list(first_occurring)[0]
-                    if check_validity_of_potential_merge_node(potential_merge_node_id):
-                        return potential_merge_node_id
-                    else:
-                        return None
-
-        # proceed one step on each path
-        to_be_deleted: List[int] = []
-        for path_id, path in enumerate(paths):
-            successors = [t for s, t, d in pet.out_edges(path[-1], EdgeType.SUCCESSOR)]
-            if len(successors) == 0:
-                # end of path reached without encountering a merge node
-                # do nothing. no progress made
-                pass
-
-            elif len(successors) == 1:
-                # append successor to path
-                paths[path_id].append(successors[0])
-                progress_made = True
-            elif len(successors) > 1:
-                # a branching point is encountered, duplicate the path and continue with two separate paths
-                for successor in successors:
-                    paths.append(copy.deepcopy(path))
-                    paths[-1].append(successor)
-                    progress_made = True
-                # delete the original path
-                to_be_deleted.append(path_id)
-        # remove paths
-        to_be_deleted = list(dict.fromkeys(to_be_deleted))
-        for path_id in sorted(to_be_deleted, reverse=True):
-            del paths[path_id]
-
     return None
 
 
@@ -509,7 +455,9 @@ def __calculate_updates(
             # multiple successors exist
 
             # determine merge node if existing
+            print("SUCCESSORS: ", successors)
             merge_node = __identify_merge_node(pet, successors)
+            print("MERGE NODE: ", merge_node)
 
             # if merge node exists, skip branched section and treat it as a single node
             if merge_node is not None:
