@@ -9,7 +9,18 @@
 import copy
 from typing import Dict, Set, Tuple, Optional, List, cast
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID, MemoryRegion, CUNode
+import networkx as nx  # type: ignore
+
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    EdgeType,
+    NodeType,
+    NodeID,
+    MemoryRegion,
+    CUNode,
+    Dependency,
+    FunctionNode,
+)
 import sys
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
@@ -308,8 +319,6 @@ def get_device_id(comb_gpu_reg, cu_id: NodeID) -> int:
 
 
 def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
-    paths: List[List[NodeID]] = []
-
     def check_validity_of_potential_merge_node(node_id: NodeID):
         # return True if the given node is a valid merge node.
         # return False otherwise.
@@ -324,35 +333,97 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             return False
         return True
 
-    visited_shared_dominators: Set[NodeID] = set()
-    found_refinement: bool = True
-    while found_refinement:
-        found_refinement = False
-        # check if any shared dominator nodes are known
-        shared_refined_dominators: Set[NodeID] = set(
-            cast(CUNode, pet.node_at(successors[0])).refined_dominator_nodes
-        )
-        shared_refined_dominators.add(successors[0])
-        for succ in successors:
-            shared_refined_dominators.intersection_update(
-                cast(CUNode, pet.node_at(succ)).refined_dominator_nodes.union({succ})
-            )
-        # remove already visited nodes from the list
-        for elem in visited_shared_dominators:
-            if elem in shared_refined_dominators:
-                shared_refined_dominators.remove(elem)
+    if len(successors) == 0:
+        raise ValueError("Empty list of successors!")
 
-        if len(shared_refined_dominators) == 0:
-            # perform a refinement step and try again or return None if no refinement could be applied
-            for succ in successors:
-                found_refinement = found_refinement or cast(
-                    CUNode, pet.node_at(succ)
-                ).refine_dominator_nodes(pet)
-        else:
-            # check if any of the shared dominators is a valid option
-            for potential_merge_node_id in shared_refined_dominators:
+    parent_function = pet.get_parent_function(pet.node_at(successors[0]))
+
+    # copy graph since edges need to be removed
+    copied_graph = pet.g.copy()
+
+    exit_cu_ids = parent_function.get_exit_cu_ids(pet)
+
+    # remove all but successor edges
+    to_be_removed = set()
+    for edge in copied_graph.edges:
+        edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+        if edge_data.etype != EdgeType.SUCCESSOR:
+            to_be_removed.add(edge)
+    for edge in to_be_removed:
+        copied_graph.remove_edge(edge[0], edge[1])
+
+    # reverse edges
+    immediate_post_dominators: Set[Tuple[NodeID, NodeID]] = set()
+    for exit_cu_id in exit_cu_ids:
+        immediate_post_dominators.update(
+            nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items()
+        )
+
+    immediate_post_dominators_dict = dict(immediate_post_dominators)
+
+    # find post dominator outside parent, if type(parent) != function
+    post_dominators = dict()
+    for node_id in parent_function.children_cu_ids:
+        if type(pet.node_at(node_id)) != CUNode:
+            continue
+        # initialize search with immediate post dominator
+        post_dom_id = immediate_post_dominators_dict[node_id]
+        while (
+            pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
+            and type(pet.node_at(pet.node_at(post_dom_id).get_parent_id(pet))) != FunctionNode
+        ):
+            new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
+            if post_dom_id == new_post_dom_id:
+                break
+            post_dom_id = new_post_dom_id
+        # found post dom
+        post_dominators[node_id] = post_dom_id
+
+    # initialize lists of current post dominators
+    current_post_dominators: List[NodeID] = [post_dominators[node_id] for node_id in successors]
+    # initialize lists of visited post dominators for each node in "successors"
+    visited_post_dominators: List[Set[NodeID]] = []
+    for idx, cpd in enumerate(current_post_dominators):
+        # add the node itself as well as it's first post dominator to visited nodes for the initialization
+        visited_post_dominators.append({cpd, successors[idx]})
+
+    if len(visited_post_dominators) == 0 and len(current_post_dominators) == 0:
+        raise ValueError("No post dominators found!")
+
+    # check for common post dominators
+    while True:
+        # check if a common post dominator exists
+        common_post_dominators = visited_post_dominators[0]
+        for idx, vpd_set in enumerate(visited_post_dominators):
+            common_post_dominators.intersection_update(vpd_set)
+            if len(common_post_dominators) == 0:
+                break
+
+        if len(common_post_dominators) > 0:
+            # return identified merge node
+            for potential_merge_node_id in common_post_dominators:
                 if check_validity_of_potential_merge_node(potential_merge_node_id):
                     return potential_merge_node_id
+
+        if len(current_post_dominators) == 0:
+            # No merge node found and no node to be checked anymore. Exit the loop.
+            break
+
+        # if not, add current post dominators to the visited list and resolve each post dominator by one step
+        # break if new post dominator is equal to the old (end of path reached)
+        for idx, cpd in enumerate(current_post_dominators):
+            visited_post_dominators[idx].add(cpd)
+        new_post_dominators = []
+        for cpd in current_post_dominators:
+            tmp = post_dominators[cpd]
+            if tmp == cpd:
+                # end of path reached, do not add tmp to list of new post dominators
+                continue
+            # get the next post dominator
+            new_post_dominators.append(tmp)
+        # replace the list of current post dominators (~ frontier)
+        current_post_dominators = new_post_dominators
+    # no merge node found
     return None
 
 

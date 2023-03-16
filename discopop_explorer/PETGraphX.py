@@ -223,6 +223,15 @@ class Node:
     def __hash__(self):
         return hash(self.id)
 
+    def get_parent_id(self, pet: PETGraphX) -> Optional[NodeID]:
+        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
+        if len(parents) == 0:
+            return None
+        elif len(parents) == 1:
+            return parents[0]
+        else:
+            raise ValueError("Node: ", self.id, "has more than one parent!")
+
 
 # Data.xml: type="0"
 class CUNode(Node):
@@ -232,57 +241,10 @@ class CUNode(Node):
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
     performs_file_io: bool = False
-    refined_dominator_nodes: Set[NodeID]
-    unrefined_dominator_nodes: Set[NodeID]
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.CU
-        self.refined_dominator_nodes = set()
-        self.unrefined_dominator_nodes = set()
-
-    def refine_dominator_nodes(self, pet: PETGraphX) -> bool:
-        """Returns true if a modification has been applied.
-        Returns false otherwise."""
-
-        if len(self.refined_dominator_nodes) == 0 and len(self.unrefined_dominator_nodes) == 0:
-            self.refined_dominator_nodes.add(self.id)
-            return True
-
-        return_value = False
-
-        # refine all unrefined dominator nodes
-        # make sure that parents are different or function node
-        to_be_refined: Set[NodeID] = set()
-        parent_ids = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
-        for unrefined_id in self.unrefined_dominator_nodes:
-            unrefined_parent_ids = [s for s, t, d in pet.in_edges(unrefined_id, EdgeType.CHILD)]
-            overlap = [
-                cuid
-                for cuid in parent_ids
-                if cuid in unrefined_parent_ids and not type(pet.node_at(cuid)) == FunctionNode
-            ]
-            if len(overlap) > 0:
-                # shared parent. not valid as a refined dominator node
-                to_be_refined.add(unrefined_id)
-            else:
-                return_value = True
-                self.refined_dominator_nodes.add(unrefined_id)
-
-        # clear list of unrefined dominator nodes
-        self.unrefined_dominator_nodes = set()
-
-        # start refinement for each element in to_be_refined
-        for elem in to_be_refined:
-            cast(CUNode, pet.node_at(elem)).refine_dominator_nodes(pet)
-
-        # update dominator nodes
-        for elem in to_be_refined:
-            self.refined_dominator_nodes.update(
-                cast(CUNode, pet.node_at(elem)).refined_dominator_nodes
-            )
-
-        return return_value
 
 
 # Data.xml: type="2"
@@ -311,6 +273,26 @@ class FunctionNode(Node):
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
+
+    def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
+
+        for child_cu_id in [t for s, t, d in pet.out_edges(self.id, EdgeType.CHILD)]:
+            if len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0:
+                return child_cu_id
+        raise ValueError("Mal-formatted function: ", self.id, " - No entry CU found!")
+
+    def get_exit_cu_ids(self, pet: PETGraphX) -> Set[NodeID]:
+        exit_cu_ids: Set[NodeID] = set()
+        if self.children_cu_ids is not None:
+            for child_cu_id in cast(List[NodeID], self.children_cu_ids):
+                print("CU ID: ", child_cu_id, len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)))
+
+                if (
+                    len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0
+                    and len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) != 0
+                ):
+                    exit_cu_ids.add(child_cu_id)
+        return exit_cu_ids
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:
@@ -513,19 +495,15 @@ class PETGraphX(object):
         # store id of parent function in each node
         # and store in each function node a list of all children ids
         for func_node in self.all_nodes(FunctionNode):
-            func_node.children_cu_ids = []
             stack: List[Node] = self.direct_children(func_node)
+            func_node.children_cu_ids = [node.id for node in stack]
+
             while stack:
                 child = stack.pop()
                 child.parent_function_id = func_node.id
                 children = self.direct_children(child)
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
-
-        # initialize dominator nodes lists
-        for cu_node in self.all_nodes(CUNode):
-            for s, t, d in self.out_edges(cu_node.id, EdgeType.SUCCESSOR):
-                cu_node.unrefined_dominator_nodes.add(t)
 
     def show(self):
         """Plots the graph
