@@ -269,10 +269,12 @@ class DummyNode(Node):
 class FunctionNode(Node):
     args: List[Variable] = []
     children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
+    reachability_pairs: Dict[NodeID, Set[NodeID]]
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
+        self.reachability_pairs = dict()
 
     def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
 
@@ -293,6 +295,27 @@ class FunctionNode(Node):
                 ):
                     exit_cu_ids.add(child_cu_id)
         return exit_cu_ids
+
+    def calculate_reachability_pairs(self, pet: PETGraphX):
+        # create graph copy and remove all but successor edges
+        copied_graph = pet.g.copy()
+
+        # remove all but successor edges
+        to_be_removed = set()
+        for edge in copied_graph.edges:
+            edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+            if edge_data.etype != EdgeType.SUCCESSOR:
+                to_be_removed.add(edge)
+        for edge in to_be_removed:
+            copied_graph.remove_edge(edge[0], edge[1])
+
+        # calculate dfs successors for children CUs
+        for node_id in cast(List[NodeID], self.children_cu_ids):
+            self.reachability_pairs[node_id] = {node_id}
+            successors = [t for s, t in nx.dfs_tree(copied_graph, node_id).edges()]
+            self.reachability_pairs[node_id].update(successors)
+
+        pass
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:
@@ -494,7 +517,9 @@ class PETGraphX(object):
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
-        for func_node in self.all_nodes(FunctionNode):
+        func_nodes = self.all_nodes(FunctionNode)
+        for idx, func_node in enumerate(func_nodes):
+            print("Calculating metadata for function: ", idx, " / ", len(func_nodes))
             stack: List[Node] = self.direct_children(func_node)
             func_node.children_cu_ids = [node.id for node in stack]
 
@@ -504,6 +529,9 @@ class PETGraphX(object):
                 children = self.direct_children(child)
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
+
+            func_node.calculate_reachability_pairs(self)
+        print("Metadata calculation done.")
 
     def show(self):
         """Plots the graph
@@ -1288,6 +1316,15 @@ class PETGraphX(object):
         :return: Boolean"""
         if source == target:
             return True, []
+
+        # trivially not reachable
+        if (
+            self.get_parent_function(target) != self.get_parent_function(source)
+            and EdgeType.CALLSNODE not in edge_types
+        ):
+            print("TRIVIAL FALSE!: ", source, target)
+            return False, []
+
         visited: List[NodeID] = []
         queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
         while len(queue) > 0:
