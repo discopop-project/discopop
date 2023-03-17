@@ -354,13 +354,13 @@ class FunctionNode(Node):
 
             immediate_post_dominators_dict = dict(immediate_post_dominators)
 
-            # add trivial cases for missing children
+            # initialize result dictionary and add trivial cases for all children
+            self.immediate_post_dominators = dict()
             for child_id in self.children_cu_ids:
-                if child_id not in immediate_post_dominators_dict:
-                    immediate_post_dominators_dict[child_id] = child_id
+                if child_id not in self.immediate_post_dominators:
+                    self.immediate_post_dominators[child_id] = child_id
 
             # find post dominator outside parent, if type(parent) != function
-            self.immediate_post_dominators = dict()
             for node_id in cast(List[NodeID], self.children_cu_ids):
                 if type(pet.node_at(node_id)) != CUNode:
                     continue
