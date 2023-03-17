@@ -142,7 +142,9 @@ def extend_data_lifespan(
     for idx, mem_reg in enumerate(live_data):
         print("EXTENDING mem_reg ", idx, "/", len(live_data), file=sys.stderr)
         modification_found = True
+        cycles = 0
         while modification_found:
+            cycles += 1
             modification_found = False
             new_entries: List[Tuple[MemoryRegion, NodeID]] = []
 
@@ -226,6 +228,8 @@ def extend_data_lifespan(
                 modification_found = True
             for mem_reg, new_cu_id in new_entries:
                 live_data[mem_reg].append(new_cu_id)
+
+        print("\tCycles: ", cycles, file=sys.stderr)
 
     # remove duplicates
     for mem_reg in live_data:
