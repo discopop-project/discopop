@@ -287,8 +287,6 @@ class FunctionNode(Node):
         exit_cu_ids: Set[NodeID] = set()
         if self.children_cu_ids is not None:
             for child_cu_id in cast(List[NodeID], self.children_cu_ids):
-                print("CU ID: ", child_cu_id, len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)))
-
                 if (
                     len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0
                     and len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) != 0
