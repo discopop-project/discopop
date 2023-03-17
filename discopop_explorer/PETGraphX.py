@@ -329,6 +329,7 @@ class FunctionNode(Node):
     def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
         if self.immediate_post_dominators_present:
             import sys
+
             print("METADATA HIT! ", self.node_id, file=sys.stderr)
             return self.immediate_post_dominators
         else:
@@ -367,7 +368,8 @@ class FunctionNode(Node):
                 while (
                     pet.node_at(node_id).get_parent_id(pet)
                     == pet.node_at(post_dom_id).get_parent_id(pet)
-                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet)))) != FunctionNode
+                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet))))
+                    != FunctionNode
                 ):
                     if post_dom_id in visited:
                         # cycle detected!
@@ -377,6 +379,7 @@ class FunctionNode(Node):
                     visited.add(post_dom_id)
                     new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
                     import sys
+
                     print("Post dom: ", post_dom_id, file=sys.stderr)
                     print("New post dom: ", new_post_dom_id, file=sys.stderr)
                     print(file=sys.stderr)

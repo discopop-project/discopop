@@ -19,6 +19,7 @@ from discopop_explorer.PETGraphX import (
     Node,
     MemoryRegion,
     Dependency,
+    FunctionNode,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
@@ -157,39 +158,48 @@ def extend_data_lifespan(
                 parent_functions.add(pet.get_parent_function(pet.node_at(cu_id)))
             print("\tparent functions: ", len(parent_functions), file=sys.stderr)
 
+            # split cu_ids by their parent function (used to reduce the complexity of the following step
+            cu_ids_by_parent_functions: Dict[FunctionNode, List[NodeID]] = dict()
             for cu_id in live_data[mem_reg]:
                 parent_function = pet.get_parent_function(pet.node_at(cu_id))
-                # check if data is live in any successor
-                # If so, set mem_reg to live in each of the encountered CUs.
+                if parent_function not in cu_ids_by_parent_functions:
+                    cu_ids_by_parent_functions[parent_function] = []
+                cu_ids_by_parent_functions[parent_function].append(cu_id)
 
-                for potential_successor_cu_id in live_data[mem_reg]:
-                    if cu_id == potential_successor_cu_id:
-                        continue
+            for parent_function in cu_ids_by_parent_functions:
+                for cu_id in cu_ids_by_parent_functions[parent_function]:
+                    # check if data is live in any successor
+                    # If so, set mem_reg to live in each of the encountered CUs.
 
-                    if cu_id in parent_function.reachability_pairs:
+                    for potential_successor_cu_id in cu_ids_by_parent_functions[parent_function]:
+                        if cu_id == potential_successor_cu_id:
+                            continue
 
-                        reachable = (
-                            potential_successor_cu_id in parent_function.reachability_pairs[cu_id]
-                        )
-                    else:
-                        reachable = False
+                        if cu_id in parent_function.reachability_pairs:
 
-                    if reachable:
-                        # get nodes of path from source to target
-                        for path in nx.all_simple_paths(
-                            copied_graph, source=cu_id, target=potential_successor_cu_id
-                        ):
-                            path_node_ids.update(path)
+                            reachable = (
+                                potential_successor_cu_id
+                                in parent_function.reachability_pairs[cu_id]
+                            )
+                        else:
+                            reachable = False
 
-                # set mem_reg to live in every child of CU
-                for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
-                    if child_id not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, child_id))
+                        if reachable:
+                            # get nodes of path from source to target
+                            for path in nx.all_simple_paths(
+                                copied_graph, source=cu_id, target=potential_successor_cu_id
+                            ):
+                                path_node_ids.update(path)
 
-                # set mem_reg to live in every called function of CU
-                for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
-                    if called_node not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, called_node))
+                    # set mem_reg to live in every child of CU
+                    for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
+                        if child_id not in live_data[mem_reg]:
+                            new_entries.append((mem_reg, child_id))
+
+                    # set mem_reg to live in every called function of CU
+                    for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
+                        if called_node not in live_data[mem_reg]:
+                            new_entries.append((mem_reg, called_node))
 
             path_nodes.update([cast(CUNode, pet.node_at(nid)) for nid in path_node_ids])
 
