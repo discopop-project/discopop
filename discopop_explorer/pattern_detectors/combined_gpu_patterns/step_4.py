@@ -375,6 +375,8 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             visited_post_dominators[idx].add(cpd)
         new_post_dominators = []
         for cpd in current_post_dominators:
+            if cpd not in post_dominators:
+                post_dominators[cpd] = cpd
             tmp = post_dominators[cpd]
             if tmp == cpd:
                 # end of path reached, do not add tmp to list of new post dominators
