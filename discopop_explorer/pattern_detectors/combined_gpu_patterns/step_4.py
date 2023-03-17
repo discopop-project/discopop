@@ -367,7 +367,10 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
         if type(pet.node_at(node_id)) != CUNode:
             continue
         # initialize search with immediate post dominator
-        post_dom_id = immediate_post_dominators_dict[node_id]
+        if node_id in immediate_post_dominators_dict:
+            post_dom_id = immediate_post_dominators_dict[node_id]
+        else:
+            post_dom_id = node_id
         while (
             pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
             and type(pet.node_at(pet.node_at(post_dom_id).get_parent_id(pet))) != FunctionNode
@@ -473,7 +476,9 @@ def identify_updates(
 
             # start calculation of updates for entry_point
             identified_updates.update(
-                __calculate_updates(pet, comb_gpu_reg, context, entry_point, writes_by_device)
+                __calculate_updates(
+                    pet, comb_gpu_reg, context, entry_point, writes_by_device, set()
+                )
             )
 
     return identified_updates
@@ -498,6 +503,7 @@ def __calculate_updates(
     context: Context,
     cur_node_id: NodeID,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    visited_nodes: Set[NodeID],
 ) -> Set[Update]:
     # calculate and return updates between ctx.cu_id and its immediate successor cur_node
     identified_updates: Set[Update] = set()
@@ -541,11 +547,22 @@ def __calculate_updates(
                 # recursive calculation will stop at the end of the funciton body, thus return identified updates
                 # without executing a new loop iteration
                 for successor in successors:
+                    if successor in visited_nodes:
+                        # prevent endless cycles
+                        continue
                     # enter recursion
                     print("ENTER RECURSION FOR: ", successor, file=sys.stderr)
+                    tmp_visited_set = copy.deepcopy(visited_nodes)
+                    tmp_visited_set.add(successor)
+
                     identified_updates.update(
                         __calculate_updates(
-                            pet, comb_gpu_reg, copy.deepcopy(context), successor, writes_by_device
+                            pet,
+                            comb_gpu_reg,
+                            copy.deepcopy(context),
+                            successor,
+                            writes_by_device,
+                            tmp_visited_set,
                         )
                     )
                 return identified_updates
