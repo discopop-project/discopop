@@ -214,7 +214,7 @@ def extend_data_lifespan(
 
                 new_entries += function_new_entries
 
-                function_finished = len(function_new_entries) == 0 and not new_path_node_found
+                function_finished = not new_path_node_found #len(function_new_entries) == 0 and not new_path_node_found
                 if function_finished:
                     finished_functions.add(parent_function)
 
