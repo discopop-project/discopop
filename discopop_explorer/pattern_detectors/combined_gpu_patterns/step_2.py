@@ -152,6 +152,11 @@ def extend_data_lifespan(
             path_node_ids: Set[NodeID] = set()
             path_nodes: Set[CUNode] = set()
 
+            parent_functions = set()
+            for cu_id in live_data[mem_reg]:
+                parent_functions.add(pet.get_parent_function(pet.node_at(cu_id)))
+            print("\tparent functions: ", len(parent_functions), file=sys.stderr)
+
             for cu_id in live_data[mem_reg]:
                 parent_function = pet.get_parent_function(pet.node_at(cu_id))
                 # check if data is live in any successor
