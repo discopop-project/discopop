@@ -140,10 +140,11 @@ def extend_data_lifespan(
         copied_graph.remove_edge(edge[0], edge[1])
 
     for idx, mem_reg in enumerate(live_data):
-        print("EXTENDING mem_reg ", idx, "/", len(live_data), " len: ", len(live_data[mem_reg]), file=sys.stderr)
+        print("EXTENDING mem_reg ", idx, "/", len(live_data), file=sys.stderr)
         modification_found = True
         cycles = 0
         while modification_found:
+            print("\t", "len: ", len(live_data[mem_reg]), file=sys.stderr)
             cycles += 1
             modification_found = False
             new_entries: List[Tuple[MemoryRegion, NodeID]] = []
