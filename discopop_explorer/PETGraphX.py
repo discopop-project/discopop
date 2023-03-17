@@ -354,14 +354,17 @@ class FunctionNode(Node):
 
             immediate_post_dominators_dict = dict(immediate_post_dominators)
 
+            # add trivial cases for missing children
+            for child_id in self.children_cu_ids:
+                if child_id not in immediate_post_dominators_dict:
+                    immediate_post_dominators_dict[child_id] = child_id
+
             # find post dominator outside parent, if type(parent) != function
             self.immediate_post_dominators = dict()
             for node_id in cast(List[NodeID], self.children_cu_ids):
                 if type(pet.node_at(node_id)) != CUNode:
                     continue
                 # initialize search with immediate post dominator
-                if node_id not in immediate_post_dominators_dict:
-                    immediate_post_dominators_dict[node_id] = node_id
                 post_dom_id = immediate_post_dominators_dict[node_id]
                 visited = set()
                 use_original = False
