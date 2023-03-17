@@ -231,7 +231,15 @@ class Node:
         elif len(parents) == 1:
             return parents[0]
         else:
-            raise ValueError("Node: ", self.id, "has more than one parent!")
+            # it is possible that a node has a function-type and e.g. loop type parent
+            # in this case, return the non-function type parent, since it will be a child of the function itself.
+            if len(parents) > 2:
+                raise ValueError("Node: ", self.id, "has too many parents!")
+            else:
+                for parent in parents:
+                    if type(pet.node_at(parent)) != FunctionNode:
+                        return parent
+        return None
 
 
 # Data.xml: type="0"
@@ -355,7 +363,7 @@ class FunctionNode(Node):
                     immediate_post_dominators_dict[node_id] = node_id
                 post_dom_id = immediate_post_dominators_dict[node_id]
                 visited = set()
-                use_original= False
+                use_original = False
                 while (
                     pet.node_at(node_id).get_parent_id(pet)
                     == pet.node_at(post_dom_id).get_parent_id(pet)
