@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import symbol
+
 import sys
 from typing import Dict, List, Set, Tuple, cast
 
@@ -157,7 +157,6 @@ def extend_data_lifespan(
             path_node_ids: Set[NodeID] = set()
             path_nodes: Set[CUNode] = set()
 
-
             # split cu_ids by their parent function (used to reduce the complexity of the following step
             cu_ids_by_parent_functions: Dict[FunctionNode, List[NodeID]] = dict()
             for cu_id in live_data[mem_reg]:
@@ -167,7 +166,14 @@ def extend_data_lifespan(
                 cu_ids_by_parent_functions[parent_function].append(cu_id)
 
             print("\tparent functions: ", len(cu_ids_by_parent_functions), file=sys.stderr)
-            print("\t", [(key.name, len(cu_ids_by_parent_functions[key]) ) for key in cu_ids_by_parent_functions], file=sys.stderr)
+            print(
+                "\t",
+                [
+                    (key.name, len(cu_ids_by_parent_functions[key]))
+                    for key in cu_ids_by_parent_functions
+                ],
+                file=sys.stderr,
+            )
 
             for parent_function in cu_ids_by_parent_functions:
                 if parent_function in finished_functions:
@@ -214,7 +220,9 @@ def extend_data_lifespan(
 
                 new_entries += function_new_entries
 
-                function_finished = not new_path_node_found #len(function_new_entries) == 0 and not new_path_node_found
+                function_finished = (
+                    not new_path_node_found
+                )  # len(function_new_entries) == 0 and not new_path_node_found
                 if function_finished:
                     finished_functions.add(parent_function)
 
