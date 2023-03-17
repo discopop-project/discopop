@@ -148,10 +148,14 @@ def extend_data_lifespan(
             modification_found = False
             new_entries: List[Tuple[MemoryRegion, NodeID]] = []
 
+            path_node_ids: Set[NodeID] = set()
+            path_nodes: Set[CUNode] = set()
+
             for cu_id in live_data[mem_reg]:
                 parent_function = pet.get_parent_function(pet.node_at(cu_id))
                 # check if data is live in any successor
                 # If so, set mem_reg to live in each of the encountered CUs.
+
                 for potential_successor_cu_id in live_data[mem_reg]:
                     if cu_id == potential_successor_cu_id:
                         continue
@@ -166,52 +170,10 @@ def extend_data_lifespan(
 
                     if reachable:
                         # get nodes of path from source to target
-                        path_node_ids: Set[NodeID] = set()
                         for path in nx.all_simple_paths(
                             copied_graph, source=cu_id, target=potential_successor_cu_id
                         ):
                             path_node_ids.update(path)
-                        path_nodes: Set[CUNode] = set(
-                            [cast(CUNode, pet.node_at(nid)) for nid in path_node_ids]
-                        )
-
-                        # if path_node is located within a loop, add the other loop cus to the path as well
-                        to_be_added: List[CUNode] = []
-                        for path_node in path_nodes:
-                            parent_node = [
-                                pet.node_at(s)
-                                for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
-                            ][0]
-                            if parent_node.type == NodeType.LOOP:
-                                for _, loop_cu_id, _ in pet.out_edges(
-                                    parent_node.id, EdgeType.CHILD
-                                ):
-                                    loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
-                                    if loop_cu not in path_nodes and loop_cu not in to_be_added:
-                                        to_be_added.append(loop_cu)
-                        for loop_cu in to_be_added:
-                            path_nodes.add(loop_cu)
-
-                        # mark mem_reg live in all path_nodes and their children
-                        for path_node in path_nodes:
-                            # todo replace with subtree calculation after merging with refactoring changes
-                            # calculate subtree without including called functions
-                            subtree_without_called_functions = [
-                                cu
-                                for cu in pet.direct_children(path_node)
-                                if cu
-                                not in [
-                                    pet.node_at(t)
-                                    for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)
-                                ]
-                            ]
-                            # add path_node itself to the subtree
-                            subtree_without_called_functions.append(path_node)
-                            # todo end of section to be replaced
-                            #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
-                            for subtree_node in subtree_without_called_functions:
-                                if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
-                                    new_entries.append((mem_reg, subtree_node.id))
 
                 # set mem_reg to live in every child of CU
                 for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
@@ -222,6 +184,43 @@ def extend_data_lifespan(
                 for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
                     if called_node not in live_data[mem_reg]:
                         new_entries.append((mem_reg, called_node))
+
+            path_nodes.update([cast(CUNode, pet.node_at(nid)) for nid in path_node_ids])
+
+            # if path_node is located within a loop, add the other loop cus to the path as well
+            to_be_added: List[CUNode] = []
+            for path_node in path_nodes:
+                parent_node = [
+                    pet.node_at(s) for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
+                ][0]
+                if parent_node.type == NodeType.LOOP:
+                    for _, loop_cu_id, _ in pet.out_edges(parent_node.id, EdgeType.CHILD):
+                        loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
+                        if loop_cu not in path_nodes and loop_cu not in to_be_added:
+                            to_be_added.append(loop_cu)
+            for loop_cu in to_be_added:
+                path_nodes.add(loop_cu)
+
+            # mark mem_reg live in all path_nodes and their children
+            for path_node in path_nodes:
+                # todo replace with subtree calculation after merging with refactoring changes
+                # calculate subtree without including called functions
+                subtree_without_called_functions = [
+                    cu
+                    for cu in pet.direct_children(path_node)
+                    if cu
+                    not in [
+                        pet.node_at(t)
+                        for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)
+                    ]
+                ]
+                # add path_node itself to the subtree
+                subtree_without_called_functions.append(path_node)
+                # todo end of section to be replaced
+                #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
+                for subtree_node in subtree_without_called_functions:
+                    if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
+                        new_entries.append((mem_reg, subtree_node.id))
 
             new_entries = list(set(new_entries))
             if len(new_entries) > 0:
