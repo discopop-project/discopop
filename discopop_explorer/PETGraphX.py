@@ -354,12 +354,19 @@ class FunctionNode(Node):
                 if node_id not in immediate_post_dominators_dict:
                     immediate_post_dominators_dict[node_id] = node_id
                 post_dom_id = immediate_post_dominators_dict[node_id]
+                visited = set()
+                use_original= False
                 while (
                     pet.node_at(node_id).get_parent_id(pet)
                     == pet.node_at(post_dom_id).get_parent_id(pet)
-                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet))))
-                    != FunctionNode
+                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet)))) != FunctionNode
                 ):
+                    if post_dom_id in visited:
+                        # cycle detected!
+                        use_original = True
+                        break
+
+                    visited.add(post_dom_id)
                     new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
                     import sys
                     print("Post dom: ", post_dom_id, file=sys.stderr)
@@ -368,8 +375,9 @@ class FunctionNode(Node):
                     if post_dom_id == new_post_dom_id:
                         break
                     post_dom_id = new_post_dom_id
-                # found post dom
-                self.immediate_post_dominators[node_id] = post_dom_id
+                if not use_original:
+                    # found post dom
+                    self.immediate_post_dominators[node_id] = post_dom_id
             self.immediate_post_dominators_present = True
             return self.immediate_post_dominators
 
