@@ -324,6 +324,8 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
         # return False otherwise.
         # do not allow return BB's as merge nodes, since this would be trivially true for every path split
         potential_merge_node = pet.node_at(node_id)
+        if type(potential_merge_node) != CUNode:
+            return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
             and potential_merge_node.end_position()
