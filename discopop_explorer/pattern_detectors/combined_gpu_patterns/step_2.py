@@ -157,10 +157,6 @@ def extend_data_lifespan(
             path_node_ids: Set[NodeID] = set()
             path_nodes: Set[CUNode] = set()
 
-            parent_functions = set()
-            for cu_id in live_data[mem_reg]:
-                parent_functions.add(pet.get_parent_function(pet.node_at(cu_id)))
-            print("\tparent functions: ", len(parent_functions), file=sys.stderr)
 
             # split cu_ids by their parent function (used to reduce the complexity of the following step
             cu_ids_by_parent_functions: Dict[FunctionNode, List[NodeID]] = dict()
@@ -169,6 +165,9 @@ def extend_data_lifespan(
                 if parent_function not in cu_ids_by_parent_functions:
                     cu_ids_by_parent_functions[parent_function] = []
                 cu_ids_by_parent_functions[parent_function].append(cu_id)
+
+            print("\tparent functions: ", len(cu_ids_by_parent_functions), file=sys.stderr)
+            print("\t", [(key.name, len(cu_ids_by_parent_functions[key]) ) for key in cu_ids_by_parent_functions], file=sys.stderr)
 
             for parent_function in cu_ids_by_parent_functions:
                 if parent_function in finished_functions:
