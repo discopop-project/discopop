@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import symbol
 import sys
 from typing import Dict, List, Set, Tuple, cast
 
@@ -144,6 +145,9 @@ def extend_data_lifespan(
         print("EXTENDING mem_reg ", idx, "/", len(live_data), file=sys.stderr)
         modification_found = True
         cycles = 0
+
+        finished_functions: Set[FunctionNode] = set()
+
         while modification_found:
             print("\t", "len: ", len(live_data[mem_reg]), file=sys.stderr)
             cycles += 1
@@ -167,6 +171,11 @@ def extend_data_lifespan(
                 cu_ids_by_parent_functions[parent_function].append(cu_id)
 
             for parent_function in cu_ids_by_parent_functions:
+                if parent_function in finished_functions:
+                    print("\t\tskipped finished function: ", parent_function.name, file=sys.stderr)
+                    continue
+                function_new_entries: List[Tuple[MemoryRegion, NodeID]] = []
+                new_path_node_found = False
                 for cu_id in cu_ids_by_parent_functions[parent_function]:
                     # check if data is live in any successor
                     # If so, set mem_reg to live in each of the encountered CUs.
@@ -189,17 +198,26 @@ def extend_data_lifespan(
                             for path in nx.all_simple_paths(
                                 copied_graph, source=cu_id, target=potential_successor_cu_id
                             ):
+                                len_pre = len(path_node_ids)
                                 path_node_ids.update(path)
+                                if len_pre < len(path_node_ids):
+                                    new_path_node_found = True
 
                     # set mem_reg to live in every child of CU
                     for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
                         if child_id not in live_data[mem_reg]:
-                            new_entries.append((mem_reg, child_id))
+                            function_new_entries.append((mem_reg, child_id))
 
                     # set mem_reg to live in every called function of CU
                     for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
                         if called_node not in live_data[mem_reg]:
-                            new_entries.append((mem_reg, called_node))
+                            function_new_entries.append((mem_reg, called_node))
+
+                new_entries += function_new_entries
+
+                function_finished = len(function_new_entries) == 0 and not new_path_node_found
+                if function_finished:
+                    finished_functions.add(parent_function)
 
             path_nodes.update([cast(CUNode, pet.node_at(nid)) for nid in path_node_ids])
 
