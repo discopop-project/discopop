@@ -140,7 +140,7 @@ def extend_data_lifespan(
         copied_graph.remove_edge(edge[0], edge[1])
 
     for idx, mem_reg in enumerate(live_data):
-        print("EXTENDING mem_reg ", idx / len(live_data), file=sys.stderr)
+        print("EXTENDING mem_reg ", idx, "/", len(live_data), file=sys.stderr)
         modification_found = True
         while modification_found:
             modification_found = False
