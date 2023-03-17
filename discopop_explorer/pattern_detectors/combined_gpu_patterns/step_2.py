@@ -149,13 +149,13 @@ def extend_data_lifespan(
             new_entries: List[Tuple[MemoryRegion, NodeID]] = []
 
             for cu_id in live_data[mem_reg]:
+                parent_function = pet.get_parent_function(pet.node_at(cu_id))
                 # check if data is live in any successor
                 # If so, set mem_reg to live in each of the encountered CUs.
                 for potential_successor_cu_id in live_data[mem_reg]:
                     if cu_id == potential_successor_cu_id:
                         continue
 
-                    parent_function = pet.get_parent_function(pet.node_at(cu_id))
                     if cu_id in parent_function.reachability_pairs:
 
                         reachable = (
