@@ -320,6 +320,7 @@ class FunctionNode(Node):
 
     def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
         if self.immediate_post_dominators_present:
+            import sys
             print("METADATA HIT! ", self.node_id, file=sys.stderr)
             return self.immediate_post_dominators
         else:
@@ -360,6 +361,10 @@ class FunctionNode(Node):
                     != FunctionNode
                 ):
                     new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
+                    import sys
+                    print("Post dom: ", post_dom_id, file=sys.stderr)
+                    print("New post dom: ", new_post_dom_id, file=sys.stderr)
+                    print(file=sys.stderr)
                     if post_dom_id == new_post_dom_id:
                         break
                     post_dom_id = new_post_dom_id
