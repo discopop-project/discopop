@@ -353,6 +353,10 @@ class FunctionNode(Node):
                 )
 
             immediate_post_dominators_dict = dict(immediate_post_dominators)
+            # add trivial cases for missing modes
+            for child_id in self.children_cu_ids:
+                if child_id not in immediate_post_dominators_dict:
+                    immediate_post_dominators_dict[child_id] = child_id
 
             # initialize result dictionary and add trivial cases for all children
             self.immediate_post_dominators = dict()
