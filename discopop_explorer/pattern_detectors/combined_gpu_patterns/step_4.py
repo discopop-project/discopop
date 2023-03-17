@@ -481,6 +481,10 @@ def __calculate_updates(
             end_reached = True
             continue
         elif len(successors) == 1:
+            if cur_node_id == successors[0]:
+                # cycle! break
+                end_reached = True
+                continue
             # start calculation for successor of current node
             cur_node_id = successors[0]
             print("PROCEED TO ", cur_node_id, file=sys.stderr)
