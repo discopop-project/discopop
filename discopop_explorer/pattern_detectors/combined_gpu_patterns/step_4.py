@@ -373,7 +373,7 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             continue
         # initialize search with immediate post dominator
         post_dom_id = immediate_post_dominators_dict[node_id]
-        
+
         while (
             pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
             and type(pet.node_at(pet.node_at(post_dom_id).get_parent_id(pet))) != FunctionNode
@@ -527,6 +527,10 @@ def __calculate_updates(
             end_reached = True
             continue
         elif len(successors) == 1:
+            if cur_node_id == successors[0]:
+                # cycle! break
+                end_reached = True
+                continue
             # start calculation for successor of current node
             cur_node_id = successors[0]
             print("PROCEED TO ", cur_node_id, file=sys.stderr)
