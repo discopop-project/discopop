@@ -269,9 +269,10 @@ def identify_end_of_life_points(
         parent_function_node_id = pet.get_parent_function(pet.node_at(eol[0])).id
         var_names: Set[VarName] = set()
         for mem_reg in eol[2]:
-            var_names.update(
-                memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
-            )
+            if parent_function_node_id in memory_regions_to_functions_and_variables[mem_reg]:
+                var_names.update(
+                    memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
+                )
         memory_regions = set(eol[2])
         # check if the exited data is required by another function
         # if so, mark the exit point as ExitPointType.FROM

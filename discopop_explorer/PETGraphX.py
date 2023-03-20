@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import copy
+import sys
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
@@ -323,7 +324,6 @@ class FunctionNode(Node):
             self.reachability_pairs[node_id] = {node_id}
             successors = [t for s, t in nx.dfs_tree(copied_graph, node_id).edges()]
             self.reachability_pairs[node_id].update(successors)
-
         pass
 
     def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
