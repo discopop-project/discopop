@@ -176,9 +176,10 @@ def extend_data_lifespan(
             )
 
             for parent_function in cu_ids_by_parent_functions:
-                if parent_function in finished_functions:
-                    print("\t\tskipped finished function: ", parent_function.name, file=sys.stderr)
-                    continue
+                # removed due to incorrect results!
+                #                if parent_function in finished_functions:
+                #                    print("\t\tskipped finished function: ", parent_function.name, file=sys.stderr)
+                #                    continue
                 function_new_entries: List[Tuple[MemoryRegion, NodeID]] = []
                 new_path_node_found = False
                 for cu_id in cu_ids_by_parent_functions[parent_function]:
