@@ -230,7 +230,15 @@ class Node:
         elif len(parents) == 1:
             return parents[0]
         else:
-            raise ValueError("Node: ", self.id, "has more than one parent!")
+            # it is possible that a node has a function-type and e.g. loop type parent
+            # in this case, return the non-function type parent, since it will be a child of the function itself.
+            if len(parents) > 2:
+                raise ValueError("Node: ", self.id, "has too many parents!")
+            else:
+                for parent in parents:
+                    if type(pet.node_at(parent)) != FunctionNode:
+                        return parent
+        return None
 
 
 # Data.xml: type="0"
