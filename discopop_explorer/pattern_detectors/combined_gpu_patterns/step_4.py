@@ -361,16 +361,19 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
 
     immediate_post_dominators_dict = dict(immediate_post_dominators)
 
+    # add missing entries
+    for node_id in parent_function.children_cu_ids:
+        if node_id not in immediate_post_dominators_dict:
+            immediate_post_dominators_dict[node_id] = node_id
+
     # find post dominator outside parent, if type(parent) != function
     post_dominators = dict()
     for node_id in parent_function.children_cu_ids:
         if type(pet.node_at(node_id)) != CUNode:
             continue
         # initialize search with immediate post dominator
-        if node_id in immediate_post_dominators_dict:
-            post_dom_id = immediate_post_dominators_dict[node_id]
-        else:
-            post_dom_id = node_id
+        post_dom_id = immediate_post_dominators_dict[node_id]
+        
         while (
             pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
             and type(pet.node_at(pet.node_at(post_dom_id).get_parent_id(pet))) != FunctionNode
