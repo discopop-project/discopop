@@ -324,6 +324,8 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
         # return False otherwise.
         # do not allow return BB's as merge nodes, since this would be trivially true for every path split
         potential_merge_node = pet.node_at(node_id)
+        if type(potential_merge_node) != CUNode:
+            return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
             and potential_merge_node.end_position()
@@ -421,6 +423,8 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             visited_post_dominators[idx].add(cpd)
         new_post_dominators = []
         for cpd in current_post_dominators:
+            if cpd not in post_dominators:
+                post_dominators[cpd] = cpd
             tmp = post_dominators[cpd]
             if tmp == cpd:
                 # end of path reached, do not add tmp to list of new post dominators
