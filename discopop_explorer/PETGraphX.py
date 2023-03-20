@@ -270,11 +270,14 @@ class FunctionNode(Node):
     args: List[Variable] = []
     children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
     reachability_pairs: Dict[NodeID, Set[NodeID]]
+    immediate_post_dominators: Dict[NodeID, NodeID]
+    immediate_post_dominators_present: bool
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
         self.reachability_pairs = dict()
+        self.immediate_post_dominators_present = False
 
     def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
 
@@ -314,6 +317,79 @@ class FunctionNode(Node):
             self.reachability_pairs[node_id].update(successors)
 
         pass
+
+    def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
+        if self.immediate_post_dominators_present:
+            import sys
+
+            print("METADATA HIT! ", self.node_id, file=sys.stderr)
+            return self.immediate_post_dominators
+        else:
+            # copy graph since edges need to be removed
+            copied_graph = pet.g.copy()
+            exit_cu_ids = self.get_exit_cu_ids(pet)
+            # remove all but successor edges
+            to_be_removed = set()
+            for edge in copied_graph.edges:
+                edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+                if edge_data.etype != EdgeType.SUCCESSOR:
+                    to_be_removed.add(edge)
+            for edge in to_be_removed:
+                copied_graph.remove_edge(edge[0], edge[1])
+
+            # reverse edges
+            immediate_post_dominators: Set[Tuple[NodeID, NodeID]] = set()
+            for exit_cu_id in exit_cu_ids:
+                immediate_post_dominators.update(
+                    nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items()
+                )
+
+            immediate_post_dominators_dict = dict(immediate_post_dominators)
+            # add trivial cases for missing modes
+            for child_id in cast(List[NodeID], self.children_cu_ids):
+                if child_id not in immediate_post_dominators_dict:
+                    immediate_post_dominators_dict[child_id] = child_id
+
+            # initialize result dictionary and add trivial cases for all children
+            self.immediate_post_dominators = dict()
+            for child_id in cast(List[NodeID], self.children_cu_ids):
+                if child_id not in self.immediate_post_dominators:
+                    self.immediate_post_dominators[child_id] = child_id
+
+            # find post dominator outside parent, if type(parent) != function
+            for node_id in cast(List[NodeID], self.children_cu_ids):
+                if type(pet.node_at(node_id)) != CUNode:
+                    continue
+                # initialize search with immediate post dominator
+                post_dom_id = immediate_post_dominators_dict[node_id]
+                visited = set()
+                use_original = False
+                while (
+                    pet.node_at(node_id).get_parent_id(pet)
+                    == pet.node_at(post_dom_id).get_parent_id(pet)
+                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet))))
+                    != FunctionNode
+                ):
+                    if post_dom_id in visited:
+                        # cycle detected!
+                        use_original = True
+                        break
+
+                    visited.add(post_dom_id)
+                    new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
+                    import sys
+
+                    print("Post dom: ", post_dom_id, file=sys.stderr)
+                    print("New post dom: ", new_post_dom_id, file=sys.stderr)
+                    print(file=sys.stderr)
+                    if post_dom_id == new_post_dom_id:
+                        break
+                    post_dom_id = new_post_dom_id
+                if not use_original:
+                    # found post dom
+                    self.immediate_post_dominators[node_id] = post_dom_id
+            self.immediate_post_dominators_present = True
+            return self.immediate_post_dominators
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:

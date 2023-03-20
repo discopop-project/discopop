@@ -339,53 +339,7 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
         raise ValueError("Empty list of successors!")
 
     parent_function = pet.get_parent_function(pet.node_at(successors[0]))
-
-    # copy graph since edges need to be removed
-    copied_graph = pet.g.copy()
-
-    exit_cu_ids = parent_function.get_exit_cu_ids(pet)
-
-    # remove all but successor edges
-    to_be_removed = set()
-    for edge in copied_graph.edges:
-        edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
-        if edge_data.etype != EdgeType.SUCCESSOR:
-            to_be_removed.add(edge)
-    for edge in to_be_removed:
-        copied_graph.remove_edge(edge[0], edge[1])
-
-    # reverse edges
-    immediate_post_dominators: Set[Tuple[NodeID, NodeID]] = set()
-    for exit_cu_id in exit_cu_ids:
-        immediate_post_dominators.update(
-            nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items()
-        )
-
-    immediate_post_dominators_dict = dict(immediate_post_dominators)
-
-    # add missing entries
-    for node_id in parent_function.children_cu_ids:
-        if node_id not in immediate_post_dominators_dict:
-            immediate_post_dominators_dict[node_id] = node_id
-
-    # find post dominator outside parent, if type(parent) != function
-    post_dominators = dict()
-    for node_id in parent_function.children_cu_ids:
-        if type(pet.node_at(node_id)) != CUNode:
-            continue
-        # initialize search with immediate post dominator
-        post_dom_id = immediate_post_dominators_dict[node_id]
-
-        while (
-            pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
-            and type(pet.node_at(pet.node_at(post_dom_id).get_parent_id(pet))) != FunctionNode
-        ):
-            new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
-            if post_dom_id == new_post_dom_id:
-                break
-            post_dom_id = new_post_dom_id
-        # found post dom
-        post_dominators[node_id] = post_dom_id
+    post_dominators = parent_function.get_immediate_post_dominators(pet)
 
     # initialize lists of current post dominators
     current_post_dominators: List[NodeID] = [post_dominators[node_id] for node_id in successors]
