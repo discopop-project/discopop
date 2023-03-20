@@ -371,8 +371,10 @@ def find_combined_gpu_regions(
 
     # combine regions
     for combinable_1, combinable_2 in true_successor_combinations:
-        combined_gpu_regions.remove(combinable_1)
-        combined_gpu_regions.remove(combinable_2)
+        if combinable_1 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_1)
+        if combinable_2 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_2)
         combined_gpu_regions.append(
             combine_regions(pet, combinable_1, combinable_2, project_folder_path)
         )
