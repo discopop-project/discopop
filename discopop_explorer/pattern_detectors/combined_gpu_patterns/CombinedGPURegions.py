@@ -176,7 +176,9 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # extend data liveness
-        extended_memory_region_liveness = extend_data_lifespan(pet, memory_region_liveness)
+        extended_memory_region_liveness = (
+            memory_region_liveness  # extend_data_lifespan(pet, memory_region_liveness)
+        )
 
         print("EXTENDED DEVICE MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_memory_region_liveness, file=sys.stderr)
@@ -188,9 +190,7 @@ class CombinedGPURegion(PatternInfo):
         print(host_liveness, file=sys.stderr)
         print(file=sys.stderr)
         host_memory_region_liveness = convert_liveness(host_liveness)
-        extended_host_memory_region_liveness = extend_data_lifespan(
-            pet, host_memory_region_liveness
-        )
+        extended_host_memory_region_liveness = host_memory_region_liveness  # extend_data_lifespan(           pet, host_memory_region_liveness        )
         print("EXTENDED HOST MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_host_memory_region_liveness, file=sys.stderr)
         print(file=sys.stderr)
