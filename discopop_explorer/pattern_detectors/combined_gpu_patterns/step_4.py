@@ -534,6 +534,7 @@ def __calculate_updates(
 
 
 def test_circle_free_graph(pet: PETGraphX):
+    """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
     import networkx as nx
 
     unrolled_function_graphs: Dict[FunctionNode, nx.MultiDiGraph] = dict()
@@ -561,8 +562,7 @@ def test_circle_free_graph(pet: PETGraphX):
     # ==> Identify cycle exits
     # create branch equivalent to "not entering the cycle"
     # create branch equivalent to "entering the cycle"
-    # TODO insert a second iteration of the cycle
-
+    # TODO insert a second iteration of the cycle?
 
     # unroll each function separately
     for function in unrolled_function_graphs:
@@ -660,6 +660,46 @@ def test_circle_free_graph(pet: PETGraphX):
                 # break the unrolling loop
                 cycle_edges = []
 
-    import sys
+    return unrolled_function_graphs
 
-    sys.exit(0)
+
+def add_accesses_from_called_functions(pet: PETGraphX, writes_by_device:  Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]], force_called_functions_to_host: bool = False) ->  Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]:
+    """Gather written and read memory regions on a function level.
+    Add the gathered information to calling CU nodes."""
+    values_propagated = True
+    cycles = 0
+    while values_propagated:
+        cycles += 1
+        values_propagated = False
+        for function in pet.all_nodes(type=FunctionNode):
+            print("FUNCTION: ", function.name)
+            memory_accesses = function.get_memory_accesses(writes_by_device)
+            if force_called_functions_to_host:
+                for device_id in memory_accesses:
+                    if device_id != 0:
+                        for mem_reg in memory_accesses[device_id]:
+                            if mem_reg not in memory_accesses[0]:
+                                memory_accesses[0][mem_reg] = set()
+                            memory_accesses[0][mem_reg].update(memory_accesses[device_id][mem_reg])
+                to_be_removed = [key for key in memory_accesses if key != 0]
+                for key in to_be_removed:
+                    del memory_accesses[key]
+
+            # add memory_accesses to calling CU's in writes_by_device
+            called_by = [s for s, t, d in pet.in_edges(function.id, EdgeType.CALLSNODE)]
+            print("\tcalled by: ", called_by)
+            for device_id in memory_accesses:
+                if device_id not in writes_by_device:
+                    writes_by_device[device_id] = dict()
+                for calling_cu_id in called_by:
+                    if calling_cu_id not in writes_by_device[device_id]:
+                        writes_by_device[device_id][calling_cu_id] = dict()
+                    for mem_reg in memory_accesses[device_id]:
+                        if mem_reg not in writes_by_device[device_id][calling_cu_id]:
+                            writes_by_device[device_id][calling_cu_id][mem_reg] = set()
+                        len_pre = len(writes_by_device[device_id][calling_cu_id][mem_reg])
+                        writes_by_device[device_id][calling_cu_id][mem_reg].update(memory_accesses[device_id][mem_reg])
+                        len_post = len(writes_by_device[device_id][calling_cu_id][mem_reg])
+                        values_propagated = (values_propagated or True) if len_pre < len_post else (values_propagated or False)
+    print("cycles: ", cycles)
+    return writes_by_device

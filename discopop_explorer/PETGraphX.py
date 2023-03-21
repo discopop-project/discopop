@@ -281,12 +281,15 @@ class FunctionNode(Node):
     reachability_pairs: Dict[NodeID, Set[NodeID]]
     immediate_post_dominators: Dict[NodeID, NodeID]
     immediate_post_dominators_present: bool
+    memory_accesses: Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]
+    memory_accesses_present: bool
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
         self.reachability_pairs = dict()
         self.immediate_post_dominators_present = False
+        self.memory_accesses_present = False
 
     def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
 
@@ -398,6 +401,24 @@ class FunctionNode(Node):
                     self.immediate_post_dominators[node_id] = post_dom_id
             self.immediate_post_dominators_present = True
             return self.immediate_post_dominators
+
+    def get_memory_accesses(self, writes_by_device:  Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]) -> Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]:
+        if not self.memory_accesses_present:
+            self.memory_accesses = dict()
+            self.memory_accesses_present = True
+
+        for child_id in self.children_cu_ids:
+            for device_id in writes_by_device:
+                if device_id not in self.memory_accesses:
+                    self.memory_accesses[device_id] = dict()
+                if child_id in writes_by_device[device_id]:
+                    for mem_reg in writes_by_device[device_id][child_id]:
+                        if mem_reg not in self.memory_accesses[device_id]:
+                            self.memory_accesses[device_id][mem_reg] = set()
+                        self.memory_accesses[device_id][mem_reg].update(writes_by_device[device_id][child_id][mem_reg])
+        return self.memory_accesses
+
+
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:

@@ -46,7 +46,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
     identify_updates,
-    test_circle_free_graph,
+    test_circle_free_graph, add_accesses_from_called_functions,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
@@ -237,16 +237,19 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
-        unrolled_function_graphs = test_circle_free_graph(pet)
+        writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
 
-        # TODO unroll function bodies to create circle-free graphs
-        # TODO add accesses from called function to the calling CU
+        # unroll function bodies to create circle-free graphs
+        unrolled_function_graphs = test_circle_free_graph(pet)
+        # TODO add accesses from called function to the calling CUs
+        writes_by_device = add_accesses_from_called_functions(pet, writes_by_device, force_called_functions_to_host=True)
+        sys.exit(0)
         # TODO extend data livespan for each function body individually
 
         # identify updates based on the circle-free graph.
         # TODO Do not allow to find merge nodes! (can be ignored firstly)
         # TODO parallelize on function level
-        writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
+
         issued_updates = identify_updates(self, pet, writes_by_device)
         print("ISSUED UPDATES:", file=sys.stderr)
         for update in issued_updates:
