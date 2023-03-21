@@ -35,8 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/PassAnalysisSupport.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
@@ -176,9 +174,8 @@ fstream fileFile;
 
 string getFName(Instruction* BI){
   Instruction *tmpI = &*BI;
-  if (DILocation *Loc = tmpI->getDebugLoc()) { // Here I is an LLVM instruction
-            string File = Loc->getFilename();  
-            return   Loc->getFilename(); 
+  if (DILocation *Loc = tmpI->getDebugLoc()) {
+    return   Loc->getFilename().str(); 
   }
   else {
     return "FileNameNotFound" ;
