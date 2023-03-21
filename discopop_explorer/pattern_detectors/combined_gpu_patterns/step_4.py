@@ -152,14 +152,11 @@ class Context(object):
         ]
         for mem_reg in overlapping_mem_reg:
             # synchronize from old to new device
-            for mem_reg in overlapping_mem_reg:
-                # issue update, if writes of new device is not a superset of old device
-                for ident, origin in self.seen_writes_by_device[self.device_id][mem_reg]:
-                    if ident not in [
-                        t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]
-                    ]:
-                        print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
-                    self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
+            # issue update, if writes of new device is not a superset of old device
+            for ident, origin in self.seen_writes_by_device[self.device_id][mem_reg]:
+                if ident not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]:
+                    print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
+                self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
 
     def request_updates_from_other_devices(
         self, pet, new_device_id: int
