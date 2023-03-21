@@ -44,7 +44,12 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     cleanup_writes,
     group_writes_by_cu,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
+    identify_updates,
+    test_circle_free_graph,
+    add_accesses_from_called_functions,
+    identify_updates_in_unrolled_function_graphs,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
     identify_end_of_life_points,
@@ -205,12 +210,12 @@ class CombinedGPURegion(PatternInfo):
         )
 
         # propagate writes to parents, successors and the children of successors
-        propagated_device_writes = propagate_writes(self, pet, device_writes)
+        propagated_device_writes = device_writes  # propagate_writes(self, pet, device_writes)
         print("PROPAGATED DEVICE WRITES:", file=sys.stderr)
         print(propagated_device_writes, file=sys.stderr)
         print(file=sys.stderr)
 
-        propagated_host_writes = propagate_writes(self, pet, host_writes)
+        propagated_host_writes = host_writes  # propagate_writes(self, pet, host_writes)
         print("PROPAGATED HOST WRITES:", file=sys.stderr)
         print(propagated_host_writes, file=sys.stderr)
         print(file=sys.stderr)
@@ -235,11 +240,34 @@ class CombinedGPURegion(PatternInfo):
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
         writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
-        issued_updates = identify_updates(self, pet, writes_by_device)
+
+        # unroll function bodies to create circle-free graphs
+        unrolled_function_graphs = test_circle_free_graph(pet, add_dummy_node=False)
+        # TODO add accesses from called function to the calling CUs
+        writes_by_device = add_accesses_from_called_functions(
+            pet, writes_by_device, force_called_functions_to_host=True
+        )
+
+        # TODO extend data lifespan for each function body individually - necessary?
+        # extend_data_lifespan_within_functions(unrolled_function_graphs, writes_by_device)
+
+        # identify updates based on the circle-free graph.
+        # TODO Do not allow to find merge nodes! (can be ignored firstly)
+        # TODO parallelize on function level
+
+        # issued_updates = identify_updates(self, pet, writes_by_device)
+        issued_updates = identify_updates_in_unrolled_function_graphs(
+            self, pet, writes_by_device, unrolled_function_graphs
+        )
+
         print("ISSUED UPDATES:", file=sys.stderr)
         for update in issued_updates:
             print(update, file=sys.stderr)
         print(file=sys.stderr)
+
+        # remove dummy marks from CU ID's created during loop unrolling
+        for update in issued_updates:
+            update.remove_dummy_marks()
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
         # propagate memory region to variable name associations within function body
