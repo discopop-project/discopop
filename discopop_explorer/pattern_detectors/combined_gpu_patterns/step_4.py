@@ -548,7 +548,7 @@ def __calculate_updates(
     return identified_updates
 
 
-def test_circle_free_graph(pet: PETGraphX):
+def test_circle_free_graph(pet: PETGraphX, add_dummy_node=True):
     """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
     import networkx as nx
 
@@ -658,32 +658,45 @@ def test_circle_free_graph(pet: PETGraphX):
                 # create branch equivalent to "entering the cycle"
                 # --> create a copy of the exit node
 
-                unrolled_function_graphs[function].add_node(
-                    "dummy:" + potential_exit_node,
-                    data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"],
-                )
+                if add_dummy_node:
+                    unrolled_function_graphs[function].add_node(
+                        "dummy:" + potential_exit_node,
+                        data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"],
+                    )
 
                 # --> redirect the last edge in the cycle to cycle_successor, and insert the created copy into the path
+                buffer = set()
                 for cycle_edge in cycle_edges:
                     if cycle_edge[1] == potential_exit_node:
                         print("Redirecting: ", cycle_edge, " TO (", cycle_edge[0], ", ", end="")
                         unrolled_function_graphs[function].remove_edge(
                             cycle_edge[0], cycle_edge[1], cycle_edge[2]
                         )
-                        unrolled_function_graphs[function].add_edge(
-                            cycle_edge[0], "dummy:" + potential_exit_node, type=EdgeType.SUCCESSOR
-                        )
+                        if add_dummy_node:
+                            unrolled_function_graphs[function].add_edge(
+                                cycle_edge[0],
+                                "dummy:" + potential_exit_node,
+                                type=EdgeType.SUCCESSOR,
+                            )
+                        else:
+                            buffer.add(cycle_edge[0])
 
                 for cycle_successor in filtered_pcsn:
+                    if add_dummy_node:
+                        print("dummy:" + potential_exit_node, ",", end="")
                     print(
-                        "dummy:" + potential_exit_node,
-                        ",",
                         cycle_successor,
                         ")",
                     )
-                    unrolled_function_graphs[function].add_edge(
-                        "dummy:" + potential_exit_node, cycle_successor
-                    )
+                    if add_dummy_node:
+                        unrolled_function_graphs[function].add_edge(
+                            "dummy:" + potential_exit_node, cycle_successor
+                        )
+                    else:
+                        for buffered_node_id in buffer:
+                            unrolled_function_graphs[function].add_edge(
+                                buffered_node_id, cycle_successor, type=EdgeType.SUCCESSOR
+                            )
 
             # prepare next iteration
             try:
