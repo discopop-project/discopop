@@ -54,6 +54,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
     identify_end_of_life_points,
     add_aliases,
+    extend_region_liveness_using_unrolled_functions,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
@@ -248,14 +249,10 @@ class CombinedGPURegion(PatternInfo):
             pet, writes_by_device, force_called_functions_to_host=True
         )
 
-        # TODO extend data lifespan for each function body individually - necessary?
-        # extend_data_lifespan_within_functions(unrolled_function_graphs, writes_by_device)
-
-        # identify updates based on the circle-free graph.
-        # TODO Do not allow to find merge nodes! (can be ignored firstly)
+        # identify updates based on the circle-free graph
         # TODO parallelize on function level
 
-        # issued_updates = identify_updates(self, pet, writes_by_device)
+        # issued_updates = identify_updates(self, pet, writes_by_device)  # old code
         issued_updates = identify_updates_in_unrolled_function_graphs(
             self, pet, writes_by_device, unrolled_function_graphs
         )
@@ -287,6 +284,14 @@ class CombinedGPURegion(PatternInfo):
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### STEP 6: convert updates to entry / exit points if possible
+
+        # extend memory region liveness based on unrolled function graphs
+        extended_memory_region_liveness = extend_region_liveness_using_unrolled_functions(
+            pet, extended_memory_region_liveness, unrolled_function_graphs
+        )
+        extended_host_memory_region_liveness = extend_region_liveness_using_unrolled_functions(
+            pet, extended_host_memory_region_liveness, unrolled_function_graphs
+        )
 
         # add aliases to updates
         aliased_updates = add_aliases(
