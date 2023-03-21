@@ -10,7 +10,7 @@ import copy
 from typing import Dict, Set, Tuple, Optional, List, cast, Any
 
 import networkx as nx  # type: ignore
-from networkx import NetworkXNoCycle
+from networkx import NetworkXNoCycle, MultiDiGraph
 
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -389,6 +389,8 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
     return None
 
 
+
+
 def identify_updates(
     comb_gpu_reg,
     pet: PETGraphX,
@@ -463,6 +465,7 @@ def __calculate_updates(
     cur_node_id: NodeID,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     visited_nodes: Set[NodeID],
+    unrolled_function_graph: MultiDiGraph
 ) -> Set[Update]:
     # calculate and return updates between ctx.cu_id and its immediate successor cur_node
     identified_updates: Set[Update] = set()
@@ -477,7 +480,9 @@ def __calculate_updates(
         identified_updates.update(required_updates)
 
         # calculate successors of current node
-        successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        #successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        successors = [t for s,t,d in unrolled_function_graph.out_edges(cur_node_id, data="data")]
+
 
         if len(successors) == 0:
             end_reached = True
@@ -495,15 +500,20 @@ def __calculate_updates(
             # multiple successors exist
 
             # determine merge node if existing
-            print("SUCCESSORS: ", successors)
-            merge_node = __identify_merge_node(pet, successors)
-            print("MERGE NODE: ", merge_node)
+            if False:
+                # Disabled merge node calculation, since new graph structures are free of cycles!
+                # Keep the old code for now.
+                print("SUCCESSORS: ", successors)
+                merge_node = __identify_merge_node(pet, successors)
+                print("MERGE NODE: ", merge_node)
 
-            # if merge node exists, skip branched section and treat it as a single node
-            if merge_node is not None:
-                cur_node_id = merge_node
-                print("PROCEED TO MERGE NODE ", cur_node_id, file=sys.stderr)
-                continue
+                # if merge node exists, skip branched section and treat it as a single node
+                if merge_node is not None:
+                    cur_node_id = merge_node
+                    print("PROCEED TO MERGE NODE ", cur_node_id, file=sys.stderr)
+                    continue
+            else:
+                merge_node = None
 
             # if no merge node exists, start recursion calculation of updates for each branch
             if merge_node is None:
@@ -526,6 +536,7 @@ def __calculate_updates(
                             successor,
                             writes_by_device,
                             tmp_visited_set,
+                            unrolled_function_graph
                         )
                     )
                 return identified_updates
@@ -703,3 +714,58 @@ def add_accesses_from_called_functions(pet: PETGraphX, writes_by_device:  Dict[i
                         values_propagated = (values_propagated or True) if len_pre < len_post else (values_propagated or False)
     print("cycles: ", cycles)
     return writes_by_device
+
+
+def identify_updates_in_unrolled_function_graphs(
+    comb_gpu_reg,
+    pet: PETGraphX,
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],
+) -> Set[Update]:
+    identified_updates: Set[Update] = set()
+    # get parent functions
+    parent_functions: Set[NodeID] = set()
+    for region in comb_gpu_reg.contained_regions:
+        parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+
+    for parent_function_id in parent_functions:
+
+        print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
+        # determine entry points
+        entry_points: List[NodeID] = []
+        for function_child_id in [
+            t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)
+        ]:
+            in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
+            if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
+                entry_points.append(cast(NodeID, function_child_id))
+
+        for entry_point in entry_points:
+            print(
+                "\tEntry point: ",
+                entry_point,
+                "@L.",
+                pet.node_at(entry_point).start_line,
+                file=sys.stderr,
+            )
+
+            # create a new context
+            # todo add contexts support for multiple devices
+            device_id = get_device_id(comb_gpu_reg, entry_point)
+            context = Context(entry_point, device_id)
+
+            try:
+                entry_point_writes = writes_by_device[device_id][entry_point]
+            except KeyError:
+                entry_point_writes = dict()
+
+            context.update_writes(device_id, entry_point_writes, entry_point)
+
+            # start calculation of updates for entry_point
+            identified_updates.update(
+                __calculate_updates(
+                    pet, comb_gpu_reg, context, entry_point, writes_by_device, set(), unrolled_function_graphs[pet.node_at(parent_function_id)]
+                )
+            )
+
+    return identified_updates
