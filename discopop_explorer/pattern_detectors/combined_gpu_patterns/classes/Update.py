@@ -226,3 +226,9 @@ class Update(object):
                 )
             else:
                 self.variable_names.add(VarName("UNDETERMINED(" + mem_reg + ")"))
+
+    def remove_dummy_marks(self):
+        if self.sink_cu_id.startswith("dummy:"):
+            self.sink_cu_id = NodeID(self.sink_cu_id[6:])
+        if self.synchronous_source_cu_id.startswith("dummy:"):
+            self.synchronous_source_cu_id = NodeID(self.synchronous_source_cu_id[6:])

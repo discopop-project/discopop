@@ -389,12 +389,11 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
     return None
 
 
-
-
 def identify_updates(
     comb_gpu_reg,
     pet: PETGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    unrolled_function_graph: MultiDiGraph,
 ) -> Set[Update]:
     identified_updates: Set[Update] = set()
     # get parent functions
@@ -438,7 +437,13 @@ def identify_updates(
             # start calculation of updates for entry_point
             identified_updates.update(
                 __calculate_updates(
-                    pet, comb_gpu_reg, context, entry_point, writes_by_device, set()
+                    pet,
+                    comb_gpu_reg,
+                    context,
+                    entry_point,
+                    writes_by_device,
+                    set(),
+                    unrolled_function_graph,
                 )
             )
 
@@ -465,7 +470,7 @@ def __calculate_updates(
     cur_node_id: NodeID,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     visited_nodes: Set[NodeID],
-    unrolled_function_graph: MultiDiGraph
+    unrolled_function_graph: MultiDiGraph,
 ) -> Set[Update]:
     # calculate and return updates between ctx.cu_id and its immediate successor cur_node
     identified_updates: Set[Update] = set()
@@ -480,9 +485,8 @@ def __calculate_updates(
         identified_updates.update(required_updates)
 
         # calculate successors of current node
-        #successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
-        successors = [t for s,t,d in unrolled_function_graph.out_edges(cur_node_id, data="data")]
-
+        # successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        successors = [t for s, t, d in unrolled_function_graph.out_edges(cur_node_id, data="data")]
 
         if len(successors) == 0:
             end_reached = True
@@ -536,7 +540,7 @@ def __calculate_updates(
                             successor,
                             writes_by_device,
                             tmp_visited_set,
-                            unrolled_function_graph
+                            unrolled_function_graph,
                         )
                     )
                 return identified_updates
@@ -603,32 +607,44 @@ def test_circle_free_graph(pet: PETGraphX):
                     entry_nodes.add(node_id)
 
             # ==> Identify cycle exits
-            for potential_exit_node in set([s for s , t, d in cycle_edges] + [t for s, t, d in cycle_edges]):
+            for potential_exit_node in set(
+                [s for s, t, d in cycle_edges] + [t for s, t, d in cycle_edges]
+            ):
                 print("cyc: ", cycle_nodes)
                 print("exit: ", potential_exit_node)
-                potential_cycle_successor_nodes = [t for s,t,d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR) if t not in cycle_nodes]
+                potential_cycle_successor_nodes = [
+                    t
+                    for s, t, d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR)
+                    if t not in cycle_nodes
+                ]
                 print("POT: ", potential_cycle_successor_nodes)
 
-
                 # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node, except for functions
-                pen_parents = [s for s, t, d in pet.in_edges(potential_exit_node, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode]
+                pen_parents = [
+                    s
+                    for s, t, d in pet.in_edges(potential_exit_node, EdgeType.CHILD)
+                    if type(pet.node_at(s)) != FunctionNode
+                ]
                 filtered_pcsn = []
                 for pcsn in potential_cycle_successor_nodes:
-                    pcsn_parents = [s for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode]
+                    pcsn_parents = [
+                        s
+                        for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD)
+                        if type(pet.node_at(s)) != FunctionNode
+                    ]
                     if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
                         # no shared parents
                         filtered_pcsn.append(pcsn)
                     # second chance: add pcsn, if it has a successor outside the given parent
                     for successor in pet.direct_successors(pet.node_at(pcsn)):
                         valid = True
-                        for parent in [s for s, t,d in pet.in_edges(successor.id)]:
+                        for parent in [s for s, t, d in pet.in_edges(successor.id)]:
                             if parent in pcsn_parents:
                                 valid = False
                                 break
                         if valid:
                             filtered_pcsn.append(pcsn)
                             break
-
 
                 if len(filtered_pcsn) == 0:
                     # not a valid exit node, skip it
@@ -642,7 +658,10 @@ def test_circle_free_graph(pet: PETGraphX):
                 # create branch equivalent to "entering the cycle"
                 # --> create a copy of the exit node
 
-                unrolled_function_graphs[function].add_node("dummy:" + potential_exit_node, data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"])
+                unrolled_function_graphs[function].add_node(
+                    "dummy:" + potential_exit_node,
+                    data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"],
+                )
 
                 # --> redirect the last edge in the cycle to cycle_successor, and insert the created copy into the path
                 for cycle_edge in cycle_edges:
@@ -651,7 +670,9 @@ def test_circle_free_graph(pet: PETGraphX):
                         unrolled_function_graphs[function].remove_edge(
                             cycle_edge[0], cycle_edge[1], cycle_edge[2]
                         )
-                        unrolled_function_graphs[function].add_edge(cycle_edge[0], "dummy:" + potential_exit_node, type=EdgeType.SUCCESSOR)
+                        unrolled_function_graphs[function].add_edge(
+                            cycle_edge[0], "dummy:" + potential_exit_node, type=EdgeType.SUCCESSOR
+                        )
 
                 for cycle_successor in filtered_pcsn:
                     print(
@@ -660,7 +681,9 @@ def test_circle_free_graph(pet: PETGraphX):
                         cycle_successor,
                         ")",
                     )
-                    unrolled_function_graphs[function].add_edge("dummy:" + potential_exit_node, cycle_successor)
+                    unrolled_function_graphs[function].add_edge(
+                        "dummy:" + potential_exit_node, cycle_successor
+                    )
 
             # prepare next iteration
             try:
@@ -674,7 +697,11 @@ def test_circle_free_graph(pet: PETGraphX):
     return unrolled_function_graphs
 
 
-def add_accesses_from_called_functions(pet: PETGraphX, writes_by_device:  Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]], force_called_functions_to_host: bool = False) ->  Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]:
+def add_accesses_from_called_functions(
+    pet: PETGraphX,
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    force_called_functions_to_host: bool = False,
+) -> Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]:
     """Gather written and read memory regions on a function level.
     Add the gathered information to calling CU nodes."""
     values_propagated = True
@@ -709,9 +736,15 @@ def add_accesses_from_called_functions(pet: PETGraphX, writes_by_device:  Dict[i
                         if mem_reg not in writes_by_device[device_id][calling_cu_id]:
                             writes_by_device[device_id][calling_cu_id][mem_reg] = set()
                         len_pre = len(writes_by_device[device_id][calling_cu_id][mem_reg])
-                        writes_by_device[device_id][calling_cu_id][mem_reg].update(memory_accesses[device_id][mem_reg])
+                        writes_by_device[device_id][calling_cu_id][mem_reg].update(
+                            memory_accesses[device_id][mem_reg]
+                        )
                         len_post = len(writes_by_device[device_id][calling_cu_id][mem_reg])
-                        values_propagated = (values_propagated or True) if len_pre < len_post else (values_propagated or False)
+                        values_propagated = (
+                            (values_propagated or True)
+                            if len_pre < len_post
+                            else (values_propagated or False)
+                        )
     print("cycles: ", cycles)
     return writes_by_device
 
@@ -764,7 +797,13 @@ def identify_updates_in_unrolled_function_graphs(
             # start calculation of updates for entry_point
             identified_updates.update(
                 __calculate_updates(
-                    pet, comb_gpu_reg, context, entry_point, writes_by_device, set(), unrolled_function_graphs[pet.node_at(parent_function_id)]
+                    pet,
+                    comb_gpu_reg,
+                    context,
+                    entry_point,
+                    writes_by_device,
+                    set(),
+                    unrolled_function_graphs[cast(FunctionNode, pet.node_at(parent_function_id))],
                 )
             )
 
