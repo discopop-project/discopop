@@ -519,6 +519,7 @@ class PETGraphX(object):
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
+
         print("\tAdded nodes...")
 
         for node_id, node in cu_dict.items():
@@ -527,7 +528,9 @@ class PETGraphX(object):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
                         print(f"WARNING: no successor node {successor} found")
-                    g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+                    # do not allow "self-successor" edges (incorrect, but not critical. might occur in Data.xml)
+                    if source != successor:
+                        g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
             if "callsNode" in dir(node) and "nodeCalled" in dir(node.callsNode):
                 for nodeCalled in [n.text for n in node.callsNode.nodeCalled]:

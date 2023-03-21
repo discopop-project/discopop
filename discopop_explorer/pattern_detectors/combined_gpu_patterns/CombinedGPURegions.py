@@ -44,7 +44,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     cleanup_writes,
     group_writes_by_cu,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
+    identify_updates,
+    test_circle_free_graph,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
     identify_end_of_life_points,
@@ -205,12 +208,12 @@ class CombinedGPURegion(PatternInfo):
         )
 
         # propagate writes to parents, successors and the children of successors
-        propagated_device_writes = device_writes # propagate_writes(self, pet, device_writes)
+        propagated_device_writes = device_writes  # propagate_writes(self, pet, device_writes)
         print("PROPAGATED DEVICE WRITES:", file=sys.stderr)
         print(propagated_device_writes, file=sys.stderr)
         print(file=sys.stderr)
 
-        propagated_host_writes = host_writes # propagate_writes(self, pet, host_writes)
+        propagated_host_writes = host_writes  # propagate_writes(self, pet, host_writes)
         print("PROPAGATED HOST WRITES:", file=sys.stderr)
         print(propagated_host_writes, file=sys.stderr)
         print(file=sys.stderr)
@@ -234,11 +237,15 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
+        unrolled_function_graphs = test_circle_free_graph(pet)
+
         # TODO unroll function bodies to create circle-free graphs
+        # TODO add accesses from called function to the calling CU
         # TODO extend data livespan for each function body individually
 
         # identify updates based on the circle-free graph.
         # TODO Do not allow to find merge nodes! (can be ignored firstly)
+        # TODO parallelize on function level
         writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
         issued_updates = identify_updates(self, pet, writes_by_device)
         print("ISSUED UPDATES:", file=sys.stderr)

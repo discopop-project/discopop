@@ -7,9 +7,10 @@
 # directory for details.
 
 import copy
-from typing import Dict, Set, Tuple, Optional, List, cast
+from typing import Dict, Set, Tuple, Optional, List, cast, Any
 
 import networkx as nx  # type: ignore
+from networkx import NetworkXNoCycle
 
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -530,3 +531,135 @@ def __calculate_updates(
                 return identified_updates
 
     return identified_updates
+
+
+def test_circle_free_graph(pet: PETGraphX):
+    import networkx as nx
+
+    unrolled_function_graphs: Dict[FunctionNode, nx.MultiDiGraph] = dict()
+
+    # initialize the function graphs
+    for function in pet.all_nodes(type=FunctionNode):
+        # get subgraph for function
+        function_subgraph = pet.g.subgraph(function.children_cu_ids).copy()
+        # remove all but successor edges
+        to_be_removed = set()
+        for edge in function_subgraph.edges:
+            edge_data = cast(Dependency, function_subgraph.edges[edge]["data"])
+            if edge_data.etype != EdgeType.SUCCESSOR:
+                to_be_removed.add(edge)
+        for edge in to_be_removed:
+            function_subgraph.remove_edge(edge[0], edge[1])
+        # store function subgraph
+        unrolled_function_graphs[function] = function_subgraph
+
+    # UNROLLING ALGORITHM:
+    # for function:
+    # while cycle in function_graph:
+    # unroll found cycle
+    # ==> Identify cycle entries
+    # ==> Identify cycle exits
+    # create branch equivalent to "not entering the cycle"
+    # create branch equivalent to "entering the cycle"
+    # TODO insert a second iteration of the cycle
+
+
+    # unroll each function separately
+    for function in unrolled_function_graphs:
+        print("UNROLLING FUNCTION: ", function.name)
+        try:
+            cycle_edges = nx.find_cycle(unrolled_function_graphs[function])
+            print("\tCycle: ", cycle_edges)
+        except NetworkXNoCycle:
+            print("\tNo cycle found.")
+            continue
+        # while cycle in graph:
+        while len(cycle_edges) > 0:
+            cycle_nodes: Set[NodeID] = set()
+            for s, t, d in cycle_edges:
+                cycle_nodes.add(s)
+                cycle_nodes.add(t)
+            # unroll cycle
+            # ==> Identify cycle entries
+            entry_nodes: Set[NodeID] = set()
+            for node_id, _, _ in cycle_edges:
+                predecessors = [s for s, t, d in pet.in_edges(node_id, EdgeType.SUCCESSOR)]
+                if len(predecessors) == 0:
+                    entry_nodes.add(node_id)
+                    continue
+                predecessors = [s for s in predecessors if s not in cycle_nodes]
+                if len(predecessors) > 0:
+                    entry_nodes.add(node_id)
+
+            # ==> Identify cycle exits
+            for potential_exit_node in set([s for s , t, d in cycle_edges] + [t for s, t, d in cycle_edges]):
+                print("cyc: ", cycle_nodes)
+                print("exit: ", potential_exit_node)
+                potential_cycle_successor_nodes = [t for s,t,d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR) if t not in cycle_nodes]
+                print("POT: ", potential_cycle_successor_nodes)
+
+
+                # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node, except for functions
+                pen_parents = [s for s, t, d in pet.in_edges(potential_exit_node, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode]
+                filtered_pcsn = []
+                for pcsn in potential_cycle_successor_nodes:
+                    pcsn_parents = [s for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode]
+                    if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
+                        # no shared parents
+                        filtered_pcsn.append(pcsn)
+                    # second chance: add pcsn, if it has a successor outside the given parent
+                    for successor in pet.direct_successors(pet.node_at(pcsn)):
+                        valid = True
+                        for parent in [s for s, t,d in pet.in_edges(successor.id)]:
+                            if parent in pcsn_parents:
+                                valid = False
+                                break
+                        if valid:
+                            filtered_pcsn.append(pcsn)
+                            break
+
+
+                if len(filtered_pcsn) == 0:
+                    # not a valid exit node, skip it
+                    continue
+
+                print("EXITS: ", filtered_pcsn)
+
+                # create branch equivalent to "not entering the cycle"
+                # --> nothing to be done, already represented by the edge "potential_exit_node --> cycle_successor"
+
+                # create branch equivalent to "entering the cycle"
+                # --> create a copy of the exit node
+
+                unrolled_function_graphs[function].add_node("dummy:" + potential_exit_node, data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"])
+
+                # --> redirect the last edge in the cycle to cycle_successor, and insert the created copy into the path
+                for cycle_edge in cycle_edges:
+                    if cycle_edge[1] == potential_exit_node:
+                        print("Redirecting: ", cycle_edge, " TO (", cycle_edge[0], ", ", end="")
+                        unrolled_function_graphs[function].remove_edge(
+                            cycle_edge[0], cycle_edge[1], cycle_edge[2]
+                        )
+                        unrolled_function_graphs[function].add_edge(cycle_edge[0], "dummy:" + potential_exit_node, type=EdgeType.SUCCESSOR)
+
+                for cycle_successor in filtered_pcsn:
+                    print(
+                        "dummy:" + potential_exit_node,
+                        ",",
+                        cycle_successor,
+                        ")",
+                    )
+                    unrolled_function_graphs[function].add_edge("dummy:" + potential_exit_node, cycle_successor)
+
+            # prepare next iteration
+            try:
+                cycle_edges = nx.find_cycle(unrolled_function_graphs[function])
+                print("\tCycle: ", cycle_edges)
+            except NetworkXNoCycle:
+                print("\tNo cycle found.")
+                # break the unrolling loop
+                cycle_edges = []
+
+    import sys
+
+    sys.exit(0)
