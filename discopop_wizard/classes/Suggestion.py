@@ -7,6 +7,7 @@
 # directory for details.
 
 import os
+import sys
 
 import tkinter as tk
 from enum import IntEnum
@@ -74,7 +75,10 @@ class Suggestion(UnpackedSuggestion):
             successful = code_preview.add_pragma(file_mapping, pragma, [])
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
-                code_preview.add_pragma(file_mapping, pragma, [], add_as_comment=True)
+                # print error codes
+                self.wizard.console.print(code_preview.compile_result_buffer)
+                code_preview.add_pragma(file_mapping, pragma, [], add_as_comment=True, skip_compilation_check=True)
+
 
         # show CodePreview
         code_preview.show_in(source_code)

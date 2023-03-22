@@ -8,6 +8,7 @@
 
 import copy
 import os
+import subprocess
 import sys
 from typing import List, Dict, Sequence, Any
 
@@ -22,6 +23,7 @@ class ContentBuffer(object):
     file_id: int
     next_free_region_id = 0
     line_type: Any
+    compile_result_buffer: str
 
     def __init__(self, file_id: int, source_code_path: str, tab_width: int = 4, line_type=Line):
         self.line_type = line_type
@@ -36,6 +38,7 @@ class ContentBuffer(object):
                 self.max_line_num = idx
                 line_obj = self.line_type(idx, line_num=idx, content=line)
                 self.lines.append(line_obj)
+        self.compile_result_buffer = ""
 
     def print_lines(self):
         for line in self.lines:
@@ -163,7 +166,9 @@ class ContentBuffer(object):
             f.write(self.get_modified_source_code())
             f.flush()
             f.close()
-        compilation_successful = True if os.system(compiler + " -c -fopenmp " + tmp_file_name) == 0 else False
+        result = subprocess.run([compiler, "-c", "-fopenmp", tmp_file_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        compilation_successful = True if result.returncode == 0 else False
+
         os.remove(tmp_file_name)
 
         # if not, reset ContentBuffer to the backup and return False
@@ -173,5 +178,8 @@ class ContentBuffer(object):
             self.next_free_region_id = backup_next_free_region_id
             self.file_id = backup_file_id
             self.max_line_num = backup_max_line_num
+            self.compile_result_buffer += result.stdout.decode('utf-8') + "\n"
+            self.compile_result_buffer += result.stderr.decode("utf-8") + "\n"
+            self.compile_result_buffer += "==> Skipped pragma insertion due to potential compilation errors!\n"
             return False
         return True
