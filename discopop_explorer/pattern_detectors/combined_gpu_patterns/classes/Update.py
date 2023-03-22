@@ -186,12 +186,29 @@ class Update(object):
                 (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
 
+        # determine update position in code
+        # todo consider asynchronous updates
+        if self.update_type == UpdateType.FROM_DEVICE:
+            # data required by host. Perform update before the sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.TO_DEVICE:
+            # data required by device. Perform update before the sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.TO_FROM_DEVICE:
+            # synchronize inbetween source and sink -> before the start of sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.ALLOCATE:
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        else:
+            # updating inbetween both CUs should be a safe fallback
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
             ",".join(modified_var_names),
-            pet.node_at(self.synchronous_source_cu_id).end_position(),
+            update_position,
         ]
 
     def get_as_metadata_using_variable_names_and_memory_regions(

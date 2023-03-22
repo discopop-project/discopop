@@ -194,7 +194,7 @@ class UnpackedSuggestion(object):
             else:
                 raise ValueError("Unsupported update type: ", update_type)
             pragma.pragma_str += target_var + ") "
-            pragma.pragma_str += "@ " + source_cu_id + " -> " + sink_cu_id + " "
+            pragma.pragma_str += " // @CU " + source_cu_id + " -> " + sink_cu_id + " "
             pragma_line_num = int(pragma_line.split(":")[1])
             pragma.start_line = pragma_line_num
             pragma.end_line = pragma_line_num
@@ -290,6 +290,9 @@ class UnpackedSuggestion(object):
         # add dependencies
         pragmas += self.__get_data_region_dependencies(self.values["data_region_depend_in"], self.values["data_region_depend_out"])
 
+        # add update instructions to pragmas
+        pragmas += self.__get_update_pragmas(self.values["update_instructions"])
+
         # add gpu loops
         for region in self.values["contained_regions"]:
             pragmas += self.__get_simple_gpu_pragmas(region["start_line"], region["end_line"],
@@ -298,8 +301,7 @@ class UnpackedSuggestion(object):
                                                      region["map_to_from_vars"],
                                                      region["map_alloc_vars"], region["map_delete_vars"],
                                                      region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=True)
-        # add update instructions to pragmas
-        pragmas += self.__get_update_pragmas(self.values["update_instructions"])
+
 
         return pragmas
 
