@@ -72,7 +72,7 @@ class Suggestion(UnpackedSuggestion):
         # get and insert pragmas
         pragmas = self.get_pragmas()
         for pragma in pragmas:
-            successful = code_preview.add_pragma(file_mapping, pragma, [])
+            successful = code_preview.add_pragma(file_mapping, pragma, [], skip_compilation_check=True if self.wizard.settings.code_preview_disable_compile_check == 1 else False)
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
                 # print error codes

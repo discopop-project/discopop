@@ -63,6 +63,10 @@ class MainScreen(object):
                                           variable=wizard.tk_var_storage.toggle_var_code_preview_show_metadata_live_device_variables,
                                           onvalue=1, offvalue=0,
                                           command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
+        code_preview_menu.add_checkbutton(label="Disable compile validation of inserted pragmas",
+                                          variable=wizard.tk_var_storage.toggle_var_code_preview_disable_compile_check,
+                                          onvalue=1, offvalue=0,
+                                          command=lambda: wizard.tk_var_storage.toggle_code_preview_setting_action())
 
 
     def build_configurations_frame(self, wizard):
