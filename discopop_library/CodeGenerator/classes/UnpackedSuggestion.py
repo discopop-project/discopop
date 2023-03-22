@@ -132,9 +132,17 @@ class UnpackedSuggestion(object):
             loop_pragma.file_id = int(loop_start.split(":")[0])
             for construct in loop["constructs"]:
                 construct_start = construct["line"]
+                mark_invalid = False
+                if ":" not in construct_start:
+                    # invalid construct, line has no position
+                    mark_invalid = True
+                    construct_start = loop_start
                 construct_start_line = int(construct_start.split(":")[1])
                 child_pragma = Pragma()
-                child_pragma.pragma_str = construct["name"] + " "
+                if mark_invalid:
+                    child_pragma.pragma_str = "// INVALID - MISSING POSITION:: " + construct["name"] + " "
+                else:
+                    child_pragma.pragma_str = construct["name"] + " "
                 if loop["collapse"] > 1:
                     child_pragma.pragma_str += "collapse(" + str(loop["collapse"]) + ") "
                 for clause in construct["clauses"]:
