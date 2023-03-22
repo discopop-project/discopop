@@ -525,13 +525,13 @@ for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB)
             {
 
                 if (isa<ReturnInst>(I)){
-                  try{
+                  //try{
                     IRBuilder<> builder(&*BB->rbegin());
                     builder.CreateCall(printFunc);
-                  }
-                  catch(std::exception &e){
-                    errs() << e.what() << "\n" ;
-                  }
+                  //}
+                  //catch(std::exception &e){
+                  //  errs() << e.what() << "\n" ;
+                  //}
                
                 }
             }
