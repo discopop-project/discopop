@@ -102,6 +102,46 @@ class Update(object):
         )
         return result_str
 
+    def __eq__(self, other):
+        if (
+            self.synchronous_source_cu_id,
+            self.asynchronous_source_cu_id,
+            self.sink_cu_id,
+            tuple(self.memory_regions),
+            tuple(self.variable_names),
+            self.update_type,
+            tuple(self.last_write_locations.items()),
+            self.asynchronous_possible,
+            tuple(self.dependencies),
+        ) == (
+            other.synchronous_source_cu_id,
+            other.asynchronous_source_cu_id,
+            other.sink_cu_id,
+            tuple(other.memory_regions),
+            tuple(other.variable_names),
+            other.update_type,
+            tuple(other.last_write_locations.items()),
+            other.asynchronous_possible,
+            tuple(other.dependencies),
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(
+            (
+                self.synchronous_source_cu_id,
+                self.asynchronous_source_cu_id,
+                self.sink_cu_id,
+                tuple(self.memory_regions),
+                tuple(self.variable_names),
+                self.update_type,
+                tuple(self.last_write_locations.items()),
+                self.asynchronous_possible,
+                tuple(self.dependencies),
+            )
+        )
+
     def get_as_metadata_using_memory_regions(self, pet: PETGraphX):
         return [
             self.synchronous_source_cu_id,

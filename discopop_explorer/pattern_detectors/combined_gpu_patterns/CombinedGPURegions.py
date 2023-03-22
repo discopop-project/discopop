@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os.path
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Type
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -55,6 +55,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     identify_end_of_life_points,
     add_aliases,
     extend_region_liveness_using_unrolled_functions,
+    remove_duplicates,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
@@ -318,6 +319,11 @@ class CombinedGPURegion(PatternInfo):
                 memory_regions_to_functions_and_variables,
             )
         )
+
+        # remove duplicates
+        updates = remove_duplicates(updates)
+        entry_points = remove_duplicates(entry_points)
+        exit_points = remove_duplicates(exit_points)
 
         # ### PREPARE METADATA
         # prepare device liveness

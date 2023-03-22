@@ -7,7 +7,8 @@
 # directory for details.
 import copy
 import sys
-from typing import Set, Tuple, Dict, List, cast, Optional
+import typing
+from typing import Set, Tuple, Dict, List, cast, Optional, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
@@ -364,3 +365,22 @@ def extend_region_liveness_using_unrolled_functions(
                     queue.append((successor, current_mem_reg, copy.deepcopy(visited_nodes)))
 
     return liveness
+
+
+def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]):
+    to_be_removed = []
+    for element_1 in target_set:
+        for element_2 in target_set:
+            print("id1: ", id(element_1))
+            print("id2: ", id(element_2))
+            if element_1 is element_2:
+                continue
+            if element_1 == element_2:
+                to_be_removed.append(element_2)
+
+    for element in to_be_removed:
+        if element in target_set:
+            print("REMOVED: ", element)
+            target_set.remove(element)  # type: ignore
+
+    return target_set
