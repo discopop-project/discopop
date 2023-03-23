@@ -4,6 +4,10 @@ project(HotspotDetection)
 # support C++14 features used by LLVM 10.0.0
 set(CMAKE_CXX_STANDARD 14)
 
+if (POLICY CMP0077)
+	cmake_policy(SET CMP0077 NEW)
+endif()
+
 if(NOT ${LLVM_DIST_PATH} STREQUAL "")
     # manually specify path to LLVM installation, used for builds from source
     if(NOT EXISTS ${LLVM_DIST_PATH})
