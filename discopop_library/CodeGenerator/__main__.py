@@ -16,7 +16,7 @@ OPTIONAL ARGUMENTS:
     --json=<file>               Json output of the DiscoPoP Explorer
     --outputdir=<path>          Directory for the modified source files
     --patterns=<str>            Comma-separated list of pattern types to be applied
-                                Possible values: reduction, do_all
+                                Possible values: reduction, do_all, simple_gpu, combined_gpu
     --skip-compilation-check    Do not validate the inserted patterns by compiling the resulting source code.
     -h --help                   Show this screen
 """
@@ -68,6 +68,10 @@ def main():
     outputdir = arguments["--outputdir"]
     relevant_patterns: List[str] = [] if arguments["--patterns"] == "None" else (
         arguments["--patterns"].split(",") if "," in arguments["--patterns"] else arguments["--patterns"])
+    # validate patterns
+    for pattern in relevant_patterns:
+        if pattern not in ["reduction", "do_all", "simple_gpu", "combined_gpu"]:
+            raise ValueError("Unsupported pattern name: ", pattern, " given in '--patterns' argument!")
 
     for file in [file_mapping_file, json_file]:
         if not os.path.isfile(file):
