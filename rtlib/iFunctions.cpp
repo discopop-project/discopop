@@ -486,9 +486,7 @@ namespace __dp {
 
             if (chunks[id].size()) {
                 // take a chunk of memory accesses from the queue
-                AccessInfo *accesses = new AccessInfo();
-                accesses = NULL;
-                accesses = chunks[id].front();
+                AccessInfo *accesses = chunks[id].front();
                 chunks[id].pop();
 
                 // unlock the mutex so that the master thread can add more chunks
