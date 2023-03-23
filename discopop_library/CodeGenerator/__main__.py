@@ -9,7 +9,7 @@
 """Discopop Code Generator
 
 Usage:
-    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>]
+    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>] [--skip-compilation-check]
 
 OPTIONAL ARGUMENTS:
     --fmap=<file>               File mapping
@@ -17,6 +17,7 @@ OPTIONAL ARGUMENTS:
     --outputdir=<path>          Directory for the modified source files
     --patterns=<str>            Comma-separated list of pattern types to be applied
                                 Possible values: reduction, do_all
+    --skip-compilation-check    Do not validate the inserted patterns by compiling the resulting source code.
     -h --help                   Show this screen
 """
 import os
@@ -36,6 +37,7 @@ docopt_schema = Schema(
         "--json": Use(str),
         "--patterns": Use(str),
         "--outputdir": Use(str),
+        "--skip-compilation-check": Use(str)
     }
 )
 
@@ -77,7 +79,7 @@ def main():
 
     identified_patterns = read_patterns_from_json_to_json(json_file, relevant_patterns)
 
-    modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns)
+    modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns,  skip_compilation_check = arguments["--skip-compilation-check"])
 
     modified_code_by_new_location: Dict[str, str] = dict()
     for file_id in modified_code:

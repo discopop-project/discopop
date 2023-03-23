@@ -16,7 +16,7 @@ from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSu
 
 
 def from_pattern_info(
-    file_mapping: Dict[int, str], patterns_by_type: Dict[str, List[PatternInfo]]
+    file_mapping: Dict[int, str], patterns_by_type: Dict[str, List[PatternInfo]], skip_compilation_check: bool = False
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -28,11 +28,11 @@ def from_pattern_info(
     for type_str in patterns_by_type:
         for pattern in patterns_by_type[type_str]:
             pattern_json_strings_by_type[type_str] = pattern.to_json()
-    return from_json_strings(file_mapping, pattern_json_strings_by_type)
+    return from_json_strings(file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check)
 
 
 def from_json_strings(
-    file_mapping: Dict[int, str], pattern_json_strings_by_type: Dict[str, List[str]]
+    file_mapping: Dict[int, str], pattern_json_strings_by_type: Dict[str, List[str]], skip_compilation_check: bool = False
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -58,7 +58,7 @@ def from_json_strings(
         pragmas = suggestion.get_pragmas()
         # add pragmas to the ContentBuffer object which corresponds to the fileId specified in UnpackedSuggestions
         for pragma in pragmas:
-            successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [])
+            successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [], skip_compilation_check=skip_compilation_check)
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
                 file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [], add_as_comment=True)
