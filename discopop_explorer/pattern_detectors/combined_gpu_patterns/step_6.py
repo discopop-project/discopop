@@ -371,8 +371,6 @@ def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPo
     to_be_removed = []
     for element_1 in target_set:
         for element_2 in target_set:
-            print("id1: ", id(element_1))
-            print("id2: ", id(element_2))
             if element_1 is element_2:
                 continue
             if element_1 == element_2:
@@ -380,7 +378,6 @@ def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPo
 
     for element in to_be_removed:
         if element in target_set:
-            print("REMOVED: ", element)
             target_set.remove(element)  # type: ignore
 
     return target_set
