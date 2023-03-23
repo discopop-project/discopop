@@ -59,6 +59,7 @@ class ExecutionView(object):
         command += "--executable-arguments \"" + self.execution_configuration.value_dict["executable_arguments"] + "\" "
         command += "--make-flags \"" + self.execution_configuration.value_dict["make_flags"] + "\" "
         command += "--make-target \"" + self.execution_configuration.value_dict["make_target"] + "\" "
+        command += "--memory-profiling-skip-function-arguments " if self.execution_configuration.value_dict["memory_profiling_skip_function_parameters"] == 1 else ""
         command += "--explorer-flags \"" + self.execution_configuration.value_dict["explorer_flags"] + "\" "
 
         return command
