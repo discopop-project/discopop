@@ -582,7 +582,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         cu->instructionsLineNumbers.erase(lid);
                         cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty()) {
-                            cu->removeCU();
+                            //cu->removeCU();
                             cu->startLine = -1;
                             cu->endLine = -1;
                         } else {
@@ -649,7 +649,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             }
         }
         if (cu->instructionsLineNumbers.empty()) {
-            cu->removeCU();
+            //cu->removeCU();
             cu->startLine = -1;
             cu->endLine = -1;
         } else {
