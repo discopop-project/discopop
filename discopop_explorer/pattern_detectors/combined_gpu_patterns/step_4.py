@@ -589,6 +589,7 @@ def test_circle_free_graph(pet: PETGraphX, add_dummy_node=True):
             print("\tNo cycle found.")
             continue
         # while cycle in graph:
+        exit_node_buffer = []
         while len(cycle_edges) > 0:
             cycle_nodes: Set[NodeID] = set()
             for s, t, d in cycle_edges:
@@ -646,9 +647,17 @@ def test_circle_free_graph(pet: PETGraphX, add_dummy_node=True):
                             filtered_pcsn.append(pcsn)
                             break
 
+                # prevent endless cycling
+                if potential_exit_node in exit_node_buffer:
+                    filtered_pcsn = potential_cycle_successor_nodes
+
                 if len(filtered_pcsn) == 0:
-                    # not a valid exit node, skip it
+                    # not a valid exit node, add to buffer and skip it
+                    exit_node_buffer.append(potential_exit_node)
                     continue
+
+                # reset buffer, since action will be performed
+                exit_node_buffer = []
 
                 print("EXITS: ", filtered_pcsn)
 
