@@ -3262,7 +3262,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
     args.push_back(ConstantInt::get(Int32, lid));
 
 
-    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
 
     args.push_back(startAddr);
 
