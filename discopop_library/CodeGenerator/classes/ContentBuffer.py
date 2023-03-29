@@ -10,7 +10,7 @@ import copy
 import os
 import subprocess
 import sys
-from typing import List, Dict, Sequence, Any, Optional
+from typing import List, Dict, Sequence, Any, Optional, re
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
@@ -172,7 +172,8 @@ class ContentBuffer(object):
         else:
             saved_dir = os.getcwd()
             # prepare environment variables if requested
-            splitted_compile_check_command = compile_check_command.split(" ")
+            pattern = re.compile(r'''((?:[^\s\"\']|\"[^\"]*\"|'[^']*')+)''')
+            splitted_compile_check_command = pattern.split(compile_check_command)[1::2]  # compile_check_command.split(" ")
             to_be_removed = []
             for idx, elem in enumerate(splitted_compile_check_command):
                 if "=" in elem and not elem.startswith("-"):
