@@ -175,12 +175,13 @@ class ContentBuffer(object):
             # prepare environment variables if requested
             pattern = re.compile(r'''((?:[^\s\"\']|\"[^\"]*\"|'[^']*')+)''')
             splitted_compile_check_command = pattern.split(compile_check_command)[1::2]  # compile_check_command.split(" ")
+            print("SPLITTED: ", splitted_compile_check_command)
             to_be_removed = []
             for idx, elem in enumerate(splitted_compile_check_command):
                 if "=" in elem and not elem.startswith("-"):
                     # set environment variable
-                    var_name = elem.split("=")[0]
-                    var_value = elem.split("=")[1]
+                    var_name = elem[:elem.index("=")]
+                    var_value = elem[elem.index("=")+1:]
                     os.environ[var_name] = var_value
                     print("SET ENVIRONMENT VAR: ")
                     print("\t", var_name)
