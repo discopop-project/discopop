@@ -182,7 +182,10 @@ class ContentBuffer(object):
                     var_name = elem.split("=")[0]
                     var_value = elem.split("=")[1]
                     os.environ[var_name] = var_value
-                    print("SET ENVIRONMENT VAR: ", elem)
+                    print("SET ENVIRONMENT VAR: ")
+                    print("\t", var_name)
+                    print("\t\t", var_value)
+
                     to_be_removed.append(idx)
             for idx in sorted(to_be_removed, reverse=True):
                 splitted_compile_check_command.pop(idx)
