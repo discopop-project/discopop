@@ -171,8 +171,22 @@ class ContentBuffer(object):
             result = subprocess.run([compiler, "-c", "-fopenmp", tmp_file_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
             saved_dir = os.getcwd()
-            print("COMPILE COMMAND: ", compile_check_command.split(" "))
-            result = subprocess.run(compile_check_command.split(" "), stdout=subprocess.PIPE,
+            # prepare environment variables if requested
+            splitted_compile_check_command = compile_check_command.split(" ")
+            to_be_removed = []
+            for idx, elem in enumerate(splitted_compile_check_command):
+                if "=" in elem and not elem.startswith("-"):
+                    # set environment variable
+                    var_name = elem.split("=")[0]
+                    var_value = elem.split("=")[1]
+                    os.environ[var_name] = var_value
+                    print("SET ENVIRONMENT VAR: ", elem)
+                    to_be_removed.append(idx)
+            for idx in sorted(to_be_removed, reverse=True):
+                splitted_compile_check_command.pop(idx)
+
+            print("COMPILE COMMAND: ", splitted_compile_check_command)
+            result = subprocess.run(splitted_compile_check_command, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
             os.chdir(saved_dir)
         compilation_successful = True if result.returncode == 0 else False
