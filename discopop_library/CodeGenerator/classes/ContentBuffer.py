@@ -8,9 +8,10 @@
 
 import copy
 import os
+import re
 import subprocess
 import sys
-from typing import List, Dict, Sequence, Any, Optional, re
+from typing import List, Dict, Sequence, Any, Optional
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
