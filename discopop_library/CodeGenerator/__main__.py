@@ -9,7 +9,7 @@
 """Discopop Code Generator
 
 Usage:
-    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>] [--skip-compilation-check]
+    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>] [--compile-check-command <str>] [--skip-compilation-check]
 
 OPTIONAL ARGUMENTS:
     --fmap=<file>               File mapping
@@ -18,9 +18,11 @@ OPTIONAL ARGUMENTS:
     --patterns=<str>            Comma-separated list of pattern types to be applied
                                 Possible values: reduction, do_all, simple_gpu, combined_gpu
     --skip-compilation-check    Do not validate the inserted patterns by compiling the resulting source code.
+    --compile-check-command=<str>     Specify a command to be executed for performing the compile check (e.g. "cd .. && make")
     -h --help                   Show this screen
 """
 import os
+import sys
 from typing import Dict, List
 
 import pstats2  # type:ignore
@@ -37,7 +39,8 @@ docopt_schema = Schema(
         "--json": Use(str),
         "--patterns": Use(str),
         "--outputdir": Use(str),
-        "--skip-compilation-check": Use(str)
+        "--skip-compilation-check": Use(str),
+        "--compile-check-command": Use(str),
     }
 )
 
@@ -67,7 +70,7 @@ def main():
     json_file = get_path(os.getcwd(), arguments["--json"])
     outputdir = arguments["--outputdir"]
     relevant_patterns: List[str] = [] if arguments["--patterns"] == "None" else (
-        arguments["--patterns"].split(",") if "," in arguments["--patterns"] else arguments["--patterns"])
+        arguments["--patterns"].split(",") if "," in arguments["--patterns"] else [arguments["--patterns"]])
     # validate patterns
     for pattern in relevant_patterns:
         if pattern not in ["reduction", "do_all", "simple_gpu", "combined_gpu"]:
@@ -83,12 +86,25 @@ def main():
 
     identified_patterns = read_patterns_from_json_to_json(json_file, relevant_patterns)
 
-    modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns,  skip_compilation_check = arguments["--skip-compilation-check"])
+    print("SKIP COMPILATION CHECK? ", arguments["--skip-compilation-check"], file=sys.stderr)
+    print("\ttype: ", type(arguments["--skip-compilation-check"]), file=sys.stderr)
+    print("COMPILE CHECK COMMAND? ", arguments["--compile-check-command"], file=sys.stderr)
+    print("\ttype: ", type(arguments["--compile-check-command"]), file=sys.stderr)
+
+    print("FILE MAPPING: ", file_mapping_dict)
+    print("patterns:" , identified_patterns)
+
+
+    modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns,  skip_compilation_check = True if arguments["--skip-compilation-check"] != "False" else False,
+                                                    compile_check_command= arguments["--compile-check-command"] if arguments["--compile-check-command"] != "None" else None)
 
     modified_code_by_new_location: Dict[str, str] = dict()
     for file_id in modified_code:
         old_location = file_mapping_dict[file_id]
+        print("OLD LOC: ", old_location)
         new_location = os.path.join(outputdir, old_location.split("/.discopop/")[1])
+        print("NEW LOC: ", new_location)
+
         modified_code_by_new_location[new_location] = modified_code[file_id]
 
     # output modified code

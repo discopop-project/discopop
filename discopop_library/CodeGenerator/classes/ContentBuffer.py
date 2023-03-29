@@ -10,7 +10,7 @@ import copy
 import os
 import subprocess
 import sys
-from typing import List, Dict, Sequence, Any
+from typing import List, Dict, Sequence, Any, Optional
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
@@ -74,7 +74,7 @@ class ContentBuffer(object):
                     self.lines.append(line)
                 return
 
-    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False, skip_compilation_check: bool = False) -> bool:
+    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False, skip_compilation_check: bool = False, compile_check_command: Optional[str] = None) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
         Returns False if compilation of the modified code was not possible.
@@ -140,10 +140,10 @@ class ContentBuffer(object):
         for child_pragma in pragma.children:
             # set skip_compilation_check to true since compiling children pragmas on their own might not be successful.
             # As an example for that, '#pragma omp declare target' can be mentioned
-            successful = self.add_pragma(file_mapping, child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment, skip_compilation_check=True)
+            successful = self.add_pragma(file_mapping, child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment, skip_compilation_check=True, compile_check_command=compile_check_command)
 
             if not successful:
-                print("==> Skipped pragma insertion due to potential compilation errors!\n")
+                print(self.compile_result_buffer)
                 self.lines = backup_lines
                 self.next_free_region_id = backup_next_free_region_id
                 self.file_id = backup_file_id
@@ -166,14 +166,21 @@ class ContentBuffer(object):
             f.write(self.get_modified_source_code())
             f.flush()
             f.close()
-        result = subprocess.run([compiler, "-c", "-fopenmp", tmp_file_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        if compile_check_command is None:
+            result = subprocess.run([compiler, "-c", "-fopenmp", tmp_file_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            saved_dir = os.getcwd()
+            print("COMPILE COMMAND: ", compile_check_command.split(" "))
+            result = subprocess.run(compile_check_command.split(" "), stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            os.chdir(saved_dir)
         compilation_successful = True if result.returncode == 0 else False
 
         os.remove(tmp_file_name)
 
         # if not, reset ContentBuffer to the backup and return False
         if not compilation_successful:
-            print("==> Skipped pragma insertion due to potential compilation errors!\n")
             self.lines = backup_lines
             self.next_free_region_id = backup_next_free_region_id
             self.file_id = backup_file_id
@@ -181,5 +188,6 @@ class ContentBuffer(object):
             self.compile_result_buffer += result.stdout.decode('utf-8') + "\n"
             self.compile_result_buffer += result.stderr.decode("utf-8") + "\n"
             self.compile_result_buffer += "==> Skipped pragma insertion due to potential compilation errors!\n"
+            print(self.compile_result_buffer)
             return False
         return True
