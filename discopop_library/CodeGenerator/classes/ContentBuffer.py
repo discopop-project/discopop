@@ -182,10 +182,13 @@ class ContentBuffer(object):
                     # set environment variable
                     var_name = elem[:elem.index("=")]
                     var_value = elem[elem.index("=")+1:]
-                    os.environ[var_name] = var_value
                     print("SET ENVIRONMENT VAR: ")
                     print("\t", var_name)
                     print("\t\t", var_value)
+                    # unpack var_value
+                    if var_value.startswith("\"") and var_value.endswith("\"") and len(var_value) > 1:
+                        var_value = var_value[1:-1]
+                    os.environ[var_name] = var_value
 
                     to_be_removed.append(idx)
             for idx in sorted(to_be_removed, reverse=True):
