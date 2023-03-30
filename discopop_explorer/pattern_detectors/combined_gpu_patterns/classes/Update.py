@@ -47,7 +47,7 @@ class Update(object):
         self.dependencies = set()
         self.asynchronous_possible = False
 
-        if False:  # disable asynchronous updates
+        if True:  # disable asynchronous updates
 
             # check if an asynchronous update is possible
             # only allow asynchronous updates to the device in order to not get problems with
