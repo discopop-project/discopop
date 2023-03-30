@@ -305,13 +305,13 @@ class GPULoopPattern(PatternInfo):
                     # construct new list of modified var names
                     modified_var_names.append(
                         (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            var.name + "[:]"  # var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
                             if "**" in var.type
                             else var.name
                         )
                     )
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
 
             clauses.append(omp_clause_str("map(to: args)", modified_var_names))
             var_names = []
@@ -331,13 +331,13 @@ class GPULoopPattern(PatternInfo):
                     # construct new list of modified var names
                     modified_var_names.append(
                         (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            var.name + "[:]"
                             if "**" in var.type
                             else var.name
                         )
                     )
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(from: args)", modified_var_names))
             var_names = []
 
@@ -356,13 +356,13 @@ class GPULoopPattern(PatternInfo):
                     # construct new list of modified var names
                     modified_var_names.append(
                         (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            var.name + "[:]"
                             if "**" in var.type
                             else var.name
                         )
                     )
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(tofrom: args)", modified_var_names))
             var_names = []
 
@@ -381,13 +381,13 @@ class GPULoopPattern(PatternInfo):
                     # construct new list of modified var names
                     modified_var_names.append(
                         (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            var.name + "[:]"
                             if "**" in var.type
                             else var.name
                         )
                     )
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(alloc: args)", modified_var_names))
             var_names = []
 
