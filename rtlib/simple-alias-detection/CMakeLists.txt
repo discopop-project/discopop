@@ -15,7 +15,7 @@ find_package(Clang)
 
 set(SOURCES
         main.cpp
-        BinCallBack.h)
+        BinCallBack.hpp)
 
 add_executable(getStatements ${SOURCES})
 
