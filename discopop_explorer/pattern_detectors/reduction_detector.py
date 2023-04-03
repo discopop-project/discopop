@@ -101,7 +101,7 @@ def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
         v
         for v in all_vars
         if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
-        and "**" not in v.type
+        # and "**" not in v.type
     ]
     reduction_var_names = [v.name for v in reduction_vars]
     fp, p, lp, s, r = classify_loop_variables(pet, root)
