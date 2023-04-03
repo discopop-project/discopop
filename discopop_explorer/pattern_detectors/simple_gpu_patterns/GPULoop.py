@@ -634,7 +634,7 @@ class GPULoopPattern(PatternInfo):
             if children.end_line > endLine:
                 endLine = children.end_line
 
-    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID):
+    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID, res):
         """
 
         :param node_id:
@@ -643,13 +643,17 @@ class GPULoopPattern(PatternInfo):
         # calculate the number of iterations of this loop relative to the top loop
         n: LoopNode = cast(LoopNode, map_node(pet, node_id))
 
+        do_all_loops = [node.node_id for node in res.do_all]
+
         for cn_id in pet.direct_children(n):
-            if cn_id.type == 2:
+            if cn_id.type == 2:  # check for loop node contained in the loop body
                 if (
                     cn_id.end_line <= n.end_line
                 ):  # todo not true if loop bodies are terminated by braces
-                    self.collapse += 1
-                    self.setCollapseClause(pet, cn_id.id)
+                    # only consider child as collapsible, if it is a do-all loop
+                    if cn_id.id in do_all_loops:
+                        self.collapse += 1
+                        self.setCollapseClause(pet, cn_id.id, res)
 
     def findMappedVar(self, direction: str, var: Variable) -> bool:
         """
