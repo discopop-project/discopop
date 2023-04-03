@@ -136,6 +136,7 @@ class Dependency:
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
+    intra_iteration_level: int = -1
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -503,9 +504,11 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     d.source_line = dep.source
     d.sink_line = dep.sink
     # check for intra-iteration dependencies
-    if dep.type.endswith("_II"):
+    if "_II_" in dep.type:
         d.intra_iteration = True
-        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+        # get intra_iteration_level
+        d.intra_iteration_level = int(dep.type[dep.type.rindex("_")+1:])
+        d.dtype = DepType[dep.type[:dep.type.index("_")]]  # remove _II_x tag
     else:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
