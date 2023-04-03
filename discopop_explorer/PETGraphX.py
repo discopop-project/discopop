@@ -507,8 +507,8 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     if "_II_" in dep.type:
         d.intra_iteration = True
         # get intra_iteration_level
-        d.intra_iteration_level = int(dep.type[dep.type.rindex("_")+1:])
-        d.dtype = DepType[dep.type[:dep.type.index("_")]]  # remove _II_x tag
+        d.intra_iteration_level = int(dep.type[dep.type.rindex("_") + 1 :])
+        d.dtype = DepType[dep.type[: dep.type.index("_")]]  # remove _II_x tag
     else:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
@@ -654,8 +654,14 @@ class PETGraphX(object):
                 for dep_2 in out_deps:
                     if dep_1 == dep_2:
                         continue
-                    if dep_1[2].dtype == dep_2[2].dtype and dep_1[2].etype == dep_2[2].etype and dep_1[2].memory_region == dep_2[2].memory_region and dep_1[2].sink_line == dep_2[2].sink_line and \
-                        dep_1[2].source_line == dep_2[2].source_line and dep_1[2].var_name == dep_2[2].var_name:
+                    if (
+                        dep_1[2].dtype == dep_2[2].dtype
+                        and dep_1[2].etype == dep_2[2].etype
+                        and dep_1[2].memory_region == dep_2[2].memory_region
+                        and dep_1[2].sink_line == dep_2[2].sink_line
+                        and dep_1[2].source_line == dep_2[2].source_line
+                        and dep_1[2].var_name == dep_2[2].var_name
+                    ):
                         if not dep_1[2].intra_iteration and dep_2[2].intra_iteration:
                             # dep_2 is a more specific duplicate of dep_1
                             # remove dep_1
@@ -671,7 +677,6 @@ class PETGraphX(object):
         for edge in set(to_be_removed_with_keys):
             self.g.remove_edge(edge[0], edge[1], edge[2])
         print("Cleaning dependencies done.")
-
 
     def show(self):
         """Plots the graph
