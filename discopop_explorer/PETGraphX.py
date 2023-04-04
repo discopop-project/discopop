@@ -307,6 +307,18 @@ class LoopNode(Node):
         else:
             return max(parent_nesting_levels)
 
+    def get_entry_node(self, pet: PETGraphX) -> Optional[Node]:
+        """returns the first CU Node contained in the loop (i.e. one without predecessor inside the loop)"""
+        for node in pet.direct_children(self):
+            predecessors_outside_loop_body = [
+                s
+                for s, t, d in pet.in_edges(node.id, EdgeType.SUCCESSOR)
+                if pet.node_at(s) not in pet.direct_children(self)
+            ]
+            if len(predecessors_outside_loop_body) > 0:
+                return cast(Node, node)
+        return None
+
 
 # Data.xml: type="3"
 class DummyNode(Node):
