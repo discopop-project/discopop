@@ -164,12 +164,8 @@ void recLoop(LoopInfo &LI, Function *F, Loop *li, int lvl, ScalarEvolution *se) 
   }
 }
 
-fstream scevfile;
-fstream tfile1;
-fstream tfile2;
-vector<string> fnames;      
+fstream fileMappingFile;   
 fstream tempfile;
-fstream fileFile;
 
 
 string getFName(Instruction* BI){
@@ -187,9 +183,9 @@ std::map<std::string, int> fileNames;
 int FileID = 1;
 
 void addFileName(string name){
-  tfile1.open("file_mapping.txt",std::ios_base::app);
-  tfile1 << name << "\n";
-  tfile1.close();
+  fileMappingFile.open("file_mapping.txt",std::ios_base::app);
+  fileMappingFile << name << "\n";
+  fileMappingFile.close();
   return;
 }
 
@@ -199,10 +195,10 @@ int getFileID(string name){
   int tempfid = 0;
   int realfid = 0;
 
-  tfile1.open("file_mapping.txt",ios::in);
-  if (tfile1){  
+  fileMappingFile.open("file_mapping.txt",ios::in);
+  if (fileMappingFile){  
     string tp;
-    while(getline(tfile1, tp)){ 
+    while(getline(fileMappingFile, tp)){ 
       //errs() << std::stoi(tp) << "\n";
       tempfid++;
       if(tp == name){
@@ -211,17 +207,17 @@ int getFileID(string name){
         //break;
       }
     }
-    tfile1.close();
+    fileMappingFile.close();
 
-    tfile1.open("file_mapping.txt",std::ios_base::app);
-    tfile1 << name << "\n";
-    tfile1.close();
+    fileMappingFile.open("file_mapping.txt",std::ios_base::app);
+    fileMappingFile << name << "\n";
+    fileMappingFile.close();
     return 0;
   }
   else { 
-    tfile1.open("file_mapping.txt",std::ios_base::app);
-    tfile1 << name << "\n";
-    tfile1.close();
+    fileMappingFile.open("file_mapping.txt",std::ios_base::app);
+    fileMappingFile << name << "\n";
+    fileMappingFile.close();
     return 0;
   }
 }
