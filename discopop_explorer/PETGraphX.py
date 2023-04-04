@@ -136,6 +136,7 @@ class Dependency:
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
+    intra_iteration_level: int = -1
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -259,10 +260,52 @@ class CUNode(Node):
 # Data.xml: type="2"
 class LoopNode(Node):
     loop_iterations: int = -1
+    contains_array_reduction: bool = False
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.LOOP
+
+    def get_nesting_level(self, pet: PETGraphX, return_invert_result: bool = True) -> int:
+        """Returns the loop nesting level for the given loop node.
+        Currently, due to the profiling output, only 3 nesting levels of loops can be mapped correctly.
+        Innermost level is 0.
+        Outermost (maximum) level is 2.
+        The order of the results originates from the LoopStack used during the profiling.
+
+        Example:
+        main(){
+            for(){ // level 1
+                for(){}     // level 0
+            }
+        }
+        """
+        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
+
+        # count levels upwards
+        parent_nesting_levels: List[int] = []
+        for parent_id in parents:
+            parent_node = pet.node_at(parent_id)
+            if type(parent_node) == FunctionNode:
+                # loop is a direct child of a function node --> Nesting level 0
+                parent_nesting_levels.append(0)
+                break
+            elif type(parent_node) == LoopNode:
+                parent_nesting_levels.append(
+                    min(
+                        2,
+                        cast(LoopNode, parent_node).get_nesting_level(
+                            pet, return_invert_result=False
+                        ),
+                    )
+                )
+
+        if return_invert_result:
+            # invert the leveling and cutoff at 0
+            inverted_levels = [max(0, 2 - level) for level in parent_nesting_levels]
+            return min(inverted_levels)
+        else:
+            return max(parent_nesting_levels)
 
 
 # Data.xml: type="3"
@@ -503,9 +546,11 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     d.source_line = dep.source
     d.sink_line = dep.sink
     # check for intra-iteration dependencies
-    if dep.type.endswith("_II"):
+    if "_II_" in dep.type:
         d.intra_iteration = True
-        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+        # get intra_iteration_level
+        d.intra_iteration_level = int(dep.type[dep.type.rindex("_") + 1 :])
+        d.dtype = DepType[dep.type[: dep.type.index("_")]]  # remove _II_x tag
     else:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
@@ -620,6 +665,7 @@ class PETGraphX(object):
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+
         return cls(g, reduction_vars, pos)
 
     def calculateFunctionMetadata(self) -> None:
@@ -640,6 +686,73 @@ class PETGraphX(object):
 
             func_node.calculate_reachability_pairs(self)
         print("Metadata calculation done.")
+
+        # cleanup dependencies (remove dependencies, if it is overwritten by a more specific Intra-iteration dependency
+        print("Cleaning duplicated dependencies...")
+        to_be_removed = []
+        for cu_node in self.all_nodes(CUNode):
+            out_deps = self.out_edges(cu_node.id, EdgeType.DATA)
+            for dep_1 in out_deps:
+                for dep_2 in out_deps:
+                    if dep_1 == dep_2:
+                        continue
+                    if (
+                        dep_1[2].dtype == dep_2[2].dtype
+                        and dep_1[2].etype == dep_2[2].etype
+                        and dep_1[2].memory_region == dep_2[2].memory_region
+                        and dep_1[2].sink_line == dep_2[2].sink_line
+                        and dep_1[2].source_line == dep_2[2].source_line
+                        and dep_1[2].var_name == dep_2[2].var_name
+                    ):
+                        if not dep_1[2].intra_iteration and dep_2[2].intra_iteration:
+                            # dep_2 is a more specific duplicate of dep_1
+                            # remove dep_1
+                            to_be_removed.append(dep_1)
+
+        to_be_removed_with_keys = []
+        for dep in to_be_removed:
+            graph_edges = self.g.out_edges(dep[0], keys=True, data="data")
+
+            for s, t, key, data in graph_edges:
+                if dep[0] == s and dep[1] == t and dep[2] == data:
+                    to_be_removed_with_keys.append((s, t, key))
+        for edge in set(to_be_removed_with_keys):
+            self.g.remove_edge(edge[0], edge[1], edge[2])
+        print("Cleaning dependencies done.")
+
+        # cleanup dependencies II : only consider the Intra-iteration dependencies with the highest level
+        print("Cleaning duplicated dependencies II...")
+        to_be_removed = []
+        for cu_node in self.all_nodes(CUNode):
+            out_deps = self.out_edges(cu_node.id, EdgeType.DATA)
+            for dep_1 in out_deps:
+                for dep_2 in out_deps:
+                    if dep_1 == dep_2:
+                        continue
+                    if (
+                        dep_1[2].dtype == dep_2[2].dtype
+                        and dep_1[2].etype == dep_2[2].etype
+                        and dep_1[2].memory_region == dep_2[2].memory_region
+                        and dep_1[2].sink_line == dep_2[2].sink_line
+                        and dep_1[2].source_line == dep_2[2].source_line
+                        and dep_1[2].var_name == dep_2[2].var_name
+                        and dep_1[2].intra_iteration
+                        and dep_2[2].intra_iteration
+                    ):
+                        if dep_1[2].intra_iteration_level < dep_2[2].intra_iteration_level:
+                            # dep_2 originated from a deeper nesting level. Remove less specific duplicate dep_1.
+                            to_be_removed.append(dep_1)
+
+        to_be_removed_with_keys = []
+        for dep in to_be_removed:
+            graph_edges = self.g.out_edges(dep[0], keys=True, data="data")
+
+            for s, t, key, data in graph_edges:
+                if dep[0] == s and dep[1] == t and dep[2] == data:
+                    to_be_removed_with_keys.append((s, t, key))
+        for edge in set(to_be_removed_with_keys):
+            self.g.remove_edge(edge[0], edge[1], edge[2])
+        print("Cleaning dependencies II done.")
 
     def show(self):
         """Plots the graph

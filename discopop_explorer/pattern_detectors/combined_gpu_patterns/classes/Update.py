@@ -178,12 +178,14 @@ class Update(object):
             # divide memory region size by size of variable
             # construct new list of modified var names
             modified_var_names = [
-                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                (
+                    vn + "[:]" if "**" in t else vn
+                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
             modified_var_names = [
-                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
 
         # determine update position in code
@@ -240,12 +242,14 @@ class Update(object):
             # divide memory region size by size of variable
             # construct new list of modified var names
             modified_var_names = [
-                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                (
+                    vn + "[:]" if "**" in t else vn
+                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
             modified_var_names = [
-                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
 
         return [

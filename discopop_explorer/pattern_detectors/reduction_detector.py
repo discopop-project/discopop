@@ -68,7 +68,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
         # print("Reduction: ", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
             node.reduction = True
-            if node.loop_iterations >= 0:
+            if node.loop_iterations >= 0 and not node.contains_array_reduction:
                 result.append(ReductionInfo(pet, node))
 
     return result
@@ -101,7 +101,7 @@ def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
         v
         for v in all_vars
         if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
-        and "**" not in v.type
+        # and "**" not in v.type --> replaced by check for array reduction
     ]
     reduction_var_names = [v.name for v in reduction_vars]
     fp, p, lp, s, r = classify_loop_variables(pet, root)
@@ -118,6 +118,10 @@ def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
         lp,
     ):
         return False
+
+    # mark loop as containing array reductions, if variable types are accordingly
+    if reduction_vars and len([v for v in reduction_vars if "**" in v.type]) > 0:
+        root.contains_array_reduction = True
 
     # if the loop contains any reduction variable, create a reduction suggestion
     return bool(reduction_vars)

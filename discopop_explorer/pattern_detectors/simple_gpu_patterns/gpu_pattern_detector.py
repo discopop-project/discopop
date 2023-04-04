@@ -55,7 +55,7 @@ def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[Pattern
     regions = GPURegions(pet, gpu_patterns)
 
     for i in gpu_patterns:
-        i.setCollapseClause(pet, i.node_id)
+        i.setCollapseClause(pet, i.node_id, res)
 
     regions.identifyGPURegions()
     # regions.old_mapData()
