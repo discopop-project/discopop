@@ -46,7 +46,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
     identify_updates,
-    test_circle_free_graph,
+    create_circle_free_function_graphs,
     add_accesses_from_called_functions,
     identify_updates_in_unrolled_function_graphs,
 )
@@ -244,7 +244,7 @@ class CombinedGPURegion(PatternInfo):
         writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
 
         # unroll function bodies to create circle-free graphs
-        unrolled_function_graphs = test_circle_free_graph(pet, add_dummy_node=False)
+        unrolled_function_graphs = create_circle_free_function_graphs(pet, add_dummy_node=False)
         # TODO add accesses from called function to the calling CUs
         writes_by_device = add_accesses_from_called_functions(
             pet, writes_by_device, force_called_functions_to_host=True

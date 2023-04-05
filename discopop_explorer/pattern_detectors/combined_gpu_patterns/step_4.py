@@ -548,7 +548,7 @@ def __calculate_updates(
     return identified_updates
 
 
-def test_circle_free_graph(pet: PETGraphX, add_dummy_node=True):
+def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
     """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
     import networkx as nx
 
