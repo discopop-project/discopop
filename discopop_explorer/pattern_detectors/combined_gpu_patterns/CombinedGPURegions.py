@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os.path
-from typing import List, Tuple, Dict, Set, Type
+from typing import List, Tuple, Dict, Set, Type, Optional
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -104,8 +104,12 @@ class CombinedGPURegion(PatternInfo):
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_regions = contained_regions
         self.device_cu_ids = device_cu_ids
-        self.start_line = min([l.start_line for l in contained_regions])
-        self.end_line = max([l.end_line for l in contained_regions])
+        self.start_line = min(
+            [l.start_line for l in contained_regions]
+        )  # todo: not correct anymore since multiple files contained now
+        self.end_line = max(
+            [l.end_line for l in contained_regions]
+        )  # todo: not correct anymore since multiple files contained now
         print("\n\n", file=sys.stderr)
         print("DEVICE CU IDS: ", file=sys.stderr)
         print(self.device_cu_ids, file=sys.stderr)
@@ -327,19 +331,19 @@ class CombinedGPURegion(PatternInfo):
 
         # ### PREPARE METADATA
         # prepare device liveness
-        self.meta_device_liveness = prepare_liveness_metadata(
-            pet,
-            extended_memory_region_liveness,
-            propagated_device_writes,
-            self.meta_device_liveness,
-        )
+        #        self.meta_device_liveness = prepare_liveness_metadata(
+        #            pet,
+        #            extended_memory_region_liveness,
+        #            propagated_device_writes,
+        #            self.meta_device_liveness,
+        #        )
         # prepare host liveness
-        self.meta_host_liveness = prepare_liveness_metadata(
-            pet,
-            extended_host_memory_region_liveness,
-            propagated_host_writes,
-            self.meta_host_liveness,
-        )
+        #        self.meta_host_liveness = prepare_liveness_metadata(
+        #            pet,
+        #            extended_host_memory_region_liveness,
+        #            propagated_host_writes,
+        #            self.meta_host_liveness,
+        #        )
         # prepare update instructions
         self.update_instructions = [
             update.get_as_metadata_using_variable_names(pet, self.project_folder_path)
@@ -408,17 +412,31 @@ def find_combined_gpu_regions(
 
     true_successor_combinations = find_true_successor_combinations(pet, intra_function_combinations)
 
-    # combine regions
-    for combinable_1, combinable_2 in true_successor_combinations:
-        if combinable_1 in combined_gpu_regions:
-            combined_gpu_regions.remove(combinable_1)
-        if combinable_2 in combined_gpu_regions:
-            combined_gpu_regions.remove(combinable_2)
-        combined_gpu_regions.append(
-            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
-        )
+    #    # combine regions
+    #    for combinable_1, combinable_2 in true_successor_combinations:
+    #        if combinable_1 in combined_gpu_regions:
+    #            combined_gpu_regions.remove(combinable_1)
+    #        if combinable_2 in combined_gpu_regions:
+    #            combined_gpu_regions.remove(combinable_2)
+    #        combined_gpu_regions.append(
+    #            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
+    #        )
 
-    return combined_gpu_regions
+    # combine all known regions
+    combined_region: Optional[CombinedGPURegion] = None
+    for cgr in combined_gpu_regions:
+        if combined_region is None:
+            combined_region = cgr
+        else:
+            combined_region = combine_regions(pet, combined_region, cgr, project_folder_path)
+
+    if combined_region is None:
+        return []
+    else:
+        return [combined_region]
+
+
+#    return combined_gpu_regions
 
 
 def find_all_pairwise_gpu_region_combinations(
