@@ -305,13 +305,14 @@ class GPULoopPattern(PatternInfo):
                     # construct new list of modified var names
                     modified_var_names.append(
                         (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
+                            var.name
+                            + "[:]"  # var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
                             if "**" in var.type
                             else var.name
                         )
                     )
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
 
             clauses.append(omp_clause_str("map(to: args)", modified_var_names))
             var_names = []
@@ -329,15 +330,9 @@ class GPULoopPattern(PatternInfo):
                     max_mem_reg_size = max(memory_region_sizes.values())
                     # divide memory region size by size of variable
                     # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
+                    modified_var_names.append((var.name + "[:]" if "**" in var.type else var.name))
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(from: args)", modified_var_names))
             var_names = []
 
@@ -354,15 +349,9 @@ class GPULoopPattern(PatternInfo):
                     max_mem_reg_size = max(memory_region_sizes.values())
                     # divide memory region size by size of variable
                     # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
+                    modified_var_names.append((var.name + "[:]" if "**" in var.type else var.name))
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(tofrom: args)", modified_var_names))
             var_names = []
 
@@ -379,15 +368,9 @@ class GPULoopPattern(PatternInfo):
                     max_mem_reg_size = max(memory_region_sizes.values())
                     # divide memory region size by size of variable
                     # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
+                    modified_var_names.append((var.name + "[:]" if "**" in var.type else var.name))
                 else:
-                    modified_var_names.append(var.name + "[:..]" if "**" in var.type else var.name)
+                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(alloc: args)", modified_var_names))
             var_names = []
 
@@ -651,7 +634,7 @@ class GPULoopPattern(PatternInfo):
             if children.end_line > endLine:
                 endLine = children.end_line
 
-    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID):
+    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID, res):
         """
 
         :param node_id:
@@ -660,13 +643,35 @@ class GPULoopPattern(PatternInfo):
         # calculate the number of iterations of this loop relative to the top loop
         n: LoopNode = cast(LoopNode, map_node(pet, node_id))
 
+        do_all_loops = [node.node_id for node in res.do_all]
+
+        loop_entry_node = cast(LoopNode, pet.node_at(node_id)).get_entry_node(pet)
+        if loop_entry_node is None:
+            loop_entry_node = pet.direct_children(pet.node_at(node_id))[0]
+
         for cn_id in pet.direct_children(n):
-            if cn_id.type == 2:
+            if cn_id.type == 2:  # check for loop node contained in the loop body
                 if (
                     cn_id.end_line <= n.end_line
                 ):  # todo not true if loop bodies are terminated by braces
-                    self.collapse += 1
-                    self.setCollapseClause(pet, cn_id.id)
+                    # only consider child as collapsible, if it is a do-all loop
+                    if cn_id.id in do_all_loops:
+                        # check for perfect nesting of both loops (i.e. no statements inbetween)
+                        # todo: possible improvement: consider columns as well, or test using the AST / nesting
+                        #  information from the LLVM debug information
+                        # check if distance between first CU of node_id and cn_id is 2 steps on the successor graph
+                        potentials: Set[Node] = set()
+                        for succ1 in pet.direct_successors(cast(Node, loop_entry_node)):
+                            for succ2 in pet.direct_successors(succ1):
+                                potentials.add(succ2)
+                        if cast(LoopNode, cn_id).get_entry_node(pet) in potentials:
+                            # perfect nesting possible. allow collapsing the loops, if root loop has no other children
+                            if len(pet.direct_children(pet.node_at(node_id))) == 5:
+                                # 2 children for loop condition and body
+                                # 1 child is the collapsible loop
+                                # 2 children for loop end and increment
+                                self.collapse += 1
+                                self.setCollapseClause(pet, cn_id.id, res)
 
     def findMappedVar(self, direction: str, var: Variable) -> bool:
         """

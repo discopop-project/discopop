@@ -68,6 +68,43 @@ class EntryPoint(object):
             + ")"
         )
 
+    def __eq__(self, other):
+        if (
+            tuple(self.var_names),
+            tuple(self.memory_regions),
+            self.source_cu_id,
+            self.sink_cu_id,
+            self.entry_point_type,
+            self.pragma_line,
+            self.entry_point_positioning,
+            tuple(self.dependencies),
+        ) == (
+            tuple(other.var_names),
+            tuple(other.memory_regions),
+            other.source_cu_id,
+            other.sink_cu_id,
+            other.entry_point_type,
+            other.pragma_line,
+            other.entry_point_positioning,
+            tuple(other.dependencies),
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(
+            (
+                tuple(self.var_names),
+                tuple(self.memory_regions),
+                self.source_cu_id,
+                self.sink_cu_id,
+                self.entry_point_type,
+                self.pragma_line,
+                self.entry_point_positioning,
+                tuple(self.dependencies),
+            )
+        )
+
     def get_as_metadata(self, pet: PETGraphX, project_folder_path: str):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
@@ -90,12 +127,14 @@ class EntryPoint(object):
             # divide memory region size by size of variable
             # construct new list of modified var names
             modified_var_names = [
-                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                (
+                    vn + "[:]" if "**" in t else vn
+                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
             modified_var_names = [
-                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
 
         return [

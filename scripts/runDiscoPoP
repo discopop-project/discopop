@@ -24,6 +24,11 @@ REQUIRED ARGUMENTS: Please use absolut paths!
  --project <dir>       path to the directory that contains your makefile
  --executable-name <string> the name of the executable that is built and analyzed
 
+PROFILING SETTINGS:
+ --memory-profiling-skip-function-arguments     disable the memory profiling for allocations which belong
+                                                to function arguments.
+  
+
 OPTIONAL ARGUMENTS:
  --llvm-clang <file>    path to clang executable
  --llvm-clang++ <file>  path to clang++ executable
@@ -202,6 +207,10 @@ while [[ $# -gt 0 ]]; do
       EXIT_AFTER_COMPILATION=true
       shift # past argument
       ;;
+    --memory-profiling-skip-function-arguments)
+      MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS=true
+      shift # past argument
+      ;;
     --python-path)
       PYTHONPATH_FLAG="$2"
       shift; shift # past argument and value
@@ -343,9 +352,16 @@ $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 # apply instrumentation and run
 #####
 
+# Assemble flags for DiscoPoP Pass
+DP_PASS_FLAGS=""
+if [ "$MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS" = true ]; then
+  log -i "DISABLED memory profiling of function arguments"
+  DP_PASS_FLAGS="$DP_PASS_FLAGS -memory-profiling-skip-function-arguments"
+fi
+
 # Run DiscoPoP Pass
 log -i "Running DiscoPoP Pass to analyze and instrument your application..."
-$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt ${DP_PASS_FLAGS}
 
 log -i "Creating Executable..."
 $LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o

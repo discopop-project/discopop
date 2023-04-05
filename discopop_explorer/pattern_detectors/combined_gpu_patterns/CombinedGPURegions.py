@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os.path
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Type
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -44,11 +44,18 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     cleanup_writes,
     group_writes_by_cu,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import identify_updates
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
+    identify_updates,
+    test_circle_free_graph,
+    add_accesses_from_called_functions,
+    identify_updates_in_unrolled_function_graphs,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
     identify_end_of_life_points,
     add_aliases,
+    extend_region_liveness_using_unrolled_functions,
+    remove_duplicates,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
@@ -176,7 +183,9 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # extend data liveness
-        extended_memory_region_liveness = extend_data_lifespan(pet, memory_region_liveness)
+        extended_memory_region_liveness = (
+            memory_region_liveness  # extend_data_lifespan(pet, memory_region_liveness)
+        )
 
         print("EXTENDED DEVICE MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_memory_region_liveness, file=sys.stderr)
@@ -188,9 +197,7 @@ class CombinedGPURegion(PatternInfo):
         print(host_liveness, file=sys.stderr)
         print(file=sys.stderr)
         host_memory_region_liveness = convert_liveness(host_liveness)
-        extended_host_memory_region_liveness = extend_data_lifespan(
-            pet, host_memory_region_liveness
-        )
+        extended_host_memory_region_liveness = host_memory_region_liveness  # extend_data_lifespan(           pet, host_memory_region_liveness        )
         print("EXTENDED HOST MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_host_memory_region_liveness, file=sys.stderr)
         print(file=sys.stderr)
@@ -205,12 +212,12 @@ class CombinedGPURegion(PatternInfo):
         )
 
         # propagate writes to parents, successors and the children of successors
-        propagated_device_writes = propagate_writes(self, pet, device_writes)
+        propagated_device_writes = device_writes  # propagate_writes(self, pet, device_writes)
         print("PROPAGATED DEVICE WRITES:", file=sys.stderr)
         print(propagated_device_writes, file=sys.stderr)
         print(file=sys.stderr)
 
-        propagated_host_writes = propagate_writes(self, pet, host_writes)
+        propagated_host_writes = host_writes  # propagate_writes(self, pet, host_writes)
         print("PROPAGATED HOST WRITES:", file=sys.stderr)
         print(propagated_host_writes, file=sys.stderr)
         print(file=sys.stderr)
@@ -235,11 +242,30 @@ class CombinedGPURegion(PatternInfo):
 
         # ### STEP 4: IDENTIFY SYNCHRONOUS UPDATE POINTS
         writes_by_device = {0: host_writes_by_cu, 1: device_writes_by_cu}
-        issued_updates = identify_updates(self, pet, writes_by_device)
+
+        # unroll function bodies to create circle-free graphs
+        unrolled_function_graphs = test_circle_free_graph(pet, add_dummy_node=False)
+        # TODO add accesses from called function to the calling CUs
+        writes_by_device = add_accesses_from_called_functions(
+            pet, writes_by_device, force_called_functions_to_host=True
+        )
+
+        # identify updates based on the circle-free graph
+        # TODO parallelize on function level
+
+        # issued_updates = identify_updates(self, pet, writes_by_device)  # old code
+        issued_updates = identify_updates_in_unrolled_function_graphs(
+            self, pet, writes_by_device, unrolled_function_graphs
+        )
+
         print("ISSUED UPDATES:", file=sys.stderr)
         for update in issued_updates:
             print(update, file=sys.stderr)
         print(file=sys.stderr)
+
+        # remove dummy marks from CU ID's created during loop unrolling
+        for update in issued_updates:
+            update.remove_dummy_marks()
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
         # propagate memory region to variable name associations within function body
@@ -259,6 +285,14 @@ class CombinedGPURegion(PatternInfo):
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
         # ### STEP 6: convert updates to entry / exit points if possible
+
+        # extend memory region liveness based on unrolled function graphs
+        extended_memory_region_liveness = extend_region_liveness_using_unrolled_functions(
+            pet, extended_memory_region_liveness, unrolled_function_graphs
+        )
+        extended_host_memory_region_liveness = extend_region_liveness_using_unrolled_functions(
+            pet, extended_host_memory_region_liveness, unrolled_function_graphs
+        )
 
         # add aliases to updates
         aliased_updates = add_aliases(
@@ -285,6 +319,11 @@ class CombinedGPURegion(PatternInfo):
                 memory_regions_to_functions_and_variables,
             )
         )
+
+        # remove duplicates
+        updates = remove_duplicates(updates)
+        entry_points = remove_duplicates(entry_points)
+        exit_points = remove_duplicates(exit_points)
 
         # ### PREPARE METADATA
         # prepare device liveness
@@ -371,8 +410,10 @@ def find_combined_gpu_regions(
 
     # combine regions
     for combinable_1, combinable_2 in true_successor_combinations:
-        combined_gpu_regions.remove(combinable_1)
-        combined_gpu_regions.remove(combinable_2)
+        if combinable_1 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_1)
+        if combinable_2 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_2)
         combined_gpu_regions.append(
             combine_regions(pet, combinable_1, combinable_2, project_folder_path)
         )

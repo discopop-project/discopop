@@ -102,6 +102,46 @@ class Update(object):
         )
         return result_str
 
+    def __eq__(self, other):
+        if (
+            self.synchronous_source_cu_id,
+            self.asynchronous_source_cu_id,
+            self.sink_cu_id,
+            tuple(self.memory_regions),
+            tuple(self.variable_names),
+            self.update_type,
+            tuple(self.last_write_locations.items()),
+            self.asynchronous_possible,
+            tuple(self.dependencies),
+        ) == (
+            other.synchronous_source_cu_id,
+            other.asynchronous_source_cu_id,
+            other.sink_cu_id,
+            tuple(other.memory_regions),
+            tuple(other.variable_names),
+            other.update_type,
+            tuple(other.last_write_locations.items()),
+            other.asynchronous_possible,
+            tuple(other.dependencies),
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(
+            (
+                self.synchronous_source_cu_id,
+                self.asynchronous_source_cu_id,
+                self.sink_cu_id,
+                tuple(self.memory_regions),
+                tuple(self.variable_names),
+                self.update_type,
+                tuple(self.last_write_locations.items()),
+                self.asynchronous_possible,
+                tuple(self.dependencies),
+            )
+        )
+
     def get_as_metadata_using_memory_regions(self, pet: PETGraphX):
         return [
             self.synchronous_source_cu_id,
@@ -138,20 +178,39 @@ class Update(object):
             # divide memory region size by size of variable
             # construct new list of modified var names
             modified_var_names = [
-                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                (
+                    vn + "[:]" if "**" in t else vn
+                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
             modified_var_names = [
-                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
+
+        # determine update position in code
+        # todo consider asynchronous updates
+        if self.update_type == UpdateType.FROM_DEVICE:
+            # data required by host. Perform update before the sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.TO_DEVICE:
+            # data required by device. Perform update before the sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.TO_FROM_DEVICE:
+            # synchronize inbetween source and sink -> before the start of sink CU
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        elif self.update_type == UpdateType.ALLOCATE:
+            update_position = pet.node_at(self.sink_cu_id).start_position()
+        else:
+            # updating inbetween both CUs should be a safe fallback
+            update_position = pet.node_at(self.sink_cu_id).start_position()
 
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
             ",".join(modified_var_names),
-            pet.node_at(self.synchronous_source_cu_id).end_position(),
+            update_position,
         ]
 
     def get_as_metadata_using_variable_names_and_memory_regions(
@@ -183,12 +242,14 @@ class Update(object):
             # divide memory region size by size of variable
             # construct new list of modified var names
             modified_var_names = [
-                (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
+                (
+                    vn + "[:]" if "**" in t else vn
+                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
             modified_var_names = [
-                (vn + "[:..]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
+                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
             ]
 
         return [
@@ -226,3 +287,9 @@ class Update(object):
                 )
             else:
                 self.variable_names.add(VarName("UNDETERMINED(" + mem_reg + ")"))
+
+    def remove_dummy_marks(self):
+        if self.sink_cu_id.startswith("dummy:"):
+            self.sink_cu_id = NodeID(self.sink_cu_id[6:])
+        if self.synchronous_source_cu_id.startswith("dummy:"):
+            self.synchronous_source_cu_id = NodeID(self.synchronous_source_cu_id[6:])

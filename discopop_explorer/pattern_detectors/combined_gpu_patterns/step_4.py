@@ -7,9 +7,21 @@
 # directory for details.
 
 import copy
-from typing import Dict, Set, Tuple, Optional, List, cast
+from typing import Dict, Set, Tuple, Optional, List, cast, Any
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeType, NodeID, MemoryRegion
+import networkx as nx  # type: ignore
+from networkx import NetworkXNoCycle, MultiDiGraph
+
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    EdgeType,
+    NodeType,
+    NodeID,
+    MemoryRegion,
+    CUNode,
+    Dependency,
+    FunctionNode,
+)
 import sys
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
@@ -141,14 +153,11 @@ class Context(object):
         ]
         for mem_reg in overlapping_mem_reg:
             # synchronize from old to new device
-            for mem_reg in overlapping_mem_reg:
-                # issue update, if writes of new device is not a superset of old device
-                for ident, origin in self.seen_writes_by_device[self.device_id][mem_reg]:
-                    if ident not in [
-                        t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]
-                    ]:
-                        print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
-                    self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
+            # issue update, if writes of new device is not a superset of old device
+            for ident, origin in self.seen_writes_by_device[self.device_id][mem_reg]:
+                if ident not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]:
+                    print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
+                self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
 
     def request_updates_from_other_devices(
         self, pet, new_device_id: int
@@ -308,13 +317,13 @@ def get_device_id(comb_gpu_reg, cu_id: NodeID) -> int:
 
 
 def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
-    paths: List[List[NodeID]] = []
-
     def check_validity_of_potential_merge_node(node_id: NodeID):
         # return True if the given node is a valid merge node.
         # return False otherwise.
         # do not allow return BB's as merge nodes, since this would be trivially true for every path split
         potential_merge_node = pet.node_at(node_id)
+        if type(potential_merge_node) != CUNode:
+            return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
             and potential_merge_node.end_position()
@@ -324,89 +333,59 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             return False
         return True
 
-    # initialize
-    for successor_id in successors:
-        paths.append([successor_id])
+    if len(successors) == 0:
+        raise ValueError("Empty list of successors!")
 
-    # iteratively search for a merge node
-    progress_made = True
-    while progress_made:
-        progress_made = False
+    parent_function = pet.get_parent_function(pet.node_at(successors[0]))
+    post_dominators = parent_function.get_immediate_post_dominators(pet)
 
-        # terminate a path if the newly added CUID occurs more than 2 times in the path
-        for path_id, path in enumerate(paths):
-            if path.count(path[-1]) > 2:
-                del paths[path_id]
-                continue
+    # initialize lists of current post dominators
+    current_post_dominators: List[NodeID] = [post_dominators[node_id] for node_id in successors]
+    # initialize lists of visited post dominators for each node in "successors"
+    visited_post_dominators: List[Set[NodeID]] = []
+    for idx, cpd in enumerate(current_post_dominators):
+        # add the node itself as well as it's first post dominator to visited nodes for the initialization
+        visited_post_dominators.append({cpd, successors[idx]})
 
-        # check if any CUID is contained in all paths
-        # initialize
-        contained_in_all_paths = set(paths[0])
-        for path_id, path in enumerate(paths):
-            contained_in_all_paths.intersection_update(set(path))
-            if len(contained_in_all_paths) == 0:
+    if len(visited_post_dominators) == 0 and len(current_post_dominators) == 0:
+        raise ValueError("No post dominators found!")
+
+    # check for common post dominators
+    while True:
+        # check if a common post dominator exists
+        common_post_dominators = visited_post_dominators[0]
+        for idx, vpd_set in enumerate(visited_post_dominators):
+            common_post_dominators.intersection_update(vpd_set)
+            if len(common_post_dominators) == 0:
                 break
-        if len(contained_in_all_paths) > 0:
-            # found merge node
-            if len(contained_in_all_paths) == 1:
-                potential_merge_node_id = list(contained_in_all_paths)[0]
+
+        if len(common_post_dominators) > 0:
+            # return identified merge node
+            for potential_merge_node_id in common_post_dominators:
                 if check_validity_of_potential_merge_node(potential_merge_node_id):
                     return potential_merge_node_id
-                else:
-                    return None
-            if len(contained_in_all_paths) > 1:
-                # search for the first occurring candidate merge node
-                first_occurring: Set[NodeID] = set()
-                for path in paths:
-                    first_occurrence_position: int = 0
-                    first_occurrence_element: Optional[NodeID] = None
-                    for candidate in contained_in_all_paths:
-                        if first_occurrence_element is None:
-                            first_occurrence_position = path.index(candidate)
-                            first_occurrence_element = candidate
-                        else:
-                            position = path.index(candidate)
-                            if position < first_occurrence_position:
-                                first_occurrence_position = position
-                                first_occurrence_element = candidate
-                    first_occurring.add(cast(NodeID, first_occurrence_element))
-                # if first_occurring contains multiple elements, it is not decidable. Raise a ValueError.
-                if len(first_occurring) > 1:
-                    raise ValueError("First occurrence undecidable for: ", first_occurring)
-                else:
-                    # only a single element identified
-                    potential_merge_node_id = list(first_occurring)[0]
-                    if check_validity_of_potential_merge_node(potential_merge_node_id):
-                        return potential_merge_node_id
-                    else:
-                        return None
 
-        # proceed one step on each path
-        to_be_deleted: List[int] = []
-        for path_id, path in enumerate(paths):
-            successors = [t for s, t, d in pet.out_edges(path[-1], EdgeType.SUCCESSOR)]
-            if len(successors) == 0:
-                # end of path reached without encountering a merge node
-                # do nothing. no progress made
-                pass
+        if len(current_post_dominators) == 0:
+            # No merge node found and no node to be checked anymore. Exit the loop.
+            break
 
-            elif len(successors) == 1:
-                # append successor to path
-                paths[path_id].append(successors[0])
-                progress_made = True
-            elif len(successors) > 1:
-                # a branching point is encountered, duplicate the path and continue with two separate paths
-                for successor in successors:
-                    paths.append(copy.deepcopy(path))
-                    paths[-1].append(successor)
-                    progress_made = True
-                # delete the original path
-                to_be_deleted.append(path_id)
-        # remove paths
-        to_be_deleted = list(dict.fromkeys(to_be_deleted))
-        for path_id in sorted(to_be_deleted, reverse=True):
-            del paths[path_id]
-
+        # if not, add current post dominators to the visited list and resolve each post dominator by one step
+        # break if new post dominator is equal to the old (end of path reached)
+        for idx, cpd in enumerate(current_post_dominators):
+            visited_post_dominators[idx].add(cpd)
+        new_post_dominators = []
+        for cpd in current_post_dominators:
+            if cpd not in post_dominators:
+                post_dominators[cpd] = cpd
+            tmp = post_dominators[cpd]
+            if tmp == cpd:
+                # end of path reached, do not add tmp to list of new post dominators
+                continue
+            # get the next post dominator
+            new_post_dominators.append(tmp)
+        # replace the list of current post dominators (~ frontier)
+        current_post_dominators = new_post_dominators
+    # no merge node found
     return None
 
 
@@ -414,6 +393,7 @@ def identify_updates(
     comb_gpu_reg,
     pet: PETGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    unrolled_function_graph: MultiDiGraph,
 ) -> Set[Update]:
     identified_updates: Set[Update] = set()
     # get parent functions
@@ -456,7 +436,15 @@ def identify_updates(
 
             # start calculation of updates for entry_point
             identified_updates.update(
-                __calculate_updates(pet, comb_gpu_reg, context, entry_point, writes_by_device)
+                __calculate_updates(
+                    pet,
+                    comb_gpu_reg,
+                    context,
+                    entry_point,
+                    writes_by_device,
+                    set(),
+                    unrolled_function_graph,
+                )
             )
 
     return identified_updates
@@ -481,6 +469,8 @@ def __calculate_updates(
     context: Context,
     cur_node_id: NodeID,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    visited_nodes: Set[NodeID],
+    unrolled_function_graph: MultiDiGraph,
 ) -> Set[Update]:
     # calculate and return updates between ctx.cu_id and its immediate successor cur_node
     identified_updates: Set[Update] = set()
@@ -495,12 +485,17 @@ def __calculate_updates(
         identified_updates.update(required_updates)
 
         # calculate successors of current node
-        successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        # successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        successors = [t for s, t, d in unrolled_function_graph.out_edges(cur_node_id, data="data")]
 
         if len(successors) == 0:
             end_reached = True
             continue
         elif len(successors) == 1:
+            if cur_node_id == successors[0]:
+                # cycle! break
+                end_reached = True
+                continue
             # start calculation for successor of current node
             cur_node_id = successors[0]
             print("PROCEED TO ", cur_node_id, file=sys.stderr)
@@ -509,26 +504,329 @@ def __calculate_updates(
             # multiple successors exist
 
             # determine merge node if existing
-            merge_node = __identify_merge_node(pet, successors)
+            if False:
+                # Disabled merge node calculation, since new graph structures are free of cycles!
+                # Keep the old code for now.
+                print("SUCCESSORS: ", successors)
+                merge_node = __identify_merge_node(pet, successors)
+                print("MERGE NODE: ", merge_node)
 
-            # if merge node exists, skip branched section and treat it as a single node
-            if merge_node is not None:
-                cur_node_id = merge_node
-                print("PROCEED TO MERGE NODE ", cur_node_id, file=sys.stderr)
-                continue
+                # if merge node exists, skip branched section and treat it as a single node
+                if merge_node is not None:
+                    cur_node_id = merge_node
+                    print("PROCEED TO MERGE NODE ", cur_node_id, file=sys.stderr)
+                    continue
+            else:
+                merge_node = None
 
             # if no merge node exists, start recursion calculation of updates for each branch
             if merge_node is None:
                 # recursive calculation will stop at the end of the funciton body, thus return identified updates
                 # without executing a new loop iteration
                 for successor in successors:
+                    if successor in visited_nodes:
+                        # prevent endless cycles
+                        continue
                     # enter recursion
                     print("ENTER RECURSION FOR: ", successor, file=sys.stderr)
+                    tmp_visited_set = copy.deepcopy(visited_nodes)
+                    tmp_visited_set.add(successor)
+
                     identified_updates.update(
                         __calculate_updates(
-                            pet, comb_gpu_reg, copy.deepcopy(context), successor, writes_by_device
+                            pet,
+                            comb_gpu_reg,
+                            copy.deepcopy(context),
+                            successor,
+                            writes_by_device,
+                            tmp_visited_set,
+                            unrolled_function_graph,
                         )
                     )
                 return identified_updates
+
+    return identified_updates
+
+
+def test_circle_free_graph(pet: PETGraphX, add_dummy_node=True):
+    """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
+    import networkx as nx
+
+    unrolled_function_graphs: Dict[FunctionNode, nx.MultiDiGraph] = dict()
+
+    # initialize the function graphs
+    for function in pet.all_nodes(type=FunctionNode):
+        # get subgraph for function
+        function_subgraph = pet.g.subgraph(function.children_cu_ids).copy()
+        # remove all but successor edges
+        to_be_removed = set()
+        for edge in function_subgraph.edges:
+            edge_data = cast(Dependency, function_subgraph.edges[edge]["data"])
+            if edge_data.etype != EdgeType.SUCCESSOR:
+                to_be_removed.add(edge)
+        for edge in to_be_removed:
+            function_subgraph.remove_edge(edge[0], edge[1])
+        # store function subgraph
+        unrolled_function_graphs[function] = function_subgraph
+
+    # UNROLLING ALGORITHM:
+    # for function:
+    # while cycle in function_graph:
+    # unroll found cycle
+    # ==> Identify cycle entries
+    # ==> Identify cycle exits
+    # create branch equivalent to "not entering the cycle"
+    # create branch equivalent to "entering the cycle"
+    # TODO insert a second iteration of the cycle?
+
+    # unroll each function separately
+    for function in unrolled_function_graphs:
+        print("UNROLLING FUNCTION: ", function.name)
+        try:
+            cycle_edges = nx.find_cycle(unrolled_function_graphs[function])
+            print("\tCycle: ", cycle_edges)
+        except NetworkXNoCycle:
+            print("\tNo cycle found.")
+            continue
+        # while cycle in graph:
+        exit_node_buffer = []
+        while len(cycle_edges) > 0:
+            cycle_nodes: Set[NodeID] = set()
+            for s, t, d in cycle_edges:
+                cycle_nodes.add(s)
+                cycle_nodes.add(t)
+            # unroll cycle
+            # ==> Identify cycle entries
+            entry_nodes: Set[NodeID] = set()
+            for node_id, _, _ in cycle_edges:
+                predecessors = [s for s, t, d in pet.in_edges(node_id, EdgeType.SUCCESSOR)]
+                if len(predecessors) == 0:
+                    entry_nodes.add(node_id)
+                    continue
+                predecessors = [s for s in predecessors if s not in cycle_nodes]
+                if len(predecessors) > 0:
+                    entry_nodes.add(node_id)
+
+            # ==> Identify cycle exits
+            for potential_exit_node in set(
+                [s for s, t, d in cycle_edges] + [t for s, t, d in cycle_edges]
+            ):
+                print("cyc: ", cycle_nodes)
+                print("exit: ", potential_exit_node)
+                potential_cycle_successor_nodes = [
+                    t
+                    for s, t, d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR)
+                    if t not in cycle_nodes
+                ]
+                print("POT: ", potential_cycle_successor_nodes)
+
+                # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node, except for functions
+                pen_parents = [
+                    s
+                    for s, t, d in pet.in_edges(potential_exit_node, EdgeType.CHILD)
+                    if type(pet.node_at(s)) != FunctionNode
+                ]
+                filtered_pcsn = []
+                for pcsn in potential_cycle_successor_nodes:
+                    pcsn_parents = [
+                        s
+                        for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD)
+                        if type(pet.node_at(s)) != FunctionNode
+                    ]
+                    if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
+                        # no shared parents
+                        filtered_pcsn.append(pcsn)
+                    # second chance: add pcsn, if it has a successor outside the given parent
+                    for successor in pet.direct_successors(pet.node_at(pcsn)):
+                        valid = True
+                        for parent in [s for s, t, d in pet.in_edges(successor.id)]:
+                            if parent in pcsn_parents:
+                                valid = False
+                                break
+                        if valid:
+                            filtered_pcsn.append(pcsn)
+                            break
+
+                # prevent endless cycling
+                if potential_exit_node in exit_node_buffer:
+                    filtered_pcsn = potential_cycle_successor_nodes
+
+                if len(filtered_pcsn) == 0:
+                    # not a valid exit node, add to buffer and skip it
+                    exit_node_buffer.append(potential_exit_node)
+                    continue
+
+                # reset buffer, since action will be performed
+                exit_node_buffer = []
+
+                print("EXITS: ", filtered_pcsn)
+
+                # create branch equivalent to "not entering the cycle"
+                # --> nothing to be done, already represented by the edge "potential_exit_node --> cycle_successor"
+
+                # create branch equivalent to "entering the cycle"
+                # --> create a copy of the exit node
+
+                if add_dummy_node:
+                    unrolled_function_graphs[function].add_node(
+                        "dummy:" + potential_exit_node,
+                        data=unrolled_function_graphs[function].nodes[potential_exit_node]["data"],
+                    )
+
+                # --> redirect the last edge in the cycle to cycle_successor, and insert the created copy into the path
+                buffer = set()
+                for cycle_edge in cycle_edges:
+                    if cycle_edge[1] == potential_exit_node:
+                        print("Redirecting: ", cycle_edge, " TO (", cycle_edge[0], ", ", end="")
+                        unrolled_function_graphs[function].remove_edge(
+                            cycle_edge[0], cycle_edge[1], cycle_edge[2]
+                        )
+                        if add_dummy_node:
+                            unrolled_function_graphs[function].add_edge(
+                                cycle_edge[0],
+                                "dummy:" + potential_exit_node,
+                                type=EdgeType.SUCCESSOR,
+                            )
+                        else:
+                            buffer.add(cycle_edge[0])
+
+                for cycle_successor in filtered_pcsn:
+                    if add_dummy_node:
+                        print("dummy:" + potential_exit_node, ",", end="")
+                    print(
+                        cycle_successor,
+                        ")",
+                    )
+                    if add_dummy_node:
+                        unrolled_function_graphs[function].add_edge(
+                            "dummy:" + potential_exit_node, cycle_successor
+                        )
+                    else:
+                        for buffered_node_id in buffer:
+                            unrolled_function_graphs[function].add_edge(
+                                buffered_node_id, cycle_successor, type=EdgeType.SUCCESSOR
+                            )
+
+            # prepare next iteration
+            try:
+                cycle_edges = nx.find_cycle(unrolled_function_graphs[function])
+                print("\tCycle: ", cycle_edges)
+            except NetworkXNoCycle:
+                print("\tNo cycle found.")
+                # break the unrolling loop
+                cycle_edges = []
+
+    return unrolled_function_graphs
+
+
+def add_accesses_from_called_functions(
+    pet: PETGraphX,
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    force_called_functions_to_host: bool = False,
+) -> Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]:
+    """Gather written and read memory regions on a function level.
+    Add the gathered information to calling CU nodes."""
+    values_propagated = True
+    cycles = 0
+    while values_propagated:
+        cycles += 1
+        values_propagated = False
+        for function in pet.all_nodes(type=FunctionNode):
+            print("FUNCTION: ", function.name)
+            memory_accesses = function.get_memory_accesses(writes_by_device)
+            if force_called_functions_to_host:
+                for device_id in memory_accesses:
+                    if device_id != 0:
+                        for mem_reg in memory_accesses[device_id]:
+                            if mem_reg not in memory_accesses[0]:
+                                memory_accesses[0][mem_reg] = set()
+                            memory_accesses[0][mem_reg].update(memory_accesses[device_id][mem_reg])
+                to_be_removed = [key for key in memory_accesses if key != 0]
+                for key in to_be_removed:
+                    del memory_accesses[key]
+
+            # add memory_accesses to calling CU's in writes_by_device
+            called_by = [s for s, t, d in pet.in_edges(function.id, EdgeType.CALLSNODE)]
+            print("\tcalled by: ", called_by)
+            for device_id in memory_accesses:
+                if device_id not in writes_by_device:
+                    writes_by_device[device_id] = dict()
+                for calling_cu_id in called_by:
+                    if calling_cu_id not in writes_by_device[device_id]:
+                        writes_by_device[device_id][calling_cu_id] = dict()
+                    for mem_reg in memory_accesses[device_id]:
+                        if mem_reg not in writes_by_device[device_id][calling_cu_id]:
+                            writes_by_device[device_id][calling_cu_id][mem_reg] = set()
+                        len_pre = len(writes_by_device[device_id][calling_cu_id][mem_reg])
+                        writes_by_device[device_id][calling_cu_id][mem_reg].update(
+                            memory_accesses[device_id][mem_reg]
+                        )
+                        len_post = len(writes_by_device[device_id][calling_cu_id][mem_reg])
+                        values_propagated = (
+                            (values_propagated or True)
+                            if len_pre < len_post
+                            else (values_propagated or False)
+                        )
+    print("cycles: ", cycles)
+    return writes_by_device
+
+
+def identify_updates_in_unrolled_function_graphs(
+    comb_gpu_reg,
+    pet: PETGraphX,
+    writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
+    unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],
+) -> Set[Update]:
+    identified_updates: Set[Update] = set()
+    # get parent functions
+    parent_functions: Set[NodeID] = set()
+    for region in comb_gpu_reg.contained_regions:
+        parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+
+    for parent_function_id in parent_functions:
+
+        print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
+        # determine entry points
+        entry_points: List[NodeID] = []
+        for function_child_id in [
+            t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)
+        ]:
+            in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
+            if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
+                entry_points.append(cast(NodeID, function_child_id))
+
+        for entry_point in entry_points:
+            print(
+                "\tEntry point: ",
+                entry_point,
+                "@L.",
+                pet.node_at(entry_point).start_line,
+                file=sys.stderr,
+            )
+
+            # create a new context
+            # todo add contexts support for multiple devices
+            device_id = get_device_id(comb_gpu_reg, entry_point)
+            context = Context(entry_point, device_id)
+
+            try:
+                entry_point_writes = writes_by_device[device_id][entry_point]
+            except KeyError:
+                entry_point_writes = dict()
+
+            context.update_writes(device_id, entry_point_writes, entry_point)
+
+            # start calculation of updates for entry_point
+            identified_updates.update(
+                __calculate_updates(
+                    pet,
+                    comb_gpu_reg,
+                    context,
+                    entry_point,
+                    writes_by_device,
+                    set(),
+                    unrolled_function_graphs[cast(FunctionNode, pet.node_at(parent_function_id))],
+                )
+            )
 
     return identified_updates

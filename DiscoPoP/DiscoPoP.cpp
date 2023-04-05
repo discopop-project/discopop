@@ -20,6 +20,7 @@
 #define DP_hybrid_DEBUG false
 #define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
 
+
 using namespace llvm;
 using namespace std;
 using namespace dputil;
@@ -582,7 +583,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         cu->instructionsLineNumbers.erase(lid);
                         cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty()) {
-                            cu->removeCU();
+                            //cu->removeCU();
                             cu->startLine = -1;
                             cu->endLine = -1;
                         } else {
@@ -649,7 +650,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             }
         }
         if (cu->instructionsLineNumbers.empty()) {
-            cu->removeCU();
+            //cu->removeCU();
             cu->startLine = -1;
             cu->endLine = -1;
         } else {
@@ -3090,7 +3091,26 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
             // alloca instruction
         else if (isa<AllocaInst>(BI)) {
             AllocaInst *AI = cast<AllocaInst>(BI);
-                instrumentAlloca(cast<AllocaInst>(BI));
+
+            // if the option is set, check if the AllocaInst is static at the entry block of
+            // a function and skip it's instrumentation.
+            // This leads to a strong improvement of the profiling time if a lot of function
+            // calls are used, but results in a worse accurracy.
+            // As the default, the accurate profiling is used.
+            // Effectively, this check disables the instrumentation of allocas which belong to function parameters.
+
+            if(DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS){
+                if(! AI->isStaticAlloca()){
+                    // only instrument non-static alloca instructions
+                    instrumentAlloca(AI);
+                }
+            }
+            else{
+                // instrument every alloca instruction
+                instrumentAlloca(AI);
+            }
+
+            
         }
             // load instruction
         else if (isa<LoadInst>(BI)) {

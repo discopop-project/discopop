@@ -5,8 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+
 import sys
 from typing import Dict, List, Set, Tuple, cast
+
+import networkx as nx  # type: ignore
 
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -16,6 +19,8 @@ from discopop_explorer.PETGraphX import (
     NodeID,
     Node,
     MemoryRegion,
+    Dependency,
+    FunctionNode,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
@@ -124,76 +129,148 @@ def extend_data_lifespan(
 ) -> Dict[MemoryRegion, List[NodeID]]:
     """Extends the lifespan of the data on the device to allow as little data movement as possible."""
     print("Extending data lifespan...", file=sys.stderr)
-    modification_found = True
-    while modification_found:
-        modification_found = False
-        new_entries: List[Tuple[MemoryRegion, NodeID]] = []
-        for mem_reg in live_data:
+    # create graph copy and remove all but successor edges
+    copied_graph = pet.g.copy()
+
+    # remove all but successor edges
+    to_be_removed = set()
+    for edge in copied_graph.edges:
+        edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+        if edge_data.etype != EdgeType.SUCCESSOR:
+            to_be_removed.add(edge)
+    for edge in to_be_removed:
+        copied_graph.remove_edge(edge[0], edge[1])
+
+    for idx, mem_reg in enumerate(live_data):
+        print("EXTENDING mem_reg ", idx, "/", len(live_data), file=sys.stderr)
+        modification_found = True
+        cycles = 0
+
+        finished_functions: Set[FunctionNode] = set()
+
+        while modification_found:
+            print("\t", "len: ", len(live_data[mem_reg]), file=sys.stderr)
+            cycles += 1
+            modification_found = False
+            new_entries: List[Tuple[MemoryRegion, NodeID]] = []
+
+            path_node_ids: Set[NodeID] = set()
+            path_nodes: Set[CUNode] = set()
+
+            # split cu_ids by their parent function (used to reduce the complexity of the following step
+            cu_ids_by_parent_functions: Dict[FunctionNode, List[NodeID]] = dict()
             for cu_id in live_data[mem_reg]:
-                # check if data is live in any successor
-                # If so, set mem_reg to live in each of the encountered CUs.
-                for potential_successor_cu_id in live_data[mem_reg]:
-                    if cu_id == potential_successor_cu_id:
-                        continue
-                    reachable, path_nodes = pet.check_reachability_and_get_path_nodes(
-                        cast(CUNode, pet.node_at(potential_successor_cu_id)),
-                        cast(CUNode, pet.node_at(cu_id)),
-                        [EdgeType.SUCCESSOR, EdgeType.CHILD],
-                    )
-                    if reachable:
-                        # if path_node is located within a loop, add the other loop cus to the path as well
-                        to_be_added: List[CUNode] = []
-                        for path_node in path_nodes:
-                            parent_node = [
-                                pet.node_at(s)
-                                for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
-                            ][0]
-                            if parent_node.type == NodeType.LOOP:
-                                for _, loop_cu_id, _ in pet.out_edges(
-                                    parent_node.id, EdgeType.CHILD
-                                ):
-                                    loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
-                                    if loop_cu not in path_nodes and loop_cu not in to_be_added:
-                                        to_be_added.append(loop_cu)
-                        for loop_cu in to_be_added:
-                            path_nodes.append(loop_cu)
+                parent_function = pet.get_parent_function(pet.node_at(cu_id))
+                if parent_function not in cu_ids_by_parent_functions:
+                    cu_ids_by_parent_functions[parent_function] = []
+                cu_ids_by_parent_functions[parent_function].append(cu_id)
 
-                        # mark mem_reg live in all path_nodes and their children
-                        for path_node in path_nodes:
-                            # todo replace with subtree calculation after merging with refactoring changes
-                            # calculate subtree without including called functions
-                            subtree_without_called_functions = [
-                                cu
-                                for cu in pet.direct_children(path_node)
-                                if cu
-                                not in [
-                                    pet.node_at(t)
-                                    for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)
-                                ]
-                            ]
-                            # add path_node itself to the subtree
-                            subtree_without_called_functions.append(path_node)
-                            # todo end of section to be replaced
-                            #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
-                            for subtree_node in subtree_without_called_functions:
-                                if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
-                                    new_entries.append((mem_reg, subtree_node.id))
+            print("\tparent functions: ", len(cu_ids_by_parent_functions), file=sys.stderr)
+            print(
+                "\t",
+                [
+                    (key.name, len(cu_ids_by_parent_functions[key]))
+                    for key in cu_ids_by_parent_functions
+                ],
+                file=sys.stderr,
+            )
 
-                # set mem_reg to live in every child of CU
-                for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
-                    if child_id not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, child_id))
+            for parent_function in cu_ids_by_parent_functions:
+                # removed due to incorrect results!
+                #                if parent_function in finished_functions:
+                #                    print("\t\tskipped finished function: ", parent_function.name, file=sys.stderr)
+                #                    continue
+                function_new_entries: List[Tuple[MemoryRegion, NodeID]] = []
+                new_path_node_found = False
+                for cu_id in cu_ids_by_parent_functions[parent_function]:
+                    # check if data is live in any successor
+                    # If so, set mem_reg to live in each of the encountered CUs.
 
-                # set mem_reg to live in every called function of CU
-                for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
-                    if called_node not in live_data[mem_reg]:
-                        new_entries.append((mem_reg, called_node))
+                    for potential_successor_cu_id in cu_ids_by_parent_functions[parent_function]:
+                        if cu_id == potential_successor_cu_id:
+                            continue
 
-        new_entries = list(set(new_entries))
-        if len(new_entries) > 0:
-            modification_found = True
-        for mem_reg, new_cu_id in new_entries:
-            live_data[mem_reg].append(new_cu_id)
+                        if cu_id in parent_function.reachability_pairs:
+
+                            reachable = (
+                                potential_successor_cu_id
+                                in parent_function.reachability_pairs[cu_id]
+                            )
+                        else:
+                            reachable = False
+
+                        if reachable:
+                            # get nodes of path from source to target
+                            for path in nx.all_simple_paths(
+                                copied_graph, source=cu_id, target=potential_successor_cu_id
+                            ):
+                                len_pre = len(path_node_ids)
+                                path_node_ids.update(path)
+                                if len_pre < len(path_node_ids):
+                                    new_path_node_found = True
+
+                    # set mem_reg to live in every child of CU
+                    for _, child_id, _ in pet.out_edges(cu_id, EdgeType.CHILD):
+                        if child_id not in live_data[mem_reg]:
+                            function_new_entries.append((mem_reg, child_id))
+
+                    # set mem_reg to live in every called function of CU
+                    for _, called_node, _ in pet.out_edges(cu_id, EdgeType.CALLSNODE):
+                        if called_node not in live_data[mem_reg]:
+                            function_new_entries.append((mem_reg, called_node))
+
+                new_entries += function_new_entries
+
+                function_finished = (
+                    not new_path_node_found
+                )  # len(function_new_entries) == 0 and not new_path_node_found
+                if function_finished:
+                    finished_functions.add(parent_function)
+
+            path_nodes.update([cast(CUNode, pet.node_at(nid)) for nid in path_node_ids])
+
+            # if path_node is located within a loop, add the other loop cus to the path as well
+            to_be_added: List[CUNode] = []
+            for path_node in path_nodes:
+                parent_node = [
+                    pet.node_at(s) for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
+                ][0]
+                if parent_node.type == NodeType.LOOP:
+                    for _, loop_cu_id, _ in pet.out_edges(parent_node.id, EdgeType.CHILD):
+                        loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
+                        if loop_cu not in path_nodes and loop_cu not in to_be_added:
+                            to_be_added.append(loop_cu)
+            for loop_cu in to_be_added:
+                path_nodes.add(loop_cu)
+
+            # mark mem_reg live in all path_nodes and their children
+            for path_node in path_nodes:
+                # todo replace with subtree calculation after merging with refactoring changes
+                # calculate subtree without including called functions
+                subtree_without_called_functions = [
+                    cu
+                    for cu in pet.direct_children(path_node)
+                    if cu
+                    not in [
+                        pet.node_at(t)
+                        for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)
+                    ]
+                ]
+                # add path_node itself to the subtree
+                subtree_without_called_functions.append(path_node)
+                # todo end of section to be replaced
+                #  subtree = pet.subtree_of_type(path_node, NodeType.CU)  # subtree contains path_node
+                for subtree_node in subtree_without_called_functions:
+                    if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
+                        new_entries.append((mem_reg, subtree_node.id))
+
+            new_entries = list(set(new_entries))
+            if len(new_entries) > 0:
+                modification_found = True
+            for mem_reg, new_cu_id in new_entries:
+                live_data[mem_reg].append(new_cu_id)
+
+        print("\tCycles: ", cycles, file=sys.stderr)
 
     # remove duplicates
     for mem_reg in live_data:

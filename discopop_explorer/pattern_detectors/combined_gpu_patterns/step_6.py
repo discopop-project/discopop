@@ -5,10 +5,22 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 import sys
-from typing import Set, Tuple, Dict, List, cast, Optional
+import typing
+from typing import Set, Tuple, Dict, List, cast, Optional, Union
 
-from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, MemoryRegion, DepType, CUNode
+from networkx import MultiDiGraph  # type: ignore
+
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    EdgeType,
+    NodeID,
+    MemoryRegion,
+    DepType,
+    CUNode,
+    FunctionNode,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -269,9 +281,10 @@ def identify_end_of_life_points(
         parent_function_node_id = pet.get_parent_function(pet.node_at(eol[0])).id
         var_names: Set[VarName] = set()
         for mem_reg in eol[2]:
-            var_names.update(
-                memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
-            )
+            if parent_function_node_id in memory_regions_to_functions_and_variables[mem_reg]:
+                var_names.update(
+                    memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
+                )
         memory_regions = set(eol[2])
         # check if the exited data is required by another function
         # if so, mark the exit point as ExitPointType.FROM
@@ -306,3 +319,65 @@ def identify_end_of_life_points(
     print(file=sys.stderr)
 
     return eol_exit_points
+
+
+def extend_region_liveness_using_unrolled_functions(
+    pet: PETGraphX,
+    liveness: Dict[MemoryRegion, List[NodeID]],
+    unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],
+) -> Dict[MemoryRegion, List[NodeID]]:
+    # TODO: potential optimization: invert the 'liveness' dict to allow faster membership check
+
+    for function in pet.all_nodes(FunctionNode):
+        print("FUNCTION: ", function.name)
+        unrolled_function_graph = unrolled_function_graphs[function]
+        queue: List[Tuple[NodeID, MemoryRegion, List[NodeID]]] = []
+        # initialize queue
+        # entry_node_id = function.get_entry_cu_id(pet)
+        for child_node_id in cast(List[NodeID], function.children_cu_ids):
+            for mem_reg in liveness:
+                if child_node_id in liveness[mem_reg]:
+                    queue.append((child_node_id, mem_reg, []))
+
+        # process queue
+        while queue:
+            print("Queue len: ", len(queue))
+            current_node_id, current_mem_reg, visited_nodes = queue.pop()
+            visited_nodes.append(current_node_id)
+
+            successors = [
+                t for s, t, d in unrolled_function_graph.out_edges(current_node_id, data="data")
+            ]
+
+            for successor in successors:
+                # if mem_reg is live in successor, create a new, clean queue entry and set all visited nodes to live
+                # else, create a new queue entry for the successor and use visited_nodes again
+
+                if successor in liveness[current_mem_reg]:
+                    # create a clean queue entry
+                    queue.append((successor, current_mem_reg, []))
+                    # set visited nodes to live
+                    for node_id in visited_nodes:
+                        if node_id not in liveness[current_mem_reg]:
+                            liveness[current_mem_reg].append(node_id)
+                            print("Set ", current_mem_reg, " live in ", node_id)
+                else:
+                    queue.append((successor, current_mem_reg, copy.deepcopy(visited_nodes)))
+
+    return liveness
+
+
+def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]):
+    to_be_removed = []
+    for element_1 in target_set:
+        for element_2 in target_set:
+            if element_1 is element_2:
+                continue
+            if element_1 == element_2:
+                to_be_removed.append(element_2)
+
+    for element in to_be_removed:
+        if element in target_set:
+            target_set.remove(element)  # type: ignore
+
+    return target_set
