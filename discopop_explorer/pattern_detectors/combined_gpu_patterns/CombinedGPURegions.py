@@ -56,6 +56,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     add_aliases,
     extend_region_liveness_using_unrolled_functions,
     remove_duplicates,
+    join_elements,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
     prepare_liveness_metadata,
@@ -328,6 +329,11 @@ class CombinedGPURegion(PatternInfo):
         updates = remove_duplicates(updates)
         entry_points = remove_duplicates(entry_points)
         exit_points = remove_duplicates(exit_points)
+
+        # join entries
+        updates = join_elements(updates)
+        entry_points = join_elements(entry_points)
+        exit_points = join_elements(exit_points)
 
         # ### PREPARE METADATA
         # prepare device liveness

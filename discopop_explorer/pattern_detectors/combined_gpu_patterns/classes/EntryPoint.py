@@ -71,7 +71,7 @@ class EntryPoint(object):
     def __eq__(self, other):
         if (
             tuple(self.var_names),
-            tuple(self.memory_regions),
+            #            tuple(self.memory_regions),  # leads to duplicated outputs
             self.source_cu_id,
             self.sink_cu_id,
             self.entry_point_type,
@@ -80,7 +80,7 @@ class EntryPoint(object):
             tuple(self.dependencies),
         ) == (
             tuple(other.var_names),
-            tuple(other.memory_regions),
+            #            tuple(other.memory_regions),  # leads to duplicated outputs
             other.source_cu_id,
             other.sink_cu_id,
             other.entry_point_type,
@@ -104,6 +104,20 @@ class EntryPoint(object):
                 tuple(self.dependencies),
             )
         )
+
+    def get_position_identifier(self):
+        # used to join multiple elements
+        return (
+            self.sink_cu_id,
+            self.source_cu_id,
+            self.entry_point_type,
+            self.entry_point_positioning,
+        )
+
+    def join(self, other):
+        self.var_names.update(other.var_names)
+        self.memory_regions.update(other.memory_regions)
+        self.dependencies.update(other.dependencies)
 
     def get_as_metadata(self, pet: PETGraphX, project_folder_path: str):
         # get type of mapped variables
