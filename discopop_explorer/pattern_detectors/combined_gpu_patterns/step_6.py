@@ -155,7 +155,6 @@ def add_aliases(
     issued_updates: Set[Update],
     memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[Update]:
-
     for update in issued_updates:
         source_parent_function_node = pet.get_parent_function(
             pet.node_at(update.synchronous_source_cu_id)
@@ -381,3 +380,25 @@ def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPo
             target_set.remove(element)  # type: ignore
 
     return target_set
+
+
+def join_elements(target_set):
+    grouping_dict = dict()
+
+    for elem in target_set:
+        if elem.get_position_identifier() not in grouping_dict:
+            grouping_dict[elem.get_position_identifier()] = []
+        grouping_dict[elem.get_position_identifier()].append(elem)
+
+    result_set = set()
+
+    for key in grouping_dict:
+        # assemble a single EntryPoint
+        joined_entry_point: Optional[EntryPoint] = None
+        for elem in grouping_dict[key]:
+            if joined_entry_point is None:
+                joined_entry_point = elem
+            else:
+                joined_entry_point.join(elem)
+        result_set.add(cast(EntryPoint, joined_entry_point))
+    return result_set

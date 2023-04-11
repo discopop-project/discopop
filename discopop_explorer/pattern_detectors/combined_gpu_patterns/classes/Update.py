@@ -107,7 +107,7 @@ class Update(object):
             self.synchronous_source_cu_id,
             self.asynchronous_source_cu_id,
             self.sink_cu_id,
-            tuple(self.memory_regions),
+            #            tuple(self.memory_regions),  # leads to duplicated outputs
             tuple(self.variable_names),
             self.update_type,
             tuple(self.last_write_locations.items()),
@@ -117,7 +117,7 @@ class Update(object):
             other.synchronous_source_cu_id,
             other.asynchronous_source_cu_id,
             other.sink_cu_id,
-            tuple(other.memory_regions),
+            #            tuple(other.memory_regions),  # leads to duplicated outputs
             tuple(other.variable_names),
             other.update_type,
             tuple(other.last_write_locations.items()),
@@ -141,6 +141,18 @@ class Update(object):
                 tuple(self.dependencies),
             )
         )
+
+    def get_position_identifier(self):
+        # used to join multiple elements
+        if self.asynchronous_possible:
+            return (self.sink_cu_id, self.asynchronous_source_cu_id, self.update_type)
+        else:
+            return (self.sink_cu_id, self.synchronous_source_cu_id, self.update_type)
+
+    def join(self, other):
+        self.variable_names.update(other.variable_names)
+        self.memory_regions.update(other.memory_regions)
+        self.dependencies.update(other.dependencies)
 
     def get_as_metadata_using_memory_regions(self, pet: PETGraphX):
         return [
