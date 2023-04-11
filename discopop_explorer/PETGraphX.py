@@ -854,7 +854,7 @@ class PETGraphX(object):
             ],
         )
 
-        # plt.show()
+        plt.show()
         plt.savefig("graphX.svg")
 
     def node_at(self, node_id: NodeID) -> Node:
