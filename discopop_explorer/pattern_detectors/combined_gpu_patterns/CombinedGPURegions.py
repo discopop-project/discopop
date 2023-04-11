@@ -418,31 +418,30 @@ def find_combined_gpu_regions(
 
     true_successor_combinations = find_true_successor_combinations(pet, intra_function_combinations)
 
-    #    # combine regions
-    #    for combinable_1, combinable_2 in true_successor_combinations:
-    #        if combinable_1 in combined_gpu_regions:
-    #            combined_gpu_regions.remove(combinable_1)
-    #        if combinable_2 in combined_gpu_regions:
-    #            combined_gpu_regions.remove(combinable_2)
-    #        combined_gpu_regions.append(
-    #            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
-    #        )
+    # combine regions
+    for combinable_1, combinable_2 in intra_function_combinations:  # true_successor_combinations:
+        if combinable_1 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_1)
+        if combinable_2 in combined_gpu_regions:
+            combined_gpu_regions.remove(combinable_2)
+        combined_gpu_regions.append(
+            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
+        )
 
-    # combine all known regions
-    combined_region: Optional[CombinedGPURegion] = None
-    for cgr in combined_gpu_regions:
-        if combined_region is None:
-            combined_region = cgr
-        else:
-            combined_region = combine_regions(pet, combined_region, cgr, project_folder_path)
+    #    # combine all known regions
+    #    combined_region: Optional[CombinedGPURegion] = None
+    #    for cgr in combined_gpu_regions:
+    #        if combined_region is None:
+    #            combined_region = cgr
+    #        else:
+    #            combined_region = combine_regions(pet, combined_region, cgr, project_folder_path)
 
-    if combined_region is None:
-        return []
-    else:
-        return [combined_region]
+    #    if combined_region is None:
+    #        return []
+    #    else:
+    #        return [combined_region]
 
-
-#    return combined_gpu_regions
+    return combined_gpu_regions
 
 
 def find_all_pairwise_gpu_region_combinations(
