@@ -28,6 +28,6 @@ add_library(DiscoPoP_RT STATIC
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
 # compile simple-alias-detection
-exec_program(${CMAKE_CURRENT_SOURCE_DIR}/simple-alias-detection/compile.sh
-    ARGS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
-)
+#exec_program(${CMAKE_CURRENT_SOURCE_DIR}/simple-alias-detection/compile.sh
+#    ARGS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+#)
