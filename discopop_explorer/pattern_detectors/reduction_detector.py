@@ -71,6 +71,9 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
             if node.loop_iterations >= 0:
                 result.append(ReductionInfo(pet, node))
 
+    for pattern in result:
+        pattern.get_workload(pet)
+
     return result
 
 

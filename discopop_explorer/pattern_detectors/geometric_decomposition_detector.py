@@ -32,7 +32,7 @@ class GDInfo(PatternInfo):
 
         self.min_iter_number = min_iter
         mi_sqrt = math.sqrt(min_iter)
-        wl = math.sqrt(self.workload)
+        wl = math.sqrt(self.get_workload(pet))
         nt = 1.1 * mi_sqrt + 0.0002 * wl - 0.0000002 * mi_sqrt * wl - 10
 
         if nt >= 1000:
@@ -95,6 +95,9 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
             if test and min_iter is not None:
                 result.append(GDInfo(pet, node, min_iter))
                 # result.append(node.id)
+
+    for pattern in result:
+        pattern.get_workload(pet)
 
     return result
 

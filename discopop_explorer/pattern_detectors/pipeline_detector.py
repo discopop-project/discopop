@@ -172,6 +172,9 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
             if node.pipeline > __pipeline_threshold:
                 result.append(PipelineInfo(pet, node))
 
+    for pattern in result:
+        pattern.get_workload(pet)
+
     return result
 
 
