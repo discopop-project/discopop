@@ -6,8 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import json
+from typing import Optional
 
-from ..PETGraphX import LoopNode, Node, NodeID, LineID
+from ..utils import calculate_workload
+from ..PETGraphX import LoopNode, Node, NodeID, LineID, PETGraphX
 
 
 class PatternInfo(object):
@@ -19,7 +21,7 @@ class PatternInfo(object):
     end_line: LineID
     iterations_count: int
     instructions_count: int
-    workload: int
+    workload: Optional[int]
 
     def __init__(self, node: Node):
         """
@@ -32,7 +34,7 @@ class PatternInfo(object):
         self.iterations_count = node.loop_iterations if isinstance(node, LoopNode) else -1
         # TODO self.instructions_count = total_instructions_count(pet, node)
         self.instructions_count = 0
-        self.workload = 0
+        self.workload = None
         # TODO self.workload = calculate_workload(pet, node)
 
     def to_json(self):
@@ -43,3 +45,10 @@ class PatternInfo(object):
                 del dic[key]
 
         return json.dumps(dic, indent=2, default=lambda o: "<not serializable>")
+
+    def get_workload(self, pet: PETGraphX) -> int:
+        """returns the workload of self._node"""
+        if self.workload is not None:
+            return self.workload
+        self.workload = calculate_workload(pet, self._node)
+        return self.workload
