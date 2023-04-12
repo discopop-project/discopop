@@ -97,45 +97,49 @@ def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
 
 # NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-# def calculate_workload(pet: PETGraphX, node: CUNode) -> int:
-#    """Calculates workload for a given node
-#    The workload is the number of instructions multiplied by respective number of iterations
-#
-#    :param pet: PET graph
-#    :param node: root node
-#    :return: workload
-#    """
-#    res = 0
-#    if node.type == NodeType.DUMMY:
-#        return 0
-#    elif node.type == NodeType.CU:
-#        res += node.instructions_count
-#    elif node.type == NodeType.FUNC:
-#        for child in find_subnodes(pet, node, EdgeType.CHILD):
-#            res += calculate_workload(pet, child)
-#    elif node.type == NodeType.LOOP:
-#        for child in find_subnodes(pet, node, EdgeType.CHILD):
-#            if child.type == NodeType.CU:
-#                if 'for.inc' in child.basic_block_id:
-#                    res += child.instructions_count
-#                elif 'for.cond' in child.basic_block_id:
-#                    res += child.instructions_count * (
-#                        get_loop_iterations(node.start_position()) + 1)
-#                else:
-#                    res += child.instructions_count * \
-#                        get_loop_iterations(node.start_position())
-#            else:
-#                res += calculate_workload(pet, child) * \
-#                    get_loop_iterations(node.start_position())
-#    return res
+def calculate_workload(pet: PETGraphX, node: Node) -> int:
+    """Calculates and stores the workload for a given node
+    The workload is the number of instructions multiplied by respective number of iterations
 
-
-def get_loop_iterations(line: LineID) -> int:
-    """Calculates the number of iterations in specified loop
-
-    :param line: start line of the loop
+    :param pet: PET graph
+    :param node: root node
+    :return: workload
     """
-    return loop_data.get(line, 0)
+    # check if value already present
+    if node.workload is not None:
+        return cast(int, node.workload)
+
+    res = 0
+    if node.type == NodeType.DUMMY:
+        # store workload
+        node.workload = 0
+        return 0
+    elif node.type == NodeType.CU:
+        res += cast(CUNode, node).instructions_count
+    elif node.type == NodeType.FUNC:
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
+            res += calculate_workload(pet, child)
+    elif node.type == NodeType.LOOP:
+        for child in find_subnodes(pet, node, EdgeType.CHILD):
+            if child.type == NodeType.CU:
+                if "for.inc" in cast(CUNode, child).basic_block_id:
+                    res += cast(CUNode, child).instructions_count
+                elif "for.cond" in cast(CUNode, child).basic_block_id:
+                    res += (
+                        cast(CUNode, child).instructions_count
+                        * cast(LoopNode, node).loop_iterations
+                        + 1
+                    )
+                else:
+                    res += (
+                        cast(CUNode, child).instructions_count
+                        * cast(LoopNode, node).loop_iterations
+                    )
+            else:
+                res += calculate_workload(pet, child) * cast(LoopNode, node).loop_iterations
+    # store workload
+    node.workload = res
+    return res
 
 
 def __get_dep_of_type(
