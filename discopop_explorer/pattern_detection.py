@@ -90,11 +90,6 @@ class PatternDetectorX(object):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.calculateFunctionMetadata()
-        # calculate workload for each Node and store the calculated value
-        # todo should be moved to PETGraphX, currently not possible due to circular import
-        for node in self.pet.all_nodes():
-            calculate_workload(self.pet, node)
-            print("\t\tNode: ", node.id, node.type, "\tworkload: ", node.workload)
         res = DetectionResult(self.pet)
 
         # reduction before doall!
