@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
@@ -188,3 +188,54 @@ def show(graph):
 
     fig.canvas.mpl_connect("motion_notify_event", hover)
     plt.show()
+
+
+def add_successor_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = SuccessorEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
+def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = ChildEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
+def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = TemporaryEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
+def delete_outgoing_temporary_edges(graph: nx.DiGraph, source_id: int):
+    to_be_deleted = set()
+    for edge in graph.out_edges(source_id):
+        edge_data = graph.edges[edge]["data"]
+        if isinstance(edge_data, TemporaryEdge):
+            to_be_deleted.add(edge)
+    for edge in to_be_deleted:
+        remove_edge(graph, edge[0], edge[1])
+
+
+def redirect_edge(graph: nx.DiGraph, old_source_id: int, new_source_id: int, old_target_id: int, new_target_id: int):
+    edge_data = graph.edges[(old_source_id, old_target_id)]["data"]
+    remove_edge(graph, old_source_id, old_target_id)
+    graph.add_edge(new_source_id, new_target_id, data=edge_data)
+
+
+def remove_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    graph.remove_edge(source_id, target_id)
+
+
+def convert_temporary_edges(graph: nx.DiGraph):
+    """Convert temporary edges to Successor edges"""
+    for edge in graph.edges:
+        edge_data = graph.edges[edge]["data"]
+        if isinstance(edge_data, TemporaryEdge):
+            graph.edges[edge]["data"] = cast(TemporaryEdge, edge_data).convert_to_successor_edge()
+
+
+def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    """Converts a single temporary edge to a successor edge"""
+    edge_data = graph.edges[(source_id, target_id)]["data"]
+    if isinstance(edge_data, TemporaryEdge):
+        graph.edges[(source_id, target_id)]["data"] = cast(TemporaryEdge,
+                                                           edge_data).convert_to_successor_edge()
