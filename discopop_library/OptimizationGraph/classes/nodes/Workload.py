@@ -1,6 +1,9 @@
 from typing import Optional
 
+from sympy import Integer  # type: ignore
+
 from discopop_explorer.PETGraphX import NodeID
+from discopop_library.OptimizationGraph.PerformanceModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
 
 
@@ -21,3 +24,10 @@ class Workload(GenericNode):
 
     def get_hover_text(self) -> str:
         return "WL: " + str(self.workload)
+
+    def get_cost_model(self) -> CostModel:
+        """Performance model of a workload consists of the workload itself"""
+        if self.workload is None:
+            return CostModel(Integer(0))
+        else:
+            return CostModel(Integer(self.workload))

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 
 from discopop_library.OptimizationGraph.classes.edges.ChildEdge import ChildEdge
+from discopop_library.OptimizationGraph.classes.edges.GenericEdge import GenericEdge
 from discopop_library.OptimizationGraph.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.OptimizationGraph.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.OptimizationGraph.classes.nodes.ContextNode import ContextNode
@@ -16,6 +17,10 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 def data_at(graph: nx.DiGraph, node_id: int) -> GenericNode:
     """Return the data object stored at the networkx node with id node_id."""
     return graph.nodes[node_id]["data"]
+
+
+def get_edge_data(graph: nx.DiGraph, source: int, target: int) -> GenericEdge:
+    return graph.edges[(source, target)]["data"]
 
 
 def get_successors(graph: nx.DiGraph, node_id: int) -> List[int]:
