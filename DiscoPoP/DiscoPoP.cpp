@@ -3197,12 +3197,12 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
                 if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc"))
                 {
-                    instrumentNewOrMalloc(cast<CallInst>(BI));
+                    instrumentNewOrMalloc(cast<CallBase>(BI));
                     continue;
                 }
                 if (fn.equals("_ZdlPv") || fn.equals("free"))
                 {
-                    instrumentDeleteOrFree(cast<CallInst>(BI));
+                    instrumentDeleteOrFree(cast<CallBase>(BI));
                     continue;
                 }
 
@@ -3311,7 +3311,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     IRB.CreateCall(DpAlloca, args, "");
 }   
 
-void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
+void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
@@ -3332,7 +3332,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
     IRB.CreateCall(DpNew, args, "");
 }
 
-void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
+void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
     // add instrumentation for delete instructions or calls to free
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
