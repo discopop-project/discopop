@@ -3121,7 +3121,13 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
                 if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc"))
                 {
-                    instrumentNewOrMalloc(cast<CallBase>(BI));
+                    if(isa<CallInst>(BI)){
+                        instrumentNewOrMalloc(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentNewOrMalloc(cast<InvokeInst>(BI));
+                    }
+                    
                     continue;
                 }
                 if (fn.equals("_ZdlPv") || fn.equals("free"))
