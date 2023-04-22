@@ -40,6 +40,7 @@ def from_json_strings(
     Only fileIDs of files which would be modified occur as keys in the returned dictionary.
     For now, it is assumed that the given patterns are independent of each other, i.e. no nesting exists."""
     # convert pattern_json_strings to UnpackedSuggestion object
+    # TODO read single list of patterns here, the parameter might need changing too
     unpacked_suggestions: List[UnpackedSuggestion] = []
     for type_str in pattern_json_strings_by_type:
         for json_str in pattern_json_strings_by_type[type_str]:

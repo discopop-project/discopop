@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List
+from typing import List, Tuple, Type, TypeVar, Union, overload
 
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
@@ -21,6 +21,8 @@ from .variable import Variable
 
 class DetectionResult(object):
     pet: PETGraphX
+    identified_patterns: List[PatternInfo]
+    # TODO remove all the following, replace reading accesses with get_patterns(<type>)
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
@@ -29,7 +31,7 @@ class DetectionResult(object):
 
     def __init__(self, pet: PETGraphX):
         self.pet = pet
-        pass
+        self.identified_patterns = list()
 
     def __str__(self):
         result_str = ""
@@ -44,6 +46,25 @@ class DetectionResult(object):
                     value_str += entry.to_string(self.pet) + "\n\n"
             result_str += value_str
         return result_str
+
+    # generic type: subclasses of PatternInfo
+    PatternT = TypeVar("PatternT", bound=PatternInfo)
+
+    @overload
+    def get_patterns(self) -> List[PatternInfo]:
+        ...
+
+    @overload
+    def get_patterns(self, type: Union[Type[PatternT], Tuple[Type[PatternT], ...]]) -> List[PatternT]:
+        ...
+
+    def get_patterns(self, type=PatternInfo):
+        """List of all patterns of specified type
+
+        :param type: type(s) of patterns
+        :return: List of all patterns (of the specified type(s))
+        """
+        return [n[1] for n in self.identified_patterns if isinstance(n[1], type)]
 
 
 class PatternDetectorX(object):
@@ -92,18 +113,18 @@ class PatternDetectorX(object):
         res = DetectionResult(self.pet)
 
         # reduction before doall!
-        res.reduction = detect_reduction(self.pet)
+        res.identified_patterns.extend(detect_reduction(self.pet))
         print("REDUCTION DONE.")
-        res.do_all = detect_do_all(self.pet)
+        res.identified_patterns.extend(detect_do_all(self.pet))
         print("DOALL DONE.")
-        res.pipeline = detect_pipeline(self.pet)
+        res.identified_patterns.extend(detect_pipeline(self.pet))
         print("PIPELINE DONE.")
-        res.geometric_decomposition = detect_gd(self.pet)
+        res.identified_patterns(detect_gd(self.pet))
         print("GEO. DEC. DONE.")
 
         # check if task pattern should be enabled
         if enable_task_pattern:
-            res.task = detect_tp(
+            res.identified_patterns.extend(detect_tp(
                 cu_dict,
                 dependencies,
                 loop_data,
@@ -112,5 +133,5 @@ class PatternDetectorX(object):
                 cu_inst_result_file,
                 llvm_cxxfilt_path,
                 discopop_build_path,
-            )
+            ))
         return res
