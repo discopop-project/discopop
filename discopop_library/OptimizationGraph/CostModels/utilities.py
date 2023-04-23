@@ -1,8 +1,9 @@
 from typing import List, Dict, cast, Optional
 
 import networkx as nx  # type: ignore
+from sympy import Integer  # type: ignore
 
-from discopop_library.OptimizationGraph.PerformanceModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_successors, get_children, data_at, \
@@ -62,5 +63,6 @@ def print_introduced_symbols_per_node(graph: nx.DiGraph):
     print("Introduced Symbols:")
     for node_id in graph.nodes:
         print("NodeID: ", node_id)
-        print("\t: ", data_at(graph, node_id).introduced_symbols)
+        for symbol in data_at(graph, node_id).introduced_symbols:
+            print("\t: ", symbol)
     print()

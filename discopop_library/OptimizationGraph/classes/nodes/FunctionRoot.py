@@ -3,7 +3,7 @@ from typing import Optional
 from sympy import Function, Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
-from discopop_library.OptimizationGraph.PerformanceModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 

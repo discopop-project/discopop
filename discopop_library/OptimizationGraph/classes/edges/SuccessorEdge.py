@@ -1,6 +1,6 @@
 from sympy import Symbol  # type: ignore
 
-from discopop_library.OptimizationGraph.PerformanceModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.edges.GenericEdge import GenericEdge
 
 
