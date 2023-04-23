@@ -3241,7 +3241,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
-    IRBuilder<> IRB(toInstrument->getNextNode());
+    IRBuilder<> IRB(toInstrument->getNextNonDebugInstruction());
 
     vector < Value * > args;
     args.push_back(ConstantInt::get(Int32, lid));
@@ -3262,7 +3262,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
-    IRBuilder<> IRB(toInstrument->getNextNode());
+    IRBuilder<> IRB(toInstrument->getNextNonDebugInstruction());
 
     vector < Value * > args;
     args.push_back(ConstantInt::get(Int32, lid));
