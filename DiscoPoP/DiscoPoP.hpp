@@ -317,6 +317,8 @@ namespace {
         int32_t fid;
         FunctionCallee ReportBB, ReportBBPair;
         dputil::VariableNameFinder *VNF;
+        std::ofstream* staticDependencyFile;
+
 // DPInstrumentationOmission end
 
     public:
