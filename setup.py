@@ -70,6 +70,5 @@ setup(
         "Topic :: Software Development",
     ],
     license_files=["LICENSE"],
-    #include_package_data=True,
-    package_data={"": ["py.typed"]}
+    include_package_data=True,
 )
