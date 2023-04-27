@@ -17,7 +17,7 @@
 
 #define DP_DEBUG false
 #define DP_VERBOSE false  // prints warning messages
-#define DP_hybrid_DEBUG true
+#define DP_hybrid_DEBUG false
 #define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
 
 using namespace llvm;
