@@ -70,7 +70,14 @@ class OptimizationGraph(object):
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
                 print(model.model.free_symbols)
-                plot3d(model.model, (Symbol("transfer_cost"), 0, 500), (Symbol("thread_num"), 1, 1024))
+                try:
+                    if len(model.model.free_symbols) == 2:
+                        plot3d(model.model, (Symbol("transfer_cost"), 0, 500), (Symbol("thread_num"), 1, 128))
+                    elif len(model.model.free_symbols) == 1:
+                        plot(model, (Symbol("transfer_cost"), 0, 500))
+                except ValueError:
+                    pass
+
 
 
         print("COMPARE: ")
