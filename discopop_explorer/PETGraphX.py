@@ -7,6 +7,9 @@
 # directory for details.
 
 from __future__ import annotations
+
+import copy
+from time import sleep
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
@@ -429,7 +432,62 @@ class PETGraphX(object):
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+        print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos)
+
+    def map_static_and_dynamic_dependencies(self):
+        print("\tMapping static to dynamic dependencies...")
+        print("\t\tIdentifying mappings between static and dynamic memory regions...", end=" ")
+        mem_reg_mappings: Dict[MemoryRegion, Set[MemoryRegion]] = dict()
+        # initialize mappings
+        for node_id in [n.id for n in self.all_nodes(CUNode)]:
+            out_deps = [
+                (s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA
+            ]
+
+            # for outgoing dependencies, the scope must be equal
+            # as a result, comparing variable names to match memory regions is valid
+            for _, _, d1 in out_deps:
+                for _, _, d2 in out_deps:
+                    if d1 == d2:
+                        continue
+                    if d1.var_name == d2.var_name:
+                        if d1.memory_region != d2.memory_region:
+                            if d1.memory_region not in mem_reg_mappings:
+                                mem_reg_mappings[d1.memory_region] = set()
+                            if d2.memory_region not in mem_reg_mappings:
+                                mem_reg_mappings[d2.memory_region] = set()
+                            mem_reg_mappings[d1.memory_region].add(d2.memory_region)
+                            mem_reg_mappings[d2.memory_region].add(d1.memory_region)
+        print("Done.")
+
+        print("\t\t\tMappings: ", mem_reg_mappings)
+
+        print("\t\tInstantiating static dependencies...", end=" ")
+        self.show()
+        # create copies of static dependency edges for all dynamic mappings
+        for node_id in [n.id for n in self.all_nodes(CUNode)]:
+            out_deps = [
+                (s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA
+            ]
+            for s, t, d in out_deps:
+                if d.memory_region.startswith("S"):
+                    # Static dependency found
+                    # check if mappings exist
+                    if d.memory_region in mem_reg_mappings:
+                        # create instances for all dynamic mappings
+                        for dynamic_mapping in [
+                            mapping
+                            for mapping in mem_reg_mappings[d.memory_region]
+                            if not mapping.startswith("S")
+                        ]:
+                            edge_data = copy.deepcopy(d)
+                            edge_data.memory_region = dynamic_mapping
+                            self.g.add_edge(s, t, data=edge_data)
+                            print("Added Instance: ", s, t, edge_data)
+
+        print("Done.")
+        self.show()
 
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
@@ -443,6 +501,7 @@ class PETGraphX(object):
                 children = self.direct_children(child)
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
+        print("\tCalculated metadata for functions...")
 
     def show(self):
         """Plots the graph
