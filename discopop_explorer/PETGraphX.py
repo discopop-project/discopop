@@ -464,7 +464,6 @@ class PETGraphX(object):
         print("\t\t\tMappings: ", mem_reg_mappings)
 
         print("\t\tInstantiating static dependencies...", end=" ")
-        self.show()
         # create copies of static dependency edges for all dynamic mappings
         for node_id in [n.id for n in self.all_nodes(CUNode)]:
             out_deps = [
@@ -487,7 +486,6 @@ class PETGraphX(object):
                             print("Added Instance: ", s, t, edge_data)
 
         print("Done.")
-        self.show()
 
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
