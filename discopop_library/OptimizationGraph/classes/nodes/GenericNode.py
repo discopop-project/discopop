@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Optional, List
 
-from sympy import Symbol, Function  # type: ignore
+from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
@@ -23,7 +23,7 @@ class GenericNode(object):
         self.node_id = node_id
         self.cu_id = cu_id
         self.introduced_symbols = []
-        self.performance_model = CostModel(identifier="dummy", performance_model=Function("dummy"))
+        self.performance_model = CostModel(Integer(0))
         self.suggestion = None
 
     def get_plot_label(self) -> str:

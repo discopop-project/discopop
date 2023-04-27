@@ -23,6 +23,7 @@ class Workload(GenericNode):
         super().__init__(node_id, cu_id)
         self.workload = workload
         self.cost_multiplier = CostModel(Integer(1))
+        self.overhead = CostModel(Integer(0))
 
     def get_plot_label(self) -> str:
         if self.workload is not None:
@@ -37,6 +38,6 @@ class Workload(GenericNode):
     def get_cost_model(self) -> CostModel:
         """Performance model of a workload consists of the workload itself"""
         if self.workload is None:
-            return CostModel(Integer(0)).multiply_combine(self.cost_multiplier)
+            return CostModel(Integer(0)).multiply_combine(self.cost_multiplier).plus_combine(self.overhead)
         else:
-            return CostModel(Integer(self.workload)).multiply_combine(self.cost_multiplier)
+            return CostModel(Integer(self.workload)).multiply_combine(self.cost_multiplier).plus_combine(self.overhead)

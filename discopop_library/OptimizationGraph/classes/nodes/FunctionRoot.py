@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Optional
 
-from sympy import Function, Symbol  # type: ignore
+from sympy import Function, Symbol, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
@@ -29,10 +29,12 @@ class FunctionRoot(Workload):
             Spawn overhead + children"""
         # todo this is only a dummy, not a finished model!
         function_name = "function" + "_" + str(self.node_id) + "_" + self.name
-        spawn_overhead = Symbol(function_name + "_spawn_overhead")
-        self.introduced_symbols.append(spawn_overhead)
-        model = Function(function_name)
-        model = spawn_overhead
+        # spawn_overhead = Symbol(function_name + "_spawn_overhead")
+        # self.introduced_symbols.append(spawn_overhead)
+        # model = Function(function_name)
+        # model = spawn_overhead
+
+        model = Integer(1)  # dummy for a unknown, but constant overhead for function spawning
         self.performance_model = CostModel(model, identifier=function_name)
 
         return CostModel(model, identifier=function_name)
