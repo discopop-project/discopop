@@ -28,7 +28,7 @@ class PETParser(object):
         self.next_free_node_id = 0
         self.cu_id_to_graph_node_id = dict()
 
-    def parse(self) -> nx.DiGraph:
+    def parse(self) -> Tuple[nx.DiGraph, int]:
         self.__add_cu_nodes()
         self.__add_functions()
         self.__add_pet_successor_edges()
@@ -37,7 +37,7 @@ class PETParser(object):
         self.__parse_branched_sections()
         convert_temporary_edges(self.graph)
 
-        return self.graph
+        return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
         """returns the next free node id and increments the counter"""
