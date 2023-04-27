@@ -40,3 +40,12 @@ class CostModel(object):
         combined_model = self.model / other.model
         path_decisions = self.path_decisions + other.path_decisions
         return CostModel(combined_model, path_decisions=path_decisions)
+
+    def multiply_combine(self, other):
+        """Combines both models in the following fashion:
+                f(x,y) = x * y"""
+        if other is None:
+            return self
+        combined_model = self.model * other.model
+        path_decisions = self.path_decisions + other.path_decisions
+        return CostModel(combined_model, path_decisions=path_decisions)

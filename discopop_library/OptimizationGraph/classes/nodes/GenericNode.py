@@ -16,7 +16,8 @@ class GenericNode(object):
         self.node_id = node_id
         self.cu_id = cu_id
         self.introduced_symbols = []
-        self.performance_model = CostModel("dummy", Function("dummy"))
+        self.performance_model = CostModel(identifier="dummy", performance_model=Function("dummy"))
+        self.suggestion = None
 
     def get_plot_label(self) -> str:
         return ""

@@ -10,8 +10,8 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_succes
     get_edge_data
 
 
-def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot, CostModel]:
-    performance_models: Dict[FunctionRoot, CostModel] = dict()
+def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot, List[CostModel]]:
+    performance_models: Dict[FunctionRoot, List[CostModel]] = dict()
     for node_id in graph.nodes:
         node_data = graph.nodes[node_id]["data"]
         if isinstance(node_data, FunctionRoot):
@@ -19,8 +19,9 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
     return performance_models
 
 
-def get_node_performance_model(graph: nx.DiGraph, node_id: int) -> CostModel:
-    """Returns the performance model for the given node"""
+def get_node_performance_model(graph: nx.DiGraph, node_id: int) -> List[CostModel]:
+    """Returns the performance models for the given node"""
+    result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
     successor_count = len(successors)
     node_data = cast(GenericNode, data_at(graph, node_id))
@@ -29,19 +30,19 @@ def get_node_performance_model(graph: nx.DiGraph, node_id: int) -> CostModel:
     model_plus_children = node_data.get_cost_model().plus_combine(get_performance_model_for_children(graph, node_id))
 
     # construct the performance model
-    if successor_count == 1:
-        combined_model = model_plus_children
-        # add transfer costs
-        transfer_costs_model = get_edge_data(graph, node_id, successors[0]).get_cost_model()
-        combined_model = combined_model.plus_combine(transfer_costs_model)
-        # append the model of the successor
-        combined_model = combined_model.plus_combine(get_node_performance_model(graph, successors[0]))
-        return combined_model
-
-    # todo implement case for branching, i.e. selection of suggestion to be implemented
+    if successor_count >= 1:
+        for successor in successors:
+            combined_model = model_plus_children
+            # add transfer costs
+            transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
+            combined_model = combined_model.plus_combine(transfer_costs_model)
+            # append the model of the successor
+            for model in get_node_performance_model(graph, successor):
+                result_list.append(combined_model.plus_combine(model))
+        return result_list
 
     # successor count == 0 or successor count > 1
-    return model_plus_children
+    return [model_plus_children]
 
 
 def get_performance_model_for_children(graph: nx.DiGraph, node_id: int) -> Optional[CostModel]:
@@ -49,7 +50,8 @@ def get_performance_model_for_children(graph: nx.DiGraph, node_id: int) -> Optio
     # todo: consider children
     children_models: List[CostModel] = []
     for child_id in get_children(graph, node_id):
-        children_models.append( get_node_performance_model(graph, child_id))
+        for model in get_node_performance_model(graph, child_id):
+            children_models.append(model)
     # construct model from individual performance models of the children
     if len(children_models) == 0:
         return None

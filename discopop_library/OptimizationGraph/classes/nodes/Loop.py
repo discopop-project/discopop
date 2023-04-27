@@ -22,10 +22,3 @@ class Loop(Workload):
     def get_hover_text(self) -> str:
         return "WL: " + str(self.workload) + "\n" + \
             "IT: " + str(self.iterations)
-
-    def get_cost_model(self) -> CostModel:
-        # todo this is only a dummy, not a finished model!
-        thread_count_name = "loop_" + str(self.node_id) + "_thread_count"
-        thread_count = Symbol(thread_count_name)
-        self.introduced_symbols.append(thread_count)
-        return super().get_cost_model().divide_combine(CostModel(thread_count))
