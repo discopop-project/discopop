@@ -177,6 +177,7 @@ bool DiscoPoP::doInitialization(Module &M) {
                 Int32
         );
         VNF = new dputil::VariableNameFinder(M);
+        int nextFreeStaticMemoryRegionID = 0;
     }
 // DPInstrumentationOmission end
 
@@ -2183,6 +2184,27 @@ bool DiscoPoP::runOnFunction(Function &F) {
             }
         }
 
+        // assign static memory region IDs to statically predictable values and thus dependencies
+        unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap;  // <SSA variable name>: (original variable name, statically assigned MemReg ID)
+        bool tmpIsGlobal;
+        long next_id;
+        string llvmIRVarName;
+        string originalVarName;
+        string staticMemoryRegionID;
+        for(auto V: staticallyPredictableValues){
+            next_id = nextFreeStaticMemoryRegionID++;
+            llvmIRVarName = VNF->getVarName(V);
+            // Note: Using variables names as keys is only possible at this point, since the map is created for each function individually.
+            // Thus, we can rely on the SSA properties of LLVM IR and can assume that e.g. scoping is handled by LLVM and destinct variable names are introduced.
+            originalVarName = trueVarNamesFromMetadataMap[llvmIRVarName];
+            if(originalVarName.size() == 0){
+                // no original variable name could be identified using the available metadata. Fall back to the LLVM IR name of the value.
+                originalVarName = llvmIRVarName;
+            }
+            staticMemoryRegionID = "S" + to_string(next_id);
+            staticValueNameToMemRegIDMap[llvmIRVarName] = pair<string, string>(originalVarName, staticMemoryRegionID);
+        }
+
         if (DP_hybrid_DEBUG) {
             errs() << "--- Local Values ---\n";
             for (auto V: staticallyPredictableValues) {
@@ -2215,7 +2237,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
                     set <string> tmp;
                     conditionalBBDepMap[Src->getParent()] = tmp;
                 }
-                conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge));
+                conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
             } else {
                 if (!conditionalBBPairDepMap.count(Dst->getParent())) {
                     map < BasicBlock * , set < string >> tmp;
@@ -2225,7 +2247,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
                     set <string> tmp;
                     conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
                 }
-                conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(DG.edgeToDPDep(edge));
+                conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
             }
             omittableInstructions.insert(Src);
             omittableInstructions.insert(Dst);
