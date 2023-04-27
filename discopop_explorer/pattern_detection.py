@@ -11,6 +11,7 @@ from typing import List
 import jsonpickle  # type: ignore
 
 from .utils import calculate_workload
+from discopop_library.OptimizationGraph.OptimizationGraph import OptimizationGraph
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
@@ -142,5 +143,7 @@ class PatternDetectorX(object):
         # disabled currently due to high additional overhead.
         # will be moved and calculated based on the optimization graph
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
+
+        mapping_and_optimization_graph = OptimizationGraph(res.pet)
 
         return res
