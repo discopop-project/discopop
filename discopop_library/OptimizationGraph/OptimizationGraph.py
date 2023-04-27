@@ -2,6 +2,7 @@ from typing import Dict
 
 import networkx as nx  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot  # type: ignore
+from sympy.plotting import plot3d  # type: ignore
 
 from discopop_explorer.PETGraphX import PETGraphX
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
@@ -36,9 +37,10 @@ class OptimizationGraph(object):
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
+        print_introduced_symbols_per_node(self.graph)
         # thread counts
         substitutions[data_at(self.graph, 105).introduced_symbols[0]] = Integer(4)
-        substitutions[data_at(self.graph, 106).introduced_symbols[0]] = Integer(16)
+        #substitutions[data_at(self.graph, 106).introduced_symbols[0]] = Integer(16)
 
         # function spawn overhead
         substitutions[data_at(self.graph, 51).introduced_symbols[0]] = Integer(5)
@@ -57,7 +59,7 @@ class OptimizationGraph(object):
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
                 print(model.model.free_symbols)
-                plot(model.model)
+                plot3d(model.model)
 
 
         print("COMPARE: ")
