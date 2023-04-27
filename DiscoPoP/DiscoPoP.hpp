@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <string.h>
 #include <utility>
@@ -318,6 +319,7 @@ namespace {
         FunctionCallee ReportBB, ReportBBPair;
         dputil::VariableNameFinder *VNF;
         std::ofstream* staticDependencyFile;
+        int nextFreeStaticMemoryRegionID;
 
 // DPInstrumentationOmission end
 

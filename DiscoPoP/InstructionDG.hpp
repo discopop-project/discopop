@@ -14,6 +14,7 @@
 #include <string>
 #include "InstructionCFG.hpp"
 #include "DPUtils.hpp"
+#include "unordered_map"
 
 class InstructionDG : public Graph<Instruction *> {
 
@@ -30,7 +31,7 @@ private:
 public:
     InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
 
-    string edgeToDPDep(Edge<Instruction *> *e);
+    string edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
 
     void highlightInstructionNode(Instruction *instr);
 
