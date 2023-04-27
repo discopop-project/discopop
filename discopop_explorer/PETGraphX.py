@@ -524,7 +524,7 @@ class PETGraphX(object):
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
         )
 
-        # plt.show()
+        plt.show()
         plt.savefig("graphX.svg")
 
     def node_at(self, node_id: NodeID) -> Node:

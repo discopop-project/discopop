@@ -74,6 +74,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
         depType = "INIT";
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " *|"
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first     // use original variable name instead of LLVM IR SSA name
                + "(" 
@@ -83,6 +84,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
         depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " "
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
@@ -94,6 +96,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
         depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " "
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
