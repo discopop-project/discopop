@@ -51,6 +51,17 @@ def get_children(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the children of the given node"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], ChildEdge)]
 
+def get_out_options(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids for the parallelization options of the given node"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
+
+def get_in_options(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids for the parallelization options of the given node"""
+    return [edge[1] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
+
+def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids for the requirements of the parallelization option in the given node"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], RequirementEdge)]
 
 def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     """Checks whether the given node has outgoing temporary successor edges"""
