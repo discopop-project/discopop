@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from numpy import long  # type: ignore
 from typing import List, Set, Optional, cast, Dict, Tuple
 from discopop_explorer.PETGraphX import (
     PETGraphX,
