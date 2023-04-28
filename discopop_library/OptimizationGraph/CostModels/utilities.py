@@ -80,21 +80,7 @@ def get_performance_models_for_children(graph: nx.DiGraph, node_id: int) -> List
                 temp_models = [cm.plus_combine(model) for cm in child_models]
                 product_set += temp_models
             child_models = product_set
-    pass
     return child_models
-
-    children_models: List[CostModel] = []
-    for child_id in get_children(graph, node_id):
-        for model in get_node_performance_models(graph, child_id):
-            children_models.append(model)
-    # construct model from individual performance models of the children
-    if len(children_models) == 0:
-        return []
-    else:
-        model = children_models[0]
-        for child_model in children_models[1:]:
-            model = model.plus_combine(child_model)
-        return model
 
 
 def print_introduced_symbols_per_node(graph: nx.DiGraph):
