@@ -28,7 +28,6 @@ from discopop_explorer.PETGraphX import (
     LoopNode,
 )
 from discopop_explorer.utils import (
-    get_loop_iterations,
     is_scalar_val,
     is_loop_index2,
     classify_loop_variables,
@@ -734,7 +733,7 @@ class GPULoopPattern(PatternInfo):
         # calculate the number of iterations of this loop relative to the top loop
         n = map_node(pet, node_id)
         ll = n.start_line
-        total_i = get_loop_iterations(LineID(str(n.start_line)))
+        total_i = cast(LoopNode, n).loop_iterations
         i_cnt = 0 if top_loop_iterations == 0 else total_i / top_loop_iterations
 
         # extend the string stream with this information and scan all child nodes to
