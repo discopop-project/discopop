@@ -9,7 +9,6 @@ import os
 import sys
 from enum import IntEnum
 
-from numpy import long  # type: ignore
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
@@ -117,7 +116,7 @@ def omp_clause_str_old(name: str, args: List[str]) -> str:
     return result
 
 
-def omp_construct_str(name: str, line: long, clauses: List[str]) -> str:
+def omp_construct_str(name: str, line: int, clauses: List[str]) -> str:
     """
 
     :param name:
@@ -143,7 +142,7 @@ class OmpConstructPositioning(IntEnum):
 
 def omp_construct_dict(
     name: str,
-    line: long,
+    line: LineID,
     clauses: List[str],
     positioning: OmpConstructPositioning = OmpConstructPositioning.BEFORE_LINE,
 ) -> dict:
@@ -154,7 +153,7 @@ def omp_construct_dict(
     :param clauses:
     :return:
     """
-    result: Dict[str, Union[str, long, List[str]]] = dict()
+    result: Dict[str, Union[str, int, List[str]]] = dict()
     result["name"] = name
     result["line"] = line
     result["clauses"] = clauses
@@ -378,7 +377,7 @@ class GPULoopPattern(PatternInfo):
             if self.has_scalar_reduction_var:
                 clauses.append(omp_clause_str("defaultmap(tofrom:scalar)", []))
 
-        tmp_start_line = str(self._node.file_id) + ":" + str(self.startLine)
+        tmp_start_line = LineID(str(self._node.file_id) + ":" + str(self.startLine))
         constructs.append(
             omp_construct_dict(
                 "#pragma omp target teams distribute parallel for", tmp_start_line, clauses
@@ -389,8 +388,8 @@ class GPULoopPattern(PatternInfo):
         used_global_vars: Set[Variable] = set()
         for node_id in self.called_functions:
             fn_node: FunctionNode = cast(FunctionNode, map_node(pet, node_id))
-            fn_node_start_line = str(fn_node.file_id) + ":" + str(fn_node.start_line)
-            fn_node_end_line = str(fn_node.file_id) + ":" + str(fn_node.end_line + 1)
+            fn_node_start_line = LineID(str(fn_node.file_id) + ":" + str(fn_node.start_line))
+            fn_node_end_line = LineID(str(fn_node.file_id) + ":" + str(fn_node.end_line + 1))
             constructs.append(
                 omp_construct_dict("#pragma omp declare target", fn_node_start_line, [])
             )
@@ -469,7 +468,7 @@ class GPULoopPattern(PatternInfo):
         # The final part of this string contains information about the loop's nested
         # loops including their iteration numbers.
         n: LoopNode = cast(LoopNode, map_node(pet, self.nodeID))
-        total_i: long = n.loop_iterations
+        total_i: int = n.loop_iterations
         for cn_id in pet.direct_children(n):
             if cn_id.type == 2:  # type loop
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, total_i)
@@ -718,9 +717,7 @@ class GPULoopPattern(PatternInfo):
         for k in [v.name for v in self.map_type_tofrom]:
             print("    " + k)
 
-    def __add_sub_loops_rec(
-        self, pet: PETGraphX, node_id: NodeID, top_loop_iterations: long
-    ) -> str:
+    def __add_sub_loops_rec(self, pet: PETGraphX, node_id: NodeID, top_loop_iterations: int) -> str:
         """This function adds information about the loop's child loops to the string
             stream 'ss'. This information contains the child loop's line number and
             its number of iterations divided by the number of iterations of the top loop.
@@ -738,7 +735,7 @@ class GPULoopPattern(PatternInfo):
 
         # extend the string stream with this information and scan all child nodes to
         # identify and process further nested loops
-        ss: str = " " + str(ll) + "-" + i_cnt
+        ss: str = " " + str(ll) + "-" + str(i_cnt)
         for cn_id in pet.direct_children(n):
             if cn_id.type == 2:
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, top_loop_iterations)
