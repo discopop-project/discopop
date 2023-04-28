@@ -128,6 +128,8 @@ class PatternDetectorX(object):
         res.simple_gpu = detect_gpu(self.pet, res, project_folder_path)
 
         # detect combined GPU patterns
-        res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
+        # disabled currently due to high additional overhead.
+        # will be moved and calculated based on the optimization graph
+        # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
         return res
