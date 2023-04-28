@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import List
+
 from sympy import Function, Symbol, init_printing, Expr  # type: ignore
 
 

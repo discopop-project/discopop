@@ -10,7 +10,6 @@ from typing import Optional
 from sympy import Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 
@@ -28,4 +27,4 @@ class Loop(Workload):
 
     def get_hover_text(self) -> str:
         return "WL: " + str(self.workload) + "\n" + \
-            "IT: " + str(self.iterations)
+               "IT: " + str(self.iterations)
