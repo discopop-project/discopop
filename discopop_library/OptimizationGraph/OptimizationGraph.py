@@ -11,13 +11,11 @@ import networkx as nx  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
 from sympy.plotting import plot3d  # type: ignore
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_library.OptimizationGraph.CostModels.utilities import get_performance_models_for_functions
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
-from discopop_library.OptimizationGraph.CostModels.utilities import get_performance_models_for_functions, \
-    print_introduced_symbols_per_node
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import show, data_at
+from discopop_library.OptimizationGraph.utilities.MOGUtilities import show
 
 
 class OptimizationGraph(object):
@@ -40,7 +38,6 @@ class OptimizationGraph(object):
 
         # print_introduced_symbols_per_node(self.graph)
 
-
         print("FUNCTION PERFORMANCE MODELS: ")
         for idx, function in enumerate(function_performance_models):
             for midx, model in enumerate(function_performance_models[function]):
@@ -52,12 +49,12 @@ class OptimizationGraph(object):
         substitutions: Dict[Symbol, Expr] = dict()
         # print_introduced_symbols_per_node(self.graph)
         # thread counts
-        #substitutions[data_at(self.graph, 105).introduced_symbols[0]] = Integer(4)
-        #substitutions[data_at(self.graph, 106).introduced_symbols[0]] = Integer(16)
+        # substitutions[data_at(self.graph, 105).introduced_symbols[0]] = Integer(4)
+        # substitutions[data_at(self.graph, 106).introduced_symbols[0]] = Integer(16)
 
         # function spawn overhead
-        #substitutions[data_at(self.graph, 51).introduced_symbols[0]] = Integer(5)
-        #substitutions[data_at(self.graph, 104).introduced_symbols[0]] = Integer(5)
+        # substitutions[data_at(self.graph, 51).introduced_symbols[0]] = Integer(5)
+        # substitutions[data_at(self.graph, 104).introduced_symbols[0]] = Integer(5)
 
         # collect free symbols
         free_symbols: Set[Symbol] = set()
@@ -94,11 +91,13 @@ class OptimizationGraph(object):
                         if len(model.model.free_symbols) <= 2:
                             if len(model.path_decisions) == 1:
                                 if combined_plot is None:
-                                    combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False)
+                                    combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128),
+                                                           (sorted_free_symbols[1], 1, 128), show=False)
                                     combined_plot.title = function.name
                                     shown_models.append((model.path_decisions, model.model))
                                 else:
-                                    combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False))
+                                    combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128),
+                                                                (sorted_free_symbols[1], 1, 128), show=False))
                                     shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass
@@ -108,17 +107,15 @@ class OptimizationGraph(object):
                     print(entry[1])
                 combined_plot.show()
 
-
-
-#        print("COMPARE: ")
-#        for idx_1, function_1 in enumerate(function_performance_models):
-#            for midx_1, model_1 in enumerate(function_performance_models[function_1]):
-#                for idx_2, function_2 in enumerate(function_performance_models):
-#                    for midx_2, model_2 in enumerate(function_performance_models[function_2]):
-#                        cmp = model_1.model.compare(model_2.model)
-#                        print(str(idx_1) + "-" + str(midx_1), str(idx_2) + "-" + str(midx_2), " ==> ",
-#                              "<" if cmp == -1 else "="
-#                              if cmp == 0 else ">")
+    #        print("COMPARE: ")
+    #        for idx_1, function_1 in enumerate(function_performance_models):
+    #            for midx_1, model_1 in enumerate(function_performance_models[function_1]):
+    #                for idx_2, function_2 in enumerate(function_performance_models):
+    #                    for midx_2, model_2 in enumerate(function_performance_models[function_2]):
+    #                        cmp = model_1.model.compare(model_2.model)
+    #                        print(str(idx_1) + "-" + str(midx_1), str(idx_2) + "-" + str(midx_2), " ==> ",
+    #                              "<" if cmp == -1 else "="
+    #                              if cmp == 0 else ">")
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id

@@ -5,8 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import copy
-from typing import List, Dict, cast, Optional
+from typing import List, Dict, cast
 
 import networkx as nx  # type: ignore
 from sympy import Integer  # type: ignore
@@ -84,11 +83,6 @@ def get_performance_models_for_children(graph: nx.DiGraph, node_id: int) -> List
     pass
     return child_models
 
-
-
-
-
-
     children_models: List[CostModel] = []
     for child_id in get_children(graph, node_id):
         for model in get_node_performance_models(graph, child_id):
@@ -101,6 +95,7 @@ def get_performance_models_for_children(graph: nx.DiGraph, node_id: int) -> List
         for child_model in children_models[1:]:
             model = model.plus_combine(child_model)
         return model
+
 
 def print_introduced_symbols_per_node(graph: nx.DiGraph):
     print("Introduced Symbols:")
