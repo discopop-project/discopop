@@ -18,7 +18,7 @@ class Loop(Workload):
 
     def __init__(self, node_id: int, cu_id: Optional[NodeID], workload: int, iterations: int):
         super().__init__(node_id, cu_id, workload=workload)
-        self.iterations = iterations
+        self.iterations = max(iterations, 1)  # to prevent dividing by 0 in case the loop has not been executed
 
     # todo: note: it might be more beneficial to use the iterations "per entry" instead of the total amount of iterations
     # example:

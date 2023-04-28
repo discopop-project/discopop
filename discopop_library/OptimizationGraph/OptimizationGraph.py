@@ -8,6 +8,7 @@
 from typing import Dict, Set, cast, List, Tuple
 
 import networkx as nx  # type: ignore
+import sympy  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
 from sympy.plotting import plot3d  # type: ignore
 
@@ -88,12 +89,15 @@ class OptimizationGraph(object):
                     model.print()
                     print("Path Decisions: ", model.path_decisions)
                     try:
+                        if len(model.model.free_symbols) == 0:
+                            continue
                         if len(model.model.free_symbols) <= 2:
                             if len(model.path_decisions) <= 1:
                                 if combined_plot is None:
                                     combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128),
                                                            (sorted_free_symbols[1], 1, 128), show=False)
                                     combined_plot.title = function.name
+
                                     shown_models.append((model.path_decisions, model.model))
                                 else:
                                     combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128),
@@ -101,21 +105,12 @@ class OptimizationGraph(object):
                                     shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass
-                print("Combined_plot: ")
-                for entry in shown_models:
-                    print("->", entry[0], end="\t")
-                    print(entry[1])
-                combined_plot.show()
-
-    #        print("COMPARE: ")
-    #        for idx_1, function_1 in enumerate(function_performance_models):
-    #            for midx_1, model_1 in enumerate(function_performance_models[function_1]):
-    #                for idx_2, function_2 in enumerate(function_performance_models):
-    #                    for midx_2, model_2 in enumerate(function_performance_models[function_2]):
-    #                        cmp = model_1.model.compare(model_2.model)
-    #                        print(str(idx_1) + "-" + str(midx_1), str(idx_2) + "-" + str(midx_2), " ==> ",
-    #                              "<" if cmp == -1 else "="
-    #                              if cmp == 0 else ">")
+                if combined_plot is not None:
+                    print("Combined_plot: ")
+                    for entry in shown_models:
+                        print("->", entry[0], end="\t")
+                        print(entry[1])
+                    combined_plot.show()
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id
