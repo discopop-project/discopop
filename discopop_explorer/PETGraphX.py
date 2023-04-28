@@ -751,9 +751,10 @@ class PETGraphX(object):
                 children = self.direct_children(child)
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
-        print("\tCalculated metadata for functions...")
 
             func_node.calculate_reachability_pairs(self)
+        print("\tCalculated metadata for functions...")
+
         print("Metadata calculation done.")
 
         # cleanup dependencies (remove dependencies, if it is overwritten by a more specific Intra-iteration dependency
