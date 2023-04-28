@@ -496,7 +496,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
                     v.text,
                     v.get("defLine"),
                     v.get("accessMode"),
-                    int(v.get("sizeInByte")),
+                    int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
                 )
                 for v in node.localVariables.local
             ]
@@ -507,7 +507,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
                     v.text,
                     v.get("defLine"),
                     v.get("accessMode"),
-                    int(v.get("sizeInByte")),
+                    int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
                 )
                 for v in getattr(node.globalVariables, "global")
             ]
@@ -537,7 +537,10 @@ def parse_cu(node: ObjectifiedElement) -> Node:
         if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
             dummy_or_func.args = [
                 Variable(
-                    v.get("type"), v.text, v.get("defLine"), sizeInByte=int(v.get("sizeInByte"))
+                    v.get("type"),
+                    v.text,
+                    v.get("defLine"),
+                    sizeInByte=int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
                 )
                 for v in node.funcArguments.arg
             ]
