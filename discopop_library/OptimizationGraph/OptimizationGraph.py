@@ -5,10 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, Set, cast, List
+from typing import Dict, Set, cast, List, Tuple
 
 import networkx as nx  # type: ignore
-from sympy import Integer, Expr, Symbol, lambdify, plot, Float  # type: ignore
+from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
 from sympy.plotting import plot3d  # type: ignore
 
 from discopop_explorer.PETGraphX import PETGraphX
@@ -34,17 +34,19 @@ class OptimizationGraph(object):
 
         # import parallelization suggestions
         self.graph = import_suggestions(detection_result, self.graph, self.get_next_free_node_id, environment)
-        # show(self.graph)
+        show(self.graph)
 
         function_performance_models = get_performance_models_for_functions(self.graph)
 
         # print_introduced_symbols_per_node(self.graph)
+
 
         print("FUNCTION PERFORMANCE MODELS: ")
         for idx, function in enumerate(function_performance_models):
             for midx, model in enumerate(function_performance_models[function]):
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
+                print("\t", model.path_decisions)
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
@@ -78,26 +80,34 @@ class OptimizationGraph(object):
             for midx, model in enumerate(function_performance_models[function]):
                 model.model = model.model.subs(substitutions)
 
-        print("FUNCTION PERFORMANCE MODELS AFTER SUBSTITUTION: ")
-        for idx, function in enumerate(function_performance_models):
-            print("Function: ", function.name)
-            combined_plot = None
-            for midx, model in enumerate(function_performance_models[function]):
-                print(str(idx) + "-" + str(midx) + ": \t", end="")
-                model.print()
-                print("Path Decisions: ", model.path_decisions)
-                try:
-                    if len(model.model.free_symbols) <= 2:
-                        #if len(model.path_decisions) == 2:
-                        if combined_plot is None:
-                            combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False)
-                            combined_plot.title = function.name
-                        else:
-                            combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False))
-                except ValueError:
-                    pass
-            print("Combined_plot: ")
-            combined_plot.show()
+        if True:  # plot results
+            print("FUNCTION PERFORMANCE MODELS AFTER SUBSTITUTION: ")
+            for idx, function in enumerate(function_performance_models):
+                print("Function: ", function.name)
+                combined_plot = None
+                shown_models: List[Tuple[List[int], Expr]] = []
+                for midx, model in enumerate(function_performance_models[function]):
+                    print(str(idx) + "-" + str(midx) + ": \t", end="")
+                    model.print()
+                    print("Path Decisions: ", model.path_decisions)
+                    try:
+                        if len(model.model.free_symbols) <= 2:
+                            if len(model.path_decisions) == 1:
+                                if combined_plot is None:
+                                    combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False)
+                                    combined_plot.title = function.name
+                                    shown_models.append((model.path_decisions, model.model))
+                                else:
+                                    combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128), (sorted_free_symbols[1], 1, 128), show=False))
+                                    shown_models.append((model.path_decisions, model.model))
+                    except ValueError:
+                        pass
+                print("Combined_plot: ")
+                for entry in shown_models:
+                    print("->", entry[0], end="\t")
+                    print(entry[1])
+                combined_plot.show()
+
 
 
 #        print("COMPARE: ")
