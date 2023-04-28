@@ -89,7 +89,7 @@ class OptimizationGraph(object):
                     print("Path Decisions: ", model.path_decisions)
                     try:
                         if len(model.model.free_symbols) <= 2:
-                            if len(model.path_decisions) == 1:
+                            if len(model.path_decisions) <= 1:
                                 if combined_plot is None:
                                     combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128),
                                                            (sorted_free_symbols[1], 1, 128), show=False)
