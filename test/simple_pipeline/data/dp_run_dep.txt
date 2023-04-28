@@ -7,17 +7,4 @@ START 1:26
 1:15 END func
 1:19 END func
 1:23 END func
-1:30 NOM  INIT *|i(1) RAW 1:30|i(1) WAR_II 1:30|i(1)
-1:14 NOM  INIT *|d(7) INIT *|in(6) WAR 1:23|d(13) WAR 1:23|in(12)
-1:15 NOM  RAW_II 1:14|d(7) RAW_II 1:14|in(6)
-1:31 NOM  RAW 1:29|d(2) RAW 1:30|i(1) WAR 1:32|a(3) WAW 1:29|a(3)
-1:29 NOM  INIT *|a(3) INIT *|b(4) INIT *|c(5) INIT *|d(2)
-1:18 NOM  WAR_II 1:15|d(9) WAR_II 1:15|in(8)
-1:33 NOM  RAW 1:29|d(2) RAW_II 1:32|b(4) WAW 1:29|c(5) WAW 1:33|c(5)
-1:22 NOM  WAR_II 1:19|d(11) WAR_II 1:19|in(10)
-1:19 NOM  RAW_II 1:18|d(9) RAW_II 1:18|in(8)
-1:35 NOM  RAW 1:32|b(4) WAR 1:32|a(3)
-1:23 NOM  RAW_II 1:22|d(11) RAW_II 1:22|in(10)
-1:32 NOM  RAW 1:29|d(2) RAW_II 1:31|a(3) WAR 1:33|b(4) WAW 1:29|b(4)
-1:26 NOM  INIT *|retval(0)
 1:36 END program

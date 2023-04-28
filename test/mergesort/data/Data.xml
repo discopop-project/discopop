@@ -1,346 +1,446 @@
 <Nodes>
 
-	<Node id="1:0" type="1" name="_Z5mergePiiii" startsAtLine = "1:16" endsAtLine = "1:41">
-		<childrenNodes>1:1,1:2,1:3,1:7,1:8,1:12,1:13,1:20</childrenNodes>
+	<Node id="1:0" type="1" name="_Z5mergePiiii" startsAtLine = "1:0" endsAtLine = "1:41">
+		<childrenNodes>1:1,1:2,1:3,1:4,1:5,1:9,1:10,1:14,1:15,1:16,1:23</childrenNodes>
 		<funcArguments>
-			<arg type="i32*" defLine="1:16">A</arg>
-			<arg type="i32" defLine="1:16">p</arg>
-			<arg type="i32" defLine="1:16">q</arg>
-			<arg type="i32" defLine="1:16">r</arg>
+			<arg type="i32*" defLine="1:16" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="1:16" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="1:16" sizeInByte="4" accessMode="RW">q</arg>
+			<arg type="i32" defLine="1:16" sizeInByte="4" accessMode="RW">r</arg>
 		</funcArguments>
+		<funcReturnLines>1:41, </funcReturnLines>
 	</Node>
 
-	<Node id="1:1" type="0" name="" startsAtLine = "1:16" endsAtLine = "1:18">
+	<Node id="1:1" type="0" name="" startsAtLine = "1:16" endsAtLine = "1:16">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>entry</BasicBlockID>
-		<readDataSize>160</readDataSize>
-		<writeDataSize>128</writeDataSize>
-		<instructionsCount>15</instructionsCount>
-		<instructionLines count="3">1:16,1:17,1:18</instructionLines>
-		<readPhaseLines count="2">1:17,1:18</readPhaseLines>
-		<writePhaseLines count="2">1:17,1:18</writePhaseLines>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>13</instructionsCount>
+		<instructionLines count="1">1:16</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:16</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:2</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:17">n1</global>
-			<global type="i32*" defLine="1:18">n2</global>
-			<global type="i32*" defLine="1:16">p.addr</global>
-			<global type="i32*" defLine="1:16">q.addr</global>
-			<global type="i32*" defLine="1:16">r.addr</global>
+			<global type="i32**" defLine="1:16" sizeInByte="4" accessMode="W">A</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="W">p</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="W">q</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="W">r</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:2" type="0" name="" startsAtLine = "1:19" endsAtLine = "1:23">
+	<Node id="1:2" type="0" name="" startsAtLine = "1:16" endsAtLine = "1:16">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>entry</BasicBlockID>
 		<readDataSize>32</readDataSize>
-		<writeDataSize>320</writeDataSize>
-		<instructionsCount>18</instructionsCount>
-		<instructionLines count="5">1:19,1:20,1:21,1:22,1:23</instructionLines>
-		<readPhaseLines count="2">1:19,1:20</readPhaseLines>
-		<writePhaseLines count="4">1:19,1:20,1:21,1:22</writePhaseLines>
+		<writeDataSize>192</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>8</instructionsCount>
+		<instructionLines count="1">1:16</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:16</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:3</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">q</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:3" type="0" name="" startsAtLine = "1:17" endsAtLine = "1:18">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>128</readDataSize>
+		<writeDataSize>128</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>9</instructionsCount>
+		<instructionLines count="2">1:17,1:18</instructionLines>
+		<readPhaseLines count="2">1:17,1:18</readPhaseLines>
+		<writePhaseLines count="2">1:17,1:18</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:4</CU>
 		</successors>
 		<localVariables>
-			<local type="i64*" defLine="1:0">__vla_expr0</local>
-			<local type="i64*" defLine="1:0">__vla_expr1</local>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="1:17">n1</global>
-			<global type="i32*" defLine="1:18">n2</global>
-			<global type="i8**" defLine="">saved_stack</global>
+			<global type="i32*" defLine="1:17" sizeInByte="4" accessMode="W">n1</global>
+			<global type="i32*" defLine="1:18" sizeInByte="4" accessMode="W">n2</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">p</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">q</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">r</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:3" type="2" name="" startsAtLine = "1:23" endsAtLine = "1:25">
-		<childrenNodes>1:4,1:5,1:6</childrenNodes>
+	<Node id="1:4" type="0" name="" startsAtLine = "1:0" endsAtLine = "1:23">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>320</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>20</instructionsCount>
+		<instructionLines count="6">1:0,1:19,1:20,1:21,1:22,1:23</instructionLines>
+		<readPhaseLines count="2">1:19,1:20</readPhaseLines>
+		<writePhaseLines count="4">1:19,1:20,1:21,1:22</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:6</CU>
+		</successors>
+		<localVariables>
+			<local type="i64*" defLine="1:0" sizeInByte="8" accessMode="W">__vla_expr0</local>
+			<local type="i64*" defLine="1:0" sizeInByte="8" accessMode="W">__vla_expr1</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="W">i</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="W">j</global>
+			<global type="i32*" defLine="1:17" sizeInByte="4" accessMode="R">n1</global>
+			<global type="i32*" defLine="1:18" sizeInByte="4" accessMode="R">n2</global>
+			<global type="i8**" defLine="LineNotFound" sizeInByte="1" accessMode="W">saved_stack</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
 	</Node>
 
-	<Node id="1:4" type="0" name="" startsAtLine = "1:23" endsAtLine = "1:23">
+	<Node id="1:5" type="2" name="" startsAtLine = "1:23" endsAtLine = "1:25">
+		<childrenNodes>1:6,1:7,1:8</childrenNodes>
+	</Node>
+
+	<Node id="1:6" type="0" name="" startsAtLine = "1:23" endsAtLine = "1:23">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.cond</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:23</instructionLines>
 		<readPhaseLines count="1">1:23</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:5</CU>
 			<CU>1:7</CU>
+			<CU>1:9</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:17">n1</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="R">i</global>
+			<global type="i32*" defLine="1:17" sizeInByte="4" accessMode="R">n1</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:5" type="0" name="" startsAtLine = "1:24" endsAtLine = "1:25">
+	<Node id="1:7" type="0" name="" startsAtLine = "1:24" endsAtLine = "1:25">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
 		<readDataSize>192</readDataSize>
 		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>12</instructionsCount>
 		<instructionLines count="2">1:24,1:25</instructionLines>
 		<readPhaseLines count="1">1:24</readPhaseLines>
 		<writePhaseLines count="1">1:24</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:8</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32**" defLine="1:16" sizeInByte="4" accessMode="R">A</global>
+			<global type="ARRAY,i32*" defLine="1:19" sizeInByte="4" accessMode="W">L</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="R">i</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">p</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:8" type="0" name="" startsAtLine = "1:23" endsAtLine = "1:23">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:23</instructionLines>
+		<readPhaseLines count="1">1:23</readPhaseLines>
+		<writePhaseLines count="1">1:23</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:6</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32**" defLine="1:16">A.addr</global>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:16">p.addr</global>
-			<global type="i32*" defLine="">vla</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="R">i</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
-	</Node>
-
-	<Node id="1:6" type="0" name="" startsAtLine = "1:23" endsAtLine = "1:23">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.inc</BasicBlockID>
-		<readDataSize>32</readDataSize>
-		<writeDataSize>64</writeDataSize>
-		<instructionsCount>4</instructionsCount>
-		<instructionLines count="1">1:23</instructionLines>
-		<readPhaseLines count="1">1:23</readPhaseLines>
-		<writePhaseLines count="1">1:23</writePhaseLines>
-		<successors>
-			<CU>1:4</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:21">i</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:7" type="0" name="" startsAtLine = "1:26" endsAtLine = "1:26">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.end</BasicBlockID>
-		<readDataSize>0</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>1</instructionsCount>
-		<instructionLines count="1">1:26</instructionLines>
-		<readPhaseLines count="0"></readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:9</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:8" type="2" name="" startsAtLine = "1:26" endsAtLine = "1:28">
-		<childrenNodes>1:9,1:10,1:11</childrenNodes>
 	</Node>
 
 	<Node id="1:9" type="0" name="" startsAtLine = "1:26" endsAtLine = "1:26">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.cond8</BasicBlockID>
-		<readDataSize>64</readDataSize>
+		<BasicBlockID>for.end</BasicBlockID>
+		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
-		<instructionsCount>4</instructionsCount>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:26</instructionLines>
-		<readPhaseLines count="1">1:26</readPhaseLines>
+		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:10</CU>
-			<CU>1:12</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="1:18">n2</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:10" type="0" name="" startsAtLine = "1:27" endsAtLine = "1:28">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body10</BasicBlockID>
-		<readDataSize>192</readDataSize>
-		<writeDataSize>64</writeDataSize>
-		<instructionsCount>13</instructionsCount>
-		<instructionLines count="2">1:27,1:28</instructionLines>
-		<readPhaseLines count="1">1:27</readPhaseLines>
-		<writePhaseLines count="1">1:27</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:11</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32**" defLine="1:16">A.addr</global>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="1:16">q.addr</global>
-			<global type="i32*" defLine="">vla4</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
+	</Node>
+
+	<Node id="1:10" type="2" name="" startsAtLine = "1:26" endsAtLine = "1:28">
+		<childrenNodes>1:11,1:12,1:13</childrenNodes>
 	</Node>
 
 	<Node id="1:11" type="0" name="" startsAtLine = "1:26" endsAtLine = "1:26">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.inc17</BasicBlockID>
-		<readDataSize>32</readDataSize>
-		<writeDataSize>64</writeDataSize>
+		<BasicBlockID>for.cond8</BasicBlockID>
+		<readDataSize>64</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:26</instructionLines>
 		<readPhaseLines count="1">1:26</readPhaseLines>
-		<writePhaseLines count="1">1:26</writePhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:9</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:22">j</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:12" type="0" name="" startsAtLine = "1:29" endsAtLine = "1:32">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.end19</BasicBlockID>
-		<readDataSize>96</readDataSize>
-		<writeDataSize>320</writeDataSize>
-		<instructionsCount>14</instructionsCount>
-		<instructionLines count="4">1:29,1:30,1:31,1:32</instructionLines>
-		<readPhaseLines count="3">1:29,1:30,1:32</readPhaseLines>
-		<writePhaseLines count="4">1:29,1:30,1:31,1:32</writePhaseLines>
-		<successors>
+			<CU>1:12</CU>
 			<CU>1:14</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="1:32">k</global>
-			<global type="i32*" defLine="1:17">n1</global>
-			<global type="i32*" defLine="1:18">n2</global>
-			<global type="i32*" defLine="1:16">p.addr</global>
-			<global type="i32*" defLine="">vla</global>
-			<global type="i32*" defLine="">vla4</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="R">j</global>
+			<global type="i32*" defLine="1:18" sizeInByte="4" accessMode="R">n2</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:13" type="2" name="" startsAtLine = "1:32" endsAtLine = "1:40">
-		<childrenNodes>1:14,1:15,1:16,1:17,1:18,1:19</childrenNodes>
+	<Node id="1:12" type="0" name="" startsAtLine = "1:27" endsAtLine = "1:28">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body10</BasicBlockID>
+		<readDataSize>192</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>13</instructionsCount>
+		<instructionLines count="2">1:27,1:28</instructionLines>
+		<readPhaseLines count="1">1:27</readPhaseLines>
+		<writePhaseLines count="1">1:27</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:13</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32**" defLine="1:16" sizeInByte="4" accessMode="R">A</global>
+			<global type="ARRAY,i32*" defLine="1:20" sizeInByte="4" accessMode="W">R</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="R">j</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">q</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
 	</Node>
 
-	<Node id="1:14" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
+	<Node id="1:13" type="0" name="" startsAtLine = "1:26" endsAtLine = "1:26">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc17</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:26</instructionLines>
+		<readPhaseLines count="1">1:26</readPhaseLines>
+		<writePhaseLines count="1">1:26</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:11</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="R">j</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:14" type="0" name="" startsAtLine = "1:29" endsAtLine = "1:31">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end19</BasicBlockID>
+		<readDataSize>64</readDataSize>
+		<writeDataSize>256</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>10</instructionsCount>
+		<instructionLines count="3">1:29,1:30,1:31</instructionLines>
+		<readPhaseLines count="2">1:29,1:30</readPhaseLines>
+		<writePhaseLines count="3">1:29,1:30,1:31</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:15</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="ARRAY,i32*" defLine="1:19" sizeInByte="4" accessMode="W">L</global>
+			<global type="ARRAY,i32*" defLine="1:20" sizeInByte="4" accessMode="W">R</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="W">i</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="W">j</global>
+			<global type="i32*" defLine="1:17" sizeInByte="4" accessMode="R">n1</global>
+			<global type="i32*" defLine="1:18" sizeInByte="4" accessMode="R">n2</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:15" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end19</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:32</instructionLines>
+		<readPhaseLines count="1">1:32</readPhaseLines>
+		<writePhaseLines count="1">1:32</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:17</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:32" sizeInByte="4" accessMode="W">k</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">p</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:16" type="2" name="" startsAtLine = "1:32" endsAtLine = "1:40">
+		<childrenNodes>1:17,1:18,1:19,1:20,1:21,1:22</childrenNodes>
+	</Node>
+
+	<Node id="1:17" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.cond24</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:32</instructionLines>
 		<readPhaseLines count="1">1:32</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:15</CU>
+			<CU>1:18</CU>
+			<CU>1:23</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:32" sizeInByte="4" accessMode="R">k</global>
+			<global type="i32*" defLine="1:16" sizeInByte="4" accessMode="R">r</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:18" type="0" name="" startsAtLine = "1:33" endsAtLine = "1:33">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body26</BasicBlockID>
+		<readDataSize>128</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>10</instructionsCount>
+		<instructionLines count="1">1:33</instructionLines>
+		<readPhaseLines count="1">1:33</readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:19</CU>
+			<CU>1:22</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="ARRAY,i32*" defLine="1:19" sizeInByte="4" accessMode="R">L</global>
+			<global type="ARRAY,i32*" defLine="1:20" sizeInByte="4" accessMode="R">R</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="R">i</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="R">j</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:19" type="0" name="" startsAtLine = "1:34" endsAtLine = "1:36">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<readDataSize>192</readDataSize>
+		<writeDataSize>128</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>13</instructionsCount>
+		<instructionLines count="3">1:34,1:35,1:36</instructionLines>
+		<readPhaseLines count="2">1:34,1:35</readPhaseLines>
+		<writePhaseLines count="2">1:34,1:35</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
 			<CU>1:20</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:32">k</global>
-			<global type="i32*" defLine="1:16">r.addr</global>
+			<global type="i32**" defLine="1:16" sizeInByte="4" accessMode="R">A</global>
+			<global type="ARRAY,i32*" defLine="1:19" sizeInByte="4" accessMode="R">L</global>
+			<global type="i32*" defLine="1:21" sizeInByte="4" accessMode="R">i</global>
+			<global type="i32*" defLine="1:32" sizeInByte="4" accessMode="R">k</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:15" type="0" name="" startsAtLine = "1:33" endsAtLine = "1:33">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body26</BasicBlockID>
-		<readDataSize>128</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>10</instructionsCount>
-		<instructionLines count="1">1:33</instructionLines>
-		<readPhaseLines count="1">1:33</readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:16</CU>
-			<CU>1:19</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="">vla</global>
-			<global type="i32*" defLine="">vla4</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:16" type="0" name="" startsAtLine = "1:34" endsAtLine = "1:36">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>if.then</BasicBlockID>
-		<readDataSize>192</readDataSize>
-		<writeDataSize>128</writeDataSize>
-		<instructionsCount>13</instructionsCount>
-		<instructionLines count="3">1:34,1:35,1:36</instructionLines>
-		<readPhaseLines count="2">1:34,1:35</readPhaseLines>
-		<writePhaseLines count="2">1:34,1:35</writePhaseLines>
-		<successors>
-			<CU>1:17</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32**" defLine="1:16">A.addr</global>
-			<global type="i32*" defLine="1:21">i</global>
-			<global type="i32*" defLine="1:32">k</global>
-			<global type="i32*" defLine="">vla</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:17" type="0" name="" startsAtLine = "1:40" endsAtLine = "1:40">
+	<Node id="1:20" type="0" name="" startsAtLine = "1:40" endsAtLine = "1:40">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>if.end</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:40</instructionLines>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:18</CU>
+			<CU>1:21</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
@@ -350,66 +450,72 @@
 		</callsNode>
 	</Node>
 
-	<Node id="1:18" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
+	<Node id="1:21" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.inc42</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:32</instructionLines>
 		<readPhaseLines count="1">1:32</readPhaseLines>
 		<writePhaseLines count="1">1:32</writePhaseLines>
-		<successors>
-			<CU>1:14</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:32">k</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:19" type="0" name="" startsAtLine = "1:37" endsAtLine = "1:38">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>if.else</BasicBlockID>
-		<readDataSize>192</readDataSize>
-		<writeDataSize>128</writeDataSize>
-		<instructionsCount>12</instructionsCount>
-		<instructionLines count="2">1:37,1:38</instructionLines>
-		<readPhaseLines count="2">1:37,1:38</readPhaseLines>
-		<writePhaseLines count="2">1:37,1:38</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:17</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32**" defLine="1:16">A.addr</global>
-			<global type="i32*" defLine="1:22">j</global>
-			<global type="i32*" defLine="1:32">k</global>
-			<global type="i32*" defLine="">vla4</global>
+			<global type="i32*" defLine="1:32" sizeInByte="4" accessMode="R">k</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
 	</Node>
 
-	<Node id="1:20" type="0" name="" startsAtLine = "1:41" endsAtLine = "1:41">
+	<Node id="1:22" type="0" name="" startsAtLine = "1:37" endsAtLine = "1:38">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.else</BasicBlockID>
+		<readDataSize>192</readDataSize>
+		<writeDataSize>128</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>12</instructionsCount>
+		<instructionLines count="2">1:37,1:38</instructionLines>
+		<readPhaseLines count="2">1:37,1:38</readPhaseLines>
+		<writePhaseLines count="2">1:37,1:38</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:20</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32**" defLine="1:16" sizeInByte="4" accessMode="R">A</global>
+			<global type="ARRAY,i32*" defLine="1:20" sizeInByte="4" accessMode="R">R</global>
+			<global type="i32*" defLine="1:22" sizeInByte="4" accessMode="R">j</global>
+			<global type="i32*" defLine="1:32" sizeInByte="4" accessMode="R">k</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:23" type="0" name="" startsAtLine = "1:41" endsAtLine = "1:41">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.end44</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:41</instructionLines>
 		<readPhaseLines count="1">1:41</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="1">1:41</returnInstructions>
 		<successors>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i8**" defLine="">saved_stack</global>
+			<global type="i8**" defLine="LineNotFound" sizeInByte="1" accessMode="R">saved_stack</global>
 		</globalVariables>
 		<callsNode>
 		</callsNode>
@@ -420,259 +526,187 @@
 
 <Nodes>
 
-	<Node id="1:21" type="1" name="_Z4sortPiii" startsAtLine = "1:43" endsAtLine = "1:50">
-		<childrenNodes>1:22,1:23,1:24,1:28</childrenNodes>
+	<Node id="1:24" type="1" name="_Z4sortPiii" startsAtLine = "1:43" endsAtLine = "1:50">
+		<childrenNodes>1:25,1:26,1:27,1:28,1:29,1:33</childrenNodes>
 		<funcArguments>
-			<arg type="i32*" defLine="1:43">A</arg>
-			<arg type="i32" defLine="1:43">p</arg>
-			<arg type="i32" defLine="1:43">r</arg>
+			<arg type="i32*" defLine="1:43" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="1:43" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="1:43" sizeInByte="4" accessMode="RW">r</arg>
 		</funcArguments>
+		<funcReturnLines>1:50, </funcReturnLines>
 	</Node>
 
-	<Node id="1:22" type="0" name="" startsAtLine = "1:43" endsAtLine = "1:44">
+	<Node id="1:25" type="0" name="" startsAtLine = "1:43" endsAtLine = "1:43">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>5</instructionsCount>
+		<instructionLines count="1">1:43</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:43</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:26</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32**" defLine="1:43" sizeInByte="4" accessMode="W">A</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="W">p</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="W">r</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:26" type="0" name="" startsAtLine = "1:43" endsAtLine = "1:43">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>128</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>5</instructionsCount>
+		<instructionLines count="1">1:43</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:43</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:27</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">p</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:27" type="0" name="" startsAtLine = "1:44" endsAtLine = "1:44">
 		<childrenNodes></childrenNodes>
 		<BasicBlockID>entry</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
-		<instructionsCount>7</instructionsCount>
-		<instructionLines count="2">1:43,1:44</instructionLines>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:44</instructionLines>
 		<readPhaseLines count="1">1:44</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:23</CU>
-			<CU>1:28</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:43">p.addr</global>
-			<global type="i32*" defLine="1:43">r.addr</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:23" type="0" name="" startsAtLine = "1:45" endsAtLine = "1:45">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>if.then</BasicBlockID>
-		<readDataSize>192</readDataSize>
-		<writeDataSize>64</writeDataSize>
-		<instructionsCount>11</instructionsCount>
-		<instructionLines count="1">1:45</instructionLines>
-		<readPhaseLines count="1">1:45</readPhaseLines>
-		<writePhaseLines count="1">1:45</writePhaseLines>
-		<successors>
-			<CU>1:24</CU>
-		</successors>
-		<localVariables>
-			<local type="i32*" defLine="1:45">q</local>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:43">p.addr</global>
-			<global type="i32*" defLine="1:43">r.addr</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:24" type="0" name="" startsAtLine = "1:46" endsAtLine = "1:49">
-		<childrenNodes>1:25,1:26,1:27</childrenNodes>
-		<BasicBlockID>if.then</BasicBlockID>
-		<readDataSize>288</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>12</instructionsCount>
-		<instructionLines count="4">1:46,1:47,1:48,1:49</instructionLines>
-		<readPhaseLines count="3">1:46,1:47,1:48</readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
 		<successors>
 			<CU>1:28</CU>
-		</successors>
-		<localVariables>
-			<local type="i32*" defLine="1:45">q</local>
-		</localVariables>
-		<globalVariables>
-			<global type="i32**" defLine="1:43">A.addr</global>
-			<global type="i32*" defLine="1:43">p.addr</global>
-			<global type="i32*" defLine="1:43">r.addr</global>
-		</globalVariables>
-		<callsNode>
-			<nodeCalled atLine="1:46">1:25</nodeCalled>
-				<recursiveFunctionCall>_Z4sortPiii 1:46,</recursiveFunctionCall>
-			<nodeCalled atLine="1:47">1:26</nodeCalled>
-				<recursiveFunctionCall>_Z4sortPiii 1:47,</recursiveFunctionCall>
-			<nodeCalled atLine="1:48">1:27</nodeCalled>
-				<recursiveFunctionCall></recursiveFunctionCall>
-		</callsNode>
-	</Node>
-
-	<Node id="1:25" type="3" name="_Z4sortPiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32*" defLine="43">A</arg>
-			<arg type="i32" defLine="43">p</arg>
-			<arg type="i32" defLine="43">r</arg>
-		</funcArguments>
-	</Node>
-
-	<Node id="1:26" type="3" name="_Z4sortPiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32*" defLine="43">A</arg>
-			<arg type="i32" defLine="43">p</arg>
-			<arg type="i32" defLine="43">r</arg>
-		</funcArguments>
-	</Node>
-
-	<Node id="1:27" type="3" name="_Z5mergePiiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32*" defLine="16">A</arg>
-			<arg type="i32" defLine="16">p</arg>
-			<arg type="i32" defLine="16">q</arg>
-			<arg type="i32" defLine="16">r</arg>
-		</funcArguments>
-	</Node>
-
-	<Node id="1:28" type="0" name="" startsAtLine = "1:50" endsAtLine = "1:50">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>if.end</BasicBlockID>
-		<readDataSize>0</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>1</instructionsCount>
-		<instructionLines count="1">1:50</instructionLines>
-		<readPhaseLines count="0"></readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-</Nodes>
-
-
-<Nodes>
-
-	<Node id="1:29" type="1" name="main" startsAtLine = "1:53" endsAtLine = "1:58">
-		<childrenNodes>1:30,1:32,1:36</childrenNodes>
-		<funcArguments>
-		</funcArguments>
-	</Node>
-
-	<Node id="1:30" type="0" name="" startsAtLine = "1:53" endsAtLine = "1:55">
-		<childrenNodes>1:31</childrenNodes>
-		<BasicBlockID>entry</BasicBlockID>
-		<readDataSize>0</readDataSize>
-		<writeDataSize>64</writeDataSize>
-		<instructionsCount>8</instructionsCount>
-		<instructionLines count="3">1:53,1:54,1:55</instructionLines>
-		<readPhaseLines count="0"></readPhaseLines>
-		<writePhaseLines count="1">1:55</writePhaseLines>
-		<successors>
 			<CU>1:33</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
-			<global type="i32*" defLine="1:55">i</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">r</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:54">1:31</nodeCalled>
-				<recursiveFunctionCall>_Z4sortPiii 1:54,</recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:28" type="0" name="" startsAtLine = "1:45" endsAtLine = "1:45">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<readDataSize>192</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>11</instructionsCount>
+		<instructionLines count="1">1:45</instructionLines>
+		<readPhaseLines count="1">1:45</readPhaseLines>
+		<writePhaseLines count="1">1:45</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:29</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:45" sizeInByte="4" accessMode="W">q</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">p</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">r</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:29" type="0" name="" startsAtLine = "1:46" endsAtLine = "1:49">
+		<childrenNodes>1:30,1:31,1:32</childrenNodes>
+		<BasicBlockID>if.then</BasicBlockID>
+		<readDataSize>288</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>12</instructionsCount>
+		<instructionLines count="4">1:46,1:47,1:48,1:49</instructionLines>
+		<readPhaseLines count="3">1:46,1:47,1:48</readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="1">1:49</returnInstructions>
+		<successors>
+			<CU>1:33</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="1:45" sizeInByte="4" accessMode="R">q</local>
+		</localVariables>
+		<globalVariables>
+			<global type="i32**" defLine="1:43" sizeInByte="4" accessMode="R">A</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">p</global>
+			<global type="i32*" defLine="1:43" sizeInByte="4" accessMode="R">r</global>
+		</globalVariables>
+		<callsNode>
+			<nodeCalled atLine="1:46">1:30</nodeCalled>
+				<recursiveFunctionCall>_Z4sortPiii 1:46,</recursiveFunctionCall>
+			<nodeCalled atLine="1:47">1:31</nodeCalled>
+				<recursiveFunctionCall>_Z4sortPiii 1:47,</recursiveFunctionCall>
+			<nodeCalled atLine="1:48">1:32</nodeCalled>
+				<recursiveFunctionCall></recursiveFunctionCall>
+		</callsNode>
+	</Node>
+
+	<Node id="1:30" type="3" name="_Z4sortPiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32*" defLine="43" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">r</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:31" type="3" name="_Z4sortPiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
 		<childrenNodes></childrenNodes>
 		<funcArguments>
-			<arg type="i32*" defLine="43">A</arg>
-			<arg type="i32" defLine="43">p</arg>
-			<arg type="i32" defLine="43">r</arg>
+			<arg type="i32*" defLine="43" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">r</arg>
 		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
-	<Node id="1:32" type="2" name="" startsAtLine = "1:55" endsAtLine = "1:57">
-		<childrenNodes>1:33,1:34,1:35</childrenNodes>
-	</Node>
-
-	<Node id="1:33" type="0" name="" startsAtLine = "1:55" endsAtLine = "1:55">
+	<Node id="1:32" type="3" name="_Z5mergePiiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.cond</BasicBlockID>
-		<readDataSize>32</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>3</instructionsCount>
-		<instructionLines count="1">1:55</instructionLines>
-		<readPhaseLines count="1">1:55</readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:34</CU>
-			<CU>1:36</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:55">i</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
+		<funcArguments>
+			<arg type="i32*" defLine="16" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="16" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="16" sizeInByte="4" accessMode="RW">q</arg>
+			<arg type="i32" defLine="16" sizeInByte="4" accessMode="RW">r</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
-	<Node id="1:34" type="0" name="" startsAtLine = "1:56" endsAtLine = "1:57">
+	<Node id="1:33" type="0" name="" startsAtLine = "1:50" endsAtLine = "1:50">
 		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>64</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<instructionsCount>6</instructionsCount>
-		<instructionLines count="2">1:56,1:57</instructionLines>
-		<readPhaseLines count="1">1:56</readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<successors>
-			<CU>1:35</CU>
-		</successors>
-		<localVariables>
-			<local type="ARRAY,i32*" defLine="1:53">array</local>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:55">i</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:35" type="0" name="" startsAtLine = "1:55" endsAtLine = "1:55">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.inc</BasicBlockID>
-		<readDataSize>32</readDataSize>
-		<writeDataSize>64</writeDataSize>
-		<instructionsCount>4</instructionsCount>
-		<instructionLines count="1">1:55</instructionLines>
-		<readPhaseLines count="1">1:55</readPhaseLines>
-		<writePhaseLines count="1">1:55</writePhaseLines>
-		<successors>
-			<CU>1:33</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="i32*" defLine="1:55">i</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:36" type="0" name="" startsAtLine = "1:58" endsAtLine = "1:58">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.end</BasicBlockID>
+		<BasicBlockID>if.end</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
-		<instructionLines count="1">1:58</instructionLines>
+		<instructionLines count="1">1:50</instructionLines>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="1">1:50</returnInstructions>
 		<successors>
 		</successors>
 		<localVariables>
@@ -685,4 +719,169 @@
 
 </Nodes>
 
+
+<Nodes>
+
+	<Node id="1:34" type="1" name="main" startsAtLine = "1:52" endsAtLine = "1:58">
+		<childrenNodes>1:35,1:36,1:38,1:42</childrenNodes>
+		<funcArguments>
+		</funcArguments>
+		<funcReturnLines>1:58, </funcReturnLines>
+	</Node>
+
+	<Node id="1:35" type="0" name="" startsAtLine = "1:52" endsAtLine = "1:52">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:52</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:52</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:36</CU>
+		</successors>
+		<localVariables>
+			<local type="i32*" defLine="LineNotFound" sizeInByte="4" accessMode="W">retval</local>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:36" type="0" name="" startsAtLine = "1:53" endsAtLine = "1:55">
+		<childrenNodes>1:37</childrenNodes>
+		<BasicBlockID>entry</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>8</instructionsCount>
+		<instructionLines count="3">1:53,1:54,1:55</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="1">1:55</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:39</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:55" sizeInByte="4" accessMode="W">i</global>
+		</globalVariables>
+		<callsNode>
+			<nodeCalled atLine="1:54">1:37</nodeCalled>
+				<recursiveFunctionCall>_Z4sortPiii 1:54,</recursiveFunctionCall>
+		</callsNode>
+	</Node>
+
+	<Node id="1:37" type="3" name="_Z4sortPiii" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32*" defLine="43" sizeInByte="4" accessMode="RW">A</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">p</arg>
+			<arg type="i32" defLine="43" sizeInByte="4" accessMode="RW">r</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
+	</Node>
+
+	<Node id="1:38" type="2" name="" startsAtLine = "1:55" endsAtLine = "1:57">
+		<childrenNodes>1:39,1:40,1:41</childrenNodes>
+	</Node>
+
+	<Node id="1:39" type="0" name="" startsAtLine = "1:55" endsAtLine = "1:55">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.cond</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>3</instructionsCount>
+		<instructionLines count="1">1:55</instructionLines>
+		<readPhaseLines count="1">1:55</readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:40</CU>
+			<CU>1:42</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:55" sizeInByte="4" accessMode="R">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:40" type="0" name="" startsAtLine = "1:56" endsAtLine = "1:57">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body</BasicBlockID>
+		<readDataSize>64</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>1</performsFileIO>
+		<instructionsCount>6</instructionsCount>
+		<instructionLines count="2">1:56,1:57</instructionLines>
+		<readPhaseLines count="1">1:56</readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:41</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="ARRAY,i32*" defLine="1:53" sizeInByte="4" accessMode="R">array</global>
+			<global type="i32*" defLine="1:55" sizeInByte="4" accessMode="R">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:41" type="0" name="" startsAtLine = "1:55" endsAtLine = "1:55">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.inc</BasicBlockID>
+		<readDataSize>32</readDataSize>
+		<writeDataSize>64</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>4</instructionsCount>
+		<instructionLines count="1">1:55</instructionLines>
+		<readPhaseLines count="1">1:55</readPhaseLines>
+		<writePhaseLines count="1">1:55</writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:39</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+			<global type="i32*" defLine="1:55" sizeInByte="4" accessMode="R">i</global>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+	<Node id="1:42" type="0" name="" startsAtLine = "1:58" endsAtLine = "1:58">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.end</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>1</instructionsCount>
+		<instructionLines count="1">1:58</instructionLines>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="1">1:58</returnInstructions>
+		<successors>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
+	</Node>
+
+</Nodes>
 
