@@ -17,7 +17,6 @@ from discopop_explorer.PETGraphX import (
     EdgeType,
     CUNode,
     NodeID,
-    Node,
     MemoryRegion,
     Dependency,
     FunctionNode,
@@ -35,7 +34,8 @@ def populate_live_data(
     comb_gpu_reg, pet: PETGraphX, ignore_update_instructions=False
 ) -> Dict[VarName, List[NodeID]]:
     """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
-    The gathered information is used for the optimization / creation of data mapping instructions afterwards."""
+    The gathered information is used for the optimization / creation of data mapping instructions afterwards.
+    """
     liveness: Dict[VarName, List[NodeID]] = dict()
 
     # populate liveness sets based on gpu loops
@@ -191,7 +191,6 @@ def extend_data_lifespan(
                             continue
 
                         if cu_id in parent_function.reachability_pairs:
-
                             reachable = (
                                 potential_successor_cu_id
                                 in parent_function.reachability_pairs[cu_id]
@@ -284,9 +283,9 @@ def calculate_host_liveness(
     comb_gpu_reg,
     pet: PETGraphX,
 ) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
-
     """
-    Variable is live on host, if a dependency between the host cu or any of its children and any device cu for a given variable exists
+    Variable is live on host, if a dependency between the host cu or any of its children and
+    any device cu for a given variable exists
 
     """
 

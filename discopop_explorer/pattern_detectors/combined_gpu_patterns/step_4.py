@@ -402,7 +402,6 @@ def identify_updates(
         parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
 
     for parent_function_id in parent_functions:
-
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []
@@ -784,7 +783,6 @@ def identify_updates_in_unrolled_function_graphs(
         parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
 
     for parent_function_id in parent_functions:
-
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []

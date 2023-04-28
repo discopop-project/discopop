@@ -103,7 +103,8 @@ class GPURegionInfo(PatternInfo):
 
     def get_exit_cus(self, pet: PETGraphX) -> Tuple[List[str], List[str]]:
         """returns a list of contained cus with successors outside the GPU Region,
-        i.e. exit points of the region. as well as a list of their successors, i.e. the nodes after the region"""
+        i.e. exit points of the region. as well as a list of their successors, i.e. the nodes after the region
+        """
         contained_exit_cus: List[str] = []
         outside_cus: List[str] = []
         for contained_cu_id in self.contained_cu_ids:

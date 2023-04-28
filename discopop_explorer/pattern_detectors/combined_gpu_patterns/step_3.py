@@ -52,7 +52,6 @@ def propagate_writes(
 
     modification_found = True
     while modification_found:
-
         # propagate writes to parents
         modification_found = True
         while modification_found:

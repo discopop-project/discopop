@@ -29,12 +29,12 @@ class Update(object):
     dependencies: Set[Dependency]
 
     def __init__(
-            self,
-            cu_id: NodeID,
-            sink_cu_id: NodeID,
-            memory_regions: Set[MemoryRegion],
-            update_type: UpdateType,
-            last_write_locations: Dict[MemoryRegion, NodeID],
+        self,
+        cu_id: NodeID,
+        sink_cu_id: NodeID,
+        memory_regions: Set[MemoryRegion],
+        update_type: UpdateType,
+        last_write_locations: Dict[MemoryRegion, NodeID],
     ):
         self.synchronous_source_cu_id = cu_id
         self.asynchronous_source_cu_id = None
@@ -46,40 +46,40 @@ class Update(object):
         self.dependencies = set()
         self.asynchronous_possible = False
 
-# Preserve, as it will be added in the future
-#        if False:  # disable asynchronous updates
-#            # check if an asynchronous update is possible
-#            # only allow asynchronous updates to the device in order to not get problems with
-#            # enforcing dependencies on the host --> tasks etc. would be required to implement the waiting behavior
-#            if self.update_type != UpdateType.FROM_DEVICE:
-#                import sys
-#
-#                print("ORIGINAL SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
-#                self.asynchronous_possible = True
-#                asynchronous_source: Optional[NodeID] = None
-#                for mem_reg in self.memory_regions:
-#                    if self.last_write_locations[mem_reg] == self.synchronous_source_cu_id:
-#                        self.asynchronous_possible = False
-#                        break
-#                    if asynchronous_source is None:
-#                        asynchronous_source = self.last_write_locations[mem_reg]
-#                    if asynchronous_source != self.last_write_locations[mem_reg]:
-#                        self.asynchronous_possible = False
-#                        break
-#
-#                if self.asynchronous_possible:
-#                    # update the asynchronous source cu
-#                    self.asynchronous_source_cu_id = cast(NodeID, asynchronous_source)
-#
-#                    # create a dependency to ensure correctness
-#                    self.dependencies.add(
-#                        Dependency(
-#                            self.asynchronous_source_cu_id,
-#                            self.sink_cu_id,
-#                            self.variable_names,
-#                            self.memory_regions,
-#                        )
-#                    )
+    # Preserve, as it will be added in the future
+    #        if False:  # disable asynchronous updates
+    #            # check if an asynchronous update is possible
+    #            # only allow asynchronous updates to the device in order to not get problems with
+    #            # enforcing dependencies on the host --> tasks etc. would be required to implement the waiting behavior
+    #            if self.update_type != UpdateType.FROM_DEVICE:
+    #                import sys
+    #
+    #                print("ORIGINAL SOURCE: ", self.synchronous_source_cu_id, file=sys.stderr)
+    #                self.asynchronous_possible = True
+    #                asynchronous_source: Optional[NodeID] = None
+    #                for mem_reg in self.memory_regions:
+    #                    if self.last_write_locations[mem_reg] == self.synchronous_source_cu_id:
+    #                        self.asynchronous_possible = False
+    #                        break
+    #                    if asynchronous_source is None:
+    #                        asynchronous_source = self.last_write_locations[mem_reg]
+    #                    if asynchronous_source != self.last_write_locations[mem_reg]:
+    #                        self.asynchronous_possible = False
+    #                        break
+    #
+    #                if self.asynchronous_possible:
+    #                    # update the asynchronous source cu
+    #                    self.asynchronous_source_cu_id = cast(NodeID, asynchronous_source)
+    #
+    #                    # create a dependency to ensure correctness
+    #                    self.dependencies.add(
+    #                        Dependency(
+    #                            self.asynchronous_source_cu_id,
+    #                            self.sink_cu_id,
+    #                            self.variable_names,
+    #                            self.memory_regions,
+    #                        )
+    #                    )
 
     def __str__(self):
         result_str = ""
@@ -103,25 +103,25 @@ class Update(object):
 
     def __eq__(self, other):
         if (
-                self.synchronous_source_cu_id,
-                self.asynchronous_source_cu_id,
-                self.sink_cu_id,
-                #            tuple(self.memory_regions),  # leads to duplicated outputs
-                tuple(self.variable_names),
-                self.update_type,
-                tuple(self.last_write_locations.items()),
-                self.asynchronous_possible,
-                tuple(self.dependencies),
+            self.synchronous_source_cu_id,
+            self.asynchronous_source_cu_id,
+            self.sink_cu_id,
+            #            tuple(self.memory_regions),  # leads to duplicated outputs
+            tuple(self.variable_names),
+            self.update_type,
+            tuple(self.last_write_locations.items()),
+            self.asynchronous_possible,
+            tuple(self.dependencies),
         ) == (
-                other.synchronous_source_cu_id,
-                other.asynchronous_source_cu_id,
-                other.sink_cu_id,
-                #            tuple(other.memory_regions),  # leads to duplicated outputs
-                tuple(other.variable_names),
-                other.update_type,
-                tuple(other.last_write_locations.items()),
-                other.asynchronous_possible,
-                tuple(other.dependencies),
+            other.synchronous_source_cu_id,
+            other.asynchronous_source_cu_id,
+            other.sink_cu_id,
+            #            tuple(other.memory_regions),  # leads to duplicated outputs
+            tuple(other.variable_names),
+            other.update_type,
+            tuple(other.last_write_locations.items()),
+            other.asynchronous_possible,
+            tuple(other.dependencies),
         ):
             return True
         return False
@@ -225,7 +225,7 @@ class Update(object):
         ]
 
     def get_as_metadata_using_variable_names_and_memory_regions(
-            self, pet: PETGraphX, project_folder_path: str
+        self, pet: PETGraphX, project_folder_path: str
     ):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
@@ -272,9 +272,9 @@ class Update(object):
         ]
 
     def convert_memory_regions_to_variable_names(
-            self,
-            pet: PETGraphX,
-            memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
+        self,
+        pet: PETGraphX,
+        memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
     ):
         self.variable_names = set()
         parent_function_id = pet.get_parent_function(pet.node_at(self.synchronous_source_cu_id)).id
@@ -285,7 +285,7 @@ class Update(object):
                     memory_regions_to_functions_and_variables[mem_reg][parent_function_id]
                 )
             elif (
-                    self.synchronous_source_cu_id in memory_regions_to_functions_and_variables[mem_reg]
+                self.synchronous_source_cu_id in memory_regions_to_functions_and_variables[mem_reg]
             ):
                 self.variable_names.update(
                     memory_regions_to_functions_and_variables[mem_reg][

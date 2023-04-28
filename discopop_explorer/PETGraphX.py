@@ -351,7 +351,6 @@ class FunctionNode(Node):
         self.memory_accesses_present = False
 
     def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
-
         for child_cu_id in [t for s, t, d in pet.out_edges(self.id, EdgeType.CHILD)]:
             if len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0:
                 return child_cu_id

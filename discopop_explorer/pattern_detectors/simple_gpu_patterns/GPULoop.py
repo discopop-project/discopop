@@ -602,7 +602,8 @@ class GPULoopPattern(PatternInfo):
         previously_known: Dict[Variable, Set[MemoryRegion]],
     ) -> List[Variable]:
         """Apply de-aliasing such that only valid (i.e. known) variable names are returned.
-        Memory Regions specified in initialized_memory_regions will be ignored respectively passed through."""
+        Memory Regions specified in initialized_memory_regions will be ignored respectively passed through.
+        """
 
         tmp_memory_regions = set()
         for _, mem_regs in input_list:
