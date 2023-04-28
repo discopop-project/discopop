@@ -9,6 +9,7 @@ import copy
 from typing import List, Dict, cast, Set
 
 import networkx as nx  # type: ignore
+import sympy  # type: ignore
 from sympy import Integer  # type: ignore
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
@@ -24,6 +25,8 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
         node_data = graph.nodes[node_id]["data"]
         if isinstance(node_data, FunctionRoot):
             performance_models[node_data] = get_node_performance_models(graph, node_id, set())
+            # filter out NaN - Models
+            performance_models[node_data] = [model for model in performance_models[node_data] if model.model != sympy.nan]
     return performance_models
 
 
@@ -73,6 +76,7 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                     if path_invalid:
                         break
                 if path_invalid:
+                    print("REST 1")
                     continue
 
                 # 2 check if a sibling of successor exists which has a requirements edge to a visited node
@@ -102,6 +106,7 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                     if path_invalid:
                         break
                 if path_invalid:
+                    print("REST 2")
                     continue
                 # ## END OF REQUIREMENTS CHECK ##
 
