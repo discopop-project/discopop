@@ -8,7 +8,9 @@
 
 import re
 import os
+import warnings
 from collections import defaultdict
+from os.path import abspath, dirname
 
 from lxml import objectify  # type:ignore
 
@@ -94,9 +96,25 @@ def __map_dummy_nodes(cu_dict):
     return cu_dict
 
 
-def __parse_dep_file(dep_fd):
+def __parse_dep_file(dep_fd, output_path: str):
     dependencies_list = []
-    for line in dep_fd.readlines():
+    # read static dependencies
+    static_dependency_lines = []
+    if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
+        warnings.warn(
+            "Static dependencies could not be found under: "
+            + os.path.join(output_path, "static_dependencies.txt")
+        )
+        # todo
+        warnings.warn(
+            "TODO: Add command line parameter to pass a location for the static dependency file, "
+            "or combine static and dynamic dependencies from the beginning."
+        )
+    else:
+        with open(os.path.join(output_path, "static_dependencies.txt"), "r") as static_dep_fd:
+            static_dependency_lines = static_dep_fd.readlines()
+
+    for line in dep_fd.readlines() + static_dependency_lines:
         dep_fields = line.split()
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
@@ -131,7 +149,7 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
     cu_dict = __map_dummy_nodes(cu_dict)
 
     with open(dependencies) as f:
-        dependencies = __parse_dep_file(f)
+        dependencies = __parse_dep_file(f, dirname(abspath(cu_file)))
 
     if os.path.exists(loop_counter):
         loop_data = {}

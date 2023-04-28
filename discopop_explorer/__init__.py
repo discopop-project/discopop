@@ -33,6 +33,7 @@ def run(
         *parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping)
     )
     print("PET CREATION FINISHED.")
+    # pet.show()
     # TODO add visualization
 
     plugin_base = PluginBase(package="plugins")

@@ -64,32 +64,46 @@ string getInstructionLine(Instruction *I) {
     }
 }
 
-string InstructionDG::edgeToDPDep(Edge<Instruction *> *e) {
+string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
+    // staticValueNameToMemRegIDMap maps: <SSA variable name> TO (original variable name, statically assigned MemReg ID)
     Instruction *I = e->getSrc()->getItem();
     Instruction *J = e->getDst()->getItem();
+
     string depType;
     if (isa<AllocaInst>(J)) {
         depType = "INIT";
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " *|"
-               + VNF->getVarName(I);
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first     // use original variable name instead of LLVM IR SSA name
+               + "(" 
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
+               + ")";
     } else if (DebugLoc dl = J->getDebugLoc()) {
         depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " "
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
-               + VNF->getVarName(I);
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first     // use original variable name instead of LLVM IR SSA name
+               + "(" 
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
+               + ")";
     } else {
         depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
         return to_string(fid) + ":"
                + getInstructionLine(I) + " "
+               + "NOM" + " "
                + depType + " "
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
-               + VNF->getVarName(I);
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first      // use original variable name instead of LLVM IR SSA name
+               + "(" 
+               + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
+               + ")";
     }
 }
 

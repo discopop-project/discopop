@@ -96,6 +96,7 @@ class PatternDetectorX(object):
     ):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
+        self.pet.map_static_and_dynamic_dependencies()
         self.pet.calculateFunctionMetadata()
         res = DetectionResult(self.pet)
 
