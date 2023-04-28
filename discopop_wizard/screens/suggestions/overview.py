@@ -24,7 +24,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     for c in details_frame.winfo_children():
         c.destroy()
     # load suggestions from execution
-    suggestions = get_suggestion_objects(execution_configuration_obj)
+    suggestions = get_suggestion_objects(wizard, execution_configuration_obj)
 
     # create horizontally split frames (scrollable list of suggestions + code preview)
     horizontal_paned_window = ttk.PanedWindow(details_frame, orient="horizontal")
@@ -99,7 +99,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     scrollbar.pack(side="right", fill="y")
 
 
-def get_suggestion_objects(execution_configuration_obj) -> List[Suggestion]:
+def get_suggestion_objects(wizard, execution_configuration_obj) -> List[Suggestion]:
     suggestions_path = os.path.join(execution_configuration_obj.value_dict["working_copy_path"], "patterns.json")
 
     suggestions_list: List[Suggestion] = []
@@ -107,6 +107,6 @@ def get_suggestion_objects(execution_configuration_obj) -> List[Suggestion]:
         suggestions_dict = json.load(f)
     for suggestion_type in suggestions_dict:
         for suggestion_values in suggestions_dict[suggestion_type]:
-            suggestions_list.append(Suggestion(suggestion_type, suggestion_values))
+            suggestions_list.append(Suggestion(wizard, suggestion_type, suggestion_values))
 
     return suggestions_list

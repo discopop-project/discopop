@@ -7,28 +7,29 @@
 # directory for details.
 
 import os
+import sys
 
 import tkinter as tk
+from enum import IntEnum
 from tkinter import ttk
 from typing import Any, Dict, List, Tuple
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
+    EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
+from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
+from discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
+from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
+class PragmaType(IntEnum):
+    PRAGMA = 1
+    REGION = 2
 
-class Suggestion(object):
-    type: str
-    values: dict
-    file_id: int
-    start_line: int
-    end_line: int
+class Suggestion(UnpackedSuggestion):
 
-    def __init__(self, type: str, values: dict):
-        self.type = type
-        self.values = values
-
-        # get start and end line of target section
-        self.file_id = int(self.values["start_line"].split(":")[0])
-        self.start_line = int(self.values["start_line"].split(":")[1])
-        self.end_line = int(self.values["end_line"].split(":")[1])
+    def __init__(self, wizard, type_str: str, values: dict):
+        super().__init__(type_str, values)
+        self.wizard = wizard
 
     def show_code_section(self, parent_frame: tk.Frame, execution_configuration):
 
@@ -63,26 +64,31 @@ class Suggestion(object):
                 path = split_line[1]
                 file_mapping[id] = path
 
-        # load source code to content window
-        source_code_path = file_mapping[self.file_id]
-        with open(source_code_path, "r") as f:
-            for idx, line in enumerate(f.readlines()):
-                idx = idx + 1  # start with line number 1
-                source_code.insert(tk.END, str(idx) + "    " + line)
-        # get list of pragmas to be inserted
-        pragmas = self.__get_pragmas()
+        # create CodePreview object
+        code_preview = CodePreviewContentBuffer(self.wizard, self.file_id, file_mapping[self.file_id])
 
-        # insert pragmas to code preview and add highlights
-        highlight_start_positions = self.__insert_pragmas(source_code, pragmas)
+        # get and insert pragmas
+        pragmas = self.get_pragmas()
+        for pragma in pragmas:
+            successful = code_preview.add_pragma(file_mapping, pragma, [], skip_compilation_check=True if self.wizard.settings.code_preview_disable_compile_check == 1 else False)
+            # if the addition resulted in a non-compilable file, add the pragma as a comment
+            if not successful:
+                # print error codes
+                self.wizard.console.print(code_preview.compile_result_buffer)
+                code_preview.add_pragma(file_mapping, pragma, [], add_as_comment=True, skip_compilation_check=True)
+
+
+        # show CodePreview
+        code_preview.show_in(source_code)
 
         # show targeted code section
-        source_code.see(highlight_start_positions[0])
+        code_preview.jump_to_first_modification(source_code)
 
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def get_as_button(self, scrollable_frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
-        return tk.Button(scrollable_frame, text=self.type + " @ " + self.values["start_line"],
+    def get_as_button(self, frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
+        return tk.Button(frame, text=self.type + " @ " + self.values["start_line"],
                          command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
 
     def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str]]):

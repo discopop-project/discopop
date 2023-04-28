@@ -38,10 +38,11 @@ namespace __dp {
         RAW,
         WAR,
         WAW,
-        RAW_II,
-        WAR_II,
-        WAW_II,
-        INIT
+        INIT,
+        RAW_II_0, RAW_II_1, RAW_II_2, 
+        WAR_II_0, WAR_II_1, WAR_II_2,
+        WAW_II_0, WAW_II_1, WAW_II_2,
+         // .._II_x to represent inter-iteration dependencies by loop level in case of nested loops
     }
             depType;
 
@@ -104,7 +105,42 @@ namespace __dp {
         LID begin;
     };
 
-    typedef std::stack <LoopTableEntry> LoopTable;
+    //typedef std::stack <LoopTableEntry> LoopTable;
+    struct LoopTable {
+        LoopTable(){};
+
+        vector <LoopTableEntry> contents;
+        
+        inline LoopTableEntry& top(){
+            return contents.back();
+        }
+
+        inline LoopTableEntry& first(){
+            return contents[0];
+        }
+
+        inline LoopTableEntry& topMinusN(size_t n){
+            return contents[contents.size()-1-n];
+        }
+
+        inline void pop(){
+            contents.pop_back();
+        }
+
+        inline bool empty(){
+            return contents.empty();
+        }
+
+        inline void push(LoopTableEntry newElement){
+            contents.push_back(newElement);
+        }
+
+        inline size_t size(){
+            return contents.size();
+        }
+
+    };
+
 
     // For loop merging
     // Assumption: no more than one loops can begin at the same line
@@ -163,15 +199,15 @@ namespace __dp {
     void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
-    void __dp_alloca(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
     // End HA
 #else
     void __dp_read(LID lid, ADDR addr, char *var);
     void __dp_write(LID lid, ADDR addr, char *var);
     // hybrid analysis
     void __dp_decl(LID lid, ADDR addr, char *var);
-    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes);
-    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBits);
+    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
+    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes);
     void __dp_delete(LID lid, ADDR startAddr);
     // End HA
 #endif

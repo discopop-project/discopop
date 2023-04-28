@@ -27,7 +27,9 @@ using namespace std;
 using namespace dputil;
 
 #define unpackLIDMetadata_getLoopID(lid) (lid >> 56)
-#define unpackLIDMetadata_getLoopIteration(lid) ((lid >> 48) & 0xFF)
+#define unpackLIDMetadata_getLoopIteration_0(lid) ((lid >> 48) & 0xFF)
+#define unpackLIDMetadata_getLoopIteration_1(lid) ((lid >> 40) & 0xFF)
+#define unpackLIDMetadata_getLoopIteration_2(lid) ((lid >> 32) & 0xFF)
 
 bool DP_DEBUG = false; // debug flag
 
@@ -67,8 +69,9 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, string, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
-    list<tuple<LID, string, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
     int64_t nextFreeMemoryRegionId = 0;
@@ -104,22 +107,61 @@ namespace __dp {
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
-            if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn) && 
-               unpackLIDMetadata_getLoopIteration(curr) == unpackLIDMetadata_getLoopIteration(depOn)){
-                // modify depType if intraIterationDependency identified
-                switch(type) {
-                    case RAW:
-                        type = RAW_II;
-                        break;
-                    case WAR:
-                        type = WAR_II;
-                        break;
-                    case WAW:
-                        type = WAW_II;
-                        break;
-                    default:
-                        break;
+            if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)){
+                // check innermost loop first
+                if(unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)){
+
+                    // modify depType if intraIterationDependency identified
+                    switch(type) {
+                        case RAW:
+                            type = RAW_II_0;
+                            break;
+                        case WAR:
+                            type = WAR_II_0;
+                            break;
+                        case WAW:
+                            type = WAW_II_0;
+                            break;
+                        default:
+                            break;
+                    }
                 }
+                // check second loop
+                else if(unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)){
+
+                    // modify depType if intraIterationDependency identified
+                    switch(type) {
+                        case RAW:
+                            type = RAW_II_1;
+                            break;
+                        case WAR:
+                            type = WAR_II_1;
+                            break;
+                        case WAW:
+                            type = WAW_II_1;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                // check outer loop
+                else if(unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)){
+                    // modify depType if intraIterationDependency identified
+                    switch(type) {
+                        case RAW:
+                            type = RAW_II_2;
+                            break;
+                        case WAR:
+                            type = WAR_II_2;
+                            break;
+                        case WAW:
+                            type = WAW_II_2;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                
             }
         }
 
@@ -177,14 +219,32 @@ namespace __dp {
                         case WAW:
                             dep += "WAW";
                             break;
-                        case RAW_II:
-                            dep += "RAW_II";
+                        case RAW_II_0:
+                            dep += "RAW_II_0";
                             break;
-                        case WAR_II:
-                            dep += "WAR_II";
+                        case WAR_II_0:
+                            dep += "WAR_II_0";
                             break;
-                        case WAW_II:
-                            dep += "WAW_II";
+                        case WAW_II_0:
+                            dep += "WAW_II_0";
+                            break;
+                        case RAW_II_1:
+                            dep += "RAW_II_1";
+                            break;
+                        case WAR_II_1:
+                            dep += "WAR_II_1";
+                            break;
+                        case WAW_II_1:
+                            dep += "WAW_II_1";
+                            break;
+                        case RAW_II_2:
+                            dep += "RAW_II_2";
+                            break;
+                        case WAR_II_2:
+                            dep += "WAR_II_2";
+                            break;
+                        case WAW_II_2:
+                            dep += "WAW_II_2";
                             break;
                         case INIT:
                             dep += "INIT";
@@ -241,6 +301,20 @@ namespace __dp {
         for (auto fe: *endFuncs) {
             *out << decodeLID(fe) << " END func" << endl;
         }
+    }
+
+    void outputAllocations() {
+        auto allocationsFileStream = new ofstream();
+        allocationsFileStream->open("memory_regions.txt", ios::out);
+        for(auto memoryRegion : allocatedMemoryRegions){
+            string position = decodeLID(get<0>(memoryRegion));
+            string id = get<1>(memoryRegion);
+            string numBytes = to_string(get<4>(memoryRegion));
+
+            *allocationsFileStream << id << " " << position << " " << numBytes << endl;
+        }
+        allocationsFileStream->flush();
+        allocationsFileStream->close();
     }
 
     void readRuntimeInfo() {
@@ -422,8 +496,21 @@ namespace __dp {
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
         if (loopStack->size() > 0){
-            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
-            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            if (loopStack->size() == 1){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            }
+            else if (loopStack->size() == 2){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+            }
+            else{ // (loopStack->size() >= 3)
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(2).count & 0xFF)) << 32); // add masked loop count
+            }
         }
         else{
             // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
@@ -650,8 +737,21 @@ namespace __dp {
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
         if (loopStack->size() > 0){
-            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
-            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            if (loopStack->size() == 1){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            }
+            else if (loopStack->size() == 2){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+            }
+            else{ // (loopStack->size() >= 3)
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(2).count & 0xFF)) << 32); // add masked loop count
+            }
         }
         else{
             // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
@@ -708,8 +808,21 @@ namespace __dp {
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
         if (loopStack->size() > 0){
-            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
-            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            if (loopStack->size() == 1){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            }
+            else if (loopStack->size() == 2){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+            }
+            else{ // (loopStack->size() >= 3)
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(2).count & 0xFF)) << 32); // add masked loop count
+            }
         }
         else{
             // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
@@ -767,8 +880,21 @@ namespace __dp {
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
         if (loopStack->size() > 0){
-            current.lid = current.lid | (((LID) (loopStack->top().loopID & 0xFF)) << 56);  // add masked loop id
-            current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            if (loopStack->size() == 1){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+            }
+            else if (loopStack->size() == 2){
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+            }
+            else{ // (loopStack->size() >= 3)
+                current.lid = current.lid | (((LID) (loopStack->first().loopID & 0xFF)) << 56);  // add masked loop id
+                current.lid = current.lid | (((LID) (loopStack->top().count & 0xFF)) << 48); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(1).count & 0xFF)) << 40); // add masked loop count
+                current.lid = current.lid | (((LID) (loopStack->topMinusN(2).count & 0xFF)) << 32); // add masked loop count
+            }
         }
         else{
             // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
@@ -786,13 +912,13 @@ namespace __dp {
         }
     }
 
-    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
+    void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
         string allocId = to_string(nextFreeMemoryRegionId);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
         
 
         // update known min and max ADDR
@@ -816,7 +942,7 @@ namespace __dp {
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes});
+        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
         lastHitIterator = allocatedMemoryRegions.end();
         lastHitIterator--;
 
@@ -830,10 +956,12 @@ namespace __dp {
     }
 
     void __dp_delete(LID lid, ADDR startAddr){
+        // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
+
         // TODO more efficient implementation
 
         // find memory region to be deleted
-        for(tuple<LID, string, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
+/*        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry : allocatedMemoryRegions){
             if(get<2>(entry) == startAddr){
                 // delete memory region
                 cout << "delete/free: " << decodeLID(lid) << ", " << get<1>(entry) << ", " << std::hex << startAddr << "\n";
@@ -842,6 +970,8 @@ namespace __dp {
             }
         }
         cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
+*/
+        return;
     } 
 
     void __dp_report_bb(int32_t bbIndex) {
@@ -876,6 +1006,7 @@ namespace __dp {
         finalizeParallelization();
         outputLoops();
         outputFuncs();
+        outputAllocations();
         // hybrid analysis
         generateStringDepMap();
         // End HA
@@ -968,7 +1099,7 @@ namespace __dp {
             // End HA
 
             // initialize lastHitIterator to dummy element
-            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t>{0, "dummy", 0, 0, 0});
+            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
             lastHitIterator = allocatedMemoryRegions.end();
             lastHitIterator--;
 

@@ -49,7 +49,11 @@ def __parse_xml_input(xml_fd):
             for instruction_id in str(node.readPhaseLines).split(","):
                 readlineToCUIdMap[instruction_id].add(node.get("id"))
 
-        cu_dict[node.get("id")] = node
+        if node.get("id") in cu_dict:
+            # entry exists already! merge the two entries
+            pass
+        else:
+            cu_dict[node.get("id")] = node
 
     return cu_dict
 

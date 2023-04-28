@@ -15,7 +15,6 @@ from .PETGraphX import PETGraphX, NodeType
 from ._version import __version__
 from .parser import parse_inputs
 from .pattern_detection import DetectionResult, PatternDetectorX
-import time
 
 
 def run(
@@ -62,7 +61,7 @@ def run(
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin after: " + plugin_name)
+        # print("executing plugin after: " + plugin_name)
         pet = p.run_after(pet)
 
     return res
