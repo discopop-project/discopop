@@ -27,6 +27,7 @@ def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_funct
         if suggestion.node_id == data_at(graph, node).cu_id:
             # reserve a node id for the new parallelization option
             new_node_id = get_next_free_node_id_function()
+            print("Do-All @ ", new_node_id)
             # copy data from exsting node
             node_data_copy = copy.deepcopy(data_at(graph, node))
             # remove cu_id to prevent using parallelization options as basis for new versions
@@ -80,15 +81,12 @@ def get_overhead_term(node_id: int, node_data: Loop, environment: Environment) -
                                               + 0.0002157726704611484 * log2(Threads) ^ (1)
                                               * Workload ^ (1) * log2(Workload) ^ (1)"""
     overhead = Float(11.95830999763869)
-    overhead += (Float(7.119516221079432)**(-7))*log(environment.thread_num, 2) * node_data.workload * log(node_data.workload, 2) * (node_data.iterations ** (5/4))
-    overhead += Float(0.0002157726704611484) * log(environment.thread_num, 2) * node_data.workload * log(node_data.workload, 2)
-    init_printing()
-    print("Overhead: ")
-    print(overhead)
+    overhead += (Float(7.119516221079432)**(-7))*log(environment.thread_num, 2) * (cast(int, node_data.workload) / node_data.iterations) * log((cast(int, node_data.workload) / node_data.iterations), 2) * (node_data.iterations ** (5/4))
+    overhead += Float(0.0002157726704611484) * log(environment.thread_num, 2) * (cast(int, node_data.workload) / node_data.iterations) * log((cast(int, node_data.workload) / node_data.iterations), 2)
 
-
-    # overhead += Integer(7.1195**(-7))*log(Threads,2)*node_data.workload * log(node_data.workload, 2)* (Iterations**(5/4))
+    # add weight to overhead
+    overhead *= environment.workload_overhead_weight
 
     cm = CostModel(overhead)
-    cm.path_decisions.append(node_id)
+    # add weight to overhead
     return cm, []
