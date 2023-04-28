@@ -13,6 +13,8 @@ from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: igno
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.classes.edges.OptionEdge import OptionEdge
+from discopop_library.OptimizationGraph.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
@@ -22,6 +24,7 @@ def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_funct
                       environment: Environment) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
+    introduced_options = []
     for node in buffer:
         if suggestion.node_id == data_at(graph, node).cu_id:
             # reserve a node id for the new parallelization option
@@ -45,6 +48,12 @@ def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_funct
 
             # create a new node for the option
             graph.add_node(new_node_id, data=node_data_copy)
+            # mark the newly created option
+            graph.add_edge(node, new_node_id, data=OptionEdge())
+            print("ADDED OPTION EDGE: ", node, new_node_id)
+
+            # save the id of the introduced parallelization option to connect them afterwards
+            introduced_options.append(new_node_id)
 
             # connect the newly created node to the parent and successor of node
             for edge in graph.in_edges(node):
@@ -53,6 +62,12 @@ def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_funct
             for edge in graph.out_edges(node):
                 edge_data = copy.deepcopy(graph.edges[edge]["data"])
                 graph.add_edge(new_node_id, edge[1], data=edge_data)
+    # connect introduced parallelization options to support path restraining
+    for node_id_1 in introduced_options:
+        for node_id_2 in introduced_options:
+            if node_id_1 == node_id_2:
+                continue
+            graph.add_edge(node_id_1, node_id_2, data=RequirementEdge())
     return graph
 
 
@@ -66,6 +81,8 @@ def get_cost_multiplier(node_id: int, environment: Environment) -> Tuple[CostMod
     mulitplier = Integer(1) / environment.thread_num
     cm = CostModel(mulitplier)
     cm.path_decisions.append(node_id)
+
+    print("COST MULTIPLIER: ", mulitplier)
 
     # return cm, [thread_count]
     return cm, []

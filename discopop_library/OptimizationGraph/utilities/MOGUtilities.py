@@ -12,6 +12,8 @@ import networkx as nx  # type: ignore
 
 from discopop_library.OptimizationGraph.classes.edges.ChildEdge import ChildEdge
 from discopop_library.OptimizationGraph.classes.edges.GenericEdge import GenericEdge
+from discopop_library.OptimizationGraph.classes.edges.OptionEdge import OptionEdge
+from discopop_library.OptimizationGraph.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.OptimizationGraph.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.OptimizationGraph.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.OptimizationGraph.classes.nodes.ContextNode import ContextNode
@@ -157,6 +159,22 @@ def show(graph):
         ax=ax,
         edge_color="green",
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], TemporaryEdge)],
+    )
+
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="pink",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], OptionEdge)],
+    )
+
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="yellow",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
     )
 
     # define tool tip style when hovering
