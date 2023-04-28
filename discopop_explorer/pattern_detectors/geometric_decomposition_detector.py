@@ -49,7 +49,7 @@ class GDInfo(PatternInfo):
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(
             pet, node, "GeometricDecomposition", [], []
         )
-        fp.append(Variable("int", "i", ""))
+        fp.append(Variable("int", "i", "", sizeInByte=4))
 
         self.first_private = fp
         self.private = p
@@ -86,7 +86,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     __loop_iterations = {}
     nodes = pet.all_nodes(FunctionNode)
     for idx, node in enumerate(nodes):
-        print("Geo. Dec.:", idx, "/", len(nodes))
+        # print("Geo. Dec.:", idx, "/", len(nodes))
         if not contains(
             result, lambda x: x.node_id == node.id
         ) and __detect_geometric_decomposition(pet, node):

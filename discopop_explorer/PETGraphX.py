@@ -7,10 +7,14 @@
 # directory for details.
 
 from __future__ import annotations
+
+import copy
+import sys
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
 from enum import IntEnum, Enum
 import itertools
 
+import jsonpickle  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
@@ -52,6 +56,7 @@ class EdgeType(Enum):
     SUCCESSOR = 1
     DATA = 2
     CALLSNODE = 3
+    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -114,11 +119,15 @@ class LineID(str):
 class MemoryRegion(str):
     # simpler but still strong typing alternative:
     def __init__(self, id_string: str):
-        # check format of newly created MemoryRegion
-        try:
-            int(id_string)
-        except ValueError:
-            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
+        super().__init__()
+        pass
+
+
+#        # check format of newly created MemoryRegion
+#        try:
+#            int(id_string)
+#        except ValueError:
+#            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
 
 
 class Dependency:
@@ -129,6 +138,7 @@ class Dependency:
     source_line: Optional[LineID] = None
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
+    intra_iteration_level: int = -1
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -194,6 +204,17 @@ class Node:
         """
         return LineID(f"{self.file_id}:{self.end_line}")
 
+    def contains_line(self, other_line) -> bool:
+        if other_line == "GlobalVar":
+            return False
+        other_file_id = int(other_line.split(":")[0])
+        other_line_num = int(other_line.split(":")[1])
+        if other_file_id != self.file_id:
+            return False
+        if other_line_num >= self.start_line and other_line_num <= self.end_line:
+            return True
+        return False
+
     def __str__(self):
         return self.id
 
@@ -206,6 +227,23 @@ class Node:
 
     def __hash__(self):
         return hash(self.id)
+
+    def get_parent_id(self, pet: PETGraphX) -> Optional[NodeID]:
+        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
+        if len(parents) == 0:
+            return None
+        elif len(parents) == 1:
+            return parents[0]
+        else:
+            # it is possible that a node has a function-type and e.g. loop type parent
+            # in this case, return the non-function type parent, since it will be a child of the function itself.
+            if len(parents) > 2:
+                raise ValueError("Node: ", self.id, "has too many parents!")
+            else:
+                for parent in parents:
+                    if type(pet.node_at(parent)) != FunctionNode:
+                        return parent
+        return None
 
 
 # Data.xml: type="0"
@@ -225,10 +263,64 @@ class CUNode(Node):
 # Data.xml: type="2"
 class LoopNode(Node):
     loop_iterations: int = -1
+    contains_array_reduction: bool = False
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.LOOP
+
+    def get_nesting_level(self, pet: PETGraphX, return_invert_result: bool = True) -> int:
+        """Returns the loop nesting level for the given loop node.
+        Currently, due to the profiling output, only 3 nesting levels of loops can be mapped correctly.
+        Innermost level is 0.
+        Outermost (maximum) level is 2.
+        The order of the results originates from the LoopStack used during the profiling.
+
+        Example:
+        main(){
+            for(){ // level 1
+                for(){}     // level 0
+            }
+        }
+        """
+        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
+
+        # count levels upwards
+        parent_nesting_levels: List[int] = []
+        for parent_id in parents:
+            parent_node = pet.node_at(parent_id)
+            if type(parent_node) == FunctionNode:
+                # loop is a direct child of a function node --> Nesting level 0
+                parent_nesting_levels.append(0)
+                break
+            elif type(parent_node) == LoopNode:
+                parent_nesting_levels.append(
+                    min(
+                        2,
+                        cast(LoopNode, parent_node).get_nesting_level(
+                            pet, return_invert_result=False
+                        ),
+                    )
+                )
+
+        if return_invert_result:
+            # invert the leveling and cutoff at 0
+            inverted_levels = [max(0, 2 - level) for level in parent_nesting_levels]
+            return min(inverted_levels)
+        else:
+            return max(parent_nesting_levels)
+
+    def get_entry_node(self, pet: PETGraphX) -> Optional[Node]:
+        """returns the first CU Node contained in the loop (i.e. one without predecessor inside the loop)"""
+        for node in pet.direct_children(self):
+            predecessors_outside_loop_body = [
+                s
+                for s, t, d in pet.in_edges(node.id, EdgeType.SUCCESSOR)
+                if pet.node_at(s) not in pet.direct_children(self)
+            ]
+            if len(predecessors_outside_loop_body) > 0:
+                return cast(Node, node)
+        return None
 
 
 # Data.xml: type="3"
@@ -244,10 +336,149 @@ class DummyNode(Node):
 class FunctionNode(Node):
     args: List[Variable] = []
     children_cu_ids: Optional[List[NodeID]] = None  # metadata to speedup some calculations
+    reachability_pairs: Dict[NodeID, Set[NodeID]]
+    immediate_post_dominators: Dict[NodeID, NodeID]
+    immediate_post_dominators_present: bool
+    memory_accesses: Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]
+    memory_accesses_present: bool
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.FUNC
+        self.reachability_pairs = dict()
+        self.immediate_post_dominators_present = False
+        self.memory_accesses_present = False
+
+    def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
+
+        for child_cu_id in [t for s, t, d in pet.out_edges(self.id, EdgeType.CHILD)]:
+            if len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0:
+                return child_cu_id
+        raise ValueError("Mal-formatted function: ", self.id, " - No entry CU found!")
+
+    def get_exit_cu_ids(self, pet: PETGraphX) -> Set[NodeID]:
+        exit_cu_ids: Set[NodeID] = set()
+        if self.children_cu_ids is not None:
+            for child_cu_id in cast(List[NodeID], self.children_cu_ids):
+                if (
+                    len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0
+                    and len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) != 0
+                ):
+                    exit_cu_ids.add(child_cu_id)
+        return exit_cu_ids
+
+    def calculate_reachability_pairs(self, pet: PETGraphX):
+        # create graph copy and remove all but successor edges
+        copied_graph = pet.g.copy()
+
+        # remove all but successor edges
+        to_be_removed = set()
+        for edge in copied_graph.edges:
+            edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+            if edge_data.etype != EdgeType.SUCCESSOR:
+                to_be_removed.add(edge)
+        for edge in to_be_removed:
+            copied_graph.remove_edge(edge[0], edge[1])
+
+        # calculate dfs successors for children CUs
+        for node_id in cast(List[NodeID], self.children_cu_ids):
+            self.reachability_pairs[node_id] = {node_id}
+            successors = [t for s, t in nx.dfs_tree(copied_graph, node_id).edges()]
+            self.reachability_pairs[node_id].update(successors)
+        pass
+
+    def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
+        if self.immediate_post_dominators_present:
+            import sys
+
+            print("METADATA HIT! ", self.node_id, file=sys.stderr)
+            return self.immediate_post_dominators
+        else:
+            # copy graph since edges need to be removed
+            copied_graph = pet.g.copy()
+            exit_cu_ids = self.get_exit_cu_ids(pet)
+            # remove all but successor edges
+            to_be_removed = set()
+            for edge in copied_graph.edges:
+                edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
+                if edge_data.etype != EdgeType.SUCCESSOR:
+                    to_be_removed.add(edge)
+            for edge in to_be_removed:
+                copied_graph.remove_edge(edge[0], edge[1])
+
+            # reverse edges
+            immediate_post_dominators: Set[Tuple[NodeID, NodeID]] = set()
+            for exit_cu_id in exit_cu_ids:
+                immediate_post_dominators.update(
+                    nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items()
+                )
+
+            immediate_post_dominators_dict = dict(immediate_post_dominators)
+            # add trivial cases for missing modes
+            for child_id in cast(List[NodeID], self.children_cu_ids):
+                if child_id not in immediate_post_dominators_dict:
+                    immediate_post_dominators_dict[child_id] = child_id
+
+            # initialize result dictionary and add trivial cases for all children
+            self.immediate_post_dominators = dict()
+            for child_id in cast(List[NodeID], self.children_cu_ids):
+                if child_id not in self.immediate_post_dominators:
+                    self.immediate_post_dominators[child_id] = child_id
+
+            # find post dominator outside parent, if type(parent) != function
+            for node_id in cast(List[NodeID], self.children_cu_ids):
+                if type(pet.node_at(node_id)) != CUNode:
+                    continue
+                # initialize search with immediate post dominator
+                post_dom_id = immediate_post_dominators_dict[node_id]
+                visited = set()
+                use_original = False
+                while (
+                    pet.node_at(node_id).get_parent_id(pet)
+                    == pet.node_at(post_dom_id).get_parent_id(pet)
+                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet))))
+                    != FunctionNode
+                ):
+                    if post_dom_id in visited:
+                        # cycle detected!
+                        use_original = True
+                        break
+
+                    visited.add(post_dom_id)
+                    new_post_dom_id = immediate_post_dominators_dict[post_dom_id]
+                    import sys
+
+                    print("Post dom: ", post_dom_id, file=sys.stderr)
+                    print("New post dom: ", new_post_dom_id, file=sys.stderr)
+                    print(file=sys.stderr)
+                    if post_dom_id == new_post_dom_id:
+                        break
+                    post_dom_id = new_post_dom_id
+                if not use_original:
+                    # found post dom
+                    self.immediate_post_dominators[node_id] = post_dom_id
+            self.immediate_post_dominators_present = True
+            return self.immediate_post_dominators
+
+    def get_memory_accesses(
+        self, writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]
+    ) -> Dict[int, Dict[MemoryRegion, Set[Optional[int]]]]:
+        if not self.memory_accesses_present:
+            self.memory_accesses = dict()
+            self.memory_accesses_present = True
+
+        for child_id in cast(List[NodeID], self.children_cu_ids):
+            for device_id in writes_by_device:
+                if device_id not in self.memory_accesses:
+                    self.memory_accesses[device_id] = dict()
+                if child_id in writes_by_device[device_id]:
+                    for mem_reg in writes_by_device[device_id][child_id]:
+                        if mem_reg not in self.memory_accesses[device_id]:
+                            self.memory_accesses[device_id][mem_reg] = set()
+                        self.memory_accesses[device_id][mem_reg].update(
+                            writes_by_device[device_id][child_id][mem_reg]
+                        )
+        return self.memory_accesses
 
 
 def parse_cu(node: ObjectifiedElement) -> Node:
@@ -260,12 +491,24 @@ def parse_cu(node: ObjectifiedElement) -> Node:
         n = CUNode(node_id)
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                Variable(
+                    v.get("type"),
+                    v.text,
+                    v.get("defLine"),
+                    v.get("accessMode"),
+                    int(v.get("sizeInByte")),
+                )
                 for v in node.localVariables.local
             ]
         if hasattr(node.globalVariables, "global"):
             n.global_vars = [
-                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"))
+                Variable(
+                    v.get("type"),
+                    v.text,
+                    v.get("defLine"),
+                    v.get("accessMode"),
+                    int(v.get("sizeInByte")),
+                )
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
@@ -293,7 +536,10 @@ def parse_cu(node: ObjectifiedElement) -> Node:
             dummy_or_func = FunctionNode(node_id)
         if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
             dummy_or_func.args = [
-                Variable(v.get("type"), v.text, v.get("defLine")) for v in node.funcArguments.arg
+                Variable(
+                    v.get("type"), v.text, v.get("defLine"), sizeInByte=int(v.get("sizeInByte"))
+                )
+                for v in node.funcArguments.arg
             ]
         n = dummy_or_func
 
@@ -315,9 +561,11 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     d.source_line = dep.source
     d.sink_line = dep.sink
     # check for intra-iteration dependencies
-    if dep.type.endswith("_II"):
+    if "_II_" in dep.type:
         d.intra_iteration = True
-        d.dtype = DepType[dep.type[0:-3]]  # remove _II tag
+        # get intra_iteration_level
+        d.intra_iteration_level = int(dep.type[dep.type.rindex("_") + 1 :])
+        d.dtype = DepType[dep.type[: dep.type.index("_")]]  # remove _II_x tag
     else:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
@@ -354,6 +602,7 @@ class PETGraphX(object):
         for id, node in cu_dict.items():
             n = parse_cu(node)
             g.add_node(id, data=n)
+
         print("\tAdded nodes...")
 
         for node_id, node in cu_dict.items():
@@ -362,7 +611,9 @@ class PETGraphX(object):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
                         print(f"WARNING: no successor node {successor} found")
-                    g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
+                    # do not allow "self-successor" edges (incorrect, but not critical. might occur in Data.xml)
+                    if source != successor:
+                        g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
             if "callsNode" in dir(node) and "nodeCalled" in dir(node.callsNode):
                 for nodeCalled in [n.text for n in node.callsNode.nodeCalled]:
@@ -429,20 +680,94 @@ class PETGraphX(object):
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+
         return cls(g, reduction_vars, pos)
 
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
-        for func_node in self.all_nodes(FunctionNode):
-            func_node.children_cu_ids = []
+        func_nodes = self.all_nodes(FunctionNode)
+        for idx, func_node in enumerate(func_nodes):
+            print("Calculating metadata for function: ", idx, " / ", len(func_nodes))
             stack: List[Node] = self.direct_children(func_node)
+            func_node.children_cu_ids = [node.id for node in stack]
+
             while stack:
                 child = stack.pop()
                 child.parent_function_id = func_node.id
                 children = self.direct_children(child)
                 func_node.children_cu_ids.extend([node.id for node in children])
                 stack.extend(children)
+
+            func_node.calculate_reachability_pairs(self)
+        print("Metadata calculation done.")
+
+        # cleanup dependencies (remove dependencies, if it is overwritten by a more specific Intra-iteration dependency
+        print("Cleaning duplicated dependencies...")
+        to_be_removed = []
+        for cu_node in self.all_nodes(CUNode):
+            out_deps = self.out_edges(cu_node.id, EdgeType.DATA)
+            for dep_1 in out_deps:
+                for dep_2 in out_deps:
+                    if dep_1 == dep_2:
+                        continue
+                    if (
+                        dep_1[2].dtype == dep_2[2].dtype
+                        and dep_1[2].etype == dep_2[2].etype
+                        and dep_1[2].memory_region == dep_2[2].memory_region
+                        and dep_1[2].sink_line == dep_2[2].sink_line
+                        and dep_1[2].source_line == dep_2[2].source_line
+                        and dep_1[2].var_name == dep_2[2].var_name
+                    ):
+                        if not dep_1[2].intra_iteration and dep_2[2].intra_iteration:
+                            # dep_2 is a more specific duplicate of dep_1
+                            # remove dep_1
+                            to_be_removed.append(dep_1)
+
+        to_be_removed_with_keys = []
+        for dep in to_be_removed:
+            graph_edges = self.g.out_edges(dep[0], keys=True, data="data")
+
+            for s, t, key, data in graph_edges:
+                if dep[0] == s and dep[1] == t and dep[2] == data:
+                    to_be_removed_with_keys.append((s, t, key))
+        for edge in set(to_be_removed_with_keys):
+            self.g.remove_edge(edge[0], edge[1], edge[2])
+        print("Cleaning dependencies done.")
+
+        # cleanup dependencies II : only consider the Intra-iteration dependencies with the highest level
+        print("Cleaning duplicated dependencies II...")
+        to_be_removed = []
+        for cu_node in self.all_nodes(CUNode):
+            out_deps = self.out_edges(cu_node.id, EdgeType.DATA)
+            for dep_1 in out_deps:
+                for dep_2 in out_deps:
+                    if dep_1 == dep_2:
+                        continue
+                    if (
+                        dep_1[2].dtype == dep_2[2].dtype
+                        and dep_1[2].etype == dep_2[2].etype
+                        and dep_1[2].memory_region == dep_2[2].memory_region
+                        and dep_1[2].sink_line == dep_2[2].sink_line
+                        and dep_1[2].source_line == dep_2[2].source_line
+                        and dep_1[2].var_name == dep_2[2].var_name
+                        and dep_1[2].intra_iteration
+                        and dep_2[2].intra_iteration
+                    ):
+                        if dep_1[2].intra_iteration_level < dep_2[2].intra_iteration_level:
+                            # dep_2 originated from a deeper nesting level. Remove less specific duplicate dep_1.
+                            to_be_removed.append(dep_1)
+
+        to_be_removed_with_keys = []
+        for dep in to_be_removed:
+            graph_edges = self.g.out_edges(dep[0], keys=True, data="data")
+
+            for s, t, key, data in graph_edges:
+                if dep[0] == s and dep[1] == t and dep[2] == data:
+                    to_be_removed_with_keys.append((s, t, key))
+        for edge in set(to_be_removed_with_keys):
+            self.g.remove_edge(edge[0], edge[1], edge[2])
+        print("Cleaning dependencies II done.")
 
     def show(self):
         """Plots the graph
@@ -523,8 +848,16 @@ class PETGraphX(object):
             edge_color="yellow",
             edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.CALLSNODE],
         )
+        nx.draw_networkx_edges(
+            self.g,
+            pos,
+            edge_color="orange",
+            edgelist=[
+                e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME
+            ],
+        )
 
-        # plt.show()
+        plt.show()
         plt.savefig("graphX.svg")
 
     def node_at(self, node_id: NodeID) -> Node:
@@ -882,7 +1215,7 @@ class PETGraphX(object):
         return res
 
     def get_undefined_variables_inside_loop(
-        self, root_loop: Node
+        self, root_loop: Node, include_global_vars: bool = False
     ) -> Dict[Variable, Set[MemoryRegion]]:
         sub = self.subtree_of_type(root_loop, CUNode)
         vars = self.get_variables(sub)
@@ -894,10 +1227,11 @@ class PETGraphX(object):
         for var in vars:
             if var.defLine == "LineNotFound" or "0:" in var.defLine:
                 dummyVariables.append(var)
-            elif var.defLine == "GlobalVar" and not self.is_reduction_var(
-                root_loop.start_position(), var.name
-            ):
-                dummyVariables.append(var)
+            elif not include_global_vars:
+                if var.defLine == "GlobalVar" and not self.is_reduction_var(
+                    root_loop.start_position(), var.name
+                ):
+                    dummyVariables.append(var)
 
         # vars = list(set(vars) ^ set(dummyVariables))
         for key in set(dummyVariables):
@@ -1122,6 +1456,45 @@ class PETGraphX(object):
                 return rv["operation"]
         return ""
 
+    def dump_to_pickled_json(self) -> str:
+        """Encodes and returns the entire Object into a pickled json string.
+        The encoded string can be reconstructed into an object by using:
+        jsonpickle.decode(json_str)
+
+        :return: encoded string
+        """
+        return jsonpickle.encode(self)
+
+    def check_reachability(self, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True
+        visited: List[str] = []
+        queue = [target]
+        while len(queue) > 0:
+            cur_node = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[Node], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.in_edges(cur_node.id)
+                if s not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True
+                else:
+                    if e[0] not in visited:
+                        queue.append(cast(Node, self.node_at(e[0])))
+        return False
+
     def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
         """returns true, if source is a predecessor of target.
         This analysis includes traversal of successor, child and calls edges."""
@@ -1168,6 +1541,49 @@ class PETGraphX(object):
             ]
         return False
 
+    def check_reachability_and_get_path_nodes(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> Tuple[bool, List[CUNode]]:
+        """check if target is reachable from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: Boolean"""
+        if source == target:
+            return True, []
+
+        # trivially not reachable
+        if (
+            self.get_parent_function(target) != self.get_parent_function(source)
+            and EdgeType.CALLSNODE not in edge_types
+        ):
+            print("TRIVIAL FALSE!: ", source, target)
+            return False, []
+
+        visited: List[NodeID] = []
+        queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
+        while len(queue) > 0:
+            cur_node, cur_path = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.in_edges(cur_node.id)
+                if s not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[0]) == source:
+                    return True, cur_path
+                else:
+                    if e[0] not in visited:
+                        tmp_path = copy.deepcopy(cur_path)
+                        tmp_path.append(cur_node)
+                        queue.append((cast(CUNode, self.node_at(e[0])), tmp_path))
+        return False, []
+
     def dump_to_gephi_file(self, name="pet.gexf"):
         """Note: Destroys the PETGraph!"""
         # replace node data with label
@@ -1184,3 +1600,72 @@ class PETGraphX(object):
                 self.g.edges[edge]["var"] = dep.var_name
                 self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
         nx.write_gexf(self.g, name)
+
+    def get_variable(self, root_node_id: NodeID, var_name: str) -> Optional[Variable]:
+        """Search for the type of the given variable by BFS searching through successor edges in reverse, starting from
+        the given root node, and checking the global and local vars of each encountered CU node."""
+        queue: List[NodeID] = [root_node_id]
+        visited: Set[NodeID] = set()
+        while queue:
+            current = queue.pop(0)
+            current_node = cast(CUNode, self.node_at(current))
+            visited.add(current)
+            variables = current_node.local_vars + current_node.global_vars
+            for v in variables:
+                if v.name == var_name:
+                    return v
+            # add predecessors of current to the list
+            predecessors = [s for s, t, d in self.in_edges(current, EdgeType.SUCCESSOR)]
+            for pred in predecessors:
+                if pred not in visited and pred not in queue:
+                    queue.append(pred)
+        return None
+
+    def get_memory_regions(self, nodes: List[CUNode], var_name: str) -> Set[MemoryRegion]:
+        """check dependencies of nodes for usages of 'var_name' and extract memory regions related to this name"""
+        mem_regs: Set[MemoryRegion] = set()
+        for node in nodes:
+            out_deps = self.out_edges(node.id, EdgeType.DATA)
+            for s, t, d in out_deps:
+                if d.var_name == var_name:
+                    if d.memory_region is not None:
+                        mem_regs.add(cast(MemoryRegion, d.memory_region))
+        return mem_regs
+
+    def get_path_nodes_between(
+        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
+    ) -> List[CUNode]:
+        """get all nodes of all patch which allow reaching target from source via edges of types edge_type.
+        :param pet: PET graph
+        :param source: CUNode
+        :param target: CUNode
+        :param edge_types: List[EdgeType]
+        :return: List of encountered nodes"""
+
+        visited: List[NodeID] = []
+        queue: List[Tuple[CUNode, List[CUNode]]] = [
+            (cast(CUNode, self.node_at(t)), [])
+            for s, t, d in self.out_edges(source.id, edge_types)
+            if type(self.node_at(t)) == CUNode
+        ]
+
+        while len(queue) > 0:
+            cur_node, cur_path = queue.pop(0)
+            if type(cur_node) == list:
+                cur_node_list = cast(List[CUNode], cur_node)
+                cur_node = cur_node_list[0]
+            visited.append(cur_node.id)
+            tmp_list = [
+                (s, t, e)
+                for s, t, e in self.out_edges(cur_node.id)
+                if t not in visited and e.etype in edge_types
+            ]
+            for e in tmp_list:
+                if self.node_at(e[1]) == target or self.node_at(e[1]) == source:
+                    continue
+                else:
+                    if e[1] not in visited:
+                        tmp_path = copy.deepcopy(cur_path)
+                        tmp_path.append(cur_node)
+                        queue.append((cast(CUNode, self.node_at(e[1])), tmp_path))
+        return [cast(CUNode, self.node_at(nid)) for nid in set(visited)]

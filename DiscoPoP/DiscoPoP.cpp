@@ -20,6 +20,7 @@
 #define DP_hybrid_DEBUG false
 #define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
 
+
 using namespace llvm;
 using namespace std;
 using namespace dputil;
@@ -72,7 +73,7 @@ void DiscoPoP::setupCallbacks() {
     DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
                                                 Void,
                            
-                                                Int32, CharPtr, Int64, Int64, Int64
+                                                Int32, CharPtr, Int64, Int64, Int64, Int64
     );
 
     DpNew = ThisModule->getOrInsertFunction("__dp_new",
@@ -720,7 +721,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             string type_str;
                             raw_string_ostream rso(type_str);
                             (it->getType())->print(rso);
-                            Variable v(string(it->getName()), rso.str(), lid, true, true);
+                            Type *variableType = it->getType();
+                            while(variableType->isPointerTy()){
+                                variableType = variableType->getPointerElementType();
+                            }
+                            Variable v(string(it->getName()), rso.str(), lid, true, true, to_string(variableType->getScalarSizeInBits()/8));
                             n->argumentsList.push_back(v);
                         }
                     } else // get name of the indirect function which is called
@@ -791,12 +796,21 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 // NOTE: changed 'instruction' to '&*instruction', next 2 lines
                 varName = determineVariableName_static(&*instruction, isGlobalVar, false);
                 varType = determineVariableType(&*instruction);
+
+                int index = isa<StoreInst>(&*instruction) ? 1 : 0;
+                Type *variableType = (&*instruction)->getOperand(index)->getType();
+                while(variableType->isPointerTy()){
+                    variableType = variableType->getPointerElementType();
+                }
+
+                string varSizeInBytes = to_string(variableType->getScalarSizeInBits()/8);
+                
                 varDefLine = determineVariableDefLine(&*instruction);
 
                 bool readAccess = isa<LoadInst>(instruction);
                 bool writeAccess = isa<StoreInst>(instruction);
 
-                Variable v(varName, varType, varDefLine, readAccess, writeAccess);
+                Variable v(varName, varType, varDefLine, readAccess, writeAccess, varSizeInBytes);
 
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
@@ -2072,7 +2086,11 @@ bool DiscoPoP::runOnFunction(Function &F) {
             string type_str;
             raw_string_ostream rso(type_str);
             (it->getType())->print(rso);
-            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
+            Type *variableType = it->getType();
+            while(variableType->isPointerTy()){
+                variableType = variableType->getPointerElementType();
+            }
+            Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true, to_string(variableType->getScalarSizeInBits()/8));
             root->argumentsList.push_back(v);
         }
         /********************* End of initialize root values
@@ -2868,6 +2886,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto ai: root->argumentsList) {
                 *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                         << " defLine=\"" << xmlEscape(ai.defLine) << "\""
+                        << " sizeInByte=\"" << ai.sizeInBytes << "\""
                         << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(ai.name) << "</arg>" << endl;
@@ -2920,6 +2939,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto lvi: cu->localVariableNames) {
                 *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
                         << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
+                        << " sizeInByte=\"" << lvi.sizeInBytes << "\""
                         << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(lvi.name) << "</local>" << endl;
@@ -2930,6 +2950,7 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             for (auto gvi: cu->globalVariableNames) {
                 *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                         << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
+                        << " sizeInByte=\"" << gvi.sizeInBytes << "\""
                         << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "")
                         << "\">"
                         << xmlEscape(gvi.name) << "</global>" << endl;
@@ -3070,7 +3091,26 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
             // alloca instruction
         else if (isa<AllocaInst>(BI)) {
             AllocaInst *AI = cast<AllocaInst>(BI);
-                instrumentAlloca(cast<AllocaInst>(BI));
+
+            // if the option is set, check if the AllocaInst is static at the entry block of
+            // a function and skip it's instrumentation.
+            // This leads to a strong improvement of the profiling time if a lot of function
+            // calls are used, but results in a worse accurracy.
+            // As the default, the accurate profiling is used.
+            // Effectively, this check disables the instrumentation of allocas which belong to function parameters.
+
+            if(DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS){
+                if(! AI->isStaticAlloca()){
+                    // only instrument non-static alloca instructions
+                    instrumentAlloca(AI);
+                }
+            }
+            else{
+                // instrument every alloca instruction
+                instrumentAlloca(AI);
+            }
+
+            
         }
             // load instruction
         else if (isa<LoadInst>(BI)) {
@@ -3197,20 +3237,24 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(startAddr);
     
     Value *endAddr = startAddr;
+    uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
+    Value *numElements = toInstrument->getOperand(0);
     if(toInstrument->isArrayAllocation()){
         // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, toInstrument->getArraySize());
+        endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
     }
     else if(toInstrument->getAllocatedType()->isArrayTy()){
         // unpack potentially multidimensional allocations
-        uint64_t numElements = 1;
+
         Type *typeToParse = toInstrument->getAllocatedType();
         Type *elementType;
+
+        uint64_t tmp_numElements = 1;
 
         // unpack multidimensional allocations
         while(typeToParse->isArrayTy()){
             // extract size from current dimension and multiply to numElements
-            numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+            tmp_numElements *= cast<ArrayType>(typeToParse)->getNumElements();
             // proceed one dimension
             typeToParse = typeToParse->getArrayElementType();
         }
@@ -3218,17 +3262,18 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
         elementType = typeToParse;
 
         // allocated size = Element size in Bytes * Number of elements
-        auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-        auto allocatedSize = elementSizeInBytes * numElements;
+        elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
 
         // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+        numElements = ConstantInt::get(Int64, tmp_numElements);
+        endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
     }
 
     args.push_back(endAddr);
-    args.push_back(IRB.CreateIntCast(toInstrument->getArraySize(), Int64, true));
+    args.push_back(IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true), ConstantInt::get(Int64, elementSizeInBytes)));
+    args.push_back(IRB.CreateIntCast(numElements, Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
-}
+}   
 
 void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
@@ -3430,9 +3475,10 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
             args.push_back(startAddr);
             
             Value *endAddr = startAddr;
+            uint64_t numElements = 1;
+            uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();
             if(Global_it->getValueType()->isArrayTy()){
                 // unpack potentially multidimensional allocations
-                uint64_t numElements = 1;
                 Type *typeToParse = Global_it->getValueType();
                 Type *elementType;
 
@@ -3448,14 +3494,15 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 
                 // allocated size = Element size in Bytes * Number of elements
                 auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-                auto allocatedSize = elementSizeInBytes * numElements;
+                allocatedSize = elementSizeInBytes * numElements;
 
                 // endAddr = startAddr + allocated size
                 endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
             }
 
             args.push_back(endAddr);
-            args.push_back(ConstantInt::get(Int64, 0));
+            args.push_back(ConstantInt::get(Int64, allocatedSize));
+            args.push_back(ConstantInt::get(Int64, numElements));
             IRB.CreateCall(DpAlloca, args, "");
         }
     }

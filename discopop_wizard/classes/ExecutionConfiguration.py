@@ -28,7 +28,8 @@ class ExecutionConfiguration(object):
 
     def __init__(self, wizard):
         self.value_dict = {"label": "", "description": "", "executable_name": "", "executable_arguments": "",
-                           "make_flags": "", "project_path": "", "linker_flags": "", "make_target": "", "notes": "",
+                           "make_flags": "", "project_path": "", "linker_flags": "", "make_target": "",
+                           "memory_profiling_skip_function_parameters": 0,  "notes": "",
                            "working_copy_path": "",
                            "explorer_flags": "--json=patterns.json"}
         self.value_dict["id"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
@@ -136,7 +137,15 @@ class ExecutionConfiguration(object):
             row=6, column=1, sticky='ew')
         tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky='ew')
         tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky='ew')
-        tk.Label(canvas, text="Additional notes:", justify=tk.RIGHT, anchor="e").grid(row=9, column=1, sticky='ew')
+        tk.Label(canvas, text="Memory Profiling:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(row=9,
+                                                                                                              column=1,
+                                                                                                              sticky='ew')
+        tk.Label(canvas, text="Skip function params:", justify=tk.RIGHT, anchor="e").grid(row=10, column=1, sticky='ew')
+        tk.Label(canvas, text="Additional:", justify=tk.RIGHT, anchor="e",
+                 font=wizard.style_font_bold_small).grid(row=11,
+                                                         column=1,
+                                                         sticky='ew')
+        tk.Label(canvas, text="Notes:", justify=tk.RIGHT, anchor="e").grid(row=12, column=1, sticky='ew')
 
         # show input fields
         label = tk.Entry(canvas)
@@ -191,9 +200,21 @@ class ExecutionConfiguration(object):
         make_target = tk.Entry(canvas)
         make_target.grid(row=8, column=2, sticky='ew')
         make_target.insert(tk.END, self.value_dict["make_target"])
+        create_tool_tip(make_target,
+                        "Space-separated list of make targets to be created.")
+
+        mpsfp_var = tk.IntVar()
+        mpsfp_var.set(self.value_dict["memory_profiling_skip_function_parameters"])
+        memory_profiling_skip_function_parameters = tk.Checkbutton(canvas, onvalue=1, offvalue=0, variable=mpsfp_var)
+        memory_profiling_skip_function_parameters.grid(row=10, column=2, sticky="w")
+        create_tool_tip(memory_profiling_skip_function_parameters,
+                        "Disables the memory profiling for function arguments.\n\n"
+                        "Depending on the application, this may lead to significant profiling runtime\n"
+                        "improvements, but the correctness of the results can not be guaranteed anymore!\n"
+                        "Use this mode with caution, and be aware of potential issues!")
 
         additional_notes = tk.Text(canvas, height=10)
-        additional_notes.grid(row=9, column=2, sticky='ew')
+        additional_notes.grid(row=12, column=2, sticky='ew')
         additional_notes.insert(tk.END, self.value_dict["notes"])
         create_tool_tip(additional_notes, "Can be used to store notes regarding the configuration.")
 
@@ -205,7 +226,7 @@ class ExecutionConfiguration(object):
                                 command=lambda: self.save_changes(wizard, main_screen_obj, label,
                                                                   description, executable_name,
                                                                   executable_args, make_flags,
-                                                                  project_path, project_linker_flags, make_target,
+                                                                  project_path, project_linker_flags, make_target, mpsfp_var,
                                                                   additional_notes))
         save_button.grid(row=1, column=1)
 
@@ -230,6 +251,7 @@ class ExecutionConfiguration(object):
                                                                               executable_args, make_flags,
                                                                               project_path, project_linker_flags,
                                                                               make_target,
+                                                                              mpsfp_var,
                                                                               additional_notes))
         execute_button.grid(row=1, column=4)
 
@@ -238,7 +260,7 @@ class ExecutionConfiguration(object):
         # check if suggestions can be loaded. If so, enable the button.
         # Else, disable it.
         try:
-            suggestions = get_suggestion_objects(self)
+            suggestions = get_suggestion_objects(self.wizard, self)
         except FileNotFoundError:
             return "disabled"
         except JSONDecodeError:
@@ -251,6 +273,7 @@ class ExecutionConfiguration(object):
                      executable_args, make_flags,
                      project_path, project_linker_flags,
                      make_target,
+                     memory_profiling_skip_function_parameters,
                      additional_notes,
                      rebuild_configurations_frame=True
                      ):
@@ -265,6 +288,7 @@ class ExecutionConfiguration(object):
         self.value_dict["working_copy_path"] = self.value_dict["project_path"] + "/.discopop"
         self.value_dict["linker_flags"] = project_linker_flags.get()
         self.value_dict["make_target"] = make_target.get()
+        self.value_dict["memory_profiling_skip_function_parameters"] = memory_profiling_skip_function_parameters.get()
         self.value_dict["notes"] = additional_notes.get("1.0", tk.END)
 
         # construct config path
@@ -301,6 +325,7 @@ class ExecutionConfiguration(object):
                               executable_args, make_flags,
                               project_path, project_linker_flags,
                               make_target,
+                              memory_profiling_skip_function_parameters,
                               additional_notes
                               ):
         # save changes
@@ -309,6 +334,7 @@ class ExecutionConfiguration(object):
                           executable_args, make_flags,
                           project_path, project_linker_flags,
                           make_target,
+                          memory_profiling_skip_function_parameters,
                           additional_notes, rebuild_configurations_frame=False)
 
         # create execution view and update results frame

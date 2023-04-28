@@ -67,10 +67,14 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
     for idx, node in enumerate(nodes):
-        print("Do-all:", idx, "/", len(nodes))
+        # print("Do-all:", idx, "/", len(nodes))
         if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
             node.do_all = True
-            if not node.reduction and node.loop_iterations >= 0:
+            if (
+                not node.reduction
+                and node.loop_iterations >= 0
+                and not node.contains_array_reduction
+            ):
                 result.append(DoAllInfo(pet, node))
 
     for pattern in result:
@@ -205,12 +209,21 @@ def __check_loop_dependencies(
             # RAW problematic, if it is not an intra-iteration RAW
             if not dep.intra_iteration:
                 return True
+            # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                tmp = root_loop.get_nesting_level(pet)
+                return True
+
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
+            # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                tmp = root_loop.get_nesting_level(pet)
+                return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
