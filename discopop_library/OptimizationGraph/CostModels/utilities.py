@@ -76,7 +76,6 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                     if path_invalid:
                         break
                 if path_invalid:
-                    print("REST 1")
                     continue
 
                 # 2 check if a sibling of successor exists which has a requirements edge to a visited node
@@ -106,7 +105,6 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                     if path_invalid:
                         break
                 if path_invalid:
-                    print("REST 2")
                     continue
                 # ## END OF REQUIREMENTS CHECK ##
 
