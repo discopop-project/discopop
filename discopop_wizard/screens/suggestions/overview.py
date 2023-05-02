@@ -49,11 +49,17 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     with open(execution_configuration_obj.value_dict["working_copy_path"] + "/Data.xml", "r") as f:
         cu_display_widget.set_text(f.read())
     result_notebook.add(cu_display_widget.frame, text="CU's")
-    # add Dependency preview
-    dep_display_widget = ScrollableTextWidget(result_notebook)
+    # add dynamic dependency preview
+    dynamic_dep_display_widget = ScrollableTextWidget(result_notebook)
     with open(execution_configuration_obj.value_dict["working_copy_path"] + "/" + execution_configuration_obj.value_dict["executable_name"] + "_dp_dep.txt", "r") as f:
-        dep_display_widget.set_text(f.read())
-    result_notebook.add(dep_display_widget.frame, text="DEP's")
+        dynamic_dep_display_widget.set_text(f.read())
+    result_notebook.add(dynamic_dep_display_widget.frame, text="Dynamic DEP's")
+    # add static dependency preview
+    static_dep_display_widget = ScrollableTextWidget(result_notebook)
+    with open(
+            execution_configuration_obj.value_dict["working_copy_path"] + "/static_dependencies.txt", "r") as f:
+        static_dep_display_widget.set_text(f.read())
+    result_notebook.add(static_dep_display_widget.frame, text="Static DEP's")
     # add instrumented LLVM IR preview
     instrumented_llvm_ir_display_widget = ScrollableTextWidget(result_notebook)
     with open(
