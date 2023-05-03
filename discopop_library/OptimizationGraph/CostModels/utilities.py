@@ -36,6 +36,7 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
             print("FN NODE ID: ", node_id)
             print("\tFN DATA ID: ", node_data.node_id)
             performance_models[node_data] = get_node_performance_models(graph, node_id, set())
+
             # filter out NaN - Models
             performance_models[node_data] = [
                 model for model in performance_models[node_data] if model.model != sympy.nan
@@ -129,10 +130,14 @@ def get_node_performance_models(
                     continue
                 # ## END OF REQUIREMENTS CHECK ##
 
+
+
                 combined_model = children_model
                 # add transfer costs
                 transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
                 combined_model = combined_model.plus_combine(transfer_costs_model)
+                # add path decision to the combined model
+                combined_model.path_decisions.append(successor)
                 # append the model of the successor
                 for model in get_node_performance_models(
                     graph, successor, copy.deepcopy(visited_nodes)
