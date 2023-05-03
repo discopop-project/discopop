@@ -5,22 +5,39 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional
+from typing import Optional, Set
 
 from sympy import Integer, Expr  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
+from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
+    WriteDataAccess,
+    ReadDataAccess,
+)
 
 
 class Workload(GenericNode):
     """This class represents a generic node in the Optimization Graph"""
+
     workload: Optional[int]
     cost_multiplier: CostModel
 
-    def __init__(self, node_id: int, cu_id: Optional[NodeID], workload: Optional[int] = None):
-        super().__init__(node_id, cu_id)
+    def __init__(
+        self,
+        node_id: int,
+        cu_id: Optional[NodeID],
+        workload: Optional[int] = None,
+        written_memory_regions: Optional[Set[WriteDataAccess]] = None,
+        read_memory_regions: Optional[Set[ReadDataAccess]] = None,
+    ):
+        super().__init__(
+            node_id,
+            cu_id,
+            written_memory_regions=written_memory_regions,
+            read_memory_regions=read_memory_regions,
+        )
         self.workload = workload
         self.cost_multiplier = CostModel(Integer(1))
         self.overhead = CostModel(Integer(0))
@@ -33,11 +50,23 @@ class Workload(GenericNode):
             return "WL"
 
     def get_hover_text(self) -> str:
-        return "WL: " + str(self.workload)
+        return (
+            "WL: " + str(self.workload) + "\n"
+            "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
+            "Write: " + str([str(e) for e in self.written_memory_regions])
+        )
 
     def get_cost_model(self) -> CostModel:
         """Performance model of a workload consists of the workload itself"""
         if self.workload is None:
-            return CostModel(Integer(0)).multiply_combine(self.cost_multiplier).plus_combine(self.overhead)
+            return (
+                CostModel(Integer(0))
+                .multiply_combine(self.cost_multiplier)
+                .plus_combine(self.overhead)
+            )
         else:
-            return CostModel(Integer(self.workload)).multiply_combine(self.cost_multiplier).plus_combine(self.overhead)
+            return (
+                CostModel(Integer(self.workload))
+                .multiply_combine(self.cost_multiplier)
+                .plus_combine(self.overhead)
+            )

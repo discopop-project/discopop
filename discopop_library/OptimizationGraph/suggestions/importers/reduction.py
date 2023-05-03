@@ -18,8 +18,9 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
 
 
-def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_function,
-                      environment: Environment) -> nx.DiGraph:
+def import_suggestion(
+    graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Environment
+) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
     for node in buffer:
@@ -34,11 +35,14 @@ def import_suggestion(graph: nx.DiGraph, suggestion, get_next_free_node_id_funct
             # add suggestion to node data
             node_data_copy.suggestion = suggestion
             # add the cost multiplier to represent the effects of the suggestion
-            cast(Workload, node_data_copy).cost_multiplier, introduced_symbols = get_cost_multiplier(new_node_id,
-                                                                                                     environment)
+            (
+                cast(Workload, node_data_copy).cost_multiplier,
+                introduced_symbols,
+            ) = get_cost_multiplier(new_node_id, environment)
             # add the overhead term to represent the overhead incurred by the suggestion
             cast(Workload, node_data_copy).overhead, tmp_introduced_symbols = get_overhead_term(
-                cast(Loop, node_data_copy), environment)
+                cast(Loop, node_data_copy), environment
+            )
             introduced_symbols += tmp_introduced_symbols
 
             node_data_copy.introduced_symbols += introduced_symbols
@@ -61,7 +65,7 @@ def get_cost_multiplier(node_id: int, environment: Environment) -> Tuple[CostMod
     A CostModel object is used to store the information on the path selection.
     Returns the multiplier and the list of introduces symbols
     Multiplier for Reduction:
-        1 / OMP ThreadCount """
+        1 / OMP ThreadCount"""
     # thread_count = Symbol("thread_count_do_all_" + str(node_id))
     mulitplier = Integer(1) / environment.thread_num
     cm = CostModel(mulitplier)
@@ -81,10 +85,14 @@ def get_overhead_term(node_data: Loop, environment: Environment) -> Tuple[CostMo
             + 5.426563196957141e-09 * Workload^(5/4) * log2(Workload)^(1) * Iterations^(3/2) * log2(Iterations)^(1)
             + 0.0005095826581781916 * Threads^(3)"""
     overhead = Float(137.7196222048026)
-    overhead += (Float(5.426563196957141) ** (-9)) * (cast(int, node_data.workload) / node_data.iterations) \
-                * log((cast(int, node_data.workload) / node_data.iterations), 2) * (node_data.iterations ** (3 / 2)) \
-                * log(node_data.iterations, 2)
-    overhead += Float(0.0005095826581781916) * (environment.thread_num ** 3)
+    overhead += (
+        (Float(5.426563196957141) ** (-9))
+        * (cast(int, node_data.workload) / node_data.iterations)
+        * log((cast(int, node_data.workload) / node_data.iterations), 2)
+        * (node_data.iterations ** (3 / 2))
+        * log(node_data.iterations, 2)
+    )
+    overhead += Float(0.0005095826581781916) * (environment.thread_num**3)
 
     # add weight to overhead
     overhead *= environment.workload_overhead_weight

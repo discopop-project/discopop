@@ -14,6 +14,7 @@ from discopop_library.OptimizationGraph.classes.edges.GenericEdge import Generic
 class OptionEdge(GenericEdge):
     """Used to mark selection options for the original sequential version.
     Used in combination with requirement edges to restrain path selections."""
+
     pass
 
     def get_cost_model(self) -> CostModel:

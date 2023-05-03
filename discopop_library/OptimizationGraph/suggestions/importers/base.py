@@ -8,12 +8,17 @@
 import networkx as nx  # type: ignore
 
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.suggestions.importers.do_all import import_suggestion as import_doall
-from discopop_library.OptimizationGraph.suggestions.importers.reduction import import_suggestion as import_reduction
+from discopop_library.OptimizationGraph.suggestions.importers.do_all import (
+    import_suggestion as import_doall,
+)
+from discopop_library.OptimizationGraph.suggestions.importers.reduction import (
+    import_suggestion as import_reduction,
+)
 
 
-def import_suggestions(detection_result, graph: nx.DiGraph, get_next_free_node_id_function,
-                       environment: Environment) -> nx.DiGraph:
+def import_suggestions(
+    detection_result, graph: nx.DiGraph, get_next_free_node_id_function, environment: Environment
+) -> nx.DiGraph:
     """Imports the suggestions specified in res into the passed graph and returns the modified graph"""
 
     # import do-all

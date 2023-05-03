@@ -12,7 +12,9 @@ import sympy  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
 from sympy.plotting import plot3d  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.utilities import get_performance_models_for_functions
+from discopop_library.OptimizationGraph.CostModels.utilities import (
+    get_performance_models_for_functions,
+)
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
@@ -26,13 +28,19 @@ class OptimizationGraph(object):
     def __init__(self, detection_result):
         self.graph, self.next_free_node_id = PETParser(detection_result.pet).parse()
         # print("FINAL")
-        # show(self.graph)
+        show(self.graph)
+
+        import sys
+
+        sys.exit(0)
 
         # define Environment
         environment = Environment()
 
         # import parallelization suggestions
-        self.graph = import_suggestions(detection_result, self.graph, self.get_next_free_node_id, environment)
+        self.graph = import_suggestions(
+            detection_result, self.graph, self.get_next_free_node_id, environment
+        )
         show(self.graph)
 
         function_performance_models = get_performance_models_for_functions(self.graph)
@@ -94,14 +102,24 @@ class OptimizationGraph(object):
                         if len(model.model.free_symbols) <= 2:
                             if len(model.path_decisions) <= 1:
                                 if combined_plot is None:
-                                    combined_plot = plot3d(model.model, (sorted_free_symbols[0], 1, 128),
-                                                           (sorted_free_symbols[1], 1, 128), show=False)
+                                    combined_plot = plot3d(
+                                        model.model,
+                                        (sorted_free_symbols[0], 1, 128),
+                                        (sorted_free_symbols[1], 1, 128),
+                                        show=False,
+                                    )
                                     combined_plot.title = function.name
 
                                     shown_models.append((model.path_decisions, model.model))
                                 else:
-                                    combined_plot.extend(plot3d(model.model, (sorted_free_symbols[0], 1, 128),
-                                                                (sorted_free_symbols[1], 1, 128), show=False))
+                                    combined_plot.extend(
+                                        plot3d(
+                                            model.model,
+                                            (sorted_free_symbols[0], 1, 128),
+                                            (sorted_free_symbols[1], 1, 128),
+                                            show=False,
+                                        )
+                                    )
                                     shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass

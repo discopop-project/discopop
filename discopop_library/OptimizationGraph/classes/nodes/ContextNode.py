@@ -10,7 +10,6 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 
 class ContextNode(Workload):
-
     def __init__(self, node_id: int):
         super().__init__(node_id, cu_id=None, workload=0)
 
