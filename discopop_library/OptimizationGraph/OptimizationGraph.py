@@ -38,7 +38,7 @@ class OptimizationGraph(object):
         self.graph = import_suggestions(
             detection_result, self.graph, self.get_next_free_node_id, environment
         )
-        #show(self.graph)
+        # show(self.graph)
 
         # calculate performance models without data transfers
         function_performance_models = get_performance_models_for_functions(self.graph)

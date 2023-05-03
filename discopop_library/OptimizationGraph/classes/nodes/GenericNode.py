@@ -34,7 +34,7 @@ class GenericNode(object):
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
-        device_id: DeviceID = 0,
+        device_id: DeviceID = None,
     ):
         self.node_id = node_id
         self.cu_id = cu_id

@@ -21,6 +21,7 @@ class Loop(Workload):
         self.iterations = max(
             iterations, 1
         )  # to prevent dividing by 0 in case the loop has not been executed
+        self.device_id = 1
 
     # todo: note: it might be more beneficial to use the iterations "per entry" instead of the total amount of iterations
     # example:

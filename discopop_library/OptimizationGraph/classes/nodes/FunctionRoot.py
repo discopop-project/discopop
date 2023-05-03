@@ -20,6 +20,7 @@ class FunctionRoot(Workload):
     def __init__(self, node_id: int, cu_id: Optional[NodeID], name: str):
         super().__init__(node_id, cu_id)
         self.name = name
+        self.device_id = 0
 
     def get_plot_label(self) -> str:
         return self.name

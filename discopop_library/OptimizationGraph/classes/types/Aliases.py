@@ -1,1 +1,3 @@
-DeviceID = int
+from typing import Optional
+
+DeviceID = Optional[int]
