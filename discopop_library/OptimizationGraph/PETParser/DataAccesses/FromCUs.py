@@ -21,11 +21,8 @@ def get_data_accesses_for_cu(
 ) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
     """Calculates and returns the sets of accessed memory regions for the given cu node.
     The first element contains write accesses, the second element contains read accesses."""
-    print("ENTRY FOR CU ID: ", cu_id)
-
     parent_function = pet.get_parent_function(pet.node_at(cu_id))
     subtree = pet.subtree_of_type(parent_function, CUNode)
-    all_function_cu_ids = [NodeID(n.id) for n in subtree]
 
     in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
     out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)

@@ -200,9 +200,6 @@ class PETParser(object):
             written_memory_regions, read_memory_regions = get_data_accesses_for_cu(
                 self.pet, cu_node.id
             )
-            print("CUID: ", cu_node)
-            print("\twritten: ", [str(e) for e in written_memory_regions])
-            print("\tread: ", [str(e) for e in read_memory_regions])
             self.graph.add_node(
                 new_node_id,
                 data=Workload(

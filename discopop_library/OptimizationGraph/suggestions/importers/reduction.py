@@ -67,9 +67,10 @@ def get_cost_multiplier(node_id: int, environment: Environment) -> Tuple[CostMod
     Multiplier for Reduction:
         1 / OMP ThreadCount"""
     # thread_count = Symbol("thread_count_do_all_" + str(node_id))
-    mulitplier = Integer(1) / environment.thread_num
-    cm = CostModel(mulitplier)
-    cm.path_decisions.append(node_id)
+    multiplier = Integer(1) / environment.thread_num
+    cm = CostModel(multiplier)
+
+    print("\tcost multiplier: ", multiplier)
 
     # return cm, [thread_count]
     return cm, []
@@ -96,6 +97,8 @@ def get_overhead_term(node_data: Loop, environment: Environment) -> Tuple[CostMo
 
     # add weight to overhead
     overhead *= environment.workload_overhead_weight
+
+    print("\toverhead: ", overhead)
 
     cm = CostModel(overhead)
     # add weight to overhead

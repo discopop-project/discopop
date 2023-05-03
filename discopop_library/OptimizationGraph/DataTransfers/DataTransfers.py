@@ -12,18 +12,15 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_succes
 
 def calculate_data_transfers(graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]]) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
+    result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
     for function in function_performance_models:
+        result_dict[function] = []
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
-            print()
             context = ContextObject(function.node_id, function.device_id)
             context = get_path_context(function.node_id, graph, model, context)
-            print("\nContext:")
-            print(context)
-            print()
-    # todo
-    #  replace with something useful
-    return dict()
+            result_dict[function].append((model, context))
+    return result_dict
 
 
 def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
@@ -69,7 +66,7 @@ def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, cont
     # check if any data needs to be updated from a different device before reading
     # if so, the context will be supplemented with the identified updates
     node_data = data_at(graph, node_id)
-    print("DEVICE ID: ", node_data.device_id)
+
     # if node has a device id assigned, update the last_seen device_id
     if node_data.device_id is not None:
         context.last_seen_device_id = node_data.device_id

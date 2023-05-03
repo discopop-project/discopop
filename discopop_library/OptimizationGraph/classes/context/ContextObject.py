@@ -51,7 +51,6 @@ class ContextObject(object):
 
                 known_writes = self.seen_writes_by_device[reading_device_id]
                 unknown_writes = other_devices_known_writes.difference(known_writes)
-                print("Unknown writes: ", unknown_writes)
                 for data_write in unknown_writes:
                     required_updates.add(
                         Update(source_node_id=self.last_visited_node_id, target_node_id=reading_node_id,
@@ -61,7 +60,6 @@ class ContextObject(object):
 
         # todo: check if this is sufficient
         for update in required_updates:
-            print("performing update: ", update)
             self.seen_writes_by_device[update.target_device_id][update.write_data_access.memory_region].add(update.write_data_access)
 
         self.necessary_updates.update(required_updates)

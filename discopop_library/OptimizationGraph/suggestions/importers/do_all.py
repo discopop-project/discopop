@@ -54,7 +54,6 @@ def import_suggestion(
             graph.add_node(new_node_id, data=node_data_copy)
             # mark the newly created option
             graph.add_edge(node, new_node_id, data=OptionEdge())
-            print("ADDED OPTION EDGE: ", node, new_node_id)
 
             # save the id of the introduced parallelization option to connect them afterwards
             introduced_options.append(new_node_id)
@@ -82,11 +81,10 @@ def get_cost_multiplier(node_id: int, environment: Environment) -> Tuple[CostMod
     Multiplier for Do-All:
         1 / OMP ThreadCount"""
     # thread_count = Symbol("thread_count_do_all_" + str(node_id))
-    mulitplier = Integer(1) / environment.thread_num
-    cm = CostModel(mulitplier)
-    cm.path_decisions.append(node_id)
+    multiplier = Integer(1) / environment.thread_num
+    cm = CostModel(multiplier)
 
-    print("COST MULTIPLIER: ", mulitplier)
+    print("\tcost multiplier: ", multiplier)
 
     # return cm, [thread_count]
     return cm, []
@@ -121,6 +119,8 @@ def get_overhead_term(node_data: Loop, environment: Environment) -> Tuple[CostMo
 
     # add weight to overhead
     overhead *= environment.workload_overhead_weight
+
+    print("\toverhead: ", overhead)
 
     cm = CostModel(overhead)
     # add weight to overhead
