@@ -3,13 +3,15 @@ from typing import Dict, Set
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.context.Update import Update
 from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
-from discopop_library.OptimizationGraph.classes.types.DataAccessType import WriteDataAccess, ReadDataAccess
+from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
+    WriteDataAccess,
+    ReadDataAccess,
+)
 
 
 class ContextObject(object):
     seen_writes_by_device: Dict[DeviceID, WriteDataAccess]
     necessary_updates: Set[Update]
-
 
     def __init__(self):
         self.seen_writes_by_device = dict()

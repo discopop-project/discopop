@@ -28,11 +28,7 @@ class OptimizationGraph(object):
     def __init__(self, detection_result):
         self.graph, self.next_free_node_id = PETParser(detection_result.pet).parse()
         # print("FINAL")
-        show(self.graph)
-
-        import sys
-
-        sys.exit(0)
+        # show(self.graph)
 
         # define Environment
         environment = Environment()
@@ -44,6 +40,10 @@ class OptimizationGraph(object):
         show(self.graph)
 
         function_performance_models = get_performance_models_for_functions(self.graph)
+
+        import sys
+
+        sys.exit(0)
 
         # print_introduced_symbols_per_node(self.graph)
 
