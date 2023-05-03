@@ -56,13 +56,9 @@ def get_data_accesses_for_cu(
         if (d.dtype == DepType.RAW) and d.memory_region is not None and len(d.memory_region) != 0
     ]
     # remove duplicates (manual, since hashing MemoryRegions did not work as intended. might be fixed in the future)
-    wmr_set: Set[WriteDataAccess] = set()
-    for wmr in written_memory_regions:
-        if str(wmr) not in [str(e) for e in wmr_set]:
-            wmr_set.add(wmr)
     rmr_set: Set[ReadDataAccess] = set()
     for rmr in read_memory_regions:
         if str(rmr) not in [str(e) for e in rmr_set]:
             rmr_set.add(rmr)
 
-    return wmr_set, rmr_set
+    return set(written_memory_regions), rmr_set

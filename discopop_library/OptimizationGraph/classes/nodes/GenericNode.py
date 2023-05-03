@@ -25,6 +25,7 @@ class GenericNode(object):
     ## Data transfer calculation
     written_memory_regions: Set[WriteDataAccess]
     read_memory_regions: Set[ReadDataAccess]
+    device_id: int
 
     def __init__(
         self,
@@ -32,6 +33,7 @@ class GenericNode(object):
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
+        device_id: int = 0,
     ):
         self.node_id = node_id
         self.cu_id = cu_id
@@ -48,6 +50,8 @@ class GenericNode(object):
             self.read_memory_regions = set()
         else:
             self.read_memory_regions = read_memory_regions
+
+        self.device_id = device_id
 
     def get_plot_label(self) -> str:
         return ""
