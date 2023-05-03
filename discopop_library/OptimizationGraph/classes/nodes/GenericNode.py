@@ -11,6 +11,7 @@ from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
 from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
     ReadDataAccess,
     WriteDataAccess,
@@ -25,7 +26,7 @@ class GenericNode(object):
     ## Data transfer calculation
     written_memory_regions: Set[WriteDataAccess]
     read_memory_regions: Set[ReadDataAccess]
-    device_id: int
+    device_id: DeviceID
 
     def __init__(
         self,
@@ -33,7 +34,7 @@ class GenericNode(object):
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
-        device_id: int = 0,
+        device_id: DeviceID = 0,
     ):
         self.node_id = node_id
         self.cu_id = cu_id
