@@ -14,9 +14,5 @@ from discopop_library.OptimizationGraph.classes.edges.GenericEdge import Generic
 class SuccessorEdge(GenericEdge):
     pass
 
-    def get_cost_model(self) -> CostModel:
-        # todo this is only a dummy, not a finished model!
-        # transfer costs will be summed up in the context objects which correspond to a given path
-        # since storing update information as property of the edges does not generalize well.
-        transfer_cost = Symbol("transfer_cost")
-        return CostModel(transfer_cost)
+    # transfer costs will be summed up in the context objects which correspond to a given path
+    # since storing update information as property of the edges does not generalize well.

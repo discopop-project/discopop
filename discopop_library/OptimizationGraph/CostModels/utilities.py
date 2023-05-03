@@ -33,8 +33,6 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
         node_data.node_id = node_id  # fix potential mismatches due to node copying
 
         if isinstance(node_data, FunctionRoot):
-            print("FN NODE ID: ", node_id)
-            print("\tFN DATA ID: ", node_data.node_id)
             performance_models[node_data] = get_node_performance_models(graph, node_id, set())
 
             # filter out NaN - Models

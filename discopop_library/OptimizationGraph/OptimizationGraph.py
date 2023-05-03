@@ -50,11 +50,6 @@ class OptimizationGraph(object):
         # TODO
         #  complete_performance_models = add_data_transfer_costs(self.graph, function_performance_models)
 
-
-        import sys
-
-        sys.exit(0)
-
         # print_introduced_symbols_per_node(self.graph)
 
         print("FUNCTION PERFORMANCE MODELS: ")
@@ -62,7 +57,9 @@ class OptimizationGraph(object):
             for midx, model in enumerate(function_performance_models[function]):
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
-                print("\t", model.path_decisions)
+
+        import sys
+        sys.exit(0)
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
