@@ -23,3 +23,6 @@ class WriteDataAccess(object):
 
     def __str__(self):
         return "W(" + self.memory_region + "-" + str(self.unique_id) + ")"
+
+    def __hash__(self):
+        return self.unique_id
