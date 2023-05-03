@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from random import randint
 from typing import Dict, Set, cast, List, Tuple
 
 import networkx as nx  # type: ignore
@@ -53,13 +54,17 @@ class OptimizationGraph(object):
         # print_introduced_symbols_per_node(self.graph)
 
         print("FUNCTION PERFORMANCE MODELS: ")
-        for idx, function in enumerate(function_performance_models):
-            for midx, model in enumerate(function_performance_models[function]):
+        for idx, function in enumerate(function_performance_models_with_transfers):
+            for midx, pair in enumerate(function_performance_models_with_transfers[function]):
+                model, context = pair
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
+                print("\tupdates: ", len(context.necessary_updates))
 
-        import sys
-        sys.exit(0)
+#        import sys
+#        sys.exit(0)
+
+
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
@@ -107,27 +112,26 @@ class OptimizationGraph(object):
                         if len(model.model.free_symbols) == 0:
                             continue
                         if len(model.model.free_symbols) <= 2:
-                            if len(model.path_decisions) <= 1:
-                                if combined_plot is None:
-                                    combined_plot = plot3d(
+                            if combined_plot is None:
+                                combined_plot = plot3d(
+                                    model.model,
+                                    (sorted_free_symbols[0], 1, 128),
+                                    (sorted_free_symbols[1], 1, 128),
+                                    show=False,
+                                )
+                                combined_plot.title = function.name
+
+                                shown_models.append((model.path_decisions, model.model))
+                            else:
+                                combined_plot.extend(
+                                    plot3d(
                                         model.model,
                                         (sorted_free_symbols[0], 1, 128),
                                         (sorted_free_symbols[1], 1, 128),
                                         show=False,
                                     )
-                                    combined_plot.title = function.name
-
-                                    shown_models.append((model.path_decisions, model.model))
-                                else:
-                                    combined_plot.extend(
-                                        plot3d(
-                                            model.model,
-                                            (sorted_free_symbols[0], 1, 128),
-                                            (sorted_free_symbols[1], 1, 128),
-                                            show=False,
-                                        )
-                                    )
-                                    shown_models.append((model.path_decisions, model.model))
+                                )
+                                shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass
                 if combined_plot is not None:
