@@ -15,6 +15,7 @@ from sympy.plotting import plot3d  # type: ignore
 from discopop_library.OptimizationGraph.CostModels.utilities import (
     get_performance_models_for_functions,
 )
+from discopop_library.OptimizationGraph.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
@@ -37,9 +38,18 @@ class OptimizationGraph(object):
         self.graph = import_suggestions(
             detection_result, self.graph, self.get_next_free_node_id, environment
         )
-        show(self.graph)
+        #show(self.graph)
 
+        # calculate performance models without data transfers
         function_performance_models = get_performance_models_for_functions(self.graph)
+
+        # calculate and append necessary data transfers to the models
+        function_performance_models_with_transfers = calculate_data_transfers(self.graph, function_performance_models)
+
+        # calculate and append costs of data transfers to the performance models
+        # TODO
+        #  complete_performance_models = add_data_transfer_costs(self.graph, function_performance_models)
+
 
         import sys
 

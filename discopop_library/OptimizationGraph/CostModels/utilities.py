@@ -30,17 +30,16 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
     performance_models: Dict[FunctionRoot, List[CostModel]] = dict()
     for node_id in graph.nodes:
         node_data = graph.nodes[node_id]["data"]
+        node_data.node_id = node_id  # fix potential mismatches due to node copying
+
         if isinstance(node_data, FunctionRoot):
+            print("FN NODE ID: ", node_id)
+            print("\tFN DATA ID: ", node_data.node_id)
             performance_models[node_data] = get_node_performance_models(graph, node_id, set())
             # filter out NaN - Models
             performance_models[node_data] = [
                 model for model in performance_models[node_data] if model.model != sympy.nan
             ]
-            # calculate necessary updates
-            # todo add
-            #  issued_updates = identify_updates_in_unrolled_function_graphs(
-            #     self, pet, writes_by_device, unrolled_function_graphs
-            #  )
     return performance_models
 
 
