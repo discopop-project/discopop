@@ -26,7 +26,7 @@ class FunctionRoot(Workload):
 
     def get_cost_model(self) -> CostModel:
         """Model:
-            Spawn overhead + children"""
+        Spawn overhead + children"""
         # todo this is only a dummy, not a finished model!
         function_name = "function" + "_" + str(self.node_id) + "_" + self.name
         # spawn_overhead = Symbol(function_name + "_spawn_overhead")

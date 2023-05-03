@@ -11,6 +11,9 @@ import networkx as nx  # type: ignore
 
 from discopop_explorer.PETGraphX import PETGraphX, FunctionNode, EdgeType, LoopNode, CUNode, NodeID
 from discopop_explorer.utils import calculate_workload
+from discopop_library.OptimizationGraph.PETParser.DataAccesses.FromCUs import (
+    get_data_accesses_for_cu,
+)
 from discopop_library.OptimizationGraph.classes.nodes.ContextMerge import ContextMerge
 from discopop_library.OptimizationGraph.classes.nodes.ContextRestore import ContextRestore
 from discopop_library.OptimizationGraph.classes.nodes.ContextSave import ContextSave
@@ -19,8 +22,16 @@ from discopop_library.OptimizationGraph.classes.nodes.ContextSnapshotPop import 
 from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at, get_successors, get_children, \
-    add_successor_edge, add_child_edge, add_temporary_edge, redirect_edge, convert_temporary_edges
+from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+    data_at,
+    get_successors,
+    get_children,
+    add_successor_edge,
+    add_child_edge,
+    add_temporary_edge,
+    redirect_edge,
+    convert_temporary_edges,
+)
 
 
 class PETParser(object):
@@ -58,8 +69,9 @@ class PETParser(object):
         'between' the different branches"""
         visited_nodes: Set[int] = set()
         for function_node in self.pet.all_nodes(FunctionNode):
-            _, _ = self.__parse_raw_node(self.cu_id_to_graph_node_id[function_node.id],
-                                         visited_nodes)
+            _, _ = self.__parse_raw_node(
+                self.cu_id_to_graph_node_id[function_node.id], visited_nodes
+            )
 
         # remove visited nodes, since duplicates exist now
         for node_id in visited_nodes:
@@ -79,8 +91,9 @@ class PETParser(object):
         else:
             return self.__parse_branching_point(root_node_id, children_entry_points, visited_nodes)
 
-    def __parse_path_node(self, root_node_id: int, connect_to_children: List[int], visited_nodes: Set[int]) -> Tuple[
-        int, int]:
+    def __parse_path_node(
+        self, root_node_id: int, connect_to_children: List[int], visited_nodes: Set[int]
+    ) -> Tuple[int, int]:
         """parses a regular path node, i.e. one with at most one successor node.
         returns the id of the first and last node in the created linearized path"""
 
@@ -106,8 +119,9 @@ class PETParser(object):
 
             return duplicate_node_id, path_end
 
-    def __parse_branching_point(self, root_node_id: int, connect_to_children: List[int], visited_nodes: Set[int]) -> \
-            Tuple[int, int]:
+    def __parse_branching_point(
+        self, root_node_id: int, connect_to_children: List[int], visited_nodes: Set[int]
+    ) -> Tuple[int, int]:
         """parses a branching point, i.e. a node with more than one successor.
         returns the id of the first and last node in the created linearized path"""
 
@@ -138,7 +152,9 @@ class PETParser(object):
         for successor in get_successors(self.graph, root_node_id):
             # Step 3.1: create and connect context restore node
             branch_context_restore_id = self.get_new_node_id()
-            self.graph.add_node(branch_context_restore_id, data=ContextRestore(branch_context_restore_id))
+            self.graph.add_node(
+                branch_context_restore_id, data=ContextRestore(branch_context_restore_id)
+            )
             add_temporary_edge(self.graph, last_added_node_id, branch_context_restore_id)
 
             # Step 3.2: parse branch
@@ -162,7 +178,9 @@ class PETParser(object):
 
         # Step 5: create and connect context snapshot pop
         context_snapshot_pop_id = self.get_new_node_id()
-        self.graph.add_node(context_snapshot_pop_id, data=ContextSnapshotPop(context_snapshot_pop_id))
+        self.graph.add_node(
+            context_snapshot_pop_id, data=ContextSnapshotPop(context_snapshot_pop_id)
+        )
         add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_id)
 
         # connect duplicated entry node to children
@@ -178,9 +196,25 @@ class PETParser(object):
             # create new node for CU
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[cu_node.id] = new_node_id
-            self.graph.add_node(new_node_id,
-                                data=Workload(node_id=new_node_id, cu_id=cu_node.id,
-                                              workload=calculate_workload(self.pet, cu_node)))
+            # calculate accessed data
+            # todo re-enable
+            written_memory_regions, read_memory_regions = get_data_accesses_for_cu(
+                self.pet, cu_node.id
+            )
+            print("CUID: ", cu_node)
+            print("\twritten: ", [str(e) for e in written_memory_regions])
+            print("\tread: ", [str(e) for e in read_memory_regions])
+            # TODO store accessed data in the node
+            self.graph.add_node(
+                new_node_id,
+                data=Workload(
+                    node_id=new_node_id,
+                    cu_id=cu_node.id,
+                    workload=calculate_workload(self.pet, cu_node),
+                    written_memory_regions=written_memory_regions,
+                    read_memory_regions=read_memory_regions,
+                ),
+            )
 
     def __add_loop_nodes(self):
         """adds Loop Nodes to the graph.
@@ -192,10 +226,15 @@ class PETParser(object):
             # create new node for Loop
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[loop_node.id] = new_node_id
-            self.graph.add_node(new_node_id,
-                                data=Loop(node_id=new_node_id, cu_id=loop_node.id,
-                                          workload=calculate_workload(self.pet, loop_node),
-                                          iterations=loop_node.loop_iterations))
+            self.graph.add_node(
+                new_node_id,
+                data=Loop(
+                    node_id=new_node_id,
+                    cu_id=loop_node.id,
+                    workload=calculate_workload(self.pet, loop_node),
+                    iterations=loop_node.loop_iterations,
+                ),
+            )
             # connect loop node and entry node via a child edge
             entry_node_cu_id = loop_node.get_entry_node(self.pet).id
             add_child_edge(self.graph, new_node_id, self.cu_id_to_graph_node_id[entry_node_cu_id])
@@ -203,18 +242,24 @@ class PETParser(object):
             # redirect edges from outside the loop to the entry node to the Loop node
             for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) not in loop_subtree:
-                    redirect_edge(self.graph, old_source_id=self.cu_id_to_graph_node_id[s],
-                                  new_source_id=self.cu_id_to_graph_node_id[s],
-                                  old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
-                                  new_target_id=new_node_id)
+                    redirect_edge(
+                        self.graph,
+                        old_source_id=self.cu_id_to_graph_node_id[s],
+                        new_source_id=self.cu_id_to_graph_node_id[s],
+                        old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
+                        new_target_id=new_node_id,
+                    )
 
             # redirect edges to the outside of the loop
             for s, t, d in self.pet.out_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(t) not in loop_subtree:
-                    redirect_edge(self.graph, old_source_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
-                                  new_source_id=new_node_id,
-                                  old_target_id=self.cu_id_to_graph_node_id[t],
-                                  new_target_id=self.cu_id_to_graph_node_id[t])
+                    redirect_edge(
+                        self.graph,
+                        old_source_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
+                        new_source_id=new_node_id,
+                        old_target_id=self.cu_id_to_graph_node_id[t],
+                        new_target_id=self.cu_id_to_graph_node_id[t],
+                    )
 
             # copy entry node
             entry_node_id = self.cu_id_to_graph_node_id[entry_node_cu_id]
@@ -225,10 +270,13 @@ class PETParser(object):
             # redirect edges from inside the loop to the copy of the entry node
             for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) in loop_subtree:
-                    redirect_edge(self.graph, old_source_id=self.cu_id_to_graph_node_id[s],
-                                  new_source_id=self.cu_id_to_graph_node_id[s],
-                                  old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
-                                  new_target_id=copied_entry_node_id)
+                    redirect_edge(
+                        self.graph,
+                        old_source_id=self.cu_id_to_graph_node_id[s],
+                        new_source_id=self.cu_id_to_graph_node_id[s],
+                        old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
+                        new_target_id=copied_entry_node_id,
+                    )
 
             # redirect accesses to the cu_id of the entry node to the newly created loop node
             self.cu_id_to_graph_node_id[entry_node_cu_id] = new_node_id
@@ -239,16 +287,28 @@ class PETParser(object):
         for function_node in self.pet.all_nodes(FunctionNode):
             # create function root node and register it in the graph
             new_node_id = self.get_new_node_id()
-            self.graph.add_node(new_node_id,
-                                data=FunctionRoot(node_id=new_node_id, cu_id=function_node.id, name=function_node.name))
+            self.graph.add_node(
+                new_node_id,
+                data=FunctionRoot(
+                    node_id=new_node_id, cu_id=function_node.id, name=function_node.name
+                ),
+            )
             # connect function node to its entry node
-            add_child_edge(self.graph, new_node_id,
-                           self.cu_id_to_graph_node_id[function_node.get_entry_cu_id(self.pet)])
+            add_child_edge(
+                self.graph,
+                new_node_id,
+                self.cu_id_to_graph_node_id[function_node.get_entry_cu_id(self.pet)],
+            )
             # save ID
             self.cu_id_to_graph_node_id[function_node.id] = new_node_id
 
     def __add_pet_successor_edges(self):
         for cu_node in self.pet.all_nodes(CUNode):
-            for successor_cu_id in [t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)]:
-                add_successor_edge(self.graph, self.cu_id_to_graph_node_id[cu_node.id],
-                                   self.cu_id_to_graph_node_id[successor_cu_id])
+            for successor_cu_id in [
+                t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)
+            ]:
+                add_successor_edge(
+                    self.graph,
+                    self.cu_id_to_graph_node_id[cu_node.id],
+                    self.cu_id_to_graph_node_id[successor_cu_id],
+                )

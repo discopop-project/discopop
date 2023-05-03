@@ -10,7 +10,6 @@ from discopop_library.OptimizationGraph.classes.nodes.ContextNode import Context
 
 
 class ContextSnapshotPop(ContextNode):
-
     def __init__(self, node_id: int):
         super().__init__(node_id)
 

@@ -15,8 +15,15 @@ from sympy import Integer  # type: ignore
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_successors, get_children, data_at, \
-    get_edge_data, get_requirements, get_out_options, get_in_options
+from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+    get_successors,
+    get_children,
+    data_at,
+    get_edge_data,
+    get_requirements,
+    get_out_options,
+    get_in_options,
+)
 
 
 def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot, List[CostModel]]:
@@ -26,11 +33,20 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
         if isinstance(node_data, FunctionRoot):
             performance_models[node_data] = get_node_performance_models(graph, node_id, set())
             # filter out NaN - Models
-            performance_models[node_data] = [model for model in performance_models[node_data] if model.model != sympy.nan]
+            performance_models[node_data] = [
+                model for model in performance_models[node_data] if model.model != sympy.nan
+            ]
+            # calculate necessary updates
+            # todo add
+            #  issued_updates = identify_updates_in_unrolled_function_graphs(
+            #     self, pet, writes_by_device, unrolled_function_graphs
+            #  )
     return performance_models
 
 
-def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: Set[int]) -> List[CostModel]:
+def get_node_performance_models(
+    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int]
+) -> List[CostModel]:
     """Returns the performance models for the given node"""
     result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
@@ -39,7 +55,9 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
     visited_nodes.add(node_id)
 
     # consider performance models of children
-    children_models = get_performance_models_for_children(graph, node_id, copy.deepcopy(visited_nodes))
+    children_models = get_performance_models_for_children(
+        graph, node_id, copy.deepcopy(visited_nodes)
+    )
 
     if len(children_models) == 0:
         children_models = [node_data.get_cost_model()]
@@ -95,7 +113,11 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                     for seq in sequential_version_ids:
                         for option in get_out_options(graph, seq):
                             # 2.3
-                            for visited_req in [req for req in get_requirements(graph, option) if req in visited_nodes]:
+                            for visited_req in [
+                                req
+                                for req in get_requirements(graph, option)
+                                if req in visited_nodes
+                            ]:
                                 # 2.4
                                 if visited_req != successor:
                                     path_invalid = True
@@ -113,7 +135,9 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
                 transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
                 combined_model = combined_model.plus_combine(transfer_costs_model)
                 # append the model of the successor
-                for model in get_node_performance_models(graph, successor, copy.deepcopy(visited_nodes)):
+                for model in get_node_performance_models(
+                    graph, successor, copy.deepcopy(visited_nodes)
+                ):
                     result_list.append(combined_model.plus_combine(model))
         return result_list
 
@@ -121,7 +145,9 @@ def get_node_performance_models(graph: nx.DiGraph, node_id: int, visited_nodes: 
     return children_models
 
 
-def get_performance_models_for_children(graph: nx.DiGraph, node_id: int, visited_nodes: Set[int]) -> List[CostModel]:
+def get_performance_models_for_children(
+    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int]
+) -> List[CostModel]:
     """Construct a performance model for the children of the given node, or return None if no children exist"""
     # todo: consider children
     child_models: List[CostModel] = []

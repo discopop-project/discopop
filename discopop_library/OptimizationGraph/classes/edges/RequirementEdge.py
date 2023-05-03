@@ -14,6 +14,7 @@ from discopop_library.OptimizationGraph.classes.edges.GenericEdge import Generic
 class RequirementEdge(GenericEdge):
     """Used to represent dependencies between path selections in the form of:
     if A is selected, it is required that B is selected as well."""
+
     pass
 
     def get_cost_model(self) -> CostModel:

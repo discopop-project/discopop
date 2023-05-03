@@ -51,7 +51,7 @@ class CostModel(object):
 
     def multiply_combine(self, other):
         """Combines both models in the following fashion:
-                f(x,y) = x * y"""
+        f(x,y) = x * y"""
         if other is None:
             return self
         combined_model = self.model * other.model
