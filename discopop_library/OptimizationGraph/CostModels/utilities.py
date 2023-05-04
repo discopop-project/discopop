@@ -128,8 +128,6 @@ def get_node_performance_models(
                     continue
                 # ## END OF REQUIREMENTS CHECK ##
 
-
-
                 combined_model = children_model
                 # add transfer costs
                 transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
