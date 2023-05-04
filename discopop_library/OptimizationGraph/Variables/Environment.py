@@ -1,6 +1,10 @@
+import os
 from typing import Dict
 
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
+
+from discopop_explorer.PETGraphX import MemoryRegion
+from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 
 
 class Environment(object):
@@ -18,9 +22,8 @@ class Environment(object):
     transfer_speeds: Dict[int, Dict[int, Expr]] = {
         0: {0: same_device_transfer_speed, 1: same_device_transfer_speed, 2: Integer(1000)},
         1: {0: same_device_transfer_speed, 1: same_device_transfer_speed, 2: Integer(1000)},
-        2: {0: Integer(1000), 1: Integer(1000), 2: same_device_transfer_speed}
+        2: {0: Integer(1000), 1: Integer(1000), 2: same_device_transfer_speed},
     }
-    ## END OF SETTINGS
 
     thread_num: Integer = Symbol(
         "CPU_thread_num"
@@ -30,3 +33,20 @@ class Environment(object):
         1: thread_num,
         2: Symbol("GPU_thread_num"),
     }  # Integer(256)}
+
+    ## END OF SETTINGS
+
+    __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
+
+    def __init__(self, project_folder_path):
+        self.__memory_region_sizes = get_sizes_of_memory_regions(
+            set(),
+            os.path.join(project_folder_path, "memory_regions.txt"),
+            return_all_memory_regions=True,
+        )
+        print("MEM REG SIZES: ", self.__memory_region_sizes)
+
+    def get_memory_region_size(self, memory_region: MemoryRegion) -> int:
+        if memory_region not in self.__memory_region_sizes:
+            self.__memory_region_sizes[memory_region] = 8  # assume 8 Bytes for unknown sizes
+        return self.__memory_region_sizes[memory_region]

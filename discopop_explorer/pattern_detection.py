@@ -144,6 +144,6 @@ class PatternDetectorX(object):
         # will be moved and calculated based on the optimization graph
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
-        mapping_and_optimization_graph = OptimizationGraph(res)
+        mapping_and_optimization_graph = OptimizationGraph(res, project_folder_path)
 
         return res
