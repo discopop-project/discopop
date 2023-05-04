@@ -19,7 +19,7 @@ from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
 
-do_all_device_ids = [1, 2]
+do_all_device_ids = [0, 1]
 
 
 def import_suggestion(
