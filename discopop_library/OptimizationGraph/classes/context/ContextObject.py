@@ -28,8 +28,9 @@ class ContextObject(object):
     def merge(self, other):
         raise NotImplementedError("TODO")
 
-    def calculate_and_perform_necessary_updates(self, node_reads: Set[ReadDataAccess], reading_device_id: int,
-                                                reading_node_id: int):
+    def calculate_and_perform_necessary_updates(
+        self, node_reads: Set[ReadDataAccess], reading_device_id: int, reading_node_id: int
+    ):
         """checks if the specified list of ReadDataAccesses performed by the specified device id makes updates
         necessary. If so, the updates will get append to the list of updates of the current ContextObject.
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
@@ -43,7 +44,9 @@ class ContextObject(object):
                 if read.memory_region not in self.seen_writes_by_device[device_id]:
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
-                other_devices_known_writes = self.seen_writes_by_device[device_id][read.memory_region]
+                other_devices_known_writes = self.seen_writes_by_device[device_id][
+                    read.memory_region
+                ]
 
                 if read.memory_region not in self.seen_writes_by_device[reading_device_id]:
                     # reading device does not currently "know" about the read memory region. create a new entry.
@@ -53,14 +56,20 @@ class ContextObject(object):
                 unknown_writes = other_devices_known_writes.difference(known_writes)
                 for data_write in unknown_writes:
                     required_updates.add(
-                        Update(source_node_id=self.last_visited_node_id, target_node_id=reading_node_id,
-                               source_device_id=device_id, target_device_id=reading_device_id,
-                               write_data_access=data_write))
-
+                        Update(
+                            source_node_id=self.last_visited_node_id,
+                            target_node_id=reading_node_id,
+                            source_device_id=device_id,
+                            target_device_id=reading_device_id,
+                            write_data_access=data_write,
+                        )
+                    )
 
         # todo: check if this is sufficient
         for update in required_updates:
-            self.seen_writes_by_device[update.target_device_id][update.write_data_access.memory_region].add(update.write_data_access)
+            self.seen_writes_by_device[update.target_device_id][
+                update.write_data_access.memory_region
+            ].add(update.write_data_access)
 
         self.necessary_updates.update(required_updates)
 
@@ -80,7 +89,6 @@ class ContextObject(object):
             # add write to the list of seen writes
             self.seen_writes_by_device[writing_device_id][write.memory_region].add(write)
         return self
-
 
     def get_transfer_costs(self) -> CostModel:
         """Replaces the planned storage of update information for individual graph edges.

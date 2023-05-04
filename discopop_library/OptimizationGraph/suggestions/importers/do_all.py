@@ -21,6 +21,7 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
 
 do_all_device_ids = [1, 2]
 
+
 def import_suggestion(
     graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Environment
 ) -> nx.DiGraph:
@@ -33,7 +34,14 @@ def import_suggestion(
             for device_id in do_all_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
-                print("Do-All @ ", new_node_id, " @ CUID: ", suggestion.node_id, " @ Device: ", device_id)
+                print(
+                    "Do-All @ ",
+                    new_node_id,
+                    " @ CUID: ",
+                    suggestion.node_id,
+                    " @ Device: ",
+                    device_id,
+                )
                 # copy data from exsting node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
                 # set the device id for the suggestion
@@ -79,7 +87,9 @@ def import_suggestion(
     return graph
 
 
-def get_cost_multiplier(node_id: int, environment: Environment, device_id: int) -> Tuple[CostModel, List[Symbol]]:
+def get_cost_multiplier(
+    node_id: int, environment: Environment, device_id: int
+) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the multiplier to represent the effects of the given suggestion on the cost model.
     A CostModel object is used to store the information on the path selection.
     Returns the multiplier and the list of introduces symbols
@@ -99,7 +109,9 @@ def get_cost_multiplier(node_id: int, environment: Environment, device_id: int) 
     return cm, []
 
 
-def get_overhead_term(node_data: Loop, environment: Environment, device_id: int) -> Tuple[CostModel, List[Symbol]]:
+def get_overhead_term(
+    node_data: Loop, environment: Environment, device_id: int
+) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the Expression which represents the Overhead incurred by the given suggestion.
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
     The function has been created using Extra-P.

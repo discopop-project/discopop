@@ -7,10 +7,16 @@ from discopop_library.OptimizationGraph.classes.context.ContextObject import Con
 from discopop_library.OptimizationGraph.classes.context.Update import Update
 from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_successors, data_at, get_children
+from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+    get_successors,
+    data_at,
+    get_children,
+)
 
 
-def calculate_data_transfers(graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]]) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+def calculate_data_transfers(
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]]
+) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
     for function in function_performance_models:
@@ -23,7 +29,9 @@ def calculate_data_transfers(graph: nx.DiGraph, function_performance_models: Dic
     return result_dict
 
 
-def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def get_path_context(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     # calculate context modifications for the current node
     context = __check_current_node(node_id, graph, model, context)
@@ -51,13 +59,20 @@ def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context:
         # find the successor which represents the path decision included in the model
         suitable_successors = [succ for succ in successors if succ in model.path_decisions]
         if len(suitable_successors) != 1:
-            raise ValueError("Invalid amount of potential successors (", len(suitable_successors), ") for path split at node:", node_id)
+            raise ValueError(
+                "Invalid amount of potential successors (",
+                len(suitable_successors),
+                ") for path split at node:",
+                node_id,
+            )
         # suitable successor identified.
         # pass the current context to the successor
         return get_path_context(suitable_successors[0], graph, model, context)
 
 
-def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def __check_current_node(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+) -> ContextObject:
     """Check if the given node results in modifications to the given context.
     Return a modified version of the context which contains the required updates."""
     # due to the Read-Compute-Write paradigm used to create the Computational Units,
@@ -70,15 +85,21 @@ def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, cont
     # if node has a device id assigned, update the last_seen device_id
     if node_data.device_id is not None:
         context.last_seen_device_id = node_data.device_id
-    context = context.calculate_and_perform_necessary_updates(node_data.read_memory_regions, cast(int, context.last_seen_device_id), node_data.node_id)
+    context = context.calculate_and_perform_necessary_updates(
+        node_data.read_memory_regions, cast(int, context.last_seen_device_id), node_data.node_id
+    )
 
     # add the writes performed by the given node to the context
-    context = context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_id))
+    context = context.add_writes(
+        node_data.written_memory_regions, cast(int, context.last_seen_device_id)
+    )
 
     return context
 
 
-def __check_children(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def __check_children(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+) -> ContextObject:
     # pass context to all children
     for child in get_children(graph, node_id):
         # reset last_visited_node_id inbetween visiting children

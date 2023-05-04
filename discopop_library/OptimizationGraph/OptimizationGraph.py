@@ -45,7 +45,9 @@ class OptimizationGraph(object):
         function_performance_models = get_performance_models_for_functions(self.graph)
 
         # calculate and append necessary data transfers to the models
-        function_performance_models_with_transfers = calculate_data_transfers(self.graph, function_performance_models)
+        function_performance_models_with_transfers = calculate_data_transfers(
+            self.graph, function_performance_models
+        )
 
         # calculate and append costs of data transfers to the performance models
         # TODO
@@ -61,10 +63,8 @@ class OptimizationGraph(object):
                 model.print()
                 print("\tupdates: ", len(context.necessary_updates))
 
-#        import sys
-#        sys.exit(0)
-
-
+        #        import sys
+        #        sys.exit(0)
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
