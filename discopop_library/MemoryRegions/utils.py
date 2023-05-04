@@ -8,13 +8,13 @@
 
 
 import os.path
-from typing import Dict, Set
+from typing import Dict, Set, cast
 
 from discopop_explorer.PETGraphX import MemoryRegion
 
 
 def get_sizes_of_memory_regions(
-    mem_regs: Set[MemoryRegion], mem_reg_file: str
+    mem_regs: Set[MemoryRegion], mem_reg_file: str, return_all_memory_regions: bool = False
 ) -> Dict[MemoryRegion, int]:
     """Returns the size of the allocated memory region in bytes"""
     if not os.path.exists(mem_reg_file):
@@ -26,6 +26,10 @@ def get_sizes_of_memory_regions(
             line = line.replace("\n", "")
             split_line = line.split(" ")
             mem_regs_dict[split_line[0]] = int(split_line[2])
+
+    if return_all_memory_regions:
+        # skip filtering of memory regions
+        return cast(Dict[MemoryRegion, int], mem_regs_dict)
 
     result_dict: Dict[MemoryRegion, int] = dict()
     for mem_reg in mem_regs:

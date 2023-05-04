@@ -27,13 +27,13 @@ class OptimizationGraph(object):
     graph: nx.DiGraph
     next_free_node_id: int
 
-    def __init__(self, detection_result):
+    def __init__(self, detection_result, project_folder_path):
         self.graph, self.next_free_node_id = PETParser(detection_result.pet).parse()
         # print("FINAL")
         # show(self.graph)
 
         # define Environment
-        environment = Environment()
+        environment = Environment(project_folder_path)
 
         # import parallelization suggestions
         self.graph = import_suggestions(
