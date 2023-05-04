@@ -1,15 +1,35 @@
 from typing import Dict, List, Tuple, Set
 
 import networkx as nx  # type: ignore
+from sympy import Integer  # type: ignore
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
 from discopop_library.OptimizationGraph.classes.context.Update import Update
 from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 
 
 def add_data_transfer_costs(
     graph: nx.DiGraph,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, Set[Update]]]],
-):
+    function_performance_models:  Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]], environment: Environment
+) ->  Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculates the data transfer costs for each of the given performance models and adds them to the respective model."""
-    raise NotImplementedError("TODO")
+    result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
+
+    for function in function_performance_models:
+        result_dict[function] = []
+        for cost_model, context in function_performance_models[function]:
+
+            # calculate costs of data transfers
+            # For now, it is assumed, that only a single data transfer happens at once
+            # and no asynchronous transfers happen.
+            # todo: This should be extended in the future.
+            data_transfer_costs = context.get_transfer_costs(environment=environment)
+
+            # extend the cost_model
+            cost_model = cost_model.plus_combine(data_transfer_costs)
+
+            # add the updated entry to result_dict
+            result_dict[function].append((cost_model, context))
+    return result_dict

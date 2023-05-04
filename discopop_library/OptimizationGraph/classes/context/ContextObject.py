@@ -1,7 +1,10 @@
-from typing import Dict, Set
+from typing import Dict, Set, Tuple, cast
+
+from sympy import Expr, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.classes.context.Update import Update
 from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
 from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
@@ -29,7 +32,7 @@ class ContextObject(object):
         raise NotImplementedError("TODO")
 
     def calculate_and_perform_necessary_updates(
-        self, node_reads: Set[ReadDataAccess], reading_device_id: int, reading_node_id: int
+            self, node_reads: Set[ReadDataAccess], reading_device_id: int, reading_node_id: int
     ):
         """checks if the specified list of ReadDataAccesses performed by the specified device id makes updates
         necessary. If so, the updates will get append to the list of updates of the current ContextObject.
@@ -90,10 +93,25 @@ class ContextObject(object):
             self.seen_writes_by_device[writing_device_id][write.memory_region].add(write)
         return self
 
-    def get_transfer_costs(self) -> CostModel:
-        """Replaces the planned storage of update information for individual graph edges.
-        Sums and returns the transfert costs represented by the current ContextObject."""
-        raise NotImplementedError("TODO")
+    def get_transfer_costs(self, environment: Environment) -> CostModel:
+        """Calculates the amount of data transferred between devices as specified by self.necessary_updates and
+        calculates an estimation for the added transfer costs under the assumption,
+        that no transfers happen concurrently and every transfer is executed in a blocking, synchronous manner."""
+        total_transfer_costs = Integer(0)
+        for update in self.necessary_updates:
+            # add static costs incurred by the transfer initialization
+            initialization_costs = environment.transfer_initialization_costs[cast(int, update.source_device_id)][
+                cast(int, update.target_device_id)]
+            total_transfer_costs += initialization_costs
+
+            # add costs incurred by the transfer itself
+            transfer_speed = environment.transfer_speeds[cast(int, update.source_device_id)][
+                cast(int, update.target_device_id)]
+            transfer_size = environment.get_memory_region_size(update.write_data_access.memory_region)
+            transfer_costs = transfer_size / transfer_speed
+
+            total_transfer_costs += transfer_costs
+        return CostModel(total_transfer_costs)
 
     def set_last_visited_node_id(self, node_id: int):
         self.last_visited_node_id = node_id

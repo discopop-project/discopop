@@ -13,6 +13,7 @@ import sympy  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
 from sympy.plotting import plot3d  # type: ignore
 
+from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.OptimizationGraph.CostModels.utilities import (
     get_performance_models_for_functions,
 )
@@ -50,21 +51,19 @@ class OptimizationGraph(object):
         )
 
         # calculate and append costs of data transfers to the performance models
-        # TODO
-        #  complete_performance_models = add_data_transfer_costs(self.graph, function_performance_models)
+        complete_performance_models = add_data_transfer_costs(self.graph, function_performance_models_with_transfers, environment)
 
         # print_introduced_symbols_per_node(self.graph)
 
         print("FUNCTION PERFORMANCE MODELS: ")
-        for idx, function in enumerate(function_performance_models_with_transfers):
-            for midx, pair in enumerate(function_performance_models_with_transfers[function]):
+        for idx, function in enumerate(complete_performance_models):
+            for midx, pair in enumerate(complete_performance_models[function]):
                 model, context = pair
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
-                print("\tupdates: ", len(context.necessary_updates))
 
-        #        import sys
-        #        sys.exit(0)
+        # import sys
+        # sys.exit(0)
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
@@ -111,7 +110,7 @@ class OptimizationGraph(object):
                     try:
                         if len(model.model.free_symbols) == 0:
                             continue
-                        if len(model.model.free_symbols) <= 2:
+                        if len(model.model.free_symbols) == 2:
                             if combined_plot is None:
                                 combined_plot = plot3d(
                                     model.model,
@@ -123,15 +122,16 @@ class OptimizationGraph(object):
 
                                 shown_models.append((model.path_decisions, model.model))
                             else:
-                                combined_plot.extend(
-                                    plot3d(
-                                        model.model,
-                                        (sorted_free_symbols[0], 1, 128),
-                                        (sorted_free_symbols[1], 1, 128),
-                                        show=False,
+                                if randint(0, 1000) < 2:
+                                    combined_plot.extend(
+                                        plot3d(
+                                            model.model,
+                                            (sorted_free_symbols[0], 1, 128),
+                                            (sorted_free_symbols[1], 1, 128),
+                                            show=False,
+                                        )
                                     )
-                                )
-                                shown_models.append((model.path_decisions, model.model))
+                                    shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass
                 if combined_plot is not None:

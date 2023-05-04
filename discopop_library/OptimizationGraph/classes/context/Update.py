@@ -23,3 +23,4 @@ class Update(object):
         self.source_device_id = source_device_id
         self.target_device_id = target_device_id
         self.write_data_access = write_data_access
+
