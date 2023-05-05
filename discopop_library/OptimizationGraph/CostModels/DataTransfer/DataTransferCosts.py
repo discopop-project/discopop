@@ -12,15 +12,15 @@ from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import Functi
 
 def add_data_transfer_costs(
     graph: nx.DiGraph,
-    function_performance_models:  Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]], environment: Environment
-) ->  Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    environment: Environment,
+) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculates the data transfer costs for each of the given performance models and adds them to the respective model."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
 
     for function in function_performance_models:
         result_dict[function] = []
         for cost_model, context in function_performance_models[function]:
-
             # calculate costs of data transfers
             # For now, it is assumed, that only a single data transfer happens at once
             # and no asynchronous transfers happen.
