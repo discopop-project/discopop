@@ -69,6 +69,10 @@ def import_suggestion(
                 for edge in graph.out_edges(node):
                     edge_data = copy.deepcopy(graph.edges[edge]["data"])
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
+                    # if the successor has no device id already,
+                    # set it to 0 to simulate "leaving" the device after the suggestion
+                    if data_at(graph, edge[1]).device_id is None:
+                        data_at(graph, edge[1]).device_id = 0
     return graph
 
 

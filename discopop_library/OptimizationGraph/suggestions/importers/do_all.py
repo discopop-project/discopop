@@ -78,6 +78,11 @@ def import_suggestion(
                 for edge in graph.out_edges(node):
                     edge_data = copy.deepcopy(graph.edges[edge]["data"])
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
+                    # if the successor has no device id already,
+                    # set it to 0 to simulate "leaving" the device after the suggestion
+                    if data_at(graph, edge[1]).device_id is None:
+                        data_at(graph, edge[1]).device_id = 0
+
     # connect introduced parallelization options to support path restraining
     for node_id_1 in introduced_options:
         for node_id_2 in introduced_options:
