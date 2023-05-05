@@ -6,14 +6,19 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from random import randint
+from time import sleep
 from typing import Dict, Set, cast, List, Tuple
 
 import networkx as nx  # type: ignore
 import sympy  # type: ignore
-from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify  # type: ignore
-from sympy.plotting import plot3d  # type: ignore
+from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
+# from sympy.plotting import plot3d  # type: ignore
+from spb import plot3d, MB  # type: ignore
+
+from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import (
+    add_data_transfer_costs,
+)
 from discopop_library.OptimizationGraph.CostModels.utilities import (
     get_performance_models_for_functions,
 )
@@ -51,7 +56,9 @@ class OptimizationGraph(object):
         )
 
         # calculate and append costs of data transfers to the performance models
-        complete_performance_models = add_data_transfer_costs(self.graph, function_performance_models_with_transfers, environment)
+        complete_performance_models = add_data_transfer_costs(
+            self.graph, function_performance_models_with_transfers, environment
+        )
 
         # print_introduced_symbols_per_node(self.graph)
 
@@ -78,6 +85,7 @@ class OptimizationGraph(object):
 
         # collect free symbols
         free_symbols: Set[Symbol] = set()
+        free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
         for function in function_performance_models:
             for model in function_performance_models[function]:
                 free_symbols.update(cast(List[Symbol], model.model.free_symbols))
@@ -85,8 +93,24 @@ class OptimizationGraph(object):
         print("Free Symbols: ", sorted_free_symbols)
         # query user for values for free symbols
         for free_symbol in sorted_free_symbols:
-            raw_symbol_value = input("Insert value for: " + free_symbol.name + ": ")
+            raw_symbol_value = input(
+                "Insert value for: "
+                + free_symbol.name
+                + ":\nLeave empty to treat as a variable. \n\t"
+            )
             if len(raw_symbol_value) == 0:
+                start_value = input("Start value?: [1]")
+                end_value = input("End value? : [128]")
+                if len(start_value) != 0:
+                    num_start_value = float(start_value)
+                else:
+                    num_start_value = float(1)
+                if len(end_value) != 0:
+                    num_end_value = float(end_value)
+                else:
+                    num_end_value = float(128)
+                free_symbol_ranges[free_symbol] = (num_start_value, num_end_value)
+
                 continue
             substitutions[free_symbol] = Float(float(raw_symbol_value))
 
@@ -110,27 +134,47 @@ class OptimizationGraph(object):
                     try:
                         if len(model.model.free_symbols) == 0:
                             continue
-                        if len(model.model.free_symbols) == 2:
+                        if len(model.model.free_symbols) <= 2:
                             if combined_plot is None:
                                 combined_plot = plot3d(
                                     model.model,
-                                    (sorted_free_symbols[0], 1, 128),
-                                    (sorted_free_symbols[1], 1, 128),
+                                    (
+                                        sorted_free_symbols[0],
+                                        free_symbol_ranges[sorted_free_symbols[0]][0],
+                                        free_symbol_ranges[sorted_free_symbols[0]][1],
+                                    ),
+                                    (
+                                        sorted_free_symbols[1],
+                                        free_symbol_ranges[sorted_free_symbols[1]][0],
+                                        free_symbol_ranges[sorted_free_symbols[1]][1],
+                                    ),
                                     show=False,
+                                    backend=MB,
                                 )
                                 combined_plot.title = function.name
 
                                 shown_models.append((model.path_decisions, model.model))
+
                             else:
                                 if randint(0, 1000) < 2:
                                     combined_plot.extend(
                                         plot3d(
                                             model.model,
-                                            (sorted_free_symbols[0], 1, 128),
-                                            (sorted_free_symbols[1], 1, 128),
+                                            (
+                                                sorted_free_symbols[0],
+                                                free_symbol_ranges[sorted_free_symbols[0]][0],
+                                                free_symbol_ranges[sorted_free_symbols[0]][1],
+                                            ),
+                                            (
+                                                sorted_free_symbols[1],
+                                                free_symbol_ranges[sorted_free_symbols[1]][0],
+                                                free_symbol_ranges[sorted_free_symbols[1]][1],
+                                            ),
                                             show=False,
+                                            backend=MB,
                                         )
                                     )
+
                                     shown_models.append((model.path_decisions, model.model))
                     except ValueError:
                         pass
