@@ -132,8 +132,10 @@ def get_node_performance_models(
                 # add transfer costs
                 transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
                 combined_model = combined_model.plus_combine(transfer_costs_model)
-                # add path decision to the combined model
-                combined_model.path_decisions.append(successor)
+
+                # if the successor is "determined" by a path decision, add path decision to the combined model
+                if len(successors) > 1:
+                    combined_model.path_decisions.append(successor)
                 # append the model of the successor
                 for model in get_node_performance_models(
                     graph, successor, copy.deepcopy(visited_nodes)
