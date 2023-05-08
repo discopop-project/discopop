@@ -75,13 +75,6 @@ class OptimizationGraph(object):
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
         # print_introduced_symbols_per_node(self.graph)
-        # thread counts
-        # substitutions[data_at(self.graph, 105).introduced_symbols[0]] = Integer(4)
-        # substitutions[data_at(self.graph, 106).introduced_symbols[0]] = Integer(16)
-
-        # function spawn overhead
-        # substitutions[data_at(self.graph, 51).introduced_symbols[0]] = Integer(5)
-        # substitutions[data_at(self.graph, 104).introduced_symbols[0]] = Integer(5)
 
         # collect free symbols
         free_symbols: Set[Symbol] = set()
@@ -132,8 +125,6 @@ class OptimizationGraph(object):
                     model.print()
                     print("Path Decisions: ", model.path_decisions)
                     try:
-                        if len(model.model.free_symbols) == 0:
-                            continue
                         if len(model.model.free_symbols) <= 2:
                             if combined_plot is None:
                                 combined_plot = plot3d(
@@ -150,6 +141,8 @@ class OptimizationGraph(object):
                                     ),
                                     show=False,
                                     backend=MB,
+                                    label=str(model.path_decisions),
+                                    zlabel="Costs",
                                 )
                                 combined_plot.title = function.name
 
@@ -172,6 +165,7 @@ class OptimizationGraph(object):
                                             ),
                                             show=False,
                                             backend=MB,
+                                            label=str(model.path_decisions),
                                         )
                                     )
 
