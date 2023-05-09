@@ -69,24 +69,24 @@ class CostModel(object):
         decision_tendency = 0  # positive -> self was evaluated to be smaller more often than the other way around
         decided = False
         counter = 0
-        min_count = 10
-        max_count = 100
-        decision_threshold = 0.80
+        min_count = 100
+        max_count = 1000
+        decision_threshold = 0.85
 
         # draw and evaluate random samples until either the max_count has been reached, or a decision has been made
         while not (decided or counter > max_count) or counter < min_count:
-
             counter += 1
-
             # determine random sampling point
             sampling_point = dict()
             for symbol in self.free_symbol_ranges:
                 range_min, range_max = self.free_symbol_ranges[symbol]
                 sampling_point[symbol] = random.uniform(range_min, range_max)
             # evaluate both functions at the sampling point
-            substituted_model_1 = self.model.subs(sampling_point)
+            #substituted_model_1 = self.model.subs(sampling_point)
+            substituted_model_1 = self.model.xreplace(sampling_point)
             numerical_result_1 = substituted_model_1.evalf()
-            substituted_model_2 = other.model.subs(sampling_point)
+            #substituted_model_2 = other.model.subs(sampling_point)
+            substituted_model_2 = other.model.xreplace(sampling_point)
             numerical_result_2 = substituted_model_2.evalf()
 
             # determine relation between the numerical results

@@ -13,7 +13,6 @@ import networkx as nx  # type: ignore
 import sympy  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff  # type: ignore
 
-# from sympy.plotting import plot3d  # type: ignore
 from spb import plot3d, MB  # type: ignore
 
 from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import (
@@ -27,6 +26,9 @@ from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import show
+from discopop_library.OptimizationGraph.utilities.optimization.GlobalOptimization.RandomSamples import \
+    find_quasi_optimal_using_random_samples
+
 
 
 class OptimizationGraph(object):
@@ -114,121 +116,17 @@ class OptimizationGraph(object):
             for midx, model in enumerate(function_performance_models[function]):
                 model.model = model.model.subs(substitutions)
 
-        # set free symbol ranges for comparison
+        # set free symbol ranges for comparisons
         for idx, function in enumerate(function_performance_models):
             for model in function_performance_models[function]:
                 model.free_symbol_ranges = free_symbol_ranges
 
-            # test: try sorting
-            # random shuffle
-            shuffle(function_performance_models[function])
-            # todo remove
 
-            sorted_list = sorted(function_performance_models[function])
-            minimum = sorted_list[0]
-            maximum = sorted_list[-1]
-            median = sorted_list[int(len(sorted_list)/2)]
-            upper_quartile = sorted_list[int(len(sorted_list)/4*3)]
-            lower_quartile = sorted_list[int(len(sorted_list)/4*1)]
-            # plot minimum, maximum and median
+        # find quasi-optimal results by checking random subsets
+        random_sample_count = 50
+        for function in function_performance_models:
+            find_quasi_optimal_using_random_samples(function_performance_models[function], random_sample_count, sorted_free_symbols, free_symbol_ranges)
 
-            print()
-            print("Maximum:")
-            print(maximum.model)
-            print(maximum.path_decisions)
-
-            print()
-            print("Median:")
-            print(median.model)
-            print(median.path_decisions)
-            print()
-            print("Minimum:")
-            print(minimum.model)
-            print(minimum.path_decisions)
-            combined_plot = plot3d(minimum.model, (
-                                        sorted_free_symbols[0],
-                                        free_symbol_ranges[sorted_free_symbols[0]][0],
-                                        free_symbol_ranges[sorted_free_symbols[0]][1],
-                                    ),
-                                    (
-                                        sorted_free_symbols[1],
-                                        free_symbol_ranges[sorted_free_symbols[1]][0],
-                                        free_symbol_ranges[sorted_free_symbols[1]][1],
-                                    ),
-                   show=False,
-                   backend=MB,
-                   label="Min: " + str(minimum.path_decisions),
-                   zlabel="Costs",
-                   )
-            combined_plot.extend(
-                plot3d(maximum.model, (
-                    sorted_free_symbols[0],
-                    free_symbol_ranges[sorted_free_symbols[0]][0],
-                    free_symbol_ranges[sorted_free_symbols[0]][1],
-                ),
-                       (
-                           sorted_free_symbols[1],
-                           free_symbol_ranges[sorted_free_symbols[1]][0],
-                           free_symbol_ranges[sorted_free_symbols[1]][1],
-                       ),
-                       show=False,
-                       backend=MB,
-                       label="max: " + str(maximum.path_decisions),
-                       zlabel="Costs",
-                       )
-            )
-            combined_plot.extend(
-                plot3d(median.model, (
-                    sorted_free_symbols[0],
-                    free_symbol_ranges[sorted_free_symbols[0]][0],
-                    free_symbol_ranges[sorted_free_symbols[0]][1],
-                ),
-                       (
-                           sorted_free_symbols[1],
-                           free_symbol_ranges[sorted_free_symbols[1]][0],
-                           free_symbol_ranges[sorted_free_symbols[1]][1],
-                       ),
-                       show=False,
-                       backend=MB,
-                       label="Median: " + str(median.path_decisions),
-                       zlabel="Costs",
-                       )
-            )
-            combined_plot.extend(
-                plot3d(lower_quartile.model, (
-                    sorted_free_symbols[0],
-                    free_symbol_ranges[sorted_free_symbols[0]][0],
-                    free_symbol_ranges[sorted_free_symbols[0]][1],
-                ),
-                       (
-                           sorted_free_symbols[1],
-                           free_symbol_ranges[sorted_free_symbols[1]][0],
-                           free_symbol_ranges[sorted_free_symbols[1]][1],
-                       ),
-                       show=False,
-                       backend=MB,
-                       label="Lower 25%: " + str(lower_quartile.path_decisions),
-                       zlabel="Costs",
-                       )
-            )
-            combined_plot.extend(
-                plot3d(upper_quartile.model, (
-                    sorted_free_symbols[0],
-                    free_symbol_ranges[sorted_free_symbols[0]][0],
-                    free_symbol_ranges[sorted_free_symbols[0]][1],
-                ),
-                       (
-                           sorted_free_symbols[1],
-                           free_symbol_ranges[sorted_free_symbols[1]][0],
-                           free_symbol_ranges[sorted_free_symbols[1]][1],
-                       ),
-                       show=False,
-                       backend=MB,
-                       label="Upper 25%: " + str(upper_quartile.path_decisions),
-                       zlabel="Costs",
-                       )
-            )
-            combined_plot.show()
 
 
         if False:  # plot results
