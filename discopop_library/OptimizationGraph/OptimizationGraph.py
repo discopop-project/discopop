@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from random import randint
+from random import randint, shuffle
 from time import sleep
 from typing import Dict, Set, cast, List, Tuple
 
@@ -114,7 +114,124 @@ class OptimizationGraph(object):
             for midx, model in enumerate(function_performance_models[function]):
                 model.model = model.model.subs(substitutions)
 
-        if True:  # plot results
+        # set free symbol ranges for comparison
+        for idx, function in enumerate(function_performance_models):
+            for model in function_performance_models[function]:
+                model.free_symbol_ranges = free_symbol_ranges
+
+            # test: try sorting
+            # random shuffle
+            shuffle(function_performance_models[function])
+            # todo remove
+
+            sorted_list = sorted(function_performance_models[function])
+            minimum = sorted_list[0]
+            maximum = sorted_list[-1]
+            median = sorted_list[int(len(sorted_list)/2)]
+            upper_quartile = sorted_list[int(len(sorted_list)/4*3)]
+            lower_quartile = sorted_list[int(len(sorted_list)/4*1)]
+            # plot minimum, maximum and median
+
+            print()
+            print("Maximum:")
+            print(maximum.model)
+            print(maximum.path_decisions)
+
+            print()
+            print("Median:")
+            print(median.model)
+            print(median.path_decisions)
+            print()
+            print("Minimum:")
+            print(minimum.model)
+            print(minimum.path_decisions)
+            combined_plot = plot3d(minimum.model, (
+                                        sorted_free_symbols[0],
+                                        free_symbol_ranges[sorted_free_symbols[0]][0],
+                                        free_symbol_ranges[sorted_free_symbols[0]][1],
+                                    ),
+                                    (
+                                        sorted_free_symbols[1],
+                                        free_symbol_ranges[sorted_free_symbols[1]][0],
+                                        free_symbol_ranges[sorted_free_symbols[1]][1],
+                                    ),
+                   show=False,
+                   backend=MB,
+                   label="Min: " + str(minimum.path_decisions),
+                   zlabel="Costs",
+                   )
+            combined_plot.extend(
+                plot3d(maximum.model, (
+                    sorted_free_symbols[0],
+                    free_symbol_ranges[sorted_free_symbols[0]][0],
+                    free_symbol_ranges[sorted_free_symbols[0]][1],
+                ),
+                       (
+                           sorted_free_symbols[1],
+                           free_symbol_ranges[sorted_free_symbols[1]][0],
+                           free_symbol_ranges[sorted_free_symbols[1]][1],
+                       ),
+                       show=False,
+                       backend=MB,
+                       label="max: " + str(maximum.path_decisions),
+                       zlabel="Costs",
+                       )
+            )
+            combined_plot.extend(
+                plot3d(median.model, (
+                    sorted_free_symbols[0],
+                    free_symbol_ranges[sorted_free_symbols[0]][0],
+                    free_symbol_ranges[sorted_free_symbols[0]][1],
+                ),
+                       (
+                           sorted_free_symbols[1],
+                           free_symbol_ranges[sorted_free_symbols[1]][0],
+                           free_symbol_ranges[sorted_free_symbols[1]][1],
+                       ),
+                       show=False,
+                       backend=MB,
+                       label="Median: " + str(median.path_decisions),
+                       zlabel="Costs",
+                       )
+            )
+            combined_plot.extend(
+                plot3d(lower_quartile.model, (
+                    sorted_free_symbols[0],
+                    free_symbol_ranges[sorted_free_symbols[0]][0],
+                    free_symbol_ranges[sorted_free_symbols[0]][1],
+                ),
+                       (
+                           sorted_free_symbols[1],
+                           free_symbol_ranges[sorted_free_symbols[1]][0],
+                           free_symbol_ranges[sorted_free_symbols[1]][1],
+                       ),
+                       show=False,
+                       backend=MB,
+                       label="Lower 25%: " + str(lower_quartile.path_decisions),
+                       zlabel="Costs",
+                       )
+            )
+            combined_plot.extend(
+                plot3d(upper_quartile.model, (
+                    sorted_free_symbols[0],
+                    free_symbol_ranges[sorted_free_symbols[0]][0],
+                    free_symbol_ranges[sorted_free_symbols[0]][1],
+                ),
+                       (
+                           sorted_free_symbols[1],
+                           free_symbol_ranges[sorted_free_symbols[1]][0],
+                           free_symbol_ranges[sorted_free_symbols[1]][1],
+                       ),
+                       show=False,
+                       backend=MB,
+                       label="Upper 25%: " + str(upper_quartile.path_decisions),
+                       zlabel="Costs",
+                       )
+            )
+            combined_plot.show()
+
+
+        if False:  # plot results
             print("FUNCTION PERFORMANCE MODELS AFTER SUBSTITUTION: ")
             for idx, function in enumerate(function_performance_models):
                 print("Function: ", function.name)
