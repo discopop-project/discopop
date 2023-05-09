@@ -122,6 +122,9 @@ namespace {
         nodeTypes type;
         int startLine;
         int endLine;
+        // added for matching with AST nodes
+        int startColumn;
+        int endColumn;
         BasicBlock *BB;
 
         // Only for func type

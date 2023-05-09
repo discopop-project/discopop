@@ -102,6 +102,18 @@ namespace dputil {
         return lid;
     }
 
+// Added for matching with AST nodes
+// Returns the column for a given instruction
+    int getColumn(Instruction *BI) {
+        const DebugLoc &location = BI->getDebugLoc();
+
+        if (location) 
+            return BI->getDebugLoc().getCol();
+            
+        return 0;
+
+    }
+
 // determine the file index according to the given FileMapping
     void determineFileID(Function &F, int32_t &fileID) {
         fileID = 0;

@@ -423,6 +423,8 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
     Node *currentNode = root;
     CU *cu;
     int lid;
+    // Added for matching with AST nodes
+    int col;
     string varName;
     bool isGlobalVar = false;
     string varType;
@@ -485,10 +487,19 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                 pair < string, vector < CU * >> (bb->getName(), basicBlockCUVector));
         DILocalScope* scopeBuffer = NULL;
 
+        // Added for matching with AST nodes
+        // a set to collect column numbers for instructions, similar to cu->instructionsLineNumbers
+        // column is paired with corresponding line id to associate column numbers with lines
+        std::set<std::pair<int, int>> columnSet;
+
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
+
+            // Added for matching with AST nodes
+            col = getColumn(&*instruction);
+
             basicBlockName = bb->getName().str();
 
             // Do not allow to combine Instructions from different scopes in the source code.
@@ -511,6 +522,10 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+
+                            // Added for matching with AST nodes
+                            cu->startColumn = (*(columnSet.begin())).second;
+                            cu->startColumn = (*(columnSet.rbegin())).second;
 
                             cu->basicBlockName = basicBlockName;
                             CUVector.push_back(cu);
@@ -536,6 +551,10 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             if (lid > 0) {
                 cu->instructionsLineNumbers.insert(lid);
                 cu->instructionsCount++;
+
+                // Added for matching with AST nodes
+                columnSet.insert(std::make_pair(lid, col));
+
                 // find return instructions
                 if (isa<ReturnInst>(instruction)) {
                     cu->returnInstructions.insert(lid);
@@ -2917,6 +2936,8 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                 << ">" << endl;
         *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root)
                 << "</childrenNodes>" << endl;
+        *outCUs << "\t\t<startColumn>" << root->startColumn << "</startColumn>" << endl;
+        *outCUs << "\t\t<endColumn>" << root->endColumn << "</endColumn>" << endl;
         if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai: root->argumentsList) {

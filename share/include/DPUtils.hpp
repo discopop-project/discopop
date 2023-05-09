@@ -112,6 +112,9 @@ namespace dputil {
 
     int64_t getLID(Instruction *BI, int32_t &fileID);
 
+    // Added for matching with AST nodes
+    int getColumn(Instruction *BI);
+
     void determineFileID(Function &F, int32_t &fileID);
 
     string get_exe_dir();
