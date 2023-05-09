@@ -22,7 +22,7 @@ def find_quasi_optimal_using_random_samples(models: List[CostModel], random_samp
     else:
         random_samples = copy.deepcopy(models) # copy required to leave the original list unmodified
 
-    sorted_list = sorted(random_samples)
+    sorted_list = sorted(random_samples)  # BOTTLENECK!
     minimum = sorted_list[0]
     maximum = sorted_list[-1]
     median = sorted_list[int(len(sorted_list) / 2)]
