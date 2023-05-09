@@ -58,9 +58,9 @@ The total observed iteration counts per loop will be stored in a file named `loo
 Each line of the file contains the summed count of iterations for the specified loop.
 The used format is as follows: `<file_id> <line_number> <total_iteration_count>`.
 
-### Average Loop Counters
-The average iteration counts per loop can be found in the previously described dependency file, which stores all information gathered during the profiling.
-The used format is as follows: `<fileID>:<LineID> BGN loop <average_iteration_count>`.
+### Total Counters, Amount of Loop Entries, Averages and Maxima
+The total, summed iteration counters per loops as well as the amount of loop entries, average iteration count per loop and the maximum observed iterations per single loop entry can be found in the previously described dependency file, which stores all information gathered during the profiling.
+The used format is as follows: `<fileID>:<LineID> BGN loop <total_iteration_count> <loop_entry_count> <average_iteration_count> <maximum_iteration_count>`.
 
 ## Reduction Instructions
 Identified reduction instructions are stored in a file named `reduction.txt`.

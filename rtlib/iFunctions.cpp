@@ -284,7 +284,10 @@ namespace __dp {
         assert((loops != nullptr) && "Loop map is not available!");
         for (auto &loop: *loops) {
             *out << decodeLID(loop.first) << " BGN loop ";
-            *out << static_cast<int32_t>(loop.second->total / loop.second->nEntered) << endl;
+            *out << loop.second->total << " ";
+            *out << loop.second->nEntered << " ";
+            *out << static_cast<int32_t>(loop.second->total / loop.second->nEntered) << " ";
+            *out << loop.second->maxIterationCount << endl;
             *out << decodeLID(loop.second->end) << " END loop" << endl;
         }
     }
@@ -1320,6 +1323,9 @@ namespace __dp {
                 loop->second->end = lid;
             }
             // New loop exit found and it's the same as before. Good.
+        }
+        if(loop->second->maxIterationCount < loopStack->top().count){
+            loop->second->maxIterationCount = loopStack->top().count;
         }
         loop->second->total += loopStack->top().count;
         ++loop->second->nEntered;
