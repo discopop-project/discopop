@@ -59,7 +59,7 @@ Each line of the file contains the summed count of iterations for the specified 
 The used format is as follows: `<file_id> <line_number> <total_iteration_count>`.
 
 ### Average Loop Counters
-The average iteration counts per loop can be found in the previously described dependency file.
+The average iteration counts per loop can be found in the previously described dependency file, which stores all information gathered during the profiling.
 The used format is as follows: `<fileID>:<LineID> BGN loop <average_iteration_count>`.
 
 ## Reduction Instructions
