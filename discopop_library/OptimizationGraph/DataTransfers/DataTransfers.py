@@ -85,6 +85,7 @@ def __check_current_node(
     # if node has a device id assigned, update the last_seen device_id
     if node_data.device_id is not None:
         context.last_seen_device_id = node_data.device_id
+
     context = context.calculate_and_perform_necessary_updates(
         node_data.read_memory_regions, cast(int, context.last_seen_device_id), node_data.node_id
     )

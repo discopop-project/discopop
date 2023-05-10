@@ -1,6 +1,6 @@
 from typing import Dict, Set, Tuple, cast
 
-from sympy import Expr, Integer  # type: ignore
+from sympy import Expr, Integer, Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
@@ -47,6 +47,7 @@ class ContextObject(object):
                 if read.memory_region not in self.seen_writes_by_device[device_id]:
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
+                print("STILL HERE")
                 other_devices_known_writes = self.seen_writes_by_device[device_id][
                     read.memory_region
                 ]
@@ -56,7 +57,11 @@ class ContextObject(object):
                     self.seen_writes_by_device[reading_device_id][read.memory_region] = set()
 
                 known_writes = self.seen_writes_by_device[reading_device_id]
+                print("Known: ", known_writes)
+                print("Other known: ", other_devices_known_writes)
+                print()
                 unknown_writes = other_devices_known_writes.difference(known_writes)
+
                 for data_write in unknown_writes:
                     required_updates.add(
                         Update(
@@ -75,7 +80,6 @@ class ContextObject(object):
             ].add(update.write_data_access)
 
         self.necessary_updates.update(required_updates)
-
         return self
 
     def add_writes(self, node_writes: Set[WriteDataAccess], writing_device_id: int):
@@ -99,6 +103,8 @@ class ContextObject(object):
         that no transfers happen concurrently and every transfer is executed in a blocking, synchronous manner.
         """
         total_transfer_costs = Integer(0)
+        symbolic_memory_region_sizes = True
+        symbol_value_suggestions = dict()
         for update in self.necessary_updates:
             # add static costs incurred by the transfer initialization
             initialization_costs = environment.transfer_initialization_costs[
@@ -110,13 +116,22 @@ class ContextObject(object):
             transfer_speed = environment.transfer_speeds[cast(int, update.source_device_id)][
                 cast(int, update.target_device_id)
             ]
-            transfer_size = environment.get_memory_region_size(
-                update.write_data_access.memory_region
+            # value suggestion used for symbolic values
+            transfer_size, value_suggestion = environment.get_memory_region_size(
+                update.write_data_access.memory_region,
+                use_symbolic_value=symbolic_memory_region_sizes
             )
+            # save suggested memory region size from Environment
+            if symbolic_memory_region_sizes:
+                symbol_value_suggestions[cast(Symbol, transfer_size)] = value_suggestion
+
             transfer_costs = transfer_size / transfer_speed
 
             total_transfer_costs += transfer_costs
-        return CostModel(total_transfer_costs)
+        if symbolic_memory_region_sizes:
+            return CostModel(total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions)
+        else:
+            return CostModel(total_transfer_costs)
 
     def set_last_visited_node_id(self, node_id: int):
         self.last_visited_node_id = node_id

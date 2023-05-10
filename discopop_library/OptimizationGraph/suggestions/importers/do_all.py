@@ -15,6 +15,7 @@ from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.classes.edges.OptionEdge import OptionEdge
 from discopop_library.OptimizationGraph.classes.edges.RequirementEdge import RequirementEdge
+from discopop_library.OptimizationGraph.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
@@ -44,6 +45,7 @@ def import_suggestion(
                 )
                 # copy data from exsting node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
+
                 # set the device id for the suggestion
                 node_data_copy.device_id = device_id
                 # remove cu_id to prevent using parallelization options as basis for new versions
@@ -78,9 +80,9 @@ def import_suggestion(
                 for edge in graph.out_edges(node):
                     edge_data = copy.deepcopy(graph.edges[edge]["data"])
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
-                    # if the successor has no device id already,
+                    # if a successor has no device id already,
                     # set it to 0 to simulate "leaving" the device after the suggestion
-                    if data_at(graph, edge[1]).device_id is None:
+                    if type(edge_data) == SuccessorEdge and data_at(graph, edge[1]).device_id is None:
                         data_at(graph, edge[1]).device_id = 0
 
     # connect introduced parallelization options to support path restraining

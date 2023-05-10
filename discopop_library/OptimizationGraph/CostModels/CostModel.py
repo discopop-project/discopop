@@ -18,13 +18,18 @@ class CostModel(object):
     identifier: str
     model: Expr
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]]
+    symbol_value_suggestions: Dict[Symbol, Expr]
 
-    def __init__(self, performance_model: Expr, identifier: str = "None", path_decisions=None):
+    def __init__(self, performance_model: Expr, identifier: str = "None", path_decisions=None, symbol_value_suggestions: Dict[Symbol, Expr]=None):
         if path_decisions is None:
             self.path_decisions = []
         else:
             # used for the construction of combined models
             self.path_decisions = path_decisions
+        if symbol_value_suggestions is None:
+            self.symbol_value_suggestions = dict()
+        else:
+            self.symbol_value_suggestions = symbol_value_suggestions
         self.identifier = identifier
         self.model = performance_model
 
@@ -66,7 +71,9 @@ class CostModel(object):
         """Compare both models.
         The comparison is based on random sampling and may not be correct in all cases!
         """
-        decision_tendency = 0  # positive -> self was evaluated to be smaller more often than the other way around
+        decision_tendency = (
+            0  # positive -> self was evaluated to be smaller more often than the other way around
+        )
         decided = False
         counter = 0
         min_count = 50

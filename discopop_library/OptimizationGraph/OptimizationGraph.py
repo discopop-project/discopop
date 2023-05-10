@@ -26,9 +26,9 @@ from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import show
-from discopop_library.OptimizationGraph.utilities.optimization.GlobalOptimization.RandomSamples import \
-    find_quasi_optimal_using_random_samples
-
+from discopop_library.OptimizationGraph.utilities.optimization.GlobalOptimization.RandomSamples import (
+    find_quasi_optimal_using_random_samples,
+)
 
 
 class OptimizationGraph(object):
@@ -81,8 +81,9 @@ class OptimizationGraph(object):
         # collect free symbols
         free_symbols: Set[Symbol] = set()
         free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
-        for function in function_performance_models:
-            for model in function_performance_models[function]:
+        for function in complete_performance_models:
+            for pair in complete_performance_models[function]:
+                model, context = pair
                 free_symbols.update(cast(List[Symbol], model.model.free_symbols))
         sorted_free_symbols = sorted(list(free_symbols), key=lambda x: x.name)
         print("Free Symbols: ", sorted_free_symbols)
@@ -111,23 +112,33 @@ class OptimizationGraph(object):
 
         print("subs: ", substitutions)
 
-        # apply substitutions
+        # apply substitutions and un-mark substituted free symbols
         for idx, function in enumerate(function_performance_models):
             for midx, model in enumerate(function_performance_models[function]):
                 model.model = model.model.subs(substitutions)
+        for symbol in substitutions:
+            if symbol in free_symbols:
+                free_symbols.remove(symbol)
+            if symbol in free_symbol_ranges:
+                del free_symbol_ranges[symbol]
+            if symbol in sorted_free_symbols:
+                sorted_free_symbols.remove(symbol)
+
 
         # set free symbol ranges for comparisons
         for idx, function in enumerate(function_performance_models):
             for model in function_performance_models[function]:
                 model.free_symbol_ranges = free_symbol_ranges
 
-
         # find quasi-optimal results by checking random subsets
         random_sample_count = 50
         for function in function_performance_models:
-            find_quasi_optimal_using_random_samples(function_performance_models[function], random_sample_count, sorted_free_symbols, free_symbol_ranges)
-
-
+            find_quasi_optimal_using_random_samples(
+                function_performance_models[function],
+                random_sample_count,
+                sorted_free_symbols,
+                free_symbol_ranges,
+            )
 
         if False:  # plot results
             print("FUNCTION PERFORMANCE MODELS AFTER SUBSTITUTION: ")
