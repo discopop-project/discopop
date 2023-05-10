@@ -20,7 +20,7 @@ class PatternInfo(object):
     start_line: LineID
     end_line: LineID
     iterations_count: int
-    instructions_count: int
+    instructions_count: Optional[int]
     workload: Optional[int]
 
     def __init__(self, node: Node):
@@ -33,7 +33,6 @@ class PatternInfo(object):
         self.end_line = node.end_position()
         self.iterations_count = node.loop_iterations if isinstance(node, LoopNode) else -1
         # TODO self.instructions_count = total_instructions_count(pet, node)
-        self.instructions_count = 0
         self.workload = None
         # TODO self.workload = calculate_workload(pet, node)
 
