@@ -1976,19 +1976,21 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-    cout << "MODULE " << M.getName().str() << "\n";
+    //cout << "MODULE " << M.getName().str() << "\n";
     long counter = 0;
-    cout << "\tFUNCTION:\n";
+    //cout << "\tFUNCTION:\n";
     for (Function &F: M) {
-        string to_be_printed = "\t(" + to_string(++counter) + " / " + to_string(M.size()) + ") -- " + F.getName().str();
-        while(to_be_printed.size() < 100){
-            to_be_printed += " ";
-        }
-        cout << to_be_printed + "\r";
+        /*
+            string to_be_printed = "\t(" + to_string(++counter) + " / " + to_string(M.size()) + ") -- " + F.getName().str();
+            while(to_be_printed.size() < 100){
+                to_be_printed += " ";
+            }
+            cout << to_be_printed + "\r";
+        */
         runOnFunction(F);
     }
 
-    cout << "\n\tFunctions Done.\n";
+    //cout << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
@@ -3203,7 +3205,6 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     else if(isa<InvokeInst>(BI)){
                         instrumentNewOrMalloc(cast<InvokeInst>(BI));
                     }
-                    
                     continue;
                 }
                 if (fn.equals("_ZdlPv") || fn.equals("free"))
