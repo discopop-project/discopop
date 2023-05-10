@@ -3278,7 +3278,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
     Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
     args.push_back(startAddr);
-    
+
     Value *endAddr = startAddr;
     uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
     Value *numElements = toInstrument->getOperand(0);
@@ -3520,6 +3520,12 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
         auto tmp_end = F.getParent()->getGlobalList().end();
         tmp_end--;  // necessary, since the list of Globals is modified when e.g. new strings are created.
         for(auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++){
+            // ignore globals which make use of "Appending Linkage", since they are system internal
+            // and do not behave like regular values. An example for such a value is @llvm.global_ctors
+            if (cast<GlobalVariable>(&*Global_it)->hasAppendingLinkage()){
+                continue;
+            }
+
             IRBuilder<> IRB(insertBefore->getNextNode());
 
             vector < Value * > args;
