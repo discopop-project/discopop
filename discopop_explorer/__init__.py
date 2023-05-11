@@ -20,7 +20,7 @@ from .pattern_detection import DetectionResult, PatternDetectorX
 def run(
     cu_xml: str,
     dep_file: str,
-    loop_counter_file: str,
+    loop_counter_file: str,  # TODO we should be able to read all info from the _dep.txt file (?)
     reduction_file: str,
     plugins: List[str],
     file_mapping: Optional[str] = None,
@@ -29,9 +29,7 @@ def run(
     discopop_build_path: Optional[str] = None,
     enable_task_pattern: bool = False,
 ) -> DetectionResult:
-    pet = PETGraphX.from_parsed_input(
-        *parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping)
-    )
+    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
     # pet.show()
     # TODO add visualization

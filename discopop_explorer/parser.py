@@ -172,7 +172,7 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
     return dependencies_list, loop_data_list
 
 
-def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mapping):
+def parse_inputs(cu_file, dependencies, reduction_file, file_mapping):
     with open(cu_file) as f:
         cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
@@ -180,7 +180,6 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
     with open(dependencies) as f:
         dependencies, loop_info = __parse_dep_file(f, dirname(abspath(cu_file)))
 
-    # TODO we do not need loop_counter_output.txt anymore? it should all be in the dep file
     loop_data = {loop.line_id: loop for loop in loop_info}
 
     fmap_file = open(file_mapping)
