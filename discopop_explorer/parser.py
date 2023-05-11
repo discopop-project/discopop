@@ -23,6 +23,7 @@ writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
 lineToCUIdMap = defaultdict(set)  # type: ignore
 
+
 @dataclass
 class DependenceItem(object):
     sink: Any
@@ -36,7 +37,7 @@ class DependenceItem(object):
 # TODO move this class to a better place, we need it not only for parsing
 @dataclass(frozen=True)
 class LoopData(object):
-    line_id:str # file_id:line_nr
+    line_id: str  # file_id:line_nr
     total_iteration_count: int
     entry_count: int
     average_iteration_count: int
@@ -109,8 +110,8 @@ def __map_dummy_nodes(cu_dict):
 
 
 def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
-    dependencies_list : List[DependenceItem] = []
-    loop_data_list : List[LoopData] = []
+    dependencies_list: List[DependenceItem] = []
+    loop_data_list: List[LoopData] = []
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
@@ -135,7 +136,15 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
             entry_count = int(dep_fields[4])
             average_iteration_count = int(dep_fields[5])
             maximum_iteration_count = int(dep_fields[6])
-            loop_data_list.append(LoopData(line_id, total_iteration_count, entry_count, average_iteration_count, maximum_iteration_count))
+            loop_data_list.append(
+                LoopData(
+                    line_id,
+                    total_iteration_count,
+                    entry_count,
+                    average_iteration_count,
+                    maximum_iteration_count,
+                )
+            )
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
         sink = dep_fields[0]
@@ -172,8 +181,8 @@ def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mappi
         dependencies, loop_info = __parse_dep_file(f, dirname(abspath(cu_file)))
 
     # TODO we do not need loop_counter_output.txt anymore? it should all be in the dep file
-    loop_data = {loop.line_id : loop for loop in loop_info}
-    
+    loop_data = {loop.line_id: loop for loop in loop_info}
+
     fmap_file = open(file_mapping)
     fmap_lines = fmap_file.read().splitlines()
     fmap_file.close()
