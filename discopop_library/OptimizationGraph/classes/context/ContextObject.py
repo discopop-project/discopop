@@ -119,7 +119,7 @@ class ContextObject(object):
             # value suggestion used for symbolic values
             transfer_size, value_suggestion = environment.get_memory_region_size(
                 update.write_data_access.memory_region,
-                use_symbolic_value=symbolic_memory_region_sizes
+                use_symbolic_value=symbolic_memory_region_sizes,
             )
             # save suggested memory region size from Environment
             if symbolic_memory_region_sizes:
@@ -129,7 +129,9 @@ class ContextObject(object):
 
             total_transfer_costs += transfer_costs
         if symbolic_memory_region_sizes:
-            return CostModel(total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions)
+            return CostModel(
+                total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
+            )
         else:
             return CostModel(total_transfer_costs)
 
