@@ -46,12 +46,16 @@ class Environment(object):
         )
         print("MEM REG SIZES: ", self.__memory_region_sizes)
 
-    def get_memory_region_size(self, memory_region: MemoryRegion, use_symbolic_value: bool = False) -> Tuple[Expr, Expr]:
+    def get_memory_region_size(
+        self, memory_region: MemoryRegion, use_symbolic_value: bool = False
+    ) -> Tuple[Expr, Expr]:
         if memory_region not in self.__memory_region_sizes:
             self.__memory_region_sizes[memory_region] = 8  # assume 8 Bytes for unknown sizes
 
         if use_symbolic_value:
             print("INTRODUCED: ", Symbol("mem_reg_size_" + str(memory_region)))
-            return Symbol("mem_reg_size_" + str(memory_region)), Integer(self.__memory_region_sizes[memory_region])
+            return Symbol("mem_reg_size_" + str(memory_region)), Integer(
+                self.__memory_region_sizes[memory_region]
+            )
         else:
             return Integer(self.__memory_region_sizes[memory_region]), Integer(0)

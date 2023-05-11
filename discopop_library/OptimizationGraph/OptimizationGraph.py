@@ -24,6 +24,9 @@ from discopop_library.OptimizationGraph.CostModels.utilities import (
 from discopop_library.OptimizationGraph.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.gui.queries.ValueTableQuery import (
+    query_user_for_symbol_values,
+)
 from discopop_library.OptimizationGraph.suggestions.importers.base import import_suggestions
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import show
 from discopop_library.OptimizationGraph.utilities.optimization.GlobalOptimization.RandomSamples import (
@@ -81,34 +84,22 @@ class OptimizationGraph(object):
         # collect free symbols
         free_symbols: Set[Symbol] = set()
         free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
+        suggested_values: Dict[Symbol, Expr] = dict()
         for function in complete_performance_models:
             for pair in complete_performance_models[function]:
                 model, context = pair
                 free_symbols.update(cast(List[Symbol], model.model.free_symbols))
+                suggested_values = suggested_values | model.symbol_value_suggestions
         sorted_free_symbols = sorted(list(free_symbols), key=lambda x: x.name)
         print("Free Symbols: ", sorted_free_symbols)
-        # query user for values for free symbols
-        for free_symbol in sorted_free_symbols:
-            raw_symbol_value = input(
-                "Insert value for: "
-                + free_symbol.name
-                + ":\nLeave empty to treat as a variable. \n\t"
-            )
-            if len(raw_symbol_value) == 0:
-                start_value = input("Start value?: [1]")
-                end_value = input("End value? : [128]")
-                if len(start_value) != 0:
-                    num_start_value = float(start_value)
-                else:
-                    num_start_value = float(1)
-                if len(end_value) != 0:
-                    num_end_value = float(end_value)
-                else:
-                    num_end_value = float(128)
-                free_symbol_ranges[free_symbol] = (num_start_value, num_end_value)
 
-                continue
-            substitutions[free_symbol] = Float(float(raw_symbol_value))
+        # query user for values for free symbols
+        query_results = query_user_for_symbol_values(sorted_free_symbols, suggested_values)
+        for symbol, value, start_value, end_value in query_results:
+            if value is not None:
+                substitutions[symbol] = Float(value)
+            else:
+                free_symbol_ranges[symbol] = (start_value, end_value)
 
         print("subs: ", substitutions)
 
@@ -123,7 +114,6 @@ class OptimizationGraph(object):
                 del free_symbol_ranges[symbol]
             if symbol in sorted_free_symbols:
                 sorted_free_symbols.remove(symbol)
-
 
         # set free symbol ranges for comparisons
         for idx, function in enumerate(function_performance_models):

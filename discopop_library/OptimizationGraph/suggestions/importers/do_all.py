@@ -82,7 +82,10 @@ def import_suggestion(
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
                     # if a successor has no device id already,
                     # set it to 0 to simulate "leaving" the device after the suggestion
-                    if type(edge_data) == SuccessorEdge and data_at(graph, edge[1]).device_id is None:
+                    if (
+                        type(edge_data) == SuccessorEdge
+                        and data_at(graph, edge[1]).device_id is None
+                    ):
                         data_at(graph, edge[1]).device_id = 0
 
     # connect introduced parallelization options to support path restraining

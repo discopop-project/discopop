@@ -20,7 +20,13 @@ class CostModel(object):
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]]
     symbol_value_suggestions: Dict[Symbol, Expr]
 
-    def __init__(self, performance_model: Expr, identifier: str = "None", path_decisions=None, symbol_value_suggestions: Dict[Symbol, Expr]=None):
+    def __init__(
+        self,
+        performance_model: Expr,
+        identifier: str = "None",
+        path_decisions=None,
+        symbol_value_suggestions: Dict[Symbol, Expr] = None,
+    ):
         if path_decisions is None:
             self.path_decisions = []
         else:
@@ -47,7 +53,12 @@ class CostModel(object):
             return self
         combined_model = self.model + other.model
         path_decisions = self.path_decisions + other.path_decisions
-        return CostModel(combined_model, path_decisions=path_decisions)
+        value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
+        return CostModel(
+            combined_model,
+            path_decisions=path_decisions,
+            symbol_value_suggestions=value_suggestions,
+        )
 
     def divide_combine(self, other):
         """Combines both models in the following fashion:
@@ -56,7 +67,12 @@ class CostModel(object):
             return self
         combined_model = self.model / other.model
         path_decisions = self.path_decisions + other.path_decisions
-        return CostModel(combined_model, path_decisions=path_decisions)
+        value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
+        return CostModel(
+            combined_model,
+            path_decisions=path_decisions,
+            symbol_value_suggestions=value_suggestions,
+        )
 
     def multiply_combine(self, other):
         """Combines both models in the following fashion:
@@ -65,7 +81,12 @@ class CostModel(object):
             return self
         combined_model = self.model * other.model
         path_decisions = self.path_decisions + other.path_decisions
-        return CostModel(combined_model, path_decisions=path_decisions)
+        value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
+        return CostModel(
+            combined_model,
+            path_decisions=path_decisions,
+            symbol_value_suggestions=value_suggestions,
+        )
 
     def __lt__(self, other):
         """Compare both models.
