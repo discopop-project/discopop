@@ -523,9 +523,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
 
-                            // Added for matching with AST nodes
-                            cu->startColumn = (*(columnSet.begin())).second;
-                            cu->startColumn = (*(columnSet.rbegin())).second;
+                            if(!columnSet.empty()) {
+                                // Added for matching with AST nodes
+                                cu->startColumn = (*(columnSet.begin())).second;
+                                cu->endColumn = (*(columnSet.rbegin())).second;
+                            }
 
                             cu->basicBlockName = basicBlockName;
                             CUVector.push_back(cu);
@@ -552,8 +554,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                 cu->instructionsLineNumbers.insert(lid);
                 cu->instructionsCount++;
 
-                // Added for matching with AST nodes
-                columnSet.insert(std::make_pair(lid, col));
+                if(col >= 0) {
+                    // Added for matching with AST nodes
+                    columnSet.insert(std::make_pair(lid, col));
+                    // for debugging columns
+                    cu->columnSet.insert(std::make_pair(lid, col));
+                }
 
                 // find return instructions
                 if (isa<ReturnInst>(instruction)) {
@@ -601,6 +607,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         cu->readPhaseLineNumbers.erase(lid);
                         cu->writePhaseLineNumbers.erase(lid);
                         cu->instructionsLineNumbers.erase(lid);
+                        // Added for matching with AST nodes
+                        columnSet.erase(std::make_pair(lid, col));
+                        // for debugging columns
+                        cu->columnSet.erase(std::make_pair(lid, col));
+                        cu->columnSet.insert(std::make_pair(lid, 10000 + col));
                         cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty()) {
                             //cu->removeCU();
@@ -609,6 +620,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         } else {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+                            if(columnSet.empty()) {
+                                // Added for matching with AST nodes
+                                cu->startColumn = (*(columnSet.begin())).second;
+                                cu->endColumn = (*(columnSet.rbegin())).second;
+                            }
                         }
                         cu->basicBlockName = basicBlockName;
                         CUVector.push_back(cu);
@@ -626,6 +642,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         if (lid > 0) {
                             cu->readPhaseLineNumbers.insert(lid);
                             cu->instructionsLineNumbers.insert(lid);
+                            if(col >= 0) {
+                                // Added for matching with AST nodes
+                                columnSet.insert(std::make_pair(lid, col));
+                                // for debugging columns
+                                cu->columnSet.insert(std::make_pair(lid, col));
+                            }
                         }
                     } else {
                         if (globalVariablesSet.count(varName) ||
@@ -676,6 +698,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         } else {
             cu->startLine = *(cu->instructionsLineNumbers.begin());
             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+            if(!columnSet.empty()) {
+                // Added for matching with AST nodes
+                cu->startColumn = (*(columnSet.begin())).second;
+                cu->endColumn = (*(columnSet.rbegin())).second;
+            }
         }
 
         cu->basicBlockName = basicBlockName;
@@ -2936,6 +2963,11 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                 << ">" << endl;
         *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root)
                 << "</childrenNodes>" << endl;
+        // for debugging columns*
+        *outCUs << "\t\t<columns>";
+        for(auto col : root->columnSet) 
+            *outCUs << "(" << dputil::decodeLID(col.first) << ", " << col.second << ") ";
+        *outCUs << "</columns>" << endl;
         *outCUs << "\t\t<startColumn>" << root->startColumn << "</startColumn>" << endl;
         *outCUs << "\t\t<endColumn>" << root->endColumn << "</endColumn>" << endl;
         if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {

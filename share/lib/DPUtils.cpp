@@ -107,10 +107,19 @@ namespace dputil {
     int getColumn(Instruction *BI) {
         const DebugLoc &location = BI->getDebugLoc();
 
-        if (location) 
+        BI->print(errs());
+
+        if (location && !isa<BranchInst>(BI)) {
+            errs() << " (" << BI->getDebugLoc().getLine() << ", " << BI->getDebugLoc().getCol() << ")\n";
             return BI->getDebugLoc().getCol();
-            
-        return 0;
+        }
+        
+        errs() << " error\n";
+
+        /*Instruction* next_inst = BI->getNextNode();
+        if(next_inst)
+            return getColumn(next_inst);*/
+        return -1;
 
     }
 

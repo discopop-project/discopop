@@ -123,8 +123,11 @@ namespace {
         int startLine;
         int endLine;
         // added for matching with AST nodes
-        int startColumn;
-        int endColumn;
+        int startColumn = -2;
+        int endColumn = -2;
+        // for debugging
+        set<std::pair<int, int>> columnSet;
+
         BasicBlock *BB;
 
         // Only for func type
