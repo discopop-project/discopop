@@ -115,7 +115,6 @@ class PatternDetectorX(object):
             res.task = detect_tp(
                 cu_dict,
                 dependencies,
-                loop_data,
                 reduction_vars,
                 file_mapping,
                 cu_inst_result_file,
