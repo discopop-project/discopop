@@ -162,6 +162,7 @@ class ContentBuffer(object):
         else:
             compiler = "clang++"
             tmp_file_name = file_mapping[self.file_id] + ".discopop_tmp.cpp"
+        tmp_file_out_name = file_mapping[self.file_id] + ".discopop_tmp.o"
 
         with open(tmp_file_name, "w+") as f:
             f.write(self.get_modified_source_code())
@@ -169,7 +170,10 @@ class ContentBuffer(object):
             f.close()
 
         if compile_check_command is None:
-            result = subprocess.run([compiler, "-c", "-fopenmp", tmp_file_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(
+                [compiler, "-c", "-fopenmp", tmp_file_name, "-o", tmp_file_out_name],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
         else:
             saved_dir = os.getcwd()
             # prepare environment variables if requested
@@ -201,6 +205,8 @@ class ContentBuffer(object):
         compilation_successful = True if result.returncode == 0 else False
 
         os.remove(tmp_file_name)
+        if compilation_successful:
+            os.remove(tmp_file_out_name)
 
         # if not, reset ContentBuffer to the backup and return False
         if not compilation_successful:
