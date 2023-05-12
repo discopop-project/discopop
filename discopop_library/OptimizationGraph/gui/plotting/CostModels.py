@@ -7,7 +7,13 @@ from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from spb import plot3d, MB, plot  # type: ignore
 
 
-def plot_CostModels(models: List[CostModel], sorted_free_symbols: List[Symbol], free_symbol_ranges: Dict[Symbol, Tuple[float, float]], labels:Optional[List[str]]=None, title:Optional[str]=None):
+def plot_CostModels(
+    models: List[CostModel],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+):
     if len(sorted_free_symbols) == 2:
         __3d_plot(models, sorted_free_symbols, free_symbol_ranges, labels=labels, title=title)
     elif len(sorted_free_symbols) == 1:
@@ -16,7 +22,13 @@ def plot_CostModels(models: List[CostModel], sorted_free_symbols: List[Symbol], 
         print("Plotiting not supported for", len(sorted_free_symbols), "free symbols!")
 
 
-def __2d_plot(models: List[CostModel], sorted_free_symbols: List[Symbol], free_symbol_ranges: Dict[Symbol, Tuple[float, float]], labels:Optional[List[str]] = None, title: Optional[str] = None):
+def __2d_plot(
+    models: List[CostModel],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+):
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
@@ -32,7 +44,7 @@ def __2d_plot(models: List[CostModel], sorted_free_symbols: List[Symbol], free_s
                 backend=MB,
                 label=model_label,
                 zlabel="Costs",
-                title=title
+                title=title,
             )
         else:
             combined_plot.extend(
@@ -52,7 +64,13 @@ def __2d_plot(models: List[CostModel], sorted_free_symbols: List[Symbol], free_s
     combined_plot.show()  # type: ignore
 
 
-def __3d_plot(models: List[CostModel], sorted_free_symbols: List[Symbol], free_symbol_ranges: Dict[Symbol, Tuple[float, float]], labels:Optional[List[str]] = None, title:Optional[str] = None):
+def __3d_plot(
+    models: List[CostModel],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+):
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
@@ -73,7 +91,7 @@ def __3d_plot(models: List[CostModel], sorted_free_symbols: List[Symbol], free_s
                 backend=MB,
                 label=model_label,
                 zlabel="Costs",
-                title=title
+                title=title,
             )
         else:
             combined_plot.extend(

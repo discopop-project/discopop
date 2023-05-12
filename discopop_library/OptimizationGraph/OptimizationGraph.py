@@ -59,7 +59,6 @@ class OptimizationGraph(object):
             self.graph, sequential_function_performance_models_with_transfers, environment
         )
 
-
         # import parallelization suggestions
         self.graph = import_suggestions(
             detection_result, self.graph, self.get_next_free_node_id, environment
@@ -141,12 +140,18 @@ class OptimizationGraph(object):
         random_paths = 50
         for function in function_performance_models:
             print("Function: ", function.name)
-            minimum, maximum, median, lower_quartile, upper_quartile = find_quasi_optimal_using_random_samples(
+            (
+                minimum,
+                maximum,
+                median,
+                lower_quartile,
+                upper_quartile,
+            ) = find_quasi_optimal_using_random_samples(
                 function_performance_models[function],
                 random_paths,
                 sorted_free_symbols,
                 free_symbol_ranges,
-                plot=False
+                plot=False,
             )
             # show table of options
             options: List[Tuple[CostModel, str]] = []
@@ -156,9 +161,12 @@ class OptimizationGraph(object):
             options.append((lower_quartile, "25% Quartile"))
             options.append((upper_quartile, "75% Quartile"))
             options.append((complete_performance_models[function][0][0], "Sequential"))
-            show_options(options, sorted_free_symbols,
-                free_symbol_ranges, window_title="Function: " + function.name)
-
+            show_options(
+                options,
+                sorted_free_symbols,
+                free_symbol_ranges,
+                window_title="Function: " + function.name,
+            )
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id

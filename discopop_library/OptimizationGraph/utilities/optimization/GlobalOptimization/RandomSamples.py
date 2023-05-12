@@ -16,7 +16,7 @@ def find_quasi_optimal_using_random_samples(
     random_path_count: int,
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
-    plot:bool=False
+    plot: bool = False,
 ):
     """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile.
     NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions
@@ -29,9 +29,7 @@ def find_quasi_optimal_using_random_samples(
     if len(models) > random_path_count:
         random_paths = random.choices(models, k=random_path_count)
     else:
-        random_paths = copy.deepcopy(
-            models
-        )  # copy required to leave the original list unmodified
+        random_paths = copy.deepcopy(models)  # copy required to leave the original list unmodified
 
     sorted_list = sorted(random_paths)  # BOTTLENECK!
     minimum = sorted_list[0]
@@ -56,12 +54,11 @@ def find_quasi_optimal_using_random_samples(
     print(minimum.path_decisions)
 
     if plot:  # plot results
-        plot_CostModels([minimum, maximum, median, lower_quartile, upper_quartile], sorted_free_symbols,
-    free_symbol_ranges, labels=["Minimum", "Maximum", "Median", "25% Quartile", "75% Quartile"])
+        plot_CostModels(
+            [minimum, maximum, median, lower_quartile, upper_quartile],
+            sorted_free_symbols,
+            free_symbol_ranges,
+            labels=["Minimum", "Maximum", "Median", "25% Quartile", "75% Quartile"],
+        )
 
     return minimum, maximum, median, lower_quartile, upper_quartile
-
-
-
-
-
