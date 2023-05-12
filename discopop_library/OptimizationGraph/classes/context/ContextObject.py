@@ -47,7 +47,6 @@ class ContextObject(object):
                 if read.memory_region not in self.seen_writes_by_device[device_id]:
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
-                print("STILL HERE")
                 other_devices_known_writes = self.seen_writes_by_device[device_id][
                     read.memory_region
                 ]
@@ -57,9 +56,6 @@ class ContextObject(object):
                     self.seen_writes_by_device[reading_device_id][read.memory_region] = set()
 
                 known_writes = self.seen_writes_by_device[reading_device_id]
-                print("Known: ", known_writes)
-                print("Other known: ", other_devices_known_writes)
-                print()
                 unknown_writes = other_devices_known_writes.difference(known_writes)
 
                 for data_write in unknown_writes:

@@ -19,13 +19,13 @@ class Environment(object):
     # transfer_speeds: {source_device: {target_device: transfer speed}} (MB/s)
     same_device_transfer_speed: Expr = Integer(100000)
     transfer_speeds: Dict[int, Dict[int, Expr]] = {
-        0: {0: same_device_transfer_speed, 1: Integer(1000)},
-        1: {0: Integer(1000), 2: same_device_transfer_speed},
+        0: {0: same_device_transfer_speed, 1: Integer(10)},
+        1: {0: Integer(10), 2: same_device_transfer_speed},
     }
     # transfer initialization cost (static costs to start a transfer between the specified devices)
     transfer_initialization_costs: Dict[int, Dict[int, Expr]] = {
-        0: {0: Integer(0), 1: Integer(1000)},
-        1: {0: Integer(1000), 1: Integer(0)},
+        0: {0: Integer(0), 1: Integer(1000000)},
+        1: {0: Integer(1000000), 1: Integer(0)},
     }
 
     # thread number spawned by openmp parallel for and reduction pragmas
@@ -44,7 +44,6 @@ class Environment(object):
             os.path.join(project_folder_path, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
-        print("MEM REG SIZES: ", self.__memory_region_sizes)
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False
@@ -53,7 +52,6 @@ class Environment(object):
             self.__memory_region_sizes[memory_region] = 8  # assume 8 Bytes for unknown sizes
 
         if use_symbolic_value:
-            print("INTRODUCED: ", Symbol("mem_reg_size_" + str(memory_region)))
             return Symbol("mem_reg_size_" + str(memory_region)), Integer(
                 self.__memory_region_sizes[memory_region]
             )

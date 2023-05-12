@@ -44,9 +44,6 @@ class OptimizationGraph(object):
     def __init__(self, detection_result, project_folder_path):
         self.graph, self.next_free_node_id = PETParser(detection_result.pet).parse()
 
-        # print("FINAL")
-        # show(self.graph)
-
         # define Environment
         environment = Environment(project_folder_path)
 
@@ -63,7 +60,6 @@ class OptimizationGraph(object):
         self.graph = import_suggestions(
             detection_result, self.graph, self.get_next_free_node_id, environment
         )
-        # show(self.graph)
 
         # calculate performance models without data transfers
         function_performance_models = get_performance_models_for_functions(self.graph)
@@ -78,8 +74,6 @@ class OptimizationGraph(object):
             self.graph, function_performance_models_with_transfers, environment
         )
 
-        # print_introduced_symbols_per_node(self.graph)
-
         print("FUNCTION PERFORMANCE MODELS: ")
         for idx, function in enumerate(complete_performance_models):
             for midx, pair in enumerate(complete_performance_models[function]):
@@ -87,12 +81,8 @@ class OptimizationGraph(object):
                 print(str(idx) + "-" + str(midx) + ": \t", end="")
                 model.print()
 
-        # import sys
-        # sys.exit(0)
-
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
-        # print_introduced_symbols_per_node(self.graph)
 
         # collect free symbols
         free_symbols: Set[Symbol] = set()
@@ -160,7 +150,7 @@ class OptimizationGraph(object):
             options.append((median, "Median"))
             options.append((lower_quartile, "25% Quartile"))
             options.append((upper_quartile, "75% Quartile"))
-            options.append((complete_performance_models[function][0][0], "Sequential"))
+            options.append((sequential_complete_performance_models[function][0][0], "Sequential"))
             show_options(
                 self.graph,
                 options,
