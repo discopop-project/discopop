@@ -1,0 +1,42 @@
+import tkinter as tk
+from tkinter import ttk
+
+class ScrollableFrameWidget(object):
+    container: ttk.Frame
+    canvas: tk.Canvas
+    scrollbar: tk.Scrollbar
+    scrollable_frame: tk.Frame  # important
+
+    def __init__(self, parent_frame):
+        self.container = ttk.Frame(parent_frame)
+        self.canvas = tk.Canvas(self.container)
+        self.scrollbar = ttk.Scrollbar(self.container, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+
+        # configure weights
+        self.container.rowconfigure(0, weight=1)
+        self.container.columnconfigure(0, weight=1)
+        self.canvas.rowconfigure(0, weight=1)
+        self.canvas.columnconfigure(0, weight=1)
+        self.scrollable_frame.rowconfigure(0, weight=1)
+        self.scrollable_frame.columnconfigure(0, weight=1)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+    def finalize(self, row_count: int):
+        self.container.grid(row=0, column=0, sticky=tk.NSEW)
+        self.canvas.grid(row=0, column=0, sticky=tk.NSEW)
+        self.scrollbar.grid(row=0, rowspan=row_count, column=1, sticky=tk.NS)
+
+
+    def get_scrollable_frame(self) -> tk.Frame:
+        return self.scrollable_frame
