@@ -12,8 +12,8 @@ class Environment(object):
     # todo: convert Costs into estimated runtime, removes need for high overhead weight
     workload_overhead_weight = Integer(1500)
     do_all_overhead_weight_by_device: Dict[int, Expr] = {
-        0: Integer(3500),
-        1: Integer(1500),
+        0: Integer(5),
+        1: Integer(1),
     }
 
     # transfer_speeds: {source_device: {target_device: transfer speed}} (MB/s)

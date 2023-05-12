@@ -162,6 +162,7 @@ class OptimizationGraph(object):
             options.append((upper_quartile, "75% Quartile"))
             options.append((complete_performance_models[function][0][0], "Sequential"))
             show_options(
+                self.graph,
                 options,
                 sorted_free_symbols,
                 free_symbol_ranges,

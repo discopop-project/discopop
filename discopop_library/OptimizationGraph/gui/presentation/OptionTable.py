@@ -1,14 +1,17 @@
 from typing import List, Tuple, Dict
 
+import networkx as nx  # type: ignore
 from sympy import Symbol
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from tkinter import *
 
 from discopop_library.OptimizationGraph.gui.plotting.CostModels import plot_CostModels
+from discopop_library.OptimizationGraph.gui.presentation.ChoiceDetails import display_choices_for_model
 
 
 def show_options(
+    graph: nx.DiGraph,
     options: List[Tuple[CostModel, str]],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
@@ -36,7 +39,6 @@ def show_options(
     for row_idx, option_tuple in enumerate(options):
         option, option_name = option_tuple
         row_idx = row_idx + 1  # to account for column headers
-        cols = []
         label = Entry(relief=RIDGE)
         label.grid(row=row_idx, column=0, sticky=NSEW)
         label.insert(END, option_name)
@@ -53,7 +55,8 @@ def show_options(
 
         plot_button = Button(options_field, text="Plot", command=lambda opt=option, opt_name=option_name: plot_CostModels([opt], sorted_free_symbols, free_symbol_ranges, [opt_name], title=opt_name))  # type: ignore
         plot_button.grid(row=0, column=0)
-        cols.append(label)
+        details_button = Button(options_field, text="Details", command=lambda opt=option, opt_name=option_name: display_choices_for_model(graph, opt, window_title=opt_name))  # type: ignore
+        details_button.grid(row=0, column=1)
 
     Button(root, text="Plot All", command=lambda: plot_CostModels([t[0] for t in options], sorted_free_symbols, free_symbol_ranges, [t[1] for t in options], title="Full Plot")).grid()  # type: ignore
     Button(root, text="Continue", command=lambda: root.destroy()).grid()
