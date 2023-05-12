@@ -15,6 +15,7 @@ from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, s
 
 from spb import plot3d, MB  # type: ignore
 
+from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import (
     add_data_transfer_costs,
 )
@@ -24,6 +25,8 @@ from discopop_library.OptimizationGraph.CostModels.utilities import (
 from discopop_library.OptimizationGraph.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.OptimizationGraph.gui.presentation.OptionTable import show_options
 from discopop_library.OptimizationGraph.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
 )
@@ -40,11 +43,22 @@ class OptimizationGraph(object):
 
     def __init__(self, detection_result, project_folder_path):
         self.graph, self.next_free_node_id = PETParser(detection_result.pet).parse()
+
         # print("FINAL")
         # show(self.graph)
 
         # define Environment
         environment = Environment(project_folder_path)
+
+        # get performance models for sequential execution
+        sequential_function_performance_models = get_performance_models_for_functions(self.graph)
+        sequential_function_performance_models_with_transfers = calculate_data_transfers(
+            self.graph, sequential_function_performance_models
+        )
+        sequential_complete_performance_models = add_data_transfer_costs(
+            self.graph, sequential_function_performance_models_with_transfers, environment
+        )
+
 
         # import parallelization suggestions
         self.graph = import_suggestions(
@@ -84,6 +98,8 @@ class OptimizationGraph(object):
         # collect free symbols
         free_symbols: Set[Symbol] = set()
         free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
+        free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
+
         suggested_values: Dict[Symbol, Expr] = dict()
         for function in complete_performance_models:
             for pair in complete_performance_models[function]:
@@ -95,12 +111,12 @@ class OptimizationGraph(object):
 
         # query user for values for free symbols
         query_results = query_user_for_symbol_values(sorted_free_symbols, suggested_values)
-        for symbol, value, start_value, end_value in query_results:
+        for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
                 substitutions[symbol] = Float(value)
             else:
                 free_symbol_ranges[symbol] = (start_value, end_value)
-
+                free_symbol_distributions[symbol] = symbol_distribution
         print("subs: ", substitutions)
 
         # apply substitutions and un-mark substituted free symbols
@@ -115,85 +131,34 @@ class OptimizationGraph(object):
             if symbol in sorted_free_symbols:
                 sorted_free_symbols.remove(symbol)
 
-        # set free symbol ranges for comparisons
+        # set free symbol ranges and distributions for comparisons
         for idx, function in enumerate(function_performance_models):
             for model in function_performance_models[function]:
                 model.free_symbol_ranges = free_symbol_ranges
+                model.free_symbol_distributions = free_symbol_distributions
 
         # find quasi-optimal results by checking random subsets
-        random_sample_count = 50
+        random_paths = 50
         for function in function_performance_models:
-            find_quasi_optimal_using_random_samples(
+            print("Function: ", function.name)
+            minimum, maximum, median, lower_quartile, upper_quartile = find_quasi_optimal_using_random_samples(
                 function_performance_models[function],
-                random_sample_count,
+                random_paths,
                 sorted_free_symbols,
                 free_symbol_ranges,
+                plot=False
             )
+            # show table of options
+            options: List[Tuple[CostModel, str]] = []
+            options.append((minimum, "Minimum"))
+            options.append((maximum, "Maximum"))
+            options.append((median, "Median"))
+            options.append((lower_quartile, "25% Quartile"))
+            options.append((upper_quartile, "75% Quartile"))
+            options.append((complete_performance_models[function][0][0], "Sequential"))
+            show_options(options, sorted_free_symbols,
+                free_symbol_ranges, window_title="Function: " + function.name)
 
-        if False:  # plot results
-            print("FUNCTION PERFORMANCE MODELS AFTER SUBSTITUTION: ")
-            for idx, function in enumerate(function_performance_models):
-                print("Function: ", function.name)
-                combined_plot = None
-                shown_models: List[Tuple[List[int], Expr]] = []
-                for midx, model in enumerate(function_performance_models[function]):
-                    print(str(idx) + "-" + str(midx) + ": \t", end="")
-                    model.print()
-                    print("Path Decisions: ", model.path_decisions)
-                    try:
-                        if len(model.model.free_symbols) <= 2:
-                            if combined_plot is None:
-                                combined_plot = plot3d(
-                                    model.model,
-                                    (
-                                        sorted_free_symbols[0],
-                                        free_symbol_ranges[sorted_free_symbols[0]][0],
-                                        free_symbol_ranges[sorted_free_symbols[0]][1],
-                                    ),
-                                    (
-                                        sorted_free_symbols[1],
-                                        free_symbol_ranges[sorted_free_symbols[1]][0],
-                                        free_symbol_ranges[sorted_free_symbols[1]][1],
-                                    ),
-                                    show=False,
-                                    backend=MB,
-                                    label=str(model.path_decisions),
-                                    zlabel="Costs",
-                                )
-                                combined_plot.title = function.name
-
-                                shown_models.append((model.path_decisions, model.model))
-
-                            else:
-                                if randint(0, 1000) < 2:
-                                    combined_plot.extend(
-                                        plot3d(
-                                            model.model,
-                                            (
-                                                sorted_free_symbols[0],
-                                                free_symbol_ranges[sorted_free_symbols[0]][0],
-                                                free_symbol_ranges[sorted_free_symbols[0]][1],
-                                            ),
-                                            (
-                                                sorted_free_symbols[1],
-                                                free_symbol_ranges[sorted_free_symbols[1]][0],
-                                                free_symbol_ranges[sorted_free_symbols[1]][1],
-                                            ),
-                                            show=False,
-                                            backend=MB,
-                                            label=str(model.path_decisions),
-                                        )
-                                    )
-
-                                    shown_models.append((model.path_decisions, model.model))
-                    except ValueError:
-                        pass
-                if combined_plot is not None:
-                    print("Combined_plot: ")
-                    for entry in shown_models:
-                        print("->", entry[0], end="\t")
-                        print(entry[1])
-                    combined_plot.show()
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id

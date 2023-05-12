@@ -1,33 +1,39 @@
 import copy
 import random
 from random import shuffle
-from symtable import Symbol
 from typing import List, Dict, Tuple
 
 from spb import plot3d, MB, plot  # type: ignore
+from sympy import Symbol
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.OptimizationGraph.gui.plotting.CostModels import plot_CostModels
 
 
 def find_quasi_optimal_using_random_samples(
     models: List[CostModel],
-    random_sample_count: int,
+    random_path_count: int,
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    plot:bool=False
 ):
+    """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile.
+    NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions
+    due to the used comparison method!"""
     # test: try sorting
     # random shuffle
     shuffle(models)
     # todo remove
     # pick random samples, if the list is bigger than the sample count
-    if len(models) > random_sample_count:
-        random_samples = random.choices(models, k=random_sample_count)
+    if len(models) > random_path_count:
+        random_paths = random.choices(models, k=random_path_count)
     else:
-        random_samples = copy.deepcopy(
+        random_paths = copy.deepcopy(
             models
         )  # copy required to leave the original list unmodified
 
-    sorted_list = sorted(random_samples)  # BOTTLENECK!
+    sorted_list = sorted(random_paths)  # BOTTLENECK!
     minimum = sorted_list[0]
     maximum = sorted_list[-1]
     median = sorted_list[int(len(sorted_list) / 2)]
@@ -49,180 +55,13 @@ def find_quasi_optimal_using_random_samples(
     print(minimum.model)
     print(minimum.path_decisions)
 
-    if True:  # plot results
-        if len(sorted_free_symbols) == 2:
-            __3d_plot(minimum, maximum, median, lower_quartile, upper_quartile, sorted_free_symbols, free_symbol_ranges)
-        elif len(sorted_free_symbols) == 1:
-            __2d_plot(minimum, maximum, median, lower_quartile, upper_quartile, sorted_free_symbols, free_symbol_ranges)
-        else:
-            print("Plotiting not supported for", len(sorted_free_symbols), "free symbols!")
-            return
+    if plot:  # plot results
+        plot_CostModels([minimum, maximum, median, lower_quartile, upper_quartile], sorted_free_symbols,
+    free_symbol_ranges, labels=["Minimum", "Maximum", "Median", "25% Quartile", "75% Quartile"])
+
+    return minimum, maximum, median, lower_quartile, upper_quartile
 
 
-def __2d_plot(minimum: CostModel, maximum: CostModel, median: CostModel, lower_quartile: CostModel, upper_quartile: CostModel, sorted_free_symbols: List[Symbol], free_symbol_ranges: Dict[Symbol, Tuple[float, float]]):
-    combined_plot = plot(
-        minimum.model,
-        (
-            sorted_free_symbols[0],
-            free_symbol_ranges[sorted_free_symbols[0]][0],
-            free_symbol_ranges[sorted_free_symbols[0]][1],
-        ),
-        show=False,
-        backend=MB,
-        label="Min: " + str(minimum.path_decisions),
-        zlabel="Costs",
-    )
-    combined_plot.extend(
-        plot(
-            maximum.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="max: " + str(maximum.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot(
-            median.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Median: " + str(median.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot(
-            lower_quartile.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Lower 25%: " + str(lower_quartile.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot(
-            upper_quartile.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Upper 25%: " + str(upper_quartile.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.show()
 
 
-def __3d_plot(minimum: CostModel, maximum: CostModel, median: CostModel, lower_quartile: CostModel, upper_quartile: CostModel, sorted_free_symbols: List[Symbol], free_symbol_ranges: Dict[Symbol, Tuple[float, float]]):
-    combined_plot = plot3d(
-        minimum.model,
-        (
-            sorted_free_symbols[0],
-            free_symbol_ranges[sorted_free_symbols[0]][0],
-            free_symbol_ranges[sorted_free_symbols[0]][1],
-        ),
-        (
-            sorted_free_symbols[1],
-            free_symbol_ranges[sorted_free_symbols[1]][0],
-            free_symbol_ranges[sorted_free_symbols[1]][1],
-        ),
-        show=False,
-        backend=MB,
-        label="Min: " + str(minimum.path_decisions),
-        zlabel="Costs",
-    )
-    combined_plot.extend(
-        plot3d(
-            maximum.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            (
-                sorted_free_symbols[1],
-                free_symbol_ranges[sorted_free_symbols[1]][0],
-                free_symbol_ranges[sorted_free_symbols[1]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="max: " + str(maximum.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot3d(
-            median.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            (
-                sorted_free_symbols[1],
-                free_symbol_ranges[sorted_free_symbols[1]][0],
-                free_symbol_ranges[sorted_free_symbols[1]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Median: " + str(median.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot3d(
-            lower_quartile.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            (
-                sorted_free_symbols[1],
-                free_symbol_ranges[sorted_free_symbols[1]][0],
-                free_symbol_ranges[sorted_free_symbols[1]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Lower 25%: " + str(lower_quartile.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.extend(
-        plot3d(
-            upper_quartile.model,
-            (
-                sorted_free_symbols[0],
-                free_symbol_ranges[sorted_free_symbols[0]][0],
-                free_symbol_ranges[sorted_free_symbols[0]][1],
-            ),
-            (
-                sorted_free_symbols[1],
-                free_symbol_ranges[sorted_free_symbols[1]][0],
-                free_symbol_ranges[sorted_free_symbols[1]][1],
-            ),
-            show=False,
-            backend=MB,
-            label="Upper 25%: " + str(upper_quartile.path_decisions),
-            zlabel="Costs",
-        )
-    )
-    combined_plot.show()
+

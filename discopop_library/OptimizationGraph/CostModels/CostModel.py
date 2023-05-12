@@ -9,8 +9,12 @@ import random
 from functools import cmp_to_key
 from typing import List, Dict, Tuple
 
+import numpy as np
 import sympy
+from matplotlib import pyplot as plt  # type: ignore
 from sympy import Function, Symbol, init_printing, Expr  # type: ignore
+
+from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
 
 
 class CostModel(object):
@@ -18,7 +22,9 @@ class CostModel(object):
     identifier: str
     model: Expr
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]]
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
+
 
     def __init__(
         self,
@@ -97,18 +103,39 @@ class CostModel(object):
         )
         decided = False
         counter = 0
+        # Sampling parameters
         min_count = 50
         max_count = 300
         decision_threshold = 0.85
+        # Weibull distribution parameters
+        alpha, beta = 0.8, 1.3
 
         # draw and evaluate random samples until either the max_count has been reached, or a decision has been made
+        # sampling points may be drawn from a uniform or weibull distribution in a left-skewed or right-skewed
+        # configuration. The Parameters of the weibull distribution can be defined above.
         while not (decided or counter > max_count) or counter < min_count:
             counter += 1
             # determine random sampling point
             sampling_point = dict()
             for symbol in self.free_symbol_ranges:
                 range_min, range_max = self.free_symbol_ranges[symbol]
-                sampling_point[symbol] = random.uniform(range_min, range_max)
+                if self.free_symbol_distributions[symbol] == FreeSymbolDistribution.UNIFORM:
+                    # draw from uniform distribution
+                    sampling_point[symbol] = random.uniform(range_min, range_max)
+                else:
+                    # use_weibull_distribution
+                    # get normalized random value from distribution
+                    normalized_pick = 42.0
+                    while normalized_pick < 0 or normalized_pick > 1:
+                        normalized_pick = random.weibullvariate(alpha, beta)
+                    if self.free_symbol_distributions[symbol] == FreeSymbolDistribution.LEFT_HEAVY:
+                        # calculate sampling point using the range starting from minimum
+                        sampling_point[symbol] = range_min + (range_max - range_min) * normalized_pick
+                    else:
+                        # simulate a right heavy distribution
+                        # calculate sampling point using the range starting from maximum
+                        sampling_point[symbol] = range_max - (range_max - range_min) * normalized_pick
+
             # evaluate both functions at the sampling point
             substituted_model_1 = self.model.xreplace(sampling_point)
             numerical_result_1 = substituted_model_1.evalf()
@@ -128,11 +155,30 @@ class CostModel(object):
 
         # check if a decision has been made
         if decided:
-            # print("DECIDED: ", decision_tendency, " -> ", decision_tendency / counter, " @ ", counter, "samples")
             if decision_tendency > 0:
                 return True
             else:
                 return False
         else:
-            # print("UNDECIDED: ", decision_tendency, " -> ", decision_tendency / counter, " @ ", counter, "samples")
             return False
+
+    def __plot_weibull_distributions(self, alpha: float, beta: float):
+        """For Debug reasons. Plots the left and right side heavy weibull distributions using the given parameters."""
+        x = np.arange(1, 100.) / 100.  # normalized to [0,1]
+
+        def weibull(x, n, a):
+            return (a / n) * (x / n) ** (a - 1) * np.exp(-(x / n) ** a)
+
+        plt.plot(x, weibull(x, alpha, beta), label="Alpha: " + str(alpha) + " Beta: " + str(beta))
+
+        # show random picks
+        ax = plt.subplot(1, 1, 1)
+        k = 100
+        for i in range(0, k):
+            # get normalized values
+            y_rnd = 42.0
+            while y_rnd < 0 or y_rnd > 1:
+                y_rnd = random.weibullvariate(alpha, beta)
+            ax.plot(y_rnd, 1, "or")
+        plt.legend()
+        plt.show()
