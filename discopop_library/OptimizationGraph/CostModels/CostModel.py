@@ -55,7 +55,10 @@ class CostModel(object):
 
     def print(self):
         init_printing()
-        print(self.parallelizable_costs)
+        print("\tPARALLEL:")
+        print("\t", self.parallelizable_costs)
+        print("\tSERIAL")
+        print("\t", self.sequential_costs)
 
     def parallelizable_plus_combine(self, other):
         """Combines both models in the following fashion:

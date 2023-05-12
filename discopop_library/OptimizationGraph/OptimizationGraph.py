@@ -78,7 +78,7 @@ class OptimizationGraph(object):
         for idx, function in enumerate(complete_performance_models):
             for midx, pair in enumerate(complete_performance_models[function]):
                 model, context = pair
-                print(str(idx) + "-" + str(midx) + ": \t", end="")
+                print(str(idx) + "-" + str(midx) + ":")
                 model.print()
 
         # define variable substitutions
@@ -110,8 +110,14 @@ class OptimizationGraph(object):
         print("subs: ", substitutions)
 
         # apply substitutions and un-mark substituted free symbols
-        for idx, function in enumerate(function_performance_models):
-            for midx, model in enumerate(function_performance_models[function]):
+        for idx, function in enumerate(complete_performance_models):
+            for midx, pair in enumerate(complete_performance_models[function]):
+                model, context = pair
+                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+                model.sequential_costs = model.sequential_costs.subs(substitutions)
+        for idx, function in enumerate(sequential_complete_performance_models):
+            for midx, pair in enumerate(sequential_complete_performance_models[function]):
+                model, context = pair
                 model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
                 model.sequential_costs = model.sequential_costs.subs(substitutions)
         for symbol in substitutions:
@@ -123,14 +129,15 @@ class OptimizationGraph(object):
                 sorted_free_symbols.remove(symbol)
 
         # set free symbol ranges and distributions for comparisons
-        for idx, function in enumerate(function_performance_models):
-            for model in function_performance_models[function]:
+        for idx, function in enumerate(complete_performance_models):
+            for pair in complete_performance_models[function]:
+                model, context = pair
                 model.free_symbol_ranges = free_symbol_ranges
                 model.free_symbol_distributions = free_symbol_distributions
 
         # find quasi-optimal results by checking random subsets
         random_paths = 50
-        for function in function_performance_models:
+        for function in complete_performance_models:
             print("Function: ", function.name)
             (
                 minimum,
@@ -139,7 +146,7 @@ class OptimizationGraph(object):
                 lower_quartile,
                 upper_quartile,
             ) = find_quasi_optimal_using_random_samples(
-                function_performance_models[function],
+                [pair[0] for pair in complete_performance_models[function]],
                 random_paths,
                 sorted_free_symbols,
                 free_symbol_ranges,
