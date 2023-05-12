@@ -17,7 +17,7 @@ from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
 
-reduction_device_ids = [0, 1]
+reduction_device_ids = [0]
 
 
 def import_suggestion(
