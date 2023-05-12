@@ -41,7 +41,7 @@ def find_quasi_optimal_using_random_samples(
 
     print()
     print("Maximum:")
-    print(maximum.parallelizable_costs)
+    print(maximum.parallelizable_costs + maximum.sequential_costs)
     print(maximum.path_decisions)
 
     print()

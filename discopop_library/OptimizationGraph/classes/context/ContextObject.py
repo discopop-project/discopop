@@ -123,6 +123,7 @@ class ContextObject(object):
 
             transfer_costs = transfer_size / transfer_speed
 
+
             total_transfer_costs += transfer_costs
         if symbolic_memory_region_sizes:
             return CostModel(Integer(0),
