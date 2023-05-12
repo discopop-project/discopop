@@ -93,7 +93,8 @@ class OptimizationGraph(object):
         for function in complete_performance_models:
             for pair in complete_performance_models[function]:
                 model, context = pair
-                free_symbols.update(cast(List[Symbol], model.model.free_symbols))
+                free_symbols.update(cast(List[Symbol], model.parallelizable_costs.free_symbols))
+                free_symbols.update(cast(List[Symbol], model.sequential_costs.free_symbols))
                 suggested_values = suggested_values | model.symbol_value_suggestions
         sorted_free_symbols = sorted(list(free_symbols), key=lambda x: x.name)
         print("Free Symbols: ", sorted_free_symbols)
@@ -111,7 +112,8 @@ class OptimizationGraph(object):
         # apply substitutions and un-mark substituted free symbols
         for idx, function in enumerate(function_performance_models):
             for midx, model in enumerate(function_performance_models[function]):
-                model.model = model.model.subs(substitutions)
+                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+                model.sequential_costs = model.sequential_costs.subs(substitutions)
         for symbol in substitutions:
             if symbol in free_symbols:
                 free_symbols.remove(symbol)

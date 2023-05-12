@@ -88,7 +88,7 @@ def get_cost_multiplier(
     thread_count = environment.thread_counts_by_device[device_id]
 
     multiplier = Integer(1) / thread_count
-    cm = CostModel(multiplier)
+    cm = CostModel(multiplier, Integer(1))
 
     print("\tcost multiplier: ", multiplier)
 
@@ -114,8 +114,8 @@ def get_overhead_term(
     overhead = Float(137.7196222048026)
     overhead += (
         (Float(5.426563196957141) ** (-9))
-        * (cast(int, node_data.workload) / node_data.iterations)
-        * log((cast(int, node_data.workload) / node_data.iterations), 2)
+        * (cast(int, node_data.parallelizable_workload) / node_data.iterations)
+        * log((cast(int, node_data.parallelizable_workload) / node_data.iterations), 2)
         * (node_data.iterations ** (3 / 2))
         * log(node_data.iterations, 2)
     )
@@ -126,6 +126,6 @@ def get_overhead_term(
 
     print("\toverhead: ", overhead)
 
-    cm = CostModel(overhead)
+    cm = CostModel(Integer(0), overhead)
     # add weight to overhead
     return cm, []

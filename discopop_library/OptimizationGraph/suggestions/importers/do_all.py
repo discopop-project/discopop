@@ -111,7 +111,7 @@ def get_cost_multiplier(
     thread_count = environment.thread_counts_by_device[device_id]
 
     multiplier = Integer(1) / thread_count
-    cm = CostModel(multiplier)
+    cm = CostModel(multiplier, Integer(1))
 
     print("\tcost multiplier: ", multiplier)
 
@@ -134,27 +134,32 @@ def get_overhead_term(
                                               + 0.0002157726704611484 * log2(Threads) ^ (1)
                                               * Workload ^ (1) * log2(Workload) ^ (1)"""
     thread_count = environment.thread_counts_by_device[device_id]
+    print("TC: ", thread_count)
+    print("IT: ", node_data.iterations)
+    print("SEQ: ", node_data.parallelizable_workload)
+    print("PAR: ", node_data.parallelizable_workload)
 
     overhead = Float(11.95830999763869)
     overhead += (
         (Float(7.119516221079432) ** (-7))
         * log(thread_count, 2)
-        * (cast(int, node_data.workload) / node_data.iterations)
-        * log((cast(int, node_data.workload) / node_data.iterations), 2)
+        * (cast(int, node_data.parallelizable_workload) / node_data.iterations)
+        * log((cast(int, node_data.parallelizable_workload) / node_data.iterations), 2)
         * (node_data.iterations ** (5 / 4))
     )
     overhead += (
         Float(0.0002157726704611484)
         * log(thread_count, 2)
-        * (cast(int, node_data.workload) / node_data.iterations)
-        * log((cast(int, node_data.workload) / node_data.iterations), 2)
+        * (cast(int, node_data.parallelizable_workload) / node_data.iterations)
+        * log((cast(int, node_data.parallelizable_workload) / node_data.iterations), 2)
     )
 
     # add weight to overhead
+    print("\toverhead pre : ", overhead)
     overhead *= environment.do_all_overhead_weight_by_device[device_id]
 
     print("\toverhead: ", overhead)
 
-    cm = CostModel(overhead)
+    cm = CostModel(Integer(0), overhead)
     # add weight to overhead
     return cm, []

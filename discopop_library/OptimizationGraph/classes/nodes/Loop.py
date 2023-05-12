@@ -16,8 +16,8 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 class Loop(Workload):
     iterations: int
 
-    def __init__(self, node_id: int, cu_id: Optional[NodeID], workload: int, iterations: int):
-        super().__init__(node_id, cu_id, workload=workload)
+    def __init__(self, node_id: int, cu_id: Optional[NodeID], parallelizable_workload: int, iterations: int):
+        super().__init__(node_id, cu_id, sequential_workload=0, parallelizable_workload=parallelizable_workload)
         self.iterations = max(
             iterations, 1
         )  # to prevent dividing by 0 in case the loop has not been executed
@@ -28,4 +28,4 @@ class Loop(Workload):
     #   for(100)    --> use 100 instead of 10000
 
     def get_hover_text(self) -> str:
-        return "WL: " + str(self.workload) + "\n" + "IT: " + str(self.iterations)
+        return "WL: " + str(self.sequential_workload) + "\n" + "IT: " + str(self.iterations)

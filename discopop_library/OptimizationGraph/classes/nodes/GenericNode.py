@@ -39,7 +39,7 @@ class GenericNode(object):
         self.node_id = node_id
         self.cu_id = cu_id
         self.introduced_symbols = []
-        self.performance_model = CostModel(Integer(0))
+        self.performance_model = CostModel(Integer(0), Integer(0))
         self.suggestion = None
 
         if written_memory_regions is None:

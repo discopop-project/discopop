@@ -205,7 +205,8 @@ class PETParser(object):
                 data=Workload(
                     node_id=new_node_id,
                     cu_id=cu_node.id,
-                    workload=calculate_workload(self.pet, cu_node),
+                    sequential_workload=calculate_workload(self.pet, cu_node),
+                    parallelizable_workload=0,
                     written_memory_regions=written_memory_regions,
                     read_memory_regions=read_memory_regions,
                 ),
@@ -226,7 +227,7 @@ class PETParser(object):
                 data=Loop(
                     node_id=new_node_id,
                     cu_id=loop_node.id,
-                    workload=calculate_workload(self.pet, loop_node),
+                    parallelizable_workload=calculate_workload(self.pet, loop_node),
                     iterations=loop_node.loop_iterations,
                 ),
             )

@@ -14,4 +14,4 @@ class GenericEdge(object):
     pass
 
     def get_cost_model(self) -> CostModel:
-        return CostModel(Integer(0))
+        return CostModel(Integer(0), Integer(0))

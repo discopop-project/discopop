@@ -28,7 +28,7 @@ def add_data_transfer_costs(
             data_transfer_costs = context.get_transfer_costs(environment=environment)
 
             # extend the cost_model
-            cost_model = cost_model.plus_combine(data_transfer_costs)
+            cost_model = cost_model.parallelizable_plus_combine(data_transfer_costs)
 
             # add the updated entry to result_dict
             result_dict[function].append((cost_model, context))

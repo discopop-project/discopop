@@ -37,7 +37,7 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
 
             # filter out NaN - Models
             performance_models[node_data] = [
-                model for model in performance_models[node_data] if model.model != sympy.nan
+                model for model in performance_models[node_data] if model.parallelizable_costs != sympy.nan
             ]
     return performance_models
 
@@ -62,7 +62,7 @@ def get_node_performance_models(
     else:
         tmp_node_cost_model = node_data.get_cost_model()
         for idx, child_model in enumerate(children_models):
-            children_models[idx] = child_model.plus_combine(tmp_node_cost_model)
+            children_models[idx] = child_model.parallelizable_plus_combine(tmp_node_cost_model)
 
     # construct the performance models
     if successor_count >= 1:
@@ -131,7 +131,7 @@ def get_node_performance_models(
                 combined_model = children_model
                 # add transfer costs
                 transfer_costs_model = get_edge_data(graph, node_id, successor).get_cost_model()
-                combined_model = combined_model.plus_combine(transfer_costs_model)
+                combined_model = combined_model.parallelizable_plus_combine(transfer_costs_model)
 
                 # if the successor is "determined" by a path decision, add path decision to the combined model
                 if len(successors) > 1:
@@ -140,7 +140,7 @@ def get_node_performance_models(
                 for model in get_node_performance_models(
                     graph, successor, copy.deepcopy(visited_nodes)
                 ):
-                    result_list.append(combined_model.plus_combine(model))
+                    result_list.append(combined_model.parallelizable_plus_combine(model))
         return result_list
 
     # successor count == 0 or successor count > 1
@@ -166,7 +166,7 @@ def get_performance_models_for_children(
             # create "product set" of child models
             product_set = []
             for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes)):
-                temp_models = [cm.plus_combine(model) for cm in child_models]
+                temp_models = [cm.parallelizable_plus_combine(model) for cm in child_models]
                 product_set += temp_models
             child_models = product_set
     return child_models
