@@ -35,7 +35,7 @@ def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title:
     fn_function_frame = Frame(scrollable_frame)
     fn_function_frame.grid(row=0, column=1, sticky=NSEW)
     fn_function = ScrollableTextWidget(fn_function_frame)
-    fn_function.set_text(str(model.model))
+    fn_function.set_text(str(model.parallelizable_costs + model.sequential_costs))
     fn_function.text_container.config(height=3)
 
     column_headers = ["Decision", "Details"]

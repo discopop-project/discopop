@@ -12,7 +12,7 @@ class Environment(object):
     # todo: convert Costs into estimated runtime, removes need for high overhead weight
     workload_overhead_weight = Integer(1500)
     do_all_overhead_weight_by_device: Dict[int, Expr] = {
-        0: Integer(5),
+        0: Integer(300),
         1: Integer(1),
     }
 

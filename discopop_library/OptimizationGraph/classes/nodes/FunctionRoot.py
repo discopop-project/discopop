@@ -18,7 +18,7 @@ class FunctionRoot(Workload):
     name: str
 
     def __init__(self, node_id: int, cu_id: Optional[NodeID], name: str):
-        super().__init__(node_id, cu_id)
+        super().__init__(node_id, cu_id, sequential_workload=0, parallelizable_workload=0)
         self.name = name
         self.device_id = 0
 
@@ -35,7 +35,7 @@ class FunctionRoot(Workload):
         # model = Function(function_name)
         # model = spawn_overhead
 
-        model = Integer(1)  # dummy for a unknown, but constant overhead for function spawning
-        self.performance_model = CostModel(model, identifier=function_name)
+        # todo: check if the costs of calling functions should be included into the models
+        self.performance_model = CostModel(Integer(0), Integer(0), identifier=function_name)
 
-        return CostModel(model, identifier=function_name)
+        return CostModel(Integer(0), Integer(0), identifier=function_name)

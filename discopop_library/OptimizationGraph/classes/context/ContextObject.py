@@ -125,11 +125,11 @@ class ContextObject(object):
 
             total_transfer_costs += transfer_costs
         if symbolic_memory_region_sizes:
-            return CostModel(
+            return CostModel(Integer(0),
                 total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
             )
         else:
-            return CostModel(total_transfer_costs)
+            return CostModel(Integer(0), total_transfer_costs)
 
     def set_last_visited_node_id(self, node_id: int):
         self.last_visited_node_id = node_id

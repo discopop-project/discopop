@@ -21,14 +21,16 @@ from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
 class Workload(GenericNode):
     """This class represents a generic node in the Optimization Graph"""
 
-    workload: Optional[int]
+    sequential_workload: Optional[int]
+    parallelizable_workload: Optional[int]
     cost_multiplier: CostModel
 
     def __init__(
         self,
         node_id: int,
         cu_id: Optional[NodeID],
-        workload: Optional[int] = None,
+        sequential_workload: Optional[int],
+        parallelizable_workload: Optional[int],
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
     ):
@@ -38,12 +40,13 @@ class Workload(GenericNode):
             written_memory_regions=written_memory_regions,
             read_memory_regions=read_memory_regions,
         )
-        self.workload = workload
-        self.cost_multiplier = CostModel(Integer(1))
-        self.overhead = CostModel(Integer(0))
+        self.sequential_workload = sequential_workload
+        self.parallelizable_workload = parallelizable_workload
+        self.cost_multiplier = CostModel(Integer(1), Integer(0))
+        self.overhead = CostModel(Integer(0), Integer(0))
 
     def get_plot_label(self) -> str:
-        if self.workload is not None:
+        if self.sequential_workload is not None:
             # return str(self.workload)
             return str(self.node_id)
         else:
@@ -51,22 +54,24 @@ class Workload(GenericNode):
 
     def get_hover_text(self) -> str:
         return (
-            "WL: " + str(self.workload) + "\n"
+            "WL: " + str(self.sequential_workload) + "\n"
             "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
             "Write: " + str([str(e) for e in self.written_memory_regions])
         )
 
     def get_cost_model(self) -> CostModel:
-        """Performance model of a workload consists of the workload itself"""
-        if self.workload is None:
+        """Performance model of a workload consists of the workload itself.
+        Individual Workloads are assumed to be not parallelizable.
+        Workloads of Loop etc. are parallelizable."""
+        if self.sequential_workload is None:
             return (
-                CostModel(Integer(0))
-                .multiply_combine(self.cost_multiplier)
-                .plus_combine(self.overhead)
+                CostModel(Integer(1), Integer(0))
+                .parallelizable_multiply_combine(self.cost_multiplier)
+                .parallelizable_plus_combine(self.overhead)
             )
         else:
             return (
-                CostModel(Integer(self.workload))
-                .multiply_combine(self.cost_multiplier)
-                .plus_combine(self.overhead)
+                CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
+                .parallelizable_multiply_combine(self.cost_multiplier)
+                .parallelizable_plus_combine(self.overhead)
             )

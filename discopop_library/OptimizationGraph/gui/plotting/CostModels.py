@@ -34,7 +34,7 @@ def __2d_plot(
         model_label = str(model.path_decisions) if labels is None else labels[idx]
         if combined_plot is None:
             combined_plot = plot(
-                model.model,
+                model.parallelizable_costs + model.sequential_costs,
                 (
                     sorted_free_symbols[0],
                     free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -49,7 +49,7 @@ def __2d_plot(
         else:
             combined_plot.extend(
                 plot(
-                    model.model,
+                    model.parallelizable_costs + model.sequential_costs,
                     (
                         sorted_free_symbols[0],
                         free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -76,7 +76,7 @@ def __3d_plot(
         model_label = str(model.path_decisions) if labels is None else labels[idx]
         if combined_plot is None:
             combined_plot = plot3d(
-                model.model,
+                model.parallelizable_costs + model.sequential_costs,
                 (
                     sorted_free_symbols[0],
                     free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -96,7 +96,7 @@ def __3d_plot(
         else:
             combined_plot.extend(
                 plot3d(
-                    model.model,
+                    model.parallelizable_costs + model.sequential_costs,
                     (
                         sorted_free_symbols[0],
                         free_symbol_ranges[sorted_free_symbols[0]][0],

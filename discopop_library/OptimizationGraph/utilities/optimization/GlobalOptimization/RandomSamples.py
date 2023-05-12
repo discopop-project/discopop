@@ -41,16 +41,16 @@ def find_quasi_optimal_using_random_samples(
 
     print()
     print("Maximum:")
-    print(maximum.model)
+    print(maximum.parallelizable_costs)
     print(maximum.path_decisions)
 
     print()
     print("Median:")
-    print(median.model)
+    print(median.parallelizable_costs)
     print(median.path_decisions)
     print()
     print("Minimum:")
-    print(minimum.model)
+    print(minimum.parallelizable_costs)
     print(minimum.path_decisions)
 
     if plot:  # plot results

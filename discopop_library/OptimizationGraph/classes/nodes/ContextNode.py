@@ -11,7 +11,7 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 class ContextNode(Workload):
     def __init__(self, node_id: int):
-        super().__init__(node_id, cu_id=None, workload=0)
+        super().__init__(node_id, cu_id=None, sequential_workload=0, parallelizable_workload=0)
 
     def get_plot_label(self) -> str:
         return str(self.node_id) + "\nCTX"

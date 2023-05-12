@@ -20,18 +20,23 @@ from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeS
 class CostModel(object):
     path_decisions: List[int]
     identifier: str
-    model: Expr
+    parallelizable_costs: Expr
+    sequential_costs: Expr
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]]
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
 
     def __init__(
         self,
-        performance_model: Expr,
+        parallelizable_costs: Expr,
+        sequential_costs: Expr,
         identifier: str = "None",
         path_decisions=None,
         symbol_value_suggestions: Dict[Symbol, Expr] = None,
     ):
+        if sequential_costs == sympy.nan:
+
+            raise ValueError("NAN: ", sequential_costs)
         if path_decisions is None:
             self.path_decisions = []
         else:
@@ -42,53 +47,65 @@ class CostModel(object):
         else:
             self.symbol_value_suggestions = symbol_value_suggestions
         self.identifier = identifier
-        self.model = performance_model
+        self.parallelizable_costs = parallelizable_costs
+        self.sequential_costs = sequential_costs
 
     def __str__(self):
-        return str(self.model)
+        return str(self.parallelizable_costs) + "\n" + str(self.sequential_costs)
 
     def print(self):
         init_printing()
-        print(self.model)
+        print(self.parallelizable_costs)
 
-    def plus_combine(self, other):
+    def parallelizable_plus_combine(self, other):
         """Combines both models in the following fashion:
-        f(x,y) = x + y"""
+        f(x,y) =
+        ==> x.parallelizable_costs + y.parallelizable_costs
+        ==> x.sequential_costs + y.sequential_costs"""
         if other is None:
             return self
-        combined_model = self.model + other.model
+        parallelizable_costs = self.parallelizable_costs + other.parallelizable_costs
+        sequential_costs = self.sequential_costs + other.sequential_costs
         path_decisions = self.path_decisions + other.path_decisions
         value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
         return CostModel(
-            combined_model,
+            parallelizable_costs,
+            sequential_costs,
             path_decisions=path_decisions,
             symbol_value_suggestions=value_suggestions,
         )
 
-    def divide_combine(self, other):
+    def parallelizable_divide_combine(self, other):
         """Combines both models in the following fashion:
-        f(x,y) = x / y"""
+        f(x,y) =
+        ==> x.parallelizable_costs / y.parallelizable_costs
+        ==> x.sequential_costs / y.sequential_costs"""
         if other is None:
             return self
-        combined_model = self.model / other.model
+        parallelizable_costs = self.parallelizable_costs / other.parallelizable_costs
+        sequential_costs = self.sequential_costs / other.sequential_costs
         path_decisions = self.path_decisions + other.path_decisions
         value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
         return CostModel(
-            combined_model,
+            parallelizable_costs, sequential_costs,
             path_decisions=path_decisions,
             symbol_value_suggestions=value_suggestions,
         )
 
-    def multiply_combine(self, other):
+    def parallelizable_multiply_combine(self, other):
         """Combines both models in the following fashion:
-        f(x,y) = x * y"""
+        f(x,y) =
+        ==> x.parallelizable_costs * y.parallelizable_costs
+        ==> x.sequential_costs * y.sequential_costs"""
         if other is None:
             return self
-        combined_model = self.model * other.model
+        parallelizable_costs = self.parallelizable_costs * other.parallelizable_costs
+        sequential_costs = self.sequential_costs * other.sequential_costs
         path_decisions = self.path_decisions + other.path_decisions
         value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
         return CostModel(
-            combined_model,
+            parallelizable_costs,
+            sequential_costs,
             path_decisions=path_decisions,
             symbol_value_suggestions=value_suggestions,
         )
@@ -140,13 +157,20 @@ class CostModel(object):
                         )
 
             # evaluate both functions at the sampling point
-            substituted_model_1 = self.model.xreplace(sampling_point)
-            numerical_result_1 = substituted_model_1.evalf()
-            substituted_model_2 = other.model.xreplace(sampling_point)
-            numerical_result_2 = substituted_model_2.evalf()
+            substituted_model_1_1 = self.parallelizable_costs.xreplace(sampling_point)
+            numerical_result_1_1 = substituted_model_1_1.evalf()
+            substituted_model_1_2 = self.sequential_costs.xreplace(sampling_point)
+            numerical_result_1_2 = substituted_model_1_2.evalf()
+            substituted_model_2_1 = other.parallelizable_costs.xreplace(sampling_point)
+            numerical_result_2_1 = substituted_model_2_1.evalf()
+            substituted_model_2_2 = other.sequential_costs.xreplace(sampling_point)
+            numerical_result_2_2 = substituted_model_2_2.evalf()
+
+            total_1 = numerical_result_1_1 + numerical_result_1_2
+            total_2 = numerical_result_2_1 + numerical_result_2_2
 
             # determine relation between the numerical results
-            if numerical_result_1 < numerical_result_2:
+            if total_1 < total_2:
                 decision_tendency += 1
             else:
                 decision_tendency -= 1
