@@ -27,20 +27,30 @@ def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title:
     scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
 
     rows = []
+    # print mathematical function for model
+    fn_label = Entry(scrollable_frame, relief=RIDGE)
+    fn_label.grid(row=0, column=0, sticky=NSEW)
+    fn_label.insert(END, "Function:")
+    fn_label.configure(state=DISABLED, disabledforeground="black")
+    fn_function_frame = Frame(scrollable_frame)
+    fn_function_frame.grid(row=0, column=1, sticky=NSEW)
+    fn_function = ScrollableTextWidget(fn_function_frame)
+    fn_function.set_text(str(model.model))
+    fn_function.text_container.config(height=3)
 
     column_headers = ["Decision", "Details"]
     # set column headers
     header_cols = []
     for col_idx, header in enumerate(column_headers):
         e = Entry(scrollable_frame, relief=RIDGE)
-        e.grid(row=0, column=col_idx, sticky=NSEW)
+        e.grid(row=1, column=col_idx, sticky=NSEW)
         e.insert(END, header)
         e.configure(state=DISABLED, disabledforeground="black")
         header_cols.append(e)
     rows.append(header_cols)
 
     for row_idx, decision in enumerate(model.path_decisions):
-        row_idx = row_idx + 1  # account for header row
+        row_idx = row_idx + 2  # account for mathematical function and header row
         # add decision id
         e = Entry(scrollable_frame, relief=RIDGE)
         e.grid(row=row_idx, column=0, sticky=NSEW)
@@ -50,10 +60,6 @@ def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title:
         # add decision details
         d = Frame(scrollable_frame)
         d.grid(row=row_idx, column=1, sticky=NSEW)
-        #d = Text(root, relief=RIDGE)
-        #d.grid(row=row_idx, column=1, sticky=NSEW)
-        #d.insert(END, str(data_at(graph, decision).suggestion))
-        #d.config(state=DISABLED)
         stw = ScrollableTextWidget(d)
         stw.set_text(str(data_at(graph, decision).suggestion))
         stw.text_container.config(height=10)
