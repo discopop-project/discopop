@@ -36,6 +36,7 @@ class GPURegionInfo(PatternInfo):
     map_delete_vars: List[str]
     produced_vars: List[str]
     consumed_vars: List[str]
+    project_folder_path: str
 
     def __init__(
         self,
@@ -49,6 +50,7 @@ class GPURegionInfo(PatternInfo):
         map_delete_vars: List[str],
         produced_vars: List[str],
         consumed_vars: List[str],
+        project_folder_path: str,
     ):
         node_id = sorted([loop.nodeID for loop in contained_loops])[0]
         PatternInfo.__init__(self, pet.node_at(node_id))
@@ -63,14 +65,15 @@ class GPURegionInfo(PatternInfo):
         self.consumed_vars = consumed_vars
         self.start_line = min([l.start_line for l in contained_loops])
         self.end_line = max([l.end_line for l in contained_loops])
+        self.project_folder_path = project_folder_path
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX, project_folder_path: str):
+    def to_string(self, pet: PETGraphX):
         contained_loops_str = "\n" if len(self.contained_loops) > 0 else ""
         for loop in self.contained_loops:
-            loop_str = loop.to_string(pet, project_folder_path)
+            loop_str = loop.to_string(pet)
             # pretty printing
             loop_str = "".join(["\t" + s + "\n" for s in loop_str.split("\n")])
             contained_loops_str += loop_str
@@ -134,10 +137,12 @@ class GPURegions:
     map_type_delete_by_region: Dict[Tuple[str, ...], List[str]]
     produced_vars: Dict[Tuple[str, ...], List[str]]
     consumed_vars: Dict[Tuple[str, ...], List[str]]
+    project_folder_path: str
 
-    def __init__(self, pet, gpu_patterns):
+    def __init__(self, pet, gpu_patterns, project_folder_path):
         self.loopsInRegion = []
         self.gpu_loop_patterns = gpu_patterns
+        self.project_folder_path = project_folder_path
         self.cascadingLoopsInRegions = [[]]
         self.numRegions = 0
         self.pet = pet
@@ -349,7 +354,9 @@ class GPURegions:
             ln = map_node(self.pet, lastNodeID)
             start = fn.start_line
             end = ln.end_line
-            gpuRegionLoop = GPULoopPattern(self.pet, firstNodeID, start, end, 1000)
+            gpuRegionLoop = GPULoopPattern(
+                self.pet, firstNodeID, start, end, 1000, self.project_folder_path
+            )
             visitedVars: Set[Variable] = set()
             while t >= 0:
                 tmp_result = self.findGPULoop(
@@ -443,6 +450,7 @@ class GPURegions:
                     self.gpu_loop_patterns[skip].start_line,
                     self.gpu_loop_patterns[skip].end_line,
                     self.gpu_loop_patterns[skip].iteration_count,
+                    self.project_folder_path,
                 )
                 for ii in self.gpu_loop_patterns:
                     if dd.nodeID == ii.nodeID:  # TODO: check remaining attributes too
@@ -496,6 +504,7 @@ class GPURegions:
                 self.map_type_delete_by_region[tuple(region)],
                 self.produced_vars[tuple(region)],
                 self.consumed_vars[tuple(region)],
+                project_folder_path,
             )
             gpu_region_info.append(current_info)
         return gpu_region_info

@@ -42,7 +42,13 @@ def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[Pattern
                 parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
                 reduction_vars = parent_reduction.reduction
             gpulp = GPULoopPattern(
-                pet, node.id, node.start_line, node.end_line, node.loop_iterations, reduction_vars
+                pet,
+                node.id,
+                node.start_line,
+                node.end_line,
+                node.loop_iterations,
+                project_folder_path,
+                reduction_vars,
             )
             gpulp.getNestedLoops(pet, node.id)
             gpulp.setParentLoop(node.id)
@@ -52,7 +58,7 @@ def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[Pattern
     if len(gpu_patterns) == 0:
         return []
 
-    regions = GPURegions(pet, gpu_patterns)
+    regions = GPURegions(pet, gpu_patterns, project_folder_path)
 
     for i in gpu_patterns:
         i.setCollapseClause(pet, i.node_id, res)
