@@ -8,8 +8,12 @@ from tkinter import *
 from discopop_library.OptimizationGraph.gui.plotting.CostModels import plot_CostModels
 
 
-def show_options(options: List[Tuple[CostModel, str]], sorted_free_symbols: List[Symbol],
-    free_symbol_ranges: Dict[Symbol, Tuple[float, float]], window_title=None):
+def show_options(
+    options: List[Tuple[CostModel, str]],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    window_title=None,
+):
     """Shows a tkinter table to browse and plot models"""
     root = Tk()
     if window_title is not None:
@@ -47,15 +51,11 @@ def show_options(options: List[Tuple[CostModel, str]], sorted_free_symbols: List
         options_field.grid(row=row_idx, column=2, sticky=NSEW)
         options_field.configure(state=DISABLED, disabledforeground="black")
 
-        plot_button = Button(options_field, text="Plot", command=lambda opt=option, opt_name=option_name: plot_CostModels([opt], sorted_free_symbols, free_symbol_ranges, [opt_name], title=opt_name)) # type: ignore
+        plot_button = Button(options_field, text="Plot", command=lambda opt=option, opt_name=option_name: plot_CostModels([opt], sorted_free_symbols, free_symbol_ranges, [opt_name], title=opt_name))  # type: ignore
         plot_button.grid(row=0, column=0)
         cols.append(label)
 
-    Button(root, text="Plot All", command=lambda: plot_CostModels([t[0] for t in options], sorted_free_symbols, free_symbol_ranges, [t[1] for t in options], title="Full Plot")).grid() # type: ignore
-    Button(root, text="Continue",
-           command=lambda: root.destroy()).grid()
+    Button(root, text="Plot All", command=lambda: plot_CostModels([t[0] for t in options], sorted_free_symbols, free_symbol_ranges, [t[1] for t in options], title="Full Plot")).grid()  # type: ignore
+    Button(root, text="Continue", command=lambda: root.destroy()).grid()
 
     mainloop()
-
-
-

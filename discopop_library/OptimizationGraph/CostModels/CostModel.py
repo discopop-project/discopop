@@ -25,7 +25,6 @@ class CostModel(object):
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
 
-
     def __init__(
         self,
         performance_model: Expr,
@@ -130,11 +129,15 @@ class CostModel(object):
                         normalized_pick = random.weibullvariate(alpha, beta)
                     if self.free_symbol_distributions[symbol] == FreeSymbolDistribution.LEFT_HEAVY:
                         # calculate sampling point using the range starting from minimum
-                        sampling_point[symbol] = range_min + (range_max - range_min) * normalized_pick
+                        sampling_point[symbol] = (
+                            range_min + (range_max - range_min) * normalized_pick
+                        )
                     else:
                         # simulate a right heavy distribution
                         # calculate sampling point using the range starting from maximum
-                        sampling_point[symbol] = range_max - (range_max - range_min) * normalized_pick
+                        sampling_point[symbol] = (
+                            range_max - (range_max - range_min) * normalized_pick
+                        )
 
             # evaluate both functions at the sampling point
             substituted_model_1 = self.model.xreplace(sampling_point)
@@ -164,10 +167,10 @@ class CostModel(object):
 
     def __plot_weibull_distributions(self, alpha: float, beta: float):
         """For Debug reasons. Plots the left and right side heavy weibull distributions using the given parameters."""
-        x = np.arange(1, 100.) / 100.  # normalized to [0,1]
+        x = np.arange(1, 100.0) / 100.0  # normalized to [0,1]
 
         def weibull(x, n, a):
-            return (a / n) * (x / n) ** (a - 1) * np.exp(-(x / n) ** a)
+            return (a / n) * (x / n) ** (a - 1) * np.exp(-((x / n) ** a))
 
         plt.plot(x, weibull(x, alpha, beta), label="Alpha: " + str(alpha) + " Beta: " + str(beta))
 
