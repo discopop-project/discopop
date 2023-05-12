@@ -6,6 +6,7 @@ from tkinter import ttk
 import tkinter as tk
 
 from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.OptimizationGraph.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 
 
 def query_user_for_symbol_values(
@@ -31,11 +32,20 @@ def query_user_for_symbol_values(
     column_headers = ["Symbol Name", "Symbol Value", "Range Start", "Range End", "Range Relevance"]
 
     root = Tk()
+    # configure window size
+    root.geometry("1000x600")
+    # configure weights
+    root.rowconfigure(0, weight=1)
+    root.columnconfigure(0, weight=1)
+    # create scrollable frame
+    scrollable_frame_widget = ScrollableFrameWidget(root)
+    scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
+
     rows = []
     # set column headers
     header_cols = []
     for col_idx, header in enumerate(column_headers):
-        e = Entry(root, relief=RIDGE)
+        e = Entry(scrollable_frame, relief=RIDGE)
         e.grid(row=0, column=col_idx, sticky=NSEW)
         e.insert(END, header)
         e.configure(state=DISABLED, disabledforeground="black")
@@ -52,7 +62,7 @@ def query_user_for_symbol_values(
         row_idx = row_idx + 1  # to account for column headers
         cols = []
         for col_idx, column_name in enumerate(column_headers):
-            e = Entry(relief=RIDGE)
+            e = Entry(scrollable_frame, relief=RIDGE)
             e.grid(row=row_idx, column=col_idx, sticky=NSEW)
             if col_idx == 0:
                 # symbol name
@@ -148,6 +158,7 @@ def query_user_for_symbol_values(
 
         root.destroy()
 
+    scrollable_frame_widget.finalize(len(symbols), row=0, col=0)
     Button(root, text="Save", command=lambda: onPress()).grid()
     Button(root, text="Validate", command=lambda: validate()).grid()
     mainloop()

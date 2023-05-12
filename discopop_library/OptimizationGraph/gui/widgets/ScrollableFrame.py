@@ -32,8 +32,8 @@ class ScrollableFrameWidget(object):
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-    def finalize(self, row_count: int):
-        self.container.grid(row=0, column=0, sticky=tk.NSEW)
+    def finalize(self, row_count: int, row: int = 0, col: int= 0 , rowspan: int= 1, columnspan: int=1):
+        self.container.grid(row=row, column=col, columnspan=columnspan, rowspan=rowspan, sticky=tk.NSEW)
         self.canvas.grid(row=0, column=0, sticky=tk.NSEW)
         self.scrollbar.grid(row=0, rowspan=row_count, column=1, sticky=tk.NS)
 
