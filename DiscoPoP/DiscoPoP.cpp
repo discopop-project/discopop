@@ -620,7 +620,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         } else {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
-                            if(columnSet.empty()) {
+                            if(!columnSet.empty()) {
                                 // Added for matching with AST nodes
                                 cu->startColumn = (*(columnSet.begin())).second;
                                 cu->endColumn = (*(columnSet.rbegin())).second;
