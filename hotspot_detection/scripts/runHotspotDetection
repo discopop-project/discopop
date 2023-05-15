@@ -74,7 +74,7 @@ log () {
 
 log_or_fail () {
   RETVAL=$?
-  log $1 "$2\n"
+  log $1 "$2"
   if [ $RETVAL -ne 0 ]; then
     log -e "Exiting script with code: ${RETVAL}"
     exit $RETVAL
@@ -171,8 +171,15 @@ while [[ $# -gt 0 ]]; do
       shift; shift # past argument and value
       ;;
     --executable-arguments)
-      EXECUTABLE_ARGUMENTS="$2"
-      shift; shift # past argument and value
+      shift # past argument
+      # parse all values:
+      EXEC_ARGS=()
+      while [[ $# -gt 0 && "$1" != -* && "$1" != --* ]]; do
+          EXEC_ARGS+=("$1")
+          shift
+      done
+      echo ${EXEC_ARGS[@]}
+      EXECUTABLE_ARGUMENTS="${EXEC_ARGS[0]}"
       ;;
     --make-flags)
       MAKE_FLAGS="$2"
@@ -341,7 +348,12 @@ fi
 
 
 # Run the instrumented application
-log -i "Running instrumented application to detect hotspots..."
-log_or_fail -d "$(./${EXECUTABLE_NAME}_hotspot ${EXECUTABLE_ARGUMENTS})"
+arraylength=${#EXEC_ARGS[@]}
+for (( i=0; i<${arraylength}; i++ ));
+do
+  log -i "Running instrumented application to detect hotspots... ($(($i+1)) / $arraylength)"
+  log -d "executable arguements: ${EXEC_ARGS[$i]}"
+  log_or_fail -d "$(./${EXECUTABLE_NAME}_hotspot ${EXEC_ARGS[$i]})"
+done
 
 
