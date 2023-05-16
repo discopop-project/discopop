@@ -229,6 +229,7 @@ class PETParser(object):
                     cu_id=loop_node.id,
                     parallelizable_workload=calculate_workload(self.pet, loop_node),
                     iterations=loop_node.loop_iterations,
+                    position=loop_node.start_position()
                 ),
             )
             # connect loop node and entry node via a child edge
