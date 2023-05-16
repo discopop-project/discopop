@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-from typing import List, Dict, cast, Set
+from typing import List, Dict, cast, Set, Optional
 
 import networkx as nx  # type: ignore
 import sympy  # type: ignore
@@ -43,9 +43,10 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
 
 
 def get_node_performance_models(
-    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int]
+    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None
 ) -> List[CostModel]:
-    """Returns the performance models for the given node"""
+    """Returns the performance models for the given node.
+    If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed."""
     result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
     successor_count = len(successors)
@@ -124,8 +125,15 @@ def get_node_performance_models(
                                 break
                     if path_invalid:
                         break
+
+                # check if the current decision invalidates decision requirements, if some are specified
+                if restrict_to_decisions is not None:
+                    if not (successor in restrict_to_decisions or data_at(graph, successor).suggestion is None):
+                        path_invalid = True
+
                 if path_invalid:
                     continue
+
                 # ## END OF REQUIREMENTS CHECK ##
 
                 combined_model = children_model

@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List, cast
+from typing import List, cast, Set
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
@@ -335,3 +335,11 @@ def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
         graph.edges[(source_id, target_id)]["data"] = cast(
             TemporaryEdge, edge_data
         ).convert_to_successor_edge()
+
+
+def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
+    result_set: Set[int] = set()
+    for node_id in graph.nodes:
+        if type(graph.nodes[node_id]["data"]) == FunctionRoot:
+            result_set.add(node_id)
+    return list(result_set)

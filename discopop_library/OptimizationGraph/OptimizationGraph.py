@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 from random import randint, shuffle
 from time import sleep
 from typing import Dict, Set, cast, List, Tuple
@@ -25,7 +26,9 @@ from discopop_library.OptimizationGraph.CostModels.utilities import (
 from discopop_library.OptimizationGraph.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.OptimizationGraph.PETParser.PETParser import PETParser
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
 from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.gui.presentation.OptionTable import show_options
 from discopop_library.OptimizationGraph.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
@@ -35,6 +38,8 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import show
 from discopop_library.OptimizationGraph.utilities.optimization.GlobalOptimization.RandomSamples import (
     find_quasi_optimal_using_random_samples,
 )
+from discopop_library.OptimizationGraph.utilities.optimization.LocalOptimization.TopDown import \
+    get_locally_optimized_models
 
 
 class OptimizationGraph(object):
@@ -55,6 +60,9 @@ class OptimizationGraph(object):
         sequential_complete_performance_models = add_data_transfer_costs(
             self.graph, sequential_function_performance_models_with_transfers, environment
         )
+
+        # copy sequential graph to allow retrieval later on
+        sequential_graph = copy.deepcopy(self.graph)
 
         # import parallelization suggestions
         self.graph = import_suggestions(
@@ -109,6 +117,7 @@ class OptimizationGraph(object):
                 free_symbol_distributions[symbol] = symbol_distribution
         print("subs: ", substitutions)
 
+
         # apply substitutions and un-mark substituted free symbols
         for idx, function in enumerate(complete_performance_models):
             for midx, pair in enumerate(complete_performance_models[function]):
@@ -127,6 +136,10 @@ class OptimizationGraph(object):
                 del free_symbol_ranges[symbol]
             if symbol in sorted_free_symbols:
                 sorted_free_symbols.remove(symbol)
+
+        # create locally optimized model
+        locally_optimized_models = get_locally_optimized_models(self.graph, substitutions)
+        # todo use locally optimized models
 
         # set free symbol ranges and distributions for comparisons
         for idx, function in enumerate(complete_performance_models):
@@ -172,3 +185,7 @@ class OptimizationGraph(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+
+
+
+
