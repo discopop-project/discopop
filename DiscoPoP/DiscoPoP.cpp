@@ -487,13 +487,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                 pair < string, vector < CU * >> (bb->getName(), basicBlockCUVector));
         DILocalScope* scopeBuffer = NULL;
 
-        // Added for matching with AST nodes
-        // a set to collect column numbers for instructions, similar to cu->instructionsLineNumbers
-        // column is paired with corresponding line id to associate column numbers with lines
-        std::set<std::pair<int, int>> columnSet;
-
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
+
             // NOTE: 'instruction' --> '&*instruction'
             lid = getLID(&*instruction, fileID);
 
@@ -523,10 +519,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
 
-                            if(!columnSet.empty()) {
+                            if(!cu->columnSet.empty()) {
                                 // Added for matching with AST nodes
-                                cu->startColumn = (*(columnSet.begin())).second;
-                                cu->endColumn = (*(columnSet.rbegin())).second;
+                                cu->startColumn = (*(cu->columnSet.begin())).second;
                             }
 
                             cu->basicBlockName = basicBlockName;
@@ -556,8 +551,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
 
                 if(col >= 0) {
                     // Added for matching with AST nodes
-                    columnSet.insert(std::make_pair(lid, col));
-                    // for debugging columns
                     cu->columnSet.insert(std::make_pair(lid, col));
                 }
 
@@ -608,10 +601,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         cu->writePhaseLineNumbers.erase(lid);
                         cu->instructionsLineNumbers.erase(lid);
                         // Added for matching with AST nodes
-                        columnSet.erase(std::make_pair(lid, col));
-                        // for debugging columns
                         cu->columnSet.erase(std::make_pair(lid, col));
-                        cu->columnSet.insert(std::make_pair(lid, 10000 + col));
+                        // optional line for debugging to see deleted lines
+                        //cu->columnSet.insert(std::make_pair(lid, 10000 + col));
                         cu->instructionsCount--;
                         if (cu->instructionsLineNumbers.empty()) {
                             //cu->removeCU();
@@ -620,10 +612,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         } else {
                             cu->startLine = *(cu->instructionsLineNumbers.begin());
                             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
-                            if(!columnSet.empty()) {
+                            if(!cu->columnSet.empty()) {
                                 // Added for matching with AST nodes
-                                cu->startColumn = (*(columnSet.begin())).second;
-                                cu->endColumn = (*(columnSet.rbegin())).second;
+                                cu->startColumn = (*(cu->columnSet.begin())).second;
                             }
                         }
                         cu->basicBlockName = basicBlockName;
@@ -644,8 +635,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             cu->instructionsLineNumbers.insert(lid);
                             if(col >= 0) {
                                 // Added for matching with AST nodes
-                                columnSet.insert(std::make_pair(lid, col));
-                                // for debugging columns
                                 cu->columnSet.insert(std::make_pair(lid, col));
                             }
                         }
@@ -691,6 +680,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                 }
             }
         }
+
         if (cu->instructionsLineNumbers.empty()) {
             //cu->removeCU();
             cu->startLine = -1;
@@ -698,10 +688,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
         } else {
             cu->startLine = *(cu->instructionsLineNumbers.begin());
             cu->endLine = *(cu->instructionsLineNumbers.rbegin());
-            if(!columnSet.empty()) {
+            if(!cu->columnSet.empty()) {
                 // Added for matching with AST nodes
-                cu->startColumn = (*(columnSet.begin())).second;
-                cu->endColumn = (*(columnSet.rbegin())).second;
+                cu->startColumn = (*(cu->columnSet.begin())).second;
             }
         }
 
@@ -2963,13 +2952,6 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
                 << ">" << endl;
         *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root)
                 << "</childrenNodes>" << endl;
-        // for debugging columns*
-        *outCUs << "\t\t<columns>";
-        for(auto col : root->columnSet) 
-            *outCUs << "(" << dputil::decodeLID(col.first) << ", " << col.second << ") ";
-        *outCUs << "</columns>" << endl;
-        *outCUs << "\t\t<startColumn>" << root->startColumn << "</startColumn>" << endl;
-        *outCUs << "\t\t<endColumn>" << root->endColumn << "</endColumn>" << endl;
         if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {
             *outCUs << "\t\t<funcArguments>" << endl;
             for (auto ai: root->argumentsList) {
@@ -2992,6 +2974,12 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
 
         if (root->type == nodeTypes::cu) {
             CU *cu = static_cast<CU *>(root);
+            // for debugging columns*
+            *outCUs << "\t\t<columns>";
+            for(auto col : cu->columnSet) 
+            *outCUs << "(" << dputil::decodeLID(col.first) << ", " << col.second << ") ";
+            *outCUs << "</columns>" << endl;
+            *outCUs << "\t\t<startColumn>" << cu->startColumn << "</startColumn>" << endl;
             *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
             *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>"
                     << endl;

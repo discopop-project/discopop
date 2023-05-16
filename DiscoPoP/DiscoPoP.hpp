@@ -122,11 +122,6 @@ namespace {
         nodeTypes type;
         int startLine;
         int endLine;
-        // added for matching with AST nodes
-        int startColumn = -2;
-        int endColumn = -2;
-        // for debugging
-        set<std::pair<int, int>> columnSet;
 
         BasicBlock *BB;
 
@@ -151,6 +146,13 @@ namespace {
     typedef struct CU_struct : Node_struct {
 
         string BBID; // BasicBlock Id where the CU appears in
+
+        // added for matching with AST nodes
+        int startColumn = -2;
+        // Added for matching with AST nodes
+        // a set to collect column numbers for instructions, similar to cu->instructionsLineNumbers
+        // column is paired with corresponding line id to associate column numbers with lines
+        set<std::pair<int, int>> columnSet;
 
         unsigned readDataSize;  // number of bytes read from memory by the cu
         unsigned writeDataSize; // number of bytes written into memory during the cu
