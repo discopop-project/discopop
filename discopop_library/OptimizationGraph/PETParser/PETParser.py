@@ -228,7 +228,7 @@ class PETParser(object):
                     node_id=new_node_id,
                     cu_id=loop_node.id,
                     parallelizable_workload=calculate_workload(self.pet, loop_node),
-                    iterations=loop_node.loop_iterations,
+                    iterations=loop_node.loop_data.average_iteration_count,
                     position=loop_node.start_position()
                 ),
             )
