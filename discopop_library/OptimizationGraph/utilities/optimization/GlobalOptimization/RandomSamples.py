@@ -41,17 +41,34 @@ def find_quasi_optimal_using_random_samples(
 
     print()
     print("Maximum:")
-    print(maximum.parallelizable_costs + maximum.sequential_costs)
+    print("Par: ", maximum.parallelizable_costs)
+    print("Seq: ", maximum.sequential_costs)
     print(maximum.path_decisions)
 
     print()
     print("Median:")
-    print(median.parallelizable_costs)
+    print("Par: ", median.parallelizable_costs)
+    print("Seq: ", median.sequential_costs)
+
     print(median.path_decisions)
     print()
     print("Minimum:")
-    print(minimum.parallelizable_costs)
+    print("Par: ", minimum.parallelizable_costs)
+    print("Seq: ", minimum.sequential_costs)
     print(minimum.path_decisions)
+
+    print()
+    print("25% Quartile:")
+    print("Par: ", lower_quartile.parallelizable_costs)
+    print("Seq: ", lower_quartile.sequential_costs)
+    print(lower_quartile.path_decisions)
+
+    print()
+    print("75% Quartile:")
+    print("Par: ", upper_quartile.parallelizable_costs)
+    print("Seq: ", upper_quartile.sequential_costs)
+    print(upper_quartile.path_decisions)
+
 
     if plot:  # plot results
         plot_CostModels(
