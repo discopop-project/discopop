@@ -44,6 +44,8 @@ def import_suggestion(
                 node_data_copy.device_id = device_id
                 # remove cu_id to prevent using parallelization options as basis for new versions
                 node_data_copy.cu_id = None
+                # copy loop iteration variable
+                cast(Loop, node_data_copy).iterations_symbol = cast(Loop, node_data_copy).iterations_symbol
                 # add suggestion to node data
                 node_data_copy.suggestion = suggestion
                 # add the cost multiplier to represent the effects of the suggestion

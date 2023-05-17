@@ -138,7 +138,7 @@ class OptimizationGraph(object):
                 sorted_free_symbols.remove(symbol)
 
         # create locally optimized model
-        locally_optimized_models = get_locally_optimized_models(self.graph, substitutions)
+        locally_optimized_models = get_locally_optimized_models(self.graph, substitutions, environment, free_symbol_ranges, free_symbol_distributions)
         # todo use locally optimized models
 
         # set free symbol ranges and distributions for comparisons
