@@ -107,10 +107,6 @@ def get_locally_optimized_models(graph: nx.DiGraph, substitutions: Dict[Symbol, 
         for entry in result_dict[key]:
             print("ENTRY: ", entry[0].path_decisions)
 
-
-    import sys
-    sys.exit(0)
-
     return result_dict
 
 
