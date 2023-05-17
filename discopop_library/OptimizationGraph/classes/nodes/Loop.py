@@ -17,12 +17,18 @@ from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 class Loop(Workload):
     iterations: int
     position: str
+    iterations_symbol: Symbol
 
-    def __init__(self, node_id: int, cu_id: Optional[NodeID], parallelizable_workload: int, iterations: int, position: str):
+    def __init__(self, node_id: int, cu_id: Optional[NodeID], parallelizable_workload: int, iterations: int, position: str, iterations_symbol: Optional[Symbol] = None):
         self.position = position
         self.iterations = max(
             iterations, 1
         )  # to prevent dividing by 0 in case the loop has not been executed
+
+        if iterations_symbol is None:
+            self.iterations_symbol = Symbol("loop_" + str(node_id)+"_pos_" + str(self.position) + "_iterations")
+        else:
+            self.iterations_symbol = cast(Symbol, iterations_symbol)
 
         # calculate workload per iteration
         per_iteration_parallelizable_workload = parallelizable_workload / iterations
@@ -41,17 +47,17 @@ class Loop(Workload):
         """Performance model of a workload consists of the workload itself.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of Loop etc. are parallelizable."""
-        iterations_symbol = Symbol("loop_" + str(self.node_id)+"_pos_" + str(self.position) + "_iterations")
+
         result_model: Optional[CostModel] = None
         if self.sequential_workload is None:
             result_model = CostModel(Integer(1), Integer(0)).parallelizable_multiply_combine(
                 self.cost_multiplier).parallelizable_plus_combine(self.overhead).parallelizable_multiply_combine(
-                CostModel(iterations_symbol, iterations_symbol))
+                CostModel(self.iterations_symbol, self.iterations_symbol))
         else:
             result_model = CostModel(Integer(self.parallelizable_workload),
                                      Integer(self.sequential_workload)).parallelizable_multiply_combine(
                 self.cost_multiplier).parallelizable_plus_combine(self.overhead).parallelizable_multiply_combine(
-                CostModel(iterations_symbol, iterations_symbol))
+                CostModel(self.iterations_symbol, self.iterations_symbol))
 
-        cast(CostModel, result_model).symbol_value_suggestions[iterations_symbol] = Integer(self.iterations)
+        cast(CostModel, result_model).symbol_value_suggestions[self.iterations_symbol] = Integer(self.iterations)
         return cast(CostModel, result_model)
