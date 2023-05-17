@@ -3226,6 +3226,16 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                     }
                 }
 
+                if (fn.equals("posix_memalign"))
+                {
+                    if(isa<CallInst>(BI)){
+                        instrumentPosixMemalign(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentPosixMemalign(cast<InvokeInst>(BI));
+                    }
+                    continue;
+                }
                 if (fn.equals("_ZdlPv") || fn.equals("free"))
                 {
                     instrumentDeleteOrFree(cast<CallBase>(BI));
@@ -3439,6 +3449,41 @@ void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
     Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
     Value* endAddr = startAddr;
     Value* numBytes = IRB.CreateMul(toInstrument->getArgOperand(0), toInstrument->getArgOperand(1));
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numBytes);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
+    // add instrumentation for calls to posix_memalign
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+
+    // Determine correct placement for the call to __dp_new
+    Instruction* nextInst;
+    if(isa<CallInst>(toInstrument)){
+        nextInst = toInstrument->getNextNonDebugInstruction();
+    }
+    else if(isa<InvokeInst>(toInstrument)){
+        // Invoke instructions are always located at the end of a basic block.
+        // Invoke instructions may throw errors, in which case the successor is a "landing pad" basic block.
+        // If no error is thrown, the control flow is resumed at a "normal destination" basic block.
+        // Set the first instruction of the normal destination as nextInst in order to add the Instrumentation at the correct location.
+        nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    }
+
+    IRBuilder<> IRB(nextInst);
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", nextInst);
+    Value* endAddr = startAddr;
+    Value* numBytes = toInstrument->getArgOperand(2);
 
     args.push_back(startAddr);
     args.push_back(endAddr);  // currently unused
