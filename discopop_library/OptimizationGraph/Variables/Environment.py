@@ -13,7 +13,11 @@ class Environment(object):
     workload_overhead_weight = Integer(1500)
     do_all_overhead_weight_by_device: Dict[int, Expr] = {
         0: Integer(300),
-        1: Integer(1),
+        1: Integer(300),
+    }
+    reduction_overhead_weight_by_device: Dict[int, Expr] = {
+        0: Integer(300),
+        1: Integer(300),
     }
 
     # transfer_speeds: {source_device: {target_device: transfer speed}} (MB/s)

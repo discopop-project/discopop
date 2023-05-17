@@ -124,7 +124,7 @@ def get_overhead_term(
     overhead += Float(0.0005095826581781916) * (thread_count**3)
 
     # add weight to overhead
-    overhead *= environment.workload_overhead_weight
+    overhead *= environment.reduction_overhead_weight_by_device[device_id]
 
     print("\toverhead: ", overhead)
 
