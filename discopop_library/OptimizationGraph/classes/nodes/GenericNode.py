@@ -11,6 +11,7 @@ from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
 from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
     ReadDataAccess,
@@ -20,6 +21,7 @@ from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
 
 class GenericNode(object):
     node_id: int  # id of the node in the nx.DiGraph which stores this object
+    environment: Environment  # environment object to retrieve and store free symbols and other configurable values
     ## Performance modelling
     introduced_symbols: List[Symbol]
     performance_model: CostModel
@@ -31,12 +33,14 @@ class GenericNode(object):
     def __init__(
         self,
         node_id: int,
+        environment: Environment,
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
         device_id: DeviceID = None,
     ):
         self.node_id = node_id
+        self.environment = environment
         self.cu_id = cu_id
         self.introduced_symbols = []
         self.performance_model = CostModel(Integer(0), Integer(0))
@@ -46,11 +50,17 @@ class GenericNode(object):
             self.written_memory_regions = set()
         else:
             self.written_memory_regions = written_memory_regions
+            # register free variables for memory region sizes
+            for memory_region in [wmr.memory_region for wmr in written_memory_regions]:
+                environment.get_memory_region_size(memory_region, use_symbolic_value=True)
 
         if read_memory_regions is None:
             self.read_memory_regions = set()
         else:
             self.read_memory_regions = read_memory_regions
+            # register free variables for memory region sizes
+            for memory_region in [rmr.memory_region for rmr in read_memory_regions]:
+                environment.get_memory_region_size(memory_region, use_symbolic_value=True)
 
         self.device_id = device_id
 

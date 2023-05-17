@@ -11,14 +11,15 @@ from sympy import Function, Symbol, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 
 class FunctionRoot(Workload):
     name: str
 
-    def __init__(self, node_id: int, cu_id: Optional[NodeID], name: str):
-        super().__init__(node_id, cu_id, sequential_workload=0, parallelizable_workload=0)
+    def __init__(self, node_id: int, environment: Environment, cu_id: Optional[NodeID], name: str):
+        super().__init__(node_id, environment, cu_id, sequential_workload=0, parallelizable_workload=0)
         self.name = name
         self.device_id = 0
 

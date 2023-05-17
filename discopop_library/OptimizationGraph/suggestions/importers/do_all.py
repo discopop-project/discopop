@@ -136,11 +136,6 @@ def get_overhead_term(
                                               + 0.0002157726704611484 * log2(Threads) ^ (1)
                                               * Workload ^ (1) * log2(Workload) ^ (1)"""
     thread_count = environment.thread_counts_by_device[device_id]
-    print("TC: ", thread_count)
-    print("IT: ", node_data.iterations)
-    print("SEQ: ", node_data.parallelizable_workload)
-    print("PAR: ", node_data.parallelizable_workload)
-
     overhead = Float(11.95830999763869)
     overhead += (
         (Float(7.119516221079432) ** (-7))
@@ -157,10 +152,7 @@ def get_overhead_term(
     )
 
     # add weight to overhead
-    print("\toverhead pre : ", overhead)
     overhead *= environment.do_all_overhead_weight_by_device[device_id]
-
-    print("\toverhead: ", overhead)
 
     cm = CostModel(Integer(0), overhead)
     # add weight to overhead
