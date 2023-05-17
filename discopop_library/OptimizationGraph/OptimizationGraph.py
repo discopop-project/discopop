@@ -136,14 +136,24 @@ class OptimizationGraph(object):
                 del free_symbol_ranges[symbol]
             if symbol in sorted_free_symbols:
                 sorted_free_symbols.remove(symbol)
-
-        # create locally optimized model
-        locally_optimized_models = get_locally_optimized_models(self.graph, substitutions, environment, free_symbol_ranges, free_symbol_distributions)
-        # todo use locally optimized models
-
         # set free symbol ranges and distributions for comparisons
         for idx, function in enumerate(complete_performance_models):
             for pair in complete_performance_models[function]:
+                model, context = pair
+                model.free_symbol_ranges = free_symbol_ranges
+                model.free_symbol_distributions = free_symbol_distributions
+
+        # create locally optimized model
+        locally_optimized_models = get_locally_optimized_models(self.graph, substitutions, environment, free_symbol_ranges, free_symbol_distributions)
+        # apply substitutions and un-mark substituted free symbols
+        for idx, function in enumerate(locally_optimized_models):
+            for midx, pair in enumerate(locally_optimized_models[function]):
+                model, context = pair
+                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+                model.sequential_costs = model.sequential_costs.subs(substitutions)
+        # set free symbol ranges and distributions for comparisons
+        for idx, function in enumerate(locally_optimized_models):
+            for pair in locally_optimized_models[function]:
                 model, context = pair
                 model.free_symbol_ranges = free_symbol_ranges
                 model.free_symbol_distributions = free_symbol_distributions
@@ -173,6 +183,7 @@ class OptimizationGraph(object):
             options.append((lower_quartile, "25% Quartile"))
             options.append((upper_quartile, "75% Quartile"))
             options.append((sequential_complete_performance_models[function][0][0], "Sequential"))
+            options.append((locally_optimized_models[function][0][0], "Locally Optimized"))
             show_options(
                 self.graph,
                 options,
