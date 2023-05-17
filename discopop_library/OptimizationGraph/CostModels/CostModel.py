@@ -172,9 +172,6 @@ class CostModel(object):
             total_1 = numerical_result_1_1 + numerical_result_1_2
             total_2 = numerical_result_2_1 + numerical_result_2_2
 
-            print("TOTAL 1: ", total_1)
-            print("TOTAL 2: ", total_2)
-
             # determine relation between the numerical results
             if total_1 < total_2:
                 decision_tendency += 1

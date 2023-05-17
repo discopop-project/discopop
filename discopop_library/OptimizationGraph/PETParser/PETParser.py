@@ -223,6 +223,14 @@ class PETParser(object):
             # calculate metadata
             loop_subtree = self.pet.subtree_of_type(loop_node, CUNode)
 
+            # get iteration count for loop
+            if loop_node.loop_data is not None:
+                iteration_count = loop_node.loop_data.average_iteration_count
+            else:
+                # loop has not been executed, thus, no information was gathered during the profiling
+                # set iteration_count to prevent divisions by zero
+                iteration_count = 1
+
             # create new node for Loop
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[loop_node.id] = new_node_id
@@ -232,7 +240,7 @@ class PETParser(object):
                     node_id=new_node_id,
                     cu_id=loop_node.id,
                     parallelizable_workload=calculate_workload(self.pet, loop_node),
-                    iterations=loop_node.loop_data.average_iteration_count,
+                    iterations=iteration_count,
                     position=loop_node.start_position(),
                     environment=self.environment,
                 ),
