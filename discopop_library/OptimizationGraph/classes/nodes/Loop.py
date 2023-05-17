@@ -11,6 +11,7 @@ from sympy import Symbol, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.Variables.Environment import Environment
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 
@@ -19,7 +20,7 @@ class Loop(Workload):
     position: str
     iterations_symbol: Symbol
 
-    def __init__(self, node_id: int, cu_id: Optional[NodeID], parallelizable_workload: int, iterations: int, position: str, iterations_symbol: Optional[Symbol] = None):
+    def __init__(self, node_id: int, environment: Environment, cu_id: Optional[NodeID], parallelizable_workload: int, iterations: int, position: str, iterations_symbol: Optional[Symbol] = None):
         self.position = position
         self.iterations = max(
             iterations, 1
@@ -32,8 +33,11 @@ class Loop(Workload):
 
         # calculate workload per iteration
         per_iteration_parallelizable_workload = parallelizable_workload / iterations
-        super().__init__(node_id, cu_id, sequential_workload=0,
+        super().__init__(node_id, environment, cu_id, sequential_workload=0,
                          parallelizable_workload=int(per_iteration_parallelizable_workload))
+
+        # register iteration symbol in environment
+        self.environment.register_free_symbol(self.iterations_symbol, value_suggestion=Integer(self.iterations))
 
     # todo: note: it might be more beneficial to use the iterations "per entry" instead of the total amount of iterations
     # example:
@@ -60,4 +64,5 @@ class Loop(Workload):
                 CostModel(self.iterations_symbol, self.iterations_symbol))
 
         cast(CostModel, result_model).symbol_value_suggestions[self.iterations_symbol] = Integer(self.iterations)
+
         return cast(CostModel, result_model)
