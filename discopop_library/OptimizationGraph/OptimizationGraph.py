@@ -187,8 +187,11 @@ class OptimizationGraph(object):
             show_options(
                 self.graph,
                 options,
+                substitutions,
                 sorted_free_symbols,
                 free_symbol_ranges,
+                free_symbol_distributions,
+                function,
                 window_title="Function: " + function.name,
             )
 

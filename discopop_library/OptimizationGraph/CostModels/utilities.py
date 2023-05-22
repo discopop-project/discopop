@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import random
 from typing import List, Dict, cast, Set, Optional
 
 import networkx as nx  # type: ignore
@@ -43,7 +44,8 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
 
 
 def get_node_performance_models(
-    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None, do_not_allow_decisions: Optional[Set[int]] = None
+        graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None,
+        do_not_allow_decisions: Optional[Set[int]] = None, get_single_random_model: bool = False
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed."""
@@ -55,7 +57,8 @@ def get_node_performance_models(
 
     # consider performance models of children
     children_models = get_performance_models_for_children(
-        graph, node_id, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions, do_not_allow_decisions=do_not_allow_decisions
+        graph, node_id, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions,
+        do_not_allow_decisions=do_not_allow_decisions, get_single_random_model=get_single_random_model
     )
 
     if len(children_models) == 0:
@@ -67,6 +70,12 @@ def get_node_performance_models(
 
     # construct the performance models
     if successor_count >= 1:
+        removed_successors = False
+        if get_single_random_model and successor_count > 1:
+            # pick only a single successor
+            successors = [random.choice(successors)]
+            removed_successors = True
+
         for children_model in children_models:
             for successor in successors:
                 # ## CHECK REQUIREMENTS ##
@@ -155,11 +164,12 @@ def get_node_performance_models(
                 combined_model = combined_model.parallelizable_plus_combine(transfer_costs_model)
 
                 # if the successor is "determined" by a path decision, add path decision to the combined model
-                if len(successors) > 1:
+                if len(successors) > 1 or removed_successors:
                     combined_model.path_decisions.append(successor)
                 # append the model of the successor
                 for model in get_node_performance_models(
-                    graph, successor, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions, do_not_allow_decisions=do_not_allow_decisions
+                        graph, successor, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions,
+                        do_not_allow_decisions=do_not_allow_decisions, get_single_random_model=get_single_random_model
                 ):
                     result_list.append(combined_model.parallelizable_plus_combine(model))
         return result_list
@@ -169,7 +179,8 @@ def get_node_performance_models(
 
 
 def get_performance_models_for_children(
-    graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None, do_not_allow_decisions: Optional[Set[int]] = None
+        graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None,
+        do_not_allow_decisions: Optional[Set[int]] = None, get_single_random_model: bool = False
 ) -> List[CostModel]:
     """Construct a performance model for the children of the given node, or return None if no children exist"""
     # todo: consider children
@@ -180,13 +191,19 @@ def get_performance_models_for_children(
     for child_id in get_children(graph, node_id):
         if first_iteration:
             first_iteration = False
-            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions, do_not_allow_decisions=do_not_allow_decisions):
+            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes),
+                                                     restrict_to_decisions=restrict_to_decisions,
+                                                     do_not_allow_decisions=do_not_allow_decisions,
+                                                     get_single_random_model=get_single_random_model):
                 # initialize list of child models
                 child_models.append(model)
         else:
             # create "product set" of child models
             product_set = []
-            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions, do_not_allow_decisions=do_not_allow_decisions):
+            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes),
+                                                     restrict_to_decisions=restrict_to_decisions,
+                                                     do_not_allow_decisions=do_not_allow_decisions,
+                                                     get_single_random_model=get_single_random_model):
                 temp_models = [cm.parallelizable_plus_combine(model) for cm in child_models]
                 product_set += temp_models
             child_models = product_set
@@ -200,3 +217,13 @@ def print_introduced_symbols_per_node(graph: nx.DiGraph):
         for symbol in data_at(graph, node_id).introduced_symbols:
             print("\t: ", symbol)
     print()
+
+
+def get_random_path(graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None) -> CostModel:
+    random_models = get_node_performance_models(graph, root_id, set(), restrict_to_decisions=must_contain,
+                                                get_single_random_model=True)
+    # filter out NaN - Models
+    random_models = [
+        model for model in random_models if model.parallelizable_costs != sympy.nan
+    ]
+    return random.choice(random_models)
