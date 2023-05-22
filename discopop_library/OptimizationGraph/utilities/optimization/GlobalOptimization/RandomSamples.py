@@ -3,35 +3,50 @@ import random
 from random import shuffle
 from typing import List, Dict, Tuple
 
+import networkx as nx  # type: ignore
 from spb import plot3d, MB, plot  # type: ignore
-from sympy import Symbol
+from sympy import Symbol, Expr
 
 from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.OptimizationGraph.CostModels.utilities import get_random_path
 from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.OptimizationGraph.gui.plotting.CostModels import plot_CostModels
 
 
 def find_quasi_optimal_using_random_samples(
-    models: List[CostModel],
+    graph: nx.DiGraph,
+    function_root: FunctionRoot,
     random_path_count: int,
+    substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
-    plot: bool = False,
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
+    verbose:bool=False,
 ):
-    """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile.
+    """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile of the random_path_count samples.
     NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions
     due to the used comparison method!"""
-    # test: try sorting
-    # random shuffle
-    shuffle(models)
-    # todo remove
-    # pick random samples, if the list is bigger than the sample count
-    if len(models) > random_path_count:
-        random_paths = random.choices(models, k=random_path_count)
-    else:
-        random_paths = copy.deepcopy(models)  # copy required to leave the original list unmodified
+    random_paths: List[CostModel] = []
+    if verbose:
+        print("Generating ", random_path_count, "random paths")
+    for i in range(0, random_path_count):
+        random_paths.append(get_random_path(graph, function_root.node_id, must_contain=None))
 
+    # apply substitutions and set free symbol ranges and distributions
+    if verbose:
+        print("\tApplying substitutions...")
+    for model in random_paths:
+        model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+        model.sequential_costs = model.sequential_costs.subs(substitutions)
+        model.free_symbol_ranges = free_symbol_ranges
+        model.free_symbol_distributions = free_symbol_distributions
+
+    if verbose:
+        print("\tSorting...")
     sorted_list = sorted(random_paths)  # BOTTLENECK!
+    if verbose:
+        print("\tDone.")
     minimum = sorted_list[0]
     maximum = sorted_list[-1]
     median = sorted_list[int(len(sorted_list) / 2)]
@@ -68,14 +83,5 @@ def find_quasi_optimal_using_random_samples(
     print("Par: ", upper_quartile.parallelizable_costs)
     print("Seq: ", upper_quartile.sequential_costs)
     print(upper_quartile.path_decisions)
-
-
-    if plot:  # plot results
-        plot_CostModels(
-            [minimum, maximum, median, lower_quartile, upper_quartile],
-            sorted_free_symbols,
-            free_symbol_ranges,
-            labels=["Minimum", "Maximum", "Median", "25% Quartile", "75% Quartile"],
-        )
 
     return minimum, maximum, median, lower_quartile, upper_quartile
