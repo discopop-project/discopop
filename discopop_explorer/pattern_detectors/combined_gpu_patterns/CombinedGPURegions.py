@@ -385,7 +385,7 @@ class CombinedGPURegion(PatternInfo):
     def to_string(self, pet: PETGraphX):
         contained_regions_str = "\n" if len(self.contained_regions) > 0 else ""
         for region in self.contained_regions:
-            region_str = region.to_string(pet, self.project_folder_path)
+            region_str = region.to_string(pet)
             # pretty printing
             region_str = "".join(["\t" + s + "\n" for s in region_str.split("\n")])
             contained_regions_str += region_str
