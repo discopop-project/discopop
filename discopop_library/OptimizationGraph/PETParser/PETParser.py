@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 from typing import Dict, List, Tuple, Set
 
 import networkx as nx  # type: ignore
@@ -60,6 +61,7 @@ class PETParser(object):
         self.__parse_branched_sections()
         convert_temporary_edges(self.graph)
 
+        self.__mark_branch_affiliation()
         self.__calculate_data_flow()
 
         return self.graph, self.next_free_node_id
@@ -327,6 +329,31 @@ class PETParser(object):
                     self.cu_id_to_graph_node_id[successor_cu_id],
                 )
 
+    def __mark_branch_affiliation(self):
+        """Mark each nodes' branch affiliation to allow a simple check for 'on same branch' relation
+        without considering the successor relation."""
+        def mark_branched_section(node, branch_stack):
+            node_data = data_at(self.graph, node)
+            if isinstance(node_data, ContextSnapshot):
+                branch_stack.append(node)
+            elif isinstance(node_data, ContextSnapshotPop):
+                branch_stack.pop()
+            # mark current node
+            node_data.branch_affiliation = copy.deepcopy(branch_stack)
+
+            # mark children
+            for child in get_children(self.graph, node):
+                mark_branched_section(child, copy.deepcopy(branch_stack))
+
+            # mark successors (at most one successor can exist,
+            # since parallelization suggestions have not been imported yet)
+            for successor in get_successors(self.graph, node):
+                mark_branched_section(successor, copy.deepcopy(branch_stack))
+
+        for function_node in get_all_function_nodes(self.graph):
+            current_node = get_children(self.graph, function_node)[0]
+            mark_branched_section(current_node, [])
+
     def __calculate_data_flow(self):
         self.in_data_flow = dict()
         self.out_data_flow = dict()
@@ -334,11 +361,7 @@ class PETParser(object):
         def inlined_data_flow_calculation(current_node, current_last_writes):
             while current_node is not None:
                 # check if current_node uses written data
-                print("CURRENT: ", current_node)
                 reads, writes = get_read_and_written_data_from_subgraph(self.graph, current_node, ignore_successors=True)
-                print("Reads: ", reads)
-                print("Writes: ", writes)
-                print()
 
                 for mem_reg in current_last_writes:
                     # check if incoming data flow exists
@@ -376,12 +399,7 @@ class PETParser(object):
             last_writes: Dict[MemoryRegion, int] = dict()
             inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
 
-        print("IN DATA FLOW: ", self.in_data_flow)
-        print("OUT DATA FLOW: ", self.out_data_flow)
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
                 if not  self.graph.has_edge(key, entry):
                     add_temporary_edge(self.graph, key, entry)
-        show(self.graph)
-        import sys
-        sys.exit(0)

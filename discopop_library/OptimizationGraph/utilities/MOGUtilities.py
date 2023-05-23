@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import random
-from typing import List, cast, Set, Optional
+from typing import List, cast, Set, Optional, Tuple
 
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
