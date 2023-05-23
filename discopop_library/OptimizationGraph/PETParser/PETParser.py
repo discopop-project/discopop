@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Set
 
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PETGraphX import PETGraphX, FunctionNode, EdgeType, LoopNode, CUNode, NodeID
+from discopop_explorer.PETGraphX import PETGraphX, FunctionNode, EdgeType, LoopNode, CUNode, NodeID, MemoryRegion
 from discopop_explorer.utils import calculate_workload
 from discopop_library.OptimizationGraph.PETParser.DataAccesses.FromCUs import (
     get_data_accesses_for_cu,
@@ -31,7 +31,7 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
     add_child_edge,
     add_temporary_edge,
     redirect_edge,
-    convert_temporary_edges,
+    convert_temporary_edges, show, get_all_function_nodes, get_read_and_written_data_from_subgraph,
 )
 
 
@@ -41,6 +41,8 @@ class PETParser(object):
     next_free_node_id: int
     cu_id_to_graph_node_id: Dict[NodeID, int]
     environment: Environment
+    in_data_flow: Dict[int, Set[int]]
+    out_data_flow: Dict[int, Set[int]]
 
     def __init__(self, pet: PETGraphX, environment: Environment):
         self.pet = pet
@@ -57,6 +59,8 @@ class PETParser(object):
 
         self.__parse_branched_sections()
         convert_temporary_edges(self.graph)
+
+        self.__calculate_data_flow()
 
         return self.graph, self.next_free_node_id
 
@@ -322,3 +326,62 @@ class PETParser(object):
                     self.cu_id_to_graph_node_id[cu_node.id],
                     self.cu_id_to_graph_node_id[successor_cu_id],
                 )
+
+    def __calculate_data_flow(self):
+        self.in_data_flow = dict()
+        self.out_data_flow = dict()
+
+        def inlined_data_flow_calculation(current_node, current_last_writes):
+            while current_node is not None:
+                # check if current_node uses written data
+                print("CURRENT: ", current_node)
+                reads, writes = get_read_and_written_data_from_subgraph(self.graph, current_node, ignore_successors=True)
+                print("Reads: ", reads)
+                print("Writes: ", writes)
+                print()
+
+                for mem_reg in current_last_writes:
+                    # check if incoming data flow exists
+                    if mem_reg in reads or mem_reg in writes:
+                        # uses written data
+                        # create incoming data flow
+                        if current_node not in self.in_data_flow:
+                            self.in_data_flow[current_node] = set()
+                        self.in_data_flow[current_node].add(current_last_writes[mem_reg])
+                        # create outgoing data flow
+                        if current_last_writes[mem_reg] not in self.out_data_flow:
+                            self.out_data_flow[current_last_writes[mem_reg]] = set()
+                        self.out_data_flow[current_last_writes[mem_reg]].add(current_node)
+                # save write to calculate outgoing data flow
+                for mem_reg in writes:
+                    current_last_writes[mem_reg] = current_node
+
+                # inline children
+                for child in get_children(self.graph, current_node):
+                    current_last_writes = inlined_data_flow_calculation(child, current_last_writes)
+
+                # continue to successor
+                successors = get_successors(self.graph, current_node)
+                if len(successors) > 1:
+                    raise ValueError("only a single successor should exist at this stage in the process!")
+                elif len(successors) == 1:
+                    current_node = successors[0]
+                else:
+                    current_node = None
+
+            return current_last_writes
+
+        # Note: at this point in time, the graph MUST NOT have branched sections
+        for function_node in get_all_function_nodes(self.graph):
+            last_writes: Dict[MemoryRegion, int] = dict()
+            inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
+
+        print("IN DATA FLOW: ", self.in_data_flow)
+        print("OUT DATA FLOW: ", self.out_data_flow)
+        for key in self.out_data_flow:
+            for entry in self.out_data_flow[key]:
+                if not  self.graph.has_edge(key, entry):
+                    add_temporary_edge(self.graph, key, entry)
+        show(self.graph)
+        import sys
+        sys.exit(0)
