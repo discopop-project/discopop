@@ -268,6 +268,7 @@ namespace {
 
         void instrumentNewOrMalloc(CallBase *toInstrument);
         void instrumentRealloc(CallBase *toInstrument);
+        void instrumentCalloc(CallBase *toInstrument);
 
         void instrumentDeleteOrFree(CallBase *toInstrument);
 
