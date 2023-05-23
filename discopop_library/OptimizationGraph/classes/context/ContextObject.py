@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple, cast
+from typing import Dict, Set, Tuple, cast, List
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 
@@ -24,12 +24,11 @@ class ContextObject(object):
         self.necessary_updates = set()
         self.last_visited_node_id = initializing_node_id
         self.last_seen_device_id = last_seen_device_id
+        self.snapshot_stack = []  # type: ignore
+        self.save_stack = []  # type: ignore  # list of lists of ContextObjects, one list per branching depth
 
     def __str__(self):
         return str(self.necessary_updates)
-
-    def merge(self, other):
-        raise NotImplementedError("TODO")
 
     def calculate_and_perform_necessary_updates(
         self, node_reads: Set[ReadDataAccess], reading_device_id: int, reading_node_id: int
