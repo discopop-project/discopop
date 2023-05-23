@@ -27,6 +27,5 @@ def import_suggestions(
 
     # import reduction
     for suggestion in detection_result.reduction:
-        # break
         graph = import_reduction(graph, suggestion, get_next_free_node_id_function, environment)
     return graph
