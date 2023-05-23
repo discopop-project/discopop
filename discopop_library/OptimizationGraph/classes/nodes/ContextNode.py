@@ -5,7 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import networkx as nx  # type: ignore
+
+from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
 from discopop_library.OptimizationGraph.Variables.Environment import Environment
+from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
 from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
 
 
@@ -15,3 +19,7 @@ class ContextNode(Workload):
 
     def get_plot_label(self) -> str:
         return str(self.node_id) + "\nCTX"
+
+    def get_modified_context(self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+        print("CONTEXT NODE")
+        return context
