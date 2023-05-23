@@ -45,7 +45,9 @@ class Loop(Workload):
     #   for(100)    --> use 100 instead of 10000
 
     def get_hover_text(self) -> str:
-        return "WL: " + str(self.sequential_workload) + "\n" + "IT: " + str(self.iterations)
+        return ("WL: " + str(self.sequential_workload) + "\n" + "IT: " + str(self.iterations) + "\n"
+    "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
+    "Write: " + str([str(e) for e in self.written_memory_regions]))
 
     def get_cost_model(self) -> CostModel:
         """Performance model of a workload consists of the workload itself.
