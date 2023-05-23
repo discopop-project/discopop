@@ -43,7 +43,7 @@ def __2d_plot(
                 show=False,
                 backend=MB,
                 label=model_label,
-                zlabel="Costs",
+                zlabel="Execution time",
                 title=title,
             )
         else:
@@ -58,7 +58,7 @@ def __2d_plot(
                     show=False,
                     backend=MB,
                     label=model_label,
-                    zlabel="Costs",
+                    zlabel="Execution time",
                 )
             )
     combined_plot.show()  # type: ignore
@@ -90,7 +90,7 @@ def __3d_plot(
                 show=False,
                 backend=MB,
                 label=model_label,
-                zlabel="Costs",
+                zlabel="Execution time",
                 title=title,
             )
         else:
@@ -110,7 +110,7 @@ def __3d_plot(
                     show=False,
                     backend=MB,
                     label=model_label,
-                    zlabel="Costs",
+                    zlabel="Execution time",
                 )
             )
     combined_plot.show()  # type: ignore
