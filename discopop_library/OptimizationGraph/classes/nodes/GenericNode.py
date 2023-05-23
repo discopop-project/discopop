@@ -30,6 +30,8 @@ class GenericNode(object):
     read_memory_regions: Set[ReadDataAccess]
     device_id: DeviceID
 
+    branch_affiliation: List[int]
+
     def __init__(
         self,
         node_id: int,
@@ -45,6 +47,7 @@ class GenericNode(object):
         self.introduced_symbols = []
         self.performance_model = CostModel(Integer(0), Integer(0))
         self.suggestion = None
+        self.branch_affiliation = []
 
         if written_memory_regions is None:
             self.written_memory_regions = set()
