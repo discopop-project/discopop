@@ -587,7 +587,7 @@ static RegisterStandardPasses
 
 static RegisterPass<SkeletonPass> X("SkeletonPass", "Hello",
                                     false /* Only looks at CFG */,
-                                    true /* Analysis Pass */);
+                                    false /* Analysis Pass */);
 
 static RegisterStandardPasses Y(
     PassManagerBuilder::EP_EarlyAsPossible,
