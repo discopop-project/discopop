@@ -239,10 +239,10 @@ long int UID = 0;
 namespace
 {
 
-  struct SkeletonPass : public FunctionPass
+  struct HotspotPass : public FunctionPass
   {
     static char ID;
-    SkeletonPass() : FunctionPass(ID) {}
+    HotspotPass() : FunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override
     {
@@ -569,7 +569,7 @@ namespace
   };
 }
 
-char SkeletonPass::ID = 0;
+char HotspotPass::ID = 0;
 
 // Automatically enable the pass.
 // http://adriansampson.net/blog/clangpass.html
@@ -577,7 +577,7 @@ char SkeletonPass::ID = 0;
 /*
 static void registerSkeletonPass(const PassManagerBuilder &,
                          legacy::PassManagerBase &PM) {
-  PM.add(new SkeletonPass());
+  PM.add(new HotspotPass());
 }
 static RegisterStandardPasses
   RegisterMyPass(PassManagerBuilder::EP_EarlyAsPossible,
@@ -585,7 +585,7 @@ static RegisterStandardPasses
 
 */
 
-static RegisterPass<SkeletonPass> X("SkeletonPass", "Hello",
+static RegisterPass<HotspotPass> X("HotspotDetection", "Records runtimes of loops and functions",
                                     false /* Only looks at CFG */,
                                     false /* Analysis Pass */);
 
@@ -593,4 +593,4 @@ static RegisterStandardPasses Y(
     PassManagerBuilder::EP_EarlyAsPossible,
     [](const PassManagerBuilder &Builder,
        legacy::PassManagerBase &PM)
-    { PM.add(new SkeletonPass()); });
+    { PM.add(new HotspotPass()); });

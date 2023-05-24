@@ -335,7 +335,7 @@ $LLVM_DIS ${EXECUTABLE_NAME}.bc -o ${EXECUTABLE_NAME}.ll
 
 # Run HotspotDetection Pass
 log -i "Running HotspotDetection Pass to analyze and instrument your application..."
-$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMHotspotDetection.so -SkeletonPass ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_hotspot.ll
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMHotspotDetection.so -HotspotDetection ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_hotspot.ll
 
 log -i "Creating Executable..."
 $LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_hotspot.ll -o  ${EXECUTABLE_NAME}_hotspot.o
