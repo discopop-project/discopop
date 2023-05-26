@@ -178,7 +178,6 @@ while [[ $# -gt 0 ]]; do
           EXEC_ARGS+=("$1")
           shift
       done
-      echo ${EXEC_ARGS[@]}
       EXECUTABLE_ARGUMENTS="${EXEC_ARGS[0]}"
       ;;
     --make-flags)
@@ -310,17 +309,6 @@ fi
 
 cd $PROJECT
 
-
-# cleanup
-# TODO removing this cleanup should be possible because we are working on a fresh copy
-# TODO but we should check that none of these files already exist inside the project
-rm -f $PROJECT/Data.xml
-rm -f $PROJECT/loop_counter_output.xml
-rm -f $PROJECT/reduction.txt
-rm -f $PROJECT/DP_CUIDCounter.txt
-rm -f $PROJECT/patterns.txt
-rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
-
 # build using gllvm as compiler
 log -i "Building your application..."
 log_or_fail -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
@@ -354,6 +342,7 @@ do
   log -i "Running instrumented application to detect hotspots... ($(($i+1)) / $arraylength)"
   log -d "executable arguements: ${EXEC_ARGS[$i]}"
   log_or_fail -d "$(./${EXECUTABLE_NAME}_hotspot ${EXEC_ARGS[$i]})"
+  log -v "HotspotDetection result:"
+  log -v "$(cat result.txt)"
+  mv result.txt hotspot_result_${i}.txt
 done
-
-
