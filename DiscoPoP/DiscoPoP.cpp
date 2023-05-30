@@ -418,7 +418,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                          map <string, vector<CU *>> &BBIDToCUIDsMap,
                          Node *root, LoopInfo &LI) {
 
-    errs() << "Function completed\n";
     const DataLayout *DL =
             &ThisModule->getDataLayout(); // used to get data size of variables,
     // pointers, structs etc.
@@ -519,7 +518,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                         // create new CU if the old one contains any instruction
                         if ((! cu->readPhaseLineNumbers.empty()) || (! cu->writePhaseLineNumbers.empty()) || (! cu->returnInstructions.empty())) {
                             cu->startLine = *(cu->instructionsLineNumbersList.begin());
-                            cu->endLine = *(cu->instructionsLineNumbersList.rbegin());
+                            cu->endLine = *(cu->instructionsLineNumbersSet.rbegin());
 
                             if(!cu->columnSet.empty()) {
                                 // Added for matching with AST nodes
@@ -618,7 +617,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
                             cu->endLine = -1;
                         } else {
                             cu->startLine = *(cu->instructionsLineNumbersList.begin());
-                            cu->endLine = *(cu->instructionsLineNumbersList.rbegin());
+                            cu->endLine = *(cu->instructionsLineNumbersSet.rbegin());
                             if(!cu->columnSet.empty()) {
                                 // Added for matching with AST nodes
                                 cu->startColumn = (*(cu->columnList.begin())).second;
@@ -696,26 +695,13 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             cu->startLine = -1;
             cu->endLine = -1;
         } else {
-            errs() << "-1\n";
             // Adjusted for matching with AST nodes
             cu->startLine = *(cu->instructionsLineNumbersList.begin());
-            errs() << "0\n";
-            cu->endLine = *(cu->instructionsLineNumbersList.rbegin());
-            errs() << "1\n";
-            errs() << "startLine was " << decodeLID(cu->startLine) << "\n";
-            errs() << "endLine was " << decodeLID(cu->endLine) << "\n";
-            // This check avoids a segmentation fault, but I don't understand why
-            /*if (cu->endLine < cu->startLine) {
-                cout << "endLine was " << decodeLID(cu->endLine) << "\n";
-                cu->endLine = *(cu->instructionsLineNumbersSet.rbegin());
-            }*/
-            errs() << "2\n";
+            cu->endLine = *(cu->instructionsLineNumbersSet.rbegin());
             if(!cu->columnSet.empty()) {
                 // Added for matching with AST nodes
-            errs() << "3\n";
                 cu->startColumn = (*(cu->columnList.begin())).second;
             }
-            errs() << "4\n";
         }
 
         cu->basicBlockName = basicBlockName;
@@ -820,7 +806,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set <string> &globalVariablesSet,
             }
         }
     }
-    errs() << "Function completed\n";
 }
 
 void DiscoPoP::fillCUVariables(Region *TopRegion,
@@ -833,6 +818,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
     // Changed TerminatorInst to Instuction
     const Instruction *TInst;
     string successorBB;
+
 
     for (Region::block_iterator bb = TopRegion->block_begin();
          bb != TopRegion->block_end(); ++bb) {
@@ -849,6 +835,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
         }
 
         auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
+        bool bbCUInvalid = false;
         for (BasicBlock::iterator instruction = (*bb)->begin();
              instruction != (*bb)->end(); ++instruction) {
             if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
@@ -875,16 +862,25 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
 
                 Variable v(varName, varType, varDefLine, readAccess, writeAccess, varSizeInBytes);
 
-                errs() << "A\n";
+                if(bbCUInvalid){
+                    continue;
+                }
                 if (lid > (*bbCU)->endLine) {
                     bbCU = next(bbCU, 1);
+
+                    if( bbCU == BBIDToCUIDsMap[bb->getName().str()].end()){
+                        bbCUInvalid = true;
+                    }
                 }
-                errs() << "B\n";
-                if (globalVariablesSet.count(varName) ||
-                    programGlobalVariablesSet.count(varName)) {
-                    (*bbCU)->globalVariableNames.insert(v);
-                } else {
-                    (*bbCU)->localVariableNames.insert(v);
+
+                // check if bbCU has a proper value and is not out of bounds
+                if (bbCU != BBIDToCUIDsMap[bb->getName().str()].end()){
+                    if ((globalVariablesSet.count(varName) ||
+                        programGlobalVariablesSet.count(varName))) {
+                        (*bbCU)->globalVariableNames.insert(v);
+                    } else {
+                        (*bbCU)->localVariableNames.insert(v);
+                    }
                 }
             }
         }
@@ -2174,13 +2170,10 @@ bool DiscoPoP::runOnFunction(Function &F) {
         populateGlobalVariablesSet(TopRegion, globalVariablesSet);
 
         createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
-        errs() << "a\n";
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
-        errs() << "b\n";
         fillStartEndLineNumbers(root, LI);
 
-        errs() << "c\n";
         secureStream();
 
         // printOriginalVariables(originalVariablesSet);
