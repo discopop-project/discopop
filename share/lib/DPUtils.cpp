@@ -107,14 +107,24 @@ namespace dputil {
     int getColumn(Instruction *BI) {
         const DebugLoc &location = BI->getDebugLoc();
 
-        BI->print(errs());
+        //BI->print(errs());
 
-        if (location && !isa<BranchInst>(BI)) {
-            errs() << " (" << BI->getDebugLoc().getLine() << ", " << BI->getDebugLoc().getCol() << ")\n";
+        if (location) {
+            //errs() << " (" << BI->getDebugLoc().getLine() << ", " << BI->getDebugLoc().getCol() << ")\n";
             return BI->getDebugLoc().getCol();
         }
+        /*else if (isa<BranchInst>(BI)) {
+            Instruction* prev_ins = BI->getPrevNode();
+            DebugLoc prev_loc = prev_ins->getDebugLoc();
+            errs() << "\n\nBranch\n";
+            while (prev_ins) {
+                prev_ins->print(errs());
+                errs() << "\n";
+                prev_ins = prev_ins->getPrevNode();
+            }
+        }*/
         
-        errs() << " error\n";
+        //errs() << " error\n";
 
         /*Instruction* next_inst = BI->getNextNode();
         if(next_inst)
