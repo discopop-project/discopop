@@ -20,6 +20,8 @@ def from_pattern_info(
     patterns_by_type: Dict[str, List[PatternInfo]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
+    CC="clang",
+    CXX="clang++",
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -34,7 +36,6 @@ def from_pattern_info(
             pattern_json_strings_by_type[type_str] = []
         for pattern in patterns_by_type[type_str]:
             pattern_json_strings_by_type[type_str].append(pattern.to_json())
-
     return from_json_strings(
         file_mapping,
         pattern_json_strings_by_type,
@@ -48,6 +49,8 @@ def from_json_strings(
     pattern_json_strings_by_type: Dict[str, List[str]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
+    CC="clang",
+    CXX="clang++",
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -92,6 +95,8 @@ def from_json_strings(
                 [],
                 skip_compilation_check=skip_compilation_check,
                 compile_check_command=compile_check_command,
+                CC=CC,
+                CXX=CXX,
             )
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
@@ -101,6 +106,8 @@ def from_json_strings(
                     [],
                     add_as_comment=True,
                     compile_check_command=compile_check_command,
+                    CC=CC,
+                    CXX=CXX,
                 )
 
     # create the resulting dictionary by assembling the contents of the ContentBuffer objects
