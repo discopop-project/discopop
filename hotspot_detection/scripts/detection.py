@@ -1,19 +1,18 @@
 import os.path
-import math
-import numpy
+from typing import List
 
-inf = math.inf
+inf = float('inf')
 
 class cs:
 	def __init__(self, csid):
+		self.csid = csid # note: csid is a unique identifier
 		self.typ = False # function is false, loop is true
-		self.fid = 0
-		self.csid = csid # note: csid is unique
-		self.lineNum = 0
-		self.name = ""
-		self.result = []	  
+		self.fid = 0 # file id
+		self.lineNum = 0 # line number
+		self.name = "" # only for functions: name of function
+		self.result = [] # runtimes
 		self.level = 0
-		self.hot = True 
+		self.hot = True
 
 	delta = -1.0
 	avr = 0.0
@@ -27,7 +26,6 @@ class cs:
 	def addData(self,runtime):
 		self.result.append(runtime)
 
-
 	def addInfo(self, tp, linN, filN, namN):
 		self.typ = tp
 		self.lineNum = linN
@@ -36,7 +34,6 @@ class cs:
 
 	def updateLevel(self,lvl):
 		self.level = lvl 
-
 
 	def calMin(self):
 		for x in self.result:
@@ -54,7 +51,6 @@ class cs:
 		self.delta = self.maxVal - self.minVal
 
 	def calRatio(self):
-
 		self.ratio = 1 / ((self.minVal / self.maxVal)+1) 
 
 	def calAvr(self):
@@ -63,8 +59,6 @@ class cs:
 			tempSum += i
 		self.avr = tempSum / len(self.result)
 		self.summ = tempSum
-
-
 
 	def isHot(self,bl):
 		self.hot = bl
@@ -76,9 +70,9 @@ class cs:
 		self.topRatio = bl
 
 
-
-cslist =[]
-
+## CS LIST
+# TODO turn this into a Dict
+cslist: List[cs] = []
 
 def findCs(iid):
 	for x in cslist:
@@ -99,15 +93,12 @@ def getSum(lst):
 		hotSum += i.avr 
 	return hotSum
 
-idfile = open('result_1.txt','r') 
+
+## READ FILES
+idfile = open('hotspot_result_1.txt','r') 
 for line in idfile:
-	temp = []
-	for word in line.split():
-		temp.append(word)
-	
-	c = cs(int(temp[0]))
+	c = cs(int(line.split()[0]))
 	cslist.append(c)
-	
 idfile.close()
 
 i = 0 
@@ -116,7 +107,7 @@ minData = inf
 maxData = 0
 while True:
 	i += 1
-	fileName = "result_" + str(i) + ".txt"
+	fileName = "hotspot_result_" + str(i) + ".txt"
 	if os.path.exists(fileName):
 		#print("a file")
 		pass 
@@ -145,10 +136,11 @@ for line in csfile:
 		tempCs.addInfo(False, int(temp[2]), int(temp[3]), 'func')
 	if temp[1] == 'loop':
 		tempCs.addInfo(True, int(temp[2]), int(temp[3]), 'loop')
-
-	
 csfile.close()
 
+
+
+## CALCULATE
 vMAX = 0
 vMIN = inf
 dMAX = 0
@@ -234,6 +226,7 @@ totalAvrMean = totalAvrSum / len(NZcslist)
 totalRatioMean = totalRatioSum / len(NZcslist)
 
 
+# classify
 for x in sortedCsAvr:
 	if ( x.avr >= totalAvrMean ):
 		x.isTopAvr(True)
@@ -242,20 +235,21 @@ for x in sortedCsRatio:
 	if ( x.ratio >= totalRatioMean ):
 		x.isTopRatio(True)
 
+# print
 for x in NZcslist:
 	print("##cs lists: ", x.typ, " ", x.csid, " ", x.fid, " " , x.result ,  " avr: ", x.avr, " sum:", x.summ, " ratio: ", x.ratio, " min: ", x.minVal," max: ", x.maxVal, " topAvr: ", x.topAvr, " topRatio: " , x.topRatio, "\n")
 print(len(NZcslist))
-
 print(totalRatioMean)
 
 counterY = 0
-counterN = 0
 counterM = 0
+counterN = 0
 
 
-f = open("Hotspots.txt","w")
+## WRITE OUT RESULTS
 
 # Hotspots based on my definition
+f = open("Hotspots.txt","w")
 f.write("Is this code region a hotspot? \n")
 for x in NZcslist:
 	if (x.topAvr == True and x.topRatio == True):

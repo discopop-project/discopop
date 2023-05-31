@@ -346,3 +346,6 @@ do
   log -v "$(cat result.txt)"
   mv result.txt hotspot_result_${i}.txt
 done
+
+# Run the python module that creates the hotspot report
+python3 $DP_BUILD/scripts/detection.py > detection_report.txt
