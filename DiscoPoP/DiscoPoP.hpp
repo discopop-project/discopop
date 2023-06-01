@@ -152,7 +152,6 @@ namespace {
         // Added for matching with AST nodes
         // a set to collect column numbers for instructions, similar to cu->instructionsLineNumbers
         // column is paired with corresponding line id to associate column numbers with lines
-        vector<std::pair<int, int>> columnList;
         set<std::pair<int, int>> columnSet;
 
         unsigned readDataSize;  // number of bytes read from memory by the cu
@@ -163,10 +162,7 @@ namespace {
         vector <string> successorCUs; // keeps IDs of control dependent CUs
         string basicBlockName;
 
-        // For the line numbers, a set and a list are used, such that every line appears only
-        // once and they appear in the order they are encountered
-        vector<int> instructionsLineNumbersList;
-        set<int> instructionsLineNumbersSet;
+        set<int> instructionsLineNumbers;
         set<int> readPhaseLineNumbers;
         set<int> writePhaseLineNumbers;
         set<int> returnInstructions;
@@ -396,7 +392,7 @@ namespace {
 
         void secureStream();
 
-        string getLineNumbersString(vector<int> LineNumbers);
+        string getLineNumbersString(set<int> LineNumbers);
 
         string getChildrenNodesString(Node *node);
 
