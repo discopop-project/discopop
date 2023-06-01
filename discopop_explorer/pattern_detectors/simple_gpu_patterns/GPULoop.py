@@ -215,7 +215,7 @@ class GPULoopPattern(PatternInfo):
             self.reduction_vars_ids: List[Variable] = []
         else:
             self.reduction_vars_str: List[str] = [
-                v.operation + ":" + v.name for v in reduction_vars
+                cast(str, v.operation) + ":" + v.name for v in reduction_vars
             ]
             self.reduction_vars_ids: List[Variable] = reduction_vars
         self.iteration_count = 0
