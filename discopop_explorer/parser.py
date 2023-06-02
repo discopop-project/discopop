@@ -35,7 +35,7 @@ class DependenceItem(object):
 
 
 # TODO move this class to a better place, we need it not only for parsing
-@dataclass(frozen=True)
+@dataclass
 class LoopData(object):
     line_id: str  # file_id:line_nr
     total_iteration_count: int
