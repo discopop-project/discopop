@@ -52,36 +52,5 @@ def find_quasi_optimal_using_random_samples(
     median = sorted_list[int(len(sorted_list) / 2)]
     upper_quartile = sorted_list[int(len(sorted_list) / 4 * 3)]
     lower_quartile = sorted_list[int(len(sorted_list) / 4 * 1)]
-    # plot minimum, maximum and median
-
-    print()
-    print("Maximum:")
-    print("Par: ", maximum.parallelizable_costs)
-    print("Seq: ", maximum.sequential_costs)
-    print(maximum.path_decisions)
-
-    print()
-    print("Median:")
-    print("Par: ", median.parallelizable_costs)
-    print("Seq: ", median.sequential_costs)
-
-    print(median.path_decisions)
-    print()
-    print("Minimum:")
-    print("Par: ", minimum.parallelizable_costs)
-    print("Seq: ", minimum.sequential_costs)
-    print(minimum.path_decisions)
-
-    print()
-    print("25% Quartile:")
-    print("Par: ", lower_quartile.parallelizable_costs)
-    print("Seq: ", lower_quartile.sequential_costs)
-    print(lower_quartile.path_decisions)
-
-    print()
-    print("75% Quartile:")
-    print("Par: ", upper_quartile.parallelizable_costs)
-    print("Seq: ", upper_quartile.sequential_costs)
-    print(upper_quartile.path_decisions)
 
     return minimum, maximum, median, lower_quartile, upper_quartile

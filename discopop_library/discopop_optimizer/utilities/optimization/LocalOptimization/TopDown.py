@@ -37,7 +37,6 @@ def get_locally_optimized_models(
 
         # create performance models for individual options of decisions
         for decision_options in decisions_to_be_made:
-            print("Decision options: ", decision_options)
             decision_models: List[Tuple[int, Tuple[CostModel, ContextObject]]] = []
             for decision in decision_options:
                 try:
@@ -68,12 +67,6 @@ def get_locally_optimized_models(
                     print("==> Ignoring Decision: ", decision)
                     continue
 
-            #            print("Decisions MODELS: ")
-            #            for model in decision_models:
-            #                print()
-            #                print(model.path_decisions)
-            #                print(model.sequential_costs + model.parallelizable_costs)
-
             # apply variable substitutions
             for decision, pair in decision_models:
                 model, context = pair
@@ -92,21 +85,12 @@ def get_locally_optimized_models(
                 model, context = pair
                 unpacked_models.append((decision, model))
             minimum = sorted(unpacked_models, key=lambda x: x[1])[0]
-            print()
-            print("MINIMUM: ", minimum)
-            print("DEC: ", minimum[0])
-            print("PATH: ", minimum[1].path_decisions)
-            print()
             locally_optimal_choices.append(minimum[0])
-
-        print("FUNCTION: ", function_node)
-        print("\tChoices: ", locally_optimal_choices)
 
         # construct locally optimal model
         performance_models = get_node_performance_models(
             graph, function_node, set(), restrict_to_decisions=set(locally_optimal_choices)
         )
-        print("GOT: ", [p.path_decisions for p in performance_models])
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(
             graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}
@@ -117,12 +101,6 @@ def get_locally_optimized_models(
             graph, performance_models_with_transfers, environment
         )
         result_dict = result_dict | complete_performance_models
-
-    print(result_dict)
-    for key in result_dict:
-        print("KEY: ", key)
-        for entry in result_dict[key]:
-            print("ENTRY: ", entry[0].path_decisions)
 
     return result_dict
 

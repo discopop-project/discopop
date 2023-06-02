@@ -111,8 +111,6 @@ def show(graph):
 
     :return:
     """
-    # print("showing")
-    # plt.plot()
     fig, ax = plt.subplots()
     try:
         pos = nx.planar_layout(graph)  # good
@@ -370,10 +368,5 @@ def get_read_and_written_data_from_subgraph(
     written_memory_regions.update(
         [write_access.memory_region for write_access in node_data.written_memory_regions]
     )
-
-    print("NODE: ", node_id)
-    print("\tWritten: ", written_memory_regions)
-    print("\tRead: ", read_memory_regions)
-    print()
 
     return read_memory_regions, written_memory_regions
