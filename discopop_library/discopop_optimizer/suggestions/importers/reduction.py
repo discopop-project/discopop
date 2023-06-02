@@ -30,14 +30,6 @@ def import_suggestion(
             for device_id in reduction_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
-                print(
-                    "Reduction @ ",
-                    new_node_id,
-                    " @ CUID: ",
-                    suggestion.node_id,
-                    " @ Device: ",
-                    device_id,
-                )
                 # copy data from existing node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
                 # set the device id for the suggestion
@@ -94,8 +86,6 @@ def get_cost_multiplier(
     multiplier = Integer(1) / thread_count
     cm = CostModel(multiplier, Integer(1))
 
-    print("\tcost multiplier: ", multiplier)
-
     # return cm, [thread_count]
     return cm, []
 
@@ -127,8 +117,6 @@ def get_overhead_term(
 
     # add weight to overhead
     overhead *= environment.reduction_overhead_weight_by_device[device_id]
-
-    print("\toverhead: ", overhead)
 
     cm = CostModel(Integer(0), overhead)
     # add weight to overhead

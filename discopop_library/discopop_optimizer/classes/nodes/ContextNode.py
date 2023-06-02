@@ -25,5 +25,4 @@ class ContextNode(Workload):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        print("CONTEXT NODE")
         return context

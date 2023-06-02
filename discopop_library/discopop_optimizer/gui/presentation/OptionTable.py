@@ -146,7 +146,7 @@ def add_random_models(
         sorted_free_symbols,
         free_symbol_ranges,
         free_symbol_distributions,
-        verbose=True,
+        verbose=False,
     )
     options.append((minimum, "Rand Minimum"))
     options.append((maximum, "Rand Maximum"))

@@ -80,13 +80,6 @@ class OptimizationGraph(object):
         #            self.graph, function_performance_models_with_transfers, environment
         #        )
 
-        #        print("FUNCTION PERFORMANCE MODELS: ")
-        #        for idx, function in enumerate(complete_performance_models):
-        #            for midx, pair in enumerate(complete_performance_models[function]):
-        #                model, context = pair
-        #                print(str(idx) + "-" + str(midx) + ":")
-        #                model.print()
-
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
 
@@ -102,7 +95,6 @@ class OptimizationGraph(object):
         #                free_symbols.update(cast(List[Symbol], model.sequential_costs.free_symbols))
         #                suggested_values = suggested_values | model.symbol_value_suggestions
         sorted_free_symbols = sorted(list(environment.free_symbols), key=lambda x: x.name)
-        print("Free Symbols: ", sorted_free_symbols)
 
         # query user for values for free symbols
         query_results = query_user_for_symbol_values(
@@ -114,7 +106,6 @@ class OptimizationGraph(object):
             else:
                 free_symbol_ranges[symbol] = (start_value, end_value)
                 free_symbol_distributions[symbol] = symbol_distribution
-        print("subs: ", substitutions)
 
         # apply substitutions and un-mark substituted free symbols
         #        for idx, function in enumerate(complete_performance_models):
@@ -163,20 +154,6 @@ class OptimizationGraph(object):
         random_paths = 50
         #        for function in complete_performance_models:
         for function in locally_optimized_models:
-            print("Function: ", function.name)
-            #            (
-            #                minimum,
-            #                maximum,
-            #                median,
-            #                lower_quartile,
-            #                upper_quartile,
-            #            ) = find_quasi_optimal_using_random_samples(
-            #                [pair[0] for pair in complete_performance_models[function]],
-            #                random_paths,
-            #                sorted_free_symbols,
-            #                free_symbol_ranges,
-            #                plot=False,
-            #            )
             # show table of options
             options: List[Tuple[CostModel, str]] = []
             #            options.append((minimum, "Minimum"))

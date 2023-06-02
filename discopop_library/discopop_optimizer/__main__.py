@@ -76,5 +76,6 @@ def main():
     # invoke optimization graph
     optimization_graph = OptimizationGraph(detection_result, arguments["--project-folder"])
 
+
 if __name__ == "__main__":
     main()
