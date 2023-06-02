@@ -5,6 +5,7 @@ import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
@@ -82,6 +83,9 @@ def show_options(
             ),
         )
         details_button.grid(row=0, column=1)
+
+        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option: export_code(graph, option))  # type: ignore
+        export_code_button.grid(row=0, column=2)
 
     Button(
         root,

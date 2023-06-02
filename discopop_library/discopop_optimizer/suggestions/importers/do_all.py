@@ -48,6 +48,7 @@ def import_suggestion(
                 ).iterations_symbol
                 # add suggestion to node data
                 node_data_copy.suggestion = suggestion
+                node_data_copy.suggestion_type = "do_all"
                 # add the cost multiplier to represent the effects of the suggestion
                 (
                     cast(Workload, node_data_copy).cost_multiplier,
@@ -100,11 +101,10 @@ def get_cost_multiplier(
     A CostModel object is used to store the information on the path selection.
     Returns the multiplier and the list of introduces symbols
     Multiplier for Do-All:
-        1 / OMP ThreadCount"""
+        1 / Thread_count"""
     # get device specifications
 
-    # thread_count = Symbol("thread_count_do_all_" + str(node_id))
-    thread_count = environment.thread_counts_by_device[device_id]
+    thread_count = environment.get_system().get_device(device_id).get_thread_count()
 
     multiplier = Integer(1) / thread_count
     cm = CostModel(multiplier, Integer(1))
@@ -127,7 +127,7 @@ def get_overhead_term(
                                               * log2(Workload) ^ (1) * Iterations ^ (5 / 4)
                                               + 0.0002157726704611484 * log2(Threads) ^ (1)
                                               * Workload ^ (1) * log2(Workload) ^ (1)"""
-    thread_count = environment.thread_counts_by_device[device_id]
+    thread_count = environment.get_system().get_device(device_id).get_thread_count()
     overhead = Float(11.95830999763869)
     overhead += (
         (Float(7.119516221079432) ** (-7))

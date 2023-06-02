@@ -39,10 +39,13 @@ class UnpackedSuggestion(object):
         self.start_line = int(self.values["start_line"].split(":")[1])
         self.end_line = int(self.values["end_line"].split(":")[1])
 
-    def __get_do_all_and_reduction_pragmas(self) -> List[Pragma]:
+    def __get_do_all_and_reduction_pragmas(self, is_gpu_pragma: bool) -> List[Pragma]:
         pragmas = []
         pragma = Pragma()
-        pragma.pragma_str = "#pragma omp parallel for "
+        if is_gpu_pragma:
+            pragma.pragma_str = "#pragma omp target teams distribute parallel for "
+        else:
+            pragma.pragma_str = "#pragma omp parallel for "
         if len(self.values["first_private"]) > 0:
             pragma.pragma_str += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
         if len(self.values["private"]) > 0:
@@ -346,8 +349,8 @@ class UnpackedSuggestion(object):
     def get_pragmas(self) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
-        if self.type == "do_all" or self.type == "reduction":
-            pragmas += self.__get_do_all_and_reduction_pragmas()
+        if self.type in ["do_all", "reduction", "gpu_do_all", "gpu_reduction"]:
+            pragmas += self.__get_do_all_and_reduction_pragmas("gpu_" in self.type)
             return pragmas
         elif self.type == "pipeline":
             pragmas += self.__get_pipeline_pragmas()

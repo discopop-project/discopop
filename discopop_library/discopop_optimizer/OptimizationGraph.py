@@ -47,9 +47,7 @@ class OptimizationGraph(object):
     graph: nx.DiGraph
     next_free_node_id: int
 
-    def __init__(self, detection_result, project_folder_path):
-        # define Environment
-        environment = Environment(project_folder_path)
+    def __init__(self, detection_result, project_folder_path, environment: Environment):
         # construct optimization graph from PET Graph
         self.graph, self.next_free_node_id = PETParser(detection_result.pet, environment).parse()
 
@@ -104,8 +102,10 @@ class OptimizationGraph(object):
             if value is not None:
                 substitutions[symbol] = Float(value)
             else:
-                free_symbol_ranges[symbol] = (start_value, end_value)
-                free_symbol_distributions[symbol] = symbol_distribution
+                free_symbol_ranges[symbol] = (cast(float, start_value), cast(float, end_value))
+                free_symbol_distributions[symbol] = cast(
+                    FreeSymbolDistribution, symbol_distribution
+                )
 
         # apply substitutions and un-mark substituted free symbols
         #        for idx, function in enumerate(complete_performance_models):

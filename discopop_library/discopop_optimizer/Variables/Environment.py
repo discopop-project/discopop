@@ -5,6 +5,8 @@ from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
+from discopop_library.discopop_optimizer.classes.system.System import System
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class Environment(object):
@@ -20,25 +22,9 @@ class Environment(object):
         1: Integer(300),
     }
 
-    # transfer_speeds: {source_device: {target_device: transfer speed}} (MB/s)
-    same_device_transfer_speed: Expr = Integer(100000)
-    transfer_speeds: Dict[int, Dict[int, Expr]] = {
-        0: {0: same_device_transfer_speed, 1: Integer(10)},
-        1: {0: Integer(10), 2: same_device_transfer_speed},
-    }
-    # transfer initialization cost (static costs to start a transfer between the specified devices)
-    transfer_initialization_costs: Dict[int, Dict[int, Expr]] = {
-        0: {0: Integer(0), 1: Integer(1000000)},
-        1: {0: Integer(1000000), 1: Integer(0)},
-    }
-
-    # thread number spawned by openmp parallel for and reduction pragmas
-    thread_counts_by_device: Dict[int, Expr] = {
-        0: Symbol("CPU_thread_num"),
-        1: Symbol("GPU_thread_num"),
-    }
-
     ## END OF SETTINGS
+
+    __system: System
 
     # all free symbols will be added to this list for simple retrieval and user query
     free_symbols: Set[Symbol] = set()
@@ -47,16 +33,18 @@ class Environment(object):
 
     __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
 
-    def __init__(self, project_folder_path):
+    def __init__(self, project_folder_path, system: System):
+        self.__system = system
+
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
             os.path.join(project_folder_path, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
 
-        # add thread counts to free_symbols
-        for key in self.thread_counts_by_device:
-            self.register_free_symbol(cast(Symbol, self.thread_counts_by_device[key]))
+        # collect free symbols from system
+        for free_symbol, value_suggestion in system.get_free_symbols():
+            self.register_free_symbol(free_symbol, value_suggestion)
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False
@@ -79,3 +67,6 @@ class Environment(object):
         self.free_symbols.add(symbol)
         if value_suggestion is not None:
             self.suggested_values[symbol] = value_suggestion
+
+    def get_system(self) -> System:
+        return self.__system
