@@ -102,15 +102,18 @@ class ContextObject(object):
         symbol_value_suggestions = dict()
         for update in self.necessary_updates:
             # add static costs incurred by the transfer initialization
-            initialization_costs = environment.transfer_initialization_costs[
-                cast(int, update.source_device_id)
-            ][cast(int, update.target_device_id)]
+            system = environment.get_system()
+            source_device = system.get_device(cast(int, update.source_device_id))
+            target_device = system.get_device(cast(int, update.target_device_id))
+            initialization_costs = system.get_network().get_transfer_initialization_costs(
+                source_device, target_device
+            )
+
             total_transfer_costs += initialization_costs
 
             # add costs incurred by the transfer itself
-            transfer_speed = environment.transfer_speeds[cast(int, update.source_device_id)][
-                cast(int, update.target_device_id)
-            ]
+            transfer_speed = system.get_network().get_transfer_speed(source_device, target_device)
+
             # value suggestion used for symbolic values
             transfer_size, value_suggestion = environment.get_memory_region_size(
                 update.write_data_access.memory_region,

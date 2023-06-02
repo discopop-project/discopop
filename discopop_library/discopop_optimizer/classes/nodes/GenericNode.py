@@ -47,6 +47,7 @@ class GenericNode(object):
         self.introduced_symbols = []
         self.performance_model = CostModel(Integer(0), Integer(0))
         self.suggestion = None
+        self.suggestion_type: Optional[str] = None
         self.branch_affiliation = []
 
         if written_memory_regions is None:

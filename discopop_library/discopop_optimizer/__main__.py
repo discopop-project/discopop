@@ -17,21 +17,19 @@ OPTIONAL ARGUMENTS:
     -h --help                   Show this screen
 """
 import os
-import sys
-from typing import Dict, List, cast
 
 import jsonpickle  # type: ignore
 import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
+from sympy import Symbol, Integer
 
 from discopop_explorer import DetectionResult
-from discopop_library.CodeGenerator.CodeGenerator import (
-    from_json_strings as generate_code_from_json_strings,
-)
-from discopop_library.FileMapping.FileMapping import load_file_mapping
-from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.system.System import System
+from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
+from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 
 docopt_schema = Schema({"--project-folder": Use(str), "--detection-result-dump": Use(str)})
 
@@ -73,8 +71,27 @@ def main():
     detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
     print("Done")
 
+    # define System
+    system = System()
+    device_0 = CPU(Symbol("CPU_thread_num"), Symbol("CPU_thread_num"))
+    device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"))
+    system.add_device(device_0)
+    system.add_device(device_1)
+    # define Network
+    network = system.get_network()
+    network.add_connection(device_0, device_0, Integer(100000), Integer(0))
+    network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
+    network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
+    network.add_connection(device_1, device_1, Integer(100000), Integer(0))
+
+    # define Environment
+    # todo rename to Experiment
+    environment = Environment(arguments["--project-folder"], system)
+
     # invoke optimization graph
-    optimization_graph = OptimizationGraph(detection_result, arguments["--project-folder"])
+    optimization_graph = OptimizationGraph(
+        detection_result, arguments["--project-folder"], environment
+    )
 
 
 if __name__ == "__main__":
