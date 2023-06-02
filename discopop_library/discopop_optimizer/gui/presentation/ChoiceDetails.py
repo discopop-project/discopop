@@ -2,16 +2,18 @@ from typing import Optional
 
 import networkx as nx  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 
 from tkinter import *
 
-from discopop_library.OptimizationGraph.gui.widgets.ScrollableFrame import ScrollableFrameWidget
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
 
-def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title: Optional[str] = None):
+def display_choices_for_model(
+    graph: nx.DiGraph, model: CostModel, window_title: Optional[str] = None
+):
     root = Tk()
     if window_title is not None:
         root.configure()
@@ -79,8 +81,4 @@ def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title:
 
     scrollable_frame_widget.finalize(len(model.path_decisions))
 
-
-
     pass
-
-

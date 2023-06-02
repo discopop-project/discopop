@@ -5,8 +5,8 @@ from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 
-from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
-from discopop_library.OptimizationGraph.gui.widgets.ScrollableFrame import ScrollableFrameWidget
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 
 
 def query_user_for_symbol_values(

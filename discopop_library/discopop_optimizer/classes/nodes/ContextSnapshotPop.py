@@ -7,10 +7,10 @@
 # directory for details.
 import networkx as nx  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
-from discopop_library.OptimizationGraph.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 
 
 class ContextSnapshotPop(ContextNode):
@@ -20,8 +20,9 @@ class ContextSnapshotPop(ContextNode):
     def get_plot_label(self) -> str:
         return str(self.node_id) + "\nCTX\nsnap pop"
 
-    def get_modified_context(self, node_id: int, graph: nx.DiGraph, model: CostModel,
-                             context: ContextObject) -> ContextObject:
+    def get_modified_context(
+        self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+    ) -> ContextObject:
         context.snapshot_stack.pop()
         context.save_stack.pop()
         return context

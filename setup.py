@@ -16,6 +16,7 @@ os.chdir(Path(__file__).parent)
 Explorer_SRC = Path("discopop_explorer")
 Wizard_SRC = Path("discopop_wizard")
 CodeGen_SRC = Path("discopop_library/CodeGenerator")
+Optimizer_SRC = Path("discopop_library/discopop_optimizer")
 
 
 def get_version():
@@ -30,6 +31,9 @@ def get_requirements():
         requirements += [line.rstrip() for line in f]
     # add discopop_wizard requirements
     with open(Wizard_SRC / "requirements.txt") as f:
+        requirements += [line.rstrip() for line in f]
+    # add discopop_optimizer requirements
+    with open(Optimizer_SRC / "requirements.txt") as f:
         requirements += [line.rstrip() for line in f]
     return requirements
 
@@ -56,7 +60,8 @@ setup(
             "discopop_explorer=discopop_explorer.__main__:main",
             "discopop_profiler=discopop_profiler.__main__:main",
             "discopop_wizard=discopop_wizard.__main__:main",
-            "discopop_code_generator=discopop_library.CodeGenerator.__main__:main"
+            "discopop_code_generator=discopop_library.CodeGenerator.__main__:main",
+            "discopop_optimizer=discopop_library.discopop_optimizer.__main__:main"
         ]
     },
     zip_safe=True,

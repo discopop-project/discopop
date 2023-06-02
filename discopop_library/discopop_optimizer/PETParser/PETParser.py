@@ -10,21 +10,29 @@ from typing import Dict, List, Tuple, Set
 
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PETGraphX import PETGraphX, FunctionNode, EdgeType, LoopNode, CUNode, NodeID, MemoryRegion
+from discopop_explorer.PETGraphX import (
+    PETGraphX,
+    FunctionNode,
+    EdgeType,
+    LoopNode,
+    CUNode,
+    NodeID,
+    MemoryRegion,
+)
 from discopop_explorer.utils import calculate_workload
-from discopop_library.OptimizationGraph.PETParser.DataAccesses.FromCUs import (
+from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
     get_data_accesses_for_cu,
 )
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.nodes.ContextMerge import ContextMerge
-from discopop_library.OptimizationGraph.classes.nodes.ContextRestore import ContextRestore
-from discopop_library.OptimizationGraph.classes.nodes.ContextSave import ContextSave
-from discopop_library.OptimizationGraph.classes.nodes.ContextSnapshot import ContextSnapshot
-from discopop_library.OptimizationGraph.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
-from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.nodes.ContextMerge import ContextMerge
+from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
+from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
+from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
+from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
+from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     data_at,
     get_successors,
     get_children,
@@ -32,7 +40,10 @@ from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
     add_child_edge,
     add_temporary_edge,
     redirect_edge,
-    convert_temporary_edges, show, get_all_function_nodes, get_read_and_written_data_from_subgraph,
+    convert_temporary_edges,
+    show,
+    get_all_function_nodes,
+    get_read_and_written_data_from_subgraph,
 )
 
 
@@ -153,7 +164,9 @@ class PETParser(object):
 
         # Step 2: create and connect context snapshot
         context_snapshot_id = self.get_new_node_id()
-        self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.environment))
+        self.graph.add_node(
+            context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.environment)
+        )
         add_temporary_edge(self.graph, duplicate_node_id, context_snapshot_id)
 
         # Step 3: parse branches
@@ -162,7 +175,8 @@ class PETParser(object):
             # Step 3.1: create and connect context restore node
             branch_context_restore_id = self.get_new_node_id()
             self.graph.add_node(
-                branch_context_restore_id, data=ContextRestore(branch_context_restore_id, self.environment)
+                branch_context_restore_id,
+                data=ContextRestore(branch_context_restore_id, self.environment),
             )
             add_temporary_edge(self.graph, last_added_node_id, branch_context_restore_id)
 
@@ -171,7 +185,9 @@ class PETParser(object):
 
             # Step 3.3: create context save node
             branch_context_save_id = self.get_new_node_id()
-            self.graph.add_node(branch_context_save_id, data=ContextSave(branch_context_save_id, self.environment))
+            self.graph.add_node(
+                branch_context_save_id, data=ContextSave(branch_context_save_id, self.environment)
+            )
 
             # Step 3.3: connect restore and save node to branch entry and exit
             add_temporary_edge(self.graph, branch_context_restore_id, branch_entry)
@@ -182,13 +198,16 @@ class PETParser(object):
 
         # step 4: create and connect context merge node
         context_merge_node_id = self.get_new_node_id()
-        self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.environment))
+        self.graph.add_node(
+            context_merge_node_id, data=ContextMerge(context_merge_node_id, self.environment)
+        )
         add_temporary_edge(self.graph, last_added_node_id, context_merge_node_id)
 
         # Step 5: create and connect context snapshot pop
         context_snapshot_pop_id = self.get_new_node_id()
         self.graph.add_node(
-            context_snapshot_pop_id, data=ContextSnapshotPop(context_snapshot_pop_id, self.environment)
+            context_snapshot_pop_id,
+            data=ContextSnapshotPop(context_snapshot_pop_id, self.environment),
         )
         add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_id)
 
@@ -306,7 +325,10 @@ class PETParser(object):
             self.graph.add_node(
                 new_node_id,
                 data=FunctionRoot(
-                    node_id=new_node_id, environment=self.environment, cu_id=function_node.id, name=function_node.name
+                    node_id=new_node_id,
+                    environment=self.environment,
+                    cu_id=function_node.id,
+                    name=function_node.name,
                 ),
             )
             # connect function node to its entry node
@@ -332,6 +354,7 @@ class PETParser(object):
     def __mark_branch_affiliation(self):
         """Mark each nodes' branch affiliation to allow a simple check for 'on same branch' relation
         without considering the successor relation."""
+
         def mark_branched_section(node, branch_stack):
             node_data = data_at(self.graph, node)
             if isinstance(node_data, ContextSnapshot):
@@ -361,7 +384,9 @@ class PETParser(object):
         def inlined_data_flow_calculation(current_node, current_last_writes):
             while current_node is not None:
                 # check if current_node uses written data
-                reads, writes = get_read_and_written_data_from_subgraph(self.graph, current_node, ignore_successors=True)
+                reads, writes = get_read_and_written_data_from_subgraph(
+                    self.graph, current_node, ignore_successors=True
+                )
 
                 for mem_reg in current_last_writes:
                     # check if incoming data flow exists
@@ -386,7 +411,9 @@ class PETParser(object):
                 # continue to successor
                 successors = get_successors(self.graph, current_node)
                 if len(successors) > 1:
-                    raise ValueError("only a single successor should exist at this stage in the process!")
+                    raise ValueError(
+                        "only a single successor should exist at this stage in the process!"
+                    )
                 elif len(successors) == 1:
                     current_node = successors[0]
                 else:
@@ -401,5 +428,5 @@ class PETParser(object):
 
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
-                if not  self.graph.has_edge(key, entry):
+                if not self.graph.has_edge(key, entry):
                     add_temporary_edge(self.graph, key, entry)

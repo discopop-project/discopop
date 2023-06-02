@@ -1,7 +1,7 @@
 from typing import Tuple, List, Set, cast, Dict, Optional
 
 from discopop_explorer.PETGraphX import NodeID, PETGraphX, MemoryRegion, CUNode, EdgeType, DepType
-from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,
 )

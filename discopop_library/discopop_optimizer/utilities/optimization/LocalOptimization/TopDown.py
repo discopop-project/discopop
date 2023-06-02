@@ -3,20 +3,32 @@ from typing import Dict, List, Tuple, Set, cast
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
-from discopop_library.OptimizationGraph.CostModels.utilities import get_node_performance_models
-from discopop_library.OptimizationGraph.DataTransfers.DataTransfers import calculate_data_transfers
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
-from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import get_all_function_nodes, get_successors, \
-    get_children, data_at, show
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import (
+    add_data_transfer_costs,
+)
+from discopop_library.discopop_optimizer.CostModels.utilities import get_node_performance_models
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    get_all_function_nodes,
+    get_successors,
+    get_children,
+    data_at,
+    show,
+)
 
 
-def get_locally_optimized_models(graph: nx.DiGraph, substitutions: Dict[Symbol, Expr], environment: Environment, free_symbol_ranges: Dict[Symbol, Tuple[float, float]], free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]) -> Dict[
-    FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+def get_locally_optimized_models(
+    graph: nx.DiGraph,
+    substitutions: Dict[Symbol, Expr],
+    environment: Environment,
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
+) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
     for function_node in get_all_function_nodes(graph):
         # get a list of all decisions that have to be made
@@ -30,18 +42,22 @@ def get_locally_optimized_models(graph: nx.DiGraph, substitutions: Dict[Symbol, 
             for decision in decision_options:
                 try:
                     # create a performance model for the specific decision
-                    performance_models = get_node_performance_models(graph, function_node, set(),
-                                                                     restrict_to_decisions={decision},
-                                                                     do_not_allow_decisions=set(
-                                                                         [o for o in decision_options if o != decision]))
+                    performance_models = get_node_performance_models(
+                        graph,
+                        function_node,
+                        set(),
+                        restrict_to_decisions={decision},
+                        do_not_allow_decisions=set([o for o in decision_options if o != decision]),
+                    )
                     # calculate and append necessary data transfers to the models
                     performance_models_with_transfers = calculate_data_transfers(
-                        graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}
+                        graph,
+                        {cast(FunctionRoot, data_at(graph, function_node)): performance_models},
                     )
 
                     # calculate and append costs of data transfers to the performance models
                     complete_performance_models = add_data_transfer_costs(
-                         graph, performance_models_with_transfers, environment
+                        graph, performance_models_with_transfers, environment
                     )
                     # add performance models to decision models for the later selection of the best candidate
                     for function in complete_performance_models:
@@ -52,11 +68,11 @@ def get_locally_optimized_models(graph: nx.DiGraph, substitutions: Dict[Symbol, 
                     print("==> Ignoring Decision: ", decision)
                     continue
 
-#            print("Decisions MODELS: ")
-#            for model in decision_models:
-#                print()
-#                print(model.path_decisions)
-#                print(model.sequential_costs + model.parallelizable_costs)
+            #            print("Decisions MODELS: ")
+            #            for model in decision_models:
+            #                print()
+            #                print(model.path_decisions)
+            #                print(model.sequential_costs + model.parallelizable_costs)
 
             # apply variable substitutions
             for decision, pair in decision_models:
@@ -87,8 +103,9 @@ def get_locally_optimized_models(graph: nx.DiGraph, substitutions: Dict[Symbol, 
         print("\tChoices: ", locally_optimal_choices)
 
         # construct locally optimal model
-        performance_models = get_node_performance_models(graph, function_node, set(),
-                                                         restrict_to_decisions=set(locally_optimal_choices))
+        performance_models = get_node_performance_models(
+            graph, function_node, set(), restrict_to_decisions=set(locally_optimal_choices)
+        )
         print("GOT: ", [p.path_decisions for p in performance_models])
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(

@@ -2,7 +2,7 @@ from typing import List, Dict, Tuple, Optional
 
 from sympy import Symbol
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 
 from spb import plot3d, MB, plot  # type: ignore
 

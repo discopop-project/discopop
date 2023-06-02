@@ -2,13 +2,13 @@ from typing import Dict, List, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
-from discopop_library.OptimizationGraph.classes.context.Update import Update
-from discopop_library.OptimizationGraph.classes.nodes.ContextNode import ContextNode
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     data_at,
     get_children,
@@ -85,7 +85,9 @@ def __check_current_node(
 
     if isinstance(node_data, ContextNode):
         # apply modifications according to encountered context node
-        updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(node_id, graph, model, context)
+        updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(
+            node_id, graph, model, context
+        )
         return updated_context
 
     # if node has a device id assigned, update the last_seen device_id
@@ -113,4 +115,3 @@ def __check_children(
         context.last_visited_node_id = node_id
         context = get_path_context(child, graph, model, context)
     return context
-

@@ -11,14 +11,14 @@ from typing import cast, Tuple, List
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.edges.OptionEdge import OptionEdge
-from discopop_library.OptimizationGraph.classes.edges.RequirementEdge import RequirementEdge
-from discopop_library.OptimizationGraph.classes.edges.SuccessorEdge import SuccessorEdge
-from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
-from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
+from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
+from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
+from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
+from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
 do_all_device_ids = [0, 1]
 
@@ -51,7 +51,9 @@ def import_suggestion(
                 # remove cu_id to prevent using parallelization options as basis for new versions
                 node_data_copy.cu_id = None
                 # copy loop iteration variable
-                cast(Loop, node_data_copy).iterations_symbol = cast(Loop, node_data_copy).iterations_symbol
+                cast(Loop, node_data_copy).iterations_symbol = cast(
+                    Loop, node_data_copy
+                ).iterations_symbol
                 # add suggestion to node data
                 node_data_copy.suggestion = suggestion
                 # add the cost multiplier to represent the effects of the suggestion

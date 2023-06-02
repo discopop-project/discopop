@@ -13,17 +13,17 @@ import networkx as nx  # type: ignore
 import sympy
 
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.OptimizationGraph.classes.edges.ChildEdge import ChildEdge
-from discopop_library.OptimizationGraph.classes.edges.GenericEdge import GenericEdge
-from discopop_library.OptimizationGraph.classes.edges.OptionEdge import OptionEdge
-from discopop_library.OptimizationGraph.classes.edges.RequirementEdge import RequirementEdge
-from discopop_library.OptimizationGraph.classes.edges.SuccessorEdge import SuccessorEdge
-from discopop_library.OptimizationGraph.classes.edges.TemporaryEdge import TemporaryEdge
-from discopop_library.OptimizationGraph.classes.nodes.ContextNode import ContextNode
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
-from discopop_library.OptimizationGraph.classes.nodes.Loop import Loop
-from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
+from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
+from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
+from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
+from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
+from discopop_library.discopop_optimizer.classes.edges.TemporaryEdge import TemporaryEdge
+from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
+from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
+from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 
 
 def data_at(graph: nx.DiGraph, node_id: int) -> GenericNode:
@@ -339,6 +339,7 @@ def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
             TemporaryEdge, edge_data
         ).convert_to_successor_edge()
 
+
 def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
     for node_id in graph.nodes:
@@ -346,7 +347,10 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
             result_set.add(node_id)
     return list(result_set)
 
-def get_read_and_written_data_from_subgraph(graph: nx.DiGraph, node_id: int, ignore_successors: bool = False) -> Tuple[Set[MemoryRegion], Set[MemoryRegion]]:
+
+def get_read_and_written_data_from_subgraph(
+    graph: nx.DiGraph, node_id: int, ignore_successors: bool = False
+) -> Tuple[Set[MemoryRegion], Set[MemoryRegion]]:
     """Collect written and read memory regions for the node itself, it's successor and it's children. Used in the data flow calculation step."""
     read_memory_regions: Set[MemoryRegion] = set()
     written_memory_regions: Set[MemoryRegion] = set()
@@ -360,13 +364,16 @@ def get_read_and_written_data_from_subgraph(graph: nx.DiGraph, node_id: int, ign
         written_memory_regions.update(writes)
     # add reads and writes of the node itself
     node_data = data_at(graph, node_id)
-    read_memory_regions.update([read_access.memory_region for read_access in node_data.read_memory_regions])
-    written_memory_regions.update([write_access.memory_region for write_access in node_data.written_memory_regions])
+    read_memory_regions.update(
+        [read_access.memory_region for read_access in node_data.read_memory_regions]
+    )
+    written_memory_regions.update(
+        [write_access.memory_region for write_access in node_data.written_memory_regions]
+    )
 
     print("NODE: ", node_id)
     print("\tWritten: ", written_memory_regions)
     print("\tRead: ", read_memory_regions)
     print()
-
 
     return read_memory_regions, written_memory_regions

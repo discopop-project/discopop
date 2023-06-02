@@ -3,11 +3,11 @@ from typing import Dict, Set, Tuple, cast, List
 from sympy import Expr, Integer, Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.context.Update import Update
-from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
-from discopop_library.OptimizationGraph.classes.types.DataAccessType import (
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,
 )
@@ -122,11 +122,10 @@ class ContextObject(object):
 
             transfer_costs = transfer_size / transfer_speed
 
-
             total_transfer_costs += transfer_costs
         if symbolic_memory_region_sizes:
-            return CostModel(Integer(0),
-                total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
+            return CostModel(
+                Integer(0), total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
             )
         else:
             return CostModel(Integer(0), total_transfer_costs)

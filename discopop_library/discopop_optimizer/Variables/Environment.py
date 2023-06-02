@@ -59,7 +59,7 @@ class Environment(object):
             self.register_free_symbol(cast(Symbol, self.thread_counts_by_device[key]))
 
     def get_memory_region_size(
-            self, memory_region: MemoryRegion, use_symbolic_value: bool = False
+        self, memory_region: MemoryRegion, use_symbolic_value: bool = False
     ) -> Tuple[Expr, Expr]:
         if memory_region not in self.__memory_region_sizes:
             self.__memory_region_sizes[memory_region] = 8  # assume 8 Bytes for unknown sizes
@@ -67,7 +67,10 @@ class Environment(object):
         if use_symbolic_value:
             symbolic_memory_region_size = Symbol("mem_reg_size_" + str(memory_region))
             # register the symbolic value in the environment
-            self.register_free_symbol(symbolic_memory_region_size, value_suggestion=Integer(self.__memory_region_sizes[memory_region]))
+            self.register_free_symbol(
+                symbolic_memory_region_size,
+                value_suggestion=Integer(self.__memory_region_sizes[memory_region]),
+            )
             return symbolic_memory_region_size, Integer(self.__memory_region_sizes[memory_region])
         else:
             return Integer(self.__memory_region_sizes[memory_region]), Integer(0)
