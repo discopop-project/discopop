@@ -25,7 +25,7 @@ from discopop_library.discopop_optimizer.CostModels.utilities import (
 )
 from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -47,9 +47,9 @@ class OptimizationGraph(object):
     graph: nx.DiGraph
     next_free_node_id: int
 
-    def __init__(self, detection_result, project_folder_path, environment: Environment):
+    def __init__(self, detection_result, project_folder_path, experiment: Experiment):
         # construct optimization graph from PET Graph
-        self.graph, self.next_free_node_id = PETParser(detection_result.pet, environment).parse()
+        self.graph, self.next_free_node_id = PETParser(detection_result.pet, experiment).parse()
 
         # get performance models for sequential execution
         sequential_function_performance_models = get_performance_models_for_functions(self.graph)
@@ -57,12 +57,12 @@ class OptimizationGraph(object):
             self.graph, sequential_function_performance_models
         )
         sequential_complete_performance_models = add_data_transfer_costs(
-            self.graph, sequential_function_performance_models_with_transfers, environment
+            self.graph, sequential_function_performance_models_with_transfers, experiment
         )
 
         # import parallelization suggestions
         self.graph = import_suggestions(
-            detection_result, self.graph, self.get_next_free_node_id, environment
+            detection_result, self.graph, self.get_next_free_node_id, experiment
         )
 
         #        # calculate performance models without data transfers
@@ -92,11 +92,11 @@ class OptimizationGraph(object):
         #                free_symbols.update(cast(List[Symbol], model.parallelizable_costs.free_symbols))
         #                free_symbols.update(cast(List[Symbol], model.sequential_costs.free_symbols))
         #                suggested_values = suggested_values | model.symbol_value_suggestions
-        sorted_free_symbols = sorted(list(environment.free_symbols), key=lambda x: x.name)
+        sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
 
         # query user for values for free symbols
         query_results = query_user_for_symbol_values(
-            sorted_free_symbols, environment.suggested_values
+            sorted_free_symbols, experiment.suggested_values
         )
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
@@ -119,8 +119,8 @@ class OptimizationGraph(object):
                 model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
                 model.sequential_costs = model.sequential_costs.subs(substitutions)
         for symbol in substitutions:
-            if symbol in environment.free_symbols:
-                environment.free_symbols.remove(symbol)
+            if symbol in experiment.free_symbols:
+                experiment.free_symbols.remove(symbol)
             if symbol in free_symbol_ranges:
                 del free_symbol_ranges[symbol]
             if symbol in sorted_free_symbols:
@@ -135,7 +135,7 @@ class OptimizationGraph(object):
 
         # create locally optimized model
         locally_optimized_models = get_locally_optimized_models(
-            self.graph, substitutions, environment, free_symbol_ranges, free_symbol_distributions
+            self.graph, substitutions, experiment, free_symbol_ranges, free_symbol_distributions
         )
         # apply substitutions and un-mark substituted free symbols
         for idx, function in enumerate(locally_optimized_models):

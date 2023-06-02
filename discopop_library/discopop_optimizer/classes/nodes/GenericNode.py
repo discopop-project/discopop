@@ -11,7 +11,7 @@ from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     ReadDataAccess,
@@ -21,7 +21,7 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 
 class GenericNode(object):
     node_id: int  # id of the node in the nx.DiGraph which stores this object
-    environment: Environment  # environment object to retrieve and store free symbols and other configurable values
+    environment: Experiment  # environment object to retrieve and store free symbols and other configurable values
     ## Performance modelling
     introduced_symbols: List[Symbol]
     performance_model: CostModel
@@ -35,7 +35,7 @@ class GenericNode(object):
     def __init__(
         self,
         node_id: int,
-        environment: Environment,
+        environment: Experiment,
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,

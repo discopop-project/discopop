@@ -23,7 +23,7 @@ from discopop_explorer.utils import calculate_workload
 from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
     get_data_accesses_for_cu,
 )
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.ContextMerge import ContextMerge
 from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
 from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
@@ -52,16 +52,16 @@ class PETParser(object):
     graph: nx.DiGraph
     next_free_node_id: int
     cu_id_to_graph_node_id: Dict[NodeID, int]
-    environment: Environment
+    experiment: Experiment
     in_data_flow: Dict[int, Set[int]]
     out_data_flow: Dict[int, Set[int]]
 
-    def __init__(self, pet: PETGraphX, environment: Environment):
+    def __init__(self, pet: PETGraphX, experiment: Experiment):
         self.pet = pet
         self.graph = nx.DiGraph()
         self.next_free_node_id = 0
         self.cu_id_to_graph_node_id = dict()
-        self.environment = environment
+        self.experiment = experiment
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
         self.__add_cu_nodes()
@@ -165,7 +165,7 @@ class PETParser(object):
         # Step 2: create and connect context snapshot
         context_snapshot_id = self.get_new_node_id()
         self.graph.add_node(
-            context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.environment)
+            context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment)
         )
         add_temporary_edge(self.graph, duplicate_node_id, context_snapshot_id)
 
@@ -176,7 +176,7 @@ class PETParser(object):
             branch_context_restore_id = self.get_new_node_id()
             self.graph.add_node(
                 branch_context_restore_id,
-                data=ContextRestore(branch_context_restore_id, self.environment),
+                data=ContextRestore(branch_context_restore_id, self.experiment),
             )
             add_temporary_edge(self.graph, last_added_node_id, branch_context_restore_id)
 
@@ -186,7 +186,7 @@ class PETParser(object):
             # Step 3.3: create context save node
             branch_context_save_id = self.get_new_node_id()
             self.graph.add_node(
-                branch_context_save_id, data=ContextSave(branch_context_save_id, self.environment)
+                branch_context_save_id, data=ContextSave(branch_context_save_id, self.experiment)
             )
 
             # Step 3.3: connect restore and save node to branch entry and exit
@@ -199,7 +199,7 @@ class PETParser(object):
         # step 4: create and connect context merge node
         context_merge_node_id = self.get_new_node_id()
         self.graph.add_node(
-            context_merge_node_id, data=ContextMerge(context_merge_node_id, self.environment)
+            context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment)
         )
         add_temporary_edge(self.graph, last_added_node_id, context_merge_node_id)
 
@@ -207,7 +207,7 @@ class PETParser(object):
         context_snapshot_pop_id = self.get_new_node_id()
         self.graph.add_node(
             context_snapshot_pop_id,
-            data=ContextSnapshotPop(context_snapshot_pop_id, self.environment),
+            data=ContextSnapshotPop(context_snapshot_pop_id, self.experiment),
         )
         add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_id)
 
@@ -232,7 +232,7 @@ class PETParser(object):
                 new_node_id,
                 data=Workload(
                     node_id=new_node_id,
-                    environment=self.environment,
+                    environment=self.experiment,
                     cu_id=cu_node.id,
                     sequential_workload=calculate_workload(self.pet, cu_node),
                     parallelizable_workload=0,
@@ -267,7 +267,7 @@ class PETParser(object):
                     parallelizable_workload=calculate_workload(self.pet, loop_node),
                     iterations=iteration_count,
                     position=loop_node.start_position(),
-                    environment=self.environment,
+                    environment=self.experiment,
                 ),
             )
             # connect loop node and entry node via a child edge
@@ -326,7 +326,7 @@ class PETParser(object):
                 new_node_id,
                 data=FunctionRoot(
                     node_id=new_node_id,
-                    environment=self.environment,
+                    environment=self.experiment,
                     cu_id=function_node.id,
                     name=function_node.name,
                 ),

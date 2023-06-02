@@ -10,14 +10,14 @@ import copy
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 
 
 class ContextRestore(ContextNode):
-    def __init__(self, node_id: int, environment: Environment):
-        super().__init__(node_id, environment)
+    def __init__(self, node_id: int, experiment: Experiment):
+        super().__init__(node_id, experiment)
 
     def get_plot_label(self) -> str:
         return str(self.node_id) + "\nCTX\nrestore"

@@ -10,13 +10,13 @@ import copy
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 
 
 class ContextSnapshot(ContextNode):
-    def __init__(self, node_id: int, environment: Environment):
+    def __init__(self, node_id: int, environment: Experiment):
         super().__init__(node_id, environment)
 
     def get_plot_label(self) -> str:

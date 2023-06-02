@@ -11,7 +11,7 @@ from sympy import Symbol, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 
 
@@ -23,7 +23,7 @@ class Loop(Workload):
     def __init__(
         self,
         node_id: int,
-        environment: Environment,
+        environment: Experiment,
         cu_id: Optional[NodeID],
         parallelizable_workload: int,
         iterations: int,

@@ -3,13 +3,13 @@ from typing import List, Optional, Tuple
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
-def export_code(graph: nx.DiGraph, environment: Environment, cost_model: CostModel):
+def export_code(graph: nx.DiGraph, environment: Experiment, cost_model: CostModel):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
     # collect suggestions to be applied
     suggestions: List[Tuple[Device, PatternInfo, str]] = []

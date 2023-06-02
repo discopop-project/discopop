@@ -7,7 +7,7 @@
 # directory for details.
 import networkx as nx  # type: ignore
 
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.suggestions.importers.do_all import (
     import_suggestion as import_doall,
 )
@@ -17,7 +17,7 @@ from discopop_library.discopop_optimizer.suggestions.importers.reduction import 
 
 
 def import_suggestions(
-    detection_result, graph: nx.DiGraph, get_next_free_node_id_function, environment: Environment
+    detection_result, graph: nx.DiGraph, get_next_free_node_id_function, environment: Experiment
 ) -> nx.DiGraph:
     """Imports the suggestions specified in res into the passed graph and returns the modified graph"""
 
