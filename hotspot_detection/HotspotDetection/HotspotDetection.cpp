@@ -280,7 +280,7 @@ namespace
 
     virtual bool runOnFunction(Function &F)
     {
-      errs() << "\n In a function called " << F.getName() << "\n";
+      errs() << "In a function called " << F.getName() << "\n";
 
       LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
