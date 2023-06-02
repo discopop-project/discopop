@@ -3,11 +3,11 @@ from typing import Dict, List, Tuple, Set
 import networkx as nx  # type: ignore
 from sympy import Integer  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
-from discopop_library.OptimizationGraph.classes.context.Update import Update
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 
 
 def add_data_transfer_costs(

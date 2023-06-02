@@ -1,6 +1,6 @@
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.OptimizationGraph.classes.types.Aliases import DeviceID
-from discopop_library.OptimizationGraph.classes.types.DataAccessType import WriteDataAccess
+from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
 
 
 class Update(object):

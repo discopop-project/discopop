@@ -1,0 +1,80 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+"""Discopop Suggestion Optimizer
+
+Usage:
+    discopop_optimizer [--project-folder <path>] [--detection-result-dump <path>]
+
+OPTIONAL ARGUMENTS:
+    --project-folder=<path>     Directory where the DiscoPoP outputs are located. [default: .]
+    --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
+    -h --help                   Show this screen
+"""
+import os
+import sys
+from typing import Dict, List, cast
+
+import jsonpickle  # type: ignore
+import pstats2  # type:ignore
+from docopt import docopt  # type:ignore
+from schema import Schema, Use, SchemaError  # type:ignore
+
+from discopop_explorer import DetectionResult
+from discopop_library.CodeGenerator.CodeGenerator import (
+    from_json_strings as generate_code_from_json_strings,
+)
+from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
+from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
+
+docopt_schema = Schema({"--project-folder": Use(str), "--detection-result-dump": Use(str)})
+
+
+def get_path(base_path: str, file_name: str) -> str:
+    """Combines path and filename if it is not absolute
+
+    :param base_path: path
+    :param file_name: file name
+    :return: path to file
+    """
+    return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
+
+
+def main():
+    """Invokes the discopop_optimizer using the given parameters"""
+    arguments = docopt(__doc__)
+
+    try:
+        arguments = docopt_schema.validate(arguments)
+    except SchemaError as e:
+        exit(e)
+
+    # prepare arguments
+    arguments["--project-folder"] = get_path(os.getcwd(), arguments["--project-folder"])
+    arguments["--detection-result-dump"] = get_path(
+        arguments["--project-folder"], arguments["--detection-result-dump"]
+    )
+
+    print("Starting discopop_optimizer...")
+    for arg_name in arguments:
+        print("\t", arg_name, "=", arguments[arg_name])
+
+    # load detection result
+    print("Loading detection result and PET...", end="")
+    detection_result_dump_str = ""
+    with open(arguments["--detection-result-dump"], "r") as f:
+        detection_result_dump_str = f.read()
+    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+    print("Done")
+
+    # invoke optimization graph
+    optimization_graph = OptimizationGraph(detection_result, arguments["--project-folder"])
+
+if __name__ == "__main__":
+    main()

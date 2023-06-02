@@ -7,11 +7,11 @@ import networkx as nx  # type: ignore
 from spb import plot3d, MB, plot  # type: ignore
 from sympy import Symbol, Expr
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.CostModels.utilities import get_random_path
-from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.gui.plotting.CostModels import plot_CostModels
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.utilities import get_random_path
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
 
 
 def find_quasi_optimal_using_random_samples(
@@ -22,7 +22,7 @@ def find_quasi_optimal_using_random_samples(
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
-    verbose:bool=False,
+    verbose: bool = False,
 ):
     """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile of the random_path_count samples.
     NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions

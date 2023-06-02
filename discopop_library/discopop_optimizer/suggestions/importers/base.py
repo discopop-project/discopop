@@ -7,11 +7,11 @@
 # directory for details.
 import networkx as nx  # type: ignore
 
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.suggestions.importers.do_all import (
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.suggestions.importers.do_all import (
     import_suggestion as import_doall,
 )
-from discopop_library.OptimizationGraph.suggestions.importers.reduction import (
+from discopop_library.discopop_optimizer.suggestions.importers.reduction import (
     import_suggestion as import_reduction,
 )
 

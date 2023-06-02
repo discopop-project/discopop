@@ -13,10 +13,10 @@ import networkx as nx  # type: ignore
 import sympy  # type: ignore
 from sympy import Integer  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.OptimizationGraph.classes.nodes.GenericNode import GenericNode
-from discopop_library.OptimizationGraph.utilities.MOGUtilities import (
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     get_children,
     data_at,
@@ -38,17 +38,24 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
 
             # filter out NaN - Models
             performance_models[node_data] = [
-                model for model in performance_models[node_data] if model.parallelizable_costs != sympy.nan
+                model
+                for model in performance_models[node_data]
+                if model.parallelizable_costs != sympy.nan
             ]
     return performance_models
 
 
 def get_node_performance_models(
-        graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None,
-        do_not_allow_decisions: Optional[Set[int]] = None, get_single_random_model: bool = False
+    graph: nx.DiGraph,
+    node_id: int,
+    visited_nodes: Set[int],
+    restrict_to_decisions: Optional[Set[int]] = None,
+    do_not_allow_decisions: Optional[Set[int]] = None,
+    get_single_random_model: bool = False,
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
-    If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed."""
+    If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
+    """
     result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
     successor_count = len(successors)
@@ -57,8 +64,12 @@ def get_node_performance_models(
 
     # consider performance models of children
     children_models = get_performance_models_for_children(
-        graph, node_id, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions,
-        do_not_allow_decisions=do_not_allow_decisions, get_single_random_model=get_single_random_model
+        graph,
+        node_id,
+        copy.deepcopy(visited_nodes),
+        restrict_to_decisions=restrict_to_decisions,
+        do_not_allow_decisions=do_not_allow_decisions,
+        get_single_random_model=get_single_random_model,
     )
 
     if len(children_models) == 0:
@@ -137,14 +148,19 @@ def get_node_performance_models(
 
                 # check if the current decision invalidates decision requirements, if some are specified
                 if restrict_to_decisions is not None:
-                    if not (successor in restrict_to_decisions or data_at(graph, successor).suggestion is None):
+                    if not (
+                        successor in restrict_to_decisions
+                        or data_at(graph, successor).suggestion is None
+                    ):
                         path_invalid = True
                     if not path_invalid:
                         if data_at(graph, successor).suggestion is None:
                             # if the sequential "fallback" has been used, check if a different option is specifically
                             # mentioned in restrict_to_decisions. If so, the sequential fallback shall be ignored.
                             options = get_out_options(graph, successor)
-                            restricted_options = [opt for opt in options if opt in restrict_to_decisions]
+                            restricted_options = [
+                                opt for opt in options if opt in restrict_to_decisions
+                            ]
                             if len(restricted_options) != 0:
                                 # do not use he sequential fallback since a required option exists
                                 path_invalid = True
@@ -168,8 +184,12 @@ def get_node_performance_models(
                     combined_model.path_decisions.append(successor)
                 # append the model of the successor
                 for model in get_node_performance_models(
-                        graph, successor, copy.deepcopy(visited_nodes), restrict_to_decisions=restrict_to_decisions,
-                        do_not_allow_decisions=do_not_allow_decisions, get_single_random_model=get_single_random_model
+                    graph,
+                    successor,
+                    copy.deepcopy(visited_nodes),
+                    restrict_to_decisions=restrict_to_decisions,
+                    do_not_allow_decisions=do_not_allow_decisions,
+                    get_single_random_model=get_single_random_model,
                 ):
                     result_list.append(combined_model.parallelizable_plus_combine(model))
         return result_list
@@ -179,8 +199,12 @@ def get_node_performance_models(
 
 
 def get_performance_models_for_children(
-        graph: nx.DiGraph, node_id: int, visited_nodes: Set[int], restrict_to_decisions: Optional[Set[int]] = None,
-        do_not_allow_decisions: Optional[Set[int]] = None, get_single_random_model: bool = False
+    graph: nx.DiGraph,
+    node_id: int,
+    visited_nodes: Set[int],
+    restrict_to_decisions: Optional[Set[int]] = None,
+    do_not_allow_decisions: Optional[Set[int]] = None,
+    get_single_random_model: bool = False,
 ) -> List[CostModel]:
     """Construct a performance model for the children of the given node, or return None if no children exist"""
     # todo: consider children
@@ -191,19 +215,27 @@ def get_performance_models_for_children(
     for child_id in get_children(graph, node_id):
         if first_iteration:
             first_iteration = False
-            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes),
-                                                     restrict_to_decisions=restrict_to_decisions,
-                                                     do_not_allow_decisions=do_not_allow_decisions,
-                                                     get_single_random_model=get_single_random_model):
+            for model in get_node_performance_models(
+                graph,
+                child_id,
+                copy.deepcopy(visited_nodes),
+                restrict_to_decisions=restrict_to_decisions,
+                do_not_allow_decisions=do_not_allow_decisions,
+                get_single_random_model=get_single_random_model,
+            ):
                 # initialize list of child models
                 child_models.append(model)
         else:
             # create "product set" of child models
             product_set = []
-            for model in get_node_performance_models(graph, child_id, copy.deepcopy(visited_nodes),
-                                                     restrict_to_decisions=restrict_to_decisions,
-                                                     do_not_allow_decisions=do_not_allow_decisions,
-                                                     get_single_random_model=get_single_random_model):
+            for model in get_node_performance_models(
+                graph,
+                child_id,
+                copy.deepcopy(visited_nodes),
+                restrict_to_decisions=restrict_to_decisions,
+                do_not_allow_decisions=do_not_allow_decisions,
+                get_single_random_model=get_single_random_model,
+            ):
                 temp_models = [cm.parallelizable_plus_combine(model) for cm in child_models]
                 product_set += temp_models
             child_models = product_set
@@ -219,11 +251,12 @@ def print_introduced_symbols_per_node(graph: nx.DiGraph):
     print()
 
 
-def get_random_path(graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None) -> CostModel:
-    random_models = get_node_performance_models(graph, root_id, set(), restrict_to_decisions=must_contain,
-                                                get_single_random_model=True)
+def get_random_path(
+    graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None
+) -> CostModel:
+    random_models = get_node_performance_models(
+        graph, root_id, set(), restrict_to_decisions=must_contain, get_single_random_model=True
+    )
     # filter out NaN - Models
-    random_models = [
-        model for model in random_models if model.parallelizable_costs != sympy.nan
-    ]
+    random_models = [model for model in random_models if model.parallelizable_costs != sympy.nan]
     return random.choice(random_models)

@@ -7,7 +7,7 @@
 # directory for details.
 from sympy import Integer  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 
 
 class GenericEdge(object):

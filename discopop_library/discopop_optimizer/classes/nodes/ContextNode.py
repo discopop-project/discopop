@@ -7,19 +7,23 @@
 # directory for details.
 import networkx as nx  # type: ignore
 
-from discopop_library.OptimizationGraph.CostModels.CostModel import CostModel
-from discopop_library.OptimizationGraph.Variables.Environment import Environment
-from discopop_library.OptimizationGraph.classes.context.ContextObject import ContextObject
-from discopop_library.OptimizationGraph.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 
 
 class ContextNode(Workload):
     def __init__(self, node_id: int, environment: Environment):
-        super().__init__(node_id, environment, cu_id=None, sequential_workload=0, parallelizable_workload=0)
+        super().__init__(
+            node_id, environment, cu_id=None, sequential_workload=0, parallelizable_workload=0
+        )
 
     def get_plot_label(self) -> str:
         return str(self.node_id) + "\nCTX"
 
-    def get_modified_context(self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+    def get_modified_context(
+        self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+    ) -> ContextObject:
         print("CONTEXT NODE")
         return context

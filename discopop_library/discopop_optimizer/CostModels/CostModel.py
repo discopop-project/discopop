@@ -14,7 +14,7 @@ import sympy
 from matplotlib import pyplot as plt  # type: ignore
 from sympy import Function, Symbol, init_printing, Expr  # type: ignore
 
-from discopop_library.OptimizationGraph.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 
 
 class CostModel(object):
@@ -35,7 +35,6 @@ class CostModel(object):
         symbol_value_suggestions: Dict[Symbol, Expr] = None,
     ):
         if sequential_costs == sympy.nan:
-
             raise ValueError("NAN: ", sequential_costs)
         if path_decisions is None:
             self.path_decisions = []
@@ -90,7 +89,8 @@ class CostModel(object):
         path_decisions = self.path_decisions + other.path_decisions
         value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
         return CostModel(
-            parallelizable_costs, sequential_costs,
+            parallelizable_costs,
+            sequential_costs,
             path_decisions=path_decisions,
             symbol_value_suggestions=value_suggestions,
         )

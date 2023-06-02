@@ -11,7 +11,7 @@ from typing import List
 import jsonpickle  # type: ignore
 
 from .utils import calculate_workload
-from discopop_library.OptimizationGraph.OptimizationGraph import OptimizationGraph
+from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
