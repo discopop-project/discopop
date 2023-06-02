@@ -11,7 +11,7 @@ from sympy import Integer, Expr  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
@@ -29,7 +29,7 @@ class Workload(GenericNode):
     def __init__(
         self,
         node_id: int,
-        environment: Environment,
+        environment: Experiment,
         cu_id: Optional[NodeID],
         sequential_workload: Optional[int],
         parallelizable_workload: Optional[int],

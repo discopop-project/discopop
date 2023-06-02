@@ -4,7 +4,7 @@ import networkx as nx  # type: ignore
 from sympy import Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -13,7 +13,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 def add_data_transfer_costs(
     graph: nx.DiGraph,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
-    environment: Environment,
+    environment: Experiment,
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculates the data transfer costs for each of the given performance models and adds them to the respective model."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()

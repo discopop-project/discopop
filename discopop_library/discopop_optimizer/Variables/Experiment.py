@@ -9,7 +9,7 @@ from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
-class Environment(object):
+class Experiment(object):
     ## SETTINGS
     # todo: convert Costs into estimated runtime, removes need for high overhead weight
     workload_overhead_weight = Integer(1500)

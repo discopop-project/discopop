@@ -9,7 +9,7 @@ from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCos
 )
 from discopop_library.discopop_optimizer.CostModels.utilities import get_node_performance_models
 from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -25,7 +25,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 def get_locally_optimized_models(
     graph: nx.DiGraph,
     substitutions: Dict[Symbol, Expr],
-    environment: Environment,
+    environment: Experiment,
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:

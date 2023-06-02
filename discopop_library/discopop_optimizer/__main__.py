@@ -26,7 +26,7 @@ from sympy import Symbol, Integer
 
 from discopop_explorer import DetectionResult
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
@@ -86,7 +86,7 @@ def main():
 
     # define Environment
     # todo rename to Experiment
-    environment = Environment(arguments["--project-folder"], system)
+    environment = Experiment(arguments["--project-folder"], system)
 
     # invoke optimization graph
     optimization_graph = OptimizationGraph(

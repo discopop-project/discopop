@@ -4,7 +4,7 @@ from sympy import Expr, Integer, Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
@@ -92,7 +92,7 @@ class ContextObject(object):
             self.seen_writes_by_device[writing_device_id][write.memory_region].add(write)
         return self
 
-    def get_transfer_costs(self, environment: Environment) -> CostModel:
+    def get_transfer_costs(self, environment: Experiment) -> CostModel:
         """Calculates the amount of data transferred between devices as specified by self.necessary_updates and
         calculates an estimation for the added transfer costs under the assumption,
         that no transfers happen concurrently and every transfer is executed in a blocking, synchronous manner.

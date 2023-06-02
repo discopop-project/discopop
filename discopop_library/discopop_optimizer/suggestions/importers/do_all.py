@@ -12,7 +12,7 @@ import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Environment import Environment
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
@@ -24,7 +24,7 @@ do_all_device_ids = [0, 1]
 
 
 def import_suggestion(
-    graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Environment
+    graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Experiment
 ) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
@@ -95,7 +95,7 @@ def import_suggestion(
 
 
 def get_cost_multiplier(
-    node_id: int, environment: Environment, device_id: int
+    node_id: int, environment: Experiment, device_id: int
 ) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the multiplier to represent the effects of the given suggestion on the cost model.
     A CostModel object is used to store the information on the path selection.
@@ -114,7 +114,7 @@ def get_cost_multiplier(
 
 
 def get_overhead_term(
-    node_data: Loop, environment: Environment, device_id: int
+    node_data: Loop, environment: Experiment, device_id: int
 ) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the Expression which represents the Overhead incurred by the given suggestion.
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
