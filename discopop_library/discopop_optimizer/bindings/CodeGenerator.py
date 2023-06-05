@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple, Dict
 
 import networkx as nx  # type: ignore
 
-from discopop_library.FileMapping.FileMapping import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
