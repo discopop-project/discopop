@@ -165,6 +165,7 @@ class OptimizationGraph(object):
             options.append((locally_optimized_models[function][0][0], "Locally Optimized"))
             show_options(
                 self.graph,
+                experiment,
                 options,
                 substitutions,
                 sorted_free_symbols,
