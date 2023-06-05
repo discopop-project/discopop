@@ -7,6 +7,7 @@ from sympy import Symbol, Expr
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
@@ -21,7 +22,7 @@ from discopop_library.discopop_optimizer.utilities.optimization.GlobalOptimizati
 def show_options(
     graph: nx.DiGraph,
     experiment: Experiment,
-    options: List[Tuple[CostModel, str]],
+    options: List[Tuple[CostModel, ContextObject, str]],
     substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
@@ -49,7 +50,7 @@ def show_options(
 
     # create option entries
     for row_idx, option_tuple in enumerate(options):
-        option, option_name = option_tuple
+        option, context, option_name = option_tuple
         row_idx = row_idx + 1  # to account for column headers
         label = Entry(relief=RIDGE)
         label.grid(row=row_idx, column=0, sticky=NSEW)
@@ -86,7 +87,7 @@ def show_options(
         )
         details_button.grid(row=0, column=1)
 
-        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option: export_code(graph, experiment, opt))  # type: ignore
+        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option, ctx=context: export_code(graph, experiment, opt, ctx))  # type: ignore
         export_code_button.grid(row=0, column=2)
 
     Button(
@@ -96,7 +97,7 @@ def show_options(
             [t[0] for t in options],
             sorted_free_symbols,
             free_symbol_ranges,
-            [t[1] for t in options],
+            [t[2] for t in options],
             title="Full Plot",
         ),
     ).grid()  # type: ignore
@@ -107,7 +108,7 @@ def show_options(
             root,
             graph,
             experiment,
-            [opt for opt in options if not opt[1].startswith("Rand ")],
+            [opt for opt in options if not opt[2].startswith("Rand ")],
             substitutions,
             sorted_free_symbols,
             free_symbol_ranges,
@@ -130,7 +131,7 @@ def add_random_models(
     root: Tk,
     graph: nx.DiGraph,
     experiment: Experiment,
-    options: List[Tuple[CostModel, str]],
+    options: List[Tuple[CostModel, ContextObject, str]],
     substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
@@ -161,11 +162,11 @@ def add_random_models(
         free_symbol_distributions,
         verbose=False,
     )
-    options.append((minimum, "Rand Minimum"))
-    options.append((maximum, "Rand Maximum"))
-    options.append((median, "Rand Median"))
-    options.append((lower_quartile, "Rand 25% Quartile"))
-    options.append((upper_quartile, "Rand 75% Quartile"))
+    options.append((minimum[0], minimum[1], "Rand Minimum"))
+    options.append((maximum[0], maximum[1], "Rand Maximum"))
+    options.append((median[0], median[1], "Rand Median"))
+    options.append((lower_quartile[0], lower_quartile[1], "Rand 25% Quartile"))
+    options.append((upper_quartile[0], upper_quartile[1], "Rand 75% Quartile"))
 
     # plot
     show_options(
@@ -182,7 +183,7 @@ def add_random_models(
 
 
 def __export_all_codes(
-    graph: nx.DiGraph, experiment: Experiment, options: List[Tuple[CostModel, str]]
+    graph: nx.DiGraph, experiment: Experiment, options: List[Tuple[CostModel, ContextObject, str]]
 ):
-    for opt, _ in options:
-        export_code(graph, experiment, opt)
+    for opt, ctx, _ in options:
+        export_code(graph, experiment, opt, ctx)

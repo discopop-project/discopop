@@ -9,6 +9,8 @@ from sympy import Symbol, Expr
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.utilities import get_random_path
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
@@ -27,16 +29,18 @@ def find_quasi_optimal_using_random_samples(
     """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile of the random_path_count samples.
     NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions
     due to the used comparison method!"""
-    random_paths: List[CostModel] = []
+    random_paths: List[Tuple[CostModel, ContextObject]] = []
     if verbose:
         print("Generating ", random_path_count, "random paths")
     for i in range(0, random_path_count):
-        random_paths.append(get_random_path(graph, function_root.node_id, must_contain=None))
+        tmp_dict = dict()
+        tmp_dict[function_root] = [get_random_path(graph, function_root.node_id, must_contain=None)]
+        random_paths.append(calculate_data_transfers(graph, tmp_dict)[function_root][0])
 
     # apply substitutions and set free symbol ranges and distributions
     if verbose:
         print("\tApplying substitutions...")
-    for model in random_paths:
+    for model, context in random_paths:
         model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
         model.sequential_costs = model.sequential_costs.subs(substitutions)
         model.free_symbol_ranges = free_symbol_ranges
@@ -44,7 +48,7 @@ def find_quasi_optimal_using_random_samples(
 
     if verbose:
         print("\tSorting...")
-    sorted_list = sorted(random_paths)  # BOTTLENECK!
+    sorted_list = sorted(random_paths, key=lambda x: x[0])  # BOTTLENECK!
     if verbose:
         print("\tDone.")
     minimum = sorted_list[0]
