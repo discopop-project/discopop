@@ -86,7 +86,7 @@ def show_options(
         )
         details_button.grid(row=0, column=1)
 
-        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option: export_code(graph, experiment, option))  # type: ignore
+        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option: export_code(graph, experiment, opt))  # type: ignore
         export_code_button.grid(row=0, column=2)
 
     Button(
@@ -115,6 +115,11 @@ def show_options(
             function_root,
             window_title,
         ),
+    ).grid()
+    Button(
+        root,
+        text="Export all codes",
+        command=lambda: __export_all_codes(graph, experiment, options),
     ).grid()
     Button(root, text="Continue", command=lambda: root.destroy()).grid()
 
@@ -174,3 +179,10 @@ def add_random_models(
         function_root,
         window_title,
     )
+
+
+def __export_all_codes(
+    graph: nx.DiGraph, experiment: Experiment, options: List[Tuple[CostModel, str]]
+):
+    for opt, _ in options:
+        export_code(graph, experiment, opt)

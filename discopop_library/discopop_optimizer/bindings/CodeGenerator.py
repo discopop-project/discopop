@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional, Tuple, Dict
 
 import networkx as nx  # type: ignore
@@ -43,8 +44,29 @@ def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel
         experiment.file_mapping, patterns_by_type, skip_compilation_check=False
     )
 
-    print("Modified Code: \n")
+    # save modified code
+    export_dir = os.path.join(
+        experiment.project_folder_path,
+        ".discopop_optimizer",
+        "code_exports",
+        str(cost_model.path_decisions),
+    )
+
+    print("\n############################")
+    print("Modified Code: Decisions: ", cost_model.path_decisions)
+    print("Exporting to: ", export_dir)
+    print("############################")
     for file_id in modified_code:
-        print("###\n")
+        print("#### File ID: ", file_id, " ####\n")
         print(modified_code[file_id])
         print("\n")
+
+    if os.path.exists(export_dir):
+        os.rmdir(export_dir)
+    os.makedirs(export_dir)
+    for file_id in modified_code:
+        code_path = os.path.join(export_dir, str(file_id).replace(" ", ""))
+        with open(code_path, "w+") as f:
+            f.write(modified_code[file_id])
+            f.flush()
+            f.close()

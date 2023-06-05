@@ -35,6 +35,7 @@ class Experiment(object):
 
     __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
 
+    project_folder_path: Path
     file_mapping: Dict[int, Path]  # file-mapping
 
     def __init__(self, project_folder_path, file_mapping_path: str, system: System):
@@ -46,6 +47,7 @@ class Experiment(object):
             return_all_memory_regions=True,
         )
 
+        self.project_folder_path = project_folder_path
         self.file_mapping = load_file_mapping(file_mapping_path)
 
         # collect free symbols from system
