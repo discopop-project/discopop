@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 from typing import List, Dict, Sequence, Any, Optional
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
@@ -26,7 +27,7 @@ class ContentBuffer(object):
     line_type: Any
     compile_result_buffer: str
 
-    def __init__(self, file_id: int, source_code_path: str, tab_width: int = 4, line_type=Line):
+    def __init__(self, file_id: int, source_code_path: Path, tab_width: int = 4, line_type=Line):
         self.line_type = line_type
         self.file_id = file_id
         self.lines = []
@@ -77,7 +78,7 @@ class ContentBuffer(object):
 
     def add_pragma(
         self,
-        file_mapping: Dict[int, str],
+        file_mapping: Dict[int, Path],
         pragma: Pragma,
         parent_regions: List[int],
         add_as_comment: bool = False,
@@ -171,13 +172,13 @@ class ContentBuffer(object):
 
         # check if the applied changes resulted in a compilable source code
         # create a temporary file to store the modified file contents
-        if file_mapping[self.file_id].endswith(".c"):
+        if str(file_mapping[self.file_id]).endswith(".c"):
             compiler = "clang"
-            tmp_file_name = file_mapping[self.file_id] + ".discopop_tmp.c"
+            tmp_file_name = str(file_mapping[self.file_id]) + ".discopop_tmp.c"
         else:
             compiler = "clang++"
-            tmp_file_name = file_mapping[self.file_id] + ".discopop_tmp.cpp"
-        tmp_file_out_name = file_mapping[self.file_id] + ".discopop_tmp.o"
+            tmp_file_name = str(file_mapping[self.file_id]) + ".discopop_tmp.cpp"
+        tmp_file_out_name = str(file_mapping[self.file_id]) + ".discopop_tmp.o"
 
         with open(tmp_file_name, "w+") as f:
             f.write(self.get_modified_source_code())

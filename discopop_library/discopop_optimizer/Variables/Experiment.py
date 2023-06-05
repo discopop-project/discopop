@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 from typing import Dict, Tuple, Set, cast, Optional
 
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
+from discopop_library.FileMapping.FileMapping import load_file_mapping
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
@@ -33,7 +35,9 @@ class Experiment(object):
 
     __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
 
-    def __init__(self, project_folder_path, system: System):
+    file_mapping: Dict[int, Path]  # file-mapping
+
+    def __init__(self, project_folder_path, file_mapping_path: str, system: System):
         self.__system = system
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
@@ -41,6 +45,8 @@ class Experiment(object):
             os.path.join(project_folder_path, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
+
+        self.file_mapping = load_file_mapping(file_mapping_path)
 
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():

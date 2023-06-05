@@ -5,8 +5,8 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 import jsons  # type: ignore
@@ -16,7 +16,7 @@ from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSu
 
 
 def from_pattern_info(
-    file_mapping: Dict[int, str],
+    file_mapping: Dict[int, Path],
     patterns_by_type: Dict[str, List[PatternInfo]],
     skip_compilation_check: bool = False,
 ) -> Dict[int, str]:
@@ -37,7 +37,7 @@ def from_pattern_info(
 
 
 def from_json_strings(
-    file_mapping: Dict[int, str],
+    file_mapping: Dict[int, Path],
     pattern_json_strings_by_type: Dict[str, List[str]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,

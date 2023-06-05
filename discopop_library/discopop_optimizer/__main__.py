@@ -9,10 +9,11 @@
 """Discopop Suggestion Optimizer
 
 Usage:
-    discopop_optimizer [--project-folder <path>] [--detection-result-dump <path>]
+    discopop_optimizer [--project-folder <path>] [--file-mapping <path>] [--detection-result-dump <path>]
 
 OPTIONAL ARGUMENTS:
     --project-folder=<path>     Directory where the DiscoPoP outputs are located. [default: .]
+    --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
     -h --help                   Show this screen
 """
@@ -31,7 +32,9 @@ from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 
-docopt_schema = Schema({"--project-folder": Use(str), "--detection-result-dump": Use(str)})
+docopt_schema = Schema(
+    {"--project-folder": Use(str), "--file-mapping": Use(str), "--detection-result-dump": Use(str)}
+)
 
 
 def get_path(base_path: str, file_name: str) -> str:
@@ -55,6 +58,7 @@ def main():
 
     # prepare arguments
     arguments["--project-folder"] = get_path(os.getcwd(), arguments["--project-folder"])
+    arguments["--file-mapping"] = get_path(os.getcwd(), arguments["--file-mapping"])
     arguments["--detection-result-dump"] = get_path(
         arguments["--project-folder"], arguments["--detection-result-dump"]
     )
@@ -86,7 +90,7 @@ def main():
 
     # define Environment
     # todo rename to Experiment
-    environment = Experiment(arguments["--project-folder"], system)
+    environment = Experiment(arguments["--project-folder"], arguments["--file-mapping"], system)
 
     # invoke optimization graph
     optimization_graph = OptimizationGraph(
