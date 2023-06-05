@@ -7,6 +7,7 @@ import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -15,7 +16,9 @@ from discopop_library.CodeGenerator.CodeGenerator import (
 )
 
 
-def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel):
+def export_code(
+    graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel, context: ContextObject
+):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
     # collect suggestions to be applied
     suggestions: List[Tuple[Device, PatternInfo, str]] = []
@@ -32,6 +35,7 @@ def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel
         suggestions.append((device, suggestion, suggestion_type))
 
     # todo collect updates to be applied
+    print("UPDATES: ", context.necessary_updates)
 
     # prepare patterns by type
     patterns_by_type: Dict[str, list[PatternInfo]] = dict()

@@ -155,14 +155,26 @@ class OptimizationGraph(object):
         #        for function in complete_performance_models:
         for function in locally_optimized_models:
             # show table of options
-            options: List[Tuple[CostModel, str]] = []
+            options: List[Tuple[CostModel, ContextObject, str]] = []
             #            options.append((minimum, "Minimum"))
             #            options.append((maximum, "Maximum"))
             #            options.append((median, "Median"))
             #            options.append((lower_quartile, "25% Quartile"))
             #            options.append((upper_quartile, "75% Quartile"))
-            options.append((sequential_complete_performance_models[function][0][0], "Sequential"))
-            options.append((locally_optimized_models[function][0][0], "Locally Optimized"))
+            options.append(
+                (
+                    sequential_complete_performance_models[function][0][0],
+                    sequential_complete_performance_models[function][0][1],
+                    "Sequential",
+                )
+            )
+            options.append(
+                (
+                    locally_optimized_models[function][0][0],
+                    locally_optimized_models[function][0][1],
+                    "Locally Optimized",
+                )
+            )
             show_options(
                 self.graph,
                 experiment,
