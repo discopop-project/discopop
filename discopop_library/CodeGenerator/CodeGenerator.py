@@ -29,8 +29,11 @@ def from_pattern_info(
     # convert patterns to json strings so that only a single interface has to be maintained
     pattern_json_strings_by_type: Dict[str, List[str]] = dict()
     for type_str in patterns_by_type:
+        if type_str not in pattern_json_strings_by_type:
+            pattern_json_strings_by_type[type_str] = []
         for pattern in patterns_by_type[type_str]:
-            pattern_json_strings_by_type[type_str] = pattern.to_json()
+            pattern_json_strings_by_type[type_str].append(pattern.to_json())
+
     return from_json_strings(
         file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check
     )

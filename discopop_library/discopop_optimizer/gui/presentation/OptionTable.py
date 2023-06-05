@@ -102,7 +102,7 @@ def show_options(
     ).grid()  # type: ignore
     Button(
         root,
-        text="Add Random (50)",
+        text="Add Random (10)",
         command=lambda: add_random_models(
             root,
             graph,
@@ -138,7 +138,7 @@ def add_random_models(
     # generate random models
     # sort random models
     # add models to the list of options
-    random_paths = 50  # amount of random models to be generated
+    random_paths = 10  # amount of random models to be generated
 
     (
         minimum,
