@@ -9,13 +9,13 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
-def export_code(graph: nx.DiGraph, environment: Experiment, cost_model: CostModel):
+def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
     # collect suggestions to be applied
     suggestions: List[Tuple[Device, PatternInfo, str]] = []
     for decision in cost_model.path_decisions:
         graph_node = data_at(graph, decision)
-        device: Device = environment.get_system().get_device(
+        device: Device = experiment.get_system().get_device(
             0 if graph_node.device_id is None else graph_node.device_id
         )
         if graph_node.suggestion is None:
