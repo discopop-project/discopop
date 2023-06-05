@@ -8,3 +8,4 @@
 
 jsonpickle
 sympy
+sympy_plot_backends
