@@ -29,9 +29,6 @@ def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel
         )
         suggestions.append((device, suggestion, suggestion_type))
 
-    print("Suggestions: ")
-    print(suggestions)
-
     # todo collect updates to be applied
 
     # prepare patterns by type
@@ -45,3 +42,9 @@ def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel
     modified_code = code_gen_from_pattern_info(
         experiment.file_mapping, patterns_by_type, skip_compilation_check=False
     )
+
+    print("Modified Code: \n")
+    for file_id in modified_code:
+        print("###\n")
+        print(modified_code[file_id])
+        print("\n")

@@ -42,7 +42,7 @@ def import_suggestion(
                 ).iterations_symbol
                 # add suggestion to node data
                 node_data_copy.suggestion = suggestion
-                node_data_copy.suggestion_type = "do_all"
+                node_data_copy.suggestion_type = "reduction"
                 # add the cost multiplier to represent the effects of the suggestion
                 (
                     cast(Workload, node_data_copy).cost_multiplier,

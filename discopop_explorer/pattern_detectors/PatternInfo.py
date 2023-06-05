@@ -60,7 +60,9 @@ class PatternInfo(object):
             if key.startswith("_"):
                 del dic[key]
 
-        return json.dumps(dic, indent=2, default=lambda o: "<not serializable>")
+        return json.dumps(
+            dic, indent=2, default=lambda o: o.toJSON()
+        )  # , default=lambda o: "<not serializable>")
 
     def get_workload(self, pet: PETGraphX) -> int:
         """returns the workload of self._node"""
