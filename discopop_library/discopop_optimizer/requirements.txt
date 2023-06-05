@@ -7,3 +7,4 @@
 # directory for details.
 
 jsonpickle
+sympy
