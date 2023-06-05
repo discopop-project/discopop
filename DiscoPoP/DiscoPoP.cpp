@@ -2069,19 +2069,21 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-    cout << "MODULE " << M.getName().str() << "\n";
+    //cout << "MODULE " << M.getName().str() << "\n";
     long counter = 0;
-    cout << "\tFUNCTION:\n";
+    //cout << "\tFUNCTION:\n";
     for (Function &F: M) {
-        string to_be_printed = "\t(" + to_string(++counter) + " / " + to_string(M.size()) + ") -- " + F.getName().str();
-        while(to_be_printed.size() < 100){
-            to_be_printed += " ";
-        }
-        cout << to_be_printed + "\r";
+        /*
+            string to_be_printed = "\t(" + to_string(++counter) + " / " + to_string(M.size()) + ") -- " + F.getName().str();
+            while(to_be_printed.size() < 100){
+                to_be_printed += " ";
+            }
+            cout << to_be_printed + "\r";
+        */
         runOnFunction(F);
     }
 
-    cout << "\n\tFunctions Done.\n";
+    //cout << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
@@ -3295,12 +3297,46 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 }
                 if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc"))
                 {
-                    instrumentNewOrMalloc(cast<CallInst>(BI));
+                    if(isa<CallInst>(BI)){
+                        instrumentNewOrMalloc(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentNewOrMalloc(cast<InvokeInst>(BI));
+                    }
+                    continue;
+                }
+                if (fn.equals("realloc"))
+                {
+                    if(isa<CallInst>(BI)){
+                        instrumentRealloc(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentRealloc(cast<InvokeInst>(BI));
+                    }
+                    continue;
+                }
+                if(fn.equals("calloc")){
+                    if(isa<CallInst>(BI)){
+                        instrumentCalloc(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentCalloc(cast<InvokeInst>(BI));
+                    }
+                }
+
+                if (fn.equals("posix_memalign"))
+                {
+                    if(isa<CallInst>(BI)){
+                        instrumentPosixMemalign(cast<CallInst>(BI));
+                    }
+                    else if(isa<InvokeInst>(BI)){
+                        instrumentPosixMemalign(cast<InvokeInst>(BI));
+                    }
                     continue;
                 }
                 if (fn.equals("_ZdlPv") || fn.equals("free"))
                 {
-                    instrumentDeleteOrFree(cast<CallInst>(BI));
+                    instrumentDeleteOrFree(cast<CallBase>(BI));
                     continue;
                 }
 
@@ -3369,7 +3405,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
     Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
     args.push_back(startAddr);
-    
+
     Value *endAddr = startAddr;
     uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
     Value *numElements = toInstrument->getOperand(0);
@@ -3409,17 +3445,31 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     IRB.CreateCall(DpAlloca, args, "");
 }   
 
-void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
+void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
-    IRBuilder<> IRB(toInstrument->getNextNode());
+
+    // Determine correct placement for the call to __dp_new
+    Instruction* nextInst;
+    if(isa<CallInst>(toInstrument)){
+        nextInst = toInstrument->getNextNonDebugInstruction();
+    }
+    else if(isa<InvokeInst>(toInstrument)){
+        // Invoke instructions are always located at the end of a basic block.
+        // Invoke instructions may throw errors, in which case the successor is a "landing pad" basic block.
+        // If no error is thrown, the control flow is resumed at a "normal destination" basic block.
+        // Set the first instruction of the normal destination as nextInst in order to add the Instrumentation at the correct location.
+        nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    }
+
+    IRBuilder<> IRB(nextInst);
 
     vector < Value * > args;
     args.push_back(ConstantInt::get(Int32, lid));
 
-    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
     Value* endAddr = startAddr;
     Value* numBytes = toInstrument->getArgOperand(0);
 
@@ -3430,12 +3480,122 @@ void DiscoPoP::instrumentNewOrMalloc(CallInst *toInstrument) {
     IRB.CreateCall(DpNew, args, "");
 }
 
-void DiscoPoP::instrumentDeleteOrFree(CallInst *toInstrument) {
+void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
+    // add instrumentation for calls to realloc
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+
+    // Determine correct placement for the call to __dp_new
+    Instruction* nextInst;
+    if(isa<CallInst>(toInstrument)){
+        nextInst = toInstrument->getNextNonDebugInstruction();
+    }
+    else if(isa<InvokeInst>(toInstrument)){
+        // Invoke instructions are always located at the end of a basic block.
+        // Invoke instructions may throw errors, in which case the successor is a "landing pad" basic block.
+        // If no error is thrown, the control flow is resumed at a "normal destination" basic block.
+        // Set the first instruction of the normal destination as nextInst in order to add the Instrumentation at the correct location.
+        nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    }
+
+    IRBuilder<> IRB(nextInst);
+    vector < Value * > args;
+
+    // deallocate
+    args.push_back(ConstantInt::get(Int32, lid));
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
+    args.push_back(startAddr);
+    IRB.CreateCall(DpDelete, args, "");
+    args.clear();
+
+    // allocate
+    args.push_back(ConstantInt::get(Int32, lid));
+    Value* endAddr = startAddr;
+    Value* numBytes = toInstrument->getArgOperand(1);
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numBytes);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
+    // add instrumentation for calls to calloc
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+
+    // Determine correct placement for the call to __dp_new
+    Instruction* nextInst;
+    if(isa<CallInst>(toInstrument)){
+        nextInst = toInstrument->getNextNonDebugInstruction();
+    }
+    else if(isa<InvokeInst>(toInstrument)){
+        // Invoke instructions are always located at the end of a basic block.
+        // Invoke instructions may throw errors, in which case the successor is a "landing pad" basic block.
+        // If no error is thrown, the control flow is resumed at a "normal destination" basic block.
+        // Set the first instruction of the normal destination as nextInst in order to add the Instrumentation at the correct location.
+        nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    }
+
+    IRBuilder<> IRB(nextInst);
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
+    Value* endAddr = startAddr;
+    Value* numBytes = IRB.CreateMul(toInstrument->getArgOperand(0), toInstrument->getArgOperand(1));
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numBytes);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
+    // add instrumentation for calls to posix_memalign
+    LID lid = getLID(toInstrument, fileID);
+    if(lid == 0)
+        return;
+
+    // Determine correct placement for the call to __dp_new
+    Instruction* nextInst;
+    if(isa<CallInst>(toInstrument)){
+        nextInst = toInstrument->getNextNonDebugInstruction();
+    }
+    else if(isa<InvokeInst>(toInstrument)){
+        // Invoke instructions are always located at the end of a basic block.
+        // Invoke instructions may throw errors, in which case the successor is a "landing pad" basic block.
+        // If no error is thrown, the control flow is resumed at a "normal destination" basic block.
+        // Set the first instruction of the normal destination as nextInst in order to add the Instrumentation at the correct location.
+        nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    }
+
+    IRBuilder<> IRB(nextInst);
+
+    vector < Value * > args;
+    args.push_back(ConstantInt::get(Int32, lid));
+
+    Value* startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", nextInst);
+    Value* endAddr = startAddr;
+    Value* numBytes = toInstrument->getArgOperand(2);
+
+    args.push_back(startAddr);
+    args.push_back(endAddr);  // currently unused
+    args.push_back(numBytes);
+
+    IRB.CreateCall(DpNew, args, "");
+}
+
+void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
     // add instrumentation for delete instructions or calls to free
     LID lid = getLID(toInstrument, fileID);
     if(lid == 0)
         return;
-    IRBuilder<> IRB(toInstrument->getNextNode());
+    IRBuilder<> IRB(toInstrument->getNextNonDebugInstruction());
 
     vector < Value * > args;
     args.push_back(ConstantInt::get(Int32, lid));
@@ -3597,6 +3757,12 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
         auto tmp_end = F.getParent()->getGlobalList().end();
         tmp_end--;  // necessary, since the list of Globals is modified when e.g. new strings are created.
         for(auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++){
+            // ignore globals which make use of "Appending Linkage", since they are system internal
+            // and do not behave like regular values. An example for such a value is @llvm.global_ctors
+            if (cast<GlobalVariable>(&*Global_it)->hasAppendingLinkage()){
+                continue;
+            }
+
             IRBuilder<> IRB(insertBefore->getNextNode());
 
             vector < Value * > args;

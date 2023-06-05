@@ -8,6 +8,8 @@
 import os
 from typing import List
 
+import jsonpickle  # type: ignore
+
 from .utils import calculate_workload
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
@@ -52,6 +54,15 @@ class DetectionResult(object):
                     value_str += entry.to_string(self.pet) + "\n\n"
             result_str += value_str
         return result_str
+
+    def dump_to_pickled_json(self) -> str:
+        """Encodes and returns the entire Object into a pickled json string.
+        The encoded string can be reconstructed into an object by using:
+        jsonpickle.decode(json_str)
+
+        :return: encoded string
+        """
+        return jsonpickle.encode(self)
 
 
 class PatternDetectorX(object):
@@ -105,9 +116,9 @@ class PatternDetectorX(object):
         print("REDUCTION DONE.")
         res.do_all = detect_do_all(self.pet)
         print("DOALL DONE.")
-        # res.pipeline = detect_pipeline(self.pet)
+        res.pipeline = detect_pipeline(self.pet)
         # print("PIPELINE DONE.")
-        # res.geometric_decomposition = detect_gd(self.pet)
+        res.geometric_decomposition = detect_gd(self.pet)
         # print("GEO. DEC. DONE.")
 
         # check if task pattern should be enabled
@@ -115,7 +126,6 @@ class PatternDetectorX(object):
             res.task = detect_tp(
                 cu_dict,
                 dependencies,
-                loop_data,
                 reduction_vars,
                 file_mapping,
                 cu_inst_result_file,

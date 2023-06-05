@@ -51,10 +51,16 @@ After executing the instrumented program, you find a text file which ends with `
 A data dependence is represented as a triple `<sink, type, source>`. `type` denotes the dependence type and can be any of `RAW`, `WAR` or `WAW`. Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region.
 
 ## Loop Counters
-As part of the DiscoPoP profiling loops are instrumented with the purpose to count the executed iterations per loop.
-The gathered information will be stored in a file named `loop_counter_output.txt`.
+As part of the DiscoPoP profiling loops are instrumented with the purpose to count the total amount of executed iterations per loop as well as the average iteration count per loop entry.
+
+### Total Loop Counters
+The total observed iteration counts per loop will be stored in a file named `loop_counter_output.txt`.
 Each line of the file contains the summed count of iterations for the specified loop.
-The used format is as follows: `<file_id> <line_number> <iteration_count>`.
+The used format is as follows: `<file_id> <line_number> <total_iteration_count>`.
+
+### Total Counters, Amount of Loop Entries, Averages and Maxima
+The total, summed iteration counters per loops as well as the amount of loop entries, average iteration count per loop and the maximum observed iterations per single loop entry can be found in the previously described dependency file, which stores all information gathered during the profiling.
+The used format is as follows: `<fileID>:<LineID> BGN loop <total_iteration_count> <loop_entry_count> <average_iteration_count> <maximum_iteration_count>`.
 
 ## Reduction Instructions
 Identified reduction instructions are stored in a file named `reduction.txt`.

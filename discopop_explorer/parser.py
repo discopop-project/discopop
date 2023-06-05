@@ -6,8 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from dataclasses import dataclass
 import re
 import os
+from typing import Any, List, Tuple
 import warnings
 from collections import defaultdict
 from os.path import abspath, dirname
@@ -22,13 +24,24 @@ writelineToCUIdMap = defaultdict(set)  # type: ignore
 lineToCUIdMap = defaultdict(set)  # type: ignore
 
 
+@dataclass
 class DependenceItem(object):
-    def __init__(self, sink, source, type, var_name, memory_region):
-        self.sink = sink
-        self.source = source
-        self.type = type
-        self.var_name = var_name
-        self.memory_region = memory_region
+    sink: Any
+    source: Any
+    type: Any
+    var_name: Any
+    memory_region: Any
+    # TODO improve typing
+
+
+# TODO move this class to a better place, we need it not only for parsing
+@dataclass
+class LoopData(object):
+    line_id: str  # file_id:line_nr
+    total_iteration_count: int
+    entry_count: int
+    average_iteration_count: int
+    maximum_iteration_count: int
 
 
 def __parse_xml_input(xml_fd):
@@ -96,8 +109,9 @@ def __map_dummy_nodes(cu_dict):
     return cu_dict
 
 
-def __parse_dep_file(dep_fd, output_path: str):
-    dependencies_list = []
+def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
+    dependencies_list: List[DependenceItem] = []
+    loop_data_list: List[LoopData] = []
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
@@ -116,6 +130,21 @@ def __parse_dep_file(dep_fd, output_path: str):
 
     for line in dep_fd.readlines() + static_dependency_lines:
         dep_fields = line.split()
+        if dep_fields[1] == "BGN" and dep_fields[2] == "loop":
+            line_id = dep_fields[0]
+            total_iteration_count = int(dep_fields[3])
+            entry_count = int(dep_fields[4])
+            average_iteration_count = int(dep_fields[5])
+            maximum_iteration_count = int(dep_fields[6])
+            loop_data_list.append(
+                LoopData(
+                    line_id,
+                    total_iteration_count,
+                    entry_count,
+                    average_iteration_count,
+                    maximum_iteration_count,
+                )
+            )
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
         sink = dep_fields[0]
@@ -140,26 +169,18 @@ def __parse_dep_file(dep_fd, output_path: str):
                 DependenceItem(sink, source_fields[0], type, var_name, aa_var_name)
             )
 
-    return dependencies_list
+    return dependencies_list, loop_data_list
 
 
-def parse_inputs(cu_file, dependencies, loop_counter, reduction_file, file_mapping):
+def parse_inputs(cu_file, dependencies, reduction_file, file_mapping):
     with open(cu_file) as f:
         cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
 
     with open(dependencies) as f:
-        dependencies = __parse_dep_file(f, dirname(abspath(cu_file)))
+        dependencies, loop_info = __parse_dep_file(f, dirname(abspath(cu_file)))
 
-    if os.path.exists(loop_counter):
-        loop_data = {}
-        with open(loop_counter) as f:
-            content = f.readlines()
-        for line in content:
-            s = line.split(" ")
-            loop_data[s[0] + ":" + s[1]] = int(s[2])
-    else:
-        loop_data = None
+    loop_data = {loop.line_id: loop for loop in loop_info}
 
     fmap_file = open(file_mapping)
     fmap_lines = fmap_file.read().splitlines()

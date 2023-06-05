@@ -181,6 +181,7 @@ class GPULoopPattern(PatternInfo):
     collapse: int
     scheduling: str
     constructs: List[dict]
+    project_folder_path: str
 
     def __init__(
         self,
@@ -189,6 +190,7 @@ class GPULoopPattern(PatternInfo):
         startLine,
         endLine,
         iterationCount: int,
+        project_folder_path: str,
         reduction_vars: Optional[List[Variable]] = None,
     ):
         node = map_node(pet, nodeID)
@@ -199,6 +201,7 @@ class GPULoopPattern(PatternInfo):
         self.startLine = startLine
         self.endLine = endLine
         self.iterationCount = iterationCount
+        self.project_folder_path = project_folder_path
         # explicitly initialize empty, else it will copy values of other patterns
         self.map_type_to = []
         self.map_type_tofrom = []
@@ -212,7 +215,7 @@ class GPULoopPattern(PatternInfo):
             self.reduction_vars_ids: List[Variable] = []
         else:
             self.reduction_vars_str: List[str] = [
-                v.operation + ":" + v.name for v in reduction_vars
+                cast(str, v.operation) + ":" + v.name for v in reduction_vars
             ]
             self.reduction_vars_ids: List[Variable] = reduction_vars
         self.iteration_count = 0
@@ -226,8 +229,8 @@ class GPULoopPattern(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX, project_folder_path: str) -> str:
-        constructs = self.__get_constructs(pet, project_folder_path)
+    def to_string(self, pet: PETGraphX) -> str:
+        constructs = self.__get_constructs(pet, self.project_folder_path)
         construct_str = "\n" if len(constructs) > 0 else ""
         for entry in constructs:
             for key in entry:

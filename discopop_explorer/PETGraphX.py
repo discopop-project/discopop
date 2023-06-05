@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 
-from .parser import readlineToCUIdMap, writelineToCUIdMap, DependenceItem
+from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 
 
@@ -265,6 +265,7 @@ class CUNode(Node):
 class LoopNode(Node):
     loop_iterations: int = -1
     contains_array_reduction: bool = False
+    loop_data: Optional[LoopData]
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
@@ -595,7 +596,7 @@ class PETGraphX(object):
         cls,
         cu_dict: Dict[str, ObjectifiedElement],
         dependencies_list: List[DependenceItem],
-        loop_data: Dict[str, int],
+        loop_data: Dict[str, LoopData],
         reduction_vars: List[Dict[str, str]],
     ):
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
@@ -635,9 +636,12 @@ class PETGraphX(object):
 
         for _, node in g.nodes(data="data"):
             if isinstance(node, LoopNode):
-                node.loop_iterations = loop_data.get(node.start_position(), 0)
+                node.loop_data = loop_data.get(node.start_position(), None)
+                # TODO remove loop_iterations property, was kept for backwards compatibility only
+                if node.loop_data is not None:
+                    node.loop_iterations = node.loop_data.total_iteration_count
 
-        print("\tAdded iterations...")
+        print("\tAdded loop data...")
 
         # calculate position before dependencies affect them
         try:

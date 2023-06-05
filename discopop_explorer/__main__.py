@@ -12,7 +12,8 @@ Usage:
     discopop_explorer [--path <path>] [--cu-xml <cuxml>] [--dep-file <depfile>] [--plugins <plugs>] \
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
 [--task-pattern] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] \
-[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>] [--profiling <bool>]
+[--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>] [--profiling <bool>] [--dump-pet <bool>]
+[--dump-detection-result <bool>]
 
 OPTIONAL ARGUMENTS:
     --path=<dir>               Directory with input data [default: ./]
@@ -33,9 +34,14 @@ OPTIONAL ARGUMENTS:
                                             Stops the regular execution of the discopop_explorer.
                                             Requires --cu-xml, --dep-file, --loop-counter, --reduction.
     --profiling=<bool>          Enable profiling. [default: false]
+    --dump-pet=<bool>           Dump PET Graph to JSON file. [default: false]
+    --dump-detection-result=<bool>  Dump DetectionResult object to JSON file. [default: true]
+                                    Contents are equivalent to the json output.
+                                    NOTE: This dump contains a dump of the PET Graph!
     -h --help                   Show this screen
 """
 import cProfile
+import copy
 import io
 import json
 import os
@@ -66,6 +72,8 @@ docopt_schema = Schema(
         "--dp-build-path": Use(str),
         "--generate-data-cu-inst": Use(str),
         "--profiling": Use(str),
+        "--dump-pet": Use(str),
+        "--dump-detection-result": Use(str),
     }
 )
 
@@ -143,6 +151,18 @@ def main():
     )
 
     end = time.time()
+
+    if arguments["--dump-pet"] == "true":
+        with open(get_path(path, "pet_dump.json"), "w+") as f:
+            f.write(res.pet.dump_to_pickled_json())
+            f.flush()
+            f.close()
+
+    if arguments["--dump-detection-result"] == "true":
+        with open(get_path(path, "detection_result_dump.json"), "w+") as f:
+            f.write(res.dump_to_pickled_json())
+            f.flush()
+            f.close()
 
     if arguments["--json"] == "None":
         print(str(res))

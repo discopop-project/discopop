@@ -149,6 +149,7 @@ namespace __dp {
 
         LID end;
         int32_t total;
+        int32_t maxIterationCount = 0;  // maximum iterations executed during a single loop entry
         int32_t nEntered;
     };
 
