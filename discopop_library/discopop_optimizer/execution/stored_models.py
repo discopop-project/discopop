@@ -9,8 +9,3 @@ def execute_stored_models(arguments: Dict):
 
     # collect models from path
     collected_model_paths: List[str] = []
-
-    code_export_path = os.path.join(arguments["--project-folder"], ".discopop_optimizer", "code_exports")
-
-
-

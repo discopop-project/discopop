@@ -26,6 +26,9 @@ class CostModel(object):
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
 
+    def toJSON(self):
+        return "AsDF"
+
     def __init__(
         self,
         parallelizable_costs: Expr,

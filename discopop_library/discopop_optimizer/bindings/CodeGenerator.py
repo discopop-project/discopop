@@ -1,13 +1,17 @@
+import json
 import os
 import random
 import string
 import shutil
 from typing import List, Optional, Tuple, Dict
 
+import jsonpickle  # type: ignore
+import jsons  # type: ignore
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeStorageObject
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
@@ -52,13 +56,24 @@ def export_code(
         experiment.file_mapping, patterns_by_type, skip_compilation_check=False
     )
 
-    # save modified code
-    export_dir = os.path.join(
-        experiment.project_folder_path,
-        ".discopop_optimizer",
-        "code_exports",
-        str(cost_model.path_decisions),
-    )
+    # save modified code as CostStorageObject
+    export_dir = os.path.join(experiment.project_folder_path, ".discopop_optimizer", "code_exports")
+    if not os.path.exists(export_dir):
+        os.makedirs(export_dir)
+
+    # generate unique hash name
+    hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    while os.path.exists(os.path.join(export_dir, hash_name)):
+        hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+    code_storage = CodeStorageObject(cost_model, modified_code)
+
+    # export code_storage object to json
+    print("Export JSON TO: ", os.path.join(export_dir, hash_name + ".json"))
+    with open(os.path.join(export_dir, hash_name + ".json"), "w+") as f:
+        f.write(jsonpickle.dumps(code_storage))
+        f.flush()
+        f.close()
 
     print("\n############################")
     print("Modified Code: Decisions: ", cost_model.path_decisions)
@@ -68,20 +83,3 @@ def export_code(
         print("#### File ID: ", file_id, " ####\n")
         print(modified_code[file_id])
         print("\n")
-
-    # generate hash name
-    hash_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-
-    # create Code Storage Object
-
-
-
-    if os.path.exists(export_dir):
-        shutil.rmtree(export_dir)
-    os.makedirs(export_dir)
-    for file_id in modified_code:
-        code_path = os.path.join(export_dir, str(file_id).replace(" ", ""))
-        with open(code_path, "w+") as f:
-            f.write(modified_code[file_id])
-            f.flush()
-            f.close()
