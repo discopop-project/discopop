@@ -18,8 +18,10 @@ def execute_stored_models(arguments: Dict):
     )
     print("Done")
 
-    # collect models from path
-    collected_model_paths: List[str] = []
+    # collect models to be executed
+    print("ARG: ", arguments["--code-export-path"])
+    for file_path in os.listdir(str(arguments["--code-export-path"])):
+        print("PATH: ", file_path)
 
     # remove working copy to free space
     print("\tRemoving working copy of the project...", end="")

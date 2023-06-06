@@ -91,6 +91,7 @@ def main():
     arguments["--detection-result-dump"] = get_path(
         arguments["--dp-output-path"], arguments["--detection-result-dump"]
     )
+    arguments["--dp-optimizer-path"] = os.path.join(arguments["--project"], ".discopop_optimizer")
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
@@ -131,7 +132,14 @@ def main():
 
     # define Environment
     # todo rename to Experiment
-    environment = Experiment(arguments["--dp-output-path"], arguments["--file-mapping"], system)
+    environment = Experiment(
+        arguments["--project"],
+        arguments["--dp-output-path"],
+        arguments["--dp-optimizer-path"],
+        arguments["--code-export-path"],
+        arguments["--file-mapping"],
+        system,
+    )
 
     # invoke optimization graph
     optimization_graph = OptimizationGraph(
