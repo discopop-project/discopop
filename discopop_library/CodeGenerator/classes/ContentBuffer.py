@@ -204,9 +204,11 @@ class ContentBuffer(object):
             os.chdir(saved_dir)
         compilation_successful = True if result.returncode == 0 else False
 
-        os.remove(tmp_file_name)
+        if os.path.exists(tmp_file_name):
+            os.remove(tmp_file_name)
         if compilation_successful:
-            os.remove(tmp_file_out_name)
+            if os.path.exists(tmp_file_out_name):
+                os.remove(tmp_file_out_name)
 
         # if not, reset ContentBuffer to the backup and return False
         if not compilation_successful:
