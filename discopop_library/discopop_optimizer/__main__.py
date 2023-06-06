@@ -9,17 +9,18 @@
 """Discopop Suggestion Optimizer
 
 Usage:
-    discopop_optimizer [--project-folder <path>] [--file-mapping <path>] [--detection-result-dump <path>]
-        [--execute-created-models] [--clean-created-code] [--code-export-path <path>]
+    discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
+        [--execute-created-models] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
 
 OPTIONAL ARGUMENTS:
-    --project-folder=<path>     Directory where the DiscoPoP outputs are located. [default: .]
+    --project=<path>            Path to the directory that contains your makefile [default: .]
     --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
     --clean-created-code        Removes all stored code modifications.
-    --code-export-path =<path>  Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
+    --code-export-path=<path>  Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
+    --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
     -h --help                   Show this screen
 """
 import os
@@ -42,12 +43,13 @@ from discopop_library.discopop_optimizer.execution.stored_models import execute_
 
 docopt_schema = Schema(
     {
-        "--project-folder": Use(str),
+        "--project": Use(str),
         "--file-mapping": Use(str),
         "--detection-result-dump": Use(str),
         "--execute-created-models": Use(str),
         "--clean-created-code": Use(str),
         "--code-export-path": Use(str),
+        "--dp-output-path": Use(str),
     }
 )
 
@@ -72,13 +74,7 @@ def main():
         exit(e)
 
     # prepare arguments
-    arguments["--project-folder"] = get_path(os.getcwd(), arguments["--project-folder"])
-    arguments["--file-mapping"] = get_path(
-        arguments["--project-folder"], arguments["--file-mapping"]
-    )
-    arguments["--detection-result-dump"] = get_path(
-        arguments["--project-folder"], arguments["--detection-result-dump"]
-    )
+    arguments["--project"] = get_path(os.getcwd(), arguments["--project"])
     arguments["--execute-created-models"] = (
         False if arguments["--execute-created-models"] == "False" else True
     )
@@ -86,7 +82,14 @@ def main():
         False if arguments["--clean-created-code"] == "False" else True
     )
     arguments["--code-export-path"] = get_path(
-        arguments["--project-folder"], arguments["--code-export-path"]
+        arguments["--project"], arguments["--code-export-path"]
+    )
+    arguments["--dp-output-path"] = get_path(arguments["--project"], arguments["--dp-output-path"])
+    arguments["--file-mapping"] = get_path(
+        arguments["--dp-output-path"], arguments["--file-mapping"]
+    )
+    arguments["--detection-result-dump"] = get_path(
+        arguments["--dp-output-path"], arguments["--detection-result-dump"]
     )
 
     print("Starting discopop_optimizer...")
@@ -128,11 +131,11 @@ def main():
 
     # define Environment
     # todo rename to Experiment
-    environment = Experiment(arguments["--project-folder"], arguments["--file-mapping"], system)
+    environment = Experiment(arguments["--dp-output-path"], arguments["--file-mapping"], system)
 
     # invoke optimization graph
     optimization_graph = OptimizationGraph(
-        detection_result, arguments["--project-folder"], environment
+        detection_result, arguments["--dp-output-path"], environment
     )
 
 
