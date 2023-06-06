@@ -36,21 +36,20 @@ def __apply_modifications(
     modifications: CodeStorageObject,
     file_mapping: Dict[int, Path],
 ):
-    print("\t\tAPPlYING: ", modifications)
-    print("\t\tproject: ", project_folder)
-    print("\t\tworking: ", working_copy_dir)
-    print("\t\tfile_mapping: ", file_mapping)
-
     for file_id in modifications.modified_code:
-        print("\t\tfile id: ", file_id)
         file_mapping_path = str(file_mapping[int(file_id)])
         # remove /.discopop/ from pat if it occurs
         if "/.discopop/" in file_mapping_path:
             file_mapping_path = file_mapping_path.replace("/.discopop/", "/")
-        print("\t\t\t", file_mapping_path)
         # get file to be overwritten
         replace_path = file_mapping_path.replace(project_folder, working_copy_dir)
-        print("\t\t\t-->", replace_path)
+        # overwrite file
+        if not os.path.exists(replace_path):
+            raise FileNotFoundError(replace_path)
+        with open(replace_path, "w") as f:
+            f.write(modifications.modified_code[file_id])
+            f.flush()
+            f.close()
 
 
 def __load_code_storage_object(file_path) -> CodeStorageObject:
