@@ -19,9 +19,6 @@ class ContextObject(object):
     seen_writes_by_device: Dict[DeviceID, Dict[MemoryRegion, Set[WriteDataAccess]]]
     necessary_updates: Set[Update]
 
-    def toJSON(self):
-        return "BLUB"
-
     def __init__(self, initializing_node_id: int, last_seen_device_id: DeviceID = None):
         self.seen_writes_by_device = dict()
         self.necessary_updates = set()

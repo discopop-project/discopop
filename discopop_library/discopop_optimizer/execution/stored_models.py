@@ -27,7 +27,12 @@ def execute_stored_models(arguments: Dict):
             code_modifications,
             load_file_mapping(arguments["--file-mapping"]),
         )
+        __compile(arguments)
         __cleanup(working_copy_dir)
+
+
+def __compile(arguments: Dict):
+    pass
 
 
 def __apply_modifications(
