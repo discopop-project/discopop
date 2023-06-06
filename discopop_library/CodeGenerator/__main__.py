@@ -102,7 +102,7 @@ def main():
     for file_id in modified_code:
         old_location = file_mapping_dict[file_id]
         print("OLD LOC: ", old_location)
-        new_location = os.path.join(outputdir, old_location.split("/.discopop/")[1])
+        new_location = os.path.join(outputdir, str(old_location).split("/.discopop/")[1])
         print("NEW LOC: ", new_location)
 
         modified_code_by_new_location[new_location] = modified_code[file_id]
