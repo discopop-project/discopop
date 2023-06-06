@@ -10,7 +10,7 @@
 
 Usage:
     discopop_optimizer [--project-folder <path>] [--file-mapping <path>] [--detection-result-dump <path>]
-        [--execute-created-models]
+        [--execute-created-models] [--clean-created-code] [--code-export-path <path>]
 
 OPTIONAL ARGUMENTS:
     --project-folder=<path>     Directory where the DiscoPoP outputs are located. [default: .]
@@ -18,9 +18,12 @@ OPTIONAL ARGUMENTS:
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
+    --clean-created-code        Removes all stored code modifications.
+    --code-export-path =<path>  Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
     -h --help                   Show this screen
 """
 import os
+import shutil
 import sys
 
 import jsonpickle  # type: ignore
@@ -43,6 +46,8 @@ docopt_schema = Schema(
         "--file-mapping": Use(str),
         "--detection-result-dump": Use(str),
         "--execute-created-models": Use(str),
+        "--clean-created-code": Use(str),
+        "--code-export-path": Use(str),
     }
 )
 
@@ -77,6 +82,12 @@ def main():
     arguments["--execute-created-models"] = (
         False if arguments["--execute-created-models"] == "False" else True
     )
+    arguments["--clean-created-code"] = (
+        False if arguments["--clean-created-code"] == "False" else True
+    )
+    arguments["--code-export-path"] = get_path(
+        arguments["--project-folder"], arguments["--code-export-path"]
+    )
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
@@ -85,6 +96,14 @@ def main():
     if arguments["--execute-created-models"]:
         execute_stored_models(arguments)
         sys.exit(0)
+
+    if arguments["--clean-created-code"]:
+        # remove stored parallel code if requested
+        print("Removing old exported code...", end="")
+        if os.path.exists(arguments["--code-export-path"]):
+            shutil.rmtree(arguments["--code-export-path"])
+        os.makedirs(arguments["--code-export-path"])
+        print("Done.")
 
     # load detection result
     print("Loading detection result and PET...", end="")
