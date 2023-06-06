@@ -10,11 +10,13 @@
 
 Usage:
     discopop_optimizer [--project-folder <path>] [--file-mapping <path>] [--detection-result-dump <path>]
+        [--execute-created-models]
 
 OPTIONAL ARGUMENTS:
     --project-folder=<path>     Directory where the DiscoPoP outputs are located. [default: .]
     --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
+    --execute-created-models    Compiles, executes and measures models already stored in the project folder.
     -h --help                   Show this screen
 """
 import os
@@ -33,7 +35,12 @@ from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 
 docopt_schema = Schema(
-    {"--project-folder": Use(str), "--file-mapping": Use(str), "--detection-result-dump": Use(str)}
+    {
+        "--project-folder": Use(str),
+        "--file-mapping": Use(str),
+        "--detection-result-dump": Use(str),
+        "--execute-created-models": Use(str),
+    }
 )
 
 
@@ -61,6 +68,9 @@ def main():
     arguments["--file-mapping"] = get_path(os.getcwd(), arguments["--file-mapping"])
     arguments["--detection-result-dump"] = get_path(
         arguments["--project-folder"], arguments["--detection-result-dump"]
+    )
+    arguments["--execute-created-models"] = (
+        False if ["--execute-created-models"] == "False" else True
     )
 
     print("Starting discopop_optimizer...")
