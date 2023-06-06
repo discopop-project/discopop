@@ -11,6 +11,7 @@
 Usage:
     discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
+        [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -19,8 +20,15 @@ OPTIONAL ARGUMENTS:
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
     --clean-created-code        Removes all stored code modifications.
-    --code-export-path=<path>  Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
+    --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
     --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
+    --executable-arguments <string>
+                                run your application with these arguments [default: ]
+    --linker-flags <string>     if your build requires to link other libraries
+                                please provide the necessary linker flags. e.g. -lm [default: ]
+    --make-target <string>      specify a specific Make target to be built,
+                                if not specified the default make target is used. [default: ]
+    --make-flags <string>       specify flags which will be passed through to make. [default: ]
     -h --help                   Show this screen
 """
 import os
@@ -50,6 +58,10 @@ docopt_schema = Schema(
         "--clean-created-code": Use(str),
         "--code-export-path": Use(str),
         "--dp-output-path": Use(str),
+        "--executable-arguments": Use(str),
+        "--linker-flags": Use(str),
+        "--make-target": Use(str),
+        "--make-flags": Use(str),
     }
 )
 
@@ -93,6 +105,9 @@ def main():
         arguments["--dp-output-path"], arguments["--detection-result-dump"]
     )
     arguments["--dp-optimizer-path"] = os.path.join(arguments["--project"], ".discopop_optimizer")
+    arguments["--make-target"] = (
+        None if arguments["--make-target"] == "None" else arguments["--make-target"]
+    )
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
