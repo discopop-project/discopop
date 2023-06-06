@@ -1,6 +1,7 @@
 import os
 import random
 import string
+import shutil
 from typing import List, Optional, Tuple, Dict
 
 import networkx as nx  # type: ignore
@@ -35,14 +36,16 @@ def export_code(
         suggestions.append((device, suggestion, suggestion_type))
 
     # todo collect updates to be applied
-    print("UPDATES: ", context.necessary_updates)
+    for update in context.necessary_updates:
+        print("type: ", type(update))
+        print(str(update))
 
     # prepare patterns by type
     patterns_by_type: Dict[str, list[PatternInfo]] = dict()
-    for _, pattern, type in suggestions:
-        if type not in patterns_by_type:
-            patterns_by_type[type] = []
-        patterns_by_type[type].append(pattern)
+    for _, pattern, s_type in suggestions:
+        if s_type not in patterns_by_type:
+            patterns_by_type[s_type] = []
+        patterns_by_type[s_type].append(pattern)
 
     # invoke the discopop code generator
     modified_code = code_gen_from_pattern_info(
@@ -74,7 +77,7 @@ def export_code(
 
 
     if os.path.exists(export_dir):
-        os.rmdir(export_dir)
+        shutil.rmtree(export_dir)
     os.makedirs(export_dir)
     for file_id in modified_code:
         code_path = os.path.join(export_dir, str(file_id).replace(" ", ""))
