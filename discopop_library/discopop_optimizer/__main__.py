@@ -12,6 +12,7 @@ Usage:
     discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
+        [--executable-name <string>] [--execution-repetitions <int>]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -19,16 +20,20 @@ OPTIONAL ARGUMENTS:
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
+                                Required: --executable-name
+    --execution-repetitions=<int>     Repeat measurements [default: 1]
     --clean-created-code        Removes all stored code modifications.
     --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
     --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
-    --executable-arguments <string>
+    --executable-name=<string>  Name of the executable generate by your makefile.
+                                Must be specified if --execute-created-models is used! [default: ]
+    --executable-arguments=<string>
                                 run your application with these arguments [default: ]
-    --linker-flags <string>     if your build requires to link other libraries
+    --linker-flags=<string>     if your build requires to link other libraries
                                 please provide the necessary linker flags. e.g. -lm [default: ]
-    --make-target <string>      specify a specific Make target to be built,
+    --make-target=<string>      specify a specific Make target to be built,
                                 if not specified the default make target is used. [default: ]
-    --make-flags <string>       specify flags which will be passed through to make. [default: ]
+    --make-flags=<string>       specify flags which will be passed through to make. [default: ]
     -h --help                   Show this screen
 """
 import os
@@ -59,9 +64,11 @@ docopt_schema = Schema(
         "--code-export-path": Use(str),
         "--dp-output-path": Use(str),
         "--executable-arguments": Use(str),
+        "--executable-name": Use(str),
         "--linker-flags": Use(str),
         "--make-target": Use(str),
         "--make-flags": Use(str),
+        "--execution-repetitions": Use(str),
     }
 )
 
@@ -114,6 +121,8 @@ def main():
         print("\t", arg_name, "=", arguments[arg_name])
 
     if arguments["--execute-created-models"]:
+        if arguments["--executable-name"] == "":
+            raise ValueError("Please specify the name of your executable using --executable-name!")
         execute_stored_models(arguments)
         sys.exit(0)
 

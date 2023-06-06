@@ -13,6 +13,7 @@ from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeStorageObject
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -22,7 +23,11 @@ from discopop_library.CodeGenerator.CodeGenerator import (
 
 
 def export_code(
-    graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel, context: ContextObject
+    graph: nx.DiGraph,
+    experiment: Experiment,
+    cost_model: CostModel,
+    context: ContextObject,
+    parent_function: FunctionRoot,
 ):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
     # collect suggestions to be applied
@@ -66,7 +71,7 @@ def export_code(
     while os.path.exists(os.path.join(export_dir, hash_name)):
         hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-    code_storage = CodeStorageObject(cost_model, modified_code)
+    code_storage = CodeStorageObject(cost_model, modified_code, parent_function)
 
     # export code_storage object to json
     print("Export JSON TO: ", os.path.join(export_dir, hash_name + ".json"))
