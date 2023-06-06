@@ -1,7 +1,12 @@
 import os
 import shutil
+import statistics
+import subprocess
+import time
+import warnings
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, cast
+from typing import Dict, cast, List
 
 import jsonpickle  # type: ignore
 
@@ -27,12 +32,61 @@ def execute_stored_models(arguments: Dict):
             code_modifications,
             load_file_mapping(arguments["--file-mapping"]),
         )
-        __compile(arguments)
+        __compile(arguments, working_copy_dir)
+        __execute(arguments, working_copy_dir)
         __cleanup(working_copy_dir)
 
 
-def __compile(arguments: Dict):
-    pass
+def __execute(arguments: Dict, working_copy_dir):
+    print("\t\texecuting...")
+    command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]
+    clean_command = [c for c in command if len(c) != 0]
+    execution_times: List[float] = []
+    for execution_idx in range(0, int(arguments["--execution-repetitions"])):
+        start_time = time.time()
+        result = subprocess.run(
+            clean_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=working_copy_dir,
+        )
+        end_time = time.time()
+        execution_times.append(end_time - start_time)
+        if str(result.returncode) != "0":
+            warnings.warn("ERROR DURING EXECUTION...\n" + result.stderr)
+        print("STDOUT: ")
+        print(result.stdout)
+        print("STDERR: ")
+        print(result.stderr)
+    print("\t\t\tREPS: ", len(execution_times))
+    print("\t\t\tAVG: ", sum(execution_times) / len(execution_times))
+    print("\t\t\tVariance: ", statistics.variance(execution_times))
+
+
+def __compile(arguments: Dict, working_copy_dir):
+    print("\t\tbuilding...")
+    command = ["make"]
+    if len(arguments["--make-flags"]) != 0:
+        command += arguments["--make-flags"].split(" ")
+
+    if len(arguments["--make-target"]) != 0:
+        command += arguments["--make-target"].split(" ")
+    clean_command = [c for c in command if len(c) != 0]
+    print("\t\t\tCommand: ", clean_command)
+    result = subprocess.run(
+        clean_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        cwd=working_copy_dir,
+    )
+    print("STDOUT: ")
+    print(result.stdout)
+    print("STDERR: ")
+    print(result.stderr)
+    if str(result.returncode) != "0":
+        warnings.warn("ERROR / WARNING DURING Compilation...\n" + result.stderr)
 
 
 def __apply_modifications(
@@ -41,6 +95,8 @@ def __apply_modifications(
     modifications: CodeStorageObject,
     file_mapping: Dict[int, Path],
 ):
+    print("\t\tApplying code modifications...")
+    print("\t\t\tFunction: ", modifications.parent_function.name)
     for file_id in modifications.modified_code:
         file_mapping_path = str(file_mapping[int(file_id)])
         # remove /.discopop/ from pat if it occurs
@@ -52,7 +108,12 @@ def __apply_modifications(
         if not os.path.exists(replace_path):
             raise FileNotFoundError(replace_path)
         with open(replace_path, "w") as f:
-            f.write(modifications.modified_code[file_id])
+            modified_code = modifications.modified_code[file_id]
+            for line in modified_code.split("\n"):
+                if "#pragma omp" in line:
+                    print("\t\t\t--> ", line)
+
+            f.write(modified_code)
             f.flush()
             f.close()
 
