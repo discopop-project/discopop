@@ -17,9 +17,11 @@ OPTIONAL ARGUMENTS:
     --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
+                                Does not start the optimization pipeline.
     -h --help                   Show this screen
 """
 import os
+import sys
 
 import jsonpickle  # type: ignore
 import pstats2  # type:ignore
@@ -33,6 +35,7 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
+from discopop_library.discopop_optimizer.execution.stored_models import execute_stored_models
 
 docopt_schema = Schema(
     {
@@ -65,17 +68,23 @@ def main():
 
     # prepare arguments
     arguments["--project-folder"] = get_path(os.getcwd(), arguments["--project-folder"])
-    arguments["--file-mapping"] = get_path(os.getcwd(), arguments["--file-mapping"])
+    arguments["--file-mapping"] = get_path(
+        arguments["--project-folder"], arguments["--file-mapping"]
+    )
     arguments["--detection-result-dump"] = get_path(
         arguments["--project-folder"], arguments["--detection-result-dump"]
     )
     arguments["--execute-created-models"] = (
-        False if ["--execute-created-models"] == "False" else True
+        False if arguments["--execute-created-models"] == "False" else True
     )
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
         print("\t", arg_name, "=", arguments[arg_name])
+
+    if arguments["--execute-created-models"]:
+        execute_stored_models(arguments)
+        sys.exit(0)
 
     # load detection result
     print("Loading detection result and PET...", end="")

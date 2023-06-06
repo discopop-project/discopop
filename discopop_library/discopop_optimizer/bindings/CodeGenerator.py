@@ -1,4 +1,6 @@
 import os
+import random
+import string
 from typing import List, Optional, Tuple, Dict
 
 import networkx as nx  # type: ignore
@@ -59,6 +61,13 @@ def export_code(graph: nx.DiGraph, experiment: Experiment, cost_model: CostModel
         print("#### File ID: ", file_id, " ####\n")
         print(modified_code[file_id])
         print("\n")
+
+    # generate hash name
+    hash_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+    # create Code Storage Object
+
+
 
     if os.path.exists(export_dir):
         os.rmdir(export_dir)
