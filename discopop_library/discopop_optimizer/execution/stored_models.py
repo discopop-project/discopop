@@ -1,29 +1,75 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, cast
+
+import jsonpickle  # type: ignore
+
+from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeStorageObject
 
 
 def execute_stored_models(arguments: Dict):
     """Collects and executes all models stored in the current project path"""
     print("Executing stored models...")
 
-    # create a copy of the original code
-    print("\tCreating a working copy of the project...", end="")
+    # collect models to be executed
     working_copy_dir = os.path.join(arguments["--project"], ".discopop_optimizer_code_copy")
-    if os.path.exists(working_copy_dir):
-        shutil.rmtree(working_copy_dir)
-    shutil.copytree(
-        str(arguments["--project"]), working_copy_dir, ignore=shutil.ignore_patterns(".discopop*")
-    )
+    for file_name in os.listdir(str(arguments["--code-export-path"])):
+        print("\t", file_name)
+        __create_project_copy(arguments["--project"], working_copy_dir)
+        code_modifications = __load_code_storage_object(
+            os.path.join(str(arguments["--code-export-path"]), file_name)
+        )
+        __apply_modifications(
+            arguments["--project"],
+            working_copy_dir,
+            code_modifications,
+            load_file_mapping(arguments["--file-mapping"]),
+        )
+        __cleanup(working_copy_dir)
+
+
+def __apply_modifications(
+    project_folder,
+    working_copy_dir,
+    modifications: CodeStorageObject,
+    file_mapping: Dict[int, Path],
+):
+    print("\t\tAPPlYING: ", modifications)
+    print("\t\tproject: ", project_folder)
+    print("\t\tworking: ", working_copy_dir)
+    print("\t\tfile_mapping: ", file_mapping)
+
+    for file_id in modifications.modified_code:
+        print("\t\tfile id: ", file_id)
+        file_mapping_path = str(file_mapping[int(file_id)])
+        # remove /.discopop/ from pat if it occurs
+        if "/.discopop/" in file_mapping_path:
+            file_mapping_path = file_mapping_path.replace("/.discopop/", "/")
+        print("\t\t\t", file_mapping_path)
+        # get file to be overwritten
+        replace_path = file_mapping_path.replace(project_folder, working_copy_dir)
+        print("\t\t\t-->", replace_path)
+
+
+def __load_code_storage_object(file_path) -> CodeStorageObject:
+    json_contents = ""
+    with open(file_path, "r") as f:
+        json_contents = f.read()
+    return cast(CodeStorageObject, jsonpickle.decode(json_contents))
+
+
+def __create_project_copy(source, target):
+    print("\t\tCreating a working copy of the project...", end="")
+    if os.path.exists(target):
+        shutil.rmtree(target)
+    shutil.copytree(str(source), target, ignore=shutil.ignore_patterns(".discopop*"))
     print("Done")
 
-    # collect models to be executed
-    print("ARG: ", arguments["--code-export-path"])
-    for file_path in os.listdir(str(arguments["--code-export-path"])):
-        print("PATH: ", file_path)
 
+def __cleanup(working_copy_dir: str):
     # remove working copy to free space
-    print("\tRemoving working copy of the project...", end="")
+    print("\t\tRemoving working copy of the project...", end="")
     shutil.rmtree(working_copy_dir)
     print("Done.")
