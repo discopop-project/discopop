@@ -35,19 +35,35 @@ class Experiment(object):
 
     __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
 
-    project_folder_path: Path
+    project_path: Path
+    discopop_output_path: Path
+    discopop_optimizer_path: Path
+    code_export_path: Path
+
     file_mapping: Dict[int, Path]  # file-mapping
 
-    def __init__(self, project_folder_path, file_mapping_path: str, system: System):
+    def __init__(
+        self,
+        project_path,
+        discopop_output_path,
+        discopop_optimizer_path,
+        code_export_path,
+        file_mapping_path: str,
+        system: System,
+    ):
         self.__system = system
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
-            os.path.join(project_folder_path, "memory_regions.txt"),
+            os.path.join(discopop_output_path, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
 
-        self.project_folder_path = project_folder_path
+        self.project_path = project_path
+        self.discopop_output_path = discopop_output_path
+        self.discopop_optimizer_path = discopop_optimizer_path
+        self.code_export_path = code_export_path
+
         self.file_mapping = load_file_mapping(file_mapping_path)
 
         # collect free symbols from system

@@ -57,7 +57,7 @@ def export_code(
     )
 
     # save modified code as CostStorageObject
-    export_dir = os.path.join(experiment.project_folder_path, ".discopop_optimizer", "code_exports")
+    export_dir = os.path.join(experiment.discopop_optimizer_path, "code_exports")
     if not os.path.exists(export_dir):
         os.makedirs(export_dir)
 
