@@ -1,4 +1,5 @@
 import os
+import shlex
 import shutil
 import statistics
 import subprocess
@@ -69,10 +70,10 @@ def __compile(arguments: Dict, working_copy_dir):
     print("\t\tbuilding...")
     command = ["make"]
     if len(arguments["--make-flags"]) != 0:
-        command += arguments["--make-flags"].split(" ")
+        command += shlex.split(arguments["--make-flags"])  # split string, consider quotes
 
     if len(arguments["--make-target"]) != 0:
-        command += arguments["--make-target"].split(" ")
+        command += shlex.split(arguments["--make-target"])  # split string, consider quotes
     clean_command = [c for c in command if len(c) != 0]
     print("\t\t\tCommand: ", clean_command)
     result = subprocess.run(
