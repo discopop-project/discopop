@@ -124,23 +124,42 @@ def __apply_modifications(
     print("\t\t\tFunction: ", modifications.parent_function.name)
     for file_id in modifications.patches:
         file_mapping_path = str(file_mapping[int(file_id)])
-        # remove /.discopop/ from pat if it occurs
+        # remove /.discopop/ from path if it occurs
         if "/.discopop/" in file_mapping_path:
             file_mapping_path = file_mapping_path.replace("/.discopop/", "/")
         # get file to be overwritten
         replace_path = file_mapping_path.replace(project_folder, working_copy_dir)
-        # overwrite file
+        # apply patch to the file
         if not os.path.exists(replace_path):
             raise FileNotFoundError(replace_path)
-        with open(replace_path, "w") as f:
-            modified_code = modifications.patches[file_id]
-            for line in modified_code.split("\n"):
-                if "#pragma omp" in line:
-                    print("\t\t\t--> ", line)
+        # save patch to disk
+        patch = replace_path + ".patch"
+        with open(patch, "w+") as p:
+            p.write(modifications.patches[file_id])
+            p.flush()
+            p.close()
 
-            f.write(modified_code)
-            f.flush()
-            f.close()
+        command = ["patch", "-i", patch, "-o", replace_path]
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=os.getcwd(),
+        )
+        print("RESULT: ", result.returncode)
+        print("STDERR:")
+        print(result.stderr)
+        print("STDOUT: ")
+        print(result.stdout)
+
+        if result.returncode == 0:
+            print("Applied Patch:")
+            print(modifications.patches[file_id])
+
+        # remove temporary patch file
+        if os.path.exists(patch):
+            os.remove(patch)
 
 
 def __load_code_storage_object(file_path) -> CodeStorageObject:
