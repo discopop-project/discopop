@@ -35,7 +35,7 @@ def execute_stored_models(arguments: Dict):
         )
         __compile(arguments, working_copy_dir)
         __execute(arguments, working_copy_dir)
-        __cleanup(working_copy_dir)
+        # __cleanup(working_copy_dir)
 
 
 def execute_single_model(arguments: Dict):
@@ -58,7 +58,7 @@ def execute_single_model(arguments: Dict):
     )
     __compile(arguments, working_copy_dir)
     __execute(arguments, working_copy_dir)
-    __cleanup(working_copy_dir)
+    # __cleanup(working_copy_dir)
 
 
 def __execute(arguments: Dict, working_copy_dir):
