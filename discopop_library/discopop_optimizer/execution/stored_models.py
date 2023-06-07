@@ -61,7 +61,8 @@ def __execute(arguments: Dict, working_copy_dir):
         print(result.stderr)
     print("\t\t\tREPS: ", len(execution_times))
     print("\t\t\tAVG: ", sum(execution_times) / len(execution_times))
-    print("\t\t\tVariance: ", statistics.variance(execution_times))
+    if len(execution_times) >= 2:
+        print("\t\t\tVariance: ", statistics.variance(execution_times))
 
 
 def __compile(arguments: Dict, working_copy_dir):
