@@ -55,7 +55,10 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
-from discopop_library.discopop_optimizer.execution.stored_models import execute_stored_models, execute_single_model
+from discopop_library.discopop_optimizer.execution.stored_models import (
+    execute_stored_models,
+    execute_single_model,
+)
 
 docopt_schema = Schema(
     {
@@ -72,7 +75,7 @@ docopt_schema = Schema(
         "--make-target": Use(str),
         "--make-flags": Use(str),
         "--execution-repetitions": Use(str),
-        "--execute-single-model": Use(str)
+        "--execute-single-model": Use(str),
     }
 )
 
@@ -119,8 +122,11 @@ def main():
     arguments["--make-target"] = (
         None if arguments["--make-target"] == "None" else arguments["--make-target"]
     )
-    arguments["--execute-single-model"] = None if len(arguments["--execute-single-model"]) == 0 else get_path(arguments["--code-export-path"], arguments["--execute-single-model"])
-
+    arguments["--execute-single-model"] = (
+        None
+        if len(arguments["--execute-single-model"]) == 0
+        else get_path(arguments["--code-export-path"], arguments["--execute-single-model"])
+    )
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
