@@ -38,6 +38,29 @@ def execute_stored_models(arguments: Dict):
         __cleanup(working_copy_dir)
 
 
+def execute_single_model(arguments: Dict):
+    """Executes the single models specified by the given arguments"""
+    print("Executing stored model...")
+
+    # collect model to be executed
+    working_copy_dir = os.path.join(arguments["--project"], ".discopop_optimizer_code_copy")
+    file_name = arguments["--execute-single-model"]
+    print("\t", file_name)
+    __create_project_copy(arguments["--project"], working_copy_dir)
+    code_modifications = __load_code_storage_object(
+        os.path.join(str(arguments["--code-export-path"]), file_name)
+    )
+    __apply_modifications(
+        arguments["--project"],
+        working_copy_dir,
+        code_modifications,
+        load_file_mapping(arguments["--file-mapping"]),
+    )
+    __compile(arguments, working_copy_dir)
+    __execute(arguments, working_copy_dir)
+    __cleanup(working_copy_dir)
+
+
 def __execute(arguments: Dict, working_copy_dir):
     print("\t\texecuting...")
     command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]
