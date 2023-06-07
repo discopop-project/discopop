@@ -10,7 +10,7 @@
 
 Usage:
     discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
-        [--execute-created-models] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
+        [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
         [--executable-name <string>] [--execution-repetitions <int>]
 
@@ -21,7 +21,10 @@ OPTIONAL ARGUMENTS:
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
                                 Required: --executable-name
-    --execution-repetitions=<int>     Repeat measurements [default: 1]
+    --execute-single-model=<path>       Execute the given model only. Path to the JSON or filename, if the model is located in --code-export-path.
+                                        Does not start the optimization pipeline.
+                                        Required: --executable-name [default: ]
+    --execution-repetitions=<int>       Repeat measurements [default: 1]
     --clean-created-code        Removes all stored code modifications.
     --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
     --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
@@ -52,7 +55,7 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
-from discopop_library.discopop_optimizer.execution.stored_models import execute_stored_models
+from discopop_library.discopop_optimizer.execution.stored_models import execute_stored_models, execute_single_model
 
 docopt_schema = Schema(
     {
@@ -69,6 +72,7 @@ docopt_schema = Schema(
         "--make-target": Use(str),
         "--make-flags": Use(str),
         "--execution-repetitions": Use(str),
+        "--execute-single-model": Use(str)
     }
 )
 
@@ -115,15 +119,20 @@ def main():
     arguments["--make-target"] = (
         None if arguments["--make-target"] == "None" else arguments["--make-target"]
     )
+    arguments["--execute-single-model"] = None if len(arguments["--execute-single-model"]) == 0 else get_path(arguments["--code-export-path"], arguments["--execute-single-model"])
+
 
     print("Starting discopop_optimizer...")
     for arg_name in arguments:
         print("\t", arg_name, "=", arguments[arg_name])
 
-    if arguments["--execute-created-models"]:
+    if arguments["--execute-created-models"] or arguments["--execute-single-model"] is not None:
         if arguments["--executable-name"] == "":
             raise ValueError("Please specify the name of your executable using --executable-name!")
-        execute_stored_models(arguments)
+        if arguments["--execute-single-model"] is None:
+            execute_stored_models(arguments)
+        else:
+            execute_single_model(arguments)
         sys.exit(0)
 
     if arguments["--clean-created-code"]:
