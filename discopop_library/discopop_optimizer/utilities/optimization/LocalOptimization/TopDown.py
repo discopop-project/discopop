@@ -100,7 +100,8 @@ def get_locally_optimized_models(
         complete_performance_models = add_data_transfer_costs(
             graph, performance_models_with_transfers, environment
         )
-        result_dict = result_dict | complete_performance_models
+        # merge dictionaries
+        result_dict = {**result_dict, **complete_performance_models}
 
     return result_dict
 

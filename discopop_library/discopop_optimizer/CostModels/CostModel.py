@@ -72,7 +72,8 @@ class CostModel(object):
         parallelizable_costs = self.parallelizable_costs + other.parallelizable_costs
         sequential_costs = self.sequential_costs + other.sequential_costs
         path_decisions = self.path_decisions + other.path_decisions
-        value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
+        # merge dictionaries
+        value_suggestions = {**self.symbol_value_suggestions, **other.symbol_value_suggestions}
         return CostModel(
             parallelizable_costs,
             sequential_costs,
@@ -108,7 +109,8 @@ class CostModel(object):
         parallelizable_costs = self.parallelizable_costs * other.parallelizable_costs
         sequential_costs = self.sequential_costs * other.sequential_costs
         path_decisions = self.path_decisions + other.path_decisions
-        value_suggestions = self.symbol_value_suggestions | other.symbol_value_suggestions
+        # merge dictionaries
+        value_suggestions = {**self.symbol_value_suggestions, **other.symbol_value_suggestions}
         return CostModel(
             parallelizable_costs,
             sequential_costs,
