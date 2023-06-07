@@ -122,7 +122,7 @@ def __apply_modifications(
 ):
     print("\t\tApplying code modifications...")
     print("\t\t\tFunction: ", modifications.parent_function.name)
-    for file_id in modifications.modified_code:
+    for file_id in modifications.patches:
         file_mapping_path = str(file_mapping[int(file_id)])
         # remove /.discopop/ from pat if it occurs
         if "/.discopop/" in file_mapping_path:
@@ -133,7 +133,7 @@ def __apply_modifications(
         if not os.path.exists(replace_path):
             raise FileNotFoundError(replace_path)
         with open(replace_path, "w") as f:
-            modified_code = modifications.modified_code[file_id]
+            modified_code = modifications.patches[file_id]
             for line in modified_code.split("\n"):
                 if "#pragma omp" in line:
                     print("\t\t\t--> ", line)

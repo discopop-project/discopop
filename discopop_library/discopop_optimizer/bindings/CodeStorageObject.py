@@ -7,12 +7,12 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 
 class CodeStorageObject(object):
     cost_model: CostModel
-    modified_code: Dict[int, str]
+    patches: Dict[int, str]
     parent_function: FunctionRoot
 
     def __init__(
-        self, cost_model: CostModel, modified_code: Dict[int, str], parent_function: FunctionRoot
+        self, cost_model: CostModel, patches: Dict[int, str], parent_function: FunctionRoot
     ):
         self.cost_model = cost_model
-        self.modified_code = modified_code
+        self.patches = patches
         self.parent_function = parent_function
