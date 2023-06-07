@@ -3,6 +3,7 @@ import os
 import random
 import string
 import shutil
+import subprocess
 from typing import List, Optional, Tuple, Dict
 
 import jsonpickle  # type: ignore
@@ -60,6 +61,8 @@ def export_code(
     modified_code = code_gen_from_pattern_info(
         experiment.file_mapping, patterns_by_type, skip_compilation_check=False
     )
+    # create patches from the modified code
+    patches = __convert_modified_code_to_patch(experiment, modified_code)
 
     # save modified code as CostStorageObject
     export_dir = os.path.join(experiment.discopop_optimizer_path, "code_exports")
@@ -71,7 +74,7 @@ def export_code(
     while os.path.exists(os.path.join(export_dir, hash_name)):
         hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-    code_storage = CodeStorageObject(cost_model, modified_code, parent_function)
+    code_storage = CodeStorageObject(cost_model, patches, parent_function)
 
     # export code_storage object to json
     print("Export JSON TO: ", os.path.join(export_dir, hash_name + ".json"))
@@ -84,7 +87,56 @@ def export_code(
     print("Modified Code: Decisions: ", cost_model.path_decisions)
     print("Exporting to: ", export_dir)
     print("############################")
-    for file_id in modified_code:
+    for file_id in patches:
         print("#### File ID: ", file_id, " ####\n")
-        print(modified_code[file_id])
+        print(patches[file_id])
         print("\n")
+
+
+def __convert_modified_code_to_patch(
+    experiment: Experiment, modified_code: Dict[int, str]
+) -> Dict[int, str]:
+    patches: Dict[int, str] = dict()
+    hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    tmp_file_name = os.path.join(os.getcwd(), hash_name + ".tmp")
+    for file_id in modified_code:
+        # write modified code to file
+        with open(tmp_file_name, "w+") as f:
+            f.write(modified_code[file_id])
+            f.flush()
+            f.close()
+
+        # generate diff
+        diff_name = tmp_file_name + ".diff"
+        command = [
+            "diff",
+            "-Naru",
+            str(experiment.file_mapping[file_id]),
+            tmp_file_name,
+        ]
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=os.getcwd(),
+        )
+        print("RESULT: ", result.returncode)
+        print("STDERR:")
+        print(result.stderr)
+        print("STDOUT: ")
+        print(result.stdout)
+
+        # save diff
+        patches[file_id] = result.stdout
+
+        # cleanup environment
+        if os.path.exists(tmp_file_name):
+            os.remove(tmp_file_name)
+        if os.path.exists(diff_name):
+            os.remove(diff_name)
+
+    print("PATCHES:")
+    print(patches)
+
+    return patches
