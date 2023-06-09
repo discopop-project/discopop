@@ -251,6 +251,7 @@ class Node:
 class CUNode(Node):
     instructions_count: int = -1
     basic_block_id = ""
+    start_column: int
     return_instructions_count: int = -1
     local_vars: List[Variable] = []
     global_vars: List[Variable] = []
@@ -526,6 +527,8 @@ def parse_cu(node: ObjectifiedElement) -> Node:
             n.recursive_function_calls = [n.text for n in node.callsNode.recursiveFunctionCall]
         if hasattr(node, "performsFileIO"):
             n.performs_file_io = True if int(getattr(node, "performsFileIO")) == 1 else False
+        if hasattr(node, "startColumn"):
+            n.start_column = int(getattr(node, "startColumn"))
         n.instructions_count = int(getattr(node, "instructionsCount"))
 
     # FUNC or DUMMY NODE
