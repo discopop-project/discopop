@@ -42,8 +42,6 @@ class UnpackedSuggestion(object):
         pragmas = []
         pragma = Pragma()
 
-        print("SELF VALUES: ", self.values)
-
         source_device_id = int(self.values["source_device_id"])
         target_device_id = int(self.values["target_device_id"])
         var_name = self.values["var_name"]
@@ -57,8 +55,8 @@ class UnpackedSuggestion(object):
                 "#pragma omp target data map(to:"
                 + var_name
                 + ") device("
-                + str(source_device_id)
-                + " -> "
+                #                + str(source_device_id)
+                #                + " -> "
                 + str(target_device_id)
                 + ")"
             )
@@ -69,8 +67,8 @@ class UnpackedSuggestion(object):
                 + var_name
                 + ") device("
                 + str(source_device_id)
-                + " -> "
-                + str(target_device_id)
+                #                + " -> "
+                #                + str(target_device_id)
                 + ")"
             )
         else:
@@ -81,8 +79,8 @@ class UnpackedSuggestion(object):
                 + var_name
                 + ") device("
                 + str(source_device_id)
-                + " -> 0"
-                + " DDsync"
+                #              + " -> 0"
+                #                + " DDsync"
                 + ")"
             )
             #  map from host to second device
@@ -90,9 +88,9 @@ class UnpackedSuggestion(object):
                 "#pragma omp target data map(to:"
                 + var_name
                 + ") device("
-                + "0 -> "
+                #               + "0 -> "
                 + str(target_device_id)
-                + " DDsync"
+                #                + " DDsync"
                 + ")"
             )
 

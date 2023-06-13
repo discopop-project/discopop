@@ -41,7 +41,6 @@ class ContextObject(object):
         A reference to the object is returned."""
         required_updates: Set[Update] = set()
         for read in node_reads:
-            print("READING: ", read.var_name, "@", reading_device_id)
             # check if the reading device has the latest view of the memory
             for device_id in self.seen_writes_by_device:
                 if device_id == reading_device_id:
@@ -89,7 +88,6 @@ class ContextObject(object):
             self.seen_writes_by_device[writing_device_id] = dict()
 
         for write in node_writes:
-            print("WRITING: ", write.var_name, "@", writing_device_id)
             # check if memory region is already present in self.seen_writes_by_device before adding the write access
             if write.memory_region not in self.seen_writes_by_device[writing_device_id]:
                 self.seen_writes_by_device[writing_device_id][write.memory_region] = set()
