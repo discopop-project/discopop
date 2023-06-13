@@ -52,7 +52,8 @@ class UnpackedSuggestion(object):
         elif source_device_id == 0 and target_device_id != 0:
             # update type to
             pragma.pragma_str = (
-                "#pragma omp target data map(to:"
+#                "#pragma omp target data map(to:"
+                "#pragma omp target enter data map(to:"
                 + var_name
                 + ") device("
                 #                + str(source_device_id)
@@ -63,7 +64,8 @@ class UnpackedSuggestion(object):
         elif source_device_id != 0 and target_device_id == 0:
             # update type from
             pragma.pragma_str = (
-                "#pragma omp target data map(from:"
+                #"#pragma omp target data map(from:"
+                "#pragma omp target exit data map(from:"
                 + var_name
                 + ") device("
                 + str(source_device_id)
@@ -75,7 +77,8 @@ class UnpackedSuggestion(object):
             # update between two devices
             #  map to host
             pragma.pragma_str = (
-                "#pragma omp target map(from:"
+                #"#pragma omp target map(from:"
+                "#pragma omp target enter data map(to:"
                 + var_name
                 + ") device("
                 + str(source_device_id)
@@ -85,7 +88,7 @@ class UnpackedSuggestion(object):
             )
             #  map from host to second device
             pragma.pragma_str = (
-                "#pragma omp target data map(to:"
+                "#pragma omp target data map(from:"
                 + var_name
                 + ") device("
                 #               + "0 -> "
