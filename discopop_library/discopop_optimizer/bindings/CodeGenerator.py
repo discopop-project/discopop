@@ -49,7 +49,6 @@ def export_code(
 
     # todo collect updates to be applied
     for update in context.necessary_updates:
-        print("ALL UPDATE: VAR_NAME: ", update.write_data_access.var_name)
         if update.source_device_id != update.target_device_id:
             # calculate correct position for update (updates inside target regions are NOT allowed by OpenMP!)
             # insert pragma before the usage position of the data
@@ -125,6 +124,26 @@ def export_code(
     for entry in to_be_removed:
         if entry in suggestions:
             suggestions.remove(entry)
+    for buf in buffer:
+        print("BUFFER: ", buf)
+
+    for sugg in suggestions:
+        if type(sugg[1]) == DeviceUpdateInfo:
+            tmp = cast(DeviceUpdateInfo, sugg[1])
+            print(
+                "Update: ",
+                tmp.source_node_id,
+                "@",
+                tmp.source_device_id,
+                "->",
+                tmp.target_node_id,
+                "@",
+                tmp.target_device_id,
+                "|",
+                tmp.mem_reg,
+                "|",
+                tmp.var_name,
+            )
 
     # prepare patterns by type
     patterns_by_type: Dict[str, list[PatternInfo]] = dict()
@@ -135,7 +154,9 @@ def export_code(
 
     # invoke the discopop code generator
     modified_code = code_gen_from_pattern_info(
-        experiment.file_mapping, patterns_by_type, skip_compilation_check=False
+        experiment.file_mapping,
+        patterns_by_type,
+        skip_compilation_check=False,
     )
     # create patches from the modified code
     patches = __convert_modified_code_to_patch(experiment, modified_code)
@@ -197,11 +218,12 @@ def __convert_modified_code_to_patch(
             universal_newlines=True,
             cwd=os.getcwd(),
         )
-        print("RESULT: ", result.returncode)
-        print("STDERR:")
-        print(result.stderr)
-        print("STDOUT: ")
-        print(result.stdout)
+        if result.returncode != 0:
+            print("RESULT: ", result.returncode)
+            print("STDERR:")
+            print(result.stderr)
+            print("STDOUT: ")
+            print(result.stdout)
 
         # save diff
         patches[file_id] = result.stdout
@@ -211,8 +233,5 @@ def __convert_modified_code_to_patch(
             os.remove(tmp_file_name)
         if os.path.exists(diff_name):
             os.remove(diff_name)
-
-    print("PATCHES:")
-    print(patches)
 
     return patches

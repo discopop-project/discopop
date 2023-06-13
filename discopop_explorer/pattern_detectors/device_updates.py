@@ -49,16 +49,13 @@ class DeviceUpdateInfo(PatternInfo):
 
     def __str__(self):
         return (
-            f"Do-all at: {self.node_id}\n"
+            # f"Device update at: {self.node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
-            # f"iterations: {self.iterations_count}\n"
-            # f"instructions: {self.instructions_count}\n"
-            # f"workload: {self.workload}\n"
-            f"source_node: {self.source_node_id}\n"
-            f"target_node: {self.target_node_id}\n"
+            # f"source_node: {self.source_node_id}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
+            # f"target_node: {self.target_node_id}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
             f"source_device: {self.source_device_id}\n"
             f"target_device: {self.target_device_id}\n"
-            f"mem_reg: {self.mem_reg}\n"
+            # f"mem_reg: {self.mem_reg}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
             f"var_name: {self.var_name}"
         )
