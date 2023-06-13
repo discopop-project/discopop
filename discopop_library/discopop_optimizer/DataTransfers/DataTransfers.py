@@ -24,7 +24,7 @@ def calculate_data_transfers(
         result_dict[function] = []
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
-            context = ContextObject(function.node_id, function.device_id)
+            context = ContextObject(function.node_id, [function.device_id])
             context = get_path_context(function.node_id, graph, model, context)
             result_dict[function].append((model, context))
     return result_dict
@@ -34,11 +34,20 @@ def get_path_context(
     node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
+    # push device id to stack if necessary
+    node_data = data_at(graph, node_id)
+    if node_data.device_id is not None:
+        context.last_seen_device_ids.append(node_data.device_id)
+
     # calculate context modifications for the current node
     context = __check_current_node(node_id, graph, model, context)
 
     # calculate context modifications for the children of the current node
     context = __check_children(node_id, graph, model, context)
+
+    # pop device id from stack if necessary
+    if node_data.device_id is not None:
+        context.last_seen_device_ids.pop()
 
     # set last_visited_node_id to the original node_id,
     # since the calculation continues from node_id after the children have been visited
@@ -90,17 +99,15 @@ def __check_current_node(
         )
         return updated_context
 
-    # if node has a device id assigned, update the last_seen device_id
-    if node_data.device_id is not None:
-        context.last_seen_device_id = node_data.device_id
-
     context = context.calculate_and_perform_necessary_updates(
-        node_data.read_memory_regions, cast(int, context.last_seen_device_id), node_data.node_id
+        node_data.read_memory_regions,
+        cast(int, context.last_seen_device_ids[-1]),
+        node_data.node_id,
     )
 
     # add the writes performed by the given node to the context
     context = context.add_writes(
-        node_data.written_memory_regions, cast(int, context.last_seen_device_id)
+        node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1])
     )
 
     return context

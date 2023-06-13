@@ -6,11 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 import jsons  # type: ignore
 
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_library.CodeGenerator.classes.ContentBuffer import ContentBuffer
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
 
@@ -53,7 +53,19 @@ def from_json_strings(
     """
     # convert pattern_json_strings to UnpackedSuggestion object
     unpacked_suggestions: List[UnpackedSuggestion] = []
-    for type_str in pattern_json_strings_by_type:
+    pattern_precedence = [
+        "do_all",
+        "reduction",
+        "device_update",
+        "gpu_do_all",
+        "gpu_reduction",
+        "pipeline",
+        "simple_gpu",
+        "combined_gpu",
+    ]
+    for type_str in pattern_precedence:
+        if type_str not in pattern_json_strings_by_type:
+            continue
         for json_str in pattern_json_strings_by_type[type_str]:
             unpacked_suggestions.append(UnpackedSuggestion(type_str, jsons.loads(json_str)))
 

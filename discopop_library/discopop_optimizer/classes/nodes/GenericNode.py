@@ -43,7 +43,8 @@ class GenericNode(object):
     ):
         self.node_id = node_id
         self.environment = environment
-        self.cu_id = cu_id
+        self.cu_id = cu_id  # used to differentiate between "legacy" and suggestion nodes
+        self.original_cu_id = cu_id  # used for the creation of update suggestions
         self.introduced_symbols = []
         self.performance_model = CostModel(Integer(0), Integer(0))
         self.suggestion = None
