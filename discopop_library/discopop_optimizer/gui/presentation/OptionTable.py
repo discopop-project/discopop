@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict, Optional
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
 
+from discopop_explorer import PETGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
@@ -20,6 +21,7 @@ from discopop_library.discopop_optimizer.utilities.optimization.GlobalOptimizati
 
 
 def show_options(
+    pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
     options: List[Tuple[CostModel, ContextObject, str]],
@@ -87,7 +89,7 @@ def show_options(
         )
         details_button.grid(row=0, column=1)
 
-        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option, ctx=context: export_code(graph, experiment, opt, ctx, function_root))  # type: ignore
+        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option, ctx=context: export_code(pet, graph, experiment, opt, ctx, function_root))  # type: ignore
         export_code_button.grid(row=0, column=2)
 
     Button(
@@ -106,6 +108,7 @@ def show_options(
         text="Add Random (10)",
         command=lambda: add_random_models(
             root,
+            pet,
             graph,
             experiment,
             [opt for opt in options if not opt[2].startswith("Rand ")],
@@ -120,7 +123,7 @@ def show_options(
     Button(
         root,
         text="Export all codes",
-        command=lambda: __export_all_codes(graph, experiment, options, function_root),
+        command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
     ).grid()
     Button(root, text="Continue", command=lambda: root.destroy()).grid()
 
@@ -129,6 +132,7 @@ def show_options(
 
 def add_random_models(
     root: Tk,
+    pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
     options: List[Tuple[CostModel, ContextObject, str]],
@@ -170,6 +174,7 @@ def add_random_models(
 
     # plot
     show_options(
+        pet,
         graph,
         experiment,
         options,
@@ -183,10 +188,11 @@ def add_random_models(
 
 
 def __export_all_codes(
+    pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
     options: List[Tuple[CostModel, ContextObject, str]],
     function_root: FunctionRoot,
 ):
     for opt, ctx, _ in options:
-        export_code(graph, experiment, opt, ctx, function_root)
+        export_code(pet, graph, experiment, opt, ctx, function_root)

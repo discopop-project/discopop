@@ -4,7 +4,8 @@ from typing import Dict, Tuple, Set, cast, Optional
 
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
-from discopop_explorer.PETGraphX import MemoryRegion
+from discopop_explorer import DetectionResult
+from discopop_explorer.PETGraphX import MemoryRegion, PETGraphX
 from discopop_library.FileMapping.FileMapping import load_file_mapping
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.discopop_optimizer.classes.system.System import System
@@ -41,6 +42,8 @@ class Experiment(object):
     code_export_path: Path
 
     file_mapping: Dict[int, Path]  # file-mapping
+
+    detection_result: DetectionResult
 
     def __init__(
         self,

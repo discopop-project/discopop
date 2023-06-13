@@ -16,6 +16,7 @@ from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, s
 
 from spb import plot3d, MB  # type: ignore
 
+from discopop_explorer import PETGraphX, DetectionResult
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import (
     add_data_transfer_costs,
@@ -47,7 +48,9 @@ class OptimizationGraph(object):
     graph: nx.DiGraph
     next_free_node_id: int
 
-    def __init__(self, detection_result, project_folder_path, experiment: Experiment):
+    def __init__(
+        self, detection_result: DetectionResult, project_folder_path, experiment: Experiment
+    ):
         # construct optimization graph from PET Graph
         self.graph, self.next_free_node_id = PETParser(detection_result.pet, experiment).parse()
 
@@ -176,6 +179,7 @@ class OptimizationGraph(object):
                 )
             )
             show_options(
+                detection_result.pet,
                 self.graph,
                 experiment,
                 options,

@@ -15,7 +15,6 @@ from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
-from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
@@ -79,11 +78,14 @@ def import_suggestion(
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
                     # if a successor has no device id already,
                     # set it to 0 to simulate "leaving" the device after the suggestion
-                    if (
-                        type(edge_data) == SuccessorEdge
-                        and data_at(graph, edge[1]).device_id is None
-                    ):
-                        data_at(graph, edge[1]).device_id = 0
+                    # todo: this should not happen here, but be considered when calculating the updates in order to
+                    #  prevent suggestions from influencing each other by "mapping" workloads to certain devices.
+                    # todo re-enable?
+                    # if (
+                    #    type(edge_data) == SuccessorEdge
+                    #    and data_at(graph, edge[1]).device_id is None
+                    # ):
+                    #   data_at(graph, edge[1]).device_id = 0
 
     # connect introduced parallelization options to support path restraining
     for node_id_1 in introduced_options:

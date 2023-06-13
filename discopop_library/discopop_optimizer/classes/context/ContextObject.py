@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple, cast, List
+from typing import Dict, Set, Tuple, cast, List, Optional
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 
@@ -15,15 +15,17 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 
 class ContextObject(object):
     last_visited_node_id: int
-    last_seen_device_id: DeviceID
+    last_seen_device_ids: List[DeviceID]
     seen_writes_by_device: Dict[DeviceID, Dict[MemoryRegion, Set[WriteDataAccess]]]
     necessary_updates: Set[Update]
 
-    def __init__(self, initializing_node_id: int, last_seen_device_id: DeviceID = None):
+    def __init__(
+        self, initializing_node_id: int, last_seen_device_ids: Optional[List[DeviceID]] = None
+    ):
         self.seen_writes_by_device = dict()
         self.necessary_updates = set()
         self.last_visited_node_id = initializing_node_id
-        self.last_seen_device_id = last_seen_device_id
+        self.last_seen_device_ids = last_seen_device_ids if last_seen_device_ids is not None else []
         self.snapshot_stack = []  # type: ignore
         self.save_stack = []  # type: ignore  # list of lists of ContextObjects, one list per branching depth
 
@@ -39,6 +41,7 @@ class ContextObject(object):
         A reference to the object is returned."""
         required_updates: Set[Update] = set()
         for read in node_reads:
+            print("READING: ", read.var_name, "@", reading_device_id)
             # check if the reading device has the latest view of the memory
             for device_id in self.seen_writes_by_device:
                 if device_id == reading_device_id:
@@ -67,6 +70,7 @@ class ContextObject(object):
                             write_data_access=data_write,
                         )
                     )
+                    # print("--> UPDATE registired")
 
         # todo: check if this is sufficient
         for update in required_updates:
@@ -85,6 +89,7 @@ class ContextObject(object):
             self.seen_writes_by_device[writing_device_id] = dict()
 
         for write in node_writes:
+            print("WRITING: ", write.var_name, "@", writing_device_id)
             # check if memory region is already present in self.seen_writes_by_device before adding the write access
             if write.memory_region not in self.seen_writes_by_device[writing_device_id]:
                 self.seen_writes_by_device[writing_device_id][write.memory_region] = set()

@@ -16,7 +16,9 @@ class System(object):
         self.__next_free_device_id += 1
         self.__devices[device_id] = device
 
-    def get_device(self, device_id: int) -> Device:
+    def get_device(self, device_id: Optional[int]) -> Device:
+        if device_id is None:
+            return self.__devices[0]
         return self.__devices[device_id]
 
     def get_network(self) -> Network:

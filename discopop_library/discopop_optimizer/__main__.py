@@ -169,10 +169,12 @@ def main():
     network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
     network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
     network.add_connection(device_1, device_1, Integer(100000), Integer(0))
+    # todo connections between devices might happen as update to host + update to second device.
+    #  As of right now, connections between two devices are implemented in this manner.
+    # todo check if OpenMP allows direct data transfers between devices
 
     # define Environment
-    # todo rename to Experiment
-    environment = Experiment(
+    experiment = Experiment(
         arguments["--project"],
         arguments["--dp-output-path"],
         arguments["--dp-optimizer-path"],
@@ -183,7 +185,7 @@ def main():
 
     # invoke optimization graph
     optimization_graph = OptimizationGraph(
-        detection_result, arguments["--dp-output-path"], environment
+        detection_result, arguments["--dp-output-path"], experiment
     )
 
 

@@ -36,5 +36,7 @@ class Update(object):
             + ", "
             + " : "
             + str(self.write_data_access.memory_region)
+            + " --> "
+            + str(self.write_data_access.var_name)
             + ")"
         )

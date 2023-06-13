@@ -28,14 +28,18 @@ def get_data_accesses_for_cu(
     out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
 
     written_memory_regions = [
-        WriteDataAccess(MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id())
+        WriteDataAccess(
+            MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name
+        )
         for s, t, d in in_dep_edges
         if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
         and d.memory_region is not None
         and len(d.memory_region) != 0
     ]
     written_memory_regions += [
-        WriteDataAccess(MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id())
+        WriteDataAccess(
+            MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name
+        )
         for s, t, d in out_dep_edges
         if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
         and d.memory_region is not None
@@ -43,12 +47,12 @@ def get_data_accesses_for_cu(
     ]
 
     read_memory_regions = [
-        ReadDataAccess(MemoryRegion(cast(str, d.memory_region)))
+        ReadDataAccess(MemoryRegion(cast(str, d.memory_region)), d.var_name)
         for s, t, d in in_dep_edges
         if (d.dtype == DepType.WAR) and d.memory_region is not None and len(d.memory_region) != 0
     ]
     read_memory_regions += [
-        ReadDataAccess(MemoryRegion(cast(str, d.memory_region)))
+        ReadDataAccess(MemoryRegion(cast(str, d.memory_region)), d.var_name)
         for s, t, d in out_dep_edges
         if (d.dtype == DepType.RAW) and d.memory_region is not None and len(d.memory_region) != 0
     ]

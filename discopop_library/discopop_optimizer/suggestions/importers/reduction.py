@@ -68,8 +68,11 @@ def import_suggestion(
                     graph.add_edge(new_node_id, edge[1], data=edge_data)
                     # if the successor has no device id already,
                     # set it to 0 to simulate "leaving" the device after the suggestion
-                    if data_at(graph, edge[1]).device_id is None:
-                        data_at(graph, edge[1]).device_id = 0
+                    # todo: this should not happen here, but be considered when calculating the updates in order to
+                    #  prevent suggestions from influencing each other by "mapping" workloads to certain devices.
+                    # todo re-enable?
+                    # if data_at(graph, edge[1]).device_id is None:
+                    #     data_at(graph, edge[1]).device_id = 0
     return graph
 
 

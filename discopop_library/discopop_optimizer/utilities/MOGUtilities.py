@@ -370,3 +370,21 @@ def get_read_and_written_data_from_subgraph(
     )
 
     return read_memory_regions, written_memory_regions
+
+
+def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns the first parent of node_id.
+    Returns None if none exists."""
+    current_node = node_id
+    preds = get_predecessors(graph, current_node)
+    while len(preds) != 0:
+        current_node = preds[0]
+        preds = get_predecessors(graph, current_node)
+
+    parents = [
+        cast(int, edge[0])
+        for edge in graph.in_edges(current_node, data="data")
+        if isinstance(edge[2], ChildEdge)
+    ]
+
+    return parents

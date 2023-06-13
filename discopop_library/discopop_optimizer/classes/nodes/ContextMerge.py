@@ -28,9 +28,9 @@ class ContextMerge(ContextNode):
         if len(context.snapshot_stack) < 1 or len(context.save_stack) < 1:
             raise ValueError("Context can not be merged before creating a snapshot!")
 
-        context.last_seen_device_id = cast(
+        context.last_seen_device_ids = cast(
             ContextObject, context.snapshot_stack[-1]
-        ).last_seen_device_id
+        ).last_seen_device_ids
         for saved_contex in context.save_stack[-1]:
             context.necessary_updates.update(cast(ContextObject, saved_contex).necessary_updates)
             for device_id in cast(ContextObject, saved_contex).seen_writes_by_device:
