@@ -11,6 +11,8 @@ class System(object):
     __network: Network = Network()
     __next_free_device_id = 0
 
+    # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
+
     def add_device(self, device: Device):
         device_id = self.__next_free_device_id
         self.__next_free_device_id += 1
@@ -30,3 +32,9 @@ class System(object):
             result_list += device.get_free_symbols()
         result_list += self.__network.get_free_symbols()
         return result_list
+
+    def get_device_id(self, device: Device) -> int:
+        for key in self.__devices:
+            if device == self.__devices[key]:
+                return key
+        raise ValueError("Unknown device: ", device)

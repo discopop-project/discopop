@@ -103,6 +103,7 @@ class UnpackedSuggestion(object):
         pragma = Pragma()
         if is_gpu_pragma:
             pragma.pragma_str = "#pragma omp target teams distribute parallel for "
+            pragma.pragma_str += "device(" + str(self.values["dp_optimizer_device_id"]) + ") "
         else:
             pragma.pragma_str = "#pragma omp parallel for "
         if len(self.values["first_private"]) > 0:
