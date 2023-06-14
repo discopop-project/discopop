@@ -52,9 +52,11 @@ class ContextObject(object):
                     read.memory_region
                 ]
 
+                is_first_data_occurrence = False
                 if read.memory_region not in self.seen_writes_by_device[reading_device_id]:
                     # reading device does not currently "know" about the read memory region. create a new entry.
                     self.seen_writes_by_device[reading_device_id][read.memory_region] = set()
+                    is_first_data_occurrence = True
 
                 known_writes = self.seen_writes_by_device[reading_device_id]
                 unknown_writes = other_devices_known_writes.difference(known_writes)
@@ -67,6 +69,7 @@ class ContextObject(object):
                             source_device_id=device_id,
                             target_device_id=reading_device_id,
                             write_data_access=data_write,
+                            is_first_data_occurrence=is_first_data_occurrence,
                         )
                     )
                     # print("--> UPDATE registired")

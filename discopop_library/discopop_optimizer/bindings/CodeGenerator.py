@@ -106,6 +106,7 @@ def export_code(
                             else cast(int, update.target_device_id),
                             start_line,
                             end_line,
+                            update.is_first_data_occurrence,
                         ),
                         "device_update",
                         None,
@@ -131,6 +132,7 @@ def export_code(
         if type(sugg[1]) == DeviceUpdateInfo:
             tmp = cast(DeviceUpdateInfo, sugg[1])
             print(
+                "First" if tmp.is_first_data_occurrence else "",
                 "Update: ",
                 tmp.source_node_id,
                 "@",
