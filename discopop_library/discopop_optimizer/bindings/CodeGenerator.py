@@ -2,6 +2,7 @@ import os
 import random
 import string
 import subprocess
+import warnings
 from typing import List, Tuple, Dict, cast, Optional
 
 import jsonpickle  # type: ignore
@@ -11,6 +12,7 @@ import networkx as nx  # type: ignore
 from discopop_explorer.PETGraphX import NodeID, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.device_updates import DeviceUpdateInfo
+from discopop_explorer.variable import Variable
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_pattern_info as code_gen_from_pattern_info,
 )
@@ -85,33 +87,70 @@ def export_code(
                 end_line = start_line
 
                 # register update
-                suggestions.append(
-                    (
-                        experiment.get_system().get_device(update.source_device_id),
-                        DeviceUpdateInfo(
-                            pet,
-                            pet.node_at(
-                                cast(NodeID, data_at(graph, update.source_node_id).original_cu_id)
-                            ),
-                            pet.node_at(
-                                cast(NodeID, data_at(graph, update.target_node_id).original_cu_id)
-                            ),
-                            update.write_data_access.memory_region,
-                            update.write_data_access.var_name,
-                            0
-                            if update.source_device_id is None
-                            else cast(int, update.source_device_id),
-                            0
-                            if update.source_device_id is None
-                            else cast(int, update.target_device_id),
-                            start_line,
-                            end_line,
-                            update.is_first_data_occurrence,
-                        ),
-                        "device_update",
-                        None,
+                source_cu_id = cast(NodeID, data_at(graph, update.source_node_id).original_cu_id)
+                target_cu_id = cast(NodeID, data_at(graph, update.target_node_id).original_cu_id)
+
+                if source_cu_id is None or target_cu_id is None:
+                    warnings.warn(
+                        "Could not register update: " + str(update) + " @ Line: " + start_line
                     )
-                )
+                else:
+                    # get updated variable
+                    var_obj = pet.get_variable(
+                        target_cu_id, cast(str, update.write_data_access.var_name)
+                    )
+                    if var_obj is None:
+                        raise ValueError(
+                            "Could not find variable object for: "
+                            + str(update)
+                            + "  ->  "
+                            + str(update.write_data_access.var_name)
+                        )
+
+                    # get amount of elements targeted by the update
+                    update_elements = int(
+                        int(
+                            experiment.get_memory_region_size(
+                                update.write_data_access.memory_region
+                            )[0].evalf()
+                        )
+                        / cast(Variable, var_obj).sizeInByte
+                    )
+
+                    # add range to updated var name if necessary
+                    if update_elements > 1 and update.write_data_access.var_name is not None:
+                        updated_var_name: Optional[str] = (
+                            str(update.write_data_access.var_name)
+                            + "[:"
+                            + str(update_elements)
+                            + "]"
+                        )
+                    else:
+                        updated_var_name = update.write_data_access.var_name
+
+                    suggestions.append(
+                        (
+                            experiment.get_system().get_device(update.source_device_id),
+                            DeviceUpdateInfo(
+                                pet,
+                                pet.node_at(source_cu_id),
+                                pet.node_at(target_cu_id),
+                                update.write_data_access.memory_region,
+                                updated_var_name,
+                                0
+                                if update.source_device_id is None
+                                else cast(int, update.source_device_id),
+                                0
+                                if update.source_device_id is None
+                                else cast(int, update.target_device_id),
+                                start_line,
+                                end_line,
+                                update.is_first_data_occurrence,
+                            ),
+                            "device_update",
+                            None,
+                        )
+                    )
 
     # remove duplicates
     to_be_removed = []
@@ -125,33 +164,35 @@ def export_code(
     for entry in to_be_removed:
         if entry in suggestions:
             suggestions.remove(entry)
-    for buf in buffer:
-        print("BUFFER: ", buf)
 
-    for sugg in suggestions:
-        if type(sugg[1]) == DeviceUpdateInfo:
-            tmp = cast(DeviceUpdateInfo, sugg[1])
-            print(
-                "First" if tmp.is_first_data_occurrence else "",
-                "Update: ",
-                tmp.source_node_id,
-                "@",
-                tmp.source_device_id,
-                "->",
-                tmp.target_node_id,
-                "@",
-                tmp.target_device_id,
-                "|",
-                tmp.mem_reg,
-                "|",
-                tmp.var_name,
-            )
+    if False:
+        # todo cleanup
+        for sugg in suggestions:
+            if type(sugg[1]) == DeviceUpdateInfo:
+                tmp = cast(DeviceUpdateInfo, sugg[1])
+                print(
+                    "First" if tmp.is_first_data_occurrence else "",
+                    "Update: ",
+                    tmp.source_node_id,
+                    "@",
+                    tmp.source_device_id,
+                    "->",
+                    tmp.target_node_id,
+                    "@",
+                    tmp.target_device_id,
+                    "|",
+                    tmp.mem_reg,
+                    "|",
+                    tmp.var_name,
+                )
 
     # prepare patterns by type
     patterns_by_type: Dict[str, list[PatternInfo]] = dict()
-    for _, pattern, s_type, s_node_id in suggestions:
+    for device, pattern, s_type, s_node_id in suggestions:
         if s_type not in patterns_by_type:
             patterns_by_type[s_type] = []
+        # add device id to pattern
+        pattern.dp_optimizer_device_id = experiment.get_system().get_device_id(device)
         patterns_by_type[s_type].append(pattern)
 
     # invoke the discopop code generator
