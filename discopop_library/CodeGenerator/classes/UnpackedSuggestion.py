@@ -45,57 +45,50 @@ class UnpackedSuggestion(object):
         source_device_id = int(self.values["source_device_id"])
         target_device_id = int(self.values["target_device_id"])
         var_name = self.values["var_name"]
+        is_first_data_occurrence: bool = self.values["is_first_data_occurrence"]
 
         if source_device_id == 0 and target_device_id == 0:
             # no update required
             pass
         elif source_device_id == 0 and target_device_id != 0:
             # update type to
-            pragma.pragma_str = (
-#                "#pragma omp target data map(to:"
-                "#pragma omp target enter data map(to:"
-                + var_name
-                + ") device("
-                #                + str(source_device_id)
-                #                + " -> "
-                + str(target_device_id)
-                + ")"
-            )
+            if is_first_data_occurrence:
+                pragma.pragma_str = "#pragma omp target enter data map(to:"
+            else:
+                pragma.pragma_str = "#pragma omp target update to("
+            pragma.pragma_str += var_name + ") device(" + str(target_device_id) + ")"
+
         elif source_device_id != 0 and target_device_id == 0:
             # update type from
-            pragma.pragma_str = (
-                #"#pragma omp target data map(from:"
-                "#pragma omp target exit data map(from:"
-                + var_name
-                + ") device("
-                + str(source_device_id)
-                #                + " -> "
-                #                + str(target_device_id)
-                + ")"
-            )
+            if is_first_data_occurrence:
+                pragma.pragma_str = "#pragma omp target enter data map(from:"
+            else:
+                pragma.pragma_str = "#pragma omp target update from("
+
+            pragma.pragma_str += var_name + ") device(" + str(source_device_id) + ")"
+
         else:
-            # update between two devices
-            #  map to host
-            pragma.pragma_str = (
-                #"#pragma omp target map(from:"
-                "#pragma omp target enter data map(to:"
-                + var_name
-                + ") device("
-                + str(source_device_id)
-                #              + " -> 0"
-                #                + " DDsync"
-                + ")"
-            )
-            #  map from host to second device
-            pragma.pragma_str = (
-                "#pragma omp target data map(from:"
-                + var_name
-                + ") device("
-                #               + "0 -> "
-                + str(target_device_id)
-                #                + " DDsync"
-                + ")"
-            )
+            # todo Implement updates between devices
+            #  Suggest two update instructions instead of one, or make sure that openMP suüpports device-device updates
+            raise NotImplementedError("Updates between devices are not yet implemented!")
+        #            # update between two devices
+        #            #  map to host
+        #            pragma.pragma_str = (
+        #                # "#pragma omp target map(from:"
+        #                    "#pragma omp target enter data map(to:"
+        #                    + var_name
+        #                    + ") device("
+        #                    + str(source_device_id)
+        #                    + ")"
+        #            )
+        #            #  map from host to second device
+        #            pragma.pragma_str = (
+        #                    "#pragma omp target data map(from:"
+        #                    + var_name
+        #                    + ") device("
+        #                    + str(target_device_id)
+        #                    + ")"
+        #            )
 
         pragma.file_id = self.file_id
         pragma.start_line = self.start_line

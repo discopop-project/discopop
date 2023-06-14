@@ -30,6 +30,7 @@ class DeviceUpdateInfo(PatternInfo):
         target_device_id: int,
         start_line: LineID,
         end_line: LineID,
+        is_first_data_occurrence: bool,
     ):
         """
         :param pet: PET graph
@@ -46,6 +47,7 @@ class DeviceUpdateInfo(PatternInfo):
         # overwrite start and end lines set by PatternInfo
         self.start_line = start_line
         self.end_line = end_line
+        self.is_first_data_occurrence = is_first_data_occurrence
 
     def __str__(self):
         return (
@@ -57,5 +59,6 @@ class DeviceUpdateInfo(PatternInfo):
             f"source_device: {self.source_device_id}\n"
             f"target_device: {self.target_device_id}\n"
             # f"mem_reg: {self.mem_reg}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
-            f"var_name: {self.var_name}"
+            f"var_name: {self.var_name}\n"
+            f"is_first_data_occurrence: {self.is_first_data_occurrence}"
         )
