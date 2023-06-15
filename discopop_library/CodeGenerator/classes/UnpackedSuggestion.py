@@ -46,6 +46,9 @@ class UnpackedSuggestion(object):
         target_device_id = int(self.values["target_device_id"])
         var_name = self.values["var_name"]
         is_first_data_occurrence: bool = self.values["is_first_data_occurrence"]
+        openmp_source_device_id = self.values["openmp_source_device_id"]
+        openmp_target_device_id = self.values["openmp_target_device_id"]
+        print("IS FIRST DATA OCCURRENCE?: ", is_first_data_occurrence)
 
         if source_device_id == 0 and target_device_id == 0:
             # no update required
@@ -56,7 +59,14 @@ class UnpackedSuggestion(object):
                 pragma.pragma_str = "#pragma omp target enter data map(to:"
             else:
                 pragma.pragma_str = "#pragma omp target update to("
-            pragma.pragma_str += var_name + ") device(" + str(target_device_id) + ")"
+            pragma.pragma_str += (
+                var_name
+                + ") device("
+                + str(openmp_source_device_id)
+                + " -> "
+                + str(openmp_target_device_id)
+                + ")"
+            )
 
         elif source_device_id != 0 and target_device_id == 0:
             # update type from
@@ -65,13 +75,33 @@ class UnpackedSuggestion(object):
             else:
                 pragma.pragma_str = "#pragma omp target update from("
 
-            pragma.pragma_str += var_name + ") device(" + str(source_device_id) + ")"
+            pragma.pragma_str += (
+                var_name
+                + ") device("
+                + str(openmp_source_device_id)
+                + " -> "
+                + str(openmp_target_device_id)
+                + ")"
+            )
 
         else:
             # todo Implement updates between devices
-            #  Suggest two update instructions instead of one, or make sure that openMP suüpports device-device updates
-            raise NotImplementedError("Updates between devices are not yet implemented!")
-        #            # update between two devices
+            #  Suggest two update instructions instead of one, or make sure that openMP supports device-device updates
+
+            # raise NotImplementedError("Updates between devices are not yet implemented!")
+            # update between two devices
+            pragma.pragma_str = (
+                "#pragma omp target update Device("
+                + str(source_device_id)
+                + ") --> Device("
+                + str(openmp_source_device_id)
+                + " -> "
+                + str(openmp_target_device_id)
+                + ") Var("
+                + var_name
+                + ")"
+            )
+
         #            #  map to host
         #            pragma.pragma_str = (
         #                # "#pragma omp target map(from:"

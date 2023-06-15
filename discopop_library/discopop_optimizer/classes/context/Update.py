@@ -27,10 +27,9 @@ class Update(object):
         self.is_first_data_occurrence = is_first_data_occurrence
 
     def __str__(self):
+        result_str = "First" if self.is_first_data_occurrence else ""
         return (
-            "First"
-            if self.is_first_data_occurrence
-            else ""
+            result_str
             + "Update("
             + str(self.source_node_id)
             + "@"
