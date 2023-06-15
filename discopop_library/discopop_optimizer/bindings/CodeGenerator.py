@@ -23,7 +23,12 @@ from discopop_library.discopop_optimizer.bindings.utilities import is_child_of_a
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at, get_parents
+from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    data_at,
+    get_parents,
+    get_temporary_successors,
+)
 
 
 def export_code(
@@ -117,6 +122,15 @@ def export_code(
                         / cast(Variable, var_obj).sizeInByte
                     )
 
+                    # debug!
+                    # add memory access to var_name
+                    dbg_info = (
+                        "-"
+                        + str(update.write_data_access.memory_region)
+                        + "-"
+                        + str(update.write_data_access.unique_id)
+                    )
+
                     # add range to updated var name if necessary
                     if update_elements > 1 and update.write_data_access.var_name is not None:
                         updated_var_name: Optional[str] = (
@@ -124,6 +138,7 @@ def export_code(
                             + "[:"
                             + str(update_elements)
                             + "]"
+                            + dbg_info
                         )
                     else:
                         updated_var_name = update.write_data_access.var_name
@@ -146,6 +161,12 @@ def export_code(
                                 start_line,
                                 end_line,
                                 update.is_first_data_occurrence,
+                                cast(
+                                    GPU, experiment.get_system().get_device(update.source_device_id)
+                                ).openmp_device_id,
+                                cast(
+                                    GPU, experiment.get_system().get_device(update.target_device_id)
+                                ).openmp_device_id,
                             ),
                             "device_update",
                             None,
@@ -192,7 +213,7 @@ def export_code(
         if s_type not in patterns_by_type:
             patterns_by_type[s_type] = []
         # add device id to pattern
-        pattern.dp_optimizer_device_id = experiment.get_system().get_device_id(device)
+        pattern.dp_optimizer_device_id = device.openmp_device_id
         patterns_by_type[s_type].append(pattern)
 
     # invoke the discopop code generator

@@ -159,16 +159,28 @@ def main():
 
     # define System
     system = System()
-    device_0 = CPU(Symbol("CPU_thread_num"), Symbol("CPU_thread_num"))
-    device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"))
+    device_0 = CPU(
+        Symbol("CPU_thread_num"), Symbol("CPU_thread_num"), openmp_device_id=-1
+    )  # Device 0 always acts as the host system
+    device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=0)
+    device_2 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=1)
     system.add_device(device_0)
     system.add_device(device_1)
+    system.add_device(device_2)
     # define Network
     network = system.get_network()
     network.add_connection(device_0, device_0, Integer(100000), Integer(0))
     network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
     network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
     network.add_connection(device_1, device_1, Integer(100000), Integer(0))
+
+    network.add_connection(device_0, device_2, Integer(10), Integer(10000000))
+    network.add_connection(device_2, device_0, Integer(10), Integer(10000000))
+    network.add_connection(device_2, device_2, Integer(1000), Integer(0))
+
+    network.add_connection(device_1, device_2, Integer(100), Integer(500000))
+    network.add_connection(device_2, device_1, Integer(100), Integer(500000))
+
     # todo connections between devices might happen as update to host + update to second device.
     #  As of right now, connections between two devices are implemented in this manner.
     # todo check if OpenMP allows direct data transfers between devices
@@ -188,6 +200,5 @@ def main():
         detection_result, arguments["--dp-output-path"], experiment
     )
 
-
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()

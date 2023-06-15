@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple, cast, List, Optional
+from typing import Dict, Set, cast, List, Optional
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 
@@ -40,9 +40,13 @@ class ContextObject(object):
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
         A reference to the object is returned."""
         required_updates: Set[Update] = set()
+        print("\n###############\n")
         for read in node_reads:
             # check if the reading device has the latest view of the memory
             for device_id in self.seen_writes_by_device:
+                # todo test
+                required_updates = set()
+
                 if device_id == reading_device_id:
                     continue
                 if read.memory_region not in self.seen_writes_by_device[device_id]:
@@ -58,29 +62,116 @@ class ContextObject(object):
                     self.seen_writes_by_device[reading_device_id][read.memory_region] = set()
                     is_first_data_occurrence = True
 
-                known_writes = self.seen_writes_by_device[reading_device_id]
+                known_writes = self.seen_writes_by_device[reading_device_id][read.memory_region]
                 unknown_writes = other_devices_known_writes.difference(known_writes)
 
+                # todo debug: test: only consider the "latest" write
+                unknown_writes_dict = dict()
+                for entry in unknown_writes:
+                    if entry.memory_region not in unknown_writes_dict:
+                        unknown_writes_dict[entry.memory_region] = entry
+                    else:
+                        if unknown_writes_dict[entry.memory_region].unique_id < entry.unique_id:
+                            # replace old write with "newer" write
+                            unknown_writes_dict[entry.memory_region] = entry
+
+                # unknown_writes = {max(unknown_writes, key=lambda x: x.unique_id)}
+                unknown_writes = set(unknown_writes_dict.values())
+
+                print("OTHER_DEVICE: ", [str(x) for x in other_devices_known_writes])
+                print("KNOWN: ", [str(x) for x in known_writes])
+                print("UNKNOWN: ", [str(x) for x in unknown_writes])
                 for data_write in unknown_writes:
-                    required_updates.add(
-                        Update(
-                            source_node_id=self.last_visited_node_id,
-                            target_node_id=reading_node_id,
-                            source_device_id=device_id,
-                            target_device_id=reading_device_id,
-                            write_data_access=data_write,
-                            is_first_data_occurrence=is_first_data_occurrence,
+                    # if device <-> device update is required, split it into two distinct updates
+                    if device_id != 0 and reading_device_id != 0:
+                        print("Device <-> Device update required!")
+
+                        # check if data is known to the host
+                        if data_write.memory_region not in self.seen_writes_by_device[0]:
+                            self.seen_writes_by_device[0][data_write.memory_region] = set()
+                        if (
+                            data_write
+                            not in self.seen_writes_by_device[0][data_write.memory_region]
+                        ):
+                            # register source device -> host update
+                            required_updates.add(
+                                Update(
+                                    source_node_id=self.last_visited_node_id,
+                                    target_node_id=reading_node_id,
+                                    source_device_id=device_id,
+                                    target_device_id=0,  # reading_device_id,
+                                    write_data_access=data_write,
+                                    is_first_data_occurrence=is_first_data_occurrence,
+                                )
+                            )
+                        else:
+                            print(
+                                "SKIPPED KNOWN WRITE: ",
+                                str(
+                                    Update(
+                                        source_node_id=self.last_visited_node_id,
+                                        target_node_id=reading_node_id,
+                                        source_device_id=device_id,
+                                        target_device_id=0,  # reading_device_id,
+                                        write_data_access=data_write,
+                                        is_first_data_occurrence=is_first_data_occurrence,
+                                    )
+                                ),
+                            )
+
+                        # register host -> target device update
+                        required_updates.add(
+                            Update(
+                                source_node_id=self.last_visited_node_id,
+                                target_node_id=reading_node_id,
+                                source_device_id=0,  # device_id,
+                                target_device_id=reading_device_id,
+                                write_data_access=data_write,
+                                is_first_data_occurrence=is_first_data_occurrence,
+                            )
                         )
-                    )
-                    # print("--> UPDATE registired")
 
-        # todo: check if this is sufficient
-        for update in required_updates:
-            self.seen_writes_by_device[update.target_device_id][
-                update.write_data_access.memory_region
-            ].add(update.write_data_access)
+                    else:
+                        # Host -> Device or Device -> Host update
 
-        self.necessary_updates.update(required_updates)
+                        # todo dbg
+                        if reading_device_id == 0:
+                            print("\nDEVICE 0")
+                            print("\tKNOWN WRITES:")
+                            for write in self.seen_writes_by_device[0][data_write.memory_region]:
+                                print("\t\t", str(write))
+                            print(
+                                "REQUESTING: ",
+                                str(data_write),
+                            )
+
+                        required_updates.add(
+                            Update(
+                                source_node_id=self.last_visited_node_id,
+                                target_node_id=reading_node_id,
+                                source_device_id=device_id,
+                                target_device_id=reading_device_id,
+                                write_data_access=data_write,
+                                is_first_data_occurrence=is_first_data_occurrence,
+                            )
+                        )
+
+                # todo: check if this is sufficient
+                for update in required_updates:
+                    print("--> Update: ", str(update))
+                    if (
+                        update.write_data_access.memory_region
+                        not in self.seen_writes_by_device[update.target_device_id]
+                    ):
+                        self.seen_writes_by_device[update.target_device_id][
+                            update.write_data_access.memory_region
+                        ] = set()
+                    self.seen_writes_by_device[update.target_device_id][
+                        update.write_data_access.memory_region
+                    ].add(update.write_data_access)
+
+                self.necessary_updates.update(required_updates)
+
         return self
 
     def add_writes(self, node_writes: Set[WriteDataAccess], writing_device_id: int):

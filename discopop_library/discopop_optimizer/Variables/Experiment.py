@@ -19,10 +19,12 @@ class Experiment(object):
     do_all_overhead_weight_by_device: Dict[int, Expr] = {
         0: Integer(300),
         1: Integer(300),
+        2: Integer(300),
     }
     reduction_overhead_weight_by_device: Dict[int, Expr] = {
         0: Integer(300),
         1: Integer(300),
+        2: Integer(300),
     }
 
     ## END OF SETTINGS

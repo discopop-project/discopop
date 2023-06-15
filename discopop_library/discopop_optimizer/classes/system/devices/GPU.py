@@ -5,8 +5,8 @@ from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
 class GPU(Device):
-    def __init__(self, compute_capability, thread_count):
-        super().__init__(compute_capability, thread_count)
+    def __init__(self, compute_capability, thread_count, openmp_device_id):
+        super().__init__(compute_capability, thread_count, openmp_device_id)
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str
