@@ -139,7 +139,16 @@ def __apply_modifications(
             p.flush()
             p.close()
 
-        command = ["patch", "-i", patch, "-o", replace_path]
+        # check existence of files:
+        if os.path.exists(patch):
+            print("PATCH FILE EXISTS")
+        if os.path.exists(replace_path):
+            print("REPLACE PATH EXISTS")
+
+        # command = ["patch", "-i", patch, "-o", replace_path]
+        command = ["patch", replace_path, patch]
+        print("Patch command: ", command)
+
         result = subprocess.run(
             command,
             stdout=subprocess.PIPE,
@@ -157,9 +166,13 @@ def __apply_modifications(
             print("Applied Patch:")
             print(modifications.patches[file_id])
 
-        # remove temporary patch file
-        if os.path.exists(patch):
-            os.remove(patch)
+
+# remove temporary patch file
+# todo re-enable cleanup
+
+
+#        if os.path.exists(patch):
+#            os.remove(patch)
 
 
 def __load_code_storage_object(file_path) -> CodeStorageObject:

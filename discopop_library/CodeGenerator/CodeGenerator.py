@@ -19,6 +19,7 @@ def from_pattern_info(
     file_mapping: Dict[int, Path],
     patterns_by_type: Dict[str, List[PatternInfo]],
     skip_compilation_check: bool = False,
+    compile_check_command: Optional[str] = None,
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -35,7 +36,10 @@ def from_pattern_info(
             pattern_json_strings_by_type[type_str].append(pattern.to_json())
 
     return from_json_strings(
-        file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check
+        file_mapping,
+        pattern_json_strings_by_type,
+        skip_compilation_check=skip_compilation_check,
+        compile_check_command=compile_check_command,
     )
 
 
