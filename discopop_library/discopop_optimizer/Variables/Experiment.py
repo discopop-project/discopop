@@ -59,6 +59,8 @@ class Experiment(object):
 
     optimization_graph: nx.DiGraph
 
+    compile_check_command: str  # passed to code generator for the validation of generated code
+
     def __init__(
         self,
         project_path,
@@ -68,6 +70,7 @@ class Experiment(object):
         file_mapping_path: str,
         system: System,
         detection_result: DetectionResult,
+        arguments: Dict,
     ):
         self.__system = system
         self.detection_result = detection_result
@@ -90,6 +93,8 @@ class Experiment(object):
             self.register_free_symbol(free_symbol, value_suggestion)
 
         self.function_models = dict()
+
+        self.compile_check_command = arguments["--compile-check-command"]
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False

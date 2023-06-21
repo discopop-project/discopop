@@ -24,7 +24,6 @@ class System(object):
         self.__devices[device_id] = device
 
     def get_device(self, device_id: Optional[int]) -> Device:
-        print("DEVICES: ", self.__devices)
         if device_id is None:
             return self.__devices[0]
         return self.__devices[device_id]

@@ -53,7 +53,7 @@ class Loop(Workload):
         )
 
         # register iteration symbol in environment
-        self.experiment.register_free_symbol(
+        experiment.register_free_symbol(
             self.iterations_symbol, value_suggestion=Integer(self.iterations)
         )
 

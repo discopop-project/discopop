@@ -40,7 +40,6 @@ class GenericNode(object):
         device_id: DeviceID = None,
     ):
         self.node_id = node_id
-        self.experiment = experiment
         self.cu_id = cu_id  # used to differentiate between "legacy" and suggestion nodes
         self.original_cu_id = cu_id  # used for the creation of update suggestions
         self.introduced_symbols = []
