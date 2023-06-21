@@ -37,9 +37,6 @@ def get_edge_data(graph: nx.DiGraph, source: int, target: int) -> GenericEdge:
 
 def get_successors(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the successors of the given node"""
-    print("ALL OUT EDGES: ", graph.out_edges())
-    print("OUT EDGES: ", graph.out_edges([node_id], data="data"))
-
     return [
         edge[1]
         for edge in graph.out_edges(node_id, data="data")

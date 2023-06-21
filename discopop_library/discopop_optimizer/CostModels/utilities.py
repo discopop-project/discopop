@@ -57,11 +57,7 @@ def get_node_performance_models(
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
     """
     result_list: List[CostModel] = []
-    print("NODE ID: ", node_id)
-    print("\ttype: ", type(node_id))
-    print("\tgraph: ", type(graph))
     successors = get_successors(graph, node_id)
-    print("SUCCS: ", successors)
     successor_count = len(successors)
     node_data = cast(GenericNode, data_at(graph, node_id))
     visited_nodes.add(node_id)
