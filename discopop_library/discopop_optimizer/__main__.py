@@ -52,6 +52,11 @@ from sympy import Symbol, Integer
 from discopop_explorer import DetectionResult
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
+    restore_session,
+    show_function_models,
+    export_to_json,
+)
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
@@ -59,6 +64,7 @@ from discopop_library.discopop_optimizer.execution.stored_models import (
     execute_stored_models,
     execute_single_model,
 )
+import tkinter.messagebox
 
 docopt_schema = Schema(
     {
@@ -149,56 +155,75 @@ def main():
         os.makedirs(arguments["--code-export-path"])
         print("Done.")
 
-    # load detection result
-    print("Loading detection result and PET...", end="")
-    detection_result_dump_str = ""
-    with open(arguments["--detection-result-dump"], "r") as f:
-        detection_result_dump_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
-    print("Done")
+    # ask if previous session should be loaded
+    load_result: bool = False
+    if os.path.exists(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.json")):
+        load_result = tkinter.messagebox.askyesno(
+            title="Restore Results?",
+            message="Do you like to load the experiment from the previous session?",
+        )
+    if load_result:
+        # load results from previous session
+        experiment = restore_session(
+            os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle")
+        )
+        show_function_models(
+            experiment,
+        )
+        # save experiment to disk
+        export_to_json(experiment)
 
-    # define System
-    system = System()
-    device_0 = CPU(
-        Symbol("CPU_thread_num"), Symbol("CPU_thread_num"), openmp_device_id=-1
-    )  # Device 0 always acts as the host system
-    device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=0)
-    device_2 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=1)
-    system.add_device(device_0)
-    system.add_device(device_1)
-    system.add_device(device_2)
-    # define Network
-    network = system.get_network()
-    network.add_connection(device_0, device_0, Integer(100000), Integer(0))
-    network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
-    network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
-    network.add_connection(device_1, device_1, Integer(100000), Integer(0))
+    else:
+        # create a new session
+        # load detection result
+        print("Loading detection result and PET...", end="")
+        detection_result_dump_str = ""
+        with open(arguments["--detection-result-dump"], "r") as f:
+            detection_result_dump_str = f.read()
+        detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+        print("Done")
 
-    network.add_connection(device_0, device_2, Integer(10), Integer(10000000))
-    network.add_connection(device_2, device_0, Integer(10), Integer(10000000))
-    network.add_connection(device_2, device_2, Integer(1000), Integer(0))
+        # define System
+        system = System()
+        device_0 = CPU(
+            Symbol("CPU_thread_num"), Symbol("CPU_thread_num"), openmp_device_id=-1
+        )  # Device 0 always acts as the host system
+        device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=0)
+        device_2 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=1)
+        system.add_device(device_0)
+        system.add_device(device_1)
+        system.add_device(device_2)
+        # define Network
+        network = system.get_network()
+        network.add_connection(device_0, device_0, Integer(100000), Integer(0))
+        network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
+        network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
+        network.add_connection(device_1, device_1, Integer(100000), Integer(0))
 
-    network.add_connection(device_1, device_2, Integer(100), Integer(500000))
-    network.add_connection(device_2, device_1, Integer(100), Integer(500000))
+        network.add_connection(device_0, device_2, Integer(10), Integer(10000000))
+        network.add_connection(device_2, device_0, Integer(10), Integer(10000000))
+        network.add_connection(device_2, device_2, Integer(1000), Integer(0))
 
-    # todo connections between devices might happen as update to host + update to second device.
-    #  As of right now, connections between two devices are implemented in this manner.
-    # todo check if OpenMP allows direct data transfers between devices
+        network.add_connection(device_1, device_2, Integer(100), Integer(500000))
+        network.add_connection(device_2, device_1, Integer(100), Integer(500000))
 
-    # define Environment
-    experiment = Experiment(
-        arguments["--project"],
-        arguments["--dp-output-path"],
-        arguments["--dp-optimizer-path"],
-        arguments["--code-export-path"],
-        arguments["--file-mapping"],
-        system,
-    )
+        # todo connections between devices might happen as update to host + update to second device.
+        #  As of right now, connections between two devices are implemented in this manner.
+        # todo check if OpenMP allows direct data transfers between devices
 
-    # invoke optimization graph
-    optimization_graph = OptimizationGraph(
-        detection_result, arguments["--dp-output-path"], experiment
-    )
+        # define Environment
+        experiment = Experiment(
+            arguments["--project"],
+            arguments["--dp-output-path"],
+            arguments["--dp-optimizer-path"],
+            arguments["--code-export-path"],
+            arguments["--file-mapping"],
+            system,
+            detection_result,
+        )
+
+        # invoke optimization graph
+        optimization_graph = OptimizationGraph(arguments["--dp-output-path"], experiment)
 
     if __name__ == "__main__":
         main()

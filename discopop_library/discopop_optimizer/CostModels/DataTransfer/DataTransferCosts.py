@@ -6,6 +6,9 @@ from sympy import Integer  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.context.ContextObjectUtils import (
+    get_transfer_costs,
+)
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 
@@ -25,7 +28,7 @@ def add_data_transfer_costs(
             # For now, it is assumed, that only a single data transfer happens at once
             # and no asynchronous transfers happen.
             # todo: This should be extended in the future.
-            data_transfer_costs = context.get_transfer_costs(environment=environment)
+            data_transfer_costs = get_transfer_costs(context, environment=environment)
 
             # extend the cost_model
             cost_model = cost_model.parallelizable_plus_combine(data_transfer_costs)
