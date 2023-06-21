@@ -12,7 +12,7 @@ Usage:
     discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
-        [--executable-name <string>] [--execution-repetitions <int>]
+        [--executable-name <string>] [--execution-repetitions <int>] [--compile-check-command <str>]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -37,6 +37,7 @@ OPTIONAL ARGUMENTS:
     --make-target=<string>      specify a specific Make target to be built,
                                 if not specified the default make target is used. [default: ]
     --make-flags=<string>       specify flags which will be passed through to make. [default: ]
+    --compile-check-command=<string>    specify a command which shall be executed to validate the correctness of generated, parallel code
     -h --help                   Show this screen
 """
 import os
@@ -82,6 +83,7 @@ docopt_schema = Schema(
         "--make-flags": Use(str),
         "--execution-repetitions": Use(str),
         "--execute-single-model": Use(str),
+        "--compile-check-command": Use(str),
     }
 )
 
@@ -132,6 +134,11 @@ def main():
         None
         if len(arguments["--execute-single-model"]) == 0
         else get_path(arguments["--code-export-path"], arguments["--execute-single-model"])
+    )
+    arguments["--compile-check-command"] = (
+        None
+        if len(arguments["--compile-check-command"]) == 0
+        else arguments["--compile-check-command"]
     )
 
     print("Starting discopop_optimizer...")
@@ -220,6 +227,7 @@ def main():
             arguments["--file-mapping"],
             system,
             detection_result,
+            arguments,
         )
 
         # invoke optimization graph

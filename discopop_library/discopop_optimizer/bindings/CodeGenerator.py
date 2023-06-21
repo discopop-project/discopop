@@ -220,7 +220,8 @@ def export_code(
     modified_code = code_gen_from_pattern_info(
         experiment.file_mapping,
         patterns_by_type,
-        skip_compilation_check=False,
+        skip_compilation_check=True,  # False,
+        compile_check_command=experiment.compile_check_command,
     )
     # create patches from the modified code
     patches = __convert_modified_code_to_patch(experiment, modified_code)
