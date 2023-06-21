@@ -1,15 +1,19 @@
 import os
 from pathlib import Path
-from typing import Dict, Tuple, Set, cast, Optional
+from typing import Dict, Tuple, Set, Optional, List
 
+import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer import DetectionResult
-from discopop_explorer.PETGraphX import MemoryRegion, PETGraphX
+from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.FileMapping.FileMapping import load_file_mapping
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.System import System
-from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class Experiment(object):
@@ -33,6 +37,10 @@ class Experiment(object):
 
     # all free symbols will be added to this list for simple retrieval and user query
     free_symbols: Set[Symbol] = set()
+    substitutions: Dict[Symbol, Expr] = dict()
+    sorted_free_symbols: List[Symbol] = []
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
     # value suggestions for all free symbols will be stored in this dictionary
     suggested_values: Dict[Symbol, Expr] = dict()
 
@@ -47,6 +55,10 @@ class Experiment(object):
 
     detection_result: DetectionResult
 
+    function_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject, str]]]
+
+    optimization_graph: nx.DiGraph
+
     def __init__(
         self,
         project_path,
@@ -55,8 +67,10 @@ class Experiment(object):
         code_export_path,
         file_mapping_path: str,
         system: System,
+        detection_result: DetectionResult,
     ):
         self.__system = system
+        self.detection_result = detection_result
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
@@ -74,6 +88,8 @@ class Experiment(object):
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():
             self.register_free_symbol(free_symbol, value_suggestion)
+
+        self.function_models = dict()
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False

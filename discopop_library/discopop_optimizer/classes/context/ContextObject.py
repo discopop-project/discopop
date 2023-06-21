@@ -3,8 +3,6 @@ from typing import Dict, Set, cast, List, Optional
 from sympy import Expr, Integer, Symbol  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
@@ -188,47 +186,6 @@ class ContextObject(object):
             # add write to the list of seen writes
             self.seen_writes_by_device[writing_device_id][write.memory_region].add(write)
         return self
-
-    def get_transfer_costs(self, environment: Experiment) -> CostModel:
-        """Calculates the amount of data transferred between devices as specified by self.necessary_updates and
-        calculates an estimation for the added transfer costs under the assumption,
-        that no transfers happen concurrently and every transfer is executed in a blocking, synchronous manner.
-        """
-        total_transfer_costs = Integer(0)
-        symbolic_memory_region_sizes = True
-        symbol_value_suggestions = dict()
-        for update in self.necessary_updates:
-            # add static costs incurred by the transfer initialization
-            system = environment.get_system()
-            source_device = system.get_device(cast(int, update.source_device_id))
-            target_device = system.get_device(cast(int, update.target_device_id))
-            initialization_costs = system.get_network().get_transfer_initialization_costs(
-                source_device, target_device
-            )
-
-            total_transfer_costs += initialization_costs
-
-            # add costs incurred by the transfer itself
-            transfer_speed = system.get_network().get_transfer_speed(source_device, target_device)
-
-            # value suggestion used for symbolic values
-            transfer_size, value_suggestion = environment.get_memory_region_size(
-                update.write_data_access.memory_region,
-                use_symbolic_value=symbolic_memory_region_sizes,
-            )
-            # save suggested memory region size from Environment
-            if symbolic_memory_region_sizes:
-                symbol_value_suggestions[cast(Symbol, transfer_size)] = value_suggestion
-
-            transfer_costs = transfer_size / transfer_speed
-
-            total_transfer_costs += transfer_costs
-        if symbolic_memory_region_sizes:
-            return CostModel(
-                Integer(0), total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
-            )
-        else:
-            return CostModel(Integer(0), total_transfer_costs)
 
     def set_last_visited_node_id(self, node_id: int):
         self.last_visited_node_id = node_id

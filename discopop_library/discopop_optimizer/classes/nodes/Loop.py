@@ -23,7 +23,7 @@ class Loop(Workload):
     def __init__(
         self,
         node_id: int,
-        environment: Experiment,
+        experiment: Experiment,
         cu_id: Optional[NodeID],
         parallelizable_workload: int,
         iterations: int,
@@ -46,14 +46,14 @@ class Loop(Workload):
         per_iteration_parallelizable_workload = parallelizable_workload / iterations
         super().__init__(
             node_id,
-            environment,
+            experiment,
             cu_id,
             sequential_workload=0,
             parallelizable_workload=int(per_iteration_parallelizable_workload),
         )
 
         # register iteration symbol in environment
-        self.environment.register_free_symbol(
+        self.experiment.register_free_symbol(
             self.iterations_symbol, value_suggestion=Integer(self.iterations)
         )
 

@@ -232,7 +232,7 @@ class PETParser(object):
                 new_node_id,
                 data=Workload(
                     node_id=new_node_id,
-                    environment=self.experiment,
+                    experiment=self.experiment,
                     cu_id=cu_node.id,
                     sequential_workload=calculate_workload(self.pet, cu_node),
                     parallelizable_workload=0,
@@ -267,7 +267,7 @@ class PETParser(object):
                     parallelizable_workload=calculate_workload(self.pet, loop_node),
                     iterations=iteration_count,
                     position=loop_node.start_position(),
-                    environment=self.experiment,
+                    experiment=self.experiment,
                 ),
             )
             # connect loop node and entry node via a child edge
@@ -326,7 +326,7 @@ class PETParser(object):
                 new_node_id,
                 data=FunctionRoot(
                     node_id=new_node_id,
-                    environment=self.experiment,
+                    experiment=self.experiment,
                     cu_id=function_node.id,
                     name=function_node.name,
                 ),

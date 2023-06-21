@@ -1,5 +1,5 @@
 from tkinter import *
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
@@ -31,7 +31,7 @@ def show_options(
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     function_root: FunctionRoot,
     window_title=None,
-):
+) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
     root = Tk()
     if window_title is not None:
@@ -89,7 +89,13 @@ def show_options(
         )
         details_button.grid(row=0, column=1)
 
-        export_code_button = Button(options_field, text="Export Code", command=lambda opt=option, ctx=context: export_code(pet, graph, experiment, opt, ctx, function_root))  # type: ignore
+        export_code_button = Button(
+            options_field,
+            text="Export Code",
+            command=lambda opt=option, ctx=context: export_code(  # type: ignore
+                pet, graph, experiment, opt, ctx, function_root
+            ),
+        )
         export_code_button.grid(row=0, column=2)
 
     Button(
@@ -121,6 +127,9 @@ def show_options(
         ),
     ).grid()
     Button(
+        root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)
+    ).grid()
+    Button(
         root,
         text="Export all codes",
         command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
@@ -129,20 +138,34 @@ def show_options(
 
     mainloop()
 
+    return options
+
+
+def __save_models(
+    experiment: Experiment,
+    function_root: FunctionRoot,
+    options: List[Tuple[CostModel, ContextObject, str]],
+):
+    print("SAVE: ", function_root)
+    print("\ttype; ", type(function_root))
+    experiment.function_models[function_root] = options
+    print("Saved models for: ", function_root.name)
+
 
 def add_random_models(
     root: Tk,
     pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
-    options: List[Tuple[CostModel, ContextObject, str]],
+    conserve_options: List[Tuple[CostModel, ContextObject, str]],
     substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     function_root: FunctionRoot,
     window_title=None,
-):
+    show_results: bool = True,
+) -> List[Tuple[CostModel, ContextObject, str]]:
     root.destroy()
 
     # generate random models
@@ -166,25 +189,28 @@ def add_random_models(
         free_symbol_distributions,
         verbose=False,
     )
-    options.append((minimum[0], minimum[1], "Rand Minimum"))
-    options.append((maximum[0], maximum[1], "Rand Maximum"))
-    options.append((median[0], median[1], "Rand Median"))
-    options.append((lower_quartile[0], lower_quartile[1], "Rand 25% Quartile"))
-    options.append((upper_quartile[0], upper_quartile[1], "Rand 75% Quartile"))
+    conserve_options.append((minimum[0], minimum[1], "Rand Minimum"))
+    conserve_options.append((maximum[0], maximum[1], "Rand Maximum"))
+    conserve_options.append((median[0], median[1], "Rand Median"))
+    conserve_options.append((lower_quartile[0], lower_quartile[1], "Rand 25% Quartile"))
+    conserve_options.append((upper_quartile[0], upper_quartile[1], "Rand 75% Quartile"))
 
     # plot
-    show_options(
-        pet,
-        graph,
-        experiment,
-        options,
-        substitutions,
-        sorted_free_symbols,
-        free_symbol_ranges,
-        free_symbol_distributions,
-        function_root,
-        window_title,
-    )
+    if show_results:
+        show_options(
+            pet,
+            graph,
+            experiment,
+            conserve_options,
+            substitutions,
+            sorted_free_symbols,
+            free_symbol_ranges,
+            free_symbol_distributions,
+            function_root,
+            window_title,
+        )
+
+    return conserve_options
 
 
 def __export_all_codes(

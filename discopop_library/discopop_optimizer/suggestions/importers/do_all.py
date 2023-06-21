@@ -34,7 +34,7 @@ def import_suggestion(
             for device_id in do_all_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
-                # copy data from exsting node
+                # copy data from existing node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
 
                 # set the device id for the suggestion
