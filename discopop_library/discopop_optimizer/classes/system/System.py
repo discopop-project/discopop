@@ -7,9 +7,14 @@ from discopop_library.discopop_optimizer.classes.system.devices.Device import De
 
 
 class System(object):
-    __devices: Dict[int, Device] = dict()
-    __network: Network = Network()
-    __next_free_device_id = 0
+    __devices: Dict[int, Device]
+    __network: Network
+    __next_free_device_id: int
+
+    def __init__(self):
+        self.__devices = dict()
+        self.__network = Network()
+        self.__next_free_device_id = 0
 
     # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
 
@@ -19,6 +24,7 @@ class System(object):
         self.__devices[device_id] = device
 
     def get_device(self, device_id: Optional[int]) -> Device:
+        print("DEVICES: ", self.__devices)
         if device_id is None:
             return self.__devices[0]
         return self.__devices[device_id]

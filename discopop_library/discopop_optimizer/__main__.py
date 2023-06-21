@@ -157,7 +157,7 @@ def main():
 
     # ask if previous session should be loaded
     load_result: bool = False
-    if os.path.exists(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.json")):
+    if os.path.exists(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle")):
         load_result = tkinter.messagebox.askyesno(
             title="Restore Results?",
             message="Do you like to load the experiment from the previous session?",
