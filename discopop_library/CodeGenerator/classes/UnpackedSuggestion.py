@@ -62,8 +62,8 @@ class UnpackedSuggestion(object):
             pragma.pragma_str += (
                 var_name
                 + ") device("
-                + str(openmp_source_device_id)
-                + " -> "
+                # + str(openmp_source_device_id)
+                # + " -> "
                 + str(openmp_target_device_id)
                 + ")"
             )
@@ -71,7 +71,7 @@ class UnpackedSuggestion(object):
         elif source_device_id != 0 and target_device_id == 0:
             # update type from
             if is_first_data_occurrence:
-                pragma.pragma_str = "#pragma omp target enter data map(from:"
+                pragma.pragma_str = "#pragma omp target exit data map(from:"
             else:
                 pragma.pragma_str = "#pragma omp target update from("
 
@@ -79,8 +79,8 @@ class UnpackedSuggestion(object):
                 var_name
                 + ") device("
                 + str(openmp_source_device_id)
-                + " -> "
-                + str(openmp_target_device_id)
+                # + " -> "
+                # + str(openmp_target_device_id)
                 + ")"
             )
 

@@ -10,6 +10,7 @@ from sympy import Symbol, Expr
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.utilities import get_random_path
 from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -17,6 +18,7 @@ from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_Cos
 
 
 def find_quasi_optimal_using_random_samples(
+    experiment: Experiment,
     graph: nx.DiGraph,
     function_root: FunctionRoot,
     random_path_count: int,
@@ -32,10 +34,18 @@ def find_quasi_optimal_using_random_samples(
     random_paths: List[Tuple[CostModel, ContextObject]] = []
     if verbose:
         print("Generating ", random_path_count, "random paths")
-    for i in range(0, random_path_count):
+    i = 0
+    while i < random_path_count:
         tmp_dict = dict()
-        tmp_dict[function_root] = [get_random_path(graph, function_root.node_id, must_contain=None)]
-        random_paths.append(calculate_data_transfers(graph, tmp_dict)[function_root][0])
+        tmp_dict[function_root] = [
+            get_random_path(experiment, graph, function_root.node_id, must_contain=None)
+        ]
+        try:
+            random_paths.append(calculate_data_transfers(graph, tmp_dict)[function_root][0])
+            i += 1
+        except ValueError:
+            # might occur as a result of invalid paths due to restrictions
+            pass
 
     # apply substitutions and set free symbol ranges and distributions
     if verbose:

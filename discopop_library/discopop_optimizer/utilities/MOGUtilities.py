@@ -374,7 +374,7 @@ def get_read_and_written_data_from_subgraph(
 
 def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns the first parent of node_id.
-    Returns None if none exists."""
+    Returns an empty list if none exists."""
     current_node = node_id
     preds = get_predecessors(graph, current_node)
     while len(preds) != 0:
@@ -388,3 +388,21 @@ def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
     ]
 
     return parents
+
+
+def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns all parents of node_id.
+    Returns an empty list if none exist."""
+
+    queue: Set[int] = set(get_parents(graph, node_id))
+    all_parents: Set[int] = set()
+    while queue:
+        current = queue.pop()
+        all_parents.add(current)
+        new_parents = [
+            parent
+            for parent in get_parents(graph, current)
+            if parent not in queue and parent not in all_parents
+        ]
+        queue.update(new_parents)
+    return list(all_parents)

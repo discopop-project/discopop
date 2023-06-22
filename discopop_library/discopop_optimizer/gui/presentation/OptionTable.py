@@ -180,6 +180,7 @@ def add_random_models(
         lower_quartile,
         upper_quartile,
     ) = find_quasi_optimal_using_random_samples(
+        experiment,
         graph,
         function_root,
         random_paths,

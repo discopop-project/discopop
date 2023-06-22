@@ -342,6 +342,7 @@ rm -f $PROJECT/${EXECUTABLE_NAME}_dp_dep.txt
 
 # build using gllvm as compiler
 log -i "Building your application..."
+log -i "General Make Command: cd $PROJECT && make $MAKE_FLAGS $MAKEFILE_TARGET"
 log_or_fail -d "\n$(make CC=$GLLVM/gclang CXX=$GLLVM/gclang++ LD=$GLLVM/gclang++ $MAKE_FLAGS $MAKEFILE_TARGET)"
 
 # create single .bc and .ll from the executable

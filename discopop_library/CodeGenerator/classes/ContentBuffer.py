@@ -9,6 +9,7 @@
 import copy
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -217,10 +218,14 @@ class ContentBuffer(object):
             for idx in sorted(to_be_removed, reverse=True):
                 splitted_compile_check_command.pop(idx)
 
-            print("COMPILE COMMAND: ", splitted_compile_check_command)
-            result = subprocess.run(
-                splitted_compile_check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            #            print("COMPILE COMMAND: ", splitted_compile_check_command)
+            #           result = subprocess.run(
+            #               splitted_compile_check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            #           )
+
+            print("COMPILE COMMAND: ", shlex.split(compile_check_command))
+            result = subprocess.run(shlex.split(compile_check_command), shell=True)
+
             os.chdir(saved_dir)
         compilation_successful = True if result.returncode == 0 else False
 

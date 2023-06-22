@@ -33,7 +33,7 @@ def execute_stored_models(arguments: Dict):
             code_modifications,
             load_file_mapping(arguments["--file-mapping"]),
         )
-        __compile(arguments, working_copy_dir)
+        __compile(arguments, working_copy_dir, arguments["--compile-check-command"])
         __execute(arguments, working_copy_dir)
         # __cleanup(working_copy_dir)
 
@@ -56,7 +56,7 @@ def execute_single_model(arguments: Dict):
         code_modifications,
         load_file_mapping(arguments["--file-mapping"]),
     )
-    __compile(arguments, working_copy_dir)
+    __compile(arguments, working_copy_dir, arguments["--compile-check-command"])
     __execute(arguments, working_copy_dir)
     # __cleanup(working_copy_dir)
 
@@ -89,9 +89,10 @@ def __execute(arguments: Dict, working_copy_dir):
         print("\t\t\tVariance: ", statistics.variance(execution_times))
 
 
-def __compile(arguments: Dict, working_copy_dir):
+def __compile(arguments: Dict, working_copy_dir, compile_command):
     print("\t\tbuilding...")
-    command = ["make"]
+    # command = compile_command
+    command = shlex.split(compile_command)
     if len(arguments["--make-flags"]) != 0:
         command += shlex.split(arguments["--make-flags"])  # split string, consider quotes
 

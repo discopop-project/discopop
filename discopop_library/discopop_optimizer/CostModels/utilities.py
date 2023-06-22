@@ -14,8 +14,10 @@ import sympy  # type: ignore
 from sympy import Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
+from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     get_children,
@@ -24,17 +26,22 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_requirements,
     get_out_options,
     get_in_options,
+    get_all_parents,
 )
 
 
-def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot, List[CostModel]]:
+def get_performance_models_for_functions(
+    experiment: Experiment, graph: nx.DiGraph
+) -> Dict[FunctionRoot, List[CostModel]]:
     performance_models: Dict[FunctionRoot, List[CostModel]] = dict()
     for node_id in graph.nodes:
         node_data = graph.nodes[node_id]["data"]
         node_data.node_id = node_id  # fix potential mismatches due to node copying
 
         if isinstance(node_data, FunctionRoot):
-            performance_models[node_data] = get_node_performance_models(graph, node_id, set())
+            performance_models[node_data] = get_node_performance_models(
+                experiment, graph, node_id, set()
+            )
 
             # filter out NaN - Models
             performance_models[node_data] = [
@@ -46,6 +53,7 @@ def get_performance_models_for_functions(graph: nx.DiGraph) -> Dict[FunctionRoot
 
 
 def get_node_performance_models(
+    experiment: Experiment,
     graph: nx.DiGraph,
     node_id: int,
     visited_nodes: Set[int],
@@ -55,6 +63,7 @@ def get_node_performance_models(
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
+    Caution: List might be empty!
     """
     result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
@@ -64,6 +73,7 @@ def get_node_performance_models(
 
     # consider performance models of children
     children_models = get_performance_models_for_children(
+        experiment,
         graph,
         node_id,
         copy.deepcopy(visited_nodes),
@@ -146,6 +156,30 @@ def get_node_performance_models(
                     if path_invalid:
                         break
 
+                # do not allow nested parallelization suggestions on devices of type GPU
+                if True:  # option to disable this check
+                    combined_visited_nodes = visited_nodes
+                    combined_visited_nodes.add(successor)
+                    gpu_suggestions = [
+                        node_id
+                        for node_id in combined_visited_nodes
+                        if isinstance(
+                            experiment.get_system().get_device(data_at(graph, node_id).device_id),
+                            GPU,
+                        )
+                    ]
+                    # check if two suggestions are in a contained-in relation
+                    for suggestion_1 in gpu_suggestions:
+                        all_parents = get_all_parents(graph, suggestion_1)
+                        for suggestion_2 in gpu_suggestions:
+                            if suggestion_1 == suggestion_2:
+                                continue
+                            if suggestion_2 in all_parents:
+                                path_invalid = True
+                                break
+                        if path_invalid:
+                            break
+
                 # check if the current decision invalidates decision requirements, if some are specified
                 if restrict_to_decisions is not None:
                     if not (
@@ -184,6 +218,7 @@ def get_node_performance_models(
                     combined_model.path_decisions.append(successor)
                 # append the model of the successor
                 for model in get_node_performance_models(
+                    experiment,
                     graph,
                     successor,
                     copy.deepcopy(visited_nodes),
@@ -192,13 +227,15 @@ def get_node_performance_models(
                     get_single_random_model=get_single_random_model,
                 ):
                     result_list.append(combined_model.parallelizable_plus_combine(model))
-        return result_list
+        if len(result_list) >= 1:
+            return result_list
 
     # successor count == 0 or successor count > 1
     return children_models
 
 
 def get_performance_models_for_children(
+    experiment: Experiment,
     graph: nx.DiGraph,
     node_id: int,
     visited_nodes: Set[int],
@@ -216,6 +253,7 @@ def get_performance_models_for_children(
         if first_iteration:
             first_iteration = False
             for model in get_node_performance_models(
+                experiment,
                 graph,
                 child_id,
                 copy.deepcopy(visited_nodes),
@@ -229,6 +267,7 @@ def get_performance_models_for_children(
             # create "product set" of child models
             product_set = []
             for model in get_node_performance_models(
+                experiment,
                 graph,
                 child_id,
                 copy.deepcopy(visited_nodes),
@@ -252,10 +291,15 @@ def print_introduced_symbols_per_node(graph: nx.DiGraph):
 
 
 def get_random_path(
-    graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None
+    experiment: Experiment, graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None
 ) -> CostModel:
     random_models = get_node_performance_models(
-        graph, root_id, set(), restrict_to_decisions=must_contain, get_single_random_model=True
+        experiment,
+        graph,
+        root_id,
+        set(),
+        restrict_to_decisions=must_contain,
+        get_single_random_model=True,
     )
     # filter out NaN - Models
     random_models = [model for model in random_models if model.parallelizable_costs != sympy.nan]
