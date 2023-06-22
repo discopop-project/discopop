@@ -53,7 +53,7 @@ class OptimizationGraph(object):
 
         # get performance models for sequential execution
         sequential_function_performance_models = get_performance_models_for_functions(
-            experiment.optimization_graph
+            experiment, experiment.optimization_graph
         )
         sequential_function_performance_models_with_transfers = calculate_data_transfers(
             experiment.optimization_graph, sequential_function_performance_models
@@ -148,6 +148,7 @@ class OptimizationGraph(object):
 
         # create locally optimized model
         locally_optimized_models = get_locally_optimized_models(
+            experiment,
             experiment.optimization_graph,
             substitutions,
             experiment,

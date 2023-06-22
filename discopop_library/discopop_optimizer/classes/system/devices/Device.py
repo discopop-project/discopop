@@ -10,10 +10,17 @@ class Device(object):
     __thread_count: Expr
     openmp_device_id: int
 
-    def __init__(self, compute_capability: Expr, thread_count: Expr, openmp_device_id: int):
+    def __init__(
+        self,
+        compute_capability: Expr,
+        thread_count: Expr,
+        openmp_device_id: int,
+        device_specific_compiler_flags: str,
+    ):
         self.__compute_capability = compute_capability
         self.__thread_count = thread_count
         self.openmp_device_id = openmp_device_id
+        self.device_specific_compiler_flags: str = device_specific_compiler_flags
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str

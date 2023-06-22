@@ -129,16 +129,22 @@ def export_code(
                         + str(update.write_data_access.memory_region)
                         + "-"
                         + str(update.write_data_access.unique_id)
+                        + "-vartype:"
+                        + cast(Variable, var_obj).type
                     )
 
                     # add range to updated var name if necessary
-                    if update_elements > 1 and update.write_data_access.var_name is not None:
+                    if (
+                        update_elements > 1
+                        and update.write_data_access.var_name is not None
+                        and "**" in cast(Variable, var_obj).type
+                    ):
                         updated_var_name: Optional[str] = (
                             str(update.write_data_access.var_name)
                             + "[:"
                             + str(update_elements)
                             + "]"
-                            + dbg_info
+                            # + dbg_info
                         )
                     else:
                         updated_var_name = update.write_data_access.var_name

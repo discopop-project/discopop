@@ -193,10 +193,24 @@ def main():
         # define System
         system = System()
         device_0 = CPU(
-            Symbol("CPU_thread_num"), Symbol("CPU_thread_num"), openmp_device_id=-1
+            Symbol("CPU_thread_num"),
+            Symbol("CPU_thread_num"),
+            openmp_device_id=-1,
+            device_specific_compiler_flags="COMPILE FOR CPU",
         )  # Device 0 always acts as the host system
-        device_1 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=0)
-        device_2 = GPU(Symbol("GPU_thread_num"), Symbol("GPU_thread_num"), openmp_device_id=1)
+        gpu_compiler_flags = "COMPILE FOR CPU"
+        device_1 = GPU(
+            Symbol("GPU_thread_num"),
+            Symbol("GPU_thread_num"),
+            openmp_device_id=0,
+            device_specific_compiler_flags="COMPILE FOR GPU",
+        )
+        device_2 = GPU(
+            Symbol("GPU_thread_num"),
+            Symbol("GPU_thread_num"),
+            openmp_device_id=1,
+            device_specific_compiler_flags="COMPILE FOR GPU",
+        )
         system.add_device(device_0)
         system.add_device(device_1)
         system.add_device(device_2)

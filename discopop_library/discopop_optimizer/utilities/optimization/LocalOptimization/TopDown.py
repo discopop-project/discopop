@@ -23,6 +23,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 
 
 def get_locally_optimized_models(
+    experiment: Experiment,
     graph: nx.DiGraph,
     substitutions: Dict[Symbol, Expr],
     environment: Experiment,
@@ -42,6 +43,7 @@ def get_locally_optimized_models(
                 try:
                     # create a performance model for the specific decision
                     performance_models = get_node_performance_models(
+                        experiment,
                         graph,
                         function_node,
                         set(),
@@ -89,7 +91,11 @@ def get_locally_optimized_models(
 
         # construct locally optimal model
         performance_models = get_node_performance_models(
-            graph, function_node, set(), restrict_to_decisions=set(locally_optimal_choices)
+            experiment,
+            graph,
+            function_node,
+            set(),
+            restrict_to_decisions=set(locally_optimal_choices),
         )
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(
