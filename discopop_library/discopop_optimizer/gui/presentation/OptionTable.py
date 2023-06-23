@@ -92,8 +92,8 @@ def show_options(
         export_code_button = Button(
             options_field,
             text="Export Code",
-            command=lambda opt=option, ctx=context: export_code(  # type: ignore
-                pet, graph, experiment, opt, ctx, function_root
+            command=lambda opt=option, opt_name=option_name, ctx=context: export_code(  # type: ignore
+                pet, graph, experiment, opt, ctx, opt_name, function_root
             ),
         )
         export_code_button.grid(row=0, column=2)
@@ -221,5 +221,5 @@ def __export_all_codes(
     options: List[Tuple[CostModel, ContextObject, str]],
     function_root: FunctionRoot,
 ):
-    for opt, ctx, _ in options:
-        export_code(pet, graph, experiment, opt, ctx, function_root)
+    for opt, ctx, label in options:
+        export_code(pet, graph, experiment, opt, ctx, label, function_root)
