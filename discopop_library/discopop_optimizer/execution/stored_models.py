@@ -33,7 +33,7 @@ def execute_stored_models(arguments: Dict):
             code_modifications,
             load_file_mapping(arguments["--file-mapping"]),
         )
-        __compile(arguments, working_copy_dir, arguments["--compile-check-command"])
+        __compile(arguments, working_copy_dir, arguments["--compile-command"])
         __execute(arguments, working_copy_dir)
         # __cleanup(working_copy_dir)
 
@@ -56,7 +56,7 @@ def execute_single_model(arguments: Dict):
         code_modifications,
         load_file_mapping(arguments["--file-mapping"]),
     )
-    __compile(arguments, working_copy_dir, arguments["--compile-check-command"])
+    __compile(arguments, working_copy_dir, arguments["--compile-command"])
     __execute(arguments, working_copy_dir)
     # __cleanup(working_copy_dir)
 

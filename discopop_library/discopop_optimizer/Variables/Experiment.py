@@ -94,7 +94,7 @@ class Experiment(object):
 
         self.function_models = dict()
 
-        self.compile_check_command = arguments["--compile-check-command"]
+        self.compile_check_command = arguments["--compile-command"]
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False
