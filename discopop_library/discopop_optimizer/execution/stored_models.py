@@ -2,12 +2,13 @@ import os
 import shlex
 import shutil
 import statistics
+import string
 import subprocess
 import time
 import warnings
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, cast, List
+import random
+from typing import Dict, cast, List, TextIO, Tuple
 
 import jsonpickle  # type: ignore
 
@@ -17,6 +18,8 @@ from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeS
 
 def execute_stored_models(arguments: Dict):
     """Collects and executes all models stored in the current project path"""
+    print("Cleaning environment...")
+    __initialize_measurement_directory(arguments)
     print("Executing stored models...")
 
     # collect models to be executed
@@ -34,12 +37,17 @@ def execute_stored_models(arguments: Dict):
             load_file_mapping(arguments["--file-mapping"]),
         )
         __compile(arguments, working_copy_dir, arguments["--compile-command"])
-        __execute(arguments, working_copy_dir)
+        __measure_and_execute(
+            arguments, working_copy_dir, code_modifications.model_id, code_modifications.label
+        )
         # __cleanup(working_copy_dir)
 
 
 def execute_single_model(arguments: Dict):
     """Executes the single models specified by the given arguments"""
+    print("Cleaning environment...")
+    __initialize_measurement_directory(arguments)
+
     print("Executing stored model...")
 
     # collect model to be executed
@@ -57,36 +65,93 @@ def execute_single_model(arguments: Dict):
         load_file_mapping(arguments["--file-mapping"]),
     )
     __compile(arguments, working_copy_dir, arguments["--compile-command"])
-    __execute(arguments, working_copy_dir)
+    __measure_and_execute(
+        arguments, working_copy_dir, code_modifications.model_id, code_modifications.label
+    )
     # __cleanup(working_copy_dir)
 
 
-def __execute(arguments: Dict, working_copy_dir):
+def __initialize_measurement_directory(arguments: Dict):
+    measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
+    if not arguments["--execution-append-measurements"]:
+        # delete measurement directory
+        if os.path.exists(measurement_dir):
+            shutil.rmtree(measurement_dir)
+    if not os.path.exists(measurement_dir):
+        os.makedirs(measurement_dir)
+    __initialize_measurement_file(os.path.join(measurement_dir, "measurements.csv"))
+
+
+def __initialize_measurement_file(measurement_file: str):
+    if not os.path.exists(measurement_file):
+        with open(measurement_file, "w+") as f:
+            # write file header
+            header_line = "Test_case_id;Model_ID;Model_Label;return_code;Executable_name;Executable_arguments;execution_time;\n"
+            f.write(header_line)
+
+
+def __measure_and_execute(arguments: Dict, working_copy_dir: str, model_id: str, model_label: str):
+    """Setup measurements, execute the compiled program and output the measurement results to a file"""
+    measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
+    # create output file for specific model measurement
+    measurement_file = os.path.join(measurement_dir, "measurements.csv")
+
+    with open(measurement_file, "a") as f:
+        execution_times: List[float] = []
+        test_case_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        for execution_idx in range(0, int(arguments["--execution-repetitions"])):
+            return_code, start_time, end_time = __execute(arguments, working_copy_dir, f)
+            execution_time = end_time - start_time
+            execution_times.append(execution_time)
+            # write execution result
+            execution_line = (
+                test_case_id
+                + ";"
+                + model_id
+                + ";"
+                + model_label
+                + ";"
+                + str(return_code)
+                + ";"
+                + arguments["--executable-name"]
+                + ";"
+                + arguments["--executable-arguments"]
+                + ";"
+                + str(execution_time).replace(".", ",")
+                + "\n"
+            )
+            f.write(execution_line)
+            f.flush()
+
+        print("\t\t\tREPS: ", len(execution_times))
+        print("\t\t\tAVG: ", sum(execution_times) / len(execution_times))
+        if len(execution_times) >= 2:
+            print("\t\t\tVariance: ", statistics.variance(execution_times))
+
+
+def __execute(
+    arguments: Dict, working_copy_dir: str, measurements_file: TextIO
+) -> Tuple[int, float, float]:
+    """Executes the current model and returns the exit code as well as the start and end time of the execution"""
     print("\t\texecuting...")
     command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]
     clean_command = [c for c in command if len(c) != 0]
-    execution_times: List[float] = []
-    for execution_idx in range(0, int(arguments["--execution-repetitions"])):
-        start_time = time.time()
-        result = subprocess.run(
-            clean_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-            cwd=working_copy_dir,
-        )
-        end_time = time.time()
-        execution_times.append(end_time - start_time)
-        if str(result.returncode) != "0":
-            warnings.warn("ERROR DURING EXECUTION...\n" + result.stderr)
-        print("STDOUT: ")
-        print(result.stdout)
-        print("STDERR: ")
-        print(result.stderr)
-    print("\t\t\tREPS: ", len(execution_times))
-    print("\t\t\tAVG: ", sum(execution_times) / len(execution_times))
-    if len(execution_times) >= 2:
-        print("\t\t\tVariance: ", statistics.variance(execution_times))
+    start_time = time.time()
+    result = subprocess.run(
+        clean_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        cwd=working_copy_dir,
+    )
+    end_time = time.time()
+    if str(result.returncode) != "0":
+        warnings.warn("ERROR DURING EXECUTION...\n" + result.stderr)
+    print("STDOUT: ")
+    print(result.stdout)
+    print("STDERR: ")
+    print(result.stderr)
+    return result.returncode, start_time, end_time
 
 
 def __compile(arguments: Dict, working_copy_dir, compile_command):

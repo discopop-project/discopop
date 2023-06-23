@@ -9,10 +9,19 @@ class CodeStorageObject(object):
     cost_model: CostModel
     patches: Dict[int, str]
     parent_function: FunctionRoot
+    model_id: str
+    label: str
 
     def __init__(
-        self, cost_model: CostModel, patches: Dict[int, str], parent_function: FunctionRoot
+        self,
+        cost_model: CostModel,
+        patches: Dict[int, str],
+        parent_function: FunctionRoot,
+        model_id: str,
+        label: str,
     ):
         self.cost_model = cost_model
         self.patches = patches
         self.parent_function = parent_function
+        self.model_id = model_id
+        self.label = label

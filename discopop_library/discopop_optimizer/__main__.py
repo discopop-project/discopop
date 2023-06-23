@@ -12,7 +12,7 @@ Usage:
     discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
-        [--executable-name <string>] [--execution-repetitions <int>] --compile-command <str>
+        [--executable-name <string>] [--execution-repetitions <int>] --compile-command <str> [--execution-append-measurements]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -25,6 +25,8 @@ OPTIONAL ARGUMENTS:
                                         Does not start the optimization pipeline.
                                         Required: --executable-name [default: ]
     --execution-repetitions=<int>       Repeat measurements [default: 1]
+    --execution-append-measurements     If set, measurement files from previous executions will be kept and new results
+                                        will be appended.
     --clean-created-code        Removes all stored code modifications.
     --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
     --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
@@ -84,6 +86,7 @@ docopt_schema = Schema(
         "--execution-repetitions": Use(str),
         "--execute-single-model": Use(str),
         "--compile-command": Use(str),
+        "--execution-append-measurements": Use(str),
     }
 )
 
@@ -112,6 +115,9 @@ def main():
     arguments["--project"] = get_path(os.getcwd(), arguments["--project"])
     arguments["--execute-created-models"] = (
         False if arguments["--execute-created-models"] == "False" else True
+    )
+    arguments["--execution-append-measurements"] = (
+        False if arguments["--execution-append-measurements"] == "False" else True
     )
     arguments["--clean-created-code"] = (
         False if arguments["--clean-created-code"] == "False" else True

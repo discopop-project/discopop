@@ -36,6 +36,7 @@ def export_code(
     experiment: Experiment,
     cost_model: CostModel,
     context: ContextObject,
+    label: str,
     parent_function: FunctionRoot,
 ):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
@@ -285,7 +286,7 @@ def export_code(
     while os.path.exists(os.path.join(export_dir, hash_name)):
         hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-    code_storage = CodeStorageObject(cost_model, patches, parent_function)
+    code_storage = CodeStorageObject(cost_model, patches, parent_function, hash_name, label)
 
     # export code_storage object to json
     print("Export JSON TO: ", os.path.join(export_dir, hash_name + ".json"))
