@@ -68,3 +68,14 @@ class DeviceUpdateInfo(PatternInfo):
             f"openmp_source_device_id: {self.openmp_source_device_id}\n"
             f"openmp_target_device_id: {self.openmp_target_device_id}"
         )
+
+    def get_str_without_first_data_occurrence(self) -> str:
+        return (
+            f"Start line: {self.start_line}\n"
+            f"End line: {self.end_line}\n"
+            f"source_device: {self.source_device_id}\n"
+            f"target_device: {self.target_device_id}\n"
+            f"var_name: {self.var_name}\n"
+            f"openmp_source_device_id: {self.openmp_source_device_id}\n"
+            f"openmp_target_device_id: {self.openmp_target_device_id}"
+        )

@@ -27,7 +27,6 @@ from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     data_at,
     get_parents,
-    get_temporary_successors,
 )
 
 
@@ -192,6 +191,50 @@ def export_code(
         if entry in suggestions:
             suggestions.remove(entry)
 
+    # remove updates, if an identical entry exists
+    to_be_removed = []
+    for entry_1 in suggestions:
+        if not isinstance(entry_1[1], DeviceUpdateInfo):
+            continue
+        entry_str_1 = (
+            str(entry_1[0])
+            + ";"
+            + (
+                cast(DeviceUpdateInfo, entry_1[1]).get_str_without_first_data_occurrence()
+                if isinstance(entry_1[1], DeviceUpdateInfo)
+                else str(entry_1[1])
+            )
+            + ";"
+            + str(entry_1[2])
+            + ";"
+            + str(entry_1[3])
+        )
+        for entry_2 in suggestions:
+            if not isinstance(entry_1[1], DeviceUpdateInfo):
+                continue
+            entry_str_2 = (
+                str(entry_2[0])
+                + ";"
+                + (
+                    cast(DeviceUpdateInfo, entry_2[1]).get_str_without_first_data_occurrence()
+                    if isinstance(entry_2[1], DeviceUpdateInfo)
+                    else str(entry_2[1])
+                )
+                + ";"
+                + str(entry_2[2])
+                + ";"
+                + str(entry_2[3])
+            )
+            if entry_str_1 == entry_str_2:
+                if (
+                    cast(DeviceUpdateInfo, entry_1[1]).is_first_data_occurrence
+                    and not cast(DeviceUpdateInfo, entry_2[1]).is_first_data_occurrence
+                ):
+                    to_be_removed.append(entry_2)
+    for entry in to_be_removed:
+        if entry in suggestions:
+            suggestions.remove(entry)
+
     if False:
         # todo cleanup
         for sugg in suggestions:
@@ -200,11 +243,11 @@ def export_code(
                 print(
                     "First" if tmp.is_first_data_occurrence else "",
                     "Update: ",
-                    tmp.source_node_id,
+                    tmp.start_line,
                     "@",
                     tmp.source_device_id,
                     "->",
-                    tmp.target_node_id,
+                    tmp.start_line,
                     "@",
                     tmp.target_device_id,
                     "|",
