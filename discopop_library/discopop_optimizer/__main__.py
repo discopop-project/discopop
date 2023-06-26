@@ -204,21 +204,21 @@ def main():
         # define System
         system = System()
         device_0 = CPU(
-            Symbol("CPU_thread_num"),
-            Symbol("CPU_thread_num"),
+            Integer(48),
+            Integer(48),
             openmp_device_id=-1,
             device_specific_compiler_flags="COMPILE FOR CPU",
         )  # Device 0 always acts as the host system
         gpu_compiler_flags = "COMPILE FOR CPU"
         device_1 = GPU(
-            Symbol("GPU_thread_num"),
-            Symbol("GPU_thread_num"),
+            Integer(512),
+            Integer(512),
             openmp_device_id=0,
             device_specific_compiler_flags="COMPILE FOR GPU",
         )
         device_2 = GPU(
-            Symbol("GPU_thread_num"),
-            Symbol("GPU_thread_num"),
+            Integer(512),
+            Integer(512),
             openmp_device_id=1,
             device_specific_compiler_flags="COMPILE FOR GPU",
         )
@@ -228,12 +228,12 @@ def main():
         # define Network
         network = system.get_network()
         network.add_connection(device_0, device_0, Integer(100000), Integer(0))
-        network.add_connection(device_0, device_1, Integer(10), Integer(1000000))
-        network.add_connection(device_1, device_0, Integer(10), Integer(1000000))
+        network.add_connection(device_0, device_1, Integer(100), Integer(1000000))
+        network.add_connection(device_1, device_0, Integer(100), Integer(1000000))
         network.add_connection(device_1, device_1, Integer(100000), Integer(0))
 
-        network.add_connection(device_0, device_2, Integer(10), Integer(10000000))
-        network.add_connection(device_2, device_0, Integer(10), Integer(10000000))
+        network.add_connection(device_0, device_2, Integer(100), Integer(10000000))
+        network.add_connection(device_2, device_0, Integer(100), Integer(10000000))
         network.add_connection(device_2, device_2, Integer(1000), Integer(0))
 
         network.add_connection(device_1, device_2, Integer(100), Integer(500000))

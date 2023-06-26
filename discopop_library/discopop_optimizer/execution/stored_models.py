@@ -137,21 +137,28 @@ def __execute(
     command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]
     clean_command = [c for c in command if len(c) != 0]
     start_time = time.time()
-    result = subprocess.run(
-        clean_command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        cwd=working_copy_dir,
-    )
-    end_time = time.time()
-    if str(result.returncode) != "0":
-        warnings.warn("ERROR DURING EXECUTION...\n" + result.stderr)
-    print("STDOUT: ")
-    print(result.stdout)
-    print("STDERR: ")
-    print(result.stderr)
-    return result.returncode, start_time, end_time
+    try:
+
+        result = subprocess.run(
+            clean_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=working_copy_dir,
+        )
+        end_time = time.time()
+        if str(result.returncode) != "0":
+            warnings.warn("ERROR DURING EXECUTION...\n" + result.stderr)
+        print("STDOUT: ")
+        print(result.stdout)
+        print("STDERR: ")
+        print(result.stderr)
+        return result.returncode, start_time, end_time
+    except FileNotFoundError as fnfe:
+        end_time = time.time()
+        print(fnfe)
+        return 1, start_time, end_time
+
 
 
 def __compile(arguments: Dict, working_copy_dir, compile_command):
