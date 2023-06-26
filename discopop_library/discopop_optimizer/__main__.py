@@ -9,10 +9,11 @@
 """Discopop Suggestion Optimizer
 
 Usage:
-    discopop_optimizer [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
+    discopop_optimizer --compile-command <str> [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
-        [--executable-name <string>] [--execution-repetitions <int>] --compile-command <str> [--execution-append-measurements]
+        [--executable-name <string>] [--execution-repetitions <int>] [--execution-append-measurements]
+        [--exhaustive-search]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -40,6 +41,8 @@ OPTIONAL ARGUMENTS:
                                 if not specified the default make target is used. [default: ]
     --make-flags=<string>       specify flags which will be passed through to make. [default: ]
     --compile-command=<string>    specify a command which shall be executed to compile the application
+    --exhaustive-search         Perform an exhaustive search for the optimal set of parallelization suggestions for the
+                                given environment
     -h --help                   Show this screen
 """
 import os
@@ -87,6 +90,7 @@ docopt_schema = Schema(
         "--execute-single-model": Use(str),
         "--compile-command": Use(str),
         "--execution-append-measurements": Use(str),
+        "--exhaustive-search": Use(str),
     }
 )
 
@@ -124,6 +128,9 @@ def main():
     )
     arguments["--code-export-path"] = get_path(
         arguments["--project"], arguments["--code-export-path"]
+    )
+    arguments["--exhaustive-search"] = (
+        False if arguments["--exhaustive-search"] == "False" else True
     )
     arguments["--dp-output-path"] = get_path(arguments["--project"], arguments["--dp-output-path"])
     arguments["--file-mapping"] = get_path(
@@ -249,7 +256,7 @@ def main():
         )
 
         # invoke optimization graph
-        optimization_graph = OptimizationGraph(arguments["--dp-output-path"], experiment)
+        optimization_graph = OptimizationGraph(arguments["--dp-output-path"], experiment, arguments)
 
     if __name__ == "__main__":
         main()

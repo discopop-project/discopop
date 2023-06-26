@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os
 from typing import Dict, cast, List, Tuple
 
 import jsonpickle  # type: ignore
@@ -27,10 +26,10 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     show_function_models,
     export_to_json,
-    restore_session,
 )
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
 )
@@ -43,7 +42,7 @@ from discopop_library.discopop_optimizer.utilities.optimization.LocalOptimizatio
 class OptimizationGraph(object):
     next_free_node_id: int
 
-    def __init__(self, project_folder_path, experiment: Experiment):
+    def __init__(self, project_folder_path, experiment: Experiment, arguments: Dict):
         # construct optimization graph from PET Graph
         experiment.optimization_graph, self.next_free_node_id = PETParser(
             experiment.detection_result.pet, experiment
@@ -72,18 +71,26 @@ class OptimizationGraph(object):
             experiment,
         )
 
-        #        # calculate performance models without data transfers
-        #        function_performance_models = get_performance_models_for_functions(experiment.optimization_graph)
+        # perform an exhaustive search if requested
+        if arguments["--exhaustive-search"]:
+            # calculate performance models without data transfers
+            function_performance_models = get_performance_models_for_functions(
+                experiment, experiment.optimization_graph
+            )
 
-        #        # calculate and append necessary data transfers to the models
-        #        function_performance_models_with_transfers = calculate_data_transfers(
-        #            experiment.optimization_graph, function_performance_models
-        #       )
+            # calculate and append necessary data transfers to the models
+            function_performance_models_with_transfers = calculate_data_transfers(
+                experiment.optimization_graph, function_performance_models
+            )
 
-        #        # calculate and append costs of data transfers to the performance models
-        #        complete_performance_models = add_data_transfer_costs(
-        #            experiment.optimization_graph, function_performance_models_with_transfers, environment
-        #        )
+            # calculate and append costs of data transfers to the performance models
+            exhaustive_performance_models = add_data_transfer_costs(
+                experiment.optimization_graph,
+                function_performance_models_with_transfers,
+                experiment,
+            )
+        else:
+            exhaustive_performance_models = dict()
 
         # define variable substitutions
         substitutions: Dict[Symbol, Expr] = dict()
@@ -168,12 +175,37 @@ class OptimizationGraph(object):
                 model.free_symbol_ranges = free_symbol_ranges
                 model.free_symbol_distributions = free_symbol_distributions
 
-        # find quasi-optimal results by checking random subsets
-        random_paths = 50
-        #        for function in complete_performance_models:
+        # apply substitutions and un-mark substituted free symbols
+        for idx, function in enumerate(exhaustive_performance_models):
+            for midx, pair in enumerate(exhaustive_performance_models[function]):
+                model, context = pair
+                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+                model.sequential_costs = model.sequential_costs.subs(substitutions)
+        # set free symbol ranges and distributions for comparisons
+        for idx, function in enumerate(exhaustive_performance_models):
+            for pair in exhaustive_performance_models[function]:
+                model, context = pair
+                model.free_symbol_ranges = free_symbol_ranges
+                model.free_symbol_distributions = free_symbol_distributions
+
+        # find the minimum of the exhaustive list of models
+        exhaustive_minima: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
+        print("Sorting exhaustive models...")
+        for function in exhaustive_performance_models:
+            sorted_exhaustive_performance_models = sorted(
+                exhaustive_performance_models[function], key=lambda x: x[0]
+            )
+            exhaustive_minima[function] = [sorted_exhaustive_performance_models[0]]
+        print("\tDone.")
+
         for function in locally_optimized_models:
             # show table of options
             options: List[Tuple[CostModel, ContextObject, str]] = []
+            # add exhaustive minima
+            if function in exhaustive_minima:
+                for model_tmp in exhaustive_minima[function]:
+                    options.append((model_tmp[0], model_tmp[1], "Exhaustive Min"))
+
             options.append(
                 (
                     sequential_complete_performance_models[function][0][0],
@@ -189,7 +221,6 @@ class OptimizationGraph(object):
                 )
             )
             # save options to experiment
-            print("ASSIG 1", function, "-->", type(function))
             experiment.function_models[function] = options
 
         # show function models

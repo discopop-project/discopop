@@ -50,10 +50,48 @@ def show_options(
         header_cols.append(e)
     rows.append(header_cols)
 
+    Button(
+        root,
+        text="Plot All",
+        command=lambda: plot_CostModels(
+            [t[0] for t in options],
+            sorted_free_symbols,
+            free_symbol_ranges,
+            [t[2] for t in options],
+            title="Full Plot",
+        ),
+    ).grid()  # type: ignore
+    Button(
+        root,
+        text="Add Random (10)",
+        command=lambda: add_random_models(
+            root,
+            pet,
+            graph,
+            experiment,
+            [opt for opt in options if not opt[2].startswith("Rand ")],
+            substitutions,
+            sorted_free_symbols,
+            free_symbol_ranges,
+            free_symbol_distributions,
+            function_root,
+            window_title,
+        ),
+    ).grid()
+    Button(
+        root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)
+    ).grid()
+    Button(
+        root,
+        text="Export all codes",
+        command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
+    ).grid()
+    Button(root, text="Continue", command=lambda: root.destroy()).grid()
+
     # create option entries
     for row_idx, option_tuple in enumerate(options):
         option, context, option_name = option_tuple
-        row_idx = row_idx + 1  # to account for column headers
+        row_idx = row_idx + 1 + 5  # to account for column headers
         label = Entry(relief=RIDGE)
         label.grid(row=row_idx, column=0, sticky=NSEW)
         label.insert(END, option_name)
@@ -97,44 +135,6 @@ def show_options(
             ),
         )
         export_code_button.grid(row=0, column=2)
-
-    Button(
-        root,
-        text="Plot All",
-        command=lambda: plot_CostModels(
-            [t[0] for t in options],
-            sorted_free_symbols,
-            free_symbol_ranges,
-            [t[2] for t in options],
-            title="Full Plot",
-        ),
-    ).grid()  # type: ignore
-    Button(
-        root,
-        text="Add Random (10)",
-        command=lambda: add_random_models(
-            root,
-            pet,
-            graph,
-            experiment,
-            [opt for opt in options if not opt[2].startswith("Rand ")],
-            substitutions,
-            sorted_free_symbols,
-            free_symbol_ranges,
-            free_symbol_distributions,
-            function_root,
-            window_title,
-        ),
-    ).grid()
-    Button(
-        root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)
-    ).grid()
-    Button(
-        root,
-        text="Export all codes",
-        command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
-    ).grid()
-    Button(root, text="Continue", command=lambda: root.destroy()).grid()
 
     mainloop()
 
