@@ -157,16 +157,18 @@ def __execute(
 def __compile(arguments: Dict, working_copy_dir, compile_command):
     print("\t\tbuilding...")
     # command = compile_command
-    command = shlex.split(compile_command)
+    #command = shlex.split(compile_command)
     if len(arguments["--make-flags"]) != 0:
-        command += shlex.split(arguments["--make-flags"])  # split string, consider quotes
+        print("MAKE FLAGS: ", arguments["--make-flags"])
+        compile_command += " " + arguments["--make-flags"]  # shlex.split(arguments["--make-flags"])  # split string, consider quotes
 
     if len(arguments["--make-target"]) != 0:
-        command += shlex.split(arguments["--make-target"])  # split string, consider quotes
-    clean_command = [c for c in command if len(c) != 0]
-    print("\t\t\tCommand: ", " ".join(clean_command))
+        compile_command += " " + arguments["--make-target"]  # shlex.split(arguments["--make-target"])  # split string, consider quotes
+#    clean_command = [c for c in command if len(c) != 0]
+    print("\t\t\tCommand: ", compile_command)  # shlex.join(clean_command))
     result = subprocess.run(
-        clean_command,
+        compile_command,
+#        " ".join(clean_command),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
