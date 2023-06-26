@@ -164,13 +164,14 @@ def __compile(arguments: Dict, working_copy_dir, compile_command):
     if len(arguments["--make-target"]) != 0:
         command += shlex.split(arguments["--make-target"])  # split string, consider quotes
     clean_command = [c for c in command if len(c) != 0]
-    print("\t\t\tCommand: ", clean_command)
+    print("\t\t\tCommand: ", " ".join(clean_command))
     result = subprocess.run(
         clean_command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
         cwd=working_copy_dir,
+        shell=True
     )
     print("STDOUT: ")
     print(result.stdout)
