@@ -16,29 +16,38 @@ from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSu
 
 
 def from_pattern_info(
-    file_mapping: Dict[int, str], patterns_by_type: Dict[str, List[PatternInfo]], skip_compilation_check: bool = False
+    file_mapping: Dict[int, str],
+    patterns_by_type: Dict[str, List[PatternInfo]],
+    skip_compilation_check: bool = False,
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
     This method does not modify the original source code.
     Only fileIDs of files which would be modified occur as keys in the returned dictionary.
-    For now, it is assumed that the given patterns are independent of each other, i.e. no nesting exists."""
+    For now, it is assumed that the given patterns are independent of each other, i.e. no nesting exists.
+    """
     # convert patterns to json strings so that only a single interface has to be maintained
     pattern_json_strings_by_type: Dict[str, List[str]] = dict()
     for type_str in patterns_by_type:
         for pattern in patterns_by_type[type_str]:
             pattern_json_strings_by_type[type_str] = pattern.to_json()
-    return from_json_strings(file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check)
+    return from_json_strings(
+        file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check
+    )
 
 
 def from_json_strings(
-    file_mapping: Dict[int, str], pattern_json_strings_by_type: Dict[str, List[str]], skip_compilation_check: bool = False, compile_check_command: Optional[str] = None
+    file_mapping: Dict[int, str],
+    pattern_json_strings_by_type: Dict[str, List[str]],
+    skip_compilation_check: bool = False,
+    compile_check_command: Optional[str] = None,
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
     This method does not modify the original source code.
     Only fileIDs of files which would be modified occur as keys in the returned dictionary.
-    For now, it is assumed that the given patterns are independent of each other, i.e. no nesting exists."""
+    For now, it is assumed that the given patterns are independent of each other, i.e. no nesting exists.
+    """
     # convert pattern_json_strings to UnpackedSuggestion object
     unpacked_suggestions: List[UnpackedSuggestion] = []
     for type_str in pattern_json_strings_by_type:
@@ -58,10 +67,22 @@ def from_json_strings(
         pragmas = suggestion.get_pragmas()
         # add pragmas to the ContentBuffer object which corresponds to the fileId specified in UnpackedSuggestions
         for pragma in pragmas:
-            successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [], skip_compilation_check=skip_compilation_check, compile_check_command=compile_check_command)
+            successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(
+                file_mapping,
+                pragma,
+                [],
+                skip_compilation_check=skip_compilation_check,
+                compile_check_command=compile_check_command,
+            )
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
-                file_id_to_content_buffer[suggestion.file_id].add_pragma(file_mapping, pragma, [], add_as_comment=True, compile_check_command=compile_check_command)
+                file_id_to_content_buffer[suggestion.file_id].add_pragma(
+                    file_mapping,
+                    pragma,
+                    [],
+                    add_as_comment=True,
+                    compile_check_command=compile_check_command,
+                )
 
     # create the resulting dictionary by assembling the contents of the ContentBuffer objects
     result_dict: Dict[int, str] = dict()

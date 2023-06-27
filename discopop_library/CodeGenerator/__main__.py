@@ -29,7 +29,9 @@ import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 
-from discopop_library.CodeGenerator.CodeGenerator import from_json_strings as generate_code_from_json_strings
+from discopop_library.CodeGenerator.CodeGenerator import (
+    from_json_strings as generate_code_from_json_strings,
+)
 from discopop_library.FileMapping.FileMapping import load_file_mapping
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 
@@ -69,16 +71,25 @@ def main():
     file_mapping_file = get_path(os.getcwd(), arguments["--fmap"])
     json_file = get_path(os.getcwd(), arguments["--json"])
     outputdir = arguments["--outputdir"]
-    relevant_patterns: List[str] = [] if arguments["--patterns"] == "None" else (
-        arguments["--patterns"].split(",") if "," in arguments["--patterns"] else [arguments["--patterns"]])
+    relevant_patterns: List[str] = (
+        []
+        if arguments["--patterns"] == "None"
+        else (
+            arguments["--patterns"].split(",")
+            if "," in arguments["--patterns"]
+            else [arguments["--patterns"]]
+        )
+    )
     # validate patterns
     for pattern in relevant_patterns:
         if pattern not in ["reduction", "do_all", "simple_gpu", "combined_gpu"]:
-            raise ValueError("Unsupported pattern name: ", pattern, " given in '--patterns' argument!")
+            raise ValueError(
+                "Unsupported pattern name: ", pattern, " given in '--patterns' argument!"
+            )
 
     for file in [file_mapping_file, json_file]:
         if not os.path.isfile(file):
-            raise FileNotFoundError('File not found: ', file)
+            raise FileNotFoundError("File not found: ", file)
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
 
@@ -92,11 +103,16 @@ def main():
     print("\ttype: ", type(arguments["--compile-check-command"]), file=sys.stderr)
 
     print("FILE MAPPING: ", file_mapping_dict)
-    print("patterns:" , identified_patterns)
+    print("patterns:", identified_patterns)
 
-
-    modified_code = generate_code_from_json_strings(file_mapping_dict, identified_patterns,  skip_compilation_check = True if arguments["--skip-compilation-check"] != "False" else False,
-                                                    compile_check_command= arguments["--compile-check-command"] if arguments["--compile-check-command"] != "None" else None)
+    modified_code = generate_code_from_json_strings(
+        file_mapping_dict,
+        identified_patterns,
+        skip_compilation_check=True if arguments["--skip-compilation-check"] != "False" else False,
+        compile_check_command=arguments["--compile-check-command"]
+        if arguments["--compile-check-command"] != "None"
+        else None,
+    )
 
     modified_code_by_new_location: Dict[str, str] = dict()
     for file_id in modified_code:
