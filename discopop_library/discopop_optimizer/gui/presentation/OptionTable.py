@@ -1,5 +1,6 @@
+import tkinter
 from tkinter import *
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
@@ -33,7 +34,7 @@ def show_options(
     window_title=None,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
-    root = Tk()
+    root = tkinter.Toplevel()
     if window_title is not None:
         root.configure()
         root.title(window_title)
@@ -59,6 +60,7 @@ def show_options(
             free_symbol_ranges,
             [t[2] for t in options],
             title="Full Plot",
+            super_title=function_root.name,
         ),
     ).grid()  # type: ignore
     Button(
@@ -86,23 +88,23 @@ def show_options(
         text="Export all codes",
         command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
     ).grid()
-    Button(root, text="Continue", command=lambda: root.destroy()).grid()
+    Button(root, text="Close", command=lambda: root.destroy()).grid()
 
     # create option entries
     for row_idx, option_tuple in enumerate(options):
         option, context, option_name = option_tuple
         row_idx = row_idx + 1 + 5  # to account for column headers
-        label = Entry(relief=RIDGE)
+        label = Entry(root, relief=RIDGE)
         label.grid(row=row_idx, column=0, sticky=NSEW)
         label.insert(END, option_name)
         label.configure(state=DISABLED, disabledforeground="black")
 
-        decisions = Entry(relief=RIDGE)
+        decisions = Entry(root, relief=RIDGE)
         decisions.grid(row=row_idx, column=1, sticky=NSEW)
         decisions.insert(END, str(option.path_decisions))
         decisions.configure(state=DISABLED, disabledforeground="black")
 
-        options_field = Entry(relief=RIDGE)
+        options_field = Entry(root, relief=RIDGE)
         options_field.grid(row=row_idx, column=2, sticky=NSEW)
         options_field.configure(state=DISABLED, disabledforeground="black")
 
@@ -115,6 +117,7 @@ def show_options(
                 free_symbol_ranges,
                 [opt_name],
                 title=opt_name,
+                super_title=function_root.name,
             ),
         )
         plot_button.grid(row=0, column=0)
@@ -153,7 +156,7 @@ def __save_models(
 
 
 def add_random_models(
-    root: Tk,
+    root: Union[Tk, tkinter.Toplevel],
     pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,

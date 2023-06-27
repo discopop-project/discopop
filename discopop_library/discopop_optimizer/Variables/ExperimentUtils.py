@@ -1,6 +1,6 @@
-import json
 import os
 import pickle
+from tkinter import Tk, Button
 from typing import List, Optional, cast
 
 import jsonpickle  # type: ignore
@@ -9,6 +9,7 @@ import jsons  # type: ignore
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.presentation.OptionTable import show_options
+from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
 
@@ -19,20 +20,48 @@ def show_function_models(
     considered_functions = (
         show_functions if show_functions is not None else experiment.function_models
     )
-    for function in considered_functions:
-        print("Showing function models: ", function.name)
-        options = show_options(  # random options might be added by show_options
-            experiment.detection_result.pet,
-            experiment.optimization_graph,
-            experiment,
-            experiment.function_models[function],
-            experiment.substitutions,
-            experiment.sorted_free_symbols,
-            experiment.free_symbol_ranges,
-            experiment.free_symbol_distributions,
-            function,
-            window_title="Function: " + function.name,
+    # show function selection dialogue
+    root = Tk()
+    root.configure()
+    root.title("Select Function for Display")
+    root.geometry("600x800")
+    root.rowconfigure(0, weight=1)
+    root.rowconfigure(1, weight=1)
+    root.columnconfigure(1, weight=1)
+    root.columnconfigure(0, weight=1)
+
+    scrollable_frame_widget = ScrollableFrameWidget(root)
+    scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
+
+    # populate scrollable frame
+    for idx, function in enumerate(considered_functions):
+        function_button = Button(
+            scrollable_frame,
+            text=function.name,
+            command=lambda func=function: show_options(  # type: ignore
+                # random options might be added by show_options
+                experiment.detection_result.pet,
+                experiment.optimization_graph,
+                experiment,
+                experiment.function_models[func],
+                experiment.substitutions,
+                experiment.sorted_free_symbols,
+                experiment.free_symbol_ranges,
+                experiment.free_symbol_distributions,
+                func,
+                window_title="Function: " + func.name,
+            ),
         )
+        function_button.grid(row=idx, column=0)
+
+    # finalize scrollable frame
+    scrollable_frame_widget.finalize(row_count=len(considered_functions), row=0, col=0)
+
+    # add exit button
+    exit_button = Button(root, text="Exit", command=lambda tk_root=root: tk_root.destroy())  # type: ignore
+    exit_button.grid(row=1, column=0)
+
+    root.mainloop()
 
 
 def export_to_json(experiment: Experiment):
