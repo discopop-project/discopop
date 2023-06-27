@@ -8,6 +8,7 @@
 
 import subprocess
 import tkinter as tk
+from typing import Optional, cast
 
 from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen
@@ -15,11 +16,13 @@ from discopop_wizard.screens.suggestions.overview import show_suggestions_overvi
 
 class ExecutionView(object):
 
-    def __init__(self, execution_configuration, wizard, details_frame: tk.Frame):
+    def __init__(self, execution_configuration, wizard, details_frame: Optional[tk.Frame], headless_mode: bool = False):
         self.execution_configuration = execution_configuration
         self.wizard = wizard
         self.details_frame = details_frame
+        self.headless_mode = headless_mode
         self.__execute()
+
 
     def __execute(self):
         # prepare environment
@@ -29,7 +32,8 @@ class ExecutionView(object):
                 self.wizard.profiling_container = ProfilingContainer(self.wizard)
             self.wizard.profiling_container.analyze_project(self)
             # todo add display of suggestions
-            self.__show_suggestions()
+            if not self.headless_mode:
+                self.__show_suggestions()
         else:
             # prepare command
             command = self.__assemble_command_string()
@@ -37,7 +41,8 @@ class ExecutionView(object):
             return_code = self.__execute_command(command)
             if return_code == 0:
                 # show suggestions, stored in project_path/patterns.txt
-                self.__show_suggestions()
+                if not self.headless_mode:
+                    self.__show_suggestions()
 
     def __assemble_command_string(self) -> str:
         # assemble command for regular execution
@@ -72,18 +77,21 @@ class ExecutionView(object):
                 for line in p.stdout:
                     line = line.replace("\n", "")
                     self.__print_to_console(line)
-                    self.wizard.console.print(line)
+                    if not self.headless_mode:
+                        self.wizard.console.print(line)
         if p.returncode != 0:
             self.__print_to_console("An error occurred during the execution!")  # Error message
-            self.wizard.console.print("An error occurred during the execution!")
+            if not self.headless_mode:
+                self.wizard.console.print("An error occurred during the execution!")
             for line in str(subprocess.CalledProcessError(p.returncode, p.args)).split("\n"):
                 line = line.replace("\n", "")
                 self.__print_to_console(line)
-                self.wizard.console.print(line)
+                if not self.headless_mode:
+                    self.wizard.console.print(line)
         return p.returncode
 
     def __print_to_console(self, msg: str):
         print(msg)
 
     def __show_suggestions(self):
-        show_suggestions_overview_screen(self.wizard, self.details_frame, self.execution_configuration)
+        show_suggestions_overview_screen(self.wizard, cast(tk.Frame, self.details_frame), self.execution_configuration)
