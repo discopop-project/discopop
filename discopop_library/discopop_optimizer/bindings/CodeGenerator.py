@@ -40,6 +40,11 @@ def export_code(
     parent_function: FunctionRoot,
 ):
     """Provides a binding to the discopop code generator and exports the code corresponding to the given cost model"""
+    # only consider "empty", i.e. sequential cases, if they are either the sequential or the locally optimized option
+    if len(cost_model.path_decisions) == 0:
+        if label not in ["Sequential", "Locally Optimized"]:
+            print("warning: skipped empty model in code export.")
+
     # collect suggestions to be applied
     suggestions: List[Tuple[Device, PatternInfo, str, Optional[int]]] = []
     for decision in cost_model.path_decisions:
