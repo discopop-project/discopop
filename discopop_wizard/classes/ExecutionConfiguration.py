@@ -354,3 +354,7 @@ class ExecutionConfiguration(object):
         main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
         # show results tab
         main_screen_obj.notebook.select(main_screen_obj.results_frame)
+
+    def get_tags(self) -> List[str]:
+        """Returns a list of strings which represents the tags assigned to the configuration."""
+        return [tag for tag in self.value_dict["tags"].split(" ") if len(tag) != 0]
