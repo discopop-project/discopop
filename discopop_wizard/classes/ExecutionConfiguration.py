@@ -30,7 +30,7 @@ class ExecutionConfiguration(object):
         self.value_dict = {"label": "", "description": "", "executable_name": "", "executable_arguments": "",
                            "make_flags": "", "project_path": "", "linker_flags": "", "make_target": "",
                            "memory_profiling_skip_function_parameters": 0,  "notes": "",
-                           "working_copy_path": "",
+                           "working_copy_path": "", "tags":"",
                            "explorer_flags": "--json=patterns.json"}
         self.value_dict["id"] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         self.wizard = wizard
@@ -145,7 +145,8 @@ class ExecutionConfiguration(object):
                  font=wizard.style_font_bold_small).grid(row=11,
                                                          column=1,
                                                          sticky='ew')
-        tk.Label(canvas, text="Notes:", justify=tk.RIGHT, anchor="e").grid(row=12, column=1, sticky='ew')
+        tk.Label(canvas, text="Tags:", justify=tk.RIGHT, anchor="e").grid(row=12, column=1, sticky="ew")
+        tk.Label(canvas, text="Notes:", justify=tk.RIGHT, anchor="e").grid(row=13, column=1, sticky='ew')
 
         # show input fields
         label = tk.Entry(canvas)
@@ -213,8 +214,13 @@ class ExecutionConfiguration(object):
                         "improvements, but the correctness of the results can not be guaranteed anymore!\n"
                         "Use this mode with caution, and be aware of potential issues!")
 
+        tags = tk.Entry(canvas)
+        tags.grid(row=12, column=2, sticky="ew")
+        tags.insert(tk.END, self.value_dict["tags"])
+        create_tool_tip(tags, "Space-separated list of tags for identification.")
+
         additional_notes = tk.Text(canvas, height=10)
-        additional_notes.grid(row=12, column=2, sticky='ew')
+        additional_notes.grid(row=13, column=2, sticky='ew')
         additional_notes.insert(tk.END, self.value_dict["notes"])
         create_tool_tip(additional_notes, "Can be used to store notes regarding the configuration.")
 
@@ -227,6 +233,7 @@ class ExecutionConfiguration(object):
                                                                   description, executable_name,
                                                                   executable_args, make_flags,
                                                                   project_path, project_linker_flags, make_target, mpsfp_var,
+                                                                  tags,
                                                                   additional_notes))
         save_button.grid(row=1, column=1)
 
@@ -252,6 +259,7 @@ class ExecutionConfiguration(object):
                                                                               project_path, project_linker_flags,
                                                                               make_target,
                                                                               mpsfp_var,
+                                                                              tags,
                                                                               additional_notes))
         execute_button.grid(row=1, column=4)
 
@@ -274,6 +282,7 @@ class ExecutionConfiguration(object):
                      project_path, project_linker_flags,
                      make_target,
                      memory_profiling_skip_function_parameters,
+                     tags,
                      additional_notes,
                      rebuild_configurations_frame=True
                      ):
@@ -289,6 +298,7 @@ class ExecutionConfiguration(object):
         self.value_dict["linker_flags"] = project_linker_flags.get()
         self.value_dict["make_target"] = make_target.get()
         self.value_dict["memory_profiling_skip_function_parameters"] = memory_profiling_skip_function_parameters.get()
+        self.value_dict["tags"] = tags.get()
         self.value_dict["notes"] = additional_notes.get("1.0", tk.END)
 
         # construct config path
@@ -326,6 +336,7 @@ class ExecutionConfiguration(object):
                               project_path, project_linker_flags,
                               make_target,
                               memory_profiling_skip_function_parameters,
+                              tags,
                               additional_notes
                               ):
         # save changes
@@ -334,7 +345,7 @@ class ExecutionConfiguration(object):
                           executable_args, make_flags,
                           project_path, project_linker_flags,
                           make_target,
-                          memory_profiling_skip_function_parameters,
+                          memory_profiling_skip_function_parameters, tags,
                           additional_notes, rebuild_configurations_frame=False)
 
         # create execution view and update results frame
