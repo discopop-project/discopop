@@ -10,7 +10,7 @@ from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import Scro
 
 
 def query_user_for_symbol_values(
-    symbols: List[Symbol], suggested_values: Dict[Symbol, Expr]
+    symbols: List[Symbol], suggested_values: Dict[Symbol, Expr], arguments: Dict
 ) -> List[
     Tuple[
         Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]
@@ -18,8 +18,9 @@ def query_user_for_symbol_values(
 ]:
     """Opens a GUI-Table to query values for each given Symbol from the user.
     The queried values are: Specific value, Range start, Range end.
-    In every case, either a specific value, or a range must be given
-    Return: [(symbol, symbol_value, range_start, range_end]"""
+    In every case, either a specific value, or a range must be given.
+    In case the optimizer is started in headless mode, the suggested values are used.
+    Return: [(symbol, symbol_value, range_start, range_end, distribution)]"""
     query_result: List[
         Tuple[
             Symbol,
@@ -29,6 +30,14 @@ def query_user_for_symbol_values(
             Optional[FreeSymbolDistribution],
         ]
     ] = []
+
+    # check for headless mode
+    if arguments["--headless-mode"]:
+        # return the suggested values
+        for symbol in symbols:
+            query_result.append((symbol, suggested_values[symbol].evalf(), None, None, None))
+        return query_result
+
     column_headers = ["Symbol Name", "Symbol Value", "Range Start", "Range End", "Range Relevance"]
 
     root = Tk()

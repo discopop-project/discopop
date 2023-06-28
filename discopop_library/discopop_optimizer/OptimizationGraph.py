@@ -26,6 +26,7 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     show_function_models,
     export_to_json,
+    perform_headless_execution,
 )
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
@@ -110,7 +111,7 @@ class OptimizationGraph(object):
 
         # query user for values for free symbols
         query_results = query_user_for_symbol_values(
-            sorted_free_symbols, experiment.suggested_values
+            sorted_free_symbols, experiment.suggested_values, arguments
         )
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
@@ -224,9 +225,13 @@ class OptimizationGraph(object):
             experiment.function_models[function] = options
 
         # show function models
-        show_function_models(
-            experiment,
-        )
+        if not arguments["--headless-mode"]:
+            show_function_models(
+                experiment,
+            )
+        else:
+            # perform actions for headless mode
+            perform_headless_execution(experiment)
 
         # save experiment to disk
         export_to_json(experiment)

@@ -38,7 +38,6 @@ class ContextObject(object):
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
         A reference to the object is returned."""
         required_updates: Set[Update] = set()
-        print("\n###############\n")
         for read in node_reads:
             # check if the reading device has the latest view of the memory
             for device_id in self.seen_writes_by_device:
@@ -76,9 +75,6 @@ class ContextObject(object):
                 # unknown_writes = {max(unknown_writes, key=lambda x: x.unique_id)}
                 unknown_writes = set(unknown_writes_dict.values())
 
-                print("OTHER_DEVICE: ", [str(x) for x in other_devices_known_writes])
-                print("KNOWN: ", [str(x) for x in known_writes])
-                print("UNKNOWN: ", [str(x) for x in unknown_writes])
                 for data_write in unknown_writes:
                     # if device <-> device update is required, split it into two distinct updates
                     if device_id != 0 and reading_device_id != 0:
@@ -131,18 +127,6 @@ class ContextObject(object):
 
                     else:
                         # Host -> Device or Device -> Host update
-
-                        # todo dbg
-                        if reading_device_id == 0:
-                            print("\nDEVICE 0")
-                            print("\tKNOWN WRITES:")
-                            for write in self.seen_writes_by_device[0][data_write.memory_region]:
-                                print("\t\t", str(write))
-                            print(
-                                "REQUESTING: ",
-                                str(data_write),
-                            )
-
                         required_updates.add(
                             Update(
                                 source_node_id=self.last_visited_node_id,
@@ -156,7 +140,6 @@ class ContextObject(object):
 
                 # todo: check if this is sufficient
                 for update in required_updates:
-                    print("--> Update: ", str(update))
                     if (
                         update.write_data_access.memory_region
                         not in self.seen_writes_by_device[update.target_device_id]

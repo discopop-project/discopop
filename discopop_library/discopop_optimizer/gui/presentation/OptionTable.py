@@ -1,6 +1,6 @@
 import tkinter
 from tkinter import *
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Optional, cast
 
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
@@ -156,7 +156,7 @@ def __save_models(
 
 
 def add_random_models(
-    root: Union[Tk, tkinter.Toplevel],
+    root: Optional[Union[Tk, tkinter.Toplevel]],
     pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
@@ -169,7 +169,8 @@ def add_random_models(
     window_title=None,
     show_results: bool = True,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
-    root.destroy()
+    if root is not None:
+        cast(Union[Tk, tkinter.Toplevel], root.destroy())
 
     # generate random models
     # sort random models

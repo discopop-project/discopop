@@ -13,7 +13,7 @@ Usage:
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
         [--executable-name <string>] [--execution-repetitions <int>] [--execution-append-measurements]
-        [--exhaustive-search]
+        [--exhaustive-search] [--headless-mode]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -43,6 +43,9 @@ OPTIONAL ARGUMENTS:
     --compile-command=<string>    specify a command which shall be executed to compile the application
     --exhaustive-search         Perform an exhaustive search for the optimal set of parallelization suggestions for the
                                 given environment
+    --headless-mode             Do not show any GUI prompts. Does not reuse prior results.
+                                Uses the suggested default values. Creates random models.
+                                Exports all models to code. Saves all models.
     -h --help                   Show this screen
 """
 import os
@@ -91,6 +94,7 @@ docopt_schema = Schema(
         "--compile-command": Use(str),
         "--execution-append-measurements": Use(str),
         "--exhaustive-search": Use(str),
+        "--headless-mode": Use(str),
     }
 )
 
@@ -132,6 +136,7 @@ def main():
     arguments["--exhaustive-search"] = (
         False if arguments["--exhaustive-search"] == "False" else True
     )
+    arguments["--headless-mode"] = False if arguments["--headless-mode"] == "False" else True
     arguments["--dp-output-path"] = get_path(arguments["--project"], arguments["--dp-output-path"])
     arguments["--file-mapping"] = get_path(
         arguments["--dp-output-path"], arguments["--file-mapping"]
@@ -175,7 +180,10 @@ def main():
 
     # ask if previous session should be loaded
     load_result: bool = False
-    if os.path.exists(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle")):
+    if (
+        os.path.exists(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle"))
+        and not arguments["--headless-mode"]
+    ):
         load_result = tkinter.messagebox.askyesno(
             title="Restore Results?",
             message="Do you like to load the experiment from the previous session?",

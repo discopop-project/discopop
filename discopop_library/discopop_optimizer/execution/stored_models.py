@@ -1,5 +1,5 @@
 import os
-import shlex
+import random
 import shutil
 import statistics
 import string
@@ -7,7 +7,6 @@ import subprocess
 import time
 import warnings
 from pathlib import Path
-import random
 from typing import Dict, cast, List, TextIO, Tuple
 
 import jsonpickle  # type: ignore
@@ -37,9 +36,7 @@ def execute_stored_models(arguments: Dict):
             load_file_mapping(arguments["--file-mapping"]),
         )
         __compile(arguments, working_copy_dir, arguments["--compile-command"])
-        __measure_and_execute(
-            arguments, working_copy_dir, code_modifications.model_id, code_modifications.label
-        )
+        __measure_and_execute(arguments, working_copy_dir, code_modifications)
         # __cleanup(working_copy_dir)
 
 
@@ -65,9 +62,7 @@ def execute_single_model(arguments: Dict):
         load_file_mapping(arguments["--file-mapping"]),
     )
     __compile(arguments, working_copy_dir, arguments["--compile-command"])
-    __measure_and_execute(
-        arguments, working_copy_dir, code_modifications.model_id, code_modifications.label
-    )
+    __measure_and_execute(arguments, working_copy_dir, code_modifications)
     # __cleanup(working_copy_dir)
 
 
@@ -86,11 +81,13 @@ def __initialize_measurement_file(measurement_file: str):
     if not os.path.exists(measurement_file):
         with open(measurement_file, "w+") as f:
             # write file header
-            header_line = "Test_case_id;Model_ID;Model_Label;return_code;Executable_name;Executable_arguments;execution_time;\n"
+            header_line = "Test_case_id;Model_ID;Model_Label;return_code;Executable_name;Executable_arguments;execution_time;Function_name;\n"
             f.write(header_line)
 
 
-def __measure_and_execute(arguments: Dict, working_copy_dir: str, model_id: str, model_label: str):
+def __measure_and_execute(
+    arguments: Dict, working_copy_dir: str, code_mod_object: CodeStorageObject
+):
     """Setup measurements, execute the compiled program and output the measurement results to a file"""
     measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
     # create output file for specific model measurement
@@ -107,9 +104,9 @@ def __measure_and_execute(arguments: Dict, working_copy_dir: str, model_id: str,
             execution_line = (
                 test_case_id
                 + ";"
-                + model_id
+                + code_mod_object.model_id
                 + ";"
-                + model_label
+                + code_mod_object.label
                 + ";"
                 + str(return_code)
                 + ";"
@@ -118,6 +115,8 @@ def __measure_and_execute(arguments: Dict, working_copy_dir: str, model_id: str,
                 + arguments["--executable-arguments"]
                 + ";"
                 + str(execution_time).replace(".", ",")
+                + ";"
+                + code_mod_object.parent_function.name
                 + "\n"
             )
             f.write(execution_line)
