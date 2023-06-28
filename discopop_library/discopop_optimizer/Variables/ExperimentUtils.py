@@ -7,8 +7,12 @@ import jsonpickle  # type: ignore
 import jsons  # type: ignore
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.gui.presentation.OptionTable import show_options
+from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
+    show_options,
+    add_random_models,
+)
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
@@ -62,6 +66,42 @@ def show_function_models(
     exit_button.grid(row=1, column=0)
 
     root.mainloop()
+
+
+def perform_headless_execution(
+    experiment: Experiment,
+):
+    print("Headless execution...")
+    for function in experiment.function_models:
+        print("\t", function.name)
+        # generate random models
+        updated_options = add_random_models(
+            None,
+            experiment.detection_result.pet,
+            experiment.optimization_graph,
+            experiment,
+            experiment.function_models[function],
+            experiment.substitutions,
+            experiment.sorted_free_symbols,
+            experiment.free_symbol_ranges,
+            experiment.free_symbol_distributions,
+            function,
+            show_results=False,
+        )
+
+        # save models
+        experiment.function_models[function] = updated_options
+        # export models to code
+        for opt, ctx, label in experiment.function_models[function]:
+            export_code(
+                experiment.detection_result.pet,
+                experiment.optimization_graph,
+                experiment,
+                opt,
+                ctx,
+                label,
+                function,
+            )
 
 
 def export_to_json(experiment: Experiment):
