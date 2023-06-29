@@ -14,8 +14,13 @@ from discopop_library.CodeGenerator.classes.Enums import (
     PragmaPosition,
 )
 from discopop_library.CodeGenerator.classes.Pragma import Pragma
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import EntryPointType, EntryPointPositioning, UpdateType, \
-    ExitPointType, ExitPointPositioning
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
+    EntryPointType,
+    EntryPointPositioning,
+    UpdateType,
+    ExitPointType,
+    ExitPointPositioning,
+)
 
 
 class UnpackedSuggestion(object):
@@ -140,7 +145,9 @@ class UnpackedSuggestion(object):
                 construct_start_line = int(construct_start.split(":")[1])
                 child_pragma = Pragma()
                 if mark_invalid:
-                    child_pragma.pragma_str = "// INVALID - MISSING POSITION:: " + construct["name"] + " "
+                    child_pragma.pragma_str = (
+                        "// INVALID - MISSING POSITION:: " + construct["name"] + " "
+                    )
                 else:
                     child_pragma.pragma_str = construct["name"] + " "
                 if loop["collapse"] > 1:
@@ -236,7 +243,14 @@ class UnpackedSuggestion(object):
 
     def __get_data_region_pragmas(self, entry_points, exit_points) -> List[Pragma]:
         pragmas = []
-        for var_name, source_cu_id, sink_cu_id, entry_point_type, pragma_line, entry_point_positioning in entry_points:
+        for (
+            var_name,
+            source_cu_id,
+            sink_cu_id,
+            entry_point_type,
+            pragma_line,
+            entry_point_positioning,
+        ) in entry_points:
             pragma = Pragma()
             pragma.pragma_str = "#pragma omp target enter data "
             if entry_point_type == EntryPointType.TO_DEVICE:
@@ -263,7 +277,14 @@ class UnpackedSuggestion(object):
                 raise ValueError("Usupported ExitPointPositioning: ", entry_point_positioning)
             pragmas.append(pragma)
 
-        for var_name, source_cu_id, sink_cu_id, exit_point_type, pragma_line, exit_point_positioning in exit_points:
+        for (
+            var_name,
+            source_cu_id,
+            sink_cu_id,
+            exit_point_type,
+            pragma_line,
+            exit_point_positioning,
+        ) in exit_points:
             pragma = Pragma()
             pragma.pragma_str = "#pragma omp target exit data "
             if exit_point_type == ExitPointType.FROM_DEVICE:
@@ -289,27 +310,36 @@ class UnpackedSuggestion(object):
             pragmas.append(pragma)
         return pragmas
 
-
     def __get_combined_gpu_pragmas(self) -> List[Pragma]:
         pragmas = []
         # add async data movement
-        pragmas += self.__get_data_region_pragmas(self.values["data_region_entry_points"],
-                                                  self.values["data_region_exit_points"])
+        pragmas += self.__get_data_region_pragmas(
+            self.values["data_region_entry_points"], self.values["data_region_exit_points"]
+        )
         # add dependencies
-        pragmas += self.__get_data_region_dependencies(self.values["data_region_depend_in"], self.values["data_region_depend_out"])
+        pragmas += self.__get_data_region_dependencies(
+            self.values["data_region_depend_in"], self.values["data_region_depend_out"]
+        )
 
         # add update instructions to pragmas
         pragmas += self.__get_update_pragmas(self.values["update_instructions"])
 
         # add gpu loops
         for region in self.values["contained_regions"]:
-            pragmas += self.__get_simple_gpu_pragmas(region["start_line"], region["end_line"],
-                                                     region["contained_loops"],
-                                                     region["map_to_vars"], region["map_from_vars"],
-                                                     region["map_to_from_vars"],
-                                                     region["map_alloc_vars"], region["map_delete_vars"],
-                                                     region["consumed_vars"], region["produced_vars"], indentation=0, ignore_mapping_clauses=True)
-
+            pragmas += self.__get_simple_gpu_pragmas(
+                region["start_line"],
+                region["end_line"],
+                region["contained_loops"],
+                region["map_to_vars"],
+                region["map_from_vars"],
+                region["map_to_from_vars"],
+                region["map_alloc_vars"],
+                region["map_delete_vars"],
+                region["consumed_vars"],
+                region["produced_vars"],
+                indentation=0,
+                ignore_mapping_clauses=True,
+            )
 
         return pragmas
 
@@ -322,13 +352,18 @@ class UnpackedSuggestion(object):
         elif self.type == "pipeline":
             pragmas += self.__get_pipeline_pragmas()
         elif self.type == "simple_gpu":
-            pragmas += self.__get_simple_gpu_pragmas(self.values["start_line"], self.values["end_line"],
-                                                     self.values["contained_loops"],
-                                                     self.values["map_to_vars"], self.values["map_from_vars"],
-                                                     self.values["map_to_from_vars"],
-                                                     self.values["map_alloc_vars"], self.values["map_delete_vars"],
-                                                     self.values["consumed_vars"], self.values["produced_vars"]
-                                                     )
+            pragmas += self.__get_simple_gpu_pragmas(
+                self.values["start_line"],
+                self.values["end_line"],
+                self.values["contained_loops"],
+                self.values["map_to_vars"],
+                self.values["map_from_vars"],
+                self.values["map_to_from_vars"],
+                self.values["map_alloc_vars"],
+                self.values["map_delete_vars"],
+                self.values["consumed_vars"],
+                self.values["produced_vars"],
+            )
         elif self.type == "combined_gpu":
             pragmas += self.__get_combined_gpu_pragmas()
         else:

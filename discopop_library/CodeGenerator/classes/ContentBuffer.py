@@ -75,7 +75,15 @@ class ContentBuffer(object):
                     self.lines.append(line)
                 return
 
-    def add_pragma(self, file_mapping: Dict[int, str], pragma: Pragma, parent_regions: List[int], add_as_comment: bool = False, skip_compilation_check: bool = False, compile_check_command: Optional[str] = None) -> bool:
+    def add_pragma(
+        self,
+        file_mapping: Dict[int, str],
+        pragma: Pragma,
+        parent_regions: List[int],
+        add_as_comment: bool = False,
+        skip_compilation_check: bool = False,
+        compile_check_command: Optional[str] = None,
+    ) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
         Returns False if compilation of the modified code was not possible.
@@ -141,7 +149,14 @@ class ContentBuffer(object):
         for child_pragma in pragma.children:
             # set skip_compilation_check to true since compiling children pragmas on their own might not be successful.
             # As an example for that, '#pragma omp declare target' can be mentioned
-            successful = self.add_pragma(file_mapping, child_pragma, pragma_line.belongs_to_regions, add_as_comment=add_as_comment, skip_compilation_check=True, compile_check_command=compile_check_command)
+            successful = self.add_pragma(
+                file_mapping,
+                child_pragma,
+                pragma_line.belongs_to_regions,
+                add_as_comment=add_as_comment,
+                skip_compilation_check=True,
+                compile_check_command=compile_check_command,
+            )
 
             if not successful:
                 print(self.compile_result_buffer)
@@ -172,25 +187,28 @@ class ContentBuffer(object):
         if compile_check_command is None:
             result = subprocess.run(
                 [compiler, "-c", "-fopenmp", tmp_file_name, "-o", tmp_file_out_name],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
         else:
             saved_dir = os.getcwd()
             # prepare environment variables if requested
-            pattern = re.compile(r'''((?:[^\s\"\']|\"[^\"]*\"|'[^']*')+)''')
-            splitted_compile_check_command = pattern.split(compile_check_command)[1::2]  # compile_check_command.split(" ")
+            pattern = re.compile(r"""((?:[^\s\"\']|\"[^\"]*\"|'[^']*')+)""")
+            splitted_compile_check_command = pattern.split(compile_check_command)[
+                1::2
+            ]  # compile_check_command.split(" ")
             print("SPLITTED: ", splitted_compile_check_command)
             to_be_removed = []
             for idx, elem in enumerate(splitted_compile_check_command):
                 if "=" in elem and not elem.startswith("-"):
                     # set environment variable
-                    var_name = elem[:elem.index("=")]
-                    var_value = elem[elem.index("=")+1:]
+                    var_name = elem[: elem.index("=")]
+                    var_value = elem[elem.index("=") + 1 :]
                     print("SET ENVIRONMENT VAR: ")
                     print("\t", var_name)
                     print("\t\t", var_value)
                     # unpack var_value
-                    if var_value.startswith("\"") and var_value.endswith("\"") and len(var_value) > 1:
+                    if var_value.startswith('"') and var_value.endswith('"') and len(var_value) > 1:
                         var_value = var_value[1:-1]
                     os.environ[var_name] = var_value
 
@@ -199,14 +217,17 @@ class ContentBuffer(object):
                 splitted_compile_check_command.pop(idx)
 
             print("COMPILE COMMAND: ", splitted_compile_check_command)
-            result = subprocess.run(splitted_compile_check_command, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+            result = subprocess.run(
+                splitted_compile_check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             os.chdir(saved_dir)
         compilation_successful = True if result.returncode == 0 else False
 
-        os.remove(tmp_file_name)
+        if os.path.exists(tmp_file_name):
+            os.remove(tmp_file_name)
         if compilation_successful:
-            os.remove(tmp_file_out_name)
+            if os.path.exists(tmp_file_out_name):
+                os.remove(tmp_file_out_name)
 
         # if not, reset ContentBuffer to the backup and return False
         if not compilation_successful:
@@ -214,9 +235,11 @@ class ContentBuffer(object):
             self.next_free_region_id = backup_next_free_region_id
             self.file_id = backup_file_id
             self.max_line_num = backup_max_line_num
-            self.compile_result_buffer += result.stdout.decode('utf-8') + "\n"
+            self.compile_result_buffer += result.stdout.decode("utf-8") + "\n"
             self.compile_result_buffer += result.stderr.decode("utf-8") + "\n"
-            self.compile_result_buffer += "==> Skipped pragma insertion due to potential compilation errors!\n"
+            self.compile_result_buffer += (
+                "==> Skipped pragma insertion due to potential compilation errors!\n"
+            )
             print(self.compile_result_buffer)
             return False
         return True

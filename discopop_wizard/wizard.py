@@ -70,7 +70,7 @@ class DiscoPoPConfigurationWizard(object):
     style_font_bold: str = "Helvetica 12 bold"
     style_font_bold_small: str = "Helvetica 10 bold"
 
-    def __init__(self, config_dir: str, arguments: Arguments):
+    def __init__(self, config_dir: str, arguments: Arguments, headless_mode: bool = False):
         self.arguments = arguments
         self.config_dir = config_dir
         # check if settings exist
@@ -90,8 +90,8 @@ class DiscoPoPConfigurationWizard(object):
         else:
             # load settings
             self.settings = load_from_config_file(config_dir)
-
-        self.initialize_screen(config_dir)
+        if not headless_mode:
+            self.initialize_screen(config_dir)
 
     def initialize_screen(self, config_dir: str):
 

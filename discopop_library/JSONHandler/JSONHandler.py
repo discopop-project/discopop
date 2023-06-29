@@ -11,7 +11,9 @@ import os.path
 from typing import Dict, List
 
 
-def read_patterns_from_json_to_json(json_path: str, relevant_patterns: List[str]) -> Dict[str, List[str]]:
+def read_patterns_from_json_to_json(
+    json_path: str, relevant_patterns: List[str]
+) -> Dict[str, List[str]]:
     """relevant_patterns specifies the names of patterns which shall be returned.
     An empty list acts as a wildcard."""
     pattern_json_strings_by_type: Dict[str, List[str]] = dict()

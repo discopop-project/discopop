@@ -514,7 +514,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
-            n.basic_block_id = getattr(node, "BasicBlockID")
+            n.basic_block_id = getattr(node, "BasicBlockID").text
         if hasattr(node, "returnInstructions"):
             n.return_instructions_count = int(getattr(node, "returnInstructions").get("count"))
         if hasattr(node.callsNode, "nodeCalled"):

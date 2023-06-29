@@ -21,4 +21,6 @@ class Pragma(object):
     children: List[Any] = []
 
     def __init__(self):
-        self.children = []  # create individual list for each Pragma object to prevent bugs due to mutability
+        self.children = (
+            []
+        )  # create individual list for each Pragma object to prevent bugs due to mutability
