@@ -3033,11 +3033,6 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
 
         if (root->type == nodeTypes::cu) {
             CU *cu = static_cast<CU *>(root);
-            // for debugging columns*
-            *outCUs << "\t\t<columns>";
-            for(auto col : cu->columnSet) 
-            *outCUs << "(" << dputil::decodeLID(col.first) << ", " << col.second << ") ";
-            *outCUs << "</columns>" << endl;
             *outCUs << "\t\t<startColumn>" << cu->startColumn << "</startColumn>" << endl;
             *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
             *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>"
