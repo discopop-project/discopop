@@ -15,8 +15,7 @@ RUN apt-get update
 RUN apt-get install -y git cmake gcc libclang-11-dev clang-11 llvm-11 clang-tools-11 python3 python3-pip python3-tk wget file
 
 # clone DiscoPoP
-#RUN git clone https://github.com/discopop-project/discopop.git
-RUN git clone https://github.com/SenseiEnrique/discopop_extended_CUs
+RUN git clone https://github.com/discopop-project/discopop.git
 WORKDIR /discopop
 
 # install DiscoPoP
