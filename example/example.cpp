@@ -9,31 +9,18 @@
  *
  */
 
-//#include <stdio.h>
+#include <stdio.h>
 
 int main(){
     int N = 100000;
     long sum = 0;
     int Arr[N];
-    for(
-    int i = 0; 
-    i < N; 
-    i++, 
-    ++i)
- 	 {
-    	test:
-    	if(i==20) {
-    	    break;
-    	}
-    	Arr[i] = i % 13;
+
+    for(int i = 0; i < N; i++){
+        Arr[i] = i % 13;
     }
-    int i=0;
-    while(i < 100) {
-    i++;
-    int N = 10;
-    long sum = 0;
-    int a;
-    a = N +5;
-    a = N +5;
+
+    for(int i = 0; i < N; i++){
+        sum += Arr[i];
     }
 }
