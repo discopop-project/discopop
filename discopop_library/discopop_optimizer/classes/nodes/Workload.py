@@ -5,11 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional, Set
+from typing import Optional, Set, List, cast
 
 from sympy import Integer, Expr  # type: ignore
 
-from discopop_explorer.PETGraphX import NodeID
+from discopop_explorer.PETGraphX import NodeID, PETGraphX, EdgeType
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
@@ -62,19 +62,52 @@ class Workload(GenericNode):
             "Branch: " + str(self.branch_affiliation)
         )
 
-    def get_cost_model(self) -> CostModel:
-        """Performance model of a workload consists of the workload itself.
+    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
+        """Performance model of a workload consists of the workload itself + the workload of called functions.
         Individual Workloads are assumed to be not parallelizable.
+        Workloads of called functions are added as encountered.
         Workloads of Loop etc. are parallelizable."""
+
         if self.sequential_workload is None:
             return (
                 CostModel(Integer(1), Integer(0))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
+                .parallelizable_plus_combine(
+                    self.__get_costs_of_function_call(experiment, all_function_nodes)
+                )
             )
         else:
             return (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
+                .parallelizable_plus_combine(
+                    self.__get_costs_of_function_call(experiment, all_function_nodes)
+                )
             )
+
+    def __get_costs_of_function_call(self, experiment, all_function_nodes) -> CostModel:
+        """Check if the node performs a function call and returns the total costs for these."""
+        total_costs = CostModel(Integer(0), Integer(0))
+        # get CUIDs of called functions
+        if self.original_cu_id is not None:
+            called_cu_ids: List[str] = [
+                str(t)
+                for s, t, d in cast(PETGraphX, experiment.detection_result.pet).out_edges(
+                    cast(NodeID, self.original_cu_id), EdgeType.CALLSNODE
+                )
+            ]
+            # filter for called FunctionRoots
+            called_function_nodes = [
+                fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids
+            ]
+            # remove duplicates
+            called_function_nodes = list(set(called_function_nodes))
+            # add costs of called function nodes to total costs
+            for called_function_root in called_function_nodes:
+                total_costs = total_costs.parallelizable_plus_combine(
+                    called_function_root.get_cost_model(experiment, all_function_nodes)
+                )
+
+        return total_costs

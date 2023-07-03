@@ -72,7 +72,7 @@ class GenericNode(object):
     def get_hover_text(self) -> str:
         return ""
 
-    def get_cost_model(self) -> CostModel:
+    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
         raise NotImplementedError(
             "Implementation needs to be provided by derived class: !", type(self)
         )

@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, cast, List, Tuple
+from typing import Dict, cast, List, Tuple, Set
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
@@ -35,6 +35,7 @@ from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
 )
 from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 from discopop_library.discopop_optimizer.utilities.optimization.LocalOptimization.TopDown import (
     get_locally_optimized_models,
 )
@@ -45,11 +46,10 @@ class OptimizationGraph(object):
 
     def __init__(self, project_folder_path, experiment: Experiment, arguments: Dict):
         # construct optimization graph from PET Graph
+        # save graph in experiment
         experiment.optimization_graph, self.next_free_node_id = PETParser(
             experiment.detection_result.pet, experiment
         ).parse()
-
-        # save graph in experiment
 
         # get performance models for sequential execution
         sequential_function_performance_models = get_performance_models_for_functions(
@@ -63,6 +63,19 @@ class OptimizationGraph(object):
             sequential_function_performance_models_with_transfers,
             experiment,
         )
+
+        for function_root in sequential_complete_performance_models:
+            print("Function: ", function_root.name)
+            print("\tfunction_model: ")
+            function_root.performance_model.print()
+
+            for model, ctx in sequential_complete_performance_models[function_root]:
+                print("\n\tmodel: ")
+                model.print()
+
+        import sys
+
+        sys.exit(0)
 
         # import parallelization suggestions
         experiment.optimization_graph = import_suggestions(

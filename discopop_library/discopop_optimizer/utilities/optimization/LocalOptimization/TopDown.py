@@ -31,7 +31,11 @@ def get_locally_optimized_models(
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
-    for function_node in get_all_function_nodes(graph):
+    all_function_ids = get_all_function_nodes(graph)
+    all_function_nodes: List[FunctionRoot] = [
+        cast(FunctionRoot, data_at(graph, fn_id)) for fn_id in all_function_ids
+    ]
+    for function_node in all_function_ids:
         # get a list of all decisions that have to be made
         decisions_to_be_made = __find_decisions(graph, function_node)
         locally_optimal_choices: List[int] = []
@@ -47,6 +51,7 @@ def get_locally_optimized_models(
                         graph,
                         function_node,
                         set(),
+                        all_function_nodes,
                         restrict_to_decisions={decision},
                         do_not_allow_decisions=set([o for o in decision_options if o != decision]),
                     )
@@ -95,6 +100,7 @@ def get_locally_optimized_models(
             graph,
             function_node,
             set(),
+            all_function_nodes,
             restrict_to_decisions=set(locally_optimal_choices),
         )
         # calculate and append necessary data transfers to the models

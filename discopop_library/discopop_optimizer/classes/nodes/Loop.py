@@ -69,7 +69,7 @@ class Loop(Workload):
             "Write: " + str([str(e) for e in self.written_memory_regions])
         )
 
-    def get_cost_model(self) -> CostModel:
+    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
         """Performance model of a workload consists of the workload itself.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of Loop etc. are parallelizable."""

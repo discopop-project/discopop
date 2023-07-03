@@ -27,6 +27,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_out_options,
     get_in_options,
     get_all_parents,
+    get_all_function_nodes,
 )
 
 
@@ -34,14 +35,22 @@ def get_performance_models_for_functions(
     experiment: Experiment, graph: nx.DiGraph
 ) -> Dict[FunctionRoot, List[CostModel]]:
     performance_models: Dict[FunctionRoot, List[CostModel]] = dict()
+    # get called FunctionRoots from cu ids
+    all_function_nodes = [
+        cast(FunctionRoot, data_at(experiment.optimization_graph, fn_id))
+        for fn_id in get_all_function_nodes(experiment.optimization_graph)
+    ]
+
     for node_id in graph.nodes:
         node_data = graph.nodes[node_id]["data"]
         node_data.node_id = node_id  # fix potential mismatches due to node copying
 
         if isinstance(node_data, FunctionRoot):
-            performance_models[node_data] = get_node_performance_models(
-                experiment, graph, node_id, set()
-            )
+            # start the collection at the first child of the function
+            for child_id in get_children(graph, node_id):
+                performance_models[node_data] = get_node_performance_models(
+                    experiment, graph, child_id, set(), all_function_nodes
+                )
 
             # filter out NaN - Models
             performance_models[node_data] = [
@@ -57,6 +66,7 @@ def get_node_performance_models(
     graph: nx.DiGraph,
     node_id: int,
     visited_nodes: Set[int],
+    all_function_nodes: List[FunctionRoot],
     restrict_to_decisions: Optional[Set[int]] = None,
     do_not_allow_decisions: Optional[Set[int]] = None,
     get_single_random_model: bool = False,
@@ -77,15 +87,16 @@ def get_node_performance_models(
         graph,
         node_id,
         copy.deepcopy(visited_nodes),
+        all_function_nodes,
         restrict_to_decisions=restrict_to_decisions,
         do_not_allow_decisions=do_not_allow_decisions,
         get_single_random_model=get_single_random_model,
     )
 
     if len(children_models) == 0:
-        children_models = [node_data.get_cost_model()]
+        children_models = [node_data.get_cost_model(experiment, all_function_nodes)]
     else:
-        tmp_node_cost_model = node_data.get_cost_model()
+        tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
         for idx, child_model in enumerate(children_models):
             children_models[idx] = child_model.parallelizable_plus_combine(tmp_node_cost_model)
 
@@ -222,6 +233,7 @@ def get_node_performance_models(
                     graph,
                     successor,
                     copy.deepcopy(visited_nodes),
+                    all_function_nodes,
                     restrict_to_decisions=restrict_to_decisions,
                     do_not_allow_decisions=do_not_allow_decisions,
                     get_single_random_model=get_single_random_model,
@@ -239,6 +251,7 @@ def get_performance_models_for_children(
     graph: nx.DiGraph,
     node_id: int,
     visited_nodes: Set[int],
+    all_function_nodes: List[FunctionRoot],
     restrict_to_decisions: Optional[Set[int]] = None,
     do_not_allow_decisions: Optional[Set[int]] = None,
     get_single_random_model: bool = False,
@@ -257,6 +270,7 @@ def get_performance_models_for_children(
                 graph,
                 child_id,
                 copy.deepcopy(visited_nodes),
+                all_function_nodes,
                 restrict_to_decisions=restrict_to_decisions,
                 do_not_allow_decisions=do_not_allow_decisions,
                 get_single_random_model=get_single_random_model,
@@ -271,6 +285,7 @@ def get_performance_models_for_children(
                 graph,
                 child_id,
                 copy.deepcopy(visited_nodes),
+                all_function_nodes,
                 restrict_to_decisions=restrict_to_decisions,
                 do_not_allow_decisions=do_not_allow_decisions,
                 get_single_random_model=get_single_random_model,
@@ -293,11 +308,17 @@ def print_introduced_symbols_per_node(graph: nx.DiGraph):
 def get_random_path(
     experiment: Experiment, graph: nx.DiGraph, root_id: int, must_contain: Optional[Set[int]] = None
 ) -> CostModel:
+    # get called FunctionRoots from cu ids
+    all_function_nodes = [
+        cast(FunctionRoot, data_at(experiment.optimization_graph, fn_id))
+        for fn_id in get_all_function_nodes(experiment.optimization_graph)
+    ]
     random_models = get_node_performance_models(
         experiment,
         graph,
         root_id,
         set(),
+        all_function_nodes,
         restrict_to_decisions=must_contain,
         get_single_random_model=True,
     )
