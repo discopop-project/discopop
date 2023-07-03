@@ -131,17 +131,67 @@ class OptimizationGraph(object):
                     FreeSymbolDistribution, symbol_distribution
                 )
 
+        # add function symbols to list of substitutions
+        # TODO NOTE THIS IS JUST A DUMMY!!!
+        #  collect substitutions
+        for function in sequential_complete_performance_models:
+            # register substitution
+            substitutions[
+                cast(Symbol, function.sequential_costs)
+            ] = sequential_complete_performance_models[function][0][0].sequential_costs
+            substitutions[
+                cast(Symbol, function.parallelizable_costs)
+            ] = sequential_complete_performance_models[function][0][0].parallelizable_costs
+
+        print("FUNCTION SUBSTITUTIONS", substitutions)
+        # todo MAY NOT STAY AS IS! MUST BE DYNAMIC
+
+        # perform iterative substitutions
+        modification_found = True
+        while modification_found and False:
+            print("SUBSTITUTION LOOP")
+            modification_found = False
+            for idx, function in enumerate(sequential_complete_performance_models):
+                for midx, model in enumerate(sequential_complete_performance_models[function]):
+                    # apply substitution to parallelizable costs
+                    tmp_model = model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != model.parallelizable_costs:
+                        modification_found = True
+                    model.parallelizable_costs = tmp_model
+
+                    # apply substitutions to sequential costs
+                    tmp_model = model.sequential_costs.subs(substitutions)
+                    if tmp_model != model.sequential_costs:
+                        modification_found = True
+                    model.sequential_costs = model.sequential_costs.subs(substitutions)
+
+        # TODO END OF DUMMY
+
         # apply substitutions and un-mark substituted free symbols
         #        for idx, function in enumerate(complete_performance_models):
         #            for midx, pair in enumerate(complete_performance_models[function]):
         #                model, context = pair
         #                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
         #                model.sequential_costs = model.sequential_costs.subs(substitutions)
-        for idx, function in enumerate(sequential_complete_performance_models):
-            for midx, pair in enumerate(sequential_complete_performance_models[function]):
-                model, context = pair
-                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
-                model.sequential_costs = model.sequential_costs.subs(substitutions)
+
+        # perform iterative substitutions
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for idx, function in enumerate(sequential_complete_performance_models):
+                for midx, pair in enumerate(sequential_complete_performance_models[function]):
+                    model, context = pair
+                    # apply substitution to parallelizable costs
+                    tmp_model = model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != model.parallelizable_costs:
+                        modification_found = True
+                    model.parallelizable_costs = tmp_model
+                    # apply substitutions to sequential costs
+                    tmp_model = model.sequential_costs.subs(substitutions)
+                    if tmp_model != model.sequential_costs:
+                        modification_found = True
+                    model.sequential_costs = tmp_model
+
         for symbol in substitutions:
             if symbol in experiment.free_symbols:
                 experiment.free_symbols.remove(symbol)
@@ -172,12 +222,25 @@ class OptimizationGraph(object):
             free_symbol_ranges,
             free_symbol_distributions,
         )
-        # apply substitutions and un-mark substituted free symbols
-        for idx, function in enumerate(locally_optimized_models):
-            for midx, pair in enumerate(locally_optimized_models[function]):
-                model, context = pair
-                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
-                model.sequential_costs = model.sequential_costs.subs(substitutions)
+        # perform iterative substitutions
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            print("SUBSTITUTION LOOP")
+            for idx, function in enumerate(locally_optimized_models):
+                for midx, pair in enumerate(locally_optimized_models[function]):
+                    model, context = pair
+                    # apply substitution to parallelizable costs
+                    tmp_model = model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != model.parallelizable_costs:
+                        modification_found = True
+                    model.parallelizable_costs = tmp_model
+                    # apply substitutions to sequential costs
+                    tmp_model = model.sequential_costs.subs(substitutions)
+                    if tmp_model != model.sequential_costs:
+                        modification_found = True
+                    model.sequential_costs = tmp_model
+
         # set free symbol ranges and distributions for comparisons
         for idx, function in enumerate(locally_optimized_models):
             for pair in locally_optimized_models[function]:
@@ -185,12 +248,23 @@ class OptimizationGraph(object):
                 model.free_symbol_ranges = free_symbol_ranges
                 model.free_symbol_distributions = free_symbol_distributions
 
-        # apply substitutions and un-mark substituted free symbols
-        for idx, function in enumerate(exhaustive_performance_models):
-            for midx, pair in enumerate(exhaustive_performance_models[function]):
-                model, context = pair
-                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
-                model.sequential_costs = model.sequential_costs.subs(substitutions)
+        # perform iterative substitutions
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            for idx, function in enumerate(exhaustive_performance_models):
+                for midx, pair in enumerate(exhaustive_performance_models[function]):
+                    model, context = pair
+                    # apply substitution to parallelizable costs
+                    tmp_model = model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != model.parallelizable_costs:
+                        modification_found = True
+                    model.parallelizable_costs = tmp_model
+                    # apply substitutions to sequential costs
+                    tmp_model = model.sequential_costs.subs(substitutions)
+                    if tmp_model != model.sequential_costs:
+                        modification_found = True
+                    model.sequential_costs = tmp_model
         # set free symbol ranges and distributions for comparisons
         for idx, function in enumerate(exhaustive_performance_models):
             for pair in exhaustive_performance_models[function]:

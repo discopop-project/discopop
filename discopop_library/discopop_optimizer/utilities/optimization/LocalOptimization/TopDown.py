@@ -74,11 +74,23 @@ def get_locally_optimized_models(
                     print("==> Ignoring Decision: ", decision)
                     continue
 
-            # apply variable substitutions
-            for decision, pair in decision_models:
-                model, context = pair
-                model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
-                model.sequential_costs = model.sequential_costs.subs(substitutions)
+            # iteratively apply variable substitutions
+            modification_found = True
+            while modification_found:
+                modification_found = False
+                for decision, pair in decision_models:
+                    model, context = pair
+                    # apply substitutions to parallelizable costs
+                    tmp_model = model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != model.parallelizable_costs:
+                        modification_found = True
+                    model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+
+                    # apply substitutions to sequential costs
+                    tmp_model = model.sequential_costs.subs(substitutions)
+                    if tmp_model != model.sequential_costs:
+                        modification_found = True
+                    model.sequential_costs = model.sequential_costs.subs(substitutions)
 
             # set free symbol ranges and distributions for comparisons
             for decision, pair in decision_models:

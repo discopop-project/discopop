@@ -59,24 +59,6 @@ def get_performance_models_for_functions(
                 if model.parallelizable_costs != sympy.nan
             ]
 
-    # TODO NOTE THIS IS JUST A DUMMY!!!
-    # replace symbols for function performance models
-    #  collect substitutions
-    function_model_substitutions: Dict[Symbol, Expr] = dict()
-    for function in performance_models:
-        # register substitution
-        # todo MAY NOT STAY AS IS! MUST BE DYNAMIC
-
-    for function_root in sequential_complete_performance_models:
-        print("Function: ", function_root.name)
-        print("\tfunction_model: ")
-        function_root.performance_model.print()
-
-        for model, ctx in sequential_complete_performance_models[function_root]:
-            print("\n\tmodel: ")
-            model.print()
-    # TODO END OF DUMMY
-
     return performance_models
 
 

@@ -51,8 +51,21 @@ def find_quasi_optimal_using_random_samples(
     if verbose:
         print("\tApplying substitutions...")
     for model, context in random_paths:
-        model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
-        model.sequential_costs = model.sequential_costs.subs(substitutions)
+        # apply substitutions iteratively
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            # apply substitutions to parallelizable costs
+            tmp_model = model.parallelizable_costs.subs(substitutions)
+            if tmp_model != model.parallelizable_costs:
+                modification_found = True
+            model.parallelizable_costs = tmp_model
+
+            # apply substitutions to sequential costs
+            tmp_model = model.sequential_costs.subs(substitutions)
+            if tmp_model != model.sequential_costs:
+                modification_found = True
+            model.sequential_costs = tmp_model
         model.free_symbol_ranges = free_symbol_ranges
         model.free_symbol_distributions = free_symbol_distributions
 
