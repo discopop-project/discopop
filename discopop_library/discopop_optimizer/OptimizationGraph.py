@@ -73,10 +73,6 @@ class OptimizationGraph(object):
                 print("\n\tmodel: ")
                 model.print()
 
-        import sys
-
-        sys.exit(0)
-
         # import parallelization suggestions
         experiment.optimization_graph = import_suggestions(
             experiment.detection_result,
