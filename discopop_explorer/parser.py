@@ -81,10 +81,10 @@ def __map_dummy_nodes(cu_dict):
             if "arg" in dir(node.funcArguments):
                 for i in node.funcArguments.arg:
                     key = key + i.get("type")
-                if node.get("type") == "3":
-                    dummy_node_args_to_id_map[key].append(node_id)
-                else:
-                    func_node_args_to_id_map[key] = node_id
+            if node.get("type") == "3":
+                dummy_node_args_to_id_map[key].append(node_id)
+            else:
+                func_node_args_to_id_map[key] = node_id
 
     # iterate over all real functions
     for func in func_node_args_to_id_map:
