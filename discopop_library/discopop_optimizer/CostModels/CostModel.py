@@ -118,6 +118,16 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
+    def register_child(self, other, root_node):
+        """Registers a child node for the given model.
+        Does not modify the stored model in self or other."""
+        return root_node.register_child(other)
+
+    def register_successor(self, other, root_node):
+        """Registers a successor node for the given model.
+        Does not modify the stored model in self or other."""
+        return root_node.register_successor(other)
+
     def __lt__(self, other):
         """Compare both models.
         The comparison is based on random sampling and may not be correct in all cases!

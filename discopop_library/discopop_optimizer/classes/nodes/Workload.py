@@ -82,17 +82,6 @@ class Workload(GenericNode):
                 )
             )
         else:
-            print("WORKLOAD COSTS: ")
-            (
-                CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
-                .parallelizable_multiply_combine(self.cost_multiplier)
-                .parallelizable_plus_combine(self.overhead)
-                .parallelizable_plus_combine(
-                    self.__get_costs_of_function_call(experiment, all_function_nodes)
-                )
-                .print()
-            )
-
             return (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
                 .parallelizable_multiply_combine(self.cost_multiplier)
@@ -126,3 +115,15 @@ class Workload(GenericNode):
                 )
 
         return total_costs
+
+    def register_child(self, other):
+        """Registers a child node for the given model.
+        Does not modify the stored model in self or other."""
+        # since workloads do not modify their children, the performance model of other is simply added to self.
+        return self.performance_model.parallelizable_plus_combine(other)
+
+    def register_successor(self, other):
+        """Registers a successor node for the given model.
+        Does not modify the stored model in self or other."""
+        # sequential composition is depicted by simply adding the performance models
+        return self.performance_model.parallelizable_plus_combine(other)

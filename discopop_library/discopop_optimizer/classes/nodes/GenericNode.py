@@ -76,3 +76,17 @@ class GenericNode(object):
         raise NotImplementedError(
             "Implementation needs to be provided by derived class: !", type(self)
         )
+
+    def register_child(self, other, root_node):
+        """Registers a child node for the given model.
+        Does not modify the stored model in self or other."""
+        raise NotImplementedError(
+            "Implementation needs to be provided by derived class: !", type(self)
+        )
+
+    def register_successor(self, other, root_node):
+        """Registers a successor node for the given model.
+        Does not modify the stored model in self or other."""
+        raise NotImplementedError(
+            "Implementation needs to be provided by derived class: !", type(self)
+        )

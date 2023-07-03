@@ -98,7 +98,7 @@ def get_node_performance_models(
     else:
         tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
         for idx, child_model in enumerate(children_models):
-            children_models[idx] = child_model.parallelizable_plus_combine(tmp_node_cost_model)
+            children_models[idx] = tmp_node_cost_model.register_child(child_model, node_data)
 
     # construct the performance models
     if successor_count >= 1:

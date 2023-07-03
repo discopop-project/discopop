@@ -99,3 +99,20 @@ class Loop(Workload):
         )
 
         return cast(CostModel, result_model)
+
+    def register_child(self, other):
+        """Registers a child node for the given model.
+        Does not modify the stored model in self or other."""
+
+        # The workload of the added child needs to be multiplied with the iteration count before adding it.
+        return self.performance_model.parallelizable_plus_combine(
+            other.parallelizable_multiply_combine(
+                CostModel(self.iterations_symbol, self.iterations_symbol)
+            )
+        )
+
+    def register_successor(self, other):
+        """Registers a successor node for the given model.
+        Does not modify the stored model in self or other."""
+        # sequential composition is depicted by simply adding the performance models
+        return self.performance_model.parallelizable_plus_combine(other)
