@@ -44,7 +44,11 @@ class Workload(GenericNode):
         )
         self.sequential_workload = sequential_workload
         self.parallelizable_workload = parallelizable_workload
-        self.cost_multiplier = CostModel(Integer(1), Integer(0))
+        self.performance_model = CostModel(
+            Integer(0 if self.parallelizable_workload is None else self.parallelizable_workload),
+            Integer(0 if self.sequential_workload is None else self.sequential_workload),
+        )
+        self.cost_multiplier = CostModel(Integer(1), Integer(1))
         self.overhead = CostModel(Integer(0), Integer(0))
 
     def get_plot_label(self) -> str:
@@ -78,6 +82,17 @@ class Workload(GenericNode):
                 )
             )
         else:
+            print("WORKLOAD COSTS: ")
+            (
+                CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
+                .parallelizable_multiply_combine(self.cost_multiplier)
+                .parallelizable_plus_combine(self.overhead)
+                .parallelizable_plus_combine(
+                    self.__get_costs_of_function_call(experiment, all_function_nodes)
+                )
+                .print()
+            )
+
             return (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
                 .parallelizable_multiply_combine(self.cost_multiplier)
