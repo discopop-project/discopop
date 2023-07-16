@@ -92,10 +92,11 @@ def get_path(base_path: str, file_name: str) -> str:
     """
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
+
 def run(
     cu_xml: str,
     dep_file: str,
-    loop_counter_file: str,  # TODO we should be able to read all info from the _dep.txt file (?)
+    loop_counter_file: str,
     reduction_file: str,
     plugins: List[str],
     file_mapping: Optional[str] = None,
@@ -106,8 +107,6 @@ def run(
 ) -> DetectionResult:
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
-    # pet.show()
-    # TODO add visualization
 
     plugin_base = PluginBase(package="plugins")
 
@@ -123,7 +122,6 @@ def run(
     res: DetectionResult = pattern_detector.detect_patterns(
         cu_xml,
         dep_file,
-        loop_counter_file,
         reduction_file,
         file_mapping,
         cu_inst_result_file,
@@ -141,6 +139,7 @@ def run(
 
 
 def main():
+    # parse arguments
     arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
 
     try:
@@ -149,7 +148,6 @@ def main():
         exit(e)
 
     path = arguments["--path"]
-
     cu_xml = get_path(path, arguments["--cu-xml"])
     dep_file = get_path(path, arguments["--dep-file"])
     loop_counter_file = get_path(path, arguments["--loop-counter"])
@@ -162,19 +160,28 @@ def main():
         # set default discopop build path
         discopop_build_path = Path(__file__).resolve().parent.parent
         discopop_build_path = os.path.join(discopop_build_path, "build")
+    plugins = [] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" ")
+    enable_profiling = (arguments["--profiling"] == "true")
+    enable_pet_dump = (arguments["--dump-pet"] == "true")
+    generate_data_cu_inst = None if arguments["--generate-data-cu-inst"] == "None" else arguments["--generate-data-cu-inst"]
+    llvm_cxxfilt_path = llvm_cxxfilt_path=arguments["--llvm-cxxfilt-path"]
+    enable_task_pattern = arguments["--task-pattern"]
+    enable_dump_detection_result = (arguments["--dump-detection-result"] == "true")
+    json_file = None if arguments["--json"] == "None" else arguments["--json"]
 
+    # check if needed files exist
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
             print(f'File not found: "{file}"')
             sys.exit()
-
-    plugins = [] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" ")
-
-    if arguments["--profiling"] == "true":
+    
+    # run with/without profiling
+    if enable_profiling:
         profile = cProfile.Profile()
         profile.enable()
 
-    if arguments["--generate-data-cu-inst"] != "None":
+    # generate data cu inst and stop
+    if generate_data_cu_inst:
         # start generation of Data_CUInst and stop execution afterwards
         from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
 
@@ -183,10 +190,11 @@ def main():
             dep_file,
             loop_counter_file,
             reduction_file,
-            arguments["--generate-data-cu-inst"],
+            generate_data_cu_inst,
         )
         sys.exit(0)
 
+    # run pattern detection
     start = time.time()
 
     res = run(
@@ -197,36 +205,37 @@ def main():
         plugins,
         file_mapping=file_mapping,
         cu_inst_result_file=cu_inst_result_file,
-        llvm_cxxfilt_path=arguments["--llvm-cxxfilt-path"],
+        llvm_cxxfilt_path=llvm_cxxfilt_path,
         discopop_build_path=discopop_build_path,
-        enable_task_pattern=arguments["--task-pattern"],
+        enable_task_pattern=enable_task_pattern,
     )
 
     end = time.time()
 
-    if arguments["--dump-pet"] == "true":
+    # output results
+    if enable_pet_dump:
         with open(get_path(path, "pet_dump.json"), "w+") as f:
             f.write(res.pet.dump_to_pickled_json())
             f.flush()
             f.close()
 
-    if arguments["--dump-detection-result"] == "true":
+    if enable_dump_detection_result:
         with open(get_path(path, "detection_result_dump.json"), "w+") as f:
             f.write(res.dump_to_pickled_json())
             f.flush()
             f.close()
 
-    if arguments["--json"] == "None":
+    if not json_file:
         print(str(res))
     else:
         # todo re-enable?
         # print(str(res))
         # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
         del res.pet
-        with open(arguments["--json"], "w") as f:
+        with open(json_file, "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
-    if arguments["--profiling"] == "true":
+    if enable_profiling:
         profile.disable()
         if os.path.exists("profiling_stats.txt"):
             os.remove("profiling_stats.txt")
