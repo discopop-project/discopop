@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import os
 from typing import List, cast, TextIO
 
 from .PETGraphX import (
@@ -192,16 +191,6 @@ def cu_instantiation_input_cpp(pet: PETGraphX, output_dir: str):
         __search_recursive_calls(pet, data_cu_inst_file, node)
     data_cu_inst_file.flush()
     data_cu_inst_file.close()
-
-
-def get_path(base_path: str, file_name: str) -> str:
-    """Combines path and filename if it is not absolute
-
-    :param base_path: path
-    :param file_name: file name
-    :return: path to file
-    """
-    return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
 def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_dir):
