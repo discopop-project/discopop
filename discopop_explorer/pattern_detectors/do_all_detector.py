@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import List, Dict, Set, Tuple, cast
+from typing import List, Dict, Set, Tuple, cast, Optional
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
@@ -79,6 +79,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
 
     for pattern in result:
         pattern.get_workload(pet)
+        pattern.get_per_iteration_workload(pet)
 
     # remove reduction operations from shared variables to prevent issues / incorrect results in the exported JSON file
     for idx, _ in enumerate(result):
