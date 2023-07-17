@@ -26,6 +26,7 @@ from .PETGraphX import (
     Dependency,
     MemoryRegion,
 )
+from .parser import LoopData
 from .variable import Variable
 
 loop_data: Dict[LineID, int] = {}
@@ -108,14 +109,21 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
     # check if value already present
     if node.workload is not None:
         return cast(int, node.workload)
-
     res = 0
     if node.type == NodeType.DUMMY:
         # store workload
         node.workload = 0
         return 0
     elif node.type == NodeType.CU:
+        # if a function is called, replace the instruction with the costs of the called function
+        # note: recursive function calls are counted as a single instruction
         res += cast(CUNode, node).instructions_count
+        for calls_edge in pet.out_edges(cast(CUNode, node).id, EdgeType.CALLSNODE):
+            # add costs of the called function
+            res += calculate_workload(pet, pet.node_at(calls_edge[1]))
+            # substract 1 to ignore the call instruction
+            # todo: should we keep the cost for the call instruction and just add the costs of the called funciton?
+            res -= 1
     elif node.type == NodeType.FUNC:
         for child in find_subnodes(pet, node, EdgeType.CHILD):
             res += calculate_workload(pet, child)
@@ -126,17 +134,20 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
                     res += cast(CUNode, child).instructions_count
                 elif "for.cond" in cast(CUNode, child).basic_block_id:
                     res += (
-                        cast(CUNode, child).instructions_count
-                        * cast(LoopNode, node).loop_iterations
+                        calculate_workload(pet, child)
+                        * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                         + 1
                     )
                 else:
                     res += (
-                        cast(CUNode, child).instructions_count
-                        * cast(LoopNode, node).loop_iterations
+                        calculate_workload(pet, child)
+                        * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                     )
             else:
-                res += calculate_workload(pet, child) * cast(LoopNode, node).loop_iterations
+                res += (
+                    calculate_workload(pet, child)
+                    * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
+                )
     # store workload
     node.workload = res
     return res
