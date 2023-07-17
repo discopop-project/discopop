@@ -169,6 +169,39 @@ def main():
     enable_dump_detection_result = (arguments["--dump-detection-result"] == "true")
     json_file = None if arguments["--json"] == "None" else arguments["--json"]
 
+    run_with_args(
+        path,
+        cu_xml,
+        dep_file,
+        loop_counter_file,
+        reduction_file,
+        file_mapping,
+        cu_inst_result_file,
+        discopop_build_path,
+        plugins, enable_profiling,
+        enable_pet_dump, generate_data_cu_inst,
+        llvm_cxxfilt_path, enable_task_pattern,
+        enable_dump_detection_result,
+        json_file
+    )
+
+def run_with_args(
+    path,
+    cu_xml,
+    dep_file,
+    loop_counter_file,
+    reduction_file,
+    file_mapping,
+    cu_inst_result_file,
+    discopop_build_path,
+    plugins, enable_profiling,
+    enable_pet_dump,
+    generate_data_cu_inst,
+    llvm_cxxfilt_path,
+    enable_task_pattern,
+    enable_dump_detection_result,
+    json_file
+):
     # check if needed files exist
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
         if not os.path.isfile(file):
