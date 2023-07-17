@@ -142,6 +142,33 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
     return res
 
 
+def calculate_per_iteration_workload_of_loop(pet: PETGraphX, node: Node) -> int:
+    """Calculates and returns the per iteration workload for a given node
+    The workload is the number of instructions that happens within the loops body.
+    The amount of iterations of the outer loop does not influence the result.
+    :param pet: PET graph
+    :param loop: root loop
+    :return: workload per iteration
+    """
+    if node.type != NodeType.LOOP:
+        raise ValueError("root has to be of type LOOP!")
+
+    res = 0
+    # sum up all children of the loops body (i.e. children excluding increment and condition)
+    # in contrast to calculate_workload, do not multiply the amount of loop iterations to the workload of the children
+    for child in find_subnodes(pet, node, EdgeType.CHILD):
+        if child.type == NodeType.CU:
+            if "for.inc" in cast(CUNode, child).basic_block_id:
+                continue
+            elif "for.cond" in cast(CUNode, child).basic_block_id:
+                continue
+            else:
+                res += calculate_workload(pet, child)
+        else:
+            res += calculate_workload(pet, child)
+    return res
+
+
 def __get_dep_of_type(
     pet: PETGraphX, node: Node, dep_type: DepType, reversed: bool
 ) -> List[Tuple[NodeID, NodeID, Dependency]]:

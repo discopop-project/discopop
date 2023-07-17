@@ -73,6 +73,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
 
     for pattern in result:
         pattern.get_workload(pet)
+        pattern.get_per_iteration_workload(pet)
 
     return result
 
