@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import List, Dict, Set, Tuple, cast, Optional
+from typing import List, Dict, Set, Tuple, cast
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
