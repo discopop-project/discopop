@@ -52,17 +52,11 @@ class GenericNode(object):
             self.written_memory_regions = set()
         else:
             self.written_memory_regions = written_memory_regions
-            # register free variables for memory region sizes
-            for memory_region in [wmr.memory_region for wmr in written_memory_regions]:
-                experiment.get_memory_region_size(memory_region, use_symbolic_value=True)
 
         if read_memory_regions is None:
             self.read_memory_regions = set()
         else:
             self.read_memory_regions = read_memory_regions
-            # register free variables for memory region sizes
-            for memory_region in [rmr.memory_region for rmr in read_memory_regions]:
-                experiment.get_memory_region_size(memory_region, use_symbolic_value=True)
 
         self.device_id = device_id
 
