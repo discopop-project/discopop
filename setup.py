@@ -57,7 +57,7 @@ setup(
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [
-            "discopop_explorer=discopop_explorer.__main__:main",
+            "discopop_explorer=cli.__main__:main",
             "discopop_profiler=discopop_profiler.__main__:main",
             "discopop_wizard=discopop_wizard.__main__:main",
             "discopop_code_generator=discopop_library.CodeGenerator.__main__:main",

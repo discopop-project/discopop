@@ -41,15 +41,15 @@ OPTIONAL ARGUMENTS:
     -h --help                   Show this screen
 """
 import os
+import sys
 
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 from pathlib import Path
 
-from discopop.discopop_explorer.API import run_with_args
-from discopop.discopop_library.commons import get_path
-
-from ._version import __version__
+from discopop_explorer.API import run_with_args
+from discopop_library.commons import get_path
+from discopop_explorer._version import __version__
 
 docopt_schema = Schema(
     {

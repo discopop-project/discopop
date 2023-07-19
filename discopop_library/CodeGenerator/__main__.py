@@ -27,7 +27,8 @@ from typing import Dict, List
 
 import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
-from schema import Schema, Use, SchemaError  # type:ignore
+from schema import Schema, Use, SchemaError
+from discopop.discopop_library.commons import get_path  # type:ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_json_strings as generate_code_from_json_strings,
@@ -46,15 +47,6 @@ docopt_schema = Schema(
     }
 )
 
-
-def get_path(base_path: str, file_name: str) -> str:
-    """Combines path and filename if it is not absolute
-
-    :param base_path: path
-    :param file_name: file name
-    :return: path to file
-    """
-    return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
 def main():

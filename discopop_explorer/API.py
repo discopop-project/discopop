@@ -4,11 +4,11 @@ import json
 import os
 import sys
 import time
-from discopop.discopop_explorer.PETGraphX import PETGraphX
-from discopop.discopop_library.commons import get_path
-from discopop.discopop_explorer.json_serializer import PatternInfoSerializer
-from discopop.discopop_explorer.parser import parse_inputs
-from discopop.discopop_explorer.pattern_detection import DetectionResult, PatternDetectorX
+from discopop_explorer.PETGraphX import PETGraphX
+from discopop_library.commons import get_path
+from discopop_explorer.json_serializer import PatternInfoSerializer
+from discopop_explorer.parser import parse_inputs
+from discopop_explorer.pattern_detection import DetectionResult, PatternDetectorX
 
 
 from pluginbase import PluginBase
