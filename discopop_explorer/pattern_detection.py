@@ -115,10 +115,5 @@ class PatternDetectorX(object):
         experiment = Experiment(project_folder_path, res, file_mapping_path)
         optimization_graph = OptimizationGraph(project_folder_path, experiment)
 
-        import sys
-
-        print("CREATED OPT GRAPH!\n################", file=sys.stderr)
-        sys.exit(0)
-
         # todo
         return res

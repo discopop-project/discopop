@@ -6,14 +6,7 @@ import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from discopop_explorer.PETGraphX import MemoryRegion
 from discopop_library.FileMapping.FileMapping import load_file_mapping
-from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
-from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
-from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.system.System import System
 
 
 class Experiment(object):
@@ -33,33 +26,15 @@ class Experiment(object):
 
     ## END OF SETTINGS
 
-    __system: System
-
     # all free symbols will be added to this list for simple retrieval and user query
     free_symbols: Set[Symbol] = set()
-    substitutions: Dict[Symbol, Expr] = dict()
-    sorted_free_symbols: List[Symbol] = []
-    free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
-    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
     # value suggestions for all free symbols will be stored in this dictionary
     suggested_values: Dict[Symbol, Expr] = dict()
 
-    __memory_region_sizes: Dict[MemoryRegion, int]  # sizes in Bytes
-
     project_path: Path
-    discopop_output_path: Path
-    discopop_optimizer_path: Path
-    code_export_path: Path
-
     file_mapping: Dict[int, Path]  # file-mapping
-
     detection_result: DetectionResult
-
-    function_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject, str]]]
-
     optimization_graph: nx.DiGraph
-
-    compile_check_command: str  # passed to code generator for the validation of generated code
 
     def __init__(
         self,
@@ -75,6 +50,3 @@ class Experiment(object):
         self.free_symbols.add(symbol)
         if value_suggestion is not None:
             self.suggested_values[symbol] = value_suggestion
-
-    def get_system(self) -> System:
-        return self.__system

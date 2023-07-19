@@ -29,7 +29,7 @@ class OptimizationGraph(object):
         self.experiment = experiment
 
         # save graph in experiment
-        experiment.optimization_graph, self.next_free_node_id = PETParser(
+        self.experiment.optimization_graph, self.next_free_node_id = PETParser(
             experiment.detection_result.pet, experiment
         ).parse()
 
