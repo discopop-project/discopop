@@ -9,6 +9,7 @@
 import glob
 import os
 import pathlib
+import shutil
 import subprocess
 import tkinter
 
@@ -42,7 +43,10 @@ class ProfilingContainer(object):
         files = glob.glob(target_folder + "/*")
         for f in files:
             if os.path.exists(f):
-                os.remove(f)
+                if os.path.isfile(f):
+                    os.remove(f)
+                else:
+                    shutil.rmtree(f)
 
     def copy_project_folder_to_container(self, project_path: str):
         self.remove_project_folder()
