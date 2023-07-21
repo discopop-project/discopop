@@ -41,7 +41,8 @@ class ProfilingContainer(object):
     def remove_previous_results(self, target_folder):
         files = glob.glob(target_folder + "/*")
         for f in files:
-            os.remove(f)
+            if os.path.exists(f):
+                os.remove(f)
 
     def copy_project_folder_to_container(self, project_path: str):
         self.remove_project_folder()
