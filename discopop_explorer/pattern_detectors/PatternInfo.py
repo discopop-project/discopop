@@ -28,7 +28,6 @@ class PatternInfo(object):
     dp_optimizer_device_id: Optional[
         int
     ] = None  # used by discopop_optimizer. unused by discopop_explorer.
-    
 
     def __init__(self, node: Node):
         """

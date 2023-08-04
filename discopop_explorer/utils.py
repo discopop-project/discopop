@@ -133,21 +133,29 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
                 if "for.inc" in cast(CUNode, child).basic_block_id:
                     res += cast(CUNode, child).instructions_count
                 elif "for.cond" in cast(CUNode, child).basic_block_id:
-                    res += (
-                        calculate_workload(pet, child)
-                        * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
-                        + 1
+                    # determine average iteration count. Use traditional iteration count as a fallback
+                    average_iteration_count = (
+                        cast(LoopNode, node).loop_iterations
+                        if cast(LoopNode, node).loop_data is None
+                        else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                     )
+                    res += calculate_workload(pet, child) * average_iteration_count + 1
                 else:
-                    res += (
-                        calculate_workload(pet, child)
-                        * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
+                    # determine average iteration count. Use traditional iteration count as a fallback
+                    average_iteration_count = (
+                        cast(LoopNode, node).loop_iterations
+                        if cast(LoopNode, node).loop_data is None
+                        else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                     )
+                    res += calculate_workload(pet, child) * average_iteration_count
             else:
-                res += (
-                    calculate_workload(pet, child)
-                    * cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
+                # determine average iteration count. Use traditional iteration count as a fallback
+                average_iteration_count = (
+                    cast(LoopNode, node).loop_iterations
+                    if cast(LoopNode, node).loop_data is None
+                    else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                 )
+                res += calculate_workload(pet, child) * average_iteration_count
     # store workload
     node.workload = res
     return res

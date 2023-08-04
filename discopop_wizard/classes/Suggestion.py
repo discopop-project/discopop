@@ -11,6 +11,7 @@ import sys
 
 import tkinter as tk
 from enum import IntEnum
+from pathlib import Path
 from tkinter import ttk
 from typing import Any, Dict, List, Tuple
 
@@ -55,14 +56,14 @@ class Suggestion(UnpackedSuggestion):
         source_code['xscrollcommand'] = x_scrollbar.set
 
         # load file mapping from project path
-        file_mapping: Dict[int, str] = dict()
+        file_mapping: Dict[int, Path] = dict()
         with open(os.path.join(execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"), "r") as f:
             for line in f.readlines():
                 line = line.replace("\n", "")
                 split_line = line.split("\t")
                 id = int(split_line[0])
                 path = split_line[1]
-                file_mapping[id] = path
+                file_mapping[id] = Path(path)
 
         # create CodePreview object
         code_preview = CodePreviewContentBuffer(self.wizard, self.file_id, file_mapping[self.file_id])
