@@ -6,12 +6,16 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os
+import sys
 
 import jsonpickle  # type: ignore
 
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
+from discopop_library.discopop_optimizer.scheduling.workload_delta import (
+    get_workload_delta_for_cu_node,
+)
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -114,6 +118,29 @@ class PatternDetectorX(object):
         # construct optimization graph (basically an acyclic representation of the PET)
         experiment = Experiment(project_folder_path, res, file_mapping_path)
         optimization_graph = OptimizationGraph(project_folder_path, experiment)
+
+        for do_all_suggestion in res.do_all:
+            for node_id in get_nodes_from_cu_id(
+                experiment.optimization_graph, do_all_suggestion.node_id
+            ):
+                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(
+                    experiment, node_id
+                )
+                print(
+                    "DOALL @ ",
+                    do_all_suggestion.node_id,
+                    " -> ",
+                    "node_id: ",
+                    node_id,
+                    " --> Delta WL: ",
+                    workload_delta,
+                    " (",
+                    min_workload,
+                    "/",
+                    max_workload,
+                    ")",
+                    file=sys.stderr,
+                )
 
         # todo
         return res

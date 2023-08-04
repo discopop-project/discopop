@@ -9,7 +9,6 @@ from typing import cast
 
 import networkx as nx  # type: ignore
 
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 
@@ -22,7 +21,7 @@ class ContextMerge(ContextNode):
         return str(self.node_id) + "\nCTX\nmerge"
 
     def get_modified_context(
-        self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
+        self, node_id: int, graph: nx.DiGraph, context: ContextObject
     ) -> ContextObject:
         if len(context.snapshot_stack) < 1 or len(context.save_stack) < 1:
             raise ValueError("Context can not be merged before creating a snapshot!")

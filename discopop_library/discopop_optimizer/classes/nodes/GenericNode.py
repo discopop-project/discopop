@@ -10,6 +10,7 @@ from typing import Optional, List, Set
 from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     ReadDataAccess,
@@ -25,6 +26,7 @@ class GenericNode(object):
     device_id: DeviceID
 
     branch_affiliation: List[int]
+    experiment: Experiment
 
     def __init__(
         self,
@@ -35,6 +37,7 @@ class GenericNode(object):
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
         device_id: DeviceID = None,
     ):
+        self.experiment = experiment
         self.node_id = node_id
         self.cu_id = cu_id  # used to differentiate between "legacy" and suggestion nodes
         self.original_cu_id = cu_id  # used for the creation of update suggestions
@@ -59,3 +62,11 @@ class GenericNode(object):
 
     def get_hover_text(self) -> str:
         return ""
+
+    def get_delta_workload(self) -> int:
+        """calculates the deviation in possible workloads represented by the current node (e.g. due to branching)
+        and returns the absolute difference value"""
+
+        raise NotImplementedError(
+            "This function needs to be implemented in every inheriting class!"
+        )

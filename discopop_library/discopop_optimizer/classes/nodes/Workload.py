@@ -5,12 +5,14 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from typing import Optional, Set, List, cast
 
 from sympy import Integer, Expr  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID, PETGraphX, EdgeType
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+
+from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,

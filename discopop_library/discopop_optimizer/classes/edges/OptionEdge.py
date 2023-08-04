@@ -7,7 +7,6 @@
 # directory for details.
 from sympy import Symbol  # type: ignore
 
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
 
 
@@ -16,6 +15,3 @@ class OptionEdge(GenericEdge):
     Used in combination with requirement edges to restrain path selections."""
 
     pass
-
-    def get_cost_model(self) -> CostModel:
-        raise ValueError("The cost of an OptionEdge is not defined and may never be used!")
