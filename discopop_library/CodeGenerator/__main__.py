@@ -27,7 +27,7 @@ from typing import Dict, List
 
 import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
-from schema import Schema, Use, SchemaError
+from schema import Schema, Use, SchemaError # type:ignore
 from discopop.discopop_library.commons import get_path  # type:ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import (

@@ -6,24 +6,22 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import pstats2
 import cProfile
 import json
 import os
 import sys
 import time
-from discopop_explorer.PETGraphX import PETGraphX
-from discopop_library.commons import get_path
-from discopop_explorer.json_serializer import PatternInfoSerializer
-from discopop_explorer.parser import parse_inputs
-from discopop_explorer.pattern_detection import DetectionResult, PatternDetectorX
-
-
-from pluginbase import PluginBase
-
-
 from pathlib import Path
 from typing import List, Optional
+
+import pstats2  # type:ignore
+from discopop_explorer.json_serializer import PatternInfoSerializer
+from discopop_explorer.parser import parse_inputs
+from discopop_explorer.pattern_detection import (DetectionResult,
+                                                 PatternDetectorX)
+from discopop_explorer.PETGraphX import PETGraphX
+from discopop_library.commons import get_path
+from pluginbase import PluginBase  # type:ignore
 
 
 def run(
@@ -102,7 +100,8 @@ def run_with_args(
     # generate data cu inst and stop
     if generate_data_cu_inst:
         # start generation of Data_CUInst and stop execution afterwards
-        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+        from .generate_Data_CUInst import \
+            wrapper as generate_data_cuinst_wrapper
 
         generate_data_cuinst_wrapper(
             cu_xml,
