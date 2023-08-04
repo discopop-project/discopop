@@ -40,6 +40,7 @@ class DoAllInfo(PatternInfo):
         self.last_private = lp
         self.shared = s
         self.reduction = r
+        self.scheduling_clause = "static"
 
     def __str__(self):
         return (
@@ -54,7 +55,8 @@ class DoAllInfo(PatternInfo):
             f"shared: {[v.name for v in self.shared]}\n"
             f"first private: {[v.name for v in self.first_private]}\n"
             f"reduction: {[v.name for v in self.reduction]}\n"
-            f"last private: {[v.name for v in self.last_private]}"
+            f"last private: {[v.name for v in self.last_private]}\n"
+            f"scheduling clause: {self.scheduling_clause}"
         )
 
 

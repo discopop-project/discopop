@@ -141,6 +141,10 @@ class PatternDetectorX(object):
                     ")",
                     file=sys.stderr,
                 )
+                # todo
+                #  very naive and non-robust approach, needs improvement in the future
+                #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
+                if workload_delta != 0:
+                    do_all_suggestion.scheduling_clause = "dynamic"
 
-        # todo
         return res
