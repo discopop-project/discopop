@@ -81,6 +81,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
 
     for pattern in result:
         pattern.get_workload(pet)
+        pattern.get_per_iteration_workload(pet)
 
     # remove reduction operations from shared variables to prevent issues / incorrect results in the exported JSON file
     for idx, _ in enumerate(result):
