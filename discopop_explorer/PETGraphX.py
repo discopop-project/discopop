@@ -639,7 +639,8 @@ class PETGraphX(object):
                 node.loop_data = loop_data.get(node.start_position(), None)
                 # TODO remove loop_iterations property, was kept for backwards compatibility only
                 if node.loop_data is not None:
-                    node.loop_iterations = node.loop_data.total_iteration_count
+                    # node.loop_iterations = node.loop_data.total_iteration_count
+                    node.loop_iterations = node.loop_data.average_iteration_count
 
         print("\tAdded loop data...")
 

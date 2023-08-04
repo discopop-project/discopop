@@ -8,6 +8,7 @@
 
 import copy
 import sys
+from pathlib import Path
 from typing import Tuple, Optional, List, Dict, Sequence, cast
 import tkinter as tk
 
@@ -69,7 +70,7 @@ class CodePreviewContentBuffer(ContentBuffer):
     next_free_region_id = 0
     lines: List[Line]
 
-    def __init__(self, wizard, file_id: int, source_code_path: str, tab_width: int = 4):
+    def __init__(self, wizard, file_id: int, source_code_path: Path, tab_width: int = 4):
         super().__init__(file_id, source_code_path, tab_width, line_type=CodePreviewLine)
         self.wizard = wizard
 

@@ -9,7 +9,7 @@
 from json import JSONEncoder
 
 from .PETGraphX import Node
-from .pattern_detection import DetectionResult
+from discopop_library.result_classes.DetectionResult import DetectionResult
 from .pattern_detectors.PatternInfo import PatternInfo
 from .pattern_detectors.pipeline_detector import PipelineStage
 from .variable import Variable

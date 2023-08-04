@@ -25,6 +25,9 @@ class PatternInfo(object):
     instructions_count: Optional[int]
     workload: Optional[int]
     per_iteration_workload: Optional[int]
+    dp_optimizer_device_id: Optional[
+        int
+    ] = None  # used by discopop_optimizer. unused by discopop_explorer.
 
     def __init__(self, node: Node):
         """
@@ -62,7 +65,9 @@ class PatternInfo(object):
             if key.startswith("_"):
                 del dic[key]
 
-        return json.dumps(dic, indent=2, default=lambda o: "<not serializable>")
+        return json.dumps(
+            dic, indent=2, default=lambda o: o.toJSON()
+        )  # , default=lambda o: "<not serializable>")
 
     def get_workload(self, pet: PETGraphX) -> int:
         """returns the workload of self._node"""

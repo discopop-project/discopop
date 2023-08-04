@@ -5,20 +5,21 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
+from pathlib import Path
 from typing import Dict, List, Optional
 
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 import jsons  # type: ignore
 
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_library.CodeGenerator.classes.ContentBuffer import ContentBuffer
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
 
 
 def from_pattern_info(
-    file_mapping: Dict[int, str],
+    file_mapping: Dict[int, Path],
     patterns_by_type: Dict[str, List[PatternInfo]],
     skip_compilation_check: bool = False,
+    compile_check_command: Optional[str] = None,
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -29,15 +30,21 @@ def from_pattern_info(
     # convert patterns to json strings so that only a single interface has to be maintained
     pattern_json_strings_by_type: Dict[str, List[str]] = dict()
     for type_str in patterns_by_type:
+        if type_str not in pattern_json_strings_by_type:
+            pattern_json_strings_by_type[type_str] = []
         for pattern in patterns_by_type[type_str]:
-            pattern_json_strings_by_type[type_str] = pattern.to_json()
+            pattern_json_strings_by_type[type_str].append(pattern.to_json())
+
     return from_json_strings(
-        file_mapping, pattern_json_strings_by_type, skip_compilation_check=skip_compilation_check
+        file_mapping,
+        pattern_json_strings_by_type,
+        skip_compilation_check=skip_compilation_check,
+        compile_check_command=compile_check_command,
     )
 
 
 def from_json_strings(
-    file_mapping: Dict[int, str],
+    file_mapping: Dict[int, Path],
     pattern_json_strings_by_type: Dict[str, List[str]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
@@ -50,7 +57,19 @@ def from_json_strings(
     """
     # convert pattern_json_strings to UnpackedSuggestion object
     unpacked_suggestions: List[UnpackedSuggestion] = []
-    for type_str in pattern_json_strings_by_type:
+    pattern_precedence = [
+        "do_all",
+        "reduction",
+        "device_update",
+        "gpu_do_all",
+        "gpu_reduction",
+        "pipeline",
+        "simple_gpu",
+        "combined_gpu",
+    ]
+    for type_str in pattern_precedence:
+        if type_str not in pattern_json_strings_by_type:
+            continue
         for json_str in pattern_json_strings_by_type[type_str]:
             unpacked_suggestions.append(UnpackedSuggestion(type_str, jsons.loads(json_str)))
 

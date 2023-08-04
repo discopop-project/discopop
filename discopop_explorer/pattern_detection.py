@@ -6,63 +6,26 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os
-from typing import List
+import sys
 
 import jsonpickle  # type: ignore
 
-from .utils import calculate_workload
-from .PETGraphX import DummyNode, LoopNode, PETGraphX, NodeType, EdgeType
-from .pattern_detectors.do_all_detector import run_detection as detect_do_all, DoAllInfo
-from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd, GDInfo
-from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
-from .pattern_detectors.combined_gpu_patterns.combined_gpu_pattern_detector import (
-    run_detection as detect_combined_gpu,
+from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.scheduling.workload_delta import (
+    get_workload_delta_for_cu_node,
 )
-from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline, PipelineInfo
-from .pattern_detectors.reduction_detector import run_detection as detect_reduction, ReductionInfo
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
+from discopop_library.result_classes.DetectionResult import DetectionResult
+from .PETGraphX import DummyNode, LoopNode, PETGraphX, EdgeType
+from .pattern_detectors.do_all_detector import run_detection as detect_do_all
+from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
+from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
+from .pattern_detectors.reduction_detector import run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
-from .pattern_detectors.PatternInfo import PatternInfo
-from .variable import Variable
-
-
-class DetectionResult(object):
-    pet: PETGraphX
-    reduction: List[ReductionInfo]
-    do_all: List[DoAllInfo]
-    pipeline: List[PipelineInfo]
-    geometric_decomposition: List[GDInfo]
-    task: List[PatternInfo]
-    simple_gpu: List[PatternInfo]
-    combined_gpu: List[PatternInfo]
-
-    def __init__(self, pet: PETGraphX):
-        self.pet = pet
-        pass
-
-    def __str__(self):
-        result_str = ""
-        for v in self.__dict__.values():
-            if type(v) == PETGraphX:
-                continue
-            value_str = "\n\n\n"
-            for entry in v:
-                try:
-                    value_str += str(entry) + "\n\n"
-                except NotImplementedError:
-                    value_str += entry.to_string(self.pet) + "\n\n"
-            result_str += value_str
-        return result_str
-
-    def dump_to_pickled_json(self) -> str:
-        """Encodes and returns the entire Object into a pickled json string.
-        The encoded string can be reconstructed into an object by using:
-        jsonpickle.decode(json_str)
-
-        :return: encoded string
-        """
-        return jsonpickle.encode(self)
 
 
 class PatternDetectorX(object):
@@ -142,5 +105,46 @@ class PatternDetectorX(object):
         # disabled currently due to high additional overhead.
         # will be moved and calculated based on the optimization graph
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
+
+        # identify scheduling clauses
+        res = self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
+
+        return res
+
+    def __identify_scheduling_clauses(
+        self, res: DetectionResult, project_folder_path: str, file_mapping_path: str
+    ) -> DetectionResult:
+        """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
+        # construct optimization graph (basically an acyclic representation of the PET)
+        experiment = Experiment(project_folder_path, res, file_mapping_path)
+        optimization_graph = OptimizationGraph(project_folder_path, experiment)
+
+        for do_all_suggestion in res.do_all:
+            for node_id in get_nodes_from_cu_id(
+                experiment.optimization_graph, do_all_suggestion.node_id
+            ):
+                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(
+                    experiment, node_id
+                )
+                print(
+                    "DOALL @ ",
+                    do_all_suggestion.node_id,
+                    " -> ",
+                    "node_id: ",
+                    node_id,
+                    " --> Delta WL: ",
+                    workload_delta,
+                    " (",
+                    min_workload,
+                    "/",
+                    max_workload,
+                    ")",
+                    file=sys.stderr,
+                )
+                # todo
+                #  very naive and non-robust approach, needs improvement in the future
+                #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
+                if workload_delta != 0:
+                    do_all_suggestion.scheduling_clause = "dynamic"
 
         return res

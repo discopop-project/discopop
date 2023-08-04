@@ -7,3 +7,5 @@
 # directory for details.
 
 jsons
+sympy
+sympy_plot_backends
