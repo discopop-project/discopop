@@ -122,10 +122,8 @@ void recLoop(LoopInfo &LI, Function *F, Loop *li, int lvl, ScalarEvolution *se)
     {
       for (BasicBlock::iterator I = (*BBb)->begin(); I != (*BBb)->end(); ++I)
       {
-        // if ( I == (*BBb)->end() ){
         Instruction *tmpI = &*I;
         lllid = getLID(&*tmpI);
-        //}
         if (lnid != 0)
         {
           continue;
@@ -148,12 +146,6 @@ void recLoop(LoopInfo &LI, Function *F, Loop *li, int lvl, ScalarEvolution *se)
   {
     tripcount = (*se).getSmallConstantTripCount((li), exitingblock);
     tripmultiple = (*se).getSmallConstantTripMultiple((li), exitingblock);
-    // cnt = se->getConstantTripCount((*li),exitingblock);
-    // errs() << "constant trip: " << cnt << "\n";
-    // if( tripcount > 0 and tripmultiple > 1){
-    errs() << "\tin line " << lllid << ":\n";
-    errs() << "\t\ttrip count is " << tripcount << "\n";
-    // errs() << "\t\ttrip multiple is " << tripmultiple <<"\n";
 
     if (tripcount > 0)
     {
@@ -161,7 +153,6 @@ void recLoop(LoopInfo &LI, Function *F, Loop *li, int lvl, ScalarEvolution *se)
       SCEVLoops++;
     }
 
-    //}
   }
   vector<Loop *> subLoops = li->getSubLoops();
   Loop::iterator j, f;
@@ -210,7 +201,6 @@ int getFileID(string name)
     string tp;
     while (getline(fileMappingFile, tp))
     {
-      // errs() << std::stoi(tp) << "\n";
       tempfid++;
       if (tp == name)
       {
@@ -252,7 +242,7 @@ namespace
 
     virtual bool doInitialization(Module &M)
     {
-      // int xx = 0 ;
+
       tempfile.open("temp.txt", ios::in);
       if (tempfile.is_open())
       {
@@ -261,19 +251,15 @@ namespace
         string lastid;
         while (getline(tempfile, tpp))
         {
-          // errs() << std::stoi(tp) << "\n";
           lastid = tpp;
         }
-        // errs() << "Result: " << lastid << '\n';
         UID = std::stoi(lastid);
       }
       else
       {
-        // int xx = 0;
         errs() << "Temp file not exist!\n";
       }
       tempfile.close();
-      // UID = UID + xx;
       errs() << "UID is: " << UID << '\n';
       return false;
     }
@@ -334,7 +320,6 @@ namespace
 
           while (file_ID == 0)
           {
-            // addFileName(name);
             file_ID = getFileID(name);
           }
 
@@ -353,8 +338,6 @@ namespace
 
             // if(!(std::find(SCEVLoopList.begin(), SCEVLoopList.end(), lnid)!=SCEVLoopList.end())){
             //  if it is not founded by the SCEV, instrument this loop
-            // errs() << " if SCEV loop at " << lnid << "\n";
-            // errs() << "Loop at line " << lnid << " instrumented\n" ;
             // }
 
             instrumentedLoops++;
@@ -495,7 +478,6 @@ namespace
       int file_ID = getFileID(name);
       while (file_ID == 0)
       {
-        // addFileName(name);
         file_ID = getFileID(name);
       }
 
@@ -554,12 +536,6 @@ namespace
     virtual bool doFinalization(Module &M)
     {
       errs() << "number of instrumented loops: " << instrumentedLoops << "\n";
-      // errs() << "number of ScalarEvolution bounded loops: " << SCEVLoops << "\n";
-      // for(std::size_t i = 0; i < fileNames.size(); ++i) {
-      //   errs() << i << " " << fileNames[i] << "\n";
-      // errs() << SCEVLoopList[i] << "\n";
-      //}
-      // errs() << "file name is " << fileNames[0] << "\n" ;
 
       tempfile.open("temp.txt", std::ios_base::app);
       tempfile << UID << "\n";
