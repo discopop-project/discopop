@@ -13,7 +13,6 @@ import subprocess
 from contextlib import suppress
 from typing import List
 
-from ._version import __version__
 from .utils import recursive_scandir, is_compile, is_link, get_library
 
 

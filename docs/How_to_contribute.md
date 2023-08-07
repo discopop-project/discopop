@@ -26,7 +26,7 @@ Follow the instructions for determining the Version number depending on the cont
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
 - Switch to the release branch (e.g. `release/1.2.3`) which shall be released
-- Update the version files in the repository
+- Update the version file in the repository (`discopop_library/global_data/version/VERSION`)
 - Create a pull request to the `master` branch and validate the changes
 - Merge the pull request and create a tag on the `master` branch with the name `v1.2.3`
     - Creating the tag triggers the automatic publication of the project to PyPi
