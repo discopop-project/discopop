@@ -53,8 +53,9 @@ from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 from pathlib import Path
 
-from . import run, __version__
+from . import run
 from .json_serializer import PatternInfoSerializer
+from discopop_library.global_data.version.utils import get_version
 
 docopt_schema = Schema(
     {
@@ -89,7 +90,7 @@ def get_path(base_path: str, file_name: str) -> str:
 
 
 def main():
-    arguments = docopt(__doc__, version=f"DiscoPoP Version {__version__}")
+    arguments = docopt(__doc__, version=f"DiscoPoP Version {get_version()}")
 
     try:
         arguments = docopt_schema.validate(arguments)

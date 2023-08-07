@@ -12,16 +12,13 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
+from discopop_library.global_data.version.utils import get_version
+
 os.chdir(Path(__file__).parent)
 Explorer_SRC = Path("discopop_explorer")
 Wizard_SRC = Path("discopop_wizard")
 CodeGen_SRC = Path("discopop_library/CodeGenerator")
 Optimizer_SRC = Path("discopop_library/discopop_optimizer")
-
-
-def get_version():
-    with open("VERSION") as f:
-        return f.read().rstrip()
 
 
 def get_requirements():
