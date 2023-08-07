@@ -17,8 +17,7 @@ from typing import List, Optional
 import pstats2  # type:ignore
 from discopop_explorer.json_serializer import PatternInfoSerializer
 from discopop_explorer.parser import parse_inputs
-from discopop_explorer.pattern_detection import (DetectionResult,
-                                                 PatternDetectorX)
+from discopop_explorer.pattern_detection import DetectionResult, PatternDetectorX
 from discopop_explorer.PETGraphX import PETGraphX
 from discopop_library.commons import get_path
 from pluginbase import PluginBase  # type:ignore
@@ -78,13 +77,14 @@ def run_with_args(
     file_mapping,
     cu_inst_result_file,
     discopop_build_path,
-    plugins, enable_profiling,
+    plugins,
+    enable_profiling,
     enable_pet_dump,
     generate_data_cu_inst,
     llvm_cxxfilt_path,
     enable_task_pattern,
     enable_dump_detection_result,
-    json_file
+    json_file,
 ):
     # check if needed files exist
     for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
@@ -100,8 +100,7 @@ def run_with_args(
     # generate data cu inst and stop
     if generate_data_cu_inst:
         # start generation of Data_CUInst and stop execution afterwards
-        from .generate_Data_CUInst import \
-            wrapper as generate_data_cuinst_wrapper
+        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
 
         generate_data_cuinst_wrapper(
             cu_xml,
