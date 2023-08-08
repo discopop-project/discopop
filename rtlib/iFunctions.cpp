@@ -1087,7 +1087,9 @@ namespace __dp {
     }
 
     void __dp_func_entry(LID lid, int32_t isStart) {
+        cout << "Hello from __dp_func_entry\n";
         if (!dpInited) {
+            cout << "NOT INITED\n";
             // This part should be executed only once.
             readRuntimeInfo();
             loopStack = new LoopTable();
@@ -1100,11 +1102,17 @@ namespace __dp {
             outPutDeps = new stringDepMap();
             bbList = new ReportedBBSet();
             // End HA
-
+            cout << "NOT INITED 1 \n";
+            cout << "AllocatedMemoryRegion: size: " << allocatedMemoryRegions.size() << " empty: " << allocatedMemoryRegions.empty() << " addr: " << &allocatedMemoryRegions << "\n";
+            tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0};
+            cout << "Created dummy\n";
             // initialize lastHitIterator to dummy element
             allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
+            cout << "NOT INITED 1.1 \n";
             lastHitIterator = allocatedMemoryRegions.end();
+            cout << "NOT INITED 1.2 \n";
             lastHitIterator--;
+            cout << "NOT INITED 2 \n";
 
 #ifdef __linux__
             // try to get an output file name w.r.t. the target application
@@ -1120,6 +1128,7 @@ namespace __dp {
                  }
                  out->open(string(selfPath) + "_dep.txt", ios::out);
             }
+            cout << "NOT INITED 3 \n";
 #else
             out->open("Output.txt", ios::out);
 #endif
@@ -1130,12 +1139,15 @@ namespace __dp {
             }
             dpInited = true;
             initParallelization();
+            cout << "NOT INITED 4 \n";
         } else if (targetTerminated) {
+            cout << "ELIF 1\n";
             if (DP_DEBUG) {
                 cout << "Entering function LID " << std::dec << decodeLID(lid);
                 cout << " but target program has returned from main(). Destructors?" << endl;
             }
         } else {
+            cout << "ELSE 1\n";
             // Process ordinary function call/invoke.
             assert((lastCallOrInvoke != 0 || lastProcessedLine != 0) &&
                    "Error: lastCalledFunc == lastProcessedLine == 0");
@@ -1147,24 +1159,33 @@ namespace __dp {
                 cout << "Entering function LID " << std::dec << decodeLID(lid) << endl;
                 cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
             }
+            cout << "ELSE 2\n";
             BGNFuncList::iterator func = beginFuncs->find(lastCallOrInvoke);
             if (func == beginFuncs->end()) {
+                cout << "IF 2\n";
                 set <LID> *tmp = new set<LID>();
                 tmp->insert(lid);
+                cout << "IF 3\n";
                 beginFuncs->insert(pair < LID, set < LID > * > (lastCallOrInvoke, tmp));
+                cout << "IF 4\n";
             } else {
+                cout << "ELSE 3\n";
                 func->second->insert(lid);
             }
+            cout << "END 1\n";
         }
+        cout << "END 2\n";
 
         if (isStart)
             *out << "START " << decodeLID(lid) << endl;
 
         // Reset last call tracker
         lastCallOrInvoke = 0;
+        cout << "Exiting from __dp_func_entry\n";
     }
 
     void __dp_func_exit(LID lid, int32_t isExit) {
+        cout << "ENTERING DP_FUNC_EXIT\n";
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "Exiting function LID " << std::dec << decodeLID(lid);
