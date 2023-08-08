@@ -10,4 +10,5 @@ echo "ARGS: $@"
 
 echo "clang++ ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
 
-clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
+#clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
+clang++ "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v

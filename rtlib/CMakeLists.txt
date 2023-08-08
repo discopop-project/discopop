@@ -19,7 +19,7 @@ set(DiscoPoP_SOURCES
         )
 
 set(CMAKE_CXX_FLAGS
-        "-O2 -std=c++11 -pthread -fno-rtti -fPIE -ffreestanding")
+        "-O2 -std=c++11 -pthread -fno-rtti -fPIE -fPIC -ffreestanding")
 
 # add_custom_target(DiscoPoP)
 
