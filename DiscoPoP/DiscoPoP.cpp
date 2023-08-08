@@ -904,7 +904,9 @@ void DiscoPoP::instrument_module(llvm::Module *module, map <string, string> *tru
             inlinedFunction(func)) {
             continue;
         }
+        errs() << "Instrumenting function\n";
         instrument_function(func, trueVarNamesFromMetadataMap);
+        errs() << "\tInstrumenting function done.\n";
     }
 }
 
@@ -934,7 +936,9 @@ void DiscoPoP::instrument_function(llvm::Function *function, map <string, string
 
     for (auto loop_it = loop_info.begin(); loop_it != loop_info.end();
          ++loop_it) {
+        errs() << "Instrumenting loop\n";
         instrument_loop(*function, file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);
+        errs() << "Instrumenting loop done\n";
     }
 }
 
@@ -954,7 +958,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     if (basic_blocks.size() < 3) {
         return;
     }
-
+    errs() << "1\n";
     // add an entry to the 'loops_' vector
     loop_info_t loop_info;
     loop_info.line_nr_ = loc.getLine();
@@ -972,7 +976,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
          ++loop_it) {
         instrument_loop(F, file_id, *loop_it, LI, trueVarNamesFromMetadataMap);
     }
-
+    errs() << "2\n";
     // The key corresponds to the variable that is loaded / stored.
     // The value points to the actual load / store instruction.
     std::map < llvm::Value * , llvm::Instruction * > load_instructions;
@@ -1021,6 +1025,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
             }
         }
     }
+    errs() << "3\n";
 
     // only keep the instructions that satisfy the following conditions :
     // - a variable that is read must also be written in the loop
@@ -1066,18 +1071,21 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
             }
         }
     }
+    errs() << "4\n";
 
     // now check if the variables are part of a reduction operation
     for (auto candidate: candidates) {
         int index = isa<StoreInst>(candidate.load_inst_) ? 1 : 0;
         string varNameLoad = "LOAD";
         string varTypeLoad = "SCALAR";
+        errs() << "4.1\n";
         llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
 
         varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
         varTypeLoad = dp_reduction_determineVariableType(candidate.load_inst_);
-
+        errs() << "4.2\n";
         if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
+            errs() << "4.2.1\n";
             if (varTypeLoad.find("ARRAY,") == std::string::npos ||
                 varNameLoad.find(".addr") == std::string::npos ||
                 varTypeLoad.find("**") != std::string::npos) {
@@ -1096,11 +1104,14 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     continue;
                 }
             }
+            errs() << "4.2.2\n";
         } else {
+            errs() << "4.2.3\n";
             if (varTypeLoad.find("ARRAY,") != std::string::npos ||
                 varNameLoad.find(".addr") != std::string::npos ||
                 varTypeLoad.find("STRUCT,") != std::string::npos ||
                 varTypeLoad.find("**") != std::string::npos) {
+                errs() << "4.2.3.1\n";
                 llvm::Instruction *load_instr = nullptr;
                 llvm::Instruction *instr =
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
@@ -1112,14 +1123,19 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     // e.g., pbvc[i] = c1s;
                     continue;
                 }
+                errs() << "4.2.3.2\n";
             } else {
+                errs() << "4.2.3.3\n";
                 llvm::Instruction *load_instr = nullptr;
                 llvm::Instruction *instr =
                         dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
                 if (instr) {
+                    errs() << "4.2.3.3.1\n";
                     candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
                     candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
+                    errs() << "4.2.3.3.2\n";
                 } else {
+                    errs() << "4.2.3.3.3\n";
                     // We want to find max or min reduction operations
                     // We want to find the basicblock that contains the load instruction
                     // Then, we traverse the whole function to check if the reduction operation is > or <
@@ -1129,41 +1145,76 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     // Ignore loops. Only look for conditional blocks
                     if (bbName.find("if") != std::string::npos ||
                         bbName.find("for") != std::string::npos) {
+                        errs() << "4.2.3.3.3.1\n";
                         // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if ( dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  = indx ; }}"
+
+                        errs() << "a\n";
+                        cast<Value>(candidate.load_inst_);
+                        errs() << "b\n";
+                        candidate.store_inst_->getValueOperand();
+                        errs() << "c\n";
+                        check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_));
+                        errs() << "d\n";
 
                         // check if loaded value is used in the store instruction to prevent "false positives"
                         if(check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))){
+                            errs() << "4.2.3.3.3.1.1\n";
                             candidate.operation_ = '>';
                         }
                         else{
+                            errs() << "4.2.3.3.3.1.2\n";
                             continue;
-                        }                  
+                        }
+                        errs() << "4.2.3.3.3.2\n";
                     } else {
+                        errs() << "4.2.3.3.3.3\n";
                         continue;
                     }
+                    errs() << "4.2.3.3.4\n";
                 }
+                errs() << "4.2.3.4\n";
             }
+            errs() << "4.2.4\n";
         }
         instructions_.push_back(candidate);
     }
+    errs() << "5\n";
 }
 
 bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue){
     // Return true, if searchedValue is used within the computation of parentValue
+    errs() << "cvu 1\n";
     if(parentValue == searchedValue){
         return true;
     }
+    errs() << "cvu 2\n";
 
     // check operands recursively, if parentValue is not a constant yet
     if(isa<Constant>(parentValue)){
         return false;
     }
+    // if parentValue is not an Instruction, the value can not be used, thus return false
+    if(! isa<Instruction>(parentValue)){
+        errs() << "parentValue not an Instruction.\n";
+        return false;
+    }
+
+    errs() << "cvu 3\n";
+    errs() << "parentValue: \n";
+    parentValue->getType()->print(errs());
+    errs() << "\n";
+    errs() << "isa<Instruction>: " << isa<Instruction>(parentValue) << "\n";
+    cast<Instruction>(parentValue);
+    errs() << "cvu 3 post\n";
     llvm::Instruction* parentInstruction = cast<Instruction>(parentValue);
     for(int idx = 0; idx < parentInstruction->getNumOperands(); idx++){
+        errs() << "cvu 3.1\n";
         if(check_value_usage(parentInstruction->getOperand(idx), searchedValue)){
             return true;
         }
+        errs() << "cvu 3.2\n";
     }
+    errs() << "cvu 4\n";
     
     return false;
     
@@ -1990,27 +2041,31 @@ bool DiscoPoP::runOnModule(Module &M) {
         runOnFunction(F);
     }
 
-    //cout << "\n\tFunctions Done.\n";
+    errs() << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
     ctx_ = &module_->getContext();
+    errs() << "Retrieved context\n";
 
     reduction_file = new std::ofstream();
     reduction_file->open("reduction.txt", std::ios_base::app);
 
     loop_counter_file = new std::ofstream();
     loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
+    errs() << "Opened file\n";
 
     bool success = dp_reduction_init_util(FileMappingPath);
     if (!success) {
         llvm::errs() << "could not find the FileMapping file: " << FileMappingPath << "\n";
         return false;
     }
-
+    errs() << "Instrumenting module\n";
     instrument_module(&M, &trueVarNamesFromMetadataMap);
+    errs() << "Instrumentation done\n";
 
     dp_reduction_insert_functions();
+    errs() << "Inserted functions\n";
 
     if (reduction_file != NULL && reduction_file->is_open()) {
         reduction_file->flush();
@@ -2021,6 +2076,7 @@ bool DiscoPoP::runOnModule(Module &M) {
         loop_counter_file->flush();
         loop_counter_file->close();
     }
+    errs() << "Written files\n";
     // End DPReduction
     return true;
 }
@@ -2069,6 +2125,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     // CUGeneration
     {
+        errs() << "GU GEN START\n";
         /********************* Initialize root values ***************************/
         Node *root = new Node;
         root->name = F.getName().str();
@@ -2115,6 +2172,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
+
         fillStartEndLineNumbers(root, LI);
 
         secureStream();
@@ -2123,14 +2181,17 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         printData(root);
 
+
         for (auto i: CUVector) {
             delete (i);
         }
+        errs() << "GU GEN END\n";
     }
     // CUGeneration end
 
     // DPInstrumentation
     {
+        errs() << "DP INST START\n";
         // Check loop parallelism?
         if (ClCheckLoopPar) {
             LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
@@ -2152,13 +2213,19 @@ bool DiscoPoP::runOnFunction(Function &F) {
         if (DP_DEBUG) {
             errs() << "pass DiscoPoP: finished function\n";
         }
+        errs() << "DP INST END\n";
     }
     // DPInstrumentation end
 
     // DPInstrumentationOmission
     {
+        errs() << "DP INST OMISSION START\n";
         if (F.getInstructionCount() == 0) return false;
-        if (DP_hybrid_SKIP) return true;
+        errs() << "post getInstCount\n";
+        if (DP_hybrid_SKIP) {
+            errs() << "DP INST OMISSION SKIPPED\n";
+            return true;
+        }
         if (DP_hybrid_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
         DebugLoc dl;
@@ -2441,6 +2508,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         staticDependencyFile->close();
 
         if (DP_hybrid_DEBUG) errs() << "Done with function " << F.getName() << ":\n";
+        errs() << "DP INST OMISSION END\n";
     }
     // DPInstrumentationOmission end
     return true;
