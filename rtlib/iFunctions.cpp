@@ -69,7 +69,7 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
     /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
@@ -309,7 +309,7 @@ namespace __dp {
     void outputAllocations() {
         auto allocationsFileStream = new ofstream();
         allocationsFileStream->open("memory_regions.txt", ios::out);
-        for(auto memoryRegion : allocatedMemoryRegions){
+        for(auto memoryRegion : *allocatedMemoryRegions){
             string position = decodeLID(get<0>(memoryRegion));
             string id = get<1>(memoryRegion);
             string numBytes = to_string(get<4>(memoryRegion));
@@ -407,14 +407,14 @@ namespace __dp {
         // check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
             // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
-            if(allocatedMemoryRegions.size() != 0){
+            if(allocatedMemoryRegions->size() != 0){
                 // search backwards in the list
-                auto bw_it = allocatedMemoryRegions.end();
+                auto bw_it = allocatedMemoryRegions->end();
                 bw_it--;
                 bool search_backwards = true;
 
                 while(true){
-                    if(*bw_it == allocatedMemoryRegions.front()){
+                    if(*bw_it == allocatedMemoryRegions->front()){
                         search_backwards = false;
                     }
                     if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
@@ -920,8 +920,8 @@ namespace __dp {
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
-        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
+        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
+        allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
         
 
         // update known min and max ADDR
@@ -945,8 +945,8 @@ namespace __dp {
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
-        lastHitIterator = allocatedMemoryRegions.end();
+        allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
+        lastHitIterator = allocatedMemoryRegions->end();
         lastHitIterator--;
 
         // update known min and max ADDR
@@ -1103,13 +1103,21 @@ namespace __dp {
             bbList = new ReportedBBSet();
             // End HA
             cout << "NOT INITED 1 \n";
-            cout << "AllocatedMemoryRegion: size: " << allocatedMemoryRegions.size() << " empty: " << allocatedMemoryRegions.empty() << " addr: " << &allocatedMemoryRegions << "\n";
+            // initialize AllocatedMemoryRegions:
+            allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
+
+            cout << "AllocatedMemoryRegion: size: " << allocatedMemoryRegions->size() << " empty: " << allocatedMemoryRegions->empty() << " addr: " << allocatedMemoryRegions << "\n";
+            if (allocatedMemoryRegions->size() == 0 && allocatedMemoryRegions->empty() == 0){
+                cout << "Reinit...\n";
+                // re-initialize the list, as something went wrong
+                allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
+            }
             tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0};
             cout << "Created dummy\n";
             // initialize lastHitIterator to dummy element
-            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
+            allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
             cout << "NOT INITED 1.1 \n";
-            lastHitIterator = allocatedMemoryRegions.end();
+            lastHitIterator = allocatedMemoryRegions->end();
             cout << "NOT INITED 1.2 \n";
             lastHitIterator--;
             cout << "NOT INITED 2 \n";
