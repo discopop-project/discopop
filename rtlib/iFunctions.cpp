@@ -69,12 +69,13 @@ namespace __dp {
     int32_t FuncStackLevel = 0;
 
     // TODO: Replace with more efficient data structure for searching
+    MemoryRegionTree *allocatedMemRegTree;
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
     /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
-    int64_t nextFreeMemoryRegionId = 0;
+    int64_t nextFreeMemoryRegionId = 1;  // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
     /******* BEGIN: parallelization section *******/
 
@@ -404,7 +405,10 @@ namespace __dp {
 
     
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
-        // check if accessed addr in knwon range. If not, return fallback immediately
+        // use tree
+        return allocatedMemRegTree->get_memory_region_id(fallback, addr);
+
+        /*// check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
             // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
             if(allocatedMemoryRegions->size() != 0){
@@ -413,15 +417,12 @@ namespace __dp {
                 bw_it--;
                 bool search_backwards = true;
 
-                int counter = 0;
                 while(true){
-                    counter++;
                     if(*bw_it == allocatedMemoryRegions->front()){
                         search_backwards = false;
                     }
                     if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
                         lastHitIterator = bw_it;
-                        cout << "Counter: " << counter << "\n";
                         return get<1>(*bw_it);
                     }
 
@@ -434,59 +435,10 @@ namespace __dp {
                 }
             }
 
-
-//            bool search_forwards = true;
-//            bool search_backwards = true;
-//            auto fw_it = lastHitIterator;
-//            auto bw_it = lastHitIterator;
-
-            // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
-            // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
-
-/*            while(true){
-                // search forward from lastHitIterator
-                if(search_forwards){
-                    if(*fw_it == allocatedMemoryRegions.back()){
-                        search_forwards = false;
-                    }
-                     // fw_it in range
-                    //cout << "Search for " << std::hex << addr << " in " << std::hex << get<2>(*fw_it) << " - " << std::hex << get<3>(*fw_it) << "\n";
-                    if(get<2>(*fw_it) <= addr && get<3>(*fw_it) >= addr){
-                        lastHitIterator = fw_it;
-                        return get<1>(*fw_it);
-                    }
-                    
-                    if(search_forwards){
-                        fw_it++;
-                    }
-                }
-                
-                // search backwards from lastHitIterator
-                if(search_backwards){
-                    if(*bw_it == allocatedMemoryRegions.front()){
-                        search_backwards = false;
-                    }
-
-                    //cout << "Search for BW " << std::hex << addr << " in " << std::hex << get<2>(*bw_it) << " - " << std::hex << get<3>(*bw_it) << "\n";
-                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
-                        lastHitIterator = bw_it;
-                        return get<1>(*bw_it);
-                    }
-
-                    if(search_backwards){
-                        bw_it--;
-                    }
-                }
-
-                if(!(search_forwards || search_backwards)){
-                    break;
-                }     
-
-            }
-*/
         }
         
         return fallback;
+        */
     }
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
@@ -919,13 +871,14 @@ namespace __dp {
     }
 
     void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
-        string allocId = to_string(nextFreeMemoryRegionId);
+        int64_t buffer = nextFreeMemoryRegionId;
+        string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
         allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
-        
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
         // update known min and max ADDR
         if(startAddr < smallestAllocatedADDR){
@@ -938,12 +891,14 @@ namespace __dp {
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
         // instrumentation function for new and malloc
-        
-        string allocId = to_string(nextFreeMemoryRegionId);
+        int64_t buffer = nextFreeMemoryRegionId;
+        string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
 
         // calculate endAddr of memory region
         endAddr = startAddr + numBytes;
+
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
@@ -1104,6 +1059,8 @@ namespace __dp {
             bbList = new ReportedBBSet();
             // End HA
             // initialize AllocatedMemoryRegions:
+
+            allocatedMemRegTree = new MemoryRegionTree();
             allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
 
             if (allocatedMemoryRegions->size() == 0 && allocatedMemoryRegions->empty() == 0){
