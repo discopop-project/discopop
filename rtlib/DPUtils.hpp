@@ -60,7 +60,7 @@ namespace dputil {
         return substrings;
     }
 
-    int32_t getFileID(string fileMapping, string fullPathName) {
+    inline int32_t getFileID(string fileMapping, string fullPathName) {
         int32_t index = 0; // if the associated file id is not found, then we return 0
         string line;
         ifstream fileMap(fileMapping.c_str());
@@ -94,7 +94,7 @@ namespace dputil {
             return true;
     }
 
-    string get_exe_dir() {
+    inline string get_exe_dir() {
         char buff[1024];
         ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
         if (len != -1) {

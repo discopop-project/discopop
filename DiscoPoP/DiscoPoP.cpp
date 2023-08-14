@@ -18,7 +18,7 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
+#define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
 
 
 using namespace llvm;
@@ -904,7 +904,9 @@ void DiscoPoP::instrument_module(llvm::Module *module, map <string, string> *tru
             inlinedFunction(func)) {
             continue;
         }
+        errs() << "Instrumenting function\n";
         instrument_function(func, trueVarNamesFromMetadataMap);
+        errs() << "\tInstrumenting function done.\n";
     }
 }
 
@@ -934,7 +936,9 @@ void DiscoPoP::instrument_function(llvm::Function *function, map <string, string
 
     for (auto loop_it = loop_info.begin(); loop_it != loop_info.end();
          ++loop_it) {
+        errs() << "Instrumenting loop\n";
         instrument_loop(*function, file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);
+        errs() << "Instrumenting loop done\n";
     }
 }
 
@@ -954,7 +958,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     if (basic_blocks.size() < 3) {
         return;
     }
-
     // add an entry to the 'loops_' vector
     loop_info_t loop_info;
     loop_info.line_nr_ = loc.getLine();
@@ -972,7 +975,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
          ++loop_it) {
         instrument_loop(F, file_id, *loop_it, LI, trueVarNamesFromMetadataMap);
     }
-
     // The key corresponds to the variable that is loaded / stored.
     // The value points to the actual load / store instruction.
     std::map < llvm::Value * , llvm::Instruction * > load_instructions;
@@ -1076,7 +1078,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
         varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
         varTypeLoad = dp_reduction_determineVariableType(candidate.load_inst_);
-
         if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
             if (varTypeLoad.find("ARRAY,") == std::string::npos ||
                 varNameLoad.find(".addr") == std::string::npos ||
@@ -1130,6 +1131,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                     if (bbName.find("if") != std::string::npos ||
                         bbName.find("for") != std::string::npos) {
                         // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if ( dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  = indx ; }}"
+                        check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_));
 
                         // check if loaded value is used in the store instruction to prevent "false positives"
                         if(check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))){
@@ -1137,7 +1139,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         }
                         else{
                             continue;
-                        }                  
+                        }
                     } else {
                         continue;
                     }
@@ -1158,6 +1160,12 @@ bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searched
     if(isa<Constant>(parentValue)){
         return false;
     }
+    // if parentValue is not an Instruction, the value can not be used, thus return false
+    if(! isa<Instruction>(parentValue)){
+        errs() << "parentValue not an Instruction.\n";
+        return false;
+    }
+
     llvm::Instruction* parentInstruction = cast<Instruction>(parentValue);
     for(int idx = 0; idx < parentInstruction->getNumOperands(); idx++){
         if(check_value_usage(parentInstruction->getOperand(idx), searchedValue)){
@@ -1990,27 +1998,31 @@ bool DiscoPoP::runOnModule(Module &M) {
         runOnFunction(F);
     }
 
-    //cout << "\n\tFunctions Done.\n";
+    errs() << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
     ctx_ = &module_->getContext();
+    errs() << "Retrieved context\n";
 
     reduction_file = new std::ofstream();
     reduction_file->open("reduction.txt", std::ios_base::app);
 
     loop_counter_file = new std::ofstream();
     loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
+    errs() << "Opened file\n";
 
     bool success = dp_reduction_init_util(FileMappingPath);
     if (!success) {
         llvm::errs() << "could not find the FileMapping file: " << FileMappingPath << "\n";
         return false;
     }
-
+    errs() << "Instrumenting module\n";
     instrument_module(&M, &trueVarNamesFromMetadataMap);
+    errs() << "Instrumentation done\n";
 
     dp_reduction_insert_functions();
+    errs() << "Inserted functions\n";
 
     if (reduction_file != NULL && reduction_file->is_open()) {
         reduction_file->flush();
@@ -2021,6 +2033,7 @@ bool DiscoPoP::runOnModule(Module &M) {
         loop_counter_file->flush();
         loop_counter_file->close();
     }
+    errs() << "Written files\n";
     // End DPReduction
     return true;
 }
@@ -2069,6 +2082,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     // CUGeneration
     {
+        errs() << "GU GEN START\n";
         /********************* Initialize root values ***************************/
         Node *root = new Node;
         root->name = F.getName().str();
@@ -2115,6 +2129,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
+
         fillStartEndLineNumbers(root, LI);
 
         secureStream();
@@ -2122,6 +2137,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // printOriginalVariables(originalVariablesSet);
 
         printData(root);
+
 
         for (auto i: CUVector) {
             delete (i);
@@ -2158,7 +2174,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
     // DPInstrumentationOmission
     {
         if (F.getInstructionCount() == 0) return false;
-        if (DP_hybrid_SKIP) return true;
+        if (DP_hybrid_SKIP) {
+            return true;
+        }
         if (DP_hybrid_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
         DebugLoc dl;
@@ -2441,6 +2459,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         staticDependencyFile->close();
 
         if (DP_hybrid_DEBUG) errs() << "Done with function " << F.getName() << ":\n";
+        errs() << "DP INST OMISSION END\n";
     }
     // DPInstrumentationOmission end
     return true;
