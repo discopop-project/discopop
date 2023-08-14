@@ -1098,7 +1098,6 @@ namespace __dp {
             dpInited = true;
             initParallelization();
         } else if (targetTerminated) {
-            cout << "ELIF 1\n";
             if (DP_DEBUG) {
                 cout << "Entering function LID " << std::dec << decodeLID(lid);
                 cout << " but target program has returned from main(). Destructors?" << endl;
