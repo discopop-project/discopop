@@ -9,9 +9,8 @@
 # directory for details.
 
 # SETTINGS
-DP_DIR=/home/lukas/git/discopop
-DP_BUILD=${DP_DIR}/build
-DP_SCRIPTS=${DP_DIR}/scripts
+DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+DP_SCRIPTS=${DP_BUILD}/scripts
 
 # original arguments: "$@"
 echo "WRAPPED CMAKE BUILD..."
@@ -22,9 +21,9 @@ echo "ARGS: ${@}"
 cmake \
   -DCMAKE_C_COMPILER_WORKS=1 \
   -DCMAKE_CXX_COMPILER_WORKS=1 \
-  -DCMAKE_CXX_COMPILER=/home/lukas/git/discopop/scripts/CXX_wrapper.sh \
-  -DCMAKE_C_COMPILER=/home/lukas/git/discopop/scripts/CC_wrapper.sh \
-  -DCMAKE_LINKER=/home/lukas/git/discopop/scripts/LINKER_wrapper.sh \
+  -DCMAKE_CXX_COMPILER=${DP_SCRIPTS}/CXX_wrapper.sh \
+  -DCMAKE_C_COMPILER=${DP_SCRIPTS}/CC_wrapper.sh \
+  -DCMAKE_LINKER=${DP_SCRIPTS}/LINKER_wrapper.sh \
   -DCMAKE_CXX_LINK_EXECUTABLE="<CMAKE_LINKER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" \
   "$@"
 

@@ -9,9 +9,8 @@
 # directory for details.
 
 # SETTINGS
-DP_DIR=/home/lukas/git/discopop
-DP_BUILD=${DP_DIR}/build
-DP_SCRIPTS=${DP_DIR}/scripts
+DP_BUILD="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+DP_SCRIPTS=${DP_BUILD}/scripts
 
 
 # original arguments: "$@"
