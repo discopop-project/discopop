@@ -16,6 +16,7 @@ set(DiscoPoP_SOURCES
         signature.cpp
         loop_counter.cpp
         #../share/lib/DPUtils.cpp
+        MemoryRegionTree.cpp
         )
 
 set(CMAKE_CXX_FLAGS

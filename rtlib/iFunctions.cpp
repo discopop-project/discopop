@@ -68,13 +68,13 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
-    // TODO: Replace with more efficient data structure for searching
+    MemoryRegionTree *allocatedMemRegTree;
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
     /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
-    int64_t nextFreeMemoryRegionId = 0;
+    int64_t nextFreeMemoryRegionId = 1;  // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
     /******* BEGIN: parallelization section *******/
 
@@ -404,7 +404,10 @@ namespace __dp {
 
     
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
-        // check if accessed addr in knwon range. If not, return fallback immediately
+        // use tree
+        return allocatedMemRegTree->get_memory_region_id(fallback, addr);
+
+        /*// check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
             // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
             if(allocatedMemoryRegions->size() != 0){
@@ -434,7 +437,7 @@ namespace __dp {
         }
         
         return fallback;
-        
+        */
     }
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
@@ -874,6 +877,7 @@ namespace __dp {
         string var_name = allocId;
         cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
         allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
         // update known min and max ADDR
         if(startAddr < smallestAllocatedADDR){
@@ -893,6 +897,7 @@ namespace __dp {
         // calculate endAddr of memory region
         endAddr = startAddr + numBytes;
 
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
@@ -1054,6 +1059,7 @@ namespace __dp {
             // End HA
             // initialize AllocatedMemoryRegions:
 
+            allocatedMemRegTree = new MemoryRegionTree();
             allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
 
             if (allocatedMemoryRegions->size() == 0 && allocatedMemoryRegions->empty() == 0){

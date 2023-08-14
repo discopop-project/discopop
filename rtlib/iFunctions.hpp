@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include "DPUtils.hpp"
+#include "MemoryRegionTree.hpp"
 // hybrid analysis
 #include <regex>
 // End HA
