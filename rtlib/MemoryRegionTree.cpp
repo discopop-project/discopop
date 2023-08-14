@@ -6,6 +6,7 @@ MemoryRegionTree::MemoryRegionTree(){
         cout << "DBG: MRT: creating new Tree.\n";
     root = new MRTNode(0xFFFFFFFFFFFFFFFF, -1);
     if(MRTVerbose)
+        cout << "DBG: RootNode: " << root << "\n";
         cout << "DBG: MRT: Done.\n";
 }
 
@@ -15,6 +16,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
     
     // create leaf node for start of the allocated region
     MRTNode *currentNode = root;
+    cout << "currentNode=root: " << currentNode << "\n";
     MRTNode* next_level_node = nullptr;
     ADDR current_addr = 0x0;
     int level = 0;
@@ -30,7 +32,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
         // traverse tree downwards
         cout << "before child access\n";
         cout << "child_arr_ptr: " << currentNode->children << "\n";
-        for(int i = 1; i < 16; i++){
+        for(int i = 0; i < 16; i++){
             cout << "Child: " << i << " " << currentNode->children[i] << "\n";
         }
         next_level_node = currentNode->children[char_at_level];
@@ -38,10 +40,13 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
         if(next_level_node == nullptr){
             // create next node
             next_level_node = new MRTNode(currentNode, current_addr, level);
+            cout << "Next level node 1: " << next_level_node << "\n"; 
             currentNode->children[char_at_level] = next_level_node;
         }
         cout << "after if\n";
         // proceed to next level
+        cout << "next_level_node: " << next_level_node << "\n";
+        cout << "currentNode: " << currentNode << "\n";
         currentNode = next_level_node;
         next_level_node = nullptr;
         cout << "Level end\n";
@@ -62,6 +67,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
     ADDR child_addr = 0;
     for(; level > 0;){
         // get parent at current level
+        cout << "CurerentNode: " << currentNode << "\n";
         parent = currentNode->parent;
         // remove region entry if existing
         parent->memoryRegionId = 0;
@@ -97,6 +103,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
                 if(startAddr > child_addr && child_addr < endAddr){
                     // create node and mark as contained
                     child = new MRTNode(parent, child_addr, level-1);
+                    cout << "Next level node 2: " << child << "\n";
                     child->memoryRegionId = memoryRegionId;
                     parent->children[child_id] = child;
                     if(MRTVerbose)
@@ -139,6 +146,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
         if(next_level_node == nullptr){
             // create next node
             next_level_node = new MRTNode(currentNode, current_addr, level);
+            cout << "Next level node 3: " << next_level_node << "\n";
             currentNode->children[char_at_level] = next_level_node;
         }
         // proceed to next level
@@ -165,6 +173,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
                 cout << "CurrentAddr 2 post shift: " << child_addr << "\n";
                 if(child_addr <= endAddr){
                     MRTNode* child_node = new MRTNode(currentNode, child_addr, level+1);
+                    cout << "Next level node 4: " << child_node << "\n";
                     currentNode->children[j] = child_node;
                     child_node->memoryRegionId = memoryRegionId;
                     if(MRTVerbose)
