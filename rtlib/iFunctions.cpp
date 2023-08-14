@@ -74,7 +74,7 @@ namespace __dp {
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
-    int64_t nextFreeMemoryRegionId = 1;  // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
+    int64_t nextFreeMemoryRegionId = 0;
 
     /******* BEGIN: parallelization section *******/
 
@@ -1091,7 +1091,6 @@ namespace __dp {
             dpInited = true;
             initParallelization();
         } else if (targetTerminated) {
-            cout << "ELIF 1\n";
             if (DP_DEBUG) {
                 cout << "Entering function LID " << std::dec << decodeLID(lid);
                 cout << " but target program has returned from main(). Destructors?" << endl;
