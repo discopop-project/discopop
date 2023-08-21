@@ -14,6 +14,15 @@
 #   Use this script to analyze a project with DiscoPoP, that is built using Makefiles
 #####################################################################################
 
+# ensure that copy of script in build folder is invoked instead of the "original"
+if [[ "${SCRIPT_PATH}" == *"discopop/scripts/"* ]]; then
+  echo "ERROR: Invoked script directly from source folder:"
+  echo "    ${SCRIPT_PATH}"
+  echo "Use the copy located in the DiscoPoP build folder instead."
+  echo ""
+  exit 1
+fi
+
 HELPTEXT="*** DiscoPoP Execution Wizard ***
 
 Use this tool to analyze a project that is built using Makefiles
