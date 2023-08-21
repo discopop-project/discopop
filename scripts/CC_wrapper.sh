@@ -34,7 +34,8 @@ echo "DP_FM_PATH: ${DP_FM_PATH}"
 # check if environment is prepared
 if [ -z ${DP_FM_PATH} ]; then
   echo "ERROR: DP_FM_PATH unspecified!"
-  echo "\tGenerate a FileMapping.txt file and create an environment Variable which points to this file."
+  echo "  Generate a FileMapping.txt file and create an environment Variable which points to this file."
+  echo "  Please refer to https://discopop-project.github.io/discopop/Profiling/File_Mapping/ for further information."
   exit 1
 fi
 
