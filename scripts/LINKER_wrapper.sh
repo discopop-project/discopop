@@ -21,14 +21,17 @@ fi
 
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
+DP_BUILD_LLVM_BIN_DIR="$(cat ${DP_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
 DP_SCRIPTS=${DP_BUILD}/scripts
+LLVM_CLANG=$DP_BUILD_LLVM_BIN_DIR/clang
+LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
 
 
 # original arguments: "$@"
 echo "WRAPPED LINKING...."
 echo "ARGS: $@"
 
-echo "clang++ ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
+echo "${LLVM_CLANGPP} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
 
 #clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
-clang++ "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
+${LLVM_CLANGPP} "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
