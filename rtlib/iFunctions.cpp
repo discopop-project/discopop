@@ -68,7 +68,6 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
-    // TODO: Replace with more efficient data structure for searching
     MemoryRegionTree *allocatedMemRegTree;
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
     /// (LID, identifier, startAddr, endAddr, numBytes, numElements)

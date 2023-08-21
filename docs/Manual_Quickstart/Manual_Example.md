@@ -40,9 +40,7 @@ As a first step, please change your working directory to the `DP_SOURCE/example`
 ## Step 1: Profiling
 
 ### Step 1.1: Create File Mapping
-DiscoPoP requires an overview of the files in the target project (`FileMapping.txt`). This file can be created by simply executing the `dp-fmap` script located in the `DP_BUILD/scripts` folder:
-
-    DP_BUILD/scripts/dp-fmap
+Please refer to [this site](../Profiling/File_Mapping.md) for further details and instructions.
 
 ### Step 1.2: Compile the Target
 To prepare the following instrumentation and profiling steps, we first have to compile the target source code to LLVM-IR.

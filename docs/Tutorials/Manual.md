@@ -11,8 +11,7 @@ The core of the DiscoPoP Profiler is the `DiscoPoP` optimizer pass.
 In order to execute the profiling for an arbitrary target project, the following steps need to be performed:
 
 * **Create a `FileMapping.txt` file:**<br/>
-It serves as an overview of all files in the project and is required by the optimizer pass. <br/>
-You can use the provided `dp-fmap` script for this. Simply run it from the directory containing your source code.
+Please refer to [this site](../Profiling/File_Mapping.md) for further details and instructions.
 
 * **Compile the source code and run the DiscoPoP optimizer pass:**<br/>
 The optimizer pass performs the static analysis and adds runtime instrumentation to the program. <br/>
