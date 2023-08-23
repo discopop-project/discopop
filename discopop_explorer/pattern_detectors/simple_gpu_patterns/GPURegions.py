@@ -22,7 +22,7 @@ from .GPUMemory import map_node
 from discopop_explorer.utils import is_loop_index2
 from discopop_explorer.variable import Variable
 from ..PatternInfo import PatternInfo
-from alive_progress import alive_bar
+from alive_progress import alive_bar  # type: ignore
 
 
 class GPURegionInfo(PatternInfo):
@@ -207,7 +207,10 @@ class GPURegions:
         with alive_bar(len(self.gpu_loop_patterns)) as progress_bar:
             for i in range(0, len(self.gpu_loop_patterns)):
                 if self.gpu_loop_patterns[i].nextLoop is not None:
-                    if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
+                    if (
+                        map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type
+                        == 2
+                    ):
                         if self.reachableCUs(
                             self.gpu_loop_patterns[i].nodeID,
                             cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
