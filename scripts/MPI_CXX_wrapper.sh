@@ -19,6 +19,13 @@ if [[ "${SCRIPT_PATH}" == *"discopop/scripts/"* ]]; then
   exit 1
 fi
 
+# ensure that mpic++ can be found
+if ! command -v mpic++ &> /dev/null
+then
+    echo "command: mpic++ could not be found!"
+    exit 1
+fi
+
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
 DP_BUILD_LLVM_BIN_DIR="$(cat ${DP_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
