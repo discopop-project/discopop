@@ -85,6 +85,9 @@ jobs:
       - name: "Check formatting of DiscoPoP Explorer"
         run: python -m black -l 100 --check discopop_explorer
 
+      - name: "Check formatting of DiscoPoP Library"
+        run: python -m black -l 100 --check discopop_library
+
       - name: "Check formatting of DiscoPoP Profiler"
         run: python -m black -l 100 --check discopop_profiler
 
