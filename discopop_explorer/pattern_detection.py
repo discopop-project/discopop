@@ -83,7 +83,7 @@ class PatternDetectorX(object):
         res.do_all = detect_do_all(self.pet)
         print("\tDONE.")
         print("PIPELINE...")
-        # res.pipeline = detect_pipeline(self.pet)
+        res.pipeline = detect_pipeline(self.pet)
         print("\tDONE.")
         print("GEO. DEC...")
         res.geometric_decomposition = detect_gd(self.pet)
