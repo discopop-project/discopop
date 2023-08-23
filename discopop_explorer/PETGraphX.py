@@ -47,6 +47,8 @@ from alive_progress import alive_bar  # type: ignore
 #    ("dtype", "string"),
 # ]
 
+global_pet = None
+
 
 def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
@@ -749,22 +751,24 @@ class PETGraphX(object):
     def calculateFunctionMetadata(self) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
+        global global_pet
         func_nodes = self.all_nodes(FunctionNode)
         print("Calculating metadata for functions: ")
-        with alive_bar(len(func_nodes)) as progress_bar:
-            for func_node in func_nodes:
-                stack: List[Node] = self.direct_children(func_node)
-                func_node.children_cu_ids = [node.id for node in stack]
 
-                while stack:
-                    child = stack.pop()
-                    child.parent_function_id = func_node.id
-                    children = self.direct_children(child)
-                    func_node.children_cu_ids.extend([node.id for node in children])
-                    stack.extend(children)
+        param_list = [(node) for node in func_nodes]
+        from multiprocessing import Pool
+        import tqdm  # type: ignore
 
-                func_node.calculate_reachability_pairs(self)
-                progress_bar()
+        with Pool(
+            initializer=initialize_calculateFunctionMetadata_worker, initargs=(self,)
+        ) as pool:
+            tmp_result = list(
+                tqdm.tqdm(
+                    pool.imap_unordered(calculateFunctionMetadata_check_node, param_list),
+                    total=len(param_list),
+                )
+            )
+
         print("\tDone.")
 
         print("Metadata calculation done.")
@@ -1736,3 +1740,27 @@ class PETGraphX(object):
                         tmp_path.append(cur_node)
                         queue.append((cast(CUNode, self.node_at(e[1])), tmp_path))
         return [cast(CUNode, self.node_at(nid)) for nid in set(visited)]
+
+
+def initialize_calculateFunctionMetadata_worker(pet):
+    global global_pet
+    global_pet = pet
+
+
+def calculateFunctionMetadata_check_node(param_tuple):
+    global global_pet
+    func_node = param_tuple
+
+    stack: List[Node] = global_pet.direct_children(func_node)
+    func_node.children_cu_ids = [node.id for node in stack]
+
+    while stack:
+        child = stack.pop()
+        child.parent_function_id = func_node.id
+        children = global_pet.direct_children(child)
+        func_node.children_cu_ids.extend([node.id for node in children])
+        stack.extend(children)
+
+    func_node.calculate_reachability_pairs(global_pet)
+
+    return []
