@@ -97,7 +97,6 @@ def __initialize_worker(pet):
 
 def __check_node(param_tuple):
     global global_pet
-    global global_progress_bar
     local_result = []
     node = param_tuple
     if __detect_reduction(global_pet, node):
