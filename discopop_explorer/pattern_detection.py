@@ -115,7 +115,7 @@ class PatternDetectorX(object):
 
         # identify scheduling clauses
         print("IDENTIFYING SCHEDULING CLAUSES...")
-        res = self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
+        # res = self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
         print("\tDONE.")
 
         return res
@@ -126,8 +126,10 @@ class PatternDetectorX(object):
         """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
         # construct optimization graph (basically an acyclic representation of the PET)
         experiment = Experiment(project_folder_path, res, file_mapping_path)
+        print("\tcreating optimization graph...")
+        # saves optimization graph in experiment
         optimization_graph = OptimizationGraph(project_folder_path, experiment)
-
+        print("\tDetermining scheduling clauses...")
         with alive_bar(len(res.do_all)) as progress_bar:
             for do_all_suggestion in res.do_all:
                 for node_id in get_nodes_from_cu_id(
