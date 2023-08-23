@@ -1,0 +1,51 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+default_language_version:
+    python: python3.8
+
+
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.2.0
+  hooks:
+  - id: trailing-whitespace   # checks for trailing whitespace
+  - id: end-of-file-fixer     # files must be empty or end on an empty new line
+  - id: check-yaml            # check yaml files are valid
+  - id: check-added-large-files # check for large files
+  - id: check-merge-conflict  # check for merge conflict strings
+
+
+# more info: https://github.com/pre-commit/mirrors-mypy
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: 'main'  # Use the sha / tag you want to point at
+  hooks:
+    - id: mypy                  # run mypy
+      args: [--strict, --ignore-missing-imports]
+      #additional_dependencies: [dep==version.version.version, ...]
+
+# Using this mirror lets us use mypyc-compiled black, which is about 2x faster
+# more info: https://github.com/psf/black/blob/main/docs/integrations/source_version_control.md
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 23.7.0
+  hooks:
+  - id: black                  # run black fromatter on all files
+    args: [--line-length=100]
+
+
+- repo: local
+  hooks:
+  - id: licensetag
+    name: Check all files for DiscoPoP License tag
+    entry: scripts/dev/check_license.sh
+    language: script
+    # exclude: we could exclude files here, but we do it in the script instead
+
+    # TODO the script should also be used by the CI pipeline
