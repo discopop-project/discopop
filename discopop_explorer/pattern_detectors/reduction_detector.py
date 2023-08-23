@@ -8,6 +8,7 @@
 
 
 from typing import List, cast
+from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
@@ -64,12 +65,15 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     """
     result: List[ReductionInfo] = []
     nodes = pet.all_nodes(LoopNode)
-    for idx, node in enumerate(nodes):
-        # print("Reduction: ", idx, "/", len(nodes))
-        if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(pet, node):
-            node.reduction = True
-            if node.loop_iterations >= 0 and not node.contains_array_reduction:
-                result.append(ReductionInfo(pet, node))
+    with alive_bar(len(nodes)) as progress_bar:
+        for node in nodes:
+            if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(
+                pet, node
+            ):
+                node.reduction = True
+                if node.loop_iterations >= 0 and not node.contains_array_reduction:
+                    result.append(ReductionInfo(pet, node))
+            progress_bar()
 
     for pattern in result:
         pattern.get_workload(pet)

@@ -7,7 +7,7 @@
 # directory for details.
 import sys
 from typing import List, Dict, Set, Tuple, cast
-
+from alive_progress import alive_bar  # type: ignore
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
     CUNode,
@@ -68,16 +68,17 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
     """
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
-    for idx, node in enumerate(nodes):
-        # print("Do-all:", idx, "/", len(nodes))
-        if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
-            node.do_all = True
-            if (
-                not node.reduction
-                and node.loop_iterations >= 0
-                and not node.contains_array_reduction
-            ):
-                result.append(DoAllInfo(pet, node))
+    with alive_bar(len(nodes)) as progress_bar:
+        for node in nodes:
+            if not contains(result, lambda x: x.node_id == node.id) and __detect_do_all(pet, node):
+                node.do_all = True
+                if (
+                    not node.reduction
+                    and node.loop_iterations >= 0
+                    and not node.contains_array_reduction
+                ):
+                    result.append(DoAllInfo(pet, node))
+            progress_bar()
 
     for pattern in result:
         pattern.get_workload(pet)

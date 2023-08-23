@@ -19,6 +19,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegionInfo,
 )
 from discopop_explorer.variable import Variable
+from alive_progress import alive_bar  # type: ignore
 
 
 def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:
@@ -30,30 +31,33 @@ def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[Pattern
     """
     gpu_patterns: List[GPULoopPattern] = []
 
-    for node in pet.all_nodes(type=LoopNode):
-        # check for lastprivates, since they are not supported by the suggested pragma:
-        #  pragma omp target teams distribute
-        # todo: instead of omitting, suggest #pragma omp target parallel for instead
-        if any(node.id == d.node_id for d in res.do_all if len(d.last_private) == 0) or any(
-            node.id == r.node_id for r in res.reduction if len(r.last_private) == 0
-        ):
-            reduction_vars: List[Variable] = []
-            if node.id in [r.node_id for r in res.reduction]:
-                parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
-                reduction_vars = parent_reduction.reduction
-            gpulp = GPULoopPattern(
-                pet,
-                node.id,
-                node.start_line,
-                node.end_line,
-                node.loop_iterations,
-                project_folder_path,
-                reduction_vars,
-            )
-            gpulp.getNestedLoops(pet, node.id)
-            gpulp.setParentLoop(node.id)
-            gpulp.classifyLoopVars(pet, node)
-            gpu_patterns.append(gpulp)
+    loop_node_count = len(pet.all_nodes(type=LoopNode))
+    with alive_bar(loop_node_count) as progress_bar:
+        for node in pet.all_nodes(type=LoopNode):
+            # check for lastprivates, since they are not supported by the suggested pragma:
+            #  pragma omp target teams distribute
+            # todo: instead of omitting, suggest #pragma omp target parallel for instead
+            if any(node.id == d.node_id for d in res.do_all if len(d.last_private) == 0) or any(
+                node.id == r.node_id for r in res.reduction if len(r.last_private) == 0
+            ):
+                reduction_vars: List[Variable] = []
+                if node.id in [r.node_id for r in res.reduction]:
+                    parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
+                    reduction_vars = parent_reduction.reduction
+                gpulp = GPULoopPattern(
+                    pet,
+                    node.id,
+                    node.start_line,
+                    node.end_line,
+                    node.loop_iterations,
+                    project_folder_path,
+                    reduction_vars,
+                )
+                gpulp.getNestedLoops(pet, node.id)
+                gpulp.setParentLoop(node.id)
+                gpulp.classifyLoopVars(pet, node)
+                gpu_patterns.append(gpulp)
+            progress_bar()
 
     if len(gpu_patterns) == 0:
         return []

@@ -8,7 +8,7 @@
 
 
 from typing import List, Tuple, Dict, Set
-
+from alive_progress import alive_bar  # type: ignore
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
     CUNode,
@@ -165,12 +165,13 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     children_cache: Dict[Node, List[Node]] = dict()
     dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(LoopNode)
-    for idx, node in enumerate(nodes):
-        # print("Pipeline:", idx, "/", len(nodes))
-        if not contains(result, lambda x: x.node_id == node.id):
-            node.pipeline = __detect_pipeline(pet, node)
-            if node.pipeline > __pipeline_threshold:
-                result.append(PipelineInfo(pet, node))
+    with alive_bar(len(nodes)) as progress_bar:
+        for node in nodes:
+            if not contains(result, lambda x: x.node_id == node.id):
+                node.pipeline = __detect_pipeline(pet, node)
+                if node.pipeline > __pipeline_threshold:
+                    result.append(PipelineInfo(pet, node))
+            progress_bar()
 
     for pattern in result:
         pattern.get_workload(pet)

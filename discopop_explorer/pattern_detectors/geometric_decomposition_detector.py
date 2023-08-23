@@ -14,6 +14,7 @@ from .PatternInfo import PatternInfo
 from ..PETGraphX import FunctionNode, LoopNode, NodeID, PETGraphX, NodeType, Node, EdgeType
 from ..utils import classify_task_vars, get_child_loops, contains
 from ..variable import Variable
+from alive_progress import alive_bar  # type: ignore
 
 __loop_iterations: Dict[NodeID, int] = {}
 
@@ -85,16 +86,17 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
     global __loop_iterations
     __loop_iterations = {}
     nodes = pet.all_nodes(FunctionNode)
-    for idx, node in enumerate(nodes):
-        # print("Geo. Dec.:", idx, "/", len(nodes))
-        if not contains(
-            result, lambda x: x.node_id == node.id
-        ) and __detect_geometric_decomposition(pet, node):
-            node.geometric_decomposition = True
-            test, min_iter = __test_chunk_limit(pet, node)
-            if test and min_iter is not None:
-                result.append(GDInfo(pet, node, min_iter))
-                # result.append(node.id)
+    with alive_bar(len(nodes)) as progress_bar:
+        for node in nodes:
+            if not contains(
+                result, lambda x: x.node_id == node.id
+            ) and __detect_geometric_decomposition(pet, node):
+                node.geometric_decomposition = True
+                test, min_iter = __test_chunk_limit(pet, node)
+                if test and min_iter is not None:
+                    result.append(GDInfo(pet, node, min_iter))
+                    # result.append(node.id)
+            progress_bar()
 
     for pattern in result:
         pattern.get_workload(pet)
