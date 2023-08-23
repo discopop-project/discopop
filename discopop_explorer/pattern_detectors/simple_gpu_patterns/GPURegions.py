@@ -22,6 +22,7 @@ from .GPUMemory import map_node
 from discopop_explorer.utils import is_loop_index2
 from discopop_explorer.variable import Variable
 from ..PatternInfo import PatternInfo
+from alive_progress import alive_bar
 
 
 class GPURegionInfo(PatternInfo):
@@ -202,136 +203,143 @@ class GPURegions:
         self.findNextLoop()
 
         self.cascadingLoopsInRegions[regionNum].append(self.gpu_loop_patterns[0].nodeID)
-        for i in range(0, len(self.gpu_loop_patterns)):
-            if self.gpu_loop_patterns[i].nextLoop is not None:
-                if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
-                    if self.reachableCUs(
-                        self.gpu_loop_patterns[i].nodeID,
-                        cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
-                    ):
-                        self.cascadingLoopsInRegions[regionNum].append(
-                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
-                        )
-                    else:
-                        regionNum += 1
-                        self.cascadingLoopsInRegions.append([])
-                        self.cascadingLoopsInRegions[regionNum].append(
-                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
-                        )
+        print("\tidentify cascading loops...")
+        with alive_bar(len(self.gpu_loop_patterns)) as progress_bar:
+            for i in range(0, len(self.gpu_loop_patterns)):
+                if self.gpu_loop_patterns[i].nextLoop is not None:
+                    if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
+                        if self.reachableCUs(
+                            self.gpu_loop_patterns[i].nodeID,
+                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
+                        ):
+                            self.cascadingLoopsInRegions[regionNum].append(
+                                cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
+                            )
+                        else:
+                            regionNum += 1
+                            self.cascadingLoopsInRegions.append([])
+                            self.cascadingLoopsInRegions[regionNum].append(
+                                cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
+                            )
+                progress_bar()
 
         self.numRegions = regionNum + 1
 
     def determineDataMapping(self) -> None:
         """determine data mapping for each GPU Region and their contained GPU Loops."""
 
-        for region in self.cascadingLoopsInRegions:
-            # determine CUs which belong to the region (= which are located inside the region)
-            region_cus: List[Node] = []
-            region_loop_patterns: List[GPULoopPattern] = []
-            for loop_id in region:
-                loop_node: LoopNode = cast(LoopNode, self.pet.node_at(loop_id))
-                gpu_lp: GPULoopPattern = [
-                    p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
-                ][0]
-                region_loop_patterns.append(gpu_lp)
-                region_cus += [
-                    cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus
+        print("\tdetermine data mapping...")
+        with alive_bar(len(self.cascadingLoopsInRegions)) as progress_bar:
+            for region in self.cascadingLoopsInRegions:
+                # determine CUs which belong to the region (= which are located inside the region)
+                region_cus: List[Node] = []
+                region_loop_patterns: List[GPULoopPattern] = []
+                for loop_id in region:
+                    loop_node: LoopNode = cast(LoopNode, self.pet.node_at(loop_id))
+                    gpu_lp: GPULoopPattern = [
+                        p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
+                    ][0]
+                    region_loop_patterns.append(gpu_lp)
+                    region_cus += [
+                        cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus
+                    ]
+                    # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
+                    loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
+                    predecessors = [
+                        s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)
+                    ]
+                    for predecessor_id in predecessors:
+                        predecessor_node = self.pet.node_at(predecessor_id)
+                        if (
+                            predecessor_node.start_line >= loop_node.start_line
+                            and predecessor_node.end_line <= loop_node.end_line
+                        ):
+                            # predecessor is loop initialization
+                            if predecessor_node not in region_cus:
+                                region_cus.append(predecessor_node)
+
+                self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
+
+                # determine start and end line of region
+                region_start_line = min([cu.start_line for cu in region_cus])
+                region_end_line = max([cu.end_line for cu in region_cus])
+
+                # determine variables which are written outside the region and read inside
+                consumed_vars: List[str] = []
+                for cu in region_cus:
+                    in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
+
+                    # var is consumed, if incoming RAW dep exists
+                    for sink_cu_id, source_cu_id, dep in in_dep_edges:
+                        # unpack dep for sake of clarity
+                        sink_line = dep.sink_line
+                        source_line = dep.source_line
+                        var_name = dep.var_name
+
+                        if self.pet.node_at(source_cu_id) not in region_cus:
+                            if dep.dtype == DepType.RAW:
+                                if dep.var_name not in consumed_vars and dep.var_name is not None:
+                                    consumed_vars.append(cast(str, dep.var_name))
+
+                # determine variables which are read afterwards and written in the region
+                produced_vars: List[str] = []
+                for cu in region_cus:
+                    out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
+                    # var is produced, if outgoing RAW or WAW dep exists
+                    for sink_cu_id, source_cu_id, dep in out_dep_edges:
+                        # unpack dep for sake of clarity
+                        sink_line = dep.sink_line
+                        source_line = dep.source_line
+                        var_name = dep.var_name
+                        if self.pet.node_at(sink_cu_id) not in region_cus:
+                            if dep.dtype in [DepType.RAW, DepType.WAW]:
+                                if dep.var_name not in produced_vars and dep.var_name is not None:
+                                    produced_vars.append(cast(str, dep.var_name))
+
+                # gather consumed, produced, allocated and deleted variables from mapping information
+                map_to_vars: List[str] = []
+                for loop_pattern in region_loop_patterns:
+                    map_to_vars += [
+                        v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
+                    ]
+                map_to_vars = list(set(map_to_vars))
+
+                map_from_vars: List[str] = []
+                for loop_pattern in region_loop_patterns:
+                    map_from_vars += [
+                        v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
+                    ]
+                map_from_vars = list(set(map_from_vars))
+
+                map_alloc_vars: List[str] = []
+                for loop_pattern in region_loop_patterns:
+                    map_alloc_vars += [v.name for v in loop_pattern.map_type_alloc]
+                map_alloc_vars = list(set(map_alloc_vars))
+
+                map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
+
+                # allocate unknown variables
+                map_alloc_vars += [
+                    var
+                    for var in map_from_vars
+                    if var not in consumed_vars + map_to_vars + map_alloc_vars
                 ]
-                # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
-                loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
-                predecessors = [
-                    s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)
+                map_alloc_vars = list(set(map_alloc_vars))
+
+                # store results
+                self.map_type_from_by_region[tuple(region)] = [
+                    var for var in map_from_vars if var not in map_to_from_vars
                 ]
-                for predecessor_id in predecessors:
-                    predecessor_node = self.pet.node_at(predecessor_id)
-                    if (
-                        predecessor_node.start_line >= loop_node.start_line
-                        and predecessor_node.end_line <= loop_node.end_line
-                    ):
-                        # predecessor is loop initialization
-                        if predecessor_node not in region_cus:
-                            region_cus.append(predecessor_node)
-
-            self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
-
-            # determine start and end line of region
-            region_start_line = min([cu.start_line for cu in region_cus])
-            region_end_line = max([cu.end_line for cu in region_cus])
-
-            # determine variables which are written outside the region and read inside
-            consumed_vars: List[str] = []
-            for cu in region_cus:
-                in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
-
-                # var is consumed, if incoming RAW dep exists
-                for sink_cu_id, source_cu_id, dep in in_dep_edges:
-                    # unpack dep for sake of clarity
-                    sink_line = dep.sink_line
-                    source_line = dep.source_line
-                    var_name = dep.var_name
-
-                    if self.pet.node_at(source_cu_id) not in region_cus:
-                        if dep.dtype == DepType.RAW:
-                            if dep.var_name not in consumed_vars and dep.var_name is not None:
-                                consumed_vars.append(cast(str, dep.var_name))
-
-            # determine variables which are read afterwards and written in the region
-            produced_vars: List[str] = []
-            for cu in region_cus:
-                out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
-                # var is produced, if outgoing RAW or WAW dep exists
-                for sink_cu_id, source_cu_id, dep in out_dep_edges:
-                    # unpack dep for sake of clarity
-                    sink_line = dep.sink_line
-                    source_line = dep.source_line
-                    var_name = dep.var_name
-                    if self.pet.node_at(sink_cu_id) not in region_cus:
-                        if dep.dtype in [DepType.RAW, DepType.WAW]:
-                            if dep.var_name not in produced_vars and dep.var_name is not None:
-                                produced_vars.append(cast(str, dep.var_name))
-
-            # gather consumed, produced, allocated and deleted variables from mapping information
-            map_to_vars: List[str] = []
-            for loop_pattern in region_loop_patterns:
-                map_to_vars += [
-                    v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
+                self.map_type_to_by_region[tuple(region)] = [
+                    var for var in map_to_vars if var not in map_to_from_vars
                 ]
-            map_to_vars = list(set(map_to_vars))
+                self.map_type_tofrom_by_region[tuple(region)] = map_to_from_vars
+                self.map_type_alloc_by_region[tuple(region)] = map_alloc_vars
+                self.map_type_delete_by_region[tuple(region)] = []
+                self.produced_vars[tuple(region)] = produced_vars
+                self.consumed_vars[tuple(region)] = consumed_vars
 
-            map_from_vars: List[str] = []
-            for loop_pattern in region_loop_patterns:
-                map_from_vars += [
-                    v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
-                ]
-            map_from_vars = list(set(map_from_vars))
-
-            map_alloc_vars: List[str] = []
-            for loop_pattern in region_loop_patterns:
-                map_alloc_vars += [v.name for v in loop_pattern.map_type_alloc]
-            map_alloc_vars = list(set(map_alloc_vars))
-
-            map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
-
-            # allocate unknown variables
-            map_alloc_vars += [
-                var
-                for var in map_from_vars
-                if var not in consumed_vars + map_to_vars + map_alloc_vars
-            ]
-            map_alloc_vars = list(set(map_alloc_vars))
-
-            # store results
-            self.map_type_from_by_region[tuple(region)] = [
-                var for var in map_from_vars if var not in map_to_from_vars
-            ]
-            self.map_type_to_by_region[tuple(region)] = [
-                var for var in map_to_vars if var not in map_to_from_vars
-            ]
-            self.map_type_tofrom_by_region[tuple(region)] = map_to_from_vars
-            self.map_type_alloc_by_region[tuple(region)] = map_alloc_vars
-            self.map_type_delete_by_region[tuple(region)] = []
-            self.produced_vars[tuple(region)] = produced_vars
-            self.consumed_vars[tuple(region)] = consumed_vars
+                progress_bar()
 
     def old_mapData(self) -> None:
         """
@@ -479,32 +487,35 @@ class GPURegions:
     def get_gpu_region_info(self, pet: PETGraphX, project_folder_path: str) -> List[GPURegionInfo]:
         """Construct GPURegionInfo representations of all identified GPU Regions and return them in a list"""
         gpu_region_info: List[GPURegionInfo] = []
-        for region in self.cascadingLoopsInRegions:
-            contained_loop_patterns = [
-                pattern for pattern in self.gpu_loop_patterns if pattern.nodeID in region
-            ]
-            # save OpenMP constructs in GPULoops for the exporting to JSON
-            for loop in contained_loop_patterns:
-                loop.save_omp_constructs(pet, project_folder_path)
-            device_cu_ids = self.cu_ids_by_region[tuple(region)]
-            for loop in contained_loop_patterns:
-                for func_node_id in loop.called_functions:
-                    for child in pet.direct_children(pet.node_at(func_node_id)):
-                        device_cu_ids.append(child.id)
+        print("\tget gpu region info...")
+        with alive_bar(len(self.cascadingLoopsInRegions)) as progress_bar:
+            for region in self.cascadingLoopsInRegions:
+                contained_loop_patterns = [
+                    pattern for pattern in self.gpu_loop_patterns if pattern.nodeID in region
+                ]
+                # save OpenMP constructs in GPULoops for the exporting to JSON
+                for loop in contained_loop_patterns:
+                    loop.save_omp_constructs(pet, project_folder_path)
+                device_cu_ids = self.cu_ids_by_region[tuple(region)]
+                for loop in contained_loop_patterns:
+                    for func_node_id in loop.called_functions:
+                        for child in pet.direct_children(pet.node_at(func_node_id)):
+                            device_cu_ids.append(child.id)
 
-            device_cu_ids = list(set(device_cu_ids))
-            current_info = GPURegionInfo(
-                self.pet,
-                contained_loop_patterns,
-                device_cu_ids,
-                self.map_type_to_by_region[tuple(region)],
-                self.map_type_from_by_region[tuple(region)],
-                self.map_type_tofrom_by_region[tuple(region)],
-                self.map_type_alloc_by_region[tuple(region)],
-                self.map_type_delete_by_region[tuple(region)],
-                self.produced_vars[tuple(region)],
-                self.consumed_vars[tuple(region)],
-                project_folder_path,
-            )
-            gpu_region_info.append(current_info)
+                device_cu_ids = list(set(device_cu_ids))
+                current_info = GPURegionInfo(
+                    self.pet,
+                    contained_loop_patterns,
+                    device_cu_ids,
+                    self.map_type_to_by_region[tuple(region)],
+                    self.map_type_from_by_region[tuple(region)],
+                    self.map_type_tofrom_by_region[tuple(region)],
+                    self.map_type_alloc_by_region[tuple(region)],
+                    self.map_type_delete_by_region[tuple(region)],
+                    self.produced_vars[tuple(region)],
+                    self.consumed_vars[tuple(region)],
+                    project_folder_path,
+                )
+                gpu_region_info.append(current_info)
+                progress_bar()
         return gpu_region_info

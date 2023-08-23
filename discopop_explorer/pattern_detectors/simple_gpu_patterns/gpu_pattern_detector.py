@@ -32,6 +32,7 @@ def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[Pattern
     gpu_patterns: List[GPULoopPattern] = []
 
     loop_node_count = len(pet.all_nodes(type=LoopNode))
+    print("\tcreate gpu patterns...")
     with alive_bar(loop_node_count) as progress_bar:
         for node in pet.all_nodes(type=LoopNode):
             # check for lastprivates, since they are not supported by the suggested pragma:
