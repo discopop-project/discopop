@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages  # type:ignore
 
 from discopop_library.global_data.version.utils import get_version
 
@@ -46,11 +46,12 @@ setup(
     author="TU Darmstadt and Iowa State University",
     author_email="discopop@lists.parallel.informatik.tu-darmstadt.de",
     description="DiscoPoP is a tool that helps software developers parallelize their "
-                "programs with threads. It discovers potential parallelism in a "
-                "sequential program and makes recommendations on how to exploit it.",
-#long_description=open(SRC / "README.md").read(),
+    "programs with threads. It discovers potential parallelism in a "
+    "sequential program and makes recommendations on how to exploit it.",
+    # long_description=open(SRC / "README.md").read(),
     long_description_content_type="text/markdown",
     install_requires=get_requirements(),
+    extras_require={"dev": ["mypy", "black", "pre-commit"]},
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [
@@ -58,7 +59,7 @@ setup(
             "discopop_profiler=discopop_profiler.__main__:main",
             "discopop_wizard=discopop_wizard.__main__:main",
             "discopop_code_generator=discopop_library.CodeGenerator.__main__:main",
-            "discopop_optimizer=discopop_library.discopop_optimizer.__main__:main"
+            "discopop_optimizer=discopop_library.discopop_optimizer.__main__:main",
         ]
     },
     zip_safe=True,
