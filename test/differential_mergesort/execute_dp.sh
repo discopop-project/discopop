@@ -9,5 +9,3 @@ clang++ mergesort.ll -o out -L"../../build/rtlib" -lpthread;
 clang mergesort.cpp -c -g -O0 -S -emit-llvm -fno-discard-value-names -Xclang -load -Xclang ../../build/libi/LLVMDPReduction.so -mllvm -fm-path -mllvm FileMapping.txt -o mergesort.ll;
 clang++ mergesort.ll -o out -L"../../build/rtlib" -lDiscoPoP_RT -lpthread;
 ./out
-
-

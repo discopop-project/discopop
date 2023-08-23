@@ -10,7 +10,7 @@
 #####################################################################################
 # DiscoPoP Execution Wizard
 # author: initial version by Bertin Görlich, November 2022
-# description: 
+# description:
 #   Use this script to analyze a project with DiscoPoP, that is built using Makefiles
 #####################################################################################
 
@@ -36,7 +36,7 @@ REQUIRED ARGUMENTS: Please use absolut paths!
 PROFILING SETTINGS:
  --memory-profiling-skip-function-arguments     disable the memory profiling for allocations which belong
                                                 to function arguments.
-  
+
 
 OPTIONAL ARGUMENTS:
  --llvm-clang <file>    path to clang executable
@@ -317,7 +317,7 @@ export LLVM_BITCODE_GENERATION_FLAGS="-g -O0 -fno-discard-value-names"
 #export LLVM_LINK_FLAGS=""
 
 log -v "GLLVM SANITY CHECK:
-$($GLLVM/gsanity-check)" 
+$($GLLVM/gsanity-check)"
 
 #####
 # Perform preliminary checks

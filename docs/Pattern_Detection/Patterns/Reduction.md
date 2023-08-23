@@ -66,4 +66,4 @@ After interpreting and implementing the suggestion, the resulting, now parallel,
     #pragma omp parallel for private(i) firstprivate(global_array) reduction(*:local_var)
     for (int i = 0; i < N; i++) {
         local_var *= global_array[i];
-    } 
+    }

@@ -15,7 +15,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
-#include <iostream>   // std::cerr 
+#include <iostream>   // std::cerr
 #include <fstream>
 #include <vector>
 #include <utility>
@@ -38,9 +38,9 @@ namespace dputil {
             return "*";
 
         stringstream ss;
-        // unpack metadata 
+        // unpack metadata
         // potentially TODO, currently not necessary
-        
+
         // remove metadata
         lid &= 0x00000000FFFFFFFF;
 

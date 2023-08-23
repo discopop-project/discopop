@@ -30,7 +30,7 @@ The reported values shall be interpreted as follows:
 Note: Disabled, since these values are not determined correctly at the moment. Values will be added to the result once their implementations are fixed.
 * `iterations: <num>` specifies the counted amount of iterations the loop has executed during the profiling.
 * `instructions: <num>` specifies the summed number of instructions executed within one iteration of the loop body
-* `TODO: workload: <num>` provides an arbitrary value which represents the computational weight of one iteration of the loop. 
+* `TODO: workload: <num>` provides an arbitrary value which represents the computational weight of one iteration of the loop.
 -->
 * `pragma:`shows which type of OpenMP pragma shall be inserted before the target loop in order to parallelize it.
 * `private: [<vars>]` lists a set of variables which have been identified as thread-`private`

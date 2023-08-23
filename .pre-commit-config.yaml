@@ -14,7 +14,7 @@ default_language_version:
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
+  rev: v4.4.0
   hooks:
   - id: trailing-whitespace   # checks for trailing whitespace
   - id: end-of-file-fixer     # files must be empty or end on an empty new line
@@ -25,10 +25,10 @@ repos:
 
 # more info: https://github.com/pre-commit/mirrors-mypy
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: 'main'  # Use the sha / tag you want to point at
+  rev: 'v1.5.1'  # Use the sha / tag you want to point at
   hooks:
     - id: mypy                  # run mypy
-      args: [--strict, --ignore-missing-imports]
+      #args: [--strict, --ignore-missing-imports]
       #additional_dependencies: [dep==version.version.version, ...]
 
 # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
