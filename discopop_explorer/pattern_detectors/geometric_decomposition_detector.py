@@ -76,32 +76,58 @@ class GDInfo(PatternInfo):
         )
 
 
+global_pet = None
+
+
 def run_detection(pet: PETGraphX) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
+    import tqdm  # type: ignore
+    from multiprocessing import Pool
+
+    global global_pet
+    global_pet = pet
+
     result: List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
     nodes = pet.all_nodes(FunctionNode)
-    with alive_bar(len(nodes)) as progress_bar:
-        for node in nodes:
-            if not contains(
-                result, lambda x: x.node_id == node.id
-            ) and __detect_geometric_decomposition(pet, node):
-                node.geometric_decomposition = True
-                test, min_iter = __test_chunk_limit(pet, node)
-                if test and min_iter is not None:
-                    result.append(GDInfo(pet, node, min_iter))
-                    # result.append(node.id)
-            progress_bar()
+
+    param_list = [(node) for node in nodes]
+    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
+        )
+    for local_result in tmp_result:
+        result += local_result
+    print("GLOBAL RES: ", result)
 
     for pattern in result:
         pattern.get_workload(pet)
 
     return result
+
+
+def __initialize_worker(pet):
+    global global_pet
+    global_pet = pet
+
+
+def __check_node(param_tuple):
+    global global_pet
+    local_result = []
+    node = param_tuple
+
+    if __detect_geometric_decomposition(global_pet, node):
+        node.geometric_decomposition = True
+        test, min_iter = __test_chunk_limit(global_pet, node)
+        if test and min_iter is not None:
+            local_result.append(GDInfo(global_pet, node, min_iter))
+
+    return local_result
 
 
 def __test_chunk_limit(pet: PETGraphX, node: Node) -> Tuple[bool, Optional[int]]:
