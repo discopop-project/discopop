@@ -32,7 +32,9 @@ def execute_tag_filtered_configurations(args: Arguments, source_dir: str):
         # get tags from config
         # get tags from arguments
         # if an overlap exists, the configurations shall be executed
-        overlapping_tags = [tag for tag in config.get_tags() if tag in args.execute_configurations_with_tag]
+        overlapping_tags = [
+            tag for tag in config.get_tags() if tag in args.execute_configurations_with_tag
+        ]
         if len(overlapping_tags) > 0:
             filtered_execution_configs.append(config)
 
@@ -42,8 +44,9 @@ def execute_tag_filtered_configurations(args: Arguments, source_dir: str):
         execution_views.append(ExecutionView(config, wizard, None, headless_mode=True))
 
 
-def __load_data(args: Arguments, source_dir: str) -> Tuple[
-    DiscoPoPConfigurationWizard, Settings, List[ExecutionConfiguration]]:
+def __load_data(
+    args: Arguments, source_dir: str
+) -> Tuple[DiscoPoPConfigurationWizard, Settings, List[ExecutionConfiguration]]:
     """Loads and returns a DiscoPoPConfigurationWizard, Settings, and a list of ExecutionConfigurations."""
     config_dir = os.path.join(source_dir, ".config")
     # load settings
@@ -56,7 +59,9 @@ def __load_data(args: Arguments, source_dir: str) -> Tuple[
     for filename in os.listdir(os.path.join(config_dir, "execution_configurations")):
         if not filename.endswith(".json"):
             continue
-        with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), 'r') as json_file:
+        with open(
+            os.path.join(os.path.join(config_dir, "execution_configurations"), filename), "r"
+        ) as json_file:
             config = ExecutionConfiguration(wizard)
             config.init_from_json(json_file)
             execution_configs.append(config)

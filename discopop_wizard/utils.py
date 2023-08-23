@@ -21,10 +21,10 @@ class Platform(Enum):
 
 def get_platform():
     platforms = {
-        'linux1': Platform.LINUX,
-        'linux2': Platform.LINUX,
-        'darwin': Platform.OSX,
-        'win32': Platform.WINDOWS
+        "linux1": Platform.LINUX,
+        "linux2": Platform.LINUX,
+        "darwin": Platform.OSX,
+        "win32": Platform.WINDOWS,
     }
     if platform not in platforms:
         return Platform.UNKNOWN
@@ -43,9 +43,13 @@ def support_scrolling(canvas):
             canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
             canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
         elif pf == Platform.WINDOWS:
-            canvas.bind_all("<MouseWheel>", functools.partial(_on_mousewheel, scroll=(-1 * (event.delta / 120))))
+            canvas.bind_all(
+                "<MouseWheel>", functools.partial(_on_mousewheel, scroll=(-1 * (event.delta / 120)))
+            )
         elif pf == Platform.OSX:
-            canvas.bind_all("<MouseWheel>", functools.partial(_on_mousewheel, scroll=-1 * event.delta))
+            canvas.bind_all(
+                "<MouseWheel>", functools.partial(_on_mousewheel, scroll=-1 * event.delta)
+            )
         else:
             canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
             canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
@@ -61,5 +65,5 @@ def support_scrolling(canvas):
             canvas.unbind_all("<Button-4>")
             canvas.unbind_all("<Button-5>")
 
-    canvas.bind('<Enter>', _bind_to_mousewheel)
-    canvas.bind('<Leave>', _unbind_from_mousewheel)
+    canvas.bind("<Enter>", _bind_to_mousewheel)
+    canvas.bind("<Leave>", _unbind_from_mousewheel)

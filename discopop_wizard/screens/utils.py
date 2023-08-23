@@ -29,9 +29,15 @@ class ToolTip(object):
         self.tip_window = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(1)
         tw.wm_geometry("+%d+%d" % (x, y))
-        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
-                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
-                         font=("tahoma", "8", "normal"))
+        label = tk.Label(
+            tw,
+            text=self.text,
+            justify=tk.LEFT,
+            background="#ffffe0",
+            relief=tk.SOLID,
+            borderwidth=1,
+            font=("tahoma", "8", "normal"),
+        )
         label.pack(ipadx=1)
 
     def hidetip(self):
@@ -50,5 +56,5 @@ def create_tool_tip(widget, text):
     def leave(event):
         tool_tip.hidetip()
 
-    widget.bind('<Enter>', enter)
-    widget.bind('<Leave>', leave)
+    widget.bind("<Enter>", enter)
+    widget.bind("<Leave>", leave)
