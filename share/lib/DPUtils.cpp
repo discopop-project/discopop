@@ -18,7 +18,7 @@ cl::opt <string> FileMappingPath("fm-path", cl::init(""),
                                  cl::desc("Specify file mapping location"), cl::Hidden);
 
 cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", cl::init(false),
-                                                            cl::desc("disable the memory profiling for allocations which belong to function arguments"), cl::Hidden);                                 
+                                                            cl::desc("disable the memory profiling for allocations which belong to function arguments"), cl::Hidden);
 
 namespace dputil {
 
@@ -91,7 +91,7 @@ namespace dputil {
 
         }
         lid = (fileID << LIDSIZE) + lno;
-        
+
         // get and store metadata in the first 32 Bits if necessary
         // Layout metadata:
             // 8 bits reserved for loop id (added dynamically)

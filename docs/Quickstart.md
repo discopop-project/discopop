@@ -23,7 +23,7 @@ The DiscoPoP GUI can be started by simply calling:
 
     discopop_wizard
 
-The first start will take some time due to downloading and setting up the docker container for the profiling. 
+The first start will take some time due to downloading and setting up the docker container for the profiling.
 Since the results can be cached, successive executions of the `discopop_wizard` will be faster.
 
 ## Provided Quickstart Example
@@ -40,9 +40,9 @@ Only three of the possible arguments are required to execute and analyze the pro
 Click `Save` to persist the changes and `Execute` to start the profiling and analysis pipeline.
 
 Once everything is finished, the identified parallelization suggestions will be shown automatically.
-Clicking on any of them opens the code preview, which highlights the parallelizable source code section and shows the suggested OpenMP pragma. 
+Clicking on any of them opens the code preview, which highlights the parallelizable source code section and shows the suggested OpenMP pragma.
 Details regarding a specific suggestion can be shown by hovering over the respective button.
 
 ![Example suggestions](img/quickstart_example_2.png)
 
-For further details and explanations, please refer to the [Tutorial](Tutorials/Tutorials.md) as well as the pages dedicated to the [Profiling](Profiling/Profiling.md) and [Pattern Detection](Pattern_Detection/Pattern_Detection.md). 
+For further details and explanations, please refer to the [Tutorial](Tutorials/Tutorials.md) as well as the pages dedicated to the [Profiling](Profiling/Profiling.md) and [Pattern Detection](Pattern_Detection/Pattern_Detection.md).

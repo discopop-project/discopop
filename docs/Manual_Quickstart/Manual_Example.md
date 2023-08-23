@@ -9,7 +9,7 @@ nav_order: 3
 
 ## Prerequisites
 We assume that you have finished the [manual setup](Manual_Setup.md) already.
-In order to follow the example, please make sure you know the paths to the following executables, files and folders. 
+In order to follow the example, please make sure you know the paths to the following executables, files and folders.
 Occurrences of names in capital letters (e.g. `DP_SOURCE`) should be replaced by the respective (absolute) paths.
 
 - From installation of prerequisites:
@@ -62,7 +62,7 @@ Specifically, we have to link the DiscoPoP Runtime libraries in order to allow t
 
     clang++ example_dp.ll -o out_prof -LDP_BUILD/rtlib -lDiscoPoP_RT -lpthread
 
-### Step 1.5: 
+### Step 1.5:
 To execute the profiling and finish the collection of the required data, the created executable `out_prof` needs to be executed.
 
     ./out_prof
@@ -90,11 +90,11 @@ Looking at the created suggestions there are two ways that the code can be paral
 
 * **Implementing the Do-All and Reduction Patterns**<br/> To implement the `Do-All` and `Reduction` patterns all we have to do is to add the suggested pragma before each loop. Make sure to add the `reduction` clause when implementing Reductions! The DiscoPoP Explorer also suggests classifications for used variables to ensure correctness and improve performance. These should be added as clauses to the pragma. Note that OpenMP implicitly makes some variables like the loop index a private variable so we can omit the corresponding clauses.
   - To implement the `Do-All` suggestion we add the following line before the corresponding loop.
-      
+
         #pragma omp parallel for shared(Arr,N)
 
   - To implement the `Reduction` suggestion we add the following line before the corresponding loop.
-    
+
         # pragma omp parallel for reduction(+:sum) shared(Arr,N)
 
   - For this specific example, when we implement both patterns it is better to open only one parallel region with `#pragma omp parallel` and use the `pragma omp for` before each loop:
@@ -115,7 +115,7 @@ Please note that it is not possible to implement both the Geometric Decompositio
 ## Step 4: Compile the parallelized application
 After changing the source recompile the edited source code with the `-fopenmp` flag to enable openMP.
 We provide example solutions on how to parallelize the patterns in the files `solution1.cpp` and `solution2.cpp`. You can compile them using:
-    
+
     clang++ solution1.cpp -fopenmp -o solution1
     clang++ solution2.cpp -fopenmp -o solution2
 

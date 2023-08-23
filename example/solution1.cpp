@@ -18,7 +18,7 @@ int main(){
 
     #pragma omp parallel shared(Arr,N)
     {
-        #pragma omp for 
+        #pragma omp for
         for(int i = 0; i < N; i++){
             Arr[i] = i % 13;
         }

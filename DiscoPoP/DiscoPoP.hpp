@@ -252,7 +252,7 @@ namespace {
         Type *pointsToStruct(PointerType *PTy);
 
         Value *determineVariableName_dynamic(Instruction *const I);
-        
+
         string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/, bool disable_MetadataMap);
 
         void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,

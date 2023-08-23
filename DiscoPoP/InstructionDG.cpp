@@ -81,7 +81,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
                + "NOM" + " "
                + depType + " *|"
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first     // use original variable name instead of LLVM IR SSA name
-               + "(" 
+               + "("
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
                + ")";
     } else if (DebugLoc dl = J->getDebugLoc()) {
@@ -93,7 +93,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first     // use original variable name instead of LLVM IR SSA name
-               + "(" 
+               + "("
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
                + ")";
     } else {
@@ -105,7 +105,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, 
                + to_string(fid) + ":"
                + getInstructionLine(J) + "|"
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].first      // use original variable name instead of LLVM IR SSA name
-               + "(" 
+               + "("
                + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second
                + ")";
     }

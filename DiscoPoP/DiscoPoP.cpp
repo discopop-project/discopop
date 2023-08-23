@@ -72,7 +72,7 @@ void DiscoPoP::setupCallbacks() {
 
     DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
                                                 Void,
-                           
+
                                                 Int32, CharPtr, Int64, Int64, Int64, Int64
     );
 
@@ -282,7 +282,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
         if(globalVariable){
             MDNode *metadata = globalVariable->getMetadata("dbg");
             if(metadata){
-                if(isa<DIGlobalVariableExpression>(metadata)){ 
+                if(isa<DIGlobalVariableExpression>(metadata)){
                     varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
                 }
             }
@@ -805,7 +805,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 }
 
                 string varSizeInBytes = to_string(variableType->getScalarSizeInBits()/8);
-                
+
                 varDefLine = determineVariableDefLine(&*instruction);
 
                 bool readAccess = isa<LoadInst>(instruction);
@@ -1167,9 +1167,9 @@ bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searched
             return true;
         }
     }
-    
+
     return false;
-    
+
 }
 
 
@@ -2061,7 +2061,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
     set <string> globalVariablesSet; // list of variables which appear in more than
     // one basic block
     map <string, vector<CU *>> BBIDToCUIDsMap;
-    
+
     determineFileID(F, fileID);
 
     // only instrument functions belonging to project source files
@@ -3153,7 +3153,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 instrumentAlloca(AI);
             }
 
-            
+
         }
             // load instruction
         else if (isa<LoadInst>(BI)) {
@@ -3350,7 +3350,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true), ConstantInt::get(Int64, elementSizeInBytes)));
     args.push_back(IRB.CreateIntCast(numElements, Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
-}   
+}
 
 void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
@@ -3680,7 +3680,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
             //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
             Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
             args.push_back(startAddr);
-            
+
             Value *endAddr = startAddr;
             uint64_t numElements = 1;
             uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();

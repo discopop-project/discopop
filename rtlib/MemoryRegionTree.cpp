@@ -25,7 +25,7 @@ MemoryRegionTree::MemoryRegionTree(){
 void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t memoryRegionId, int32_t *tempAddrCount, int32_t NUM_WORKERS){
     if(MRTVerbose)
         cout << "DBG: MRT: allocating: " << startAddr << " - " << endAddr << " as " << memoryRegionId << "\n";
-    
+
     // create leaf node for start of the allocated region
     MRTNode *currentNode = root;
     MRTNode* next_level_node = nullptr;
@@ -61,14 +61,14 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
         // remove region entry if existing
         parent->memoryRegionId = 0;
 
-        // register or set memory region of missing children 
+        // register or set memory region of missing children
         for(ADDR child_id = 0; child_id < 16; child_id++){
             child = parent->children[child_id];
             // construct addr of child
             child_addr = parent->addr;
             child_addr = (child_addr | (((child_id << 60) >> 4*(level-1)) & get_level_shifting_mask(level-1)));
 
-            // if child is missing create it:                 
+            // if child is missing create it:
             if(child == nullptr){
                 // check if child is contained in registered memory region
                 if(startAddr > child_addr && child_addr < endAddr){
@@ -133,7 +133,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr, int64_t mem
                         cout << "DBG: MRT: registered contained child\n";
                 }
             }
-        }   
+        }
     }
     if(MRTVerbose)
         cout << "DBG: MRT: found leaf node for endAddr: " << endAddr << "\n";
@@ -162,7 +162,7 @@ string MemoryRegionTree::get_memory_region_id(string fallback, ADDR addr){
         if(readMemoryRegionId != 0){
             memoryRegionId = readMemoryRegionId;
         }
-        
+
 
         // traverse tree downwards
         next_level_node = currentNode->children[char_at_level];

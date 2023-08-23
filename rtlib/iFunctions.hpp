@@ -40,7 +40,7 @@ namespace __dp {
         WAR,
         WAW,
         INIT,
-        RAW_II_0, RAW_II_1, RAW_II_2, 
+        RAW_II_0, RAW_II_1, RAW_II_2,
         WAR_II_0, WAR_II_1, WAR_II_2,
         WAW_II_0, WAW_II_1, WAW_II_2,
          // .._II_x to represent inter-iteration dependencies by loop level in case of nested loops
@@ -54,7 +54,7 @@ namespace __dp {
         AccessInfo() : lid(0) {}
 
         bool isRead;
-        // hybrid analysis 
+        // hybrid analysis
         bool skip;
         // End HA
         LID lid;
@@ -111,7 +111,7 @@ namespace __dp {
         LoopTable(){};
 
         vector <LoopTableEntry> contents;
-        
+
         inline LoopTableEntry& top(){
             return contents.back();
         }

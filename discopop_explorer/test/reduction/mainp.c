@@ -16,7 +16,7 @@ int simpleLoop(int n)
 int main()
 {
     int res = simpleLoop(10);
-    
+
     printf("%d\n", res);
 
     return 0;

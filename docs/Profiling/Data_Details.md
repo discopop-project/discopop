@@ -17,7 +17,7 @@ The xml file contains much information about the program. There are four types o
 Function nodes which are represented by type 1 contain information about functions in each file of the source code. Function nodes contain children nodes which can be CUs, loop nodes, and dummies. Also, you can find the list of function arguments there.
 
 Nodes with type 0 are CUs. They follow a read-after-write pattern. They are the atoms of parallelization; meaning that we do not look inside a CU for parallelization opportunities. The information that we report for CUs are the following:
- 
+
 - `BasicBlockID`: The ID of the basic block that the CU happens in. A basic block is a block of code with single entry and exit points. A basic block may contain multiple CUs but a CU may not span over multiple basic blocks.
 - `readDataSize`: number of bytes which is read in this CU. We consider LLVM-IR load instructions to compute this value.
 - `writeDataSize`: Number of bytes written in this CU. It is computed like `readDataSize`.
@@ -33,7 +33,7 @@ Nodes with type 0 are CUs. They follow a read-after-write pattern. They are the 
 
 Loop nodes have type 2. They contain children nodes which can be CUs, other loops, or dummy nodes.
 
-Dummy nodes are usually library functions whose source code is not available. We cannot profile them and thus do not provide parallelization suggestions for them. 
+Dummy nodes are usually library functions whose source code is not available. We cannot profile them and thus do not provide parallelization suggestions for them.
 
 Please note that DiscoPoP appends CUs to an existing `Data.xml` file and thus if you need to extract computational units of the program again, you need to remove the existing `Data.xml` file.
 
@@ -41,13 +41,13 @@ Please note that DiscoPoP appends CUs to an existing `Data.xml` file and thus if
 
 DiscoPoP uses a signature to store data dependences. You can configure the settings of this signature by creating a dp.conf file in the root directory of your program. The contents of the config file usually contains the following parameters:
 
-- `SIG_ELEM_BIT`: Size of each element in the signature in bits. 
+- `SIG_ELEM_BIT`: Size of each element in the signature in bits.
 - `SIG_NUM_ELEM`: Size of the signature. The bigger it is, the less false positives/negatives are reported.
 - `SIG_NUM_HASH`: Number of signatures. A value of two indicates that one signature is used for read accesses and one signature for write accesses.
 - `USE_PERFECT`: When it is set to one, DiscoPoP uses a perfect signature. The default value is one.
 
 To find parallelization opportunities, we need to extract data dependencies inside the program. For that, we need to instrument the memory accesses, link the program with DiscoPoP run-time libraries, and finally execute the program with several representative inputs. The necessary steps are described [here](../Tutorials/Tutorials.md).
-After executing the instrumented program, you find a text file which ends with `_dep.txt` which contains the data dependences identified using the provided input. 
+After executing the instrumented program, you find a text file which ends with `_dep.txt` which contains the data dependences identified using the provided input.
 A data dependence is represented as a triple `<sink, type, source>`. `type` denotes the dependence type and can be any of `RAW`, `WAR` or `WAW`. Note that a special type `INIT` represents the first write operation to a memory address. `source` and `sink` are the source code locations of the former and the latter memory access, respectively. `sink` is further represented as a pair `<fileID:lineID>`, while source is represented as a triple `<fileID:lineID|variableName>`. The keyword `NOM` (short for "NORMAL") indicates that the source line specified by aggregated `sink` has no control-flow information. Otherwise, `BGN` and `END` represent the entry and exit points of a control region.
 
 ## Loop Counters
@@ -66,7 +66,7 @@ The used format is as follows: `<fileID>:<LineID> BGN loop <total_iteration_coun
 Identified reduction instructions are stored in a file named `reduction.txt`.
 Each line of the file describes one identified reduction instruction in the code.
 The format is quite simple and will be explained using the following example:
-    
+
     FileID : 1 Loop Line Number : 10 Reduction Line Number : 12 Variable Name : sum Operation Name : +
 
 `FileID` specifies the id of the file, as stored in `FileMapping.txt`, which contains the identified reduction operation.

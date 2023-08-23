@@ -161,7 +161,7 @@ namespace __dp {
                             break;
                     }
                 }
-                
+
             }
         }
 
@@ -402,7 +402,7 @@ namespace __dp {
         pthread_attr_destroy(&attr);
     }
 
-    
+
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
         // use tree
         return allocatedMemRegTree->get_memory_region_id(fallback, addr);
@@ -435,7 +435,7 @@ namespace __dp {
             }
 
         }
-        
+
         return fallback;
         */
     }
@@ -470,7 +470,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -711,7 +711,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -782,7 +782,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -854,7 +854,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -932,7 +932,7 @@ namespace __dp {
         cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
 */
         return;
-    } 
+    }
 
     void __dp_report_bb(int32_t bbIndex) {
         bbList->insert(bbIndex);

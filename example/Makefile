@@ -36,6 +36,6 @@ help:
 	@echo " all				builds all the above executables"
 	@echo " help			show this message"
 	@echo " clean			remove all build and analysis artefacts from this directory. Only the provided files will survive."
-	
+
 clean:
 	find . -type f -not -name 'example.cpp' -not -name 'Makefile' -not -name 'solution1.cpp' -not -name 'solution2.cpp' -delete

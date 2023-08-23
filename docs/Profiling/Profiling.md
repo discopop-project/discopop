@@ -15,5 +15,3 @@ Detailed instructions on how to apply the pass, typically referenced to as `Disc
 A detailed explanation of the gathered data, and in particular the used formats can be found [here](Data_Details.md).
 
 An explanation of the filemapping required by several steps of the DiscoPoP pipeline can be found [here](File_Mapping.md).
-
-

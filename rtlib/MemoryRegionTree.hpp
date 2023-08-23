@@ -31,7 +31,7 @@ inline ADDR get_level_shifting_mask(int level){
     case 5:
         return 0x00000F0000000000;
     case 6:
-        return 0x000000F000000000;    
+        return 0x000000F000000000;
     case 7:
         return 0x0000000F00000000;
     case 8:
@@ -64,21 +64,21 @@ struct MRTNode {
         : addr(addr_i), level(level), children{}
         {
             if(MRTVerbose)
-                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " childArrPtr: " << children <<"\n"; 
+                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " childArrPtr: " << children <<"\n";
         };
     MRTNode(MRTNode* parent_node, ADDR addr_i, short level)
         : parent(parent_node), addr(addr_i), level(level), children{}
         {
             if(MRTVerbose)
-                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " with parent addr: " << parent_node->addr << " childArrPtr: " << children << "\n"; 
+                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " with parent addr: " << parent_node->addr << " childArrPtr: " << children << "\n";
         };
     MRTNode(MRTNode* parent_node, ADDR addr_i, uint memRegId, short level)
         : parent(parent_node), addr(addr_i), memoryRegionId(memRegId), level(level), children{}
         {
             if(MRTVerbose)
-                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " childArrPtr: " << children << "\n"; 
+                cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level << " childArrPtr: " << children << "\n";
         };
-    
+
     // Values
     ADDR addr;
     short level;

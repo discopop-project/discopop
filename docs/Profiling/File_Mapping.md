@@ -28,4 +28,3 @@ The format used to report the assigned file ids is as follows:
 <file_id_2> <file_path_3>
 ...
 ```
-
