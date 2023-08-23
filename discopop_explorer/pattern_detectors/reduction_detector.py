@@ -23,6 +23,7 @@ from ..PETGraphX import (
     EdgeType,
 )
 from ..utils import is_reduction_var, classify_loop_variables, contains
+from multiprocessing import Pool
 
 
 class ReductionInfo(PatternInfo):
@@ -57,29 +58,54 @@ class ReductionInfo(PatternInfo):
         )
 
 
+global_pet = None
+
+
 def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param pet: PET graph
     :return: List of detected pattern info
     """
+    import tqdm  # type: ignore
+
+    global global_pet
+    global_pet = pet
     result: List[ReductionInfo] = []
     nodes = pet.all_nodes(LoopNode)
-    with alive_bar(len(nodes)) as progress_bar:
-        for node in nodes:
-            if not contains(result, lambda x: x.node_id == node.id) and __detect_reduction(
-                pet, node
-            ):
-                node.reduction = True
-                if node.loop_iterations >= 0 and not node.contains_array_reduction:
-                    result.append(ReductionInfo(pet, node))
-            progress_bar()
+
+    param_list = [(node) for node in nodes]
+    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
+        )
+    for local_result in tmp_result:
+        result += local_result
+    print("GLOBAL RES: ", result)
 
     for pattern in result:
         pattern.get_workload(pet)
         pattern.get_per_iteration_workload(pet)
 
     return result
+
+
+def __initialize_worker(pet):
+    global global_pet
+    global_pet = pet
+
+
+def __check_node(param_tuple):
+    global global_pet
+    global global_progress_bar
+    local_result = []
+    node = param_tuple
+    if __detect_reduction(global_pet, node):
+        node.reduction = True
+        if node.loop_iterations >= 0 and not node.contains_array_reduction:
+            local_result.append(ReductionInfo(global_pet, node))
+
+    return local_result
 
 
 def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:

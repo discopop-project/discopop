@@ -17,3 +17,4 @@ schema>=0.7.0
 jsonpickle
 pstats2
 alive-progress
+tqdm
