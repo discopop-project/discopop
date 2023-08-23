@@ -23,6 +23,7 @@ from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
 from discopop_wizard.classes.Settings import Settings, load_from_config_file
 from discopop_wizard.classes.TKVarStorage import TKVarStorage
 from discopop_wizard.screens.main import MainScreen
+
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
 from discopop_wizard.screens.settings import show_settings_screen, save_settings
@@ -76,8 +77,10 @@ class DiscoPoPConfigurationWizard(object):
         # check if settings exist
         if os.stat(os.path.join(config_dir, "SETTINGS.txt")).st_size == 0:
             # no settings exist
-            prompt_result = messagebox.askyesno("DiscoPoP Wizard",
-                                                   "Do you want to make use of a docker container for the profiling?")
+            prompt_result = messagebox.askyesno(
+                "DiscoPoP Wizard",
+                "Do you want to make use of a docker container for the profiling?",
+            )
             if not prompt_result:
                 # ask user for path to discopop_build and go/bin directory
                 discopop_build_dir = filedialog.askdirectory(title="Select DiscoPoP build folder")
@@ -85,8 +88,11 @@ class DiscoPoPConfigurationWizard(object):
             else:
                 discopop_build_dir = ""
                 go_bin_dir = ""
-            self.settings = Settings(use_docker_container=prompt_result, discopop_build_dir=discopop_build_dir,
-                                     go_bin_dir=go_bin_dir)
+            self.settings = Settings(
+                use_docker_container=prompt_result,
+                discopop_build_dir=discopop_build_dir,
+                go_bin_dir=go_bin_dir,
+            )
         else:
             # load settings
             self.settings = load_from_config_file(config_dir)
@@ -94,25 +100,31 @@ class DiscoPoPConfigurationWizard(object):
             self.initialize_screen(config_dir)
 
     def initialize_screen(self, config_dir: str):
-
         self.window = tk.Tk()
         self.window.title("DiscoPoP Wizard")
 
         # enable closing by pressing CTRL+C in the command line or the interface
         def handler(event):
             self.window.destroy()
-            print('caught ^C')
+            print("caught ^C")
+
         def check():
             self.window.after(500, check)
-        signal.signal(signal.SIGINT, lambda x,y : print('terminal ^C') or handler(None))
-        self.window.after(500, check)
-        #self.window.bind_all('<Control-c>', handler) # uncomment to close with CTRL+C from interface
 
+        signal.signal(signal.SIGINT, lambda x, y: print("terminal ^C") or handler(None))
+        self.window.after(500, check)
+        # self.window.bind_all('<Control-c>', handler) # uncomment to close with CTRL+C from interface
 
         # load window icon
         try:
             photo = tk.PhotoImage(
-                file=os.path.join(str(pathlib.Path(__file__).parent.resolve()), "assets", "icons", "discoPoP_128x128.png"))
+                file=os.path.join(
+                    str(pathlib.Path(__file__).parent.resolve()),
+                    "assets",
+                    "icons",
+                    "discoPoP_128x128.png",
+                )
+            )
             self.window.iconphoto(False, photo)
         except tk.TclError:
             warnings.warn("Loading the window icon was not successful.")
@@ -121,7 +133,7 @@ class DiscoPoPConfigurationWizard(object):
         if get_platform() in (Platform.OSX, Platform.WINDOWS):
             self.window.state("zoomed")
         else:
-            self.window.attributes('-zoomed', True)
+            self.window.attributes("-zoomed", True)
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(1, weight=1)
         paned_window = ttk.PanedWindow(self.window, orient=tk.VERTICAL)
@@ -161,7 +173,6 @@ class DiscoPoPConfigurationWizard(object):
         # close DiscoPoP profiling profiling_container before exiting the application
         if self.profiling_container is not None:
             self.profiling_container.stop()
-
 
     def close_frame_contents(self):
         # close current frame contents

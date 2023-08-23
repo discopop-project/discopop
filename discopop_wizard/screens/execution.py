@@ -15,14 +15,18 @@ from discopop_wizard.screens.suggestions.overview import show_suggestions_overvi
 
 
 class ExecutionView(object):
-
-    def __init__(self, execution_configuration, wizard, details_frame: Optional[tk.Frame], headless_mode: bool = False):
+    def __init__(
+        self,
+        execution_configuration,
+        wizard,
+        details_frame: Optional[tk.Frame],
+        headless_mode: bool = False,
+    ):
         self.execution_configuration = execution_configuration
         self.wizard = wizard
         self.details_frame = details_frame
         self.headless_mode = headless_mode
         self.__execute()
-
 
     def __execute(self):
         # prepare environment
@@ -49,28 +53,47 @@ class ExecutionView(object):
         command = ""
         # settings
         command = self.wizard.settings.discopop_build_dir + "/scripts/runDiscoPoP "
-        command += "--llvm-clang \"" + self.wizard.settings.clang + "\" "
-        command += "--llvm-clang++ \"" + self.wizard.settings.clangpp + "\" "
-        command += "--llvm-ar \"" + self.wizard.settings.llvm_ar + "\" "
-        command += "--llvm-link \"" + self.wizard.settings.llvm_link + "\" "
-        command += "--llvm-dis \"" + self.wizard.settings.llvm_dis + "\" "
-        command += "--llvm-opt \"" + self.wizard.settings.llvm_opt + "\" "
-        command += "--llvm-llc \"" + self.wizard.settings.llvm_llc + "\" "
-        command += "--gllvm \"" + self.wizard.settings.go_bin + "\" "
+        command += '--llvm-clang "' + self.wizard.settings.clang + '" '
+        command += '--llvm-clang++ "' + self.wizard.settings.clangpp + '" '
+        command += '--llvm-ar "' + self.wizard.settings.llvm_ar + '" '
+        command += '--llvm-link "' + self.wizard.settings.llvm_link + '" '
+        command += '--llvm-dis "' + self.wizard.settings.llvm_dis + '" '
+        command += '--llvm-opt "' + self.wizard.settings.llvm_opt + '" '
+        command += '--llvm-llc "' + self.wizard.settings.llvm_llc + '" '
+        command += '--gllvm "' + self.wizard.settings.go_bin + '" '
         # execution configuration
-        command += "--project \"" + self.execution_configuration.value_dict["project_path"] + "\" "
-        command += "--linker-flags \"" + self.execution_configuration.value_dict["linker_flags"] + "\" "
-        command += "--executable-name \"" + self.execution_configuration.value_dict["executable_name"] + "\" "
-        command += "--executable-arguments \"" + self.execution_configuration.value_dict["executable_arguments"] + "\" "
-        command += "--make-flags \"" + self.execution_configuration.value_dict["make_flags"] + "\" "
-        command += "--make-target \"" + self.execution_configuration.value_dict["make_target"] + "\" "
-        command += "--memory-profiling-skip-function-arguments " if self.execution_configuration.value_dict["memory_profiling_skip_function_parameters"] == 1 else ""
-        command += "--explorer-flags \"" + self.execution_configuration.value_dict["explorer_flags"] + "\" "
+        command += '--project "' + self.execution_configuration.value_dict["project_path"] + '" '
+        command += (
+            '--linker-flags "' + self.execution_configuration.value_dict["linker_flags"] + '" '
+        )
+        command += (
+            '--executable-name "'
+            + self.execution_configuration.value_dict["executable_name"]
+            + '" '
+        )
+        command += (
+            '--executable-arguments "'
+            + self.execution_configuration.value_dict["executable_arguments"]
+            + '" '
+        )
+        command += '--make-flags "' + self.execution_configuration.value_dict["make_flags"] + '" '
+        command += '--make-target "' + self.execution_configuration.value_dict["make_target"] + '" '
+        command += (
+            "--memory-profiling-skip-function-arguments "
+            if self.execution_configuration.value_dict["memory_profiling_skip_function_parameters"]
+            == 1
+            else ""
+        )
+        command += (
+            '--explorer-flags "' + self.execution_configuration.value_dict["explorer_flags"] + '" '
+        )
 
         return command
 
     def __execute_command(self, command: str) -> int:
-        with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
+        with subprocess.Popen(
+            command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
+        ) as p:
             if p.stdout is None:
                 print("command execution was not successfull")
             else:
@@ -94,4 +117,6 @@ class ExecutionView(object):
         print(msg)
 
     def __show_suggestions(self):
-        show_suggestions_overview_screen(self.wizard, cast(tk.Frame, self.details_frame), self.execution_configuration)
+        show_suggestions_overview_screen(
+            self.wizard, cast(tk.Frame, self.details_frame), self.execution_configuration
+        )

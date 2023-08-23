@@ -54,14 +54,14 @@ class Console(object):
 
         # create a Scrollbar and associate it with the content frame
         y_scrollbar = ttk.Scrollbar(self.parent_frame, command=self.log_screen.yview)
-        y_scrollbar.grid(row=0, column=1, sticky='nsew')
-        self.log_screen['yscrollcommand'] = y_scrollbar.set
-        x_scrollbar = ttk.Scrollbar(self.parent_frame, orient="horizontal", command=self.log_screen.xview)
-        x_scrollbar.grid(row=1, column=0, columnspan=2, sticky='nsew')
-        self.log_screen['xscrollcommand'] = x_scrollbar.set
+        y_scrollbar.grid(row=0, column=1, sticky="nsew")
+        self.log_screen["yscrollcommand"] = y_scrollbar.set
+        x_scrollbar = ttk.Scrollbar(
+            self.parent_frame, orient="horizontal", command=self.log_screen.xview
+        )
+        x_scrollbar.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.log_screen["xscrollcommand"] = x_scrollbar.set
 
         # create progress bar
         # self.progress_bar = ttk.Progressbar(self.parent_frame, orient=tk.HORIZONTAL, mode="determinate")
         # self.progress_bar.grid(row=2, column=0, columnspan=2, sticky="nsew")
-
-

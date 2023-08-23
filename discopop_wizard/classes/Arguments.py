@@ -12,4 +12,3 @@ class Arguments(object):
     no_gui: bool = False
     execute_all_configurations: bool = False
     execute_configurations_with_tag: List[str] = []
-
