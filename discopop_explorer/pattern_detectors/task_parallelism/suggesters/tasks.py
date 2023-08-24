@@ -319,7 +319,10 @@ def correct_task_suggestions_in_loop_body(
                                                                 # inner is direct successor of outer
                                                                 combined_critical_lines[
                                                                     outer_idx
-                                                                ] = (outer[0], inner[1])
+                                                                ] = (
+                                                                    outer[0],
+                                                                    inner[1],
+                                                                )
                                                                 combined_critical_lines.pop(
                                                                     inner_idx
                                                                 )

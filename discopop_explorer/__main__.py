@@ -13,7 +13,7 @@ Usage:
 [--loop-counter <loopcount>] [--reduction <reduction>] [--json <json_out>] [--fmap <fmap>] \
 [--task-pattern] [--cu-inst-res <cuinstres>] [--llvm-cxxfilt-path <cxxfp>] \
 [--dp-build-path=<dpbuildpath>] [--generate-data-cu-inst <outputdir>] [--profiling <bool>] [--dump-pet <bool>]
-[--dump-detection-result <bool>]
+[--dump-detection-result <bool>] [--microbench-file <json>]
 
 OPTIONAL ARGUMENTS:
     --path=<dir>               Directory with input data [default: ./]
@@ -38,6 +38,7 @@ OPTIONAL ARGUMENTS:
     --dump-detection-result=<bool>  Dump DetectionResult object to JSON file. [default: true]
                                     Contents are equivalent to the json output.
                                     NOTE: This dump contains a dump of the PET Graph!
+    --microbench-file=<file>    path to a microbenchmark json file
     -h --help                   Show this screen
 """
 import cProfile
@@ -51,9 +52,13 @@ from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 from pathlib import Path
 
+
 from . import run
 from .json_serializer import PatternInfoSerializer
 from discopop_library.global_data.version.utils import get_version
+from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
+    ExtrapInterpolatedMicrobench,
+)
 
 docopt_schema = Schema(
     {
@@ -73,6 +78,7 @@ docopt_schema = Schema(
         "--profiling": Use(str),
         "--dump-pet": Use(str),
         "--dump-detection-result": Use(str),
+        "--microbench-file": Use(str),
     }
 )
 
@@ -103,17 +109,17 @@ def main():
     reduction_file = get_path(path, arguments["--reduction"])
     file_mapping = get_path(path, arguments["--fmap"])
     cu_inst_result_file = get_path(path, arguments["--cu-inst-res"])
+    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
+        if not os.path.isfile(file):
+            print(f'File not found: "{file}"')
+            sys.exit()
+
     if arguments["--dp-build-path"] != "None":
         discopop_build_path = arguments["--dp-build-path"]
     else:
         # set default discopop build path
         discopop_build_path = Path(__file__).resolve().parent.parent
         discopop_build_path = os.path.join(discopop_build_path, "build")
-
-    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
-        if not os.path.isfile(file):
-            print(f'File not found: "{file}"')
-            sys.exit()
 
     plugins = [] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" ")
 
@@ -182,6 +188,17 @@ def main():
             stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
+
+    # demonstration of Microbenchmark possibilities
+    if arguments["--microbench-file"] != "None":
+        microbench_file = get_path(path, arguments["--microbench-file"])
+        if not os.path.isfile(microbench_file):
+            raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
+
+        extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
+        sympyExpr = extrapBench.getFunctionSympy()
+        print(sympyExpr)
+        print(sympyExpr.free_symbols)
 
 
 if __name__ == "__main__":
