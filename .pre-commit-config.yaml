@@ -30,7 +30,7 @@ repos:
   rev: 'v1.5.1'  # Use the sha / tag you want to point at
   hooks:
     - id: mypy                  # run mypy
-      #args: [--strict, --ignore-missing-imports]
+      args: [--check-untyped-defs, --ignore-missing-imports]
       #additional_dependencies: [dep==version.version.version, ...]
 
 # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
