@@ -5,12 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os
 from pathlib import Path
-from typing import Dict, Tuple, Set, Optional, List
+from typing import Dict, Set, Optional
 
 import networkx as nx  # type: ignore
-from sympy import Integer, Symbol, Expr, Float  # type: ignore
+from sympy import Integer, Symbol, Expr  # type: ignore
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.FileMapping.FileMapping import load_file_mapping
@@ -38,16 +37,16 @@ class Experiment(object):
     # value suggestions for all free symbols will be stored in this dictionary
     suggested_values: Dict[Symbol, Expr] = dict()
 
-    project_path: Path
+    project_path: str
     file_mapping: Dict[int, Path]  # file-mapping
     detection_result: DetectionResult
     optimization_graph: nx.DiGraph
 
     def __init__(
         self,
-        project_path,
+        project_path: str,
         detection_result: DetectionResult,
-        file_mapping_path,
+        file_mapping_path: str,
     ):
         self.detection_result = detection_result
         self.project_path = project_path
