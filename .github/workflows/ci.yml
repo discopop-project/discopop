@@ -27,7 +27,7 @@ jobs:
     name: Execute CI Tests
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: "Check all files for DiscoPoP License tag"
         run: |
@@ -56,7 +56,7 @@ jobs:
           [ -z "$ERROR" ] || exit 1
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
 
