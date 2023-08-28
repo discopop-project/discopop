@@ -7,7 +7,9 @@
 # directory for details.
 
 default_language_version:
-    python: python3.8
+    python: python3
+    # python >= 3.8 should be used.
+    # python3 used for compatibility reasons between different systems
 
 
 # See https://pre-commit.com for more information
