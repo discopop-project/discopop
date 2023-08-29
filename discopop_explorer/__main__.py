@@ -103,7 +103,7 @@ def main():
     dep_file = get_path(path, arguments["--dep-file"])
     loop_counter_file = get_path(path, arguments["--loop-counter"])
     reduction_file = get_path(path, arguments["--reduction"])
-    file_mapping = get_path(path, "FileMapping.txt")
+    file_mapping = get_path(path, arguments["--fmap"])
     cu_inst_result_file = get_path(path, arguments["--cu-inst-res"])
     if arguments["--dp-build-path"] != "None":
         discopop_build_path = arguments["--dp-build-path"]
