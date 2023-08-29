@@ -63,10 +63,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install -r discopop_explorer/requirements.txt
-          pip install -r discopop_profiler/requirements.txt
-          pip install -r discopop_library/requirements.txt
-          pip install mypy data-science-types black
+          pip install .[ci]
 
       - name: Python Unit-tests
         run: python -m unittest -v

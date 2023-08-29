@@ -41,8 +41,6 @@ OPTIONAL ARGUMENTS:
     -h --help                   Show this screen
 """
 import cProfile
-import copy
-import io
 import json
 import os
 import pstats2  # type:ignore
