@@ -155,3 +155,7 @@ _deps
 !/example/example.cpp
 !/example/solution1.cpp
 !/example/solution2.cpp
+
+# do not ignore our test data
+!/test/*
+!/test/**/Makefile
