@@ -47,3 +47,4 @@ sympy-plot-backends==2.4.3
 tqdm==4.66.1
 typish==1.9.3
 zipp==3.16.2
+alive_progress==3.1.4
