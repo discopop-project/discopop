@@ -13,7 +13,7 @@ Usage:
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
         [--executable-name <string>] [--execution-repetitions <int>] [--execution-append-measurements]
-        [--exhaustive-search] [--headless-mode]
+        [--exhaustive-search] [--headless-mode] [--doall-microbench-file <string>] [--reduction-microbench-file <string>]
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
@@ -46,6 +46,12 @@ OPTIONAL ARGUMENTS:
     --headless-mode             Do not show any GUI prompts. Does not reuse prior results.
                                 Uses the suggested default values. Creates random models.
                                 Exports all models to code. Saves all models.
+    --reduction-microbench-file=<string>     Path to the microbenchmark output which represents the overhead
+                                             of reduction suggestions.
+                                             Default model: 0
+    --doall-microbench-file=<string>         Path to the microbenchmark output which represents the overhead
+                                             of reduction suggestions.
+                                             Default model: 0
     -h --help                   Show this screen
 """
 import os
@@ -59,6 +65,10 @@ from schema import Schema, Use, SchemaError  # type:ignore
 from sympy import Symbol, Integer
 
 from discopop_explorer import DetectionResult
+from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
+    ExtrapInterpolatedMicrobench,
+)
+from discopop_library.discopop_optimizer.Microbench.Microbench import MicrobenchType
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
@@ -95,6 +105,8 @@ docopt_schema = Schema(
         "--execution-append-measurements": Use(str),
         "--exhaustive-search": Use(str),
         "--headless-mode": Use(str),
+        "--doall-microbench-file": Use(str),
+        "--reduction-microbench-file": Use(str),
     }
 )
 
@@ -250,6 +262,26 @@ def main():
         # todo connections between devices might happen as update to host + update to second device.
         #  As of right now, connections between two devices are implemented in this manner.
         # todo check if OpenMP allows direct data transfers between devices
+
+        # load overhead measurements into system if existent
+        if arguments["--doall-microbench-file"] != "None":
+            microbench_file = arguments["--doall-microbench-file"]
+            if not os.path.isfile(microbench_file):
+                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
+            # construct and set overhead model for doall suggestions
+            system.set_doall_overhead_model(
+                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy()
+            )
+        if arguments["--reduction-microbench-file"] != "None":
+            microbench_file = arguments["--reduction-microbench-file"]
+            if not os.path.isfile(microbench_file):
+                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
+            # construct and set overhead model for reduction suggestions
+            system.set_reduction_overhead_model(
+                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(
+                    benchType=MicrobenchType.FOR
+                )
+            )
 
         # define Environment
         experiment = Experiment(
