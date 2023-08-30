@@ -8,8 +8,6 @@
 import os
 import sys
 
-import jsonpickle  # type: ignore
-
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.scheduling.workload_delta import (
@@ -114,14 +112,13 @@ class PatternDetectorX(object):
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
         # identify scheduling clauses
-        print("IDENTIFYING SCHEDULING CLAUSES...")
-        # res = self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
-        print("\tDONE.")
-
-        return res
+        return self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
 
     def __identify_scheduling_clauses(
-        self, res: DetectionResult, project_folder_path: str, file_mapping_path: str
+        self,
+        res: DetectionResult,
+        project_folder_path: str,
+        file_mapping_path: str,
     ) -> DetectionResult:
         """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
         # construct optimization graph (basically an acyclic representation of the PET)
