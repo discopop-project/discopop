@@ -676,10 +676,12 @@ class PETGraphX(object):
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
                     vars_in_source_node = set()
-                    for var in itertools.chain(sink_node.local_vars, sink_node.global_vars):
-                        vars_in_sink_node.add(var.name)
-                    for var in itertools.chain(source_node.local_vars, source_node.global_vars):
-                        vars_in_source_node.add(var.name)
+                    if type(sink_node) == CUNode:
+                        for var in itertools.chain(sink_node.local_vars, sink_node.global_vars):
+                            vars_in_sink_node.add(var.name)
+                    if type(source_node) == CUNode:
+                        for var in itertools.chain(source_node.local_vars, source_node.global_vars):
+                            vars_in_source_node.add(var.name)
 
                     if (
                         dep.var_name not in vars_in_sink_node
