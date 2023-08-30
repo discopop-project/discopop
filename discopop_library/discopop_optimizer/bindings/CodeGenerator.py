@@ -270,7 +270,7 @@ def export_code(
                 )
 
     # prepare patterns by type
-    patterns_by_type: Dict[str, list[PatternInfo]] = dict()
+    patterns_by_type: Dict[str, List[PatternInfo]] = dict()
     for device, pattern, s_type, s_node_id in suggestions:
         if s_type not in patterns_by_type:
             patterns_by_type[s_type] = []

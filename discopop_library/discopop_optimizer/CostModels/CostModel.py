@@ -217,7 +217,7 @@ class CostModel(object):
         plt.plot(x, weibull(x, alpha, beta), label="Alpha: " + str(alpha) + " Beta: " + str(beta))
 
         # show random picks
-        ax = plt.subplot(1, 1, 1)
+        ax = plt.subplot(1, 1, 1)  # type: ignore
         k = 100
         for i in range(0, k):
             # get normalized values

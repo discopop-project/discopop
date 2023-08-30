@@ -83,10 +83,10 @@ def __1d_plot(
     plt.figure(__unique_plot_id)
     __unique_plot_id += 1
     if title is not None:
-        plt.title(title)
+        plt.title(title)  # type: ignore
     if super_title is not None:
-        plt.suptitle(super_title)
-    plt.bar(y_pos, height)
+        plt.suptitle(super_title)  # type: ignore
+    plt.bar(y_pos, height)  # type: ignore
     # Create names on the x-axis
     plt.xticks(y_pos, bars_tuple)
     # Show graphic
