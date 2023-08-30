@@ -72,18 +72,36 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
         ) as f:
             static_dep_display_widget.set_text(f.read())
     else:
-        static_dep_display_widget.set_text("")
+        static_dep_display_widget.set_text(
+            execution_configuration_obj.value_dict["working_copy_path"]
+            + "/static_dependencies.txt"
+            + " NOT FOUND."
+        )
     result_notebook.add(static_dep_display_widget.frame, text="Static DEP's")
     # add instrumented LLVM IR preview
     instrumented_llvm_ir_display_widget = ScrollableTextWidget(result_notebook)
-    with open(
+    if os.path.exists(
         execution_configuration_obj.value_dict["working_copy_path"]
         + "/"
         + execution_configuration_obj.value_dict["executable_name"]
-        + "_dp.ll",
-        "r",
-    ) as f:
-        instrumented_llvm_ir_display_widget.set_text(f.read())
+        + "_dp.ll"
+    ):
+        with open(
+            execution_configuration_obj.value_dict["working_copy_path"]
+            + "/"
+            + execution_configuration_obj.value_dict["executable_name"]
+            + "_dp.ll",
+            "r",
+        ) as f:
+            instrumented_llvm_ir_display_widget.set_text(f.read())
+    else:
+        instrumented_llvm_ir_display_widget.set_text(
+            execution_configuration_obj.value_dict["working_copy_path"]
+            + "/"
+            + execution_configuration_obj.value_dict["executable_name"]
+            + "_dp.ll"
+            + " NOT FOUND."
+        )
     result_notebook.add(instrumented_llvm_ir_display_widget.frame, text="LLVM IR")
     # add patterns.json preview
     patterns_json_display_widget = ScrollableTextWidget(result_notebook)
