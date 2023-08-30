@@ -71,6 +71,7 @@ def get_node_performance_models(
     restrict_to_decisions: Optional[Set[int]] = None,
     do_not_allow_decisions: Optional[Set[int]] = None,
     get_single_random_model: bool = False,
+    ignore_node_costs: Optional[List[int]] = None,
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
@@ -95,11 +96,26 @@ def get_node_performance_models(
     )
 
     if len(children_models) == 0:
-        children_models = [node_data.get_cost_model(experiment, all_function_nodes)]
+        if ignore_node_costs is not None:
+            if node_data.node_id in ignore_node_costs:
+                children_models = [CostModel(Integer(0), Integer(0))]
+        else:
+            children_models = [node_data.get_cost_model(experiment, all_function_nodes)]
+
     else:
-        tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
+        if ignore_node_costs is not None:
+            if node_data.node_id in ignore_node_costs:
+                tmp_node_cost_model = CostModel(Integer(0), Integer(0))
+        else:
+            tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
         for idx, child_model in enumerate(children_models):
-            children_models[idx] = tmp_node_cost_model.register_child(child_model, node_data)
+            if ignore_node_costs is not None:
+                if node_data.node_id not in ignore_node_costs:
+                    children_models[idx] = tmp_node_cost_model.register_child(
+                        child_model, node_data
+                    )
+            else:
+                children_models[idx] = tmp_node_cost_model.register_child(child_model, node_data)
 
     # construct the performance models
     if successor_count >= 1:
@@ -238,8 +254,10 @@ def get_node_performance_models(
                     restrict_to_decisions=restrict_to_decisions,
                     do_not_allow_decisions=do_not_allow_decisions,
                     get_single_random_model=get_single_random_model,
+                    ignore_node_costs=ignore_node_costs,
                 ):
-                    result_list.append(combined_model.parallelizable_plus_combine(model))
+                    tmp = combined_model.parallelizable_plus_combine(model)
+                    result_list.append(tmp)
         if len(result_list) >= 1:
             return result_list
 

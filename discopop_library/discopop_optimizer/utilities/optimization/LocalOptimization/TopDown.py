@@ -1,3 +1,10 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
 from typing import Dict, List, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
@@ -54,6 +61,9 @@ def get_locally_optimized_models(
                         all_function_nodes,
                         restrict_to_decisions={decision},
                         do_not_allow_decisions=set([o for o in decision_options if o != decision]),
+                        ignore_node_costs=[
+                            cast(FunctionRoot, data_at(graph, function_node)).node_id
+                        ],  # ignore first node to prevent duplication of function costs
                     )
                     # calculate and append necessary data transfers to the models
                     performance_models_with_transfers = calculate_data_transfers(
@@ -114,6 +124,9 @@ def get_locally_optimized_models(
             set(),
             all_function_nodes,
             restrict_to_decisions=set(locally_optimal_choices),
+            ignore_node_costs=[
+                cast(FunctionRoot, data_at(graph, function_node)).node_id
+            ],  # ignore first node to prevent duplication of function costs
         )
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(

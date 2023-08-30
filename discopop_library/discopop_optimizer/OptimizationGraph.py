@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, cast, List, Tuple, Set
+from typing import Dict, cast, List, Tuple
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
@@ -35,7 +35,6 @@ from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
 )
 from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 from discopop_library.discopop_optimizer.utilities.optimization.LocalOptimization.TopDown import (
     get_locally_optimized_models,
 )
@@ -65,7 +64,7 @@ class OptimizationGraph(object):
         )
 
         for function_root in sequential_complete_performance_models:
-            print("Function: ", function_root.name)
+            print("SEQ: Function: ", function_root.name)
             print("\tfunction_model: ")
             function_root.performance_model.print()
 
@@ -222,6 +221,7 @@ class OptimizationGraph(object):
             free_symbol_ranges,
             free_symbol_distributions,
         )
+
         # perform iterative substitutions
         modification_found = True
         while modification_found:

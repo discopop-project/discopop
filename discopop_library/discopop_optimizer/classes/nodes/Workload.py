@@ -73,7 +73,7 @@ class Workload(GenericNode):
         Workloads of Loop etc. are parallelizable."""
 
         if self.sequential_workload is None:
-            return (
+            cm = (
                 CostModel(Integer(1), Integer(0))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
@@ -81,8 +81,10 @@ class Workload(GenericNode):
                     self.__get_costs_of_function_call(experiment, all_function_nodes)
                 )
             )
+
+            return cm
         else:
-            return (
+            cm = (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
@@ -90,6 +92,7 @@ class Workload(GenericNode):
                     self.__get_costs_of_function_call(experiment, all_function_nodes)
                 )
             )
+            return cm
 
     def __get_costs_of_function_call(self, experiment, all_function_nodes) -> CostModel:
         """Check if the node performs a function call and returns the total costs for these."""
