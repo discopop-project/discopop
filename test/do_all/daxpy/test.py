@@ -1,10 +1,11 @@
 import os
-import unittest
 import pathlib
+import unittest
+
 import jsonpickle
 
-from discopop_explorer.test.utils.validators import check_do_all_equivalence
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
 
 
 class TestMethods(unittest.TestCase):
@@ -31,27 +32,26 @@ class TestMethods(unittest.TestCase):
         # execute DiscoPoP analysis
         os.system("discopop_explorer --dep-file=prog_dep.txt")
         # validate results
-        validation_result = validate_results(current_dir, src_dir)
+        self.validate_results(current_dir, src_dir)
         # clean environment
         os.system("make veryclean")
 
-        self.assertTrue(validation_result)
+    def validate_results(self, test_dir, src_dir):
+        """compare results to gold standard"""
+        gold_standard_file = os.path.join(test_dir, "detection_result_dump.json")
+        test_output_file = os.path.join(src_dir, "detection_result_dump.json")
+        # load both detection results
+        with open(gold_standard_file, "r") as f:
+            tmp_str = f.read()
+        gold_standard: DetectionResult = jsonpickle.decode(tmp_str)
 
+        with open(test_output_file, "r") as f:
+            tmp_str = f.read()
+        test_output: DetectionResult = jsonpickle.decode(tmp_str)
 
-def validate_results(test_dir, src_dir) -> bool:
-    """compare results to gold standard"""
-    gold_standard_file = os.path.join(test_dir, "detection_result_dump.json")
-    test_output_file = os.path.join(src_dir, "detection_result_dump.json")
-    # load both detection results
-    tmp_str = ""
-    with open(gold_standard_file, "r") as f:
-        tmp_str = f.read()
-    gold_standard: DetectionResult = jsonpickle.decode(tmp_str)
+        # convert DoAllInfo objects to DoAllInfoForValidation objects to make use of custom __eq__
+        converted_gold_standard = [DoAllInfoForValidation(elem) for elem in gold_standard.do_all]
+        converted_test_output = [DoAllInfoForValidation(elem) for elem in test_output.do_all]
 
-    tmp_str = ""
-    with open(test_output_file, "r") as f:
-        tmp_str = f.read()
-    test_output: DetectionResult = jsonpickle.decode(tmp_str)
-
-    # check both ways to ensure exactly the correct patterns have been identified
-    return check_do_all_equivalence(gold_standard.do_all, test_output.do_all)
+        # compare doall list elements
+        self.assertListEqual(converted_gold_standard, converted_test_output)
