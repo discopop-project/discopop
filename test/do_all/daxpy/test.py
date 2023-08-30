@@ -35,7 +35,7 @@ class TestMethods(unittest.TestCase):
         # clean environment
         os.system("make veryclean")
 
-        assert validation_result
+        self.assertTrue(validation_result)
 
 
 def validate_results(test_dir, src_dir) -> bool:
