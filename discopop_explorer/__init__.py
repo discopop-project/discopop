@@ -12,9 +12,9 @@ from typing import List, Optional
 from pluginbase import PluginBase  # type:ignore
 
 from .PETGraphX import PETGraphX, NodeType
-from ._version import __version__
 from .parser import parse_inputs
-from .pattern_detection import DetectionResult, PatternDetectorX
+from .pattern_detection import PatternDetectorX
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 def run(

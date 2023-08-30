@@ -7,7 +7,7 @@
 # directory for details.
 import random
 from functools import cmp_to_key
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 import numpy as np
 import sympy
@@ -35,7 +35,7 @@ class CostModel(object):
         sequential_costs: Expr,
         identifier: str = "None",
         path_decisions=None,
-        symbol_value_suggestions: Dict[Symbol, Expr] = None,
+        symbol_value_suggestions: Optional[Dict[Symbol, Expr]] = None,
     ):
         if sequential_costs == sympy.nan:
             raise ValueError("NAN: ", sequential_costs)

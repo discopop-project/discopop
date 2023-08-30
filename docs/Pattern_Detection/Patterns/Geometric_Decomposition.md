@@ -93,7 +93,7 @@ Note: Since the geometric decomposition relies on the identification of the thre
     {
         int i;
         int d=20,a=22, b=44,c=90;
-        
+
         #pragma omp parallel
         #pragma omp single
         for (int x = 0; x < 10; x++ ) {
@@ -109,7 +109,7 @@ Note: Since the geometric decomposition relies on the identification of the thre
                 }
             }
         }
-        
+
         a = b;
         return 0;
     }

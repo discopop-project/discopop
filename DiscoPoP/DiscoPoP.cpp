@@ -72,7 +72,7 @@ void DiscoPoP::setupCallbacks() {
 
     DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca",
                                                 Void,
-                           
+
                                                 Int32, CharPtr, Int64, Int64, Int64, Int64
     );
 
@@ -282,7 +282,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
         if(globalVariable){
             MDNode *metadata = globalVariable->getMetadata("dbg");
             if(metadata){
-                if(isa<DIGlobalVariableExpression>(metadata)){ 
+                if(isa<DIGlobalVariableExpression>(metadata)){
                     varDefLine = to_string(fileID) + ":" + to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
                 }
             }
@@ -805,7 +805,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 }
 
                 string varSizeInBytes = to_string(variableType->getScalarSizeInBits()/8);
-                
+
                 varDefLine = determineVariableDefLine(&*instruction);
 
                 bool readAccess = isa<LoadInst>(instruction);
@@ -954,7 +954,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     if (basic_blocks.size() < 3) {
         return;
     }
-
     // add an entry to the 'loops_' vector
     loop_info_t loop_info;
     loop_info.line_nr_ = loc.getLine();
@@ -972,7 +971,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
          ++loop_it) {
         instrument_loop(F, file_id, *loop_it, LI, trueVarNamesFromMetadataMap);
     }
-
     // The key corresponds to the variable that is loaded / stored.
     // The value points to the actual load / store instruction.
     std::map < llvm::Value * , llvm::Instruction * > load_instructions;
@@ -1076,7 +1074,6 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
         varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
         varTypeLoad = dp_reduction_determineVariableType(candidate.load_inst_);
-
         if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
             if (varTypeLoad.find("ARRAY,") == std::string::npos ||
                 varNameLoad.find(".addr") == std::string::npos ||
@@ -1137,7 +1134,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
                         }
                         else{
                             continue;
-                        }                  
+                        }
                     } else {
                         continue;
                     }
@@ -1158,15 +1155,21 @@ bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searched
     if(isa<Constant>(parentValue)){
         return false;
     }
+    // if parentValue is not an Instruction, the value can not be used, thus return false
+    if(! isa<Instruction>(parentValue)){
+        errs() << "parentValue not an Instruction.\n";
+        return false;
+    }
+
     llvm::Instruction* parentInstruction = cast<Instruction>(parentValue);
     for(int idx = 0; idx < parentInstruction->getNumOperands(); idx++){
         if(check_value_usage(parentInstruction->getOperand(idx), searchedValue)){
             return true;
         }
     }
-    
+
     return false;
-    
+
 }
 
 
@@ -1844,7 +1847,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
             }
         }
     } else {
-        llvm::errs() << "Error : Could not find a main function\n";
+        llvm::errs() << "Warning : Could not find a main function\n";
     }
 }
 
@@ -1990,7 +1993,6 @@ bool DiscoPoP::runOnModule(Module &M) {
         runOnFunction(F);
     }
 
-    //cout << "\n\tFunctions Done.\n";
 
     // DPReduction
     module_ = &M;
@@ -2007,7 +2009,6 @@ bool DiscoPoP::runOnModule(Module &M) {
         llvm::errs() << "could not find the FileMapping file: " << FileMappingPath << "\n";
         return false;
     }
-
     instrument_module(&M, &trueVarNamesFromMetadataMap);
 
     dp_reduction_insert_functions();
@@ -2115,6 +2116,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
+
         fillStartEndLineNumbers(root, LI);
 
         secureStream();
@@ -2122,6 +2124,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // printOriginalVariables(originalVariablesSet);
 
         printData(root);
+
 
         for (auto i: CUVector) {
             delete (i);
@@ -2158,7 +2161,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
     // DPInstrumentationOmission
     {
         if (F.getInstructionCount() == 0) return false;
-        if (DP_hybrid_SKIP) return true;
+        if (DP_hybrid_SKIP) {
+            return true;
+        }
         if (DP_hybrid_DEBUG) errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
         DebugLoc dl;
@@ -3148,7 +3153,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                 instrumentAlloca(AI);
             }
 
-            
+
         }
             // load instruction
         else if (isa<LoadInst>(BI)) {
@@ -3345,7 +3350,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true), ConstantInt::get(Int64, elementSizeInBytes)));
     args.push_back(IRB.CreateIntCast(numElements, Int64, true));
     IRB.CreateCall(DpAlloca, args, "");
-}   
+}
 
 void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     // add instrumentation for new instructions or calls to malloc
@@ -3675,7 +3680,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
             //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
             Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
             args.push_back(startAddr);
-            
+
             Value *endAddr = startAddr;
             uint64_t numElements = 1;
             uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();

@@ -85,6 +85,8 @@ class ContentBuffer(object):
         add_as_comment: bool = False,
         skip_compilation_check: bool = False,
         compile_check_command: Optional[str] = None,
+        CC="clang",
+        CXX="clang++",
     ) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
@@ -158,6 +160,8 @@ class ContentBuffer(object):
                 add_as_comment=add_as_comment,
                 skip_compilation_check=True,
                 compile_check_command=compile_check_command,
+                CC=CC,
+                CXX=CXX,
             )
 
             if not successful:
@@ -174,10 +178,10 @@ class ContentBuffer(object):
         # check if the applied changes resulted in a compilable source code
         # create a temporary file to store the modified file contents
         if str(file_mapping[self.file_id]).endswith(".c"):
-            compiler = "clang"
+            compiler = CC
             tmp_file_name = str(file_mapping[self.file_id]) + ".discopop_tmp.c"
         else:
-            compiler = "clang++"
+            compiler = CXX
             tmp_file_name = str(file_mapping[self.file_id]) + ".discopop_tmp.cpp"
         tmp_file_out_name = str(file_mapping[self.file_id]) + ".discopop_tmp.o"
 
@@ -227,7 +231,7 @@ class ContentBuffer(object):
             result = subprocess.run(shlex.split(compile_check_command), shell=True)
 
             os.chdir(saved_dir)
-        compilation_successful = True if result.returncode == 0 else False
+        compilation_successful = result.returncode == 0
 
         if os.path.exists(tmp_file_name):
             os.remove(tmp_file_name)

@@ -1,4 +1,4 @@
-<!-- 
+<!--
  /*
  * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
  *
@@ -8,11 +8,11 @@
  * the 3-Clause BSD License. See the LICENSE file in the package base
  * directory for details.
  *
- */ 
+ */
  -->
 
 # DiscoPoP - Discovery of Potential Parallelism
-DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University. 
+DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of Technical University of Darmstadt and Iowa State University.
 
 In a nutshell, DiscoPoP performs the following steps:
 * detect parts of the code (computational units or CUs) with little to no internal parallelization potential,

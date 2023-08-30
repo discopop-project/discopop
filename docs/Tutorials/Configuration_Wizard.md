@@ -96,7 +96,7 @@ You can disable the usage of a docker container at any point in the `Options->Se
 
 
 ### Using local installation
-In order to use a local installation, you have to provide paths to your `DiscoPoP build folder` and you `Go binary` folder.
+In order to use a local installation, you have to provide paths to your `DiscoPoP build folder` and your `Go binary` folder.
 Both can be specified by simply following the opened prompts:
 ![Wizard: DiscoPoP build folder prompt](../img/wizard_build_folder_prompt.png)
 
@@ -127,4 +127,3 @@ Hovering over the suggestions will show all gathered information.
 
 Note: Assembling the suggested OpenMP pragma for the preview is not yet supported for all pattern types.
 In such cases, please refer to the detailed explanations of the [patterns](../Pattern_Detection/Patterns/Patterns.md) for instructions how to interpret the respective suggestions based on the gathered Information.
-

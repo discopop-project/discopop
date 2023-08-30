@@ -9,8 +9,9 @@
 import os
 import shutil
 
-import jsons # type:ignore
+import jsons  # type:ignore
 import tkinter as tk
+
 
 class Settings(object):
     # general settings
@@ -32,7 +33,9 @@ class Settings(object):
     code_preview_show_line_numbers: int = 1  # 1 = True, 0 = False
     code_preview_disable_compile_check: int = 0  # 1 = True, 0 = False
 
-    def __init__(self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True) -> None:
+    def __init__(
+        self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True
+    ) -> None:
         self.discopop_build_dir = discopop_build_dir
         self.go_bin = go_bin_dir
         self.use_docker_container_for_profiling = use_docker_container
@@ -42,7 +45,11 @@ class Settings(object):
         # get llvm_bin_dir from stored build configuration
         llvm_bin_dir = ""
         if settings_valid:
-            command = 'cat ' + self.discopop_build_dir + '/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*"'
+            command = (
+                "cat "
+                + self.discopop_build_dir
+                + '/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*"'
+            )
             llvm_bin_dir = os.popen(command).read().replace("\n", "")
             if not os.path.exists(llvm_bin_dir):
                 llvm_bin_dir = ""
@@ -83,9 +90,16 @@ class Settings(object):
             self.llvm_llc = shutil.which("llc-11") or ""
 
         # validate settings
-        settings_valid = settings_valid and len(self.clang) > 0 and len(self.clangpp) > 0 and len(self.llvm_ar) > 0 \
-                         and len(self.llvm_link) > 0 and len(self.llvm_dis) > 0 and len(self.llvm_opt) > 0 and len(
-            self.llvm_llc) > 0
+        settings_valid = (
+            settings_valid
+            and len(self.clang) > 0
+            and len(self.clangpp) > 0
+            and len(self.llvm_ar) > 0
+            and len(self.llvm_link) > 0
+            and len(self.llvm_dis) > 0
+            and len(self.llvm_opt) > 0
+            and len(self.llvm_llc) > 0
+        )
 
         # set initialized, if all values could be determined and are valid, or docker container is used
         self.initialized = use_docker_container or settings_valid
@@ -122,13 +136,22 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.llvm_opt = __load_or_get_default(value_dict, "llvm_opt")
     settings.llvm_llc = __load_or_get_default(value_dict, "llvm_llc")
     settings.go_bin = __load_or_get_default(value_dict, "go_bin")
-    settings.use_docker_container_for_profiling = __load_or_get_default(value_dict,
-                                                                        "use_docker_container_for_profiling")
+    settings.use_docker_container_for_profiling = __load_or_get_default(
+        value_dict, "use_docker_container_for_profiling"
+    )
     # code preview settings
-    settings.code_preview_show_metadata_regions = __load_or_get_default(value_dict, "code_preview_show_metadata_regions")
-    settings.code_preview_show_line_numbers = __load_or_get_default(value_dict, "code_preview_show_line_numbers")
-    settings.code_preview_show_metadata_live_device_variables = __load_or_get_default(value_dict, "code_preview_show_metadata_live_device_variables")
-    settings.code_preview_disable_compile_check = __load_or_get_default(value_dict, "code_preview_disable_compile_check")
+    settings.code_preview_show_metadata_regions = __load_or_get_default(
+        value_dict, "code_preview_show_metadata_regions"
+    )
+    settings.code_preview_show_line_numbers = __load_or_get_default(
+        value_dict, "code_preview_show_line_numbers"
+    )
+    settings.code_preview_show_metadata_live_device_variables = __load_or_get_default(
+        value_dict, "code_preview_show_metadata_live_device_variables"
+    )
+    settings.code_preview_disable_compile_check = __load_or_get_default(
+        value_dict, "code_preview_disable_compile_check"
+    )
 
     settings.initialized = True
     return settings

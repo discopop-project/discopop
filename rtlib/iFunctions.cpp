@@ -68,13 +68,13 @@ namespace __dp {
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
 
-    // TODO: Replace with more efficient data structure for searching
-    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> allocatedMemoryRegions;
+    MemoryRegionTree *allocatedMemRegTree;
+    list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
     /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator lastHitIterator;
     ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
     ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
-    int64_t nextFreeMemoryRegionId = 0;
+    int64_t nextFreeMemoryRegionId = 1;  // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
     /******* BEGIN: parallelization section *******/
 
@@ -83,7 +83,7 @@ namespace __dp {
     pthread_mutex_t allDepsLock;
     pthread_t *workers = nullptr; // worker threads
 
-    int32_t NUM_WORKERS = 1;               // default number of worker threads (multiple workers can potentially lead to non-deterministic results)
+    int32_t NUM_WORKERS = 3;               // default number of worker threads (multiple workers can potentially lead to non-deterministic results)
     int32_t CHUNK_SIZE = 500;              // default number of addresses in each chunk
     queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
     bool *addrChunkPresent = nullptr;      // addrChunkPresent[thread_id] denotes whether or not a new chunk is available for the corresponding thread
@@ -161,7 +161,7 @@ namespace __dp {
                             break;
                     }
                 }
-                
+
             }
         }
 
@@ -309,7 +309,7 @@ namespace __dp {
     void outputAllocations() {
         auto allocationsFileStream = new ofstream();
         allocationsFileStream->open("memory_regions.txt", ios::out);
-        for(auto memoryRegion : allocatedMemoryRegions){
+        for(auto memoryRegion : *allocatedMemoryRegions){
             string position = decodeLID(get<0>(memoryRegion));
             string id = get<1>(memoryRegion);
             string numBytes = to_string(get<4>(memoryRegion));
@@ -402,19 +402,22 @@ namespace __dp {
         pthread_attr_destroy(&attr);
     }
 
-    
+
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
-        // check if accessed addr in knwon range. If not, return fallback immediately
+        // use tree
+        return allocatedMemRegTree->get_memory_region_id(fallback, addr);
+
+        /*// check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
             // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE MEMORY ADDRESSES ARE REUSED
-            if(allocatedMemoryRegions.size() != 0){
+            if(allocatedMemoryRegions->size() != 0){
                 // search backwards in the list
-                auto bw_it = allocatedMemoryRegions.end();
+                auto bw_it = allocatedMemoryRegions->end();
                 bw_it--;
                 bool search_backwards = true;
 
                 while(true){
-                    if(*bw_it == allocatedMemoryRegions.front()){
+                    if(*bw_it == allocatedMemoryRegions->front()){
                         search_backwards = false;
                     }
                     if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
@@ -431,59 +434,10 @@ namespace __dp {
                 }
             }
 
-
-//            bool search_forwards = true;
-//            bool search_backwards = true;
-//            auto fw_it = lastHitIterator;
-//            auto bw_it = lastHitIterator;
-
-            // TODO: Remove allocated entries from allocatedMemoryRegions when leaving a functions body to keep the list as short as possible
-            // Caveats: The datastructure needs to be threadsafe, as it is accessed by multiple worker threads concurrently
-
-/*            while(true){
-                // search forward from lastHitIterator
-                if(search_forwards){
-                    if(*fw_it == allocatedMemoryRegions.back()){
-                        search_forwards = false;
-                    }
-                     // fw_it in range
-                    //cout << "Search for " << std::hex << addr << " in " << std::hex << get<2>(*fw_it) << " - " << std::hex << get<3>(*fw_it) << "\n";
-                    if(get<2>(*fw_it) <= addr && get<3>(*fw_it) >= addr){
-                        lastHitIterator = fw_it;
-                        return get<1>(*fw_it);
-                    }
-                    
-                    if(search_forwards){
-                        fw_it++;
-                    }
-                }
-                
-                // search backwards from lastHitIterator
-                if(search_backwards){
-                    if(*bw_it == allocatedMemoryRegions.front()){
-                        search_backwards = false;
-                    }
-
-                    //cout << "Search for BW " << std::hex << addr << " in " << std::hex << get<2>(*bw_it) << " - " << std::hex << get<3>(*bw_it) << "\n";
-                    if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
-                        lastHitIterator = bw_it;
-                        return get<1>(*bw_it);
-                    }
-
-                    if(search_backwards){
-                        bw_it--;
-                    }
-                }
-
-                if(!(search_forwards || search_backwards)){
-                    break;
-                }     
-
-            }
-*/
         }
-        
+
         return fallback;
+        */
     }
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
@@ -516,7 +470,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -757,7 +711,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -828,7 +782,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -900,7 +854,7 @@ namespace __dp {
             }
         }
         else{
-            // mark loopID as invalid (0xFF to allow 0 as valid loop id) 
+            // mark loopID as invalid (0xFF to allow 0 as valid loop id)
             current.lid = current.lid | (((LID) 0xFF) << 56);
         }
 
@@ -916,13 +870,14 @@ namespace __dp {
     }
 
     void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
-        string allocId = to_string(nextFreeMemoryRegionId);
+        int64_t buffer = nextFreeMemoryRegionId;
+        string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
-        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions.size()) << "\n";
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
-        
+        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
+        allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
         // update known min and max ADDR
         if(startAddr < smallestAllocatedADDR){
@@ -935,18 +890,20 @@ namespace __dp {
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
         // instrumentation function for new and malloc
-        
-        string allocId = to_string(nextFreeMemoryRegionId);
+        int64_t buffer = nextFreeMemoryRegionId;
+        string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
 
         // calculate endAddr of memory region
         endAddr = startAddr + numBytes;
 
+        allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
+
         cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
         printf(" NumBytes: %lld\n", numBytes);
 
-        allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
-        lastHitIterator = allocatedMemoryRegions.end();
+        allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
+        lastHitIterator = allocatedMemoryRegions->end();
         lastHitIterator--;
 
         // update known min and max ADDR
@@ -975,7 +932,7 @@ namespace __dp {
         cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
 */
         return;
-    } 
+    }
 
     void __dp_report_bb(int32_t bbIndex) {
         bbList->insert(bbIndex);
@@ -1100,10 +1057,19 @@ namespace __dp {
             outPutDeps = new stringDepMap();
             bbList = new ReportedBBSet();
             // End HA
+            // initialize AllocatedMemoryRegions:
 
+            allocatedMemRegTree = new MemoryRegionTree();
+            allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
+
+            if (allocatedMemoryRegions->size() == 0 && allocatedMemoryRegions->empty() == 0){
+                // re-initialize the list, as something went wrong
+                allocatedMemoryRegions = new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
+            }
+            tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0};
             // initialize lastHitIterator to dummy element
-            allocatedMemoryRegions.push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
-            lastHitIterator = allocatedMemoryRegions.end();
+            allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0, 0, 0, 0});
+            lastHitIterator = allocatedMemoryRegions->end();
             lastHitIterator--;
 
 #ifdef __linux__

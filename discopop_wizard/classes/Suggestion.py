@@ -11,28 +11,34 @@ import sys
 
 import tkinter as tk
 from enum import IntEnum
+from pathlib import Path
 from tkinter import ttk
 from typing import Any, Dict, List, Tuple
 
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import ExitPointPositioning, \
-    EntryPointPositioning, ExitPointType, EntryPointType, UpdateType
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
+    ExitPointPositioning,
+    EntryPointPositioning,
+    ExitPointType,
+    EntryPointType,
+    UpdateType,
+)
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
 from discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
 from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
+
 class PragmaType(IntEnum):
     PRAGMA = 1
     REGION = 2
 
-class Suggestion(UnpackedSuggestion):
 
+class Suggestion(UnpackedSuggestion):
     def __init__(self, wizard, type_str: str, values: dict):
         super().__init__(type_str, values)
         self.wizard = wizard
 
     def show_code_section(self, parent_frame: tk.Frame, execution_configuration):
-
         # close elements of parent_frame
         for c in parent_frame.winfo_children():
             c.destroy()
@@ -47,37 +53,65 @@ class Suggestion(UnpackedSuggestion):
 
         # create a Scrollbar and associate it with the content frame
         y_scrollbar = ttk.Scrollbar(parent_frame, command=source_code.yview)
-        y_scrollbar.grid(row=0, column=1, sticky='nsew')
-        source_code['yscrollcommand'] = y_scrollbar.set
+        y_scrollbar.grid(row=0, column=1, sticky="nsew")
+        source_code["yscrollcommand"] = y_scrollbar.set
 
         x_scrollbar = ttk.Scrollbar(parent_frame, orient="horizontal", command=source_code.xview)
-        x_scrollbar.grid(row=1, column=0, columnspan=2, sticky='nsew')
-        source_code['xscrollcommand'] = x_scrollbar.set
+        x_scrollbar.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        source_code["xscrollcommand"] = x_scrollbar.set
 
         # load file mapping from project path
-        file_mapping: Dict[int, str] = dict()
-        with open(os.path.join(execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"), "r") as f:
+        file_mapping: Dict[int, Path] = dict()
+        with open(
+            os.path.join(
+                execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"
+            ),
+            "r",
+        ) as f:
             for line in f.readlines():
                 line = line.replace("\n", "")
                 split_line = line.split("\t")
                 id = int(split_line[0])
                 path = split_line[1]
-                file_mapping[id] = path
+                file_mapping[id] = Path(path)
 
         # create CodePreview object
-        code_preview = CodePreviewContentBuffer(self.wizard, self.file_id, file_mapping[self.file_id])
+        code_preview = CodePreviewContentBuffer(
+            self.wizard, self.file_id, file_mapping[self.file_id]
+        )
 
         # get and insert pragmas
         pragmas = self.get_pragmas()
         for pragma in pragmas:
-            compile_check_command = "cd " + execution_configuration.value_dict["working_copy_path"] + " && make " + execution_configuration.value_dict["make_flags"] + " " + execution_configuration.value_dict["make_target"]
-            successful = code_preview.add_pragma(file_mapping, pragma, [], skip_compilation_check=True if self.wizard.settings.code_preview_disable_compile_check == 1 else False, compile_check_command=compile_check_command)
+            compile_check_command = (
+                "cd "
+                + execution_configuration.value_dict["working_copy_path"]
+                + " && make "
+                + execution_configuration.value_dict["make_flags"]
+                + " "
+                + execution_configuration.value_dict["make_target"]
+            )
+            successful = code_preview.add_pragma(
+                file_mapping,
+                pragma,
+                [],
+                skip_compilation_check=True
+                if self.wizard.settings.code_preview_disable_compile_check == 1
+                else False,
+                compile_check_command=compile_check_command,
+            )
             # if the addition resulted in a non-compilable file, add the pragma as a comment
             if not successful:
                 # print error codes
                 self.wizard.console.print(code_preview.compile_result_buffer)
-                code_preview.add_pragma(file_mapping, pragma, [], add_as_comment=True, skip_compilation_check=True, compile_check_command=compile_check_command)
-
+                code_preview.add_pragma(
+                    file_mapping,
+                    pragma,
+                    [],
+                    add_as_comment=True,
+                    skip_compilation_check=True,
+                    compile_check_command=compile_check_command,
+                )
 
         # show CodePreview
         code_preview.show_in(source_code)
@@ -88,21 +122,28 @@ class Suggestion(UnpackedSuggestion):
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def get_as_button(self, frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
-        return tk.Button(frame, text=self.type + " @ " + self.values["start_line"],
-                         command=lambda: self.show_code_section(code_preview_frame, execution_configuration))
+    def get_as_button(
+        self, frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration
+    ) -> tk.Button:
+        return tk.Button(
+            frame,
+            text=self.type + " @ " + self.values["start_line"],
+            command=lambda: self.show_code_section(code_preview_frame, execution_configuration),
+        )
 
     def __insert_pragmas(self, source_code: tk.Text, pragmas: List[Tuple[int, int, str]]):
         highlight_start_positions = []
 
         idx = 0
-        for start_line, end_line, pragma_str in sorted(pragmas, reverse=True,
-                                                       key=lambda v: int(v[0])):  # sort reverse by line num
+        for start_line, end_line, pragma_str in sorted(
+            pragmas, reverse=True, key=lambda v: int(v[0])
+        ):  # sort reverse by line num
             # add pragma string
             source_code.insert(str(start_line) + ".0", "    " + pragma_str + "\n")
             # highlight inserted pragmas and their target code sections
-            pos = self.__highlight_code(source_code, start_line, end_line + 1,
-                                        idx)  # +1 to account for added pragma line
+            pos = self.__highlight_code(
+                source_code, start_line, end_line + 1, idx
+            )  # +1 to account for added pragma line
             highlight_start_positions.append(pos)
             idx += 1
 
@@ -117,7 +158,9 @@ class Suggestion(UnpackedSuggestion):
         start_pos = str(start_line) + ".0"
         end_pos = str(end_line) + "." + str(end_line_length)
         source_code.tag_add("start" + str(index), start_pos, end_pos)
-        source_code.tag_config("start" + str(index), background=background_color, foreground="black")
+        source_code.tag_config(
+            "start" + str(index), background=background_color, foreground="black"
+        )
         return start_pos
 
     def __get_pragmas(self) -> List[Tuple[int, int, str]]:
@@ -142,7 +185,9 @@ class Suggestion(UnpackedSuggestion):
                         reductions_dict[red_type] = []
                     reductions_dict[red_type].append(var)
                 for red_type in reductions_dict:
-                    pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+                    pragma += (
+                        "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+                    )
             pragma_tuple = (self.start_line, self.end_line, pragma)
             pragmas.append(pragma_tuple)
             return pragmas
@@ -164,7 +209,13 @@ class Suggestion(UnpackedSuggestion):
                             reductions_dict[red_type] = []
                         reductions_dict[red_type].append(var)
                     for red_type in reductions_dict:
-                        pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
+                        pragma += (
+                            "reduction("
+                            + red_type
+                            + ":"
+                            + ",".join(reductions_dict[red_type])
+                            + ") "
+                        )
                 if len(stage["in_deps"]) > 0:
                     pragma += "depends(in:" + ",".join(stage["in_deps"]) + ") "
                 if len(stage["out_deps"]) > 0:
@@ -172,13 +223,23 @@ class Suggestion(UnpackedSuggestion):
                 if len(stage["in_out_deps"]) > 0:
                     pragma += "depends(inout:" + ",".join(stage["in_out_deps"]) + ") "
                 pragma_tuple = (
-                int(stage["startsAtLine"].split(":")[1]), int(stage["endsAtLine"].split(":")[1]), pragma)
+                    int(stage["startsAtLine"].split(":")[1]),
+                    int(stage["endsAtLine"].split(":")[1]),
+                    pragma,
+                )
                 pragmas.append(pragma_tuple)
         else:
-            pragmas.append((self.start_line, self.end_line, "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type))
+            pragmas.append(
+                (
+                    self.start_line,
+                    self.end_line,
+                    "#CURRENTLY UNSUPPORTED PREVIEW FOR TYPE: " + self.type,
+                )
+            )
         return pragmas
 
     def get_details(self) -> str:
         """Returns the details string which should be shown when hovering over the Suggestion button."""
         import pprint
+
         return pprint.pformat(self.values)

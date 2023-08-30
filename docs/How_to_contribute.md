@@ -23,10 +23,18 @@ However, instead of creating a fork of the repository please create a branch wit
 A good and easy option for this is to use the `Create a branch` link which can be found in the `Development` section of each issue.
 Follow the instructions for determining the Version number depending on the contents of your branch and create a pull request to the respective release branch.
 
+## Setup for developers
+In general it is sufficient to follow the general installation instructions. However the following tips can help you to be more productive:
+ - Work on python code in a virtual environment
+ - Install the python programs in development mode by executing `pip install -e .[dev]` from the project main directory
+   - The `-e` switch ensures that changes in the python source code are immediately active.
+   - `[dev]` also installs some development requirements (e.g. mypy, black, pre-commit).
+ - Install some git hooks by running `pre-commit install` from the main directory of this project. These hooks help to ensure a good quality of the commited code by automatically running the black **formatter** and checking for **type safety** with mypy on every commit.
+
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
 - Switch to the release branch (e.g. `release/1.2.3`) which shall be released
-- Update the version files in the repository
+- Update the version file in the repository (`discopop_library/global_data/version/VERSION`)
 - Create a pull request to the `master` branch and validate the changes
 - Merge the pull request and create a tag on the `master` branch with the name `v1.2.3`
     - Creating the tag triggers the automatic publication of the project to PyPi

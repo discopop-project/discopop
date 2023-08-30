@@ -8,6 +8,7 @@
 
 import copy
 import sys
+from pathlib import Path
 from typing import Tuple, Optional, List, Dict, Sequence, cast
 import tkinter as tk
 
@@ -51,16 +52,35 @@ class CodePreviewLine(Line):
                 self.__highlight(parent_element, line_idx, 0, len(line), background_color)
             else:
                 # highlight pragma only
-                self.__highlight(parent_element, line_idx, len(line) - len(self.content), len(line), background_color)
+                self.__highlight(
+                    parent_element,
+                    line_idx,
+                    len(line) - len(self.content),
+                    len(line),
+                    background_color,
+                )
 
-    def __highlight(self, parent_element: tk.Text, line_idx: int, start_position: int, end_position: int, color: str):
+    def __highlight(
+        self,
+        parent_element: tk.Text,
+        line_idx: int,
+        start_position: int,
+        end_position: int,
+        color: str,
+    ):
         """highlights the given section of the line in the given color"""
         start_position_str = str(line_idx) + "." + str(start_position)
         end_position_str = str(line_idx) + "." + str(end_position)
-        parent_element.tag_add(color + ":" + start_position_str + "-" + end_position_str, start_position_str,
-                               end_position_str)
-        parent_element.tag_config(color + ":" + start_position_str + "-" + end_position_str, background=color,
-                                  foreground="black")
+        parent_element.tag_add(
+            color + ":" + start_position_str + "-" + end_position_str,
+            start_position_str,
+            end_position_str,
+        )
+        parent_element.tag_config(
+            color + ":" + start_position_str + "-" + end_position_str,
+            background=color,
+            foreground="black",
+        )
 
 
 class CodePreviewContentBuffer(ContentBuffer):
@@ -69,7 +89,7 @@ class CodePreviewContentBuffer(ContentBuffer):
     next_free_region_id = 0
     lines: List[Line]
 
-    def __init__(self, wizard, file_id: int, source_code_path: str, tab_width: int = 4):
+    def __init__(self, wizard, file_id: int, source_code_path: Path, tab_width: int = 4):
         super().__init__(file_id, source_code_path, tab_width, line_type=CodePreviewLine)
         self.wizard = wizard
 
@@ -78,7 +98,9 @@ class CodePreviewContentBuffer(ContentBuffer):
         for line_idx, line in enumerate(self.lines):
             # offset line_id to account for start with 1
             offset_line_id = line_idx + 1
-            cast(CodePreviewLine, line).display(self.wizard, parent_element, offset_line_id, self.max_line_num)
+            cast(CodePreviewLine, line).display(
+                self.wizard, parent_element, offset_line_id, self.max_line_num
+            )
 
     def jump_to_first_modification(self, parent_element: tk.Text):
         """Jumps to the location of the first modified source code location."""

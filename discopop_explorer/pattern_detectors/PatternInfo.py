@@ -8,7 +8,7 @@
 import json
 from typing import Optional
 
-from ..utils import calculate_workload
+from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 from ..PETGraphX import LoopNode, Node, NodeID, LineID, PETGraphX
 
 
@@ -24,6 +24,7 @@ class PatternInfo(object):
     entries: int
     instructions_count: Optional[int]
     workload: Optional[int]
+    per_iteration_workload: Optional[int]
     dp_optimizer_device_id: Optional[
         int
     ] = None  # used by discopop_optimizer. unused by discopop_explorer.
@@ -54,6 +55,7 @@ class PatternInfo(object):
 
         # TODO self.instructions_count = total_instructions_count(pet, node)
         self.workload = None
+        self.per_iteration_workload: Optional[int] = None
         # TODO self.workload = calculate_workload(pet, node)
 
     def to_json(self):
@@ -73,3 +75,10 @@ class PatternInfo(object):
             return self.workload
         self.workload = calculate_workload(pet, self._node)
         return self.workload
+
+    def get_per_iteration_workload(self, pet: PETGraphX) -> int:
+        """returns the per iteration workload of self"""
+        if self.per_iteration_workload is not None:
+            return self.per_iteration_workload
+        self.per_iteration_workload = calculate_per_iteration_workload_of_loop(pet, self._node)
+        return self.per_iteration_workload

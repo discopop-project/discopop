@@ -11,29 +11,36 @@ import os
 from os.path import dirname
 
 from discopop_wizard.classes.Arguments import Arguments
-from discopop_wizard.headless.headless_execution import execute_all_stored_configurations, \
-    execute_tag_filtered_configurations
+from discopop_wizard.headless.headless_execution import (
+    execute_all_stored_configurations,
+    execute_tag_filtered_configurations,
+)
 from discopop_wizard.wizard import main as wizard_main
 
 
 def convert_args(namespace_args: argparse.Namespace) -> Arguments:
     """Stores args into an Arguments object."""
     return_arg = Arguments()
-    return_arg.execute_configurations_with_tag = [tag for tag in
-                                                  namespace_args.execute_configurations_with_tag.split(",") if
-                                                  len(tag) > 0]
+    return_arg.execute_configurations_with_tag = [
+        tag for tag in namespace_args.execute_configurations_with_tag.split(",") if len(tag) > 0
+    ]
     return_arg.execute_all_configurations = namespace_args.execute_all_configurations == "true"
 
     return return_arg
 
 
 def main():
-    parser = argparse.ArgumentParser(description='DiscoPoP Configuration Wizard')
+    parser = argparse.ArgumentParser(description="DiscoPoP Configuration Wizard")
 
-    parser.add_argument("--execute_all_configurations",
-                        help="Execute all stored configurations in a headless manner. [true / false]")
-    parser.add_argument("--execute_configurations_with_tag", default="",
-                        help="Execute all stored configurations in a headless manner which have any of the given tags assigned. [comma-separated list of tags to be executed]")
+    parser.add_argument(
+        "--execute_all_configurations",
+        help="Execute all stored configurations in a headless manner. [true / false]",
+    )
+    parser.add_argument(
+        "--execute_configurations_with_tag",
+        default="",
+        help="Execute all stored configurations in a headless manner which have any of the given tags assigned. [comma-separated list of tags to be executed]",
+    )
 
     args = convert_args(parser.parse_args())
 

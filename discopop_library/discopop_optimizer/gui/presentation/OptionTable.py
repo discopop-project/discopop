@@ -1,3 +1,10 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
 import tkinter
 from tkinter import *
 from typing import List, Tuple, Dict, Union, Optional, cast
@@ -5,7 +12,7 @@ from typing import List, Tuple, Dict, Union, Optional, cast
 import networkx as nx  # type: ignore
 from sympy import Symbol, Expr
 
-from discopop_explorer import PETGraphX
+from discopop_explorer.PETGraphX import PETGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code

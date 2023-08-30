@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 import sympy
 
-from discopop_explorer.PETGraphX import MemoryRegion
+from discopop_explorer.PETGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
@@ -24,6 +24,14 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+
+
+def get_nodes_from_cu_id(graph: nx.DiGraph, cu_node_id: NodeID) -> List[int]:
+    result_list: List[int] = []
+    for node_id in graph.nodes:
+        if cast(GenericNode, graph.nodes[node_id]["data"]).original_cu_id == cu_node_id:
+            result_list.append(node_id)
+    return result_list
 
 
 def data_at(graph: nx.DiGraph, node_id: int) -> GenericNode:

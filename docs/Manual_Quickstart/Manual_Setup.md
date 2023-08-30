@@ -23,7 +23,7 @@ The Configuration Wizard uses Tkinter for its GUI functionality. It can be insta
 
 
 ## DiscoPoP profiler installation
-First, clone the source code into a designated folder. 
+First, clone the source code into a designated folder.
 
 	git clone https://github.com/discopop-project/discopop.git
 
@@ -32,7 +32,7 @@ Then, create a build directory, for example inside the source folder:
 	cd discopop
 	mkdir build; cd build;
 
-Next, configure the project using CMake. 
+Next, configure the project using CMake.
 
 If you have installed LLVM <b>from the source</b> please specify the preferred LLVM installation path for DiscoPoP. This can be done using the `-DLLVM_DIST_PATH=<PATH_TO_LLVM_BUILD_FOLDER>` CMake variable.
 
@@ -50,7 +50,7 @@ Once the configuration process is successfully finished, compile the DiscoPoP li
 
 
 ## Installation of Python Modules
-The included Python modules `discopop_explorer` and `discopop_wizard` will be installed during the `cmake` build process, 
+The included Python modules `discopop_explorer` and `discopop_wizard` will be installed during the `cmake` build process,
 but they can also be installed using `pip` by executing the following command in the base directory of DiscoPoP:
 
 	pip install .

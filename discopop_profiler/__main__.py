@@ -12,7 +12,8 @@ import argparse
 import logging
 import shutil
 
-from . import DiscopopCpp, __version__
+from . import DiscopopCpp
+from discopop_library.global_data.version.utils import get_version
 
 PROG = "discopop_profiler"
 
@@ -29,7 +30,7 @@ def main(args=None):
         "-V",
         "--version",
         action="version",
-        version=f"%(prog)s {__version__}",
+        version=f"%(prog)s {get_version()}",
         help="Show version number and exit.",
     )
     parser.add_argument(
