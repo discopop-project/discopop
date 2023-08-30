@@ -29,6 +29,7 @@ class MicrobenchType(str, Enum):
     SEPARATED = "SEPARATED"
     SHARED = "SHARED"
     PRIVATE = "PRIVATE"
+    FOR = "FOR"
 
 
 class MicrobenchDimension(str, Enum):

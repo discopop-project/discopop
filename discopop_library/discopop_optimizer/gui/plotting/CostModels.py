@@ -9,6 +9,7 @@ from typing import List, Dict, Tuple, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt  # type: ignore
+import matplotlib
 from spb import plot3d, MB, plot  # type: ignore
 from sympy import Symbol
 
@@ -64,6 +65,7 @@ def __1d_plot(
     super_title: Optional[str] = None,
 ):
     global __unique_plot_id
+    matplotlib.use("TkAgg")
     # Make a dataset from models:
     height: List[float] = []
     bars: List[str] = []
@@ -100,6 +102,7 @@ def __2d_plot(
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
 ):
+    matplotlib.use("TkAgg")
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
@@ -142,6 +145,7 @@ def __3d_plot(
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
 ):
+    matplotlib.use("TkAgg")
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
