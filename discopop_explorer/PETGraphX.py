@@ -22,6 +22,7 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
+from alive_progress import alive_bar  # type: ignore
 
 
 # unused
@@ -749,20 +750,22 @@ class PETGraphX(object):
         # store id of parent function in each node
         # and store in each function node a list of all children ids
         func_nodes = self.all_nodes(FunctionNode)
-        for idx, func_node in enumerate(func_nodes):
-            print("Calculating metadata for function: ", idx, " / ", len(func_nodes))
-            stack: List[Node] = self.direct_children(func_node)
-            func_node.children_cu_ids = [node.id for node in stack]
+        print("Calculating metadata for functions: ")
+        with alive_bar(len(func_nodes)) as progress_bar:
+            for func_node in func_nodes:
+                stack: List[Node] = self.direct_children(func_node)
+                func_node.children_cu_ids = [node.id for node in stack]
 
-            while stack:
-                child = stack.pop()
-                child.parent_function_id = func_node.id
-                children = self.direct_children(child)
-                func_node.children_cu_ids.extend([node.id for node in children])
-                stack.extend(children)
+                while stack:
+                    child = stack.pop()
+                    child.parent_function_id = func_node.id
+                    children = self.direct_children(child)
+                    func_node.children_cu_ids.extend([node.id for node in children])
+                    stack.extend(children)
 
-            func_node.calculate_reachability_pairs(self)
-        print("\tCalculated metadata for functions...")
+                func_node.calculate_reachability_pairs(self)
+                progress_bar()
+        print("\tDone.")
 
         print("Metadata calculation done.")
 
