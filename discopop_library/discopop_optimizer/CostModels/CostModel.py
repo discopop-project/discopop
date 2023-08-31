@@ -175,17 +175,34 @@ class CostModel(object):
                         )
 
             # evaluate both functions at the sampling point
-            substituted_model_1_1 = self.parallelizable_costs.xreplace(sampling_point)
-            numerical_result_1_1 = substituted_model_1_1.evalf()
-            substituted_model_1_2 = self.sequential_costs.xreplace(sampling_point)
-            numerical_result_1_2 = substituted_model_1_2.evalf()
-            substituted_model_2_1 = other.parallelizable_costs.xreplace(sampling_point)
-            numerical_result_2_1 = substituted_model_2_1.evalf()
-            substituted_model_2_2 = other.sequential_costs.xreplace(sampling_point)
-            numerical_result_2_2 = substituted_model_2_2.evalf()
+            print("PAR 1 PRE: ", self.parallelizable_costs)
 
-            total_1 = numerical_result_1_1 + numerical_result_1_2
-            total_2 = numerical_result_2_1 + numerical_result_2_2
+            substituted_model_1_1 = self.parallelizable_costs.xreplace(sampling_point)
+            print("PAR 1 POST: ", substituted_model_1_1)
+            numerical_result_1_1 = substituted_model_1_1.evalf()
+            print("PAR 1 EVAL:", numerical_result_1_1)
+
+            print("SEQ 1 PRE: ", self.sequential_costs)
+            substituted_model_1_2 = self.sequential_costs.xreplace(sampling_point)
+            print("SEQ 1 POST: ", substituted_model_1_2)
+            numerical_result_1_2 = substituted_model_1_2.evalf()
+            print("SEQ 1 EVAL:", numerical_result_1_2)
+
+            print("PAR 2 PRE: ", other.parallelizable_costs)
+            substituted_model_2_1 = other.parallelizable_costs.xreplace(sampling_point)
+            print("PAR 2 POST: ", substituted_model_1_1)
+            numerical_result_2_1 = substituted_model_2_1.evalf()
+            print("PAR 2 EVAL:", numerical_result_1_1)
+
+            print("SEQ 2 PRE: ", self.sequential_costs)
+            substituted_model_2_2 = other.sequential_costs.xreplace(sampling_point)
+            print("SEQ 2 POST: ", substituted_model_1_2)
+            numerical_result_2_2 = substituted_model_2_2.evalf()
+            print("SEQ 2 EVAL:", numerical_result_1_2)
+
+            # use re() to get real values in case extrap has introduced sqrt's
+            total_1 = sympy.re(numerical_result_1_1 + numerical_result_1_2)
+            total_2 = sympy.re(numerical_result_2_1 + numerical_result_2_2)
 
             # determine relation between the numerical results
             if total_1 < total_2:

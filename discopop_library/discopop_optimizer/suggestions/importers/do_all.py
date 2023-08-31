@@ -12,6 +12,10 @@ import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Microbench.utils import (
+    convert_microbench_to_discopop_workload,
+    convert_discopop_to_microbench_workload,
+)
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
@@ -126,13 +130,19 @@ def get_overhead_term(
     overhead_model = environment.get_system().get_doall_overhead_model()
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
-    per_iteration_workload = cast(int, node_data.parallelizable_workload)
     iterations = node_data.iterations
+    per_iteration_workload = cast(int, node_data.parallelizable_workload)
+    # convert DiscoPoP workload to Microbench workload
+    # converted_per_iteration_workload = convert_discopop_to_microbench_workload(
+    #    Integer(per_iteration_workload), Integer(iterations)
+    # )
+    converted_per_iteration_workload = Integer(per_iteration_workload)
+
     substitutions: Dict[Symbol, Expr] = {}
 
     for symbol in cast(List[Symbol], overhead_model.free_symbols):
         if cast(Symbol, symbol).name == "workload":
-            substitutions[symbol] = Integer(per_iteration_workload)
+            substitutions[symbol] = converted_per_iteration_workload
         elif cast(Symbol, symbol).name == "iterations":
             substitutions[symbol] = Integer(iterations)
         elif cast(Symbol, symbol).name == "threads":
@@ -141,6 +151,8 @@ def get_overhead_term(
             raise ValueError("Unknown symbol: ", symbol)
 
     substituted_overhead_model = overhead_model.xreplace(substitutions)
+
+    # todo: convert result (in s) to workload
 
     cm = CostModel(Integer(0), substituted_overhead_model)
     # add weight to overhead

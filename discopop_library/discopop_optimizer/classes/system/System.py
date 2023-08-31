@@ -29,9 +29,11 @@ class System(object):
     # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
 
     def set_doall_overhead_model(self, model: Expr):
+        print("System: Set DOALL overhead model: ", model)
         self.__do_all_overhead_model = model
 
     def set_reduction_overhead_model(self, model: Expr):
+        print("System: Set REDUCTION overhead model: ", model)
         self.__reduction_overhead_model = model
 
     def get_doall_overhead_model(self) -> Expr:

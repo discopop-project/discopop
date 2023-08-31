@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt  # type: ignore
 import matplotlib
 from spb import plot3d, MB, plot  # type: ignore
 from sympy import Symbol
+import sympy
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 
@@ -75,7 +76,9 @@ def __1d_plot(
         bars.append(model_label)
 
         # get numeric value from model
-        num_value = float(model.sequential_costs.evalf() + model.parallelizable_costs.evalf())
+        num_value = float(
+            sympy.re(model.sequential_costs.evalf() + model.parallelizable_costs.evalf())
+        )
         height.append(num_value)
 
     bars_tuple = tuple(bars)
