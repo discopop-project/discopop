@@ -53,5 +53,13 @@ class TestMethods(unittest.TestCase):
         converted_gold_standard = [DoAllInfoForValidation(elem) for elem in gold_standard.do_all]
         converted_test_output = [DoAllInfoForValidation(elem) for elem in test_output.do_all]
 
+        # sort the lists
+        converted_gold_standard = sorted(
+            converted_gold_standard, key=lambda x: (x.dai.node_id, x.dai.start_line, x.dai.end_line)
+        )
+        converted_test_output = sorted(
+            converted_test_output, key=lambda x: (x.dai.node_id, x.dai.start_line, x.dai.end_line)
+        )
+
         # compare doall list elements
         self.assertListEqual(converted_gold_standard, converted_test_output)
