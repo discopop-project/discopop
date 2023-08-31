@@ -223,9 +223,10 @@ def main():
 
         # define System
         system = System()
+        device_0_threads = Symbol("device_0_threads")  # Integer(48)
         device_0 = CPU(
             Integer(48),
-            Integer(48),
+            device_0_threads,
             openmp_device_id=-1,
             device_specific_compiler_flags="COMPILE FOR CPU",
         )  # Device 0 always acts as the host system

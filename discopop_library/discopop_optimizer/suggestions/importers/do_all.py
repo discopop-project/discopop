@@ -36,6 +36,7 @@ def import_suggestion(
                 new_node_id = get_next_free_node_id_function()
                 # copy data from existing node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
+                node_data_copy.node_id = new_node_id
 
                 # set the device id for the suggestion
                 node_data_copy.device_id = device_id
@@ -135,7 +136,7 @@ def get_overhead_term(
         elif cast(Symbol, symbol).name == "iterations":
             substitutions[symbol] = Integer(iterations)
         elif cast(Symbol, symbol).name == "threads":
-            substitutions[symbol] = Integer(thread_count)
+            substitutions[symbol] = thread_count
         else:
             raise ValueError("Unknown symbol: ", symbol)
 

@@ -12,7 +12,7 @@ from typing import List, Dict, Tuple, Optional
 import numpy as np
 import sympy
 from matplotlib import pyplot as plt  # type: ignore
-from sympy import Function, Symbol, init_printing, Expr  # type: ignore
+from sympy import Function, Symbol, init_printing, Expr, N, nsimplify  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 
@@ -118,10 +118,10 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
-    def register_child(self, other, root_node):
+    def register_child(self, other, root_node, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
-        return root_node.register_child(other)
+        return root_node.register_child(other, experiment, all_function_nodes)
 
     def register_successor(self, other, root_node):
         """Registers a successor node for the given model.
