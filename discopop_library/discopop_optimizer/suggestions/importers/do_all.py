@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-from typing import cast, Tuple, List
+from typing import cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
@@ -120,34 +120,27 @@ def get_overhead_term(
 ) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the Expression which represents the Overhead incurred by the given suggestion.
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
-    The function has been created using Extra-P.
-    # Todo: In the future, this shall happen dynamically, such that the used function is created per system.
-
-    Overhead(Threads, Iterations, Workload) = 11.95830999763869
-                                              + 7.119516221079432e-07
-                                              * log2(Threads) ^ (1) * Workload ^ (1)
-                                              * log2(Workload) ^ (1) * Iterations ^ (5 / 4)
-                                              + 0.0002157726704611484 * log2(Threads) ^ (1)
-                                              * Workload ^ (1) * log2(Workload) ^ (1)"""
+    The function has been created using Extra-P."""
+    # retrieve DoAll overhead model
+    overhead_model = environment.get_system().get_doall_overhead_model()
+    # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
-    overhead = Float(11.95830999763869)
-    overhead += (
-        (Float(7.119516221079432) ** (-7))
-        * log(thread_count, 2)
-        * (cast(int, node_data.parallelizable_workload) / node_data.iterations)
-        * log((cast(int, node_data.parallelizable_workload) / node_data.iterations), 2)
-        * (node_data.iterations ** (5 / 4))
-    )
-    overhead += (
-        Float(0.0002157726704611484)
-        * log(thread_count, 2)
-        * (cast(int, node_data.parallelizable_workload) / node_data.iterations)
-        * log((cast(int, node_data.parallelizable_workload) / node_data.iterations), 2)
-    )
+    per_iteration_workload = cast(int, node_data.parallelizable_workload)
+    iterations = node_data.iterations
+    substitutions: Dict[Symbol, Expr] = {}
 
-    # add weight to overhead
-    overhead *= environment.do_all_overhead_weight_by_device[device_id]
+    for symbol in cast(List[Symbol], overhead_model.free_symbols):
+        if cast(Symbol, symbol).name == "workload":
+            substitutions[symbol] = Integer(per_iteration_workload)
+        elif cast(Symbol, symbol).name == "iterations":
+            substitutions[symbol] = Integer(iterations)
+        elif cast(Symbol, symbol).name == "threads":
+            substitutions[symbol] = Integer(thread_count)
+        else:
+            raise ValueError("Unknown symbol: ", symbol)
 
-    cm = CostModel(Integer(0), overhead)
+    substituted_overhead_model = overhead_model.xreplace(substitutions)
+
+    cm = CostModel(Integer(0), substituted_overhead_model)
     # add weight to overhead
     return cm, []
