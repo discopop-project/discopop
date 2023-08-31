@@ -24,6 +24,7 @@ from .pattern_detectors.reduction_detector import run_detection as detect_reduct
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
+from alive_progress import alive_bar  # type: ignore
 
 
 class PatternDetectorX(object):
@@ -73,14 +74,18 @@ class PatternDetectorX(object):
         res = DetectionResult(self.pet)
 
         # reduction before doall!
+        print("REDUCTIONS...")
         res.reduction = detect_reduction(self.pet)
-        print("REDUCTION DONE.")
+        print("\tDONE.")
+        print("DOALL...")
         res.do_all = detect_do_all(self.pet)
-        print("DOALL DONE.")
+        print("\tDONE.")
+        print("PIPELINE...")
         res.pipeline = detect_pipeline(self.pet)
-        # print("PIPELINE DONE.")
+        print("\tDONE.")
+        print("GEO. DEC...")
         res.geometric_decomposition = detect_gd(self.pet)
-        # print("GEO. DEC. DONE.")
+        print("\tDONE.")
 
         # check if task pattern should be enabled
         if enable_task_pattern:
@@ -97,7 +102,9 @@ class PatternDetectorX(object):
         project_folder_path = os.path.dirname(os.path.abspath(file_mapping))
 
         # detect GPU patterns based on previously identified patterns
+        print("SIMPLE GPU...")
         res.simple_gpu = detect_gpu(self.pet, res, project_folder_path)
+        print("\tDONE.")
 
         return res
 

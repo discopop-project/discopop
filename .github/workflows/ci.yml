@@ -65,9 +65,6 @@ jobs:
           pip install --upgrade pip
           pip install .[ci]
 
-      - name: Python Unit-tests
-        run: python -m unittest -v
-
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: python -m mypy -p discopop_explorer
 
@@ -132,6 +129,12 @@ jobs:
           cd build
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           make -j3
+
+      - name: Python Unit-tests
+        run: python -m unittest -v
+
+      - name: "Setup DiscoPoP Profiler - Create executable"
+        run: chmod +x .github/workflows/tests/profiler.sh
 
       - name: "Execute DiscoPoP Profiler - mergesort - discopopPass"
         run: .github/workflows/tests/profiler.sh mergesort discopopPass

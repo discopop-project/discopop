@@ -8,7 +8,7 @@
 
 
 from typing import List, Tuple, Dict, Set
-
+from alive_progress import alive_bar  # type: ignore
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
     CUNode,
@@ -154,6 +154,9 @@ def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[Li
     )
 
 
+global_pet = None
+
+
 def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
     except for doall loops
@@ -161,21 +164,48 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
     :param pet: PET graph
     :return: List of detected pattern info
     """
+    import tqdm  # type: ignore
+    from multiprocessing import Pool
+
+    global global_pet
+    global_pet = pet
+
     result: List[PipelineInfo] = []
     children_cache: Dict[Node, List[Node]] = dict()
     dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(LoopNode)
-    for idx, node in enumerate(nodes):
-        # print("Pipeline:", idx, "/", len(nodes))
-        if not contains(result, lambda x: x.node_id == node.id):
-            node.pipeline = __detect_pipeline(pet, node)
-            if node.pipeline > __pipeline_threshold:
-                result.append(PipelineInfo(pet, node))
+
+    param_list = [(node) for node in nodes]
+    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
+        )
+    for local_result in tmp_result:
+        result += local_result
+    print("GLOBAL RES: ", result)
 
     for pattern in result:
         pattern.get_workload(pet)
 
     return result
+
+
+def __initialize_worker(pet):
+    global global_pet
+    global_pet = pet
+
+
+def __check_node(param_tuple):
+    global global_pet
+    local_result = []
+
+    node = param_tuple
+
+    node.pipeline = __detect_pipeline(global_pet, node)
+    if node.pipeline > __pipeline_threshold:
+        local_result.append(PipelineInfo(global_pet, node))
+
+    return local_result
 
 
 def __detect_pipeline(pet: PETGraphX, root: Node, children_cache=None, dep_cache=None) -> float:

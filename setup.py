@@ -46,6 +46,7 @@ setup(
         "schema>=0.7.0",
         "sympy",
         "sympy_plot_backends",
+        "alive_progress",
     ],
     extras_require={
         "dev": ["mypy", "black", "data-science-types", "pre-commit"],
