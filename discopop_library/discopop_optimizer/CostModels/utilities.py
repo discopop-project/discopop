@@ -112,10 +112,12 @@ def get_node_performance_models(
             if ignore_node_costs is not None:
                 if node_data.node_id not in ignore_node_costs:
                     children_models[idx] = tmp_node_cost_model.register_child(
-                        child_model, node_data
+                        child_model, node_data, experiment, all_function_nodes
                     )
             else:
-                children_models[idx] = tmp_node_cost_model.register_child(child_model, node_data)
+                children_models[idx] = tmp_node_cost_model.register_child(
+                    child_model, node_data, experiment, all_function_nodes
+                )
 
     # construct the performance models
     if successor_count >= 1:
@@ -340,6 +342,7 @@ def get_random_path(
         all_function_nodes,
         restrict_to_decisions=must_contain,
         get_single_random_model=True,
+        ignore_node_costs=[cast(FunctionRoot, data_at(graph, root_id)).node_id],
     )
     # filter out NaN - Models
     random_models = [model for model in random_models if model.parallelizable_costs != sympy.nan]

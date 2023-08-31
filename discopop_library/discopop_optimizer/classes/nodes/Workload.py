@@ -119,7 +119,7 @@ class Workload(GenericNode):
 
         return total_costs
 
-    def register_child(self, other):
+    def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         # since workloads do not modify their children, the performance model of other is simply added to self.

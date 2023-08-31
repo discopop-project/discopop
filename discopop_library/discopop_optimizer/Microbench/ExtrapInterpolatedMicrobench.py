@@ -22,6 +22,7 @@ from extrap.fileio.json_file_reader import read_json_file  # type: ignore
 from extrap.modelers.model_generator import ModelGenerator  # type: ignore
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
 from sympy.parsing.sympy_parser import parse_expr  # type: ignore
+import sympy
 
 
 # This class uses extrap to extrapolate microbench measurements.
@@ -68,7 +69,9 @@ class ExtrapInterpolatedMicrobench(Microbench):
         function_str = function_str.replace("r", "iterations")
         function_str = function_str.replace("p", "threads")
         function_str = function_str.replace("q", "workload")
-        expr = parse_expr(function_str)
+        # define replacements to match representations used in extrap output
+        function_mappings = {"log2": lambda x: sympy.log(x, 2)}
+        expr = parse_expr(function_str, local_dict=function_mappings)
         return expr
 
     def getMeasurements(self):

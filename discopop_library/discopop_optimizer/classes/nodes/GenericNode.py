@@ -77,7 +77,7 @@ class GenericNode(object):
             "Implementation needs to be provided by derived class: !", type(self)
         )
 
-    def register_child(self, other, root_node):
+    def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         raise NotImplementedError(

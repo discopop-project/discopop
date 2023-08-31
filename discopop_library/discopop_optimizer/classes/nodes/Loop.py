@@ -19,6 +19,7 @@ class Loop(Workload):
     iterations: int
     position: str
     iterations_symbol: Symbol
+    experiment: Experiment
 
     def __init__(
         self,
@@ -30,6 +31,7 @@ class Loop(Workload):
         position: str,
         iterations_symbol: Optional[Symbol] = None,
     ):
+        self.experiment = experiment
         self.position = position
         self.iterations = max(
             iterations, 1
@@ -100,14 +102,15 @@ class Loop(Workload):
 
         return cast(CostModel, result_model)
 
-    def register_child(self, other):
+    def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
-
         # The workload of the added child needs to be multiplied with the iteration count before adding it.
-        return self.performance_model.parallelizable_plus_combine(
-            other.parallelizable_multiply_combine(
-                CostModel(self.iterations_symbol, self.iterations_symbol)
+        return self.get_cost_model(experiment, all_function_nodes).parallelizable_multiply_combine(
+            self.performance_model.parallelizable_plus_combine(
+                other.parallelizable_multiply_combine(
+                    CostModel(self.iterations_symbol, self.iterations_symbol)
+                )
             )
         )
 

@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Dict, List, Tuple, Optional
 
-from sympy import Symbol, Expr, Integer
+from sympy import Symbol, Expr, Integer, simplify
 
 from discopop_library.discopop_optimizer.classes.system.Network import Network
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
@@ -29,11 +29,9 @@ class System(object):
     # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
 
     def set_doall_overhead_model(self, model: Expr):
-        print("System: Set DOALL overhead model to: ", model)
         self.__do_all_overhead_model = model
 
     def set_reduction_overhead_model(self, model: Expr):
-        print("System: Set REDUCTION overhead model to: ", model)
         self.__reduction_overhead_model = model
 
     def get_doall_overhead_model(self) -> Expr:

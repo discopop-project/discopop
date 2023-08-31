@@ -115,7 +115,7 @@ def get_overhead_term(
         elif cast(Symbol, symbol).name == "iterations":
             substitutions[symbol] = Integer(iterations)
         elif cast(Symbol, symbol).name == "threads":
-            substitutions[symbol] = Integer(thread_count)
+            substitutions[symbol] = thread_count
         else:
             raise ValueError("Unknown symbol: ", symbol)
 

@@ -57,6 +57,7 @@ def find_quasi_optimal_using_random_samples(
     # apply substitutions and set free symbol ranges and distributions
     if verbose:
         print("\tApplying substitutions...")
+        print("\t" + str(substitutions))
     for model, context in random_paths:
         # apply substitutions iteratively
         modification_found = True
