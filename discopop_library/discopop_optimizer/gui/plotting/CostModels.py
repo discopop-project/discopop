@@ -78,6 +78,7 @@ def __1d_plot(
         # get numeric value from model
         num_value = float(
             sympy.re(model.sequential_costs.evalf() + model.parallelizable_costs.evalf())
+            + sympy.im(model.sequential_costs.evalf() + model.parallelizable_costs.evalf())
         )
         height.append(num_value)
 

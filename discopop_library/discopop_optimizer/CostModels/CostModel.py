@@ -201,8 +201,12 @@ class CostModel(object):
             print("SEQ 2 EVAL:", numerical_result_1_2)
 
             # use re() to get real values in case extrap has introduced sqrt's
-            total_1 = sympy.re(numerical_result_1_1 + numerical_result_1_2)
-            total_2 = sympy.re(numerical_result_2_1 + numerical_result_2_2)
+            total_1 = sympy.re(numerical_result_1_1 + numerical_result_1_2) + sympy.im(
+                numerical_result_1_1 + numerical_result_1_2
+            )
+            total_2 = sympy.re(numerical_result_2_1 + numerical_result_2_2) + sympy.im(
+                numerical_result_2_1 + numerical_result_2_2
+            )
 
             # determine relation between the numerical results
             if total_1 < total_2:
