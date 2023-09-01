@@ -28,7 +28,8 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 Detailed information about each execution step, the setup as well as the functionality of DiscoPoP and how to contribute can be found on the [wiki page](https://discopop-project.github.io/discopop/).
 
 ### Quick Links
-- [Quickstart guide](https://discopop-project.github.io/discopop/Quickstart)
+- [Quickstart guide - GUI](https://discopop-project.github.io/discopop/Quickstart)
+- [Quickstart guide - CMake projects](https://discopop-project.github.io/discopop/Quickstart_CMake)
 
 ## Example
 DiscoPoP creates parallelization suggestions for sequential source code.

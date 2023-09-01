@@ -143,6 +143,7 @@ def main():
     start = time.time()
 
     res = run(
+        arguments["--path"],
         cu_xml,
         dep_file,
         loop_counter_file,

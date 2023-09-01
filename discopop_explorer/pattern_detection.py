@@ -57,6 +57,7 @@ class PatternDetectorX(object):
 
     def detect_patterns(
         self,
+        project_path,
         cu_dict,
         dependencies,
         loop_data,
@@ -99,11 +100,9 @@ class PatternDetectorX(object):
                 discopop_build_path,
             )
 
-        project_folder_path = os.path.dirname(os.path.abspath(file_mapping))
-
         # detect GPU patterns based on previously identified patterns
         print("SIMPLE GPU...")
-        res.simple_gpu = detect_gpu(self.pet, res, project_folder_path)
+        res.simple_gpu = detect_gpu(self.pet, res, project_path)
         print("\tDONE.")
 
         return res
