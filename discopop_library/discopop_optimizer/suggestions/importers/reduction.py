@@ -115,7 +115,6 @@ def get_overhead_term(
     converted_per_iteration_workload = convert_discopop_to_microbench_workload(
         Integer(per_iteration_workload), Integer(iterations)
     )
-    # converted_per_iteration_workload = Integer(per_iteration_workload)
 
     substitutions: Dict[Symbol, Expr] = {}
 

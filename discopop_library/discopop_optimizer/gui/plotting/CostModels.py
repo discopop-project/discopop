@@ -110,9 +110,12 @@ def __2d_plot(
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
+        model_costs = sympy.re(model.parallelizable_costs + model.sequential_costs) + sympy.im(
+            model.parallelizable_costs + model.sequential_costs
+        )
         if combined_plot is None:
             combined_plot = plot(
-                model.parallelizable_costs + model.sequential_costs,
+                model_costs,
                 (
                     sorted_free_symbols[0],
                     free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -127,7 +130,7 @@ def __2d_plot(
         else:
             combined_plot.extend(
                 plot(
-                    model.parallelizable_costs + model.sequential_costs,
+                    model_costs,
                     (
                         sorted_free_symbols[0],
                         free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -153,9 +156,12 @@ def __3d_plot(
     combined_plot = None
     for idx, model in enumerate(models):
         model_label = str(model.path_decisions) if labels is None else labels[idx]
+        model_costs = sympy.re(model.parallelizable_costs + model.sequential_costs) + sympy.im(
+            model.parallelizable_costs + model.sequential_costs
+        )
         if combined_plot is None:
             combined_plot = plot3d(
-                model.parallelizable_costs + model.sequential_costs,
+                model_costs,
                 (
                     sorted_free_symbols[0],
                     free_symbol_ranges[sorted_free_symbols[0]][0],
@@ -175,7 +181,7 @@ def __3d_plot(
         else:
             combined_plot.extend(
                 plot3d(
-                    model.parallelizable_costs + model.sequential_costs,
+                    model_costs,
                     (
                         sorted_free_symbols[0],
                         free_symbol_ranges[sorted_free_symbols[0]][0],

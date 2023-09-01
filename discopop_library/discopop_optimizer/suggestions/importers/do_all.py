@@ -133,10 +133,11 @@ def get_overhead_term(
     iterations = node_data.iterations
     per_iteration_workload = cast(int, node_data.parallelizable_workload)
     # convert DiscoPoP workload to Microbench workload
-    # converted_per_iteration_workload = convert_discopop_to_microbench_workload(
-    #    Integer(per_iteration_workload), Integer(iterations)
-    # )
-    converted_per_iteration_workload = Integer(per_iteration_workload)
+    converted_per_iteration_workload = Float(
+        convert_discopop_to_microbench_workload(
+            Integer(per_iteration_workload), Integer(iterations)
+        )
+    )
 
     substitutions: Dict[Symbol, Expr] = {}
 
