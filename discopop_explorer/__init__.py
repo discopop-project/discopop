@@ -18,6 +18,7 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 def run(
+    project_path: str,
     cu_xml: str,
     dep_file: str,
     loop_counter_file: str,  # TODO we should be able to read all info from the _dep.txt file (?)
@@ -46,6 +47,7 @@ def run(
     pattern_detector = PatternDetectorX(pet)
 
     res: DetectionResult = pattern_detector.detect_patterns(
+        project_path,
         cu_xml,
         dep_file,
         loop_counter_file,

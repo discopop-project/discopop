@@ -57,6 +57,7 @@ class PatternDetectorX(object):
 
     def detect_patterns(
         self,
+        project_path,
         cu_dict,
         dependencies,
         loop_data,
@@ -99,11 +100,9 @@ class PatternDetectorX(object):
                 discopop_build_path,
             )
 
-        project_folder_path = os.path.dirname(os.path.abspath(file_mapping))
-
         # detect GPU patterns based on previously identified patterns
         print("SIMPLE GPU...")
-        res.simple_gpu = detect_gpu(self.pet, res, project_folder_path)
+        res.simple_gpu = detect_gpu(self.pet, res, project_path)
         print("\tDONE.")
 
         # detect combined GPU patterns
@@ -112,7 +111,7 @@ class PatternDetectorX(object):
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
         # identify scheduling clauses
-        return self.__identify_scheduling_clauses(res, project_folder_path, file_mapping)
+        return self.__identify_scheduling_clauses(res, project_path, file_mapping)
 
     def __identify_scheduling_clauses(
         self,

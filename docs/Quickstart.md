@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Quickstart
+title: Quickstart - GUI
 nav_order: 2
 ---
 
-# Quickstart
+# Quickstart - GUI
 The fastest and most convenient way to using DiscoPoP is provided by the [graphical user interface](Tutorials/Configuration_Wizard.md).
 It can be installed from `PyPi` and offers the option to perform the necessary profiling steps using a docker container by default.
 Thus, no manual setup of the environment apart from installing `docker` is required.
