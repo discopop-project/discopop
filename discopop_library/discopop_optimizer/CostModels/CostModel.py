@@ -12,7 +12,7 @@ from typing import List, Dict, Tuple, Optional
 import numpy as np
 import sympy
 from matplotlib import pyplot as plt  # type: ignore
-from sympy import Function, Symbol, init_printing, Expr, N, nsimplify  # type: ignore
+from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 
@@ -207,6 +207,9 @@ class CostModel(object):
             total_2 = sympy.re(numerical_result_2_1 + numerical_result_2_2) + sympy.im(
                 numerical_result_2_1 + numerical_result_2_2
             )
+
+            print("TOTAL1: ", total_1)
+            print("TOTAL2: ", total_2)
 
             # determine relation between the numerical results
             if total_1 < total_2:

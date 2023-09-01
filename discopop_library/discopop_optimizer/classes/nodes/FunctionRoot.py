@@ -55,4 +55,9 @@ class FunctionRoot(Workload):
         # instead of returning an empty model, return symbols for sequential and parallel workload.
         # These symbols can be substituted in order to evaluate for different versions of other functions
 
-        return self.performance_model
+        cm = self.performance_model
+        # substitute Expr(0) with Integer(0)
+        cm.parallelizable_costs = cm.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
+        cm.sequential_costs = cm.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+
+        return cm

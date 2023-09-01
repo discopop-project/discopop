@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Optional, cast
 
-from sympy import Symbol, Integer  # type: ignore
+from sympy import Symbol, Integer, Expr  # type: ignore
 
 from discopop_explorer.PETGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -100,7 +100,12 @@ class Loop(Workload):
             self.iterations
         )
 
-        return cast(CostModel, result_model)
+        cm = cast(CostModel, result_model)
+        # substitute Expr(0) with Integer(0)
+        cm.parallelizable_costs = cm.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
+        cm.sequential_costs = cm.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+
+        return cm
 
     def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.

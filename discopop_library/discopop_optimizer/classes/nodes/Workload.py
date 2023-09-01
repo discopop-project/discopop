@@ -81,8 +81,6 @@ class Workload(GenericNode):
                     self.__get_costs_of_function_call(experiment, all_function_nodes)
                 )
             )
-
-            return cm
         else:
             cm = (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
@@ -92,7 +90,12 @@ class Workload(GenericNode):
                     self.__get_costs_of_function_call(experiment, all_function_nodes)
                 )
             )
-            return cm
+
+        # substitute Expr(0) with Integer(0)
+        cm.parallelizable_costs = cm.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
+        cm.sequential_costs = cm.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+
+        return cm
 
     def __get_costs_of_function_call(self, experiment, all_function_nodes) -> CostModel:
         """Check if the node performs a function call and returns the total costs for these."""
