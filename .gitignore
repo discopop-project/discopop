@@ -152,6 +152,8 @@ _deps
 # do not ignore our example data
 /example/*
 !/example/Makefile
+!/example/CMakeLists.txt
+!/example/execute_cmake_example.sh
 !/example/example.cpp
 !/example/solution1.cpp
 !/example/solution2.cpp
