@@ -86,6 +86,9 @@ jobs:
       - name: "Check formatting of DiscoPoP Profiler"
         run: python -m black -l 100 --check discopop_profiler
 
+      - name: "Check formatting of DiscoPoP Wizard"
+        run: python -m black -l 100 --check discopop_wizard
+
       - name: Test DiscoPop Explorer - DISABLED
         run: |
           if false; then  # disable the check temporarily
