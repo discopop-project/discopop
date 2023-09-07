@@ -56,14 +56,13 @@ jobs:
           [ -z "$ERROR" ] || exit 1
 
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
+          cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install .[ci]
+        run: pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: python -m mypy -p discopop_explorer
