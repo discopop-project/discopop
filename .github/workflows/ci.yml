@@ -148,19 +148,10 @@ jobs:
       - name: "Execute DiscoPoP Profiler - simple_pipeline - discopopPass"
         run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
 
-  ci_successful:
-    name: "CI Tests Successful"
-    runs-on: ubuntu-20.04
-    needs: execute_tests
-    steps:
-      - name: "Report success"
-        run: exit 0
-
-
   update_wiki-build:
     name: "Update Wiki - Build"
     runs-on: ubuntu-20.04
-    needs: ci_successful
+    needs: execute_tests
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
