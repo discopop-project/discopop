@@ -84,10 +84,6 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
     output = []
     cu_to_suggestions_map: Dict[str, List[TaskParallelismInfo]] = dict()
     for s in suggestions:
-        # filter out non task / taskwait suggestions and append to output
-        if not (type(s) == Task or type(s) == TaskParallelismInfo):
-            output.append(s)
-            continue
         # fill cu_to_suggestions_map
         if s.node_id in cu_to_suggestions_map:
             cu_to_suggestions_map[s.node_id].append(s)
@@ -137,9 +133,6 @@ def detect_taskloop_reduction(
     # iterate over suggestions
     for s in suggestions:
         # ignore others than tasks
-        if not (type(s) == Task or type(s) == TaskParallelismInfo):
-            output.append(s)
-            continue
         if s.type is not TPIType.TASK:
             continue
         # check if s contained in reduction loop body

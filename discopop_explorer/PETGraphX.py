@@ -1543,9 +1543,6 @@ class PETGraphX(object):
         queue = [target]
         while len(queue) > 0:
             cur_node = queue.pop(0)
-            if type(cur_node) == list:
-                cur_node_list = cast(List[Node], cur_node)
-                cur_node = cur_node_list[0]
             visited.append(cur_node.id)
             tmp_list = [
                 (s, t, e)
@@ -1630,9 +1627,6 @@ class PETGraphX(object):
         queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
         while len(queue) > 0:
             cur_node, cur_path = queue.pop(0)
-            if type(cur_node) == list:
-                cur_node_list = cast(List[CUNode], cur_node)
-                cur_node = cur_node_list[0]
             visited.append(cur_node.id)
             tmp_list = [
                 (s, t, e)
@@ -1716,9 +1710,6 @@ class PETGraphX(object):
 
         while len(queue) > 0:
             cur_node, cur_path = queue.pop(0)
-            if type(cur_node) == list:
-                cur_node_list = cast(List[CUNode], cur_node)
-                cur_node = cur_node_list[0]
             visited.append(cur_node.id)
             tmp_list = [
                 (s, t, e)
