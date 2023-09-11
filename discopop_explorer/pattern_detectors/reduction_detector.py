@@ -18,10 +18,10 @@ from ..PETGraphX import (
     NodeType,
     Node,
     LineID,
-    Variable,
     DepType,
     EdgeType,
 )
+from ..variable import Variable
 from ..utils import is_reduction_var, classify_loop_variables, contains
 from multiprocessing import Pool
 
