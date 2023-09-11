@@ -104,7 +104,7 @@ class Settings(object):
         # set initialized, if all values could be determined and are valid, or docker container is used
         self.initialized = use_docker_container or settings_valid
 
-    def get_as_json_string(self) -> str:
+    def get_as_json_string(self):
         """returns a representation of the settings which will be stored in a configuration file."""
         return jsons.dumps(self)
 

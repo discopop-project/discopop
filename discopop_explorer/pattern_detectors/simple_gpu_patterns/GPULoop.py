@@ -260,7 +260,7 @@ class GPULoopPattern(PatternInfo):
 
         :return:
         """
-        json_output: Any = "{"
+        json_output: str = "{"
         # == == Metadata == ==
         json_output += '"id":"' + str(self.nodeID) + '",'
         json_output += '"startline":"' + self.start_line + '",'
