@@ -44,7 +44,7 @@ class DetectionResult(object):
             result_str += value_str
         return result_str
 
-    def dump_to_pickled_json(self) -> str:
+    def dump_to_pickled_json(self):
         """Encodes and returns the entire Object into a pickled json string.
         The encoded string can be reconstructed into an object by using:
         jsonpickle.decode(json_str)

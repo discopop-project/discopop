@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Union, overload
+from typing import Dict, List, Tuple, TypeVar, Union, overload
 import json
 
 import numpy as np
@@ -19,18 +19,16 @@ from .Microbench import (
     MicrobenchCoordinate,
 )
 
+T = TypeVar("T")
 
-def __partition(pred, iterable):
-    kept = 0
-    removed = 0
-    trues = []
-    falses = []
-    for item in iterable:
+
+def __partition(pred, list: List[T]) -> Tuple[List[T], List[T]]:
+    trues: List[T] = []
+    falses: List[T] = []
+    for item in list:
         if pred(item):
-            kept += 1
             trues.append(item)
         else:
-            removed += 1
             falses.append(item)
     return trues, falses
 
