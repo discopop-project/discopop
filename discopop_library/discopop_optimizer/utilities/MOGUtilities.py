@@ -32,11 +32,11 @@ def get_nodes_from_cu_id(graph: nx.DiGraph, cu_node_id: NodeID) -> List[int]:
 
 def data_at(graph: nx.DiGraph, node_id: int) -> GenericNode:
     """Return the data object stored at the networkx node with id node_id."""
-    return graph.nodes[node_id]["data"]
+    return cast(GenericNode, graph.nodes[node_id]["data"])
 
 
 def get_edge_data(graph: nx.DiGraph, source: int, target: int) -> GenericEdge:
-    return graph.edges[(source, target)]["data"]
+    return cast(GenericEdge, graph.edges[(source, target)]["data"])
 
 
 def get_successors(graph: nx.DiGraph, node_id: int) -> List[int]:

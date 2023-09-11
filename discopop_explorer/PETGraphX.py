@@ -931,7 +931,7 @@ class PETGraphX(object):
         :param node_id: id of the node
         :return: Node
         """
-        return self.g.nodes[node_id]["data"]
+        return cast(Node, self.g.nodes[node_id]["data"])
 
     # generic type for subclasses of Node
     NodeT = TypeVar("NodeT", bound=Node)
@@ -1521,7 +1521,7 @@ class PETGraphX(object):
                 return rv["operation"]
         return ""
 
-    def dump_to_pickled_json(self) -> str:
+    def dump_to_pickled_json(self):
         """Encodes and returns the entire Object into a pickled json string.
         The encoded string can be reconstructed into an object by using:
         jsonpickle.decode(json_str)
