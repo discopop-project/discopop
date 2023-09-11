@@ -28,9 +28,7 @@ def suggest_shared_clauses_for_all_tasks_in_function_body(
     """
     task_suggestions = [
         s
-        for s in [
-            cast(TaskParallelismInfo, t) for t in suggestions if type(t) == TaskParallelismInfo
-        ]
+        for s in [t for t in suggestions if type(t) == TaskParallelismInfo]
         if s.type is TPIType.TASK
     ]
     for ts in task_suggestions:

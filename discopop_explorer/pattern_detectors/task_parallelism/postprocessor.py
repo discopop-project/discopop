@@ -32,16 +32,12 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
     :return: Updated suggestions"""
     task_suggestions = [
         s
-        for s in [
-            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
-        ]
+        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
         if s.type is TPIType.TASK
     ]
     taskwait_suggestions = [
         s
-        for s in [
-            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
-        ]
+        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
         if s.type is TPIType.TASKWAIT
     ]
     # mark preceeding suggestions for each taskwait suggestion
@@ -116,7 +112,7 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
                 )
         # valid, overwrite sug.task_group if value is not None
         if value is not None:
-            sug.task_group = [cast(int, value)]
+            sug.task_group = [value]
     return suggestions
 
 
@@ -130,30 +126,13 @@ def sort_output(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     sorted_suggestions = []
     tmp_dict: Dict[str, List[Tuple[str, PatternInfo]]] = dict()
     for sug in suggestions:
-        if type(sug) == ParallelRegionInfo:
-            sug_par = cast(ParallelRegionInfo, sug)
-            # Note: Code duplicated for type correctness
+        if isinstance(sug, (ParallelRegionInfo, TaskParallelismInfo)):
             # get start_line and file_id for sug
-            if ":" not in sug_par.region_start_line:
-                start_line = sug_par.region_start_line
-                file_id = sug_par.start_line[0 : sug_par.start_line.index(":")]
+            if ":" not in sug.region_start_line:
+                start_line = sug.region_start_line
+                file_id = sug.start_line[0 : sug.start_line.index(":")]
             else:
-                start_line = sug_par.region_start_line
-                file_id = start_line[0 : start_line.index(":")]
-                start_line = start_line[start_line.index(":") + 1 :]
-            # split suggestions by file-id
-            if file_id not in tmp_dict:
-                tmp_dict[file_id] = []
-            tmp_dict[file_id].append((start_line, sug))
-        elif type(sug) == TaskParallelismInfo:
-            sug_task = cast(TaskParallelismInfo, sug)
-            # Note: Code duplicated for type correctness
-            # get start_line and file_id for sug
-            if ":" not in sug_task.region_start_line:
-                start_line = sug_task.region_start_line
-                file_id = sug_task.start_line[0 : sug_task.start_line.index(":")]
-            else:
-                start_line = sug_task.region_start_line
+                start_line = sug.region_start_line
                 file_id = start_line[0 : start_line.index(":")]
                 start_line = start_line[start_line.index(":") + 1 :]
             # split suggestions by file-id

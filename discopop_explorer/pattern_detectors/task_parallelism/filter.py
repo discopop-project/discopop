@@ -49,7 +49,6 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(
         # only consider task suggestions
         if type(suggestion) != TaskParallelismInfo:
             continue
-        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.type is not TPIType.TASK:
             continue
         # get parent loops of suggestion
@@ -92,7 +91,6 @@ def __filter_data_sharing_clauses_by_function(
         # only consider task suggestions
         if type(suggestion) != TaskParallelismInfo:
             continue
-        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
             continue
         # get function containing the task cu
@@ -302,7 +300,6 @@ def __filter_data_sharing_clauses_by_scope(
         # only consider task suggestions
         if type(suggestion) != TaskParallelismInfo:
             continue
-        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.type is not TPIType.TASK:
             continue
         # get function containing the task cu
@@ -348,15 +345,14 @@ def __filter_sharing_clause(
                 # accept global vars
                 continue
             # get CU which contains var_def_line
-            optional_var_def_cu: Optional[Node] = None
+            var_def_cu: Optional[Node] = None
             for child_cu in get_cus_inside_function(pet, parent_function_cu):
                 if line_contained_in_region(
                     var_def_line, child_cu.start_position(), child_cu.end_position()
                 ):
-                    optional_var_def_cu = child_cu
-            if optional_var_def_cu is None:
+                    var_def_cu = child_cu
+            if var_def_cu is None:
                 continue
-            var_def_cu = cast(Node, optional_var_def_cu)
             # 1. check control flow (reverse BFS from suggestion._node to parent_function
             if __reverse_reachable_w_o_breaker(
                 pet, pet.node_at(suggestion.node_id), parent_function_cu, var_def_cu, []
@@ -434,16 +430,14 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
     :param suggestions: List[PatternInfo]
     :return: Modified List of PatternInfos
     """
-    result = []
+    result: List[PatternInfo] = []
     for s in suggestions:
         if not type(s) == TaskParallelismInfo:
             result.append(s)
         else:
-            s_tpi = cast(TaskParallelismInfo, s)
-            s_tpi.in_dep = list(set(s_tpi.in_dep))
-            s_tpi.out_dep = list(set(s_tpi.out_dep))
-            s_tpi.in_out_dep = list(set(s_tpi.in_out_dep))
-            s = cast(PatternInfo, s_tpi)
+            s.in_dep = list(set(s.in_dep))
+            s.out_dep = list(set(s.out_dep))
+            s.in_out_dep = list(set(s.in_out_dep))
             result.append(s)
     return result
 
@@ -716,7 +710,6 @@ def filter_data_depend_clauses(
             # only consider task suggestions
             if type(suggestion) != TaskParallelismInfo:
                 continue
-            suggestion = cast(TaskParallelismInfo, suggestion)
             if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             for var in suggestion.in_dep:
@@ -741,7 +734,6 @@ def filter_data_depend_clauses(
             # only consider task suggestions
             if type(suggestion) != TaskParallelismInfo:
                 continue
-            suggestion = cast(TaskParallelismInfo, suggestion)
             if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             # get function containing the task cu

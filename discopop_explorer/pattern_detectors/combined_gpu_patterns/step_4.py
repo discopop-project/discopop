@@ -399,7 +399,7 @@ def identify_updates(
     # get parent functions
     parent_functions: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+        parent_functions.add(pet.get_parent_function(pet.node_at(region.node_id)).id)
 
     for parent_function_id in parent_functions:
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
@@ -410,7 +410,7 @@ def identify_updates(
         ]:
             in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
-                entry_points.append(cast(NodeID, function_child_id))
+                entry_points.append(function_child_id)
 
         for entry_point in entry_points:
             print(
@@ -780,7 +780,7 @@ def identify_updates_in_unrolled_function_graphs(
     # get parent functions
     parent_functions: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.add(cast(NodeID, pet.get_parent_function(pet.node_at(region.node_id)).id))
+        parent_functions.add(pet.get_parent_function(pet.node_at(region.node_id)).id)
 
     for parent_function_id in parent_functions:
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
@@ -791,7 +791,7 @@ def identify_updates_in_unrolled_function_graphs(
         ]:
             in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
-                entry_points.append(cast(NodeID, function_child_id))
+                entry_points.append(function_child_id)
 
         for entry_point in entry_points:
             print(

@@ -156,16 +156,14 @@ def convert_temporary_edges(graph: nx.DiGraph):
     for edge in graph.edges:
         edge_data = graph.edges[edge]["data"]
         if isinstance(edge_data, TemporaryEdge):
-            graph.edges[edge]["data"] = cast(TemporaryEdge, edge_data).convert_to_successor_edge()
+            graph.edges[edge]["data"] = edge_data.convert_to_successor_edge()
 
 
 def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     """Converts a single temporary edge to a successor edge"""
     edge_data = graph.edges[(source_id, target_id)]["data"]
     if isinstance(edge_data, TemporaryEdge):
-        graph.edges[(source_id, target_id)]["data"] = cast(
-            TemporaryEdge, edge_data
-        ).convert_to_successor_edge()
+        graph.edges[(source_id, target_id)]["data"] = edge_data.convert_to_successor_edge()
 
 
 def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:

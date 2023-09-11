@@ -158,10 +158,9 @@ def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -
                     # find this suggestion and extract combine_with_node
                     found_cwn = False
                     for tmp_omit, tmp_cwn in omittable_nodes:
-                        tmp_cwn_list = cast(List[Node], tmp_cwn)
                         if pet.node_at(e[1]) == tmp_omit:
-                            if len(tmp_cwn_list) == 1:
-                                parent_task = tmp_cwn_list[0]
+                            if len(tmp_cwn) == 1:
+                                parent_task = tmp_cwn[0]
                                 found_cwn = True
 
                     if not found_cwn:
@@ -303,7 +302,6 @@ def __split_suggestions(
         elif type(single_suggestion) == OmittableCuInfo:
             omittable_suggestions.append(single_suggestion)
         elif type(single_suggestion) == TaskParallelismInfo:
-            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
             if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
             elif single_suggestion.type is TPIType.TASK:
@@ -324,14 +322,12 @@ def suggest_barriers_for_uncovered_tasks_before_return(
     for suggestion in suggestions:
         if type(suggestion) != TaskParallelismInfo:
             continue
-        suggestion = cast(TaskParallelismInfo, suggestion)
         if suggestion.type is not TPIType.TASK:
             continue
         # if task is covered by a parallel region, ignore it due to the present, implicit barrier
         covered_by_parallel_region = False
         for tmp in suggestions:
             if type(tmp) == ParallelRegionInfo:
-                tmp = cast(ParallelRegionInfo, tmp)
                 if line_contained_in_region(
                     suggestion.start_line, tmp.region_start_line, tmp.region_end_line
                 ):
@@ -388,11 +384,10 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
     :param suggestions: List[PatternInfo]
     :return: List[PatternInfo]
     """
-    barrier_suggestions = []
+    barrier_suggestions: List[TaskParallelismInfo] = []
     result: List[PatternInfo] = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == TaskParallelismInfo:
-            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
             try:
                 if single_suggestion.type is TPIType.TASKWAIT:
                     barrier_suggestions.append(single_suggestion)
@@ -476,7 +471,6 @@ def suggest_missing_barriers_for_global_vars(
         ):
             continue
         if type(single_suggestion) == TaskParallelismInfo:
-            single_suggestion = cast(TaskParallelismInfo, single_suggestion)
             if single_suggestion.type is TPIType.TASKWAIT:
                 taskwait_suggestions.append(single_suggestion)
             elif single_suggestion.type is TPIType.TASK:
