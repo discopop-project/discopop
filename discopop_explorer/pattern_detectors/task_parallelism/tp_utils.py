@@ -157,9 +157,6 @@ def check_reachability(
     queue = [target]
     while len(queue) > 0:
         cur_node = queue.pop(0)
-        if type(cur_node) == list:
-            cur_node_list = cast(List[Node], cur_node)
-            cur_node = cur_node_list[0]
         visited.append(cur_node.id)
         tmp_list = [
             (s, t, e)
