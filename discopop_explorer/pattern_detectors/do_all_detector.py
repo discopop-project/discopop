@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import sys
 from typing import List, Dict, Set, Tuple, cast
 from alive_progress import alive_bar  # type: ignore
 from .PatternInfo import PatternInfo
@@ -18,11 +17,10 @@ from ..PETGraphX import (
     EdgeType,
     LineID,
     MemoryRegion,
-    Variable,
     DepType,
 )
-from ..utils import classify_loop_variables, contains
-import time
+from ..variable import Variable
+from ..utils import classify_loop_variables
 from multiprocessing import Pool
 
 
