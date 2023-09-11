@@ -108,7 +108,7 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
     """
     # check if value already present
     if node.workload is not None:
-        return cast(int, node.workload)
+        return node.workload
     res = 0
     if node.type == NodeType.DUMMY:
         # store workload

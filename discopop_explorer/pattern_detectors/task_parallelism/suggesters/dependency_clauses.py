@@ -177,9 +177,7 @@ def get_alias_information(
     # iterate over task suggestions
     task_suggestions = [
         s
-        for s in [
-            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
-        ]
+        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
         if s.type is TPIType.TASK
     ]
     # collect alias information
@@ -225,7 +223,6 @@ def get_alias_information(
                     continue
                 if called_function_cu_id is None:
                     continue
-                called_function_cu_id_not_none = cast(NodeID, called_function_cu_id)
                 current_alias = [
                     (
                         param,
@@ -236,7 +233,7 @@ def get_alias_information(
                 ]
                 current_alias += get_alias_for_parameter_at_position(
                     pet,
-                    cast(FunctionNode, pet.node_at(called_function_cu_id_not_none)),
+                    cast(FunctionNode, pet.node_at(called_function_cu_id)),
                     idx,
                     source_code_files,
                     [],
@@ -325,7 +322,6 @@ def identify_dependencies_for_different_functions(
     task_suggestions: List[TaskParallelismInfo] = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
-            s = cast(TaskParallelismInfo, s)
             if s.type is TPIType.TASK:
                 task_suggestions.append(s)
             else:
@@ -544,9 +540,8 @@ def identify_dependencies_for_same_functions(
     task_suggestions: List[TaskParallelismInfo] = []
     for s in suggestions:
         if type(s) == TaskParallelismInfo:
-            s_tpi = cast(TaskParallelismInfo, s)
-            if s_tpi.type is TPIType.TASK:
-                task_suggestions.append(s_tpi)
+            if s.type is TPIType.TASK:
+                task_suggestions.append(s)
             else:
                 result_suggestions.append(s)
         else:
@@ -813,10 +808,9 @@ def check_dependence_of_task_pair(
     """
     dependencies = []
     # iterate over parameters of task_1
-    for parameter_potential_none in param_names_1:
-        if parameter_potential_none is None:
+    for parameter in param_names_1:
+        if parameter is None:
             continue
-        parameter = cast(str, parameter_potential_none)
         # get aliases for parameter
         for alias_entry in aliases[task_suggestion_1]:
             # skip wrong alias entries
@@ -964,7 +958,6 @@ def get_function_call_parameter_rw_information(
             return None
     if called_function_name is None:
         raise ValueError("No valid called function could be found!")
-    called_function_name_not_none = cast(str, called_function_name)
     # 5.2. get R/W information for successive called function's parameters based on CUInstResult.txt
     called_function_cu = cast(FunctionNode, pet.node_at(called_function_cu_id))
     # get raw info concerning the scope of called_function_cu
@@ -985,7 +978,7 @@ def get_function_call_parameter_rw_information(
         for raw_entry in filtered_raw_info:
             if raw_entry["var"] is None:
                 continue
-            raw_entry_var = cast(str, raw_entry["var"])
+            raw_entry_var = raw_entry["var"]
             if raw_entry_var.replace(".addr", "") == arg_var.name.replace(".addr", ""):
                 raw_reported = True
         raw_reported_for_param_positions.append((raw_reported, False))
@@ -1006,13 +999,13 @@ def get_function_call_parameter_rw_information(
             source_code_files,
             int(call_position.split(":")[1]),
             call_position.split(":")[0],
-            called_function_name=demangle(called_function_name_not_none).split("(")[0],
+            called_function_name=demangle(called_function_name).split("(")[0],
         )
     except IndexError:
         return None
     # get function parameter names from recursive function call
     function_name, parameter_names = get_called_function_and_parameter_names_from_function_call(
-        function_call_string, called_function_name_not_none, cast(CUNode, parent_cu_node)
+        function_call_string, called_function_name, cast(CUNode, parent_cu_node)
     )
 
     # 5.4. start recursion step

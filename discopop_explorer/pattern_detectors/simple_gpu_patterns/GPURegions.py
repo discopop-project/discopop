@@ -282,7 +282,7 @@ class GPURegions:
                         if self.pet.node_at(source_cu_id) not in region_cus:
                             if dep.dtype == DepType.RAW:
                                 if dep.var_name not in consumed_vars and dep.var_name is not None:
-                                    consumed_vars.append(cast(str, dep.var_name))
+                                    consumed_vars.append(dep.var_name)
 
                 # determine variables which are read afterwards and written in the region
                 produced_vars: List[str] = []
@@ -297,7 +297,7 @@ class GPURegions:
                         if self.pet.node_at(sink_cu_id) not in region_cus:
                             if dep.dtype in [DepType.RAW, DepType.WAW]:
                                 if dep.var_name not in produced_vars and dep.var_name is not None:
-                                    produced_vars.append(cast(str, dep.var_name))
+                                    produced_vars.append(dep.var_name)
 
                 # gather consumed, produced, allocated and deleted variables from mapping information
                 map_to_vars: List[str] = []
@@ -351,10 +351,9 @@ class GPURegions:
 
         for i in range(0, self.numRegions):
             for j in self.cascadingLoopsInRegions[i]:
-                tmp_result = self.findGPULoop(j)
-                if tmp_result is None:
+                gpuLoop = self.findGPULoop(j)
+                if gpuLoop is None:
                     continue
-                gpuLoop: GPULoopPattern = cast(GPULoopPattern, tmp_result)
                 gpuLoop.printGPULoop()
         print(f"==============================================")
         for i in range(0, self.numRegions):
@@ -370,15 +369,14 @@ class GPURegions:
             )
             visitedVars: Set[Variable] = set()
             while t >= 0:
-                tmp_result = self.findGPULoop(
+                loopIter = self.findGPULoop(
                     self.cascadingLoopsInRegions[i][t]
                 )  # tmp_result contains GPU loops inside the parent region
 
-                if tmp_result is None:
+                if loopIter is None:
                     t -= 1
                     continue
 
-                loopIter: GPULoopPattern = cast(GPULoopPattern, tmp_result)
                 varis: Set[Variable] = set([])
                 varis.update(loopIter.map_type_alloc)
                 varis.update(loopIter.map_type_to)
