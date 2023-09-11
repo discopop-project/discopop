@@ -30,8 +30,10 @@ repos:
   rev: 'v1.5.1'  # Use the sha / tag you want to point at
   hooks:
     - id: mypy                  # run mypy
-      #args: [--strict, --ignore-missing-imports]
+      args: [--config-file=mypy.ini, --ignore-missing-imports]
       #additional_dependencies: [dep==version.version.version, ...]
+      # NOTE: pre-commit runs mypy in a virtualenv, so dependencies are not installed unless explicitly listed here
+      # TODO: how do we manage the dependencies?
 
 # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
 # more info: https://github.com/psf/black/blob/main/docs/integrations/source_version_control.md
