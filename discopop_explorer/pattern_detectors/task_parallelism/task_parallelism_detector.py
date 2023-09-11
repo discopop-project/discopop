@@ -91,7 +91,7 @@ def build_preprocessed_graph_and_run_detection(
     if llvm_cxxfilt_path is None:
         __global_llvm_cxxfilt_path = "None"
     else:
-        __global_llvm_cxxfilt_path = cast(str, llvm_cxxfilt_path)
+        __global_llvm_cxxfilt_path = llvm_cxxfilt_path
     if discopop_build_path is None or discopop_build_path == "None":
         raise ValueError("Path to DiscoPoP build directory not specified!")
     set_global_llvm_cxxfilt_path(__global_llvm_cxxfilt_path)
@@ -110,7 +110,7 @@ def build_preprocessed_graph_and_run_detection(
         file_mapping,
         dep_file,
         cu_inst_result_file,
-        cast(str, discopop_build_path),
+        discopop_build_path,
     )
 
     return suggestions

@@ -300,9 +300,7 @@ class LoopNode(Node):
                 parent_nesting_levels.append(
                     min(
                         2,
-                        cast(LoopNode, parent_node).get_nesting_level(
-                            pet, return_invert_result=False
-                        ),
+                        parent_node.get_nesting_level(pet, return_invert_result=False),
                     )
                 )
 
@@ -322,7 +320,7 @@ class LoopNode(Node):
                 if pet.node_at(s) not in pet.direct_children(self)
             ]
             if len(predecessors_outside_loop_body) > 0:
-                return cast(Node, node)
+                return node
         return None
 
 
@@ -361,7 +359,7 @@ class FunctionNode(Node):
     def get_exit_cu_ids(self, pet: PETGraphX) -> Set[NodeID]:
         exit_cu_ids: Set[NodeID] = set()
         if self.children_cu_ids is not None:
-            for child_cu_id in cast(List[NodeID], self.children_cu_ids):
+            for child_cu_id in self.children_cu_ids:
                 if (
                     len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0
                     and len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) != 0
@@ -1154,7 +1152,7 @@ class PETGraphX(object):
         parent_func_source = self.get_parent_function(self.node_at(t))
 
         res = False
-        d_var_name_str = cast(str, str(d.var_name))
+        d_var_name_str = str(d.var_name)
 
         if self.unused_is_global(d_var_name_str, sub) and not (
             self.is_passed_by_reference(d, parent_func_sink)
@@ -1278,7 +1276,7 @@ class PETGraphX(object):
                     ):
                         if dep.var_name == var_name.name:
                             if dep.memory_region is not None:
-                                res[var_name].add(cast(MemoryRegion, dep.memory_region))
+                                res[var_name].add(dep.memory_region)
         return res
 
     def get_undefined_variables_inside_loop(
@@ -1559,7 +1557,7 @@ class PETGraphX(object):
                     return True
                 else:
                     if e[0] not in visited:
-                        queue.append(cast(Node, self.node_at(e[0])))
+                        queue.append(self.node_at(e[0]))
         return False
 
     def is_predecessor(self, source_id: NodeID, target_id: NodeID) -> bool:
@@ -1696,7 +1694,7 @@ class PETGraphX(object):
             for s, t, d in out_deps:
                 if d.var_name == var_name:
                     if d.memory_region is not None:
-                        mem_regs.add(cast(MemoryRegion, d.memory_region))
+                        mem_regs.add(d.memory_region)
         return mem_regs
 
     def get_path_nodes_between(

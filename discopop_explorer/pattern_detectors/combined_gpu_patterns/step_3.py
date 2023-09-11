@@ -121,10 +121,9 @@ def propagate_writes(
                     pet_node = pet.node_at(cu_id)
                     if type(pet_node) != CUNode:
                         continue
-                    cu_node = cast(CUNode, pet_node)
-                    if cu_node.return_instructions_count > 0:
+                    if pet_node.return_instructions_count > 0:
                         # propagate write to calling cus
-                        parent_function = pet.get_parent_function(cu_node)
+                        parent_function = pet.get_parent_function(pet_node)
                         callees = [
                             s for s, t, d in pet.in_edges(parent_function.id, EdgeType.CALLSNODE)
                         ]

@@ -224,15 +224,7 @@ def __parse_node(
     # calculate the workload of the current node and register it in the stack
     #  add workload of the current node to min / max
     if isinstance(node_data, Workload):
-        min_wl = (
-            0
-            if cast(Workload, node_data).sequential_workload is None
-            else cast(int, cast(Workload, node_data).sequential_workload)
-        ) + (
-            0
-            if cast(Workload, node_data).parallelizable_workload is None
-            else cast(int, cast(Workload, node_data).parallelizable_workload)
-        )
+        min_wl = (node_data.sequential_workload or 0) + (node_data.parallelizable_workload or 0)
         max_wl = min_wl
         # apply iteration factor if requested
         min_wl *= iteration_factor
@@ -241,7 +233,7 @@ def __parse_node(
 
     # register children
     if type(node_data) == Loop:
-        iteration_factor = cast(Loop, node_data).iterations
+        iteration_factor = node_data.iterations
     else:
         iteration_factor = 1
     for child_id in get_children(experiment.optimization_graph, node_id):

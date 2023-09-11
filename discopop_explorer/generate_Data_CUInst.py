@@ -130,7 +130,7 @@ def __output_dependencies_of_type(
                 + dep_identifier
                 + cast(str, dep[2].source_line)
                 + "|"
-                + cast(str, dep[2].var_name)
+                + dep[2].var_name
                 + ","
             )
 
