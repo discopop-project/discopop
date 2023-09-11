@@ -46,8 +46,6 @@ repos:
   hooks:
   - id: licensetag
     name: Check all files for DiscoPoP License tag
-    entry: scripts/dev/check_license.sh
+    entry: scripts/dev/check-license.sh
     language: script
     # exclude: we could exclude files here, but we do it in the script instead
-
-    # TODO the script should also be used by the CI pipeline
