@@ -12,7 +12,7 @@ import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr  # type: ignore
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
 class Experiment(object):
