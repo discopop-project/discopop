@@ -25,14 +25,13 @@ import os
 import sys
 from typing import Dict, List
 
-import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_json_strings as generate_code_from_json_strings,
 )
-from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.PathManagement.PathManagement import load_file_mapping, get_path
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 
 docopt_schema = Schema(
@@ -45,16 +44,6 @@ docopt_schema = Schema(
         "--compile-check-command": Use(str),
     }
 )
-
-
-def get_path(base_path: str, file_name: str) -> str:
-    """Combines path and filename if it is not absolute
-
-    :param base_path: path
-    :param file_name: file name
-    :return: path to file
-    """
-    return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
 
 
 def main():
