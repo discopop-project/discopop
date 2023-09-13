@@ -42,6 +42,7 @@ OPTIONAL ARGUMENTS:
     -h --help                   Show this screen
 """
 import cProfile
+from dataclasses import dataclass
 import json
 import os
 import pstats2  # type:ignore
@@ -67,28 +68,6 @@ from .PETGraphX import PETGraphX
 from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
 from discopop_library.result_classes.DetectionResult import DetectionResult
-
-docopt_schema = Schema(
-    {
-        "--path": Use(str),
-        "--cu-xml": Use(str),
-        "--dep-file": Use(str),
-        "--loop-counter": Use(str),
-        "--reduction": Use(str),
-        "--fmap": Use(str),
-        "--plugins": Use(str),
-        "--json": Use(str),
-        "--task-pattern": Use(bool),
-        "--cu-inst-res": Use(str),
-        "--llvm-cxxfilt-path": Use(str),
-        "--dp-build-path": Use(str),
-        "--generate-data-cu-inst": Use(str),
-        "--profiling": Use(str),
-        "--dump-pet": Use(str),
-        "--dump-detection-result": Use(str),
-        "--microbench-file": Use(str),
-    }
-)
 
 
 def run(
@@ -141,109 +120,192 @@ def run(
     return res
 
 
-def main():
+@dataclass
+class ExplorerArguments(object):
+    """Container Class for the arguments passed to the discopop_explorer"""
+
+    discopop_build_path: str
+    microbench_file: Optional[str]
+    project_path: str
+    cu_xml_file: str
+    dep_file: str
+    loop_counter_file: str
+    reduction_file: str
+    file_mapping_file: str
+    plugins: List[str]
+    enable_task_pattern: bool
+    enable_profiling_dump_file: Optional[str]  # None means no dump, otherwise the path
+    enable_pet_dump_file: Optional[str]  # None means no dump, otherwise the path
+    enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
+    # TODO generate_data_cu_inst: specify exact path instead of directory
+    generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt in given dir & exit
+    cu_inst_result_file: Optional[str]
+    llvm_cxxfilt_path: Optional[str]
+    json: Optional[str]
+
+    def __post_init__(self):
+        self.__validate()
+
+    def __validate(self):
+        """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
+        validation_failure = False
+
+        # check for missing files
+        missing_files = []
+        for file in [
+            self.cu_xml_file,
+            self.dep_file,
+            self.loop_counter_file,
+            self.reduction_file,
+            self.file_mapping_file,
+        ]:  # TODO more files?
+            if not os.path.isfile(file):
+                missing_files.append(file)
+        if missing_files:
+            validation_failure = True
+            print("The following files are missing:")
+            for file in missing_files:
+                print(file)
+
+        # validate discopop build path
+        # TODO validate discopop build path
+
+        if validation_failure:
+            print("Exiting...")
+            sys.exit()
+
+
+def parse_args() -> ExplorerArguments:
+    """Parse the arguments passed to the discopop_explorer"""
     arguments = docopt(__doc__, version=f"DiscoPoP Version {get_version()}")
+
+    docopt_schema = Schema(
+        {
+            "--path": Use(str),
+            "--cu-xml": Use(str),
+            "--dep-file": Use(str),
+            "--loop-counter": Use(str),
+            "--reduction": Use(str),
+            "--fmap": Use(str),
+            "--plugins": Use(str),
+            "--json": Use(str),
+            "--task-pattern": Use(bool),
+            "--cu-inst-res": Use(str),
+            "--llvm-cxxfilt-path": Use(str),
+            "--dp-build-path": Use(str),
+            "--generate-data-cu-inst": Use(str),
+            "--profiling": Use(str),
+            "--dump-pet": Use(str),
+            "--dump-detection-result": Use(str),
+            "--microbench-file": Use(str),
+        }
+    )
 
     try:
         arguments = docopt_schema.validate(arguments)
     except SchemaError as e:
         exit(e)
 
-    path = arguments["--path"]
+    # fmt: off
+    return ExplorerArguments(
+        discopop_build_path=arguments["--dp-build-path"] if arguments["--dp-build-path"] != "None" else Path(__file__).resolve().parent.parent / "build",
+        microbench_file=arguments["--microbench-file"], # optionally specify path
+        project_path=arguments["--path"],
+        cu_xml_file=get_path(arguments["--path"], arguments["--cu-xml"]),
+        dep_file=get_path(arguments["--path"], arguments["--dep-file"]),
+        loop_counter_file=get_path(arguments["--path"], arguments["--loop-counter"]),
+        reduction_file=get_path(arguments["--path"], arguments["--reduction"]),
+        file_mapping_file=get_path(arguments["--path"], arguments["--fmap"]),
+        plugins=[] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" "),
+        enable_task_pattern=arguments["--task-pattern"],
+        enable_profiling_dump_file=None if arguments["--profiling"] != "true" else get_path(arguments["--path"], "profiling_stats.txt"), # enable using --profiling true
+        enable_pet_dump_file=None if arguments["--dump-pet"] != "true" else get_path(arguments["--path"], "pet_dump.json"), # enable using --dump-pet true
+        enable_detection_result_dump_file=None if arguments["--dump-detection-result"] != "true" else get_path(arguments["--path"], "detection_result_dump.json"), # enable using --dump-detection-result true
+        generate_data_cu_inst=None if arguments["--generate-data-cu-inst"] == "None" else arguments["--generate-data-cu-inst"], # optionally specify path
+        cu_inst_result_file=get_path(arguments["--path"], arguments["--cu-inst-res"]),
+        llvm_cxxfilt_path=arguments["--llvm-cxxfilt-path"],
+        json=None if arguments["--json"] == "None" else arguments["--json"], # optionally specify path
+    )
+    # fmt: on
 
-    cu_xml = get_path(path, arguments["--cu-xml"])
-    dep_file = get_path(path, arguments["--dep-file"])
-    loop_counter_file = get_path(path, arguments["--loop-counter"])
-    reduction_file = get_path(path, arguments["--reduction"])
-    file_mapping = get_path(path, arguments["--fmap"])
-    cu_inst_result_file = get_path(path, arguments["--cu-inst-res"])
-    for file in [cu_xml, dep_file, loop_counter_file, reduction_file, file_mapping]:
-        if not os.path.isfile(file):
-            print(f'File not found: "{file}"')
-            sys.exit()
 
-    if arguments["--dp-build-path"] != "None":
-        discopop_build_path = arguments["--dp-build-path"]
-    else:
-        # set default discopop build path
-        discopop_build_path = Path(__file__).resolve().parent.parent
-        discopop_build_path = os.path.join(discopop_build_path, "build")
+def main():
+    arguments = parse_args()
 
-    plugins = [] if arguments["--plugins"] == "None" else arguments["--plugins"].split(" ")
-
-    if arguments["--profiling"] == "true":
+    if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
         profile.enable()
 
-    if arguments["--generate-data-cu-inst"] != "None":
+    if arguments.generate_data_cu_inst is not None:
         # start generation of Data_CUInst and stop execution afterwards
         from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
 
         generate_data_cuinst_wrapper(
-            cu_xml,
-            dep_file,
-            loop_counter_file,
-            reduction_file,
-            arguments["--generate-data-cu-inst"],
+            arguments.cu_xml_file,
+            arguments.dep_file,
+            arguments.loop_counter_file,
+            arguments.reduction_file,
+            arguments.generate_data_cu_inst,
         )
         sys.exit(0)
 
     start = time.time()
 
     res = run(
-        arguments["--path"],
-        cu_xml,
-        dep_file,
-        loop_counter_file,
-        reduction_file,
-        plugins,
-        file_mapping=file_mapping,
-        cu_inst_result_file=cu_inst_result_file,
-        llvm_cxxfilt_path=arguments["--llvm-cxxfilt-path"],
-        discopop_build_path=discopop_build_path,
-        enable_task_pattern=arguments["--task-pattern"],
+        arguments.project_path,
+        arguments.cu_xml_file,
+        arguments.dep_file,
+        arguments.loop_counter_file,
+        arguments.reduction_file,
+        arguments.plugins,
+        file_mapping=arguments.file_mapping_file,
+        cu_inst_result_file=arguments.cu_inst_result_file,
+        llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
+        discopop_build_path=arguments.discopop_build_path,
+        enable_task_pattern=arguments.enable_task_pattern,
     )
 
     end = time.time()
 
-    if arguments["--dump-pet"] == "true":
-        with open(get_path(path, "pet_dump.json"), "w+") as f:
+    if arguments.enable_pet_dump_file is not None:
+        with open(arguments.enable_pet_dump_file, "w+") as f:
             f.write(res.pet.dump_to_pickled_json())
             f.flush()
             f.close()
 
-    if arguments["--dump-detection-result"] == "true":
-        with open(get_path(path, "detection_result_dump.json"), "w+") as f:
+    if arguments.enable_detection_result_dump_file is not None:
+        with open(arguments.enable_detection_result_dump_file, "w+") as f:
             f.write(res.dump_to_pickled_json())
             f.flush()
             f.close()
 
-    if arguments["--json"] == "None":
+    if arguments.json is None:
         print(str(res))
     else:
         # todo re-enable?
         # print(str(res))
         # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
         del res.pet
-        with open(arguments["--json"], "w") as f:
+        with open(arguments.json, "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
-    if arguments["--profiling"] == "true":
+    if arguments.enable_profiling_dump_file is not None:
         profile.disable()
-        if os.path.exists("profiling_stats.txt"):
-            os.remove("profiling_stats.txt")
-        with open("profiling_stats.txt", "w+") as f:
+        if os.path.exists(arguments.enable_profiling_dump_file):
+            os.remove(arguments.enable_profiling_dump_file)
+        with open(arguments.enable_profiling_dump_file, "w+") as f:
             stats = pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
             stats.print_stats()
 
     print("Time taken for pattern detection: {0}".format(end - start))
 
     # demonstration of Microbenchmark possibilities
-    if arguments["--microbench-file"] != "None":
-        microbench_file = get_path(path, arguments["--microbench-file"])
+    if arguments.microbench_file is not None:
+        microbench_file = get_path(
+            arguments.project_path, arguments.microbench_file
+        )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
         if not os.path.isfile(microbench_file):
             raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
-
         extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
         sympyExpr = extrapBench.getFunctionSympy()
         print(sympyExpr)
