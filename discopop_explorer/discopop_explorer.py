@@ -193,7 +193,7 @@ def run(arguments: ExplorerArguments):
         # print(str(res))
         # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
         del res.pet
-        with open(arguments.enable_json_file, "w") as f:
+        with open(arguments.enable_json_file, "w+") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     if arguments.enable_profiling_dump_file is not None:
