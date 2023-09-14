@@ -18,7 +18,7 @@ from typing import Dict, cast, List, TextIO, Tuple
 
 import jsonpickle  # type: ignore
 
-from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeStorageObject
 
 
