@@ -137,8 +137,7 @@ class ExplorerArguments(object):
     enable_profiling_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_pet_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
-    # TODO generate_data_cu_inst: specify exact path instead of directory
-    generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt in given dir & exit
+    generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt & exit
     cu_inst_result_file: Optional[str]
     llvm_cxxfilt_path: Optional[str]
     json: Optional[str]
@@ -221,7 +220,7 @@ def parse_args() -> ExplorerArguments:
         enable_profiling_dump_file=None if arguments["--profiling"] != "true" else get_path(arguments["--path"], "profiling_stats.txt"), # enable using --profiling true
         enable_pet_dump_file=None if arguments["--dump-pet"] != "true" else get_path(arguments["--path"], "pet_dump.json"), # enable using --dump-pet true
         enable_detection_result_dump_file=None if arguments["--dump-detection-result"] != "true" else get_path(arguments["--path"], "detection_result_dump.json"), # enable using --dump-detection-result true
-        generate_data_cu_inst=None if arguments["--generate-data-cu-inst"] == "None" else arguments["--generate-data-cu-inst"], # optionally specify path
+        generate_data_cu_inst=None if arguments["--generate-data-cu-inst"] == "None" else get_path(arguments["--path"], arguments["--generate-data-cu-inst"] + "/Data_CUInst.txt"), # optionally specify path
         cu_inst_result_file=get_path(arguments["--path"], arguments["--cu-inst-res"]),
         llvm_cxxfilt_path=arguments["--llvm-cxxfilt-path"],
         json=None if arguments["--json"] == "None" else arguments["--json"], # optionally specify path
