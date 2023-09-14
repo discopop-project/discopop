@@ -12,9 +12,9 @@ from typing import Dict, Tuple, Set, Optional, List
 import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
-from discopop_explorer import DetectionResult
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.FileMapping.FileMapping import load_file_mapping
+from discopop_library.result_classes.DetectionResult import DetectionResult
+from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject

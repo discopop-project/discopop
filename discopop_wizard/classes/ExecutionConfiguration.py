@@ -110,7 +110,7 @@ class ExecutionConfiguration(object):
             json_str += line
         self.value_dict = {**self.value_dict, **jsons.loads(json_str)}  # merge both dictionaries
 
-    def get_values_as_json_string(self) -> str:
+    def get_values_as_json_string(self):
         """returns a representation of the settings which will be stored in a configuration file."""
         return jsons.dumps(self.value_dict)
 

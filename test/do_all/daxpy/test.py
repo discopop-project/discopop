@@ -30,7 +30,7 @@ class TestMethods(unittest.TestCase):
         # execute instrumented program
         os.system("./prog")
         # execute DiscoPoP analysis
-        os.system("discopop_explorer --dep-file=prog_dep.txt")
+        os.system("discopop_explorer --dep-file=prog_dep.txt --dump-detection-result")
         # validate results
         self.validate_results(current_dir, src_dir)
         # clean environment

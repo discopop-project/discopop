@@ -44,10 +44,10 @@ def suggest_parallel_regions(
     # remove duplicates
     parents = list(set(parents))
     # get outer-most parents of suggested tasks
-    outer_parents = []
+    outer_parents: List[Tuple[Node, Optional[Node]]] = []
     # iterate over entries in parents.
     while len(parents) > 0:
-        (p, last_node) = parents.pop(0)
+        p, last_node = parents.pop(0)
         p_parents = get_parent_of_type(pet, p, NodeType.FUNC, EdgeType.CHILD, False)
         if not p_parents:  # p_parents is empty
             # p is outer
@@ -64,7 +64,7 @@ def suggest_parallel_regions(
     for parent, last_node in outer_parents:
         if last_node is None:
             continue
-        last_node = cast(Node, last_node)
+        last_node = last_node
         region_suggestions.append(
             ParallelRegionInfo(
                 parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position()
@@ -84,10 +84,6 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
     output = []
     cu_to_suggestions_map: Dict[str, List[TaskParallelismInfo]] = dict()
     for s in suggestions:
-        # filter out non task / taskwait suggestions and append to output
-        if not (type(s) == Task or type(s) == TaskParallelismInfo):
-            output.append(s)
-            continue
         # fill cu_to_suggestions_map
         if s.node_id in cu_to_suggestions_map:
             cu_to_suggestions_map[s.node_id].append(s)
@@ -115,8 +111,7 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
             cu_to_suggestions_map[cu][idx] = s
     # append suggestions to output
     for cu in cu_to_suggestions_map:
-        tmp: List[TaskParallelismInfo] = cast(List[TaskParallelismInfo], cu_to_suggestions_map[cu])
-        for s in tmp:
+        for s in cu_to_suggestions_map[cu]:
             output.append(s)
     return output
 
@@ -138,9 +133,6 @@ def detect_taskloop_reduction(
     # iterate over suggestions
     for s in suggestions:
         # ignore others than tasks
-        if not (type(s) == Task or type(s) == TaskParallelismInfo):
-            output.append(s)
-            continue
         if s.type is not TPIType.TASK:
             continue
         # check if s contained in reduction loop body
@@ -149,8 +141,8 @@ def detect_taskloop_reduction(
             # s not contained in reduction loop body
             output.append(s)
         else:
-            red_vars_entry = cast(Dict[str, str], red_vars_entry)
-            red_loop = cast(Node, red_loop)
+            red_vars_entry = red_vars_entry
+            red_loop = red_loop
             # s contained in reduction loop body
             # modify task s
             reduction_clause = "reduction("
@@ -184,17 +176,14 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
     result: List[PatternInfo] = []
     for single_suggestion in suggestions:
         if type(single_suggestion) == OmittableCuInfo:
-            omittable_suggestions.append(cast(OmittableCuInfo, single_suggestion))
+            omittable_suggestions.append(single_suggestion)
         else:
             if type(single_suggestion) == TaskParallelismInfo:
-                single_suggestion_tpi: TaskParallelismInfo = cast(
-                    TaskParallelismInfo, single_suggestion
-                )
                 try:
-                    if single_suggestion_tpi.type is TPIType.TASK:
-                        task_suggestions.append(single_suggestion_tpi)
+                    if single_suggestion.type is TPIType.TASK:
+                        task_suggestions.append(single_suggestion)
                     else:
-                        result.append(single_suggestion_tpi)
+                        result.append(single_suggestion)
                 except AttributeError:
                     result.append(single_suggestion)
             else:
@@ -259,7 +248,7 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
                         continue
                     task_suggestions_dict[omit_s.combine_with_node][
                         omit_target_task_idx
-                    ].out_dep.append(cast(str, omit_out_var))
+                    ].out_dep.append(omit_out_var)
                     # omit_s.combine_with_node.out_dep.append(omit_out_var)
                 # process in dependencies of omit_s
                 for omit_in_var in omit_s.in_dep:

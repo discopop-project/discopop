@@ -72,6 +72,8 @@ class Workload(GenericNode):
         Workloads of called functions are added as encountered.
         Workloads of Loop etc. are parallelizable."""
 
+        cm: CostModel
+
         if self.sequential_workload is None:
             cm = (
                 CostModel(Integer(1), Integer(0))
@@ -105,7 +107,7 @@ class Workload(GenericNode):
             called_cu_ids: List[str] = [
                 str(t)
                 for s, t, d in cast(PETGraphX, experiment.detection_result.pet).out_edges(
-                    cast(NodeID, self.original_cu_id), EdgeType.CALLSNODE
+                    self.original_cu_id, EdgeType.CALLSNODE
                 )
             ]
             # filter for called FunctionRoots

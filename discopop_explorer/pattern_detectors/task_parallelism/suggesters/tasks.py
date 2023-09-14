@@ -161,9 +161,7 @@ def correct_task_suggestions_in_loop_body(
     :return: Updated suggestions"""
     task_suggestions = [
         s
-        for s in [
-            cast(TaskParallelismInfo, e) for e in suggestions if type(e) == TaskParallelismInfo
-        ]
+        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
         if s.type is TPIType.TASK
     ]
     for ts in task_suggestions:
@@ -207,7 +205,6 @@ def correct_task_suggestions_in_loop_body(
                         )
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
-                                s = cast(TaskParallelismInfo, s)
                                 if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1]) + 1
                     else:
@@ -225,7 +222,6 @@ def correct_task_suggestions_in_loop_body(
                         # move pragma taskwait line
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
-                                s = cast(TaskParallelismInfo, s)
                                 if s.type is TPIType.TASKWAIT and s._node == stws_cu:
                                     s.pragma_line = int(loop_cu.end_position().split(":")[1])
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)

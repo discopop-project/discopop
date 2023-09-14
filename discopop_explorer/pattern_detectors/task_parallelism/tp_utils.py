@@ -44,12 +44,12 @@ def demangle(mangled_name: str) -> str:
         # set default llvm-cxxfilt executable
         llvm_cxxfilt_path = "llvm-cxxfilt"
     else:
-        llvm_cxxfilt_path = cast(str, __global_llvm_cxxfilt_path)
+        llvm_cxxfilt_path = __global_llvm_cxxfilt_path
     try:
         process = subprocess.Popen([llvm_cxxfilt_path, mangled_name], stdout=subprocess.PIPE)
         process.wait()
         if process.stdout is not None:
-            out_bytes = cast(IO[bytes], process.stdout).readline()
+            out_bytes = process.stdout.readline()
             out = out_bytes.decode("UTF-8")
             out = out.replace("\n", "")
             demangling_cache[mangled_name] = out
@@ -157,9 +157,6 @@ def check_reachability(
     queue = [target]
     while len(queue) > 0:
         cur_node = queue.pop(0)
-        if type(cur_node) == list:
-            cur_node_list = cast(List[Node], cur_node)
-            cur_node = cur_node_list[0]
         visited.append(cur_node.id)
         tmp_list = [
             (s, t, e)
@@ -358,7 +355,7 @@ def recursive_function_call_contained_in_worker_cu(
                     tightest_worker_cu = cur_w
     if tightest_worker_cu is None:
         raise ValueError("No surrounding worker CU could be found.")
-    return cast(Node, tightest_worker_cu)
+    return tightest_worker_cu
 
 
 def task_contained_in_reduction_loop(
@@ -431,9 +428,7 @@ def get_function_call_from_source_code(
         string = string[-1]
         return string
 
-    called_function_name_contained = False
-    if called_function_name is None:
-        called_function_name_contained = True
+    called_function_name_contained = called_function_name is None
 
     while (
         function_call_string.count("(") > function_call_string.count(")")
@@ -467,10 +462,9 @@ def get_function_call_from_source_code(
     function_call_string = function_call_string.replace("\n", "")
     # if called_function_name is set and contained more than once in function_call_string, split function_call_string
     if called_function_name is not None:
-        called_function_name_str = cast(str, called_function_name)
-        while function_call_string.count(called_function_name_str) > 1:
+        while function_call_string.count(called_function_name) > 1:
             function_call_string = function_call_string[
-                : function_call_string.rfind(called_function_name_str)
+                : function_call_string.rfind(called_function_name)
             ]
 
     return function_call_string
@@ -563,7 +557,7 @@ def get_called_function_and_parameter_names_from_function_call(
         else:
             # check if param in known variables:
             result_parameters.append(param.replace(" ", ""))
-    return cast(Optional[str], function_name), cast(List[Optional[str]], result_parameters)
+    return cast(Optional[str], function_name), result_parameters
 
 
 def set_global_llvm_cxxfilt_path(value: str):

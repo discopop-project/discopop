@@ -30,8 +30,9 @@ repos:
   rev: 'v1.5.1'  # Use the sha / tag you want to point at
   hooks:
     - id: mypy                  # run mypy
-      #args: [--strict, --ignore-missing-imports]
+      args: [--config-file=mypy.ini, --ignore-missing-imports]
       #additional_dependencies: [dep==version.version.version, ...]
+      # NOTE: pre-commit runs mypy in a virtualenv, so dependencies are not installed unless explicitly listed here
 
 # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
 # more info: https://github.com/psf/black/blob/main/docs/integrations/source_version_control.md
@@ -46,8 +47,6 @@ repos:
   hooks:
   - id: licensetag
     name: Check all files for DiscoPoP License tag
-    entry: scripts/dev/check_license.sh
+    entry: scripts/dev/check-license.sh
     language: script
     # exclude: we could exclude files here, but we do it in the script instead
-
-    # TODO the script should also be used by the CI pipeline

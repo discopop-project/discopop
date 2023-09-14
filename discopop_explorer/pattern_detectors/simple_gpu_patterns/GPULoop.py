@@ -260,7 +260,7 @@ class GPULoopPattern(PatternInfo):
 
         :return:
         """
-        json_output: Any = "{"
+        json_output: str = "{"
         # == == Metadata == ==
         json_output += '"id":"' + str(self.nodeID) + '",'
         json_output += '"startline":"' + self.start_line + '",'
@@ -681,7 +681,7 @@ class GPULoopPattern(PatternInfo):
                         #  information from the LLVM debug information
                         # check if distance between first CU of node_id and cn_id is 2 steps on the successor graph
                         potentials: Set[Node] = set()
-                        for succ1 in pet.direct_successors(cast(Node, loop_entry_node)):
+                        for succ1 in pet.direct_successors(loop_entry_node):
                             for succ2 in pet.direct_successors(succ1):
                                 potentials.add(succ2)
                         if cast(LoopNode, cn_id).get_entry_node(pet) in potentials:

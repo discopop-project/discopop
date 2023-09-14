@@ -8,7 +8,6 @@
 
 from typing import Tuple, Dict, Set, cast
 
-from discopop_explorer import NodeType
 from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID, CUNode, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
@@ -95,10 +94,8 @@ def get_cu_and_varname_to_memory_regions(
             if dep.var_name is None or dep.memory_region is None or len(dep.memory_region) == 0:
                 continue
             if dep.var_name not in result_dict[cu_id]:
-                result_dict[cu_id][VarName(cast(str, dep.var_name))] = set()
-            result_dict[cu_id][VarName(cast(str, dep.var_name))].add(
-                MemoryRegion(cast(str, dep.memory_region))
-            )
+                result_dict[cu_id][VarName(dep.var_name)] = set()
+            result_dict[cu_id][VarName(dep.var_name)].add(dep.memory_region)
 
     return result_dict
 

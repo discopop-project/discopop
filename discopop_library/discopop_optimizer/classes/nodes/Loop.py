@@ -42,7 +42,7 @@ class Loop(Workload):
                 "loop_" + str(node_id) + "_pos_" + str(self.position) + "_iterations"
             )
         else:
-            self.iterations_symbol = cast(Symbol, iterations_symbol)
+            self.iterations_symbol = iterations_symbol
 
         # calculate workload per iteration
         per_iteration_parallelizable_workload = parallelizable_workload / iterations
