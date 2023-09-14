@@ -34,8 +34,8 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 class ExplorerArguments(object):
     """Container Class for the arguments passed to the discopop_explorer"""
 
+    # input files and configuration
     discopop_build_path: str
-    microbench_file: Optional[str]
     project_path: str
     cu_xml_file: str
     dep_file: str
@@ -43,14 +43,17 @@ class ExplorerArguments(object):
     reduction_file: str
     file_mapping_file: str
     plugins: List[str]
-    enable_task_pattern: bool
+    # output and formatting
+    enable_json_file: Optional[str]
     enable_profiling_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_pet_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
+    # experimental features:
+    enable_task_pattern: bool
     generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt & exit
     cu_inst_result_file: Optional[str]
     llvm_cxxfilt_path: Optional[str]
-    json: Optional[str]
+    microbench_file: Optional[str]
 
     def __post_init__(self):
         self.__validate()
@@ -84,7 +87,7 @@ class ExplorerArguments(object):
             sys.exit()
 
 
-def run(
+def __run(
     project_path: str,
     cu_xml: str,
     dep_file: str,
@@ -134,7 +137,7 @@ def run(
     return res
 
 
-def run_with_arguments(arguments: ExplorerArguments):
+def run(arguments: ExplorerArguments):
     """Run the discopop_explorer with the given arguments"""
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
@@ -155,7 +158,7 @@ def run_with_arguments(arguments: ExplorerArguments):
 
     start = time.time()
 
-    res = run(
+    res = __run(
         arguments.project_path,
         arguments.cu_xml_file,
         arguments.dep_file,
@@ -183,14 +186,14 @@ def run_with_arguments(arguments: ExplorerArguments):
             f.flush()
             f.close()
 
-    if arguments.json is None:
+    if arguments.enable_json_file is None:
         print(str(res))
     else:
         # todo re-enable?
         # print(str(res))
         # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
         del res.pet
-        with open(arguments.json, "w") as f:
+        with open(arguments.enable_json_file, "w") as f:
             json.dump(res, f, indent=2, cls=PatternInfoSerializer)
 
     if arguments.enable_profiling_dump_file is not None:

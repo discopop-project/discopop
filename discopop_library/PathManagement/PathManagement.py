@@ -8,7 +8,7 @@
 
 import os.path
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 
 def load_file_mapping(fmap_path: str) -> Dict[int, Path]:
@@ -35,3 +35,10 @@ def get_path(base_path: str, file_name: str) -> str:
     :return: path to file
     """
     return file_name if os.path.isabs(file_name) else os.path.join(base_path, file_name)
+
+
+def get_path_or_none(base_path: str, file_name: Optional[str]) -> Optional[str]:
+    """same as get_path but returns None if file_name is None"""
+    if file_name is None:
+        return None
+    return get_path(base_path, file_name)
