@@ -84,7 +84,7 @@ def parse_args() -> ExplorerArguments:
     # fmt: off
     return ExplorerArguments(
         discopop_build_path=arguments["--dp-build-path"] if arguments["--dp-build-path"] != "None" else Path(__file__).resolve().parent.parent / "build",
-        microbench_file=arguments["--microbench-file"], # optionally specify path
+        microbench_file=None if arguments["--microbench-file"] == "None" else arguments["--microbench-file"], # optionally specify path
         project_path=arguments["--path"],
         cu_xml_file=get_path(arguments["--path"], arguments["--cu-xml"]),
         dep_file=get_path(arguments["--path"], arguments["--dep-file"]),
