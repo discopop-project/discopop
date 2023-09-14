@@ -134,13 +134,13 @@ def export_to_json(experiment: Experiment):
 
 
 def restore_session(json_file: str) -> Experiment:
-    experiment = pickle.load(open(json_file, "rb"))
+    experiment: Experiment = pickle.load(open(json_file, "rb"))
 
     # convert keys of function_models to FunctionRoot objects
     to_be_added = []
     to_be_deleted = []
     for old_key in experiment.function_models:
-        new_key = cast(FunctionRoot, data_at(experiment.optimization_graph, old_key))
+        new_key = cast(FunctionRoot, data_at(experiment.optimization_graph, cast(int, old_key)))
         to_be_added.append((new_key, experiment.function_models[old_key]))
         to_be_deleted.append(old_key)
 

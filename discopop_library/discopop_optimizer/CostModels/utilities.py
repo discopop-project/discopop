@@ -80,7 +80,7 @@ def get_node_performance_models(
     result_list: List[CostModel] = []
     successors = get_successors(graph, node_id)
     successor_count = len(successors)
-    node_data = cast(GenericNode, data_at(graph, node_id))
+    node_data = data_at(graph, node_id)
     visited_nodes.add(node_id)
 
     # consider performance models of children

@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from typing import cast
 
 from sympy import Expr, Integer
 
@@ -28,7 +29,7 @@ def convert_discopop_to_microbench_workload(discopop_workload: Expr, iteration_c
     # todo
     w0 = 13
     wi = 14
-    return ((discopop_workload / iteration_count) - w0) / (iteration_count * wi)
+    return cast(Expr, ((discopop_workload / iteration_count) - w0) / (iteration_count * wi))
 
 
 def convert_microbench_to_discopop_workload(
@@ -52,4 +53,4 @@ def convert_microbench_to_discopop_workload(
     wi = Integer(14)
     w0 = Integer(13)
 
-    return iteration_count * (microbench_workload * iteration_count * wi + w0)
+    return cast(Expr, iteration_count * (microbench_workload * iteration_count * wi + w0))

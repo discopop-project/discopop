@@ -131,7 +131,7 @@ def export_code(
                                 update.write_data_access.memory_region
                             )[0].evalf()
                         )
-                        / cast(Variable, var_obj).sizeInByte
+                        / var_obj.sizeInByte
                     )
 
                     # debug!
@@ -142,14 +142,14 @@ def export_code(
                         + "-"
                         + str(update.write_data_access.unique_id)
                         + "-vartype:"
-                        + cast(Variable, var_obj).type
+                        + var_obj.type
                     )
 
                     # add range to updated var name if necessary
                     if (
                         update_elements > 1
                         and update.write_data_access.var_name is not None
-                        and "**" in cast(Variable, var_obj).type
+                        and "**" in var_obj.type
                     ):
                         updated_var_name: Optional[str] = (
                             str(update.write_data_access.var_name)
@@ -170,9 +170,7 @@ def export_code(
                                 pet.node_at(target_cu_id),
                                 update.write_data_access.memory_region,
                                 updated_var_name,
-                                0
-                                if update.source_device_id is None
-                                else cast(int, update.source_device_id),
+                                0 if update.source_device_id is None else update.source_device_id,
                                 0
                                 if update.source_device_id is None
                                 else cast(int, update.target_device_id),
@@ -213,7 +211,7 @@ def export_code(
             str(entry_1[0])
             + ";"
             + (
-                cast(DeviceUpdateInfo, entry_1[1]).get_str_without_first_data_occurrence()
+                entry_1[1].get_str_without_first_data_occurrence()
                 if isinstance(entry_1[1], DeviceUpdateInfo)
                 else str(entry_1[1])
             )
@@ -229,7 +227,7 @@ def export_code(
                 str(entry_2[0])
                 + ";"
                 + (
-                    cast(DeviceUpdateInfo, entry_2[1]).get_str_without_first_data_occurrence()
+                    entry_2[1].get_str_without_first_data_occurrence()
                     if isinstance(entry_2[1], DeviceUpdateInfo)
                     else str(entry_2[1])
                 )
@@ -240,7 +238,7 @@ def export_code(
             )
             if entry_str_1 == entry_str_2:
                 if (
-                    cast(DeviceUpdateInfo, entry_1[1]).is_first_data_occurrence
+                    entry_1[1].is_first_data_occurrence
                     and not cast(DeviceUpdateInfo, entry_2[1]).is_first_data_occurrence
                 ):
                     to_be_removed.append(entry_2)

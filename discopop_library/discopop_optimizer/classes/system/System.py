@@ -18,6 +18,7 @@ class System(object):
     __network: Network
     __next_free_device_id: int
     __do_all_overhead_model: Expr
+    __reduction_overhead_model: Expr
 
     def __init__(self):
         self.__devices = dict()

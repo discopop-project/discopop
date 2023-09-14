@@ -142,11 +142,11 @@ def get_overhead_term(
     substitutions: Dict[Symbol, Expr] = {}
 
     for symbol in cast(List[Symbol], overhead_model.free_symbols):
-        if cast(Symbol, symbol).name == "workload":
+        if symbol.name == "workload":
             substitutions[symbol] = converted_per_iteration_workload
-        elif cast(Symbol, symbol).name == "iterations":
+        elif symbol.name == "iterations":
             substitutions[symbol] = Integer(iterations)
-        elif cast(Symbol, symbol).name == "threads":
+        elif symbol.name == "threads":
             substitutions[symbol] = thread_count
         else:
             raise ValueError("Unknown symbol: ", symbol)
