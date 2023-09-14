@@ -54,7 +54,7 @@ def parse_args() -> ExplorerArguments:
     )
     # flags related to output and formatting:
     parser.add_argument(
-        "--json", type=str, default=None,
+        "--json", type=str, nargs="?", default=None, const="patterns.json",
         help="Json output")
     parser.add_argument(
         "--profiling", type=str, nargs="?", default=None, const="profiling_stats.txt",
