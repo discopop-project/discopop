@@ -138,6 +138,14 @@ class OptimizationGraph(object):
                     FreeSymbolDistribution, symbol_distribution
                 )
 
+        # save raw cost models for sequential functions
+        for function in sequential_complete_performance_models:
+            for model, ctx in sequential_complete_performance_models[function]:
+                if model.raw_sequential_costs is None:
+                    model.raw_sequential_costs = model.sequential_costs
+                if model.raw_parallelizable_costs is None:
+                    model.raw_parallelizable_costs = model.parallelizable_costs
+
         # by default, select the sequential version of each function for substitution
         for function in sequential_complete_performance_models:
             experiment.selected_paths_per_function[
@@ -163,7 +171,12 @@ class OptimizationGraph(object):
             print("SUBSTITUTION LOOP")
             modification_found = False
             for idx, function in enumerate(sequential_complete_performance_models):
-                for midx, model in enumerate(sequential_complete_performance_models[function]):
+                for model, ctx in sequential_complete_performance_models[function]:
+                    # save raw cost models
+                    if model.raw_sequential_costs is None:
+                        model.raw_sequential_costs = model.sequential_costs
+                    if model.raw_parallelizable_costs is None:
+                        model.raw_parallelizable_costs = model.parallelizable_costs
                     # apply substitution to parallelizable costs
                     tmp_model = model.parallelizable_costs.subs(substitutions)
                     if tmp_model != model.parallelizable_costs:
@@ -192,6 +205,11 @@ class OptimizationGraph(object):
             for idx, function in enumerate(sequential_complete_performance_models):
                 for midx, pair in enumerate(sequential_complete_performance_models[function]):
                     model, context = pair
+                    # save raw cost models
+                    if model.raw_sequential_costs is None:
+                        model.raw_sequential_costs = model.sequential_costs
+                    if model.raw_parallelizable_costs is None:
+                        model.raw_parallelizable_costs = model.parallelizable_costs
                     # apply substitution to parallelizable costs
                     tmp_model = model.parallelizable_costs.subs(substitutions)
                     if tmp_model != model.parallelizable_costs:
@@ -242,6 +260,11 @@ class OptimizationGraph(object):
             for idx, function in enumerate(locally_optimized_models):
                 for midx, pair in enumerate(locally_optimized_models[function]):
                     model, context = pair
+                    # save raw cost models
+                    if model.raw_sequential_costs is None:
+                        model.raw_sequential_costs = model.sequential_costs
+                    if model.raw_parallelizable_costs is None:
+                        model.raw_parallelizable_costs = model.parallelizable_costs
                     # apply substitution to parallelizable costs
                     tmp_model = model.parallelizable_costs.subs(substitutions)
                     if tmp_model != model.parallelizable_costs:
@@ -267,6 +290,11 @@ class OptimizationGraph(object):
             for idx, function in enumerate(exhaustive_performance_models):
                 for midx, pair in enumerate(exhaustive_performance_models[function]):
                     model, context = pair
+                    # save raw cost models
+                    if model.raw_sequential_costs is None:
+                        model.raw_sequential_costs = model.sequential_costs
+                    if model.raw_parallelizable_costs is None:
+                        model.raw_parallelizable_costs = model.parallelizable_costs
                     # apply substitution to parallelizable costs
                     tmp_model = model.parallelizable_costs.subs(substitutions)
                     if tmp_model != model.parallelizable_costs:

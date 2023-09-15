@@ -19,7 +19,10 @@ from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_co
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
+from discopop_library.discopop_optimizer.gui.plotting.CostModels import (
+    plot_CostModels,
+    plot_CostModels_using_function_path_selections,
+)
 from discopop_library.discopop_optimizer.gui.presentation.ChoiceDetails import (
     display_choices_for_model,
 )
@@ -73,6 +76,21 @@ def show_options(
     label2.grid(row=1, column=1, sticky=NSEW)
     label2.insert(END, str(experiment.selected_paths_per_function[function_root][0].path_decisions))
     label2.configure(state=DISABLED, disabledforeground="black")
+
+    plot_button = Button(
+        root,
+        text="Plot using selections",
+        command=lambda: plot_CostModels_using_function_path_selections(  # type: ignore
+            experiment,
+            [experiment.selected_paths_per_function[function_root][0]],  # type: ignore
+            sorted_free_symbols,
+            free_symbol_ranges,
+            [function_root.name],
+            title=function_root.name,
+            super_title=function_root.name,
+        ),
+    )
+    plot_button.grid(row=1, column=2, sticky=NSEW)
 
     Button(
         root,
@@ -165,6 +183,9 @@ def show_options(
         export_code_button.grid(row=0, column=2)
 
         def __update_selection(cm, ctx):
+            # use raw models for selection updates
+            cm.parallelizable_costs = cm.raw_parallelizable_costs
+            cm.sequential_costs = cm.raw_sequential_costs
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
             # update displayed value
             label2.configure(state=NORMAL)

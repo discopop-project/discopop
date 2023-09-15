@@ -105,6 +105,13 @@ class Loop(Workload):
         cm.parallelizable_costs = cm.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
         cm.sequential_costs = cm.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
 
+        if cm.raw_sequential_costs is not None:
+            cm.raw_sequential_costs = cm.raw_sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+        if cm.raw_parallelizable_costs is not None:
+            cm.raw_parallelizable_costs = cm.raw_parallelizable_costs.subs(
+                {Expr(Integer(0)): Integer(0)}
+            )
+
         return cm
 
     def register_child(self, other, experiment, all_function_nodes):

@@ -90,6 +90,12 @@ def get_locally_optimized_models(
                 modification_found = False
                 for decision, pair in decision_models:
                     model, context = pair
+                    # save raw cost models
+                    if model.raw_sequential_costs is None:
+                        model.raw_sequential_costs = model.sequential_costs
+                    if model.raw_parallelizable_costs is None:
+                        model.raw_parallelizable_costs = model.parallelizable_costs
+
                     # apply substitutions to parallelizable costs
                     tmp_model = model.parallelizable_costs.subs(substitutions)
                     if tmp_model != model.parallelizable_costs:

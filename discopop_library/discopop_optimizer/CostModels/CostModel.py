@@ -22,6 +22,8 @@ class CostModel(object):
     identifier: str
     parallelizable_costs: Expr
     sequential_costs: Expr
+    raw_parallelizable_costs: Optional[Expr]
+    raw_sequential_costs: Optional[Expr]
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]]
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
@@ -51,6 +53,8 @@ class CostModel(object):
         self.identifier = identifier
         self.parallelizable_costs = parallelizable_costs
         self.sequential_costs = sequential_costs
+        self.raw_parallelizable_costs = None
+        self.raw_sequential_costs = None
 
     def __str__(self):
         return str(self.parallelizable_costs) + "\n" + str(self.sequential_costs)

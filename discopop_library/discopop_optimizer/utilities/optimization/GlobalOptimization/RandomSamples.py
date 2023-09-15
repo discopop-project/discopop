@@ -59,6 +59,11 @@ def find_quasi_optimal_using_random_samples(
         print("\tApplying substitutions...")
         print("\t" + str(substitutions))
     for model, context in random_paths:
+        # save raw cost models
+        if model.raw_sequential_costs is None:
+            model.raw_sequential_costs = model.sequential_costs
+        if model.raw_parallelizable_costs is None:
+            model.raw_parallelizable_costs = model.parallelizable_costs
         # apply substitutions iteratively
         modification_found = True
         while modification_found:

@@ -5,16 +5,18 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List, Dict, Tuple, Optional
+import copy
+from typing import List, Dict, Tuple, Optional, cast
 
 import numpy as np
 from matplotlib import pyplot as plt  # type: ignore
 import matplotlib
 from spb import plot3d, MB, plot  # type: ignore
-from sympy import Symbol
+from sympy import Symbol, Expr
 import sympy
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 
 
 def plot_CostModels(
@@ -25,6 +27,93 @@ def plot_CostModels(
     title: Optional[str] = None,
     super_title: Optional[str] = None,
 ):
+    if len(sorted_free_symbols) == 2:
+        __3d_plot(
+            models,
+            sorted_free_symbols,
+            free_symbol_ranges,
+            labels=labels,
+            title=str(title) + str(super_title) if super_title is not None else title,
+        )
+    elif len(sorted_free_symbols) == 1:
+        __2d_plot(
+            models,
+            sorted_free_symbols,
+            free_symbol_ranges,
+            labels=labels,
+            title=str(title) + str(super_title) if super_title is not None else title,
+        )
+    elif len(sorted_free_symbols) == 0:
+        __1d_plot(
+            models,
+            sorted_free_symbols,
+            free_symbol_ranges,
+            labels=labels,
+            title=title,
+            super_title=super_title,
+        )
+    else:
+        print("Plotiting not supported for", len(sorted_free_symbols), "free symbols!")
+
+
+def plot_CostModels_using_function_path_selections(
+    experiment: Experiment,
+    models: List[CostModel],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+    super_title: Optional[str] = None,
+):
+    print("PLOTTING: ")
+    for m in models:
+        print(m.raw_sequential_costs)
+        print(m.raw_parallelizable_costs)
+    print()
+
+    # apply selected substitutions
+    # collect substitutions
+    local_substitutions = copy.deepcopy(experiment.substitutions)
+    for function in experiment.selected_paths_per_function:
+        # register substitution
+        local_substitutions[
+            cast(Symbol, function.sequential_costs)
+        ] = experiment.selected_paths_per_function[function][0].sequential_costs
+        local_substitutions[
+            cast(Symbol, function.parallelizable_costs)
+        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+
+    print("LOCAL FUNCTION SUBSTITUTIONS", local_substitutions)
+
+    # prepare models by loading raw costs
+    for model in models:
+        model.sequential_costs = cast(Expr, model.raw_sequential_costs)
+        model.parallelizable_costs = cast(Expr, model.raw_parallelizable_costs)
+
+    # perform iterative substitutions
+    modification_found = True
+    while modification_found:
+        print("LOCAL SUBSTITUTION LOOP")
+        modification_found = False
+        for model in models:
+            # apply substitution to parallelizable costs
+            tmp_model = model.parallelizable_costs.subs(local_substitutions)
+            if tmp_model != model.parallelizable_costs:
+                modification_found = True
+            model.parallelizable_costs = tmp_model
+
+            # apply substitutions to sequential costs
+            tmp_model = model.sequential_costs.subs(local_substitutions)
+            if tmp_model != model.sequential_costs:
+                modification_found = True
+            model.sequential_costs = model.sequential_costs.subs(local_substitutions)
+
+    print("PLOTTING AFTER SUBSTITUTION: ")
+    for m in models:
+        print(m.sequential_costs)
+        print(m.parallelizable_costs)
+    print()
+
     if len(sorted_free_symbols) == 2:
         __3d_plot(
             models,
