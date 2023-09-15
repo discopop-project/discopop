@@ -138,20 +138,24 @@ class OptimizationGraph(object):
                     FreeSymbolDistribution, symbol_distribution
                 )
 
-        # add function symbols to list of substitutions
-        # TODO NOTE THIS IS JUST A DUMMY!!!
-        #  collect substitutions
+        # by default, select the sequential version of each function for substitution
         for function in sequential_complete_performance_models:
+            experiment.selected_paths_per_function[
+                function
+            ] = sequential_complete_performance_models[function][0]
+
+        # add function symbols to list of substitutions
+        # collect substitutions
+        for function in experiment.selected_paths_per_function:
             # register substitution
             substitutions[
                 cast(Symbol, function.sequential_costs)
-            ] = sequential_complete_performance_models[function][0][0].sequential_costs
+            ] = experiment.selected_paths_per_function[function][0].sequential_costs
             substitutions[
                 cast(Symbol, function.parallelizable_costs)
-            ] = sequential_complete_performance_models[function][0][0].parallelizable_costs
+            ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
 
         print("FUNCTION SUBSTITUTIONS", substitutions)
-        # todo MAY NOT STAY AS IS! MUST BE DYNAMIC
 
         # perform iterative substitutions
         modification_found = True

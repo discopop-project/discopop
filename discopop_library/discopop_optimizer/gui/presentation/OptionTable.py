@@ -39,7 +39,7 @@ def show_options(
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     function_root: FunctionRoot,
     parent_frame: tkinter.Frame,
-    spawned_windows: List[tkinter.Toplevel] = [],
+    spawned_windows: List[tkinter.Toplevel],
     window_title=None,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
@@ -63,6 +63,16 @@ def show_options(
         e.configure(state=DISABLED, disabledforeground="black")
         header_cols.append(e)
     rows.append(header_cols)
+
+    label1 = Entry(root, relief=RIDGE)
+    label1.grid(row=1, column=0, sticky=NSEW)
+    label1.insert(END, "Current selection:")
+    label1.configure(state=DISABLED, disabledforeground="black")
+
+    label2 = Entry(root, relief=RIDGE)
+    label2.grid(row=1, column=1, sticky=NSEW)
+    label2.insert(END, str(experiment.selected_paths_per_function[function_root][0].path_decisions))
+    label2.configure(state=DISABLED, disabledforeground="black")
 
     Button(
         root,

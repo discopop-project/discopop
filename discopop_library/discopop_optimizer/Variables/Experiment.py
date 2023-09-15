@@ -63,6 +63,7 @@ class Experiment(object):
     detection_result: DetectionResult
 
     function_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject, str]]]
+    selected_paths_per_function: Dict[FunctionRoot, Tuple[CostModel, ContextObject]]
 
     optimization_graph: nx.DiGraph
 
@@ -100,6 +101,7 @@ class Experiment(object):
             self.register_free_symbol(free_symbol, value_suggestion)
 
         self.function_models = dict()
+        self.selected_paths_per_function = dict()
 
         self.compile_check_command = arguments["--compile-command"]
 
