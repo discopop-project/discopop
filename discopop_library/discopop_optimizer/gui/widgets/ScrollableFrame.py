@@ -48,7 +48,7 @@ class ScrollableFrameWidget(object):
             row=row, column=col, columnspan=columnspan, rowspan=rowspan, sticky=tk.NSEW
         )
         self.canvas.grid(row=0, column=0, sticky=tk.NSEW)
-        self.scrollbar.grid(row=0, rowspan=row_count, column=1, sticky=tk.NS)
+        self.scrollbar.grid(row=0, rowspan=max(row_count, 1), column=1, sticky=tk.NS)
 
     def get_scrollable_frame(self) -> tk.Frame:
         return self.scrollable_frame
