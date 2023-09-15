@@ -5,11 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, cast, List, Tuple
+from typing import Dict, cast, List, Tuple, Optional
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
 import sympy  # type: ignore
+import tkinter as tk
 from spb import plot3d, MB  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff  # type: ignore
 
@@ -43,7 +44,14 @@ from discopop_library.discopop_optimizer.utilities.optimization.LocalOptimizatio
 class OptimizationGraph(object):
     next_free_node_id: int
 
-    def __init__(self, project_folder_path, experiment: Experiment, arguments: Dict):
+    def __init__(
+        self,
+        project_folder_path,
+        experiment: Experiment,
+        arguments: Dict,
+        parent_frame: tk.Frame,
+        destroy_window_after_execution: bool,
+    ):
         # construct optimization graph from PET Graph
         # save graph in experiment
         experiment.optimization_graph, self.next_free_node_id = PETParser(
@@ -119,7 +127,7 @@ class OptimizationGraph(object):
 
         # query user for values for free symbols
         query_results = query_user_for_symbol_values(
-            sorted_free_symbols, experiment.suggested_values, arguments
+            sorted_free_symbols, experiment.suggested_values, arguments, parent_frame
         )
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
@@ -309,9 +317,7 @@ class OptimizationGraph(object):
 
         # show function models
         if not arguments["--headless-mode"]:
-            show_function_models(
-                experiment,
-            )
+            show_function_models(experiment, parent_frame, destroy_window_after_execution)
         else:
             # perform actions for headless mode
             perform_headless_execution(experiment)

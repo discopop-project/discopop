@@ -57,6 +57,8 @@ OPTIONAL ARGUMENTS:
 import os
 import shutil
 import sys
+import tkinter as tk
+from typing import Optional, Union
 
 import jsonpickle  # type: ignore
 import pstats2  # type:ignore
@@ -190,6 +192,22 @@ def main():
         os.makedirs(arguments["--code-export-path"])
         print("Done.")
 
+    start_optimizer(arguments)
+
+
+def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
+    # create gui frame if none given
+    if parent_frame is None:
+        tk_root: Union[tk.Tk, tk.Toplevel] = tk.Tk()
+        # configure window size
+        tk_root.geometry("1000x600")
+        parent_frame = tk.Frame(tk_root)
+        parent_frame.pack(fill=tk.BOTH)
+        destroy_window_after_execution = True
+    else:
+        tk_root = parent_frame.winfo_toplevel()
+        destroy_window_after_execution = False
+
     # ask if previous session should be loaded
     load_result: bool = False
     if (
@@ -197,6 +215,7 @@ def main():
         and not arguments["--headless-mode"]
     ):
         load_result = tkinter.messagebox.askyesno(
+            parent=parent_frame,
             title="Restore Results?",
             message="Do you like to load the experiment from the previous session?",
         )
@@ -205,9 +224,7 @@ def main():
         experiment = restore_session(
             os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle")
         )
-        show_function_models(
-            experiment,
-        )
+        show_function_models(experiment, parent_frame, destroy_window_after_execution)
         # save experiment to disk
         export_to_json(experiment)
 
@@ -297,7 +314,21 @@ def main():
         )
 
         # invoke optimization graph
-        optimization_graph = OptimizationGraph(arguments["--dp-output-path"], experiment, arguments)
+        optimization_graph = OptimizationGraph(
+            arguments["--dp-output-path"],
+            experiment,
+            arguments,
+            parent_frame,
+            destroy_window_after_execution,
+        )
 
-    if __name__ == "__main__":
-        main()
+    if destroy_window_after_execution:
+        try:
+            tk_root.destroy()
+        except tkinter.TclError:
+            # Window has been destroyed already
+            pass
+
+
+if __name__ == "__main__":
+    main()

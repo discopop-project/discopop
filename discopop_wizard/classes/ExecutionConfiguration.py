@@ -18,6 +18,7 @@ from typing import TextIO, List, Dict, Tuple
 import jsons  # type:ignore
 
 from discopop_wizard.screens.execution import ExecutionView
+from discopop_wizard.screens.optimizer.binding import create_optimizer_screen
 from discopop_wizard.screens.suggestions.overview import (
     show_suggestions_overview_screen,
     get_suggestion_objects,
@@ -43,7 +44,7 @@ class ExecutionConfiguration(object):
             "notes": "",
             "working_copy_path": "",
             "tags": "",
-            "explorer_flags": "--json=patterns.json",
+            "explorer_flags": "--json=patterns.json --dump-detection-result",
         }
         self.value_dict["id"] = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
         self.wizard = wizard
@@ -131,8 +132,14 @@ class ExecutionConfiguration(object):
         main_screen_obj.notebook.tab(
             main_screen_obj.results_frame, state=self.__button_state_from_result_existence()
         )
+        main_screen_obj.notebook.tab(
+            main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence()
+        )
+
         if self.__button_state_from_result_existence() == "normal":
             show_suggestions_overview_screen(wizard, main_screen_obj.results_frame, self)
+        if self.__button_state_from_result_existence() == "normal":
+            create_optimizer_screen(wizard, main_screen_obj.optimizer_frame, self)
 
     def show_details_screen(self, wizard, main_screen_obj):
         # delete previous frame contents
@@ -487,8 +494,14 @@ class ExecutionConfiguration(object):
         main_screen_obj.notebook.tab(
             main_screen_obj.results_frame, state=self.__button_state_from_result_existence()
         )
+        main_screen_obj.notebook.tab(
+            main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence()
+        )
+
         # show results tab
         main_screen_obj.notebook.select(main_screen_obj.results_frame)
+        # initialize optimizer tab
+        create_optimizer_screen(wizard, main_screen_obj.optimizer_frame, self)
 
     def get_tags(self) -> List[str]:
         """Returns a list of strings which represents the tags assigned to the configuration."""

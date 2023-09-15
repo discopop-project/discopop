@@ -38,13 +38,19 @@ def show_options(
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     function_root: FunctionRoot,
+    parent_frame: tkinter.Frame,
+    spawned_windows: List[tkinter.Toplevel] = [],
     window_title=None,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
-    root = tkinter.Toplevel()
-    if window_title is not None:
-        root.configure()
-        root.title(window_title)
+    # root = tkinter.Toplevel()
+    # if window_title is not None:
+    #    root.configure()
+    #    root.title(window_title)
+    root = tkinter.Toplevel(parent_frame.winfo_toplevel())
+    spawned_windows.append(root)
+    root.configure()
+    root.title(window_title)
 
     rows = []
     column_headers = ["Label", "Decisions", "Options"]
@@ -84,6 +90,8 @@ def show_options(
             free_symbol_ranges,
             free_symbol_distributions,
             function_root,
+            parent_frame,
+            spawned_windows,
             window_title,
         ),
     ).grid()
@@ -146,7 +154,7 @@ def show_options(
         )
         export_code_button.grid(row=0, column=2)
 
-    mainloop()
+    root.mainloop()
 
     return options
 
@@ -163,7 +171,7 @@ def __save_models(
 
 
 def add_random_models(
-    root: Optional[Union[Tk, tkinter.Toplevel]],
+    root: Optional[tkinter.Toplevel],
     pet: PETGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
@@ -173,11 +181,14 @@ def add_random_models(
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     function_root: FunctionRoot,
+    parent_frame: Optional[tkinter.Frame],
+    spawned_windows: List[tkinter.Toplevel],
     window_title=None,
     show_results: bool = True,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     if root is not None:
-        cast(Union[Tk, tkinter.Toplevel], root.destroy())
+        # close window
+        root.destroy()
 
     # generate random models
     # sort random models
@@ -219,6 +230,8 @@ def add_random_models(
             free_symbol_ranges,
             free_symbol_distributions,
             function_root,
+            cast(tkinter.Frame, parent_frame),  # valid due to show_results flag
+            spawned_windows,
             window_title,
         )
 

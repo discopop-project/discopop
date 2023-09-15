@@ -300,7 +300,8 @@ log -i \
   makeTarget: $MAKEFILE_TARGET
   dp_build:   $DP_BUILD
   gllvmLog:   $GLLVM_LOG
-  pythonPath: $PYTHONPATH_FLAG"
+  pythonPath: $PYTHONPATH_FLAG
+  explorer_flags: $EXPLORER_FLAGS"
 
 #####
 # configure gllvm

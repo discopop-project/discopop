@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from typing import List, Tuple, Optional, Dict, cast
 
 from sympy import Symbol, Expr
@@ -17,7 +18,10 @@ from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import Scro
 
 
 def query_user_for_symbol_values(
-    symbols: List[Symbol], suggested_values: Dict[Symbol, Expr], arguments: Dict
+    symbols: List[Symbol],
+    suggested_values: Dict[Symbol, Expr],
+    arguments: Dict,
+    parent_frame: tk.Frame,
 ) -> List[
     Tuple[
         Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]
@@ -47,14 +51,11 @@ def query_user_for_symbol_values(
 
     column_headers = ["Symbol Name", "Symbol Value", "Range Start", "Range End", "Range Relevance"]
 
-    root = Tk()
-    # configure window size
-    root.geometry("1000x600")
     # configure weights
-    root.rowconfigure(0, weight=1)
-    root.columnconfigure(0, weight=1)
+    parent_frame.rowconfigure(0, weight=1)
+    parent_frame.columnconfigure(0, weight=1)
     # create scrollable frame
-    scrollable_frame_widget = ScrollableFrameWidget(root)
+    scrollable_frame_widget = ScrollableFrameWidget(parent_frame)
     scrollable_frame = scrollable_frame_widget.get_scrollable_frame()
 
     rows = []
@@ -172,10 +173,14 @@ def query_user_for_symbol_values(
                 )
             )
 
-        root.destroy()
+        # close elements on optimizer_frame
+        for c in parent_frame.winfo_children():
+            c.destroy()
+
+        parent_frame.quit()
 
     scrollable_frame_widget.finalize(len(symbols), row=0, col=0)
-    Button(root, text="Save", command=lambda: onPress()).grid()
-    Button(root, text="Validate", command=lambda: validate()).grid()
-    mainloop()
+    Button(parent_frame, text="Save", command=lambda: onPress()).grid()
+    Button(parent_frame, text="Validate", command=lambda: validate()).grid()
+    parent_frame.mainloop()
     return query_result
