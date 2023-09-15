@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import tkinter as tk
+from tkinter import filedialog
 
 from discopop_library.PathManagement.PathManagement import get_path
 from discopop_library.discopop_optimizer.__main__ import start_optimizer
@@ -22,7 +23,7 @@ def create_optimizer_screen(wizard, parent_frame, execution_configuration):
     arguments = dict()
 
     def overwrite_with_file_selection(target: tk.Entry):
-        prompt_result = tk.filedialog.askopenfilename()
+        prompt_result = filedialog.askopenfilename()
         if len(prompt_result) != 0:
             target.delete(0, tk.END)
             target.insert(0, prompt_result)
@@ -81,8 +82,8 @@ def create_optimizer_screen(wizard, parent_frame, execution_configuration):
         font=wizard.style_font_bold_small,
     ).grid(row=4, column=0, sticky="ew")
     exhaustive_search = tk.IntVar(canvas)
-    exhaustive_search.set(1)
-    cb = tk.Checkbutton(canvas, onvalue=1, offvalue=0)
+    exhaustive_search.set(0)
+    cb = tk.Checkbutton(canvas, onvalue=1, offvalue=0, variable=exhaustive_search)
     cb.grid(row=4, column=1)
 
     start_button = tk.Button(
