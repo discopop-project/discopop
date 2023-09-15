@@ -164,6 +164,23 @@ def show_options(
         )
         export_code_button.grid(row=0, column=2)
 
+        def __update_selection(cm, ctx):
+            experiment.selected_paths_per_function[function_root] = (cm, ctx)
+            # update displayed value
+            label2.configure(state=NORMAL)
+            label2.delete(0, END)
+            label2.insert(0, str(cm.path_decisions))
+            label2.configure(state=DISABLED)
+
+        update_selection_button = Button(
+            options_field,
+            text="Update selection",
+            command=lambda opt=option, opt_name=option_name, ctx=context: __update_selection(  # type: ignore
+                opt, ctx
+            ),
+        )
+        update_selection_button.grid(row=0, column=3)
+
     root.mainloop()
 
     return options
