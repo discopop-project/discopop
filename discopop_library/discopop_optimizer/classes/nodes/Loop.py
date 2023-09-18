@@ -94,18 +94,12 @@ class Loop(Workload):
                 CostModel(Integer(1), Integer(0))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
-                .parallelizable_multiply_combine(
-                    CostModel(self.iterations_symbol, self.iterations_symbol)
-                )
             )
         else:
             result_model = (
                 CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
-                .parallelizable_multiply_combine(
-                    CostModel(self.iterations_symbol, self.iterations_symbol)
-                )
             )
 
         cast(CostModel, result_model).symbol_value_suggestions[self.iterations_symbol] = Integer(
