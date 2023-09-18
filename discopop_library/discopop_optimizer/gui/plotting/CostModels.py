@@ -50,16 +50,11 @@ def plot_CostModels(
             cast(Symbol, function.parallelizable_costs)
         ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
 
-    print("PRE SUBSTITUTION:")
-
     local_models = copy.deepcopy(models)
-    for m in local_models:
-        m.print()
 
     # perform iterative substitutions
     modification_found = True
     while modification_found:
-        print("LOCAL SUBSTITUTION LOOP")
         modification_found = False
         for model in local_models:
             # apply substitution to parallelizable costs
@@ -73,10 +68,6 @@ def plot_CostModels(
             if tmp_model != model.sequential_costs:
                 modification_found = True
             model.sequential_costs = model.sequential_costs.subs(local_substitutions)
-
-    print("POST SUBSTITUTION:")
-    for m in local_models:
-        m.print()
 
     if len(local_sorted_free_symbols) == 2:
         __3d_plot(
@@ -128,17 +119,11 @@ def plot_CostModels_using_function_path_selections(
             cast(Symbol, function.parallelizable_costs)
         ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
 
-    print("LOCAL FUNCTION SUBSTITUTIONS", local_substitutions)
-
-    print("PRE SUBSTITUTION: ")
     local_models = copy.deepcopy(models)
-    for m in local_models:
-        m.print()
 
     # perform iterative substitutions
     modification_found = True
     while modification_found:
-        print("LOCAL SUBSTITUTION LOOP")
         modification_found = False
         for model in local_models:
             # apply substitution to parallelizable costs
@@ -162,11 +147,6 @@ def plot_CostModels_using_function_path_selections(
             del local_free_symbol_ranges[symbol]
         if symbol in local_sorted_free_symbols:
             local_sorted_free_symbols.remove(symbol)
-
-    print("PLOTTING AFTER SUBSTITUTION: ")
-    for m in local_models:
-        m.print()
-    print()
 
     if len(local_sorted_free_symbols) == 2:
         __3d_plot(

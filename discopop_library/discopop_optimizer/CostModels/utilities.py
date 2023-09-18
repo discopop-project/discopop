@@ -110,8 +110,6 @@ def get_node_performance_models(
         else:
             tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
 
-        if isinstance(node_data, Loop):
-            print("FOUND LOOP:")
         for idx, child_model in enumerate(children_models):
             if ignore_node_costs is not None:
                 if node_data.node_id not in ignore_node_costs:

@@ -118,34 +118,6 @@ class Loop(Workload):
     def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
-        print("Register Loop Child")
-        print("step 0:")
-        CostModel(self.iterations_symbol, self.iterations_symbol).print()
-        print("step 0.1:")
-        other.print()
-        print("step 1: ")
-        other.parallelizable_multiply_combine(
-            CostModel(self.iterations_symbol, self.iterations_symbol)
-        ).print()
-        print("step 2:")
-        self.performance_model.parallelizable_plus_combine(
-            other.parallelizable_multiply_combine(
-                CostModel(self.iterations_symbol, self.iterations_symbol)
-            )
-        ).print()
-
-        print("step 3:")
-        self.get_cost_model(experiment, all_function_nodes).print()
-
-        print("step 4:")
-        self.get_cost_model(experiment, all_function_nodes).parallelizable_multiply_combine(
-            self.performance_model.parallelizable_plus_combine(
-                other.parallelizable_multiply_combine(
-                    CostModel(self.iterations_symbol, self.iterations_symbol)
-                )
-            )
-        ).print()
-        print()
 
         # The workload of the added child needs to be multiplied with the iteration count before adding it.
         return self.get_cost_model(experiment, all_function_nodes).parallelizable_multiply_combine(
