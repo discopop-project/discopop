@@ -20,6 +20,7 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 
 
 def plot_CostModels(
+    experiment,
     models: List[CostModel],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
@@ -27,27 +28,77 @@ def plot_CostModels(
     title: Optional[str] = None,
     super_title: Optional[str] = None,
 ):
-    if len(sorted_free_symbols) == 2:
+    local_sorted_free_symbols = copy.deepcopy(sorted_free_symbols)
+    local_free_symbol_ranges = copy.deepcopy(free_symbol_ranges)
+    for symbol in experiment.substitutions:
+        if symbol in experiment.free_symbols:
+            experiment.free_symbols.remove(symbol)
+        if symbol in local_free_symbol_ranges:
+            del local_free_symbol_ranges[symbol]
+        if symbol in local_sorted_free_symbols:
+            local_sorted_free_symbols.remove(symbol)
+
+    # apply selected substitutions
+    # collect substitutions
+    local_substitutions = copy.deepcopy(experiment.substitutions)
+    for function in experiment.selected_paths_per_function:
+        # register substitution
+        local_substitutions[
+            cast(Symbol, function.sequential_costs)
+        ] = experiment.selected_paths_per_function[function][0].sequential_costs
+        local_substitutions[
+            cast(Symbol, function.parallelizable_costs)
+        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+
+    print("PRE SUBSTITUTION:")
+
+    local_models = copy.deepcopy(models)
+    for m in local_models:
+        m.print()
+
+    # perform iterative substitutions
+    modification_found = True
+    while modification_found:
+        print("LOCAL SUBSTITUTION LOOP")
+        modification_found = False
+        for model in local_models:
+            # apply substitution to parallelizable costs
+            tmp_model = model.parallelizable_costs.subs(local_substitutions)
+            if tmp_model != model.parallelizable_costs:
+                modification_found = True
+            model.parallelizable_costs = tmp_model
+
+            # apply substitutions to sequential costs
+            tmp_model = model.sequential_costs.subs(local_substitutions)
+            if tmp_model != model.sequential_costs:
+                modification_found = True
+            model.sequential_costs = model.sequential_costs.subs(local_substitutions)
+
+    print("POST SUBSTITUTION:")
+    for m in local_models:
+        m.print()
+
+    if len(local_sorted_free_symbols) == 2:
         __3d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=str(title) + str(super_title) if super_title is not None else title,
         )
-    elif len(sorted_free_symbols) == 1:
+    elif len(local_sorted_free_symbols) == 1:
         __2d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=str(title) + str(super_title) if super_title is not None else title,
         )
-    elif len(sorted_free_symbols) == 0:
+    elif len(local_sorted_free_symbols) == 0:
         __1d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=title,
             super_title=super_title,
@@ -65,12 +116,6 @@ def plot_CostModels_using_function_path_selections(
     title: Optional[str] = None,
     super_title: Optional[str] = None,
 ):
-    print("PLOTTING: ")
-    for m in models:
-        print(m.raw_sequential_costs)
-        print(m.raw_parallelizable_costs)
-    print()
-
     # apply selected substitutions
     # collect substitutions
     local_substitutions = copy.deepcopy(experiment.substitutions)
@@ -85,17 +130,17 @@ def plot_CostModels_using_function_path_selections(
 
     print("LOCAL FUNCTION SUBSTITUTIONS", local_substitutions)
 
-    # prepare models by loading raw costs
-    for model in models:
-        model.sequential_costs = cast(Expr, model.raw_sequential_costs)
-        model.parallelizable_costs = cast(Expr, model.raw_parallelizable_costs)
+    print("PRE SUBSTITUTION: ")
+    local_models = copy.deepcopy(models)
+    for m in local_models:
+        m.print()
 
     # perform iterative substitutions
     modification_found = True
     while modification_found:
         print("LOCAL SUBSTITUTION LOOP")
         modification_found = False
-        for model in models:
+        for model in local_models:
             # apply substitution to parallelizable costs
             tmp_model = model.parallelizable_costs.subs(local_substitutions)
             if tmp_model != model.parallelizable_costs:
@@ -108,39 +153,48 @@ def plot_CostModels_using_function_path_selections(
                 modification_found = True
             model.sequential_costs = model.sequential_costs.subs(local_substitutions)
 
+    local_sorted_free_symbols = copy.deepcopy(sorted_free_symbols)
+    local_free_symbol_ranges = copy.deepcopy(free_symbol_ranges)
+    for symbol in experiment.substitutions:
+        if symbol in experiment.free_symbols:
+            experiment.free_symbols.remove(symbol)
+        if symbol in local_free_symbol_ranges:
+            del local_free_symbol_ranges[symbol]
+        if symbol in local_sorted_free_symbols:
+            local_sorted_free_symbols.remove(symbol)
+
     print("PLOTTING AFTER SUBSTITUTION: ")
-    for m in models:
-        print(m.sequential_costs)
-        print(m.parallelizable_costs)
+    for m in local_models:
+        m.print()
     print()
 
-    if len(sorted_free_symbols) == 2:
+    if len(local_sorted_free_symbols) == 2:
         __3d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=str(title) + str(super_title) if super_title is not None else title,
         )
-    elif len(sorted_free_symbols) == 1:
+    elif len(local_sorted_free_symbols) == 1:
         __2d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=str(title) + str(super_title) if super_title is not None else title,
         )
-    elif len(sorted_free_symbols) == 0:
+    elif len(local_sorted_free_symbols) == 0:
         __1d_plot(
-            models,
-            sorted_free_symbols,
-            free_symbol_ranges,
+            local_models,
+            local_sorted_free_symbols,
+            local_free_symbol_ranges,
             labels=labels,
             title=title,
             super_title=super_title,
         )
     else:
-        print("Plotiting not supported for", len(sorted_free_symbols), "free symbols!")
+        print("Plotiting not supported for", len(local_sorted_free_symbols), "free symbols!")
 
 
 __unique_plot_id = 0

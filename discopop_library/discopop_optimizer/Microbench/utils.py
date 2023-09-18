@@ -7,10 +7,12 @@
 # directory for details.
 from typing import cast
 
-from sympy import Expr, Integer
+from sympy import Expr, Integer, Max
 
 
-def convert_discopop_to_microbench_workload(discopop_workload: Expr, iteration_count: Expr) -> Expr:
+def convert_discopop_to_microbench_workload(
+    discopop_per_iteration_workload: Expr, iteration_count: Expr
+) -> Expr:
     """Converts the estimated workload into the workload measurement used by Microbench.
     According to Formula:
 
@@ -29,7 +31,12 @@ def convert_discopop_to_microbench_workload(discopop_workload: Expr, iteration_c
     # todo
     w0 = 13
     wi = 14
-    return cast(Expr, ((discopop_workload / iteration_count) - w0) / (iteration_count * wi))
+
+    # discopop_per_iteration_workload is equivalent to (Wd/iD)
+    # for the same reason, iteration_count is disregarded
+    Wm = cast(Expr, (discopop_per_iteration_workload - w0) / wi)
+    # do not allow negative return values
+    return Max(Wm, Integer(1))
 
 
 def convert_microbench_to_discopop_workload(

@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import random
+import sys
 from functools import cmp_to_key
 from typing import List, Dict, Tuple, Optional
 
@@ -53,18 +54,16 @@ class CostModel(object):
         self.identifier = identifier
         self.parallelizable_costs = parallelizable_costs
         self.sequential_costs = sequential_costs
-        self.raw_parallelizable_costs = None
-        self.raw_sequential_costs = None
 
     def __str__(self):
         return str(self.parallelizable_costs) + "\n" + str(self.sequential_costs)
 
-    def print(self):
+    def print(self, file=sys.stdout):
         init_printing()
         print("\tPARALLEL:")
-        print("\t", self.parallelizable_costs)
+        print("\t", self.parallelizable_costs, file=file)
         print("\tSERIAL")
-        print("\t", self.sequential_costs)
+        print("\t", self.sequential_costs, file=file)
 
     def parallelizable_plus_combine(self, other):
         """Combines both models in the following fashion:

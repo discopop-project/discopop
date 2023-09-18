@@ -17,6 +17,7 @@ from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
+from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
@@ -108,6 +109,9 @@ def get_node_performance_models(
                 tmp_node_cost_model = CostModel(Integer(0), Integer(0))
         else:
             tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
+
+        if isinstance(node_data, Loop):
+            print("FOUND LOOP:")
         for idx, child_model in enumerate(children_models):
             if ignore_node_costs is not None:
                 if node_data.node_id not in ignore_node_costs:

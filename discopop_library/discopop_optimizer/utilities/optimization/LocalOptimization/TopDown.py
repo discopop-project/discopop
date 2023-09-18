@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 from typing import Dict, List, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
@@ -85,41 +86,56 @@ def get_locally_optimized_models(
                     continue
 
             # iteratively apply variable substitutions
+            decision_models_with_substitutions: List[
+                Tuple[int, Tuple[CostModel, ContextObject, CostModel]]
+            ] = []
+            # initialize substitution
+            for decision, pair in decision_models:
+                model, context = pair
+                decision_models_with_substitutions.append(
+                    (decision, (model, context, copy.deepcopy(model)))
+                )
+
             modification_found = True
             while modification_found:
                 modification_found = False
-                for decision, pair in decision_models:
-                    model, context = pair
-                    # save raw cost models
-                    if model.raw_sequential_costs is None:
-                        model.raw_sequential_costs = model.sequential_costs
-                    if model.raw_parallelizable_costs is None:
-                        model.raw_parallelizable_costs = model.parallelizable_costs
+                for decision, tpl in decision_models_with_substitutions:
+                    model, context, substituted_model = tpl
 
                     # apply substitutions to parallelizable costs
-                    tmp_model = model.parallelizable_costs.subs(substitutions)
-                    if tmp_model != model.parallelizable_costs:
+                    tmp_model = substituted_model.parallelizable_costs.subs(substitutions)
+                    if tmp_model != substituted_model.parallelizable_costs:
                         modification_found = True
-                    model.parallelizable_costs = model.parallelizable_costs.subs(substitutions)
+                    substituted_model.parallelizable_costs = (
+                        substituted_model.parallelizable_costs.subs(substitutions)
+                    )
 
                     # apply substitutions to sequential costs
-                    tmp_model = model.sequential_costs.subs(substitutions)
-                    if tmp_model != model.sequential_costs:
+                    tmp_model = substituted_model.sequential_costs.subs(substitutions)
+                    if tmp_model != substituted_model.sequential_costs:
                         modification_found = True
-                    model.sequential_costs = model.sequential_costs.subs(substitutions)
+                    substituted_model.sequential_costs = substituted_model.sequential_costs.subs(
+                        substitutions
+                    )
+
+            #                    decision_models_with_substitutions.append(
+            ##                        (decision, (model, context, substituted_model))
+            #                   )
 
             # set free symbol ranges and distributions for comparisons
-            for decision, pair in decision_models:
-                model, context = pair
+            for decision, tpl in decision_models_with_substitutions:
+                model, context, substituted_model = tpl
                 model.free_symbol_ranges = free_symbol_ranges
                 model.free_symbol_distributions = free_symbol_distributions
+                substituted_model.free_symbol_ranges = free_symbol_ranges
+                substituted_model.free_symbol_distributions = free_symbol_distributions
 
             # find minimum in decision_models
-            unpacked_models: List[Tuple[int, CostModel]] = []
-            for decision, pair in decision_models:
-                model, context = pair
-                unpacked_models.append((decision, model))
-            minimum = sorted(unpacked_models, key=lambda x: x[1])[0]
+            unpacked_models: List[Tuple[int, CostModel, CostModel]] = []
+            for decision, tpl in decision_models_with_substitutions:
+                model, context, substituted_model = tpl
+                unpacked_models.append((decision, model, substituted_model))
+            minimum = sorted(unpacked_models, key=lambda x: x[2])[0]
             locally_optimal_choices.append(minimum[0])
 
         # construct locally optimal model

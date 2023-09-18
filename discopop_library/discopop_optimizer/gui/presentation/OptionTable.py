@@ -96,6 +96,7 @@ def show_options(
         root,
         text="Plot All",
         command=lambda: plot_CostModels(
+            experiment,
             [t[0] for t in options],
             sorted_free_symbols,
             free_symbol_ranges,
@@ -155,6 +156,7 @@ def show_options(
             options_field,
             text="Plot",
             command=lambda opt=option, opt_name=option_name: plot_CostModels(  # type: ignore
+                experiment,
                 [opt],  # type: ignore
                 sorted_free_symbols,
                 free_symbol_ranges,
@@ -183,10 +185,13 @@ def show_options(
         export_code_button.grid(row=0, column=2)
 
         def __update_selection(cm, ctx):
-            # use raw models for selection updates
-            cm.parallelizable_costs = cm.raw_parallelizable_costs
-            cm.sequential_costs = cm.raw_sequential_costs
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
+            experiment.substitutions[
+                cast(Symbol, function_root.sequential_costs)
+            ] = experiment.selected_paths_per_function[function_root][0].sequential_costs
+            experiment.substitutions[
+                cast(Symbol, function_root.parallelizable_costs)
+            ] = experiment.selected_paths_per_function[function_root][0].parallelizable_costs
             # update displayed value
             label2.configure(state=NORMAL)
             label2.delete(0, END)

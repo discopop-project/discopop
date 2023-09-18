@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from typing import Optional, cast
 
 from sympy import Symbol, Integer, Expr  # type: ignore
@@ -50,7 +51,7 @@ class Loop(Workload):
             node_id,
             experiment,
             cu_id,
-            sequential_workload=0,
+            sequential_workload=1,
             parallelizable_workload=int(per_iteration_parallelizable_workload),
         )
 
@@ -75,6 +76,13 @@ class Loop(Workload):
         """Performance model of a workload consists of the workload itself.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of Loop etc. are parallelizable."""
+
+        # print("Loop Costs: ", file=sys.stderr)
+        # print(self.sequential_workload, file=sys.stderr)
+        # print(self.parallelizable_workload, file=sys.stderr)
+        # print("overhead: ", file=sys.stderr)
+        # self.overhead.print(file=sys.stderr)
+        # print("", file=sys.stderr)
 
         result_model: Optional[CostModel] = None
         if self.sequential_workload is None:
@@ -105,18 +113,40 @@ class Loop(Workload):
         cm.parallelizable_costs = cm.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
         cm.sequential_costs = cm.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
 
-        if cm.raw_sequential_costs is not None:
-            cm.raw_sequential_costs = cm.raw_sequential_costs.subs({Expr(Integer(0)): Integer(0)})
-        if cm.raw_parallelizable_costs is not None:
-            cm.raw_parallelizable_costs = cm.raw_parallelizable_costs.subs(
-                {Expr(Integer(0)): Integer(0)}
-            )
-
         return cm
 
     def register_child(self, other, experiment, all_function_nodes):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
+        print("Register Loop Child")
+        print("step 0:")
+        CostModel(self.iterations_symbol, self.iterations_symbol).print()
+        print("step 0.1:")
+        other.print()
+        print("step 1: ")
+        other.parallelizable_multiply_combine(
+            CostModel(self.iterations_symbol, self.iterations_symbol)
+        ).print()
+        print("step 2:")
+        self.performance_model.parallelizable_plus_combine(
+            other.parallelizable_multiply_combine(
+                CostModel(self.iterations_symbol, self.iterations_symbol)
+            )
+        ).print()
+
+        print("step 3:")
+        self.get_cost_model(experiment, all_function_nodes).print()
+
+        print("step 4:")
+        self.get_cost_model(experiment, all_function_nodes).parallelizable_multiply_combine(
+            self.performance_model.parallelizable_plus_combine(
+                other.parallelizable_multiply_combine(
+                    CostModel(self.iterations_symbol, self.iterations_symbol)
+                )
+            )
+        ).print()
+        print()
+
         # The workload of the added child needs to be multiplied with the iteration count before adding it.
         return self.get_cost_model(experiment, all_function_nodes).parallelizable_multiply_combine(
             self.performance_model.parallelizable_plus_combine(

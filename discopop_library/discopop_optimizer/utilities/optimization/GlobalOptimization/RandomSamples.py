@@ -58,39 +58,46 @@ def find_quasi_optimal_using_random_samples(
     if verbose:
         print("\tApplying substitutions...")
         print("\t" + str(substitutions))
+
+    random_paths_with_substitutions: List[Tuple[CostModel, ContextObject, CostModel]] = []
     for model, context in random_paths:
-        # save raw cost models
-        if model.raw_sequential_costs is None:
-            model.raw_sequential_costs = model.sequential_costs
-        if model.raw_parallelizable_costs is None:
-            model.raw_parallelizable_costs = model.parallelizable_costs
+        substituted_model = copy.deepcopy(model)
+
         # apply substitutions iteratively
         modification_found = True
         while modification_found:
             modification_found = False
             # apply substitutions to parallelizable costs
-            tmp_model = model.parallelizable_costs.subs(substitutions)
-            if tmp_model != model.parallelizable_costs:
+            tmp_model = substituted_model.parallelizable_costs.subs(substitutions)
+            if tmp_model != substituted_model.parallelizable_costs:
                 modification_found = True
-            model.parallelizable_costs = tmp_model
+            substituted_model.parallelizable_costs = tmp_model
 
             # apply substitutions to sequential costs
-            tmp_model = model.sequential_costs.subs(substitutions)
-            if tmp_model != model.sequential_costs:
+            tmp_model = substituted_model.sequential_costs.subs(substitutions)
+            if tmp_model != substituted_model.sequential_costs:
                 modification_found = True
-            model.sequential_costs = tmp_model
-        model.free_symbol_ranges = free_symbol_ranges
-        model.free_symbol_distributions = free_symbol_distributions
+            substituted_model.sequential_costs = tmp_model
+        substituted_model.free_symbol_ranges = free_symbol_ranges
+        substituted_model.free_symbol_distributions = free_symbol_distributions
+
+        random_paths_with_substitutions.append((model, context, substituted_model))
 
     if verbose:
         print("\tSorting...")
-    sorted_list = sorted(random_paths, key=lambda x: x[0])  # BOTTLENECK!
+    sorted_list = sorted(random_paths_with_substitutions, key=lambda x: x[2])  # BOTTLENECK!
     if verbose:
         print("\tDone.")
-    minimum = sorted_list[0]
-    maximum = sorted_list[-1]
-    median = sorted_list[int(len(sorted_list) / 2)]
-    upper_quartile = sorted_list[int(len(sorted_list) / 4 * 3)]
-    lower_quartile = sorted_list[int(len(sorted_list) / 4 * 1)]
+    minimum = (sorted_list[0][0], sorted_list[0][1])
+    maximum = (sorted_list[-1][0], sorted_list[-1][1])
+    median = (sorted_list[int(len(sorted_list) / 2)][0], sorted_list[int(len(sorted_list) / 2)][1])
+    upper_quartile = (
+        sorted_list[int(len(sorted_list) / 4 * 3)][0],
+        sorted_list[int(len(sorted_list) / 4 * 3)][1],
+    )
+    lower_quartile = (
+        sorted_list[int(len(sorted_list) / 4 * 1)][0],
+        sorted_list[int(len(sorted_list) / 4 * 1)][1],
+    )
 
     return minimum, maximum, median, lower_quartile, upper_quartile
