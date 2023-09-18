@@ -47,6 +47,10 @@ class Loop(Workload):
 
         # calculate workload per iteration
         per_iteration_parallelizable_workload = parallelizable_workload / iterations
+        print("ADDING LOOP @ ", position)
+        print("\tpar_workload: ", parallelizable_workload)
+        print("\tper it: ", per_iteration_parallelizable_workload)
+        print("\t#iterations: ", iterations)
         super().__init__(
             node_id,
             experiment,

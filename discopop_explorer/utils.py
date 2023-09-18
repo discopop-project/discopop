@@ -98,7 +98,9 @@ def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
 
 # NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-def calculate_workload(pet: PETGraphX, node: Node) -> int:
+def calculate_workload(
+    pet: PETGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False
+) -> int:
     """Calculates and stores the workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
 
@@ -108,7 +110,8 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
     """
     # check if value already present
     if node.workload is not None:
-        return node.workload
+        if not ignore_function_calls_and_cached_values:
+            return node.workload
     res = 0
     if node.type == NodeType.DUMMY:
         # store workload
@@ -118,15 +121,25 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
         # if a function is called, replace the instruction with the costs of the called function
         # note: recursive function calls are counted as a single instruction
         res += cast(CUNode, node).instructions_count
-        for calls_edge in pet.out_edges(cast(CUNode, node).id, EdgeType.CALLSNODE):
-            # add costs of the called function
-            res += calculate_workload(pet, pet.node_at(calls_edge[1]))
-            # substract 1 to ignore the call instruction
-            # todo: should we keep the cost for the call instruction and just add the costs of the called funciton?
-            res -= 1
+        if not ignore_function_calls_and_cached_values:
+            for calls_edge in pet.out_edges(cast(CUNode, node).id, EdgeType.CALLSNODE):
+                # add costs of the called function
+                res += calculate_workload(
+                    pet,
+                    pet.node_at(calls_edge[1]),
+                    ignore_function_calls_and_cached_values=ignore_function_calls_and_cached_values,
+                )
+                # substract 1 to ignore the call instruction
+                # todo: should we keep the cost for the call instruction and just add the costs of the called funciton?
+                res -= 1
     elif node.type == NodeType.FUNC:
-        for child in find_subnodes(pet, node, EdgeType.CHILD):
-            res += calculate_workload(pet, child)
+        if not ignore_function_calls_and_cached_values:
+            for child in find_subnodes(pet, node, EdgeType.CHILD):
+                res += calculate_workload(
+                    pet,
+                    child,
+                    ignore_function_calls_and_cached_values=ignore_function_calls_and_cached_values,
+                )
     elif node.type == NodeType.LOOP:
         for child in find_subnodes(pet, node, EdgeType.CHILD):
             if child.type == NodeType.CU:
@@ -139,7 +152,15 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
                         if cast(LoopNode, node).loop_data is None
                         else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                     )
-                    res += calculate_workload(pet, child) * average_iteration_count + 1
+                    res += (
+                        calculate_workload(
+                            pet,
+                            child,
+                            ignore_function_calls_and_cached_values=ignore_function_calls_and_cached_values,
+                        )
+                        * average_iteration_count
+                        + 1
+                    )
                 else:
                     # determine average iteration count. Use traditional iteration count as a fallback
                     average_iteration_count = (
@@ -147,7 +168,14 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
                         if cast(LoopNode, node).loop_data is None
                         else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                     )
-                    res += calculate_workload(pet, child) * average_iteration_count
+                    res += (
+                        calculate_workload(
+                            pet,
+                            child,
+                            ignore_function_calls_and_cached_values=ignore_function_calls_and_cached_values,
+                        )
+                        * average_iteration_count
+                    )
             else:
                 # determine average iteration count. Use traditional iteration count as a fallback
                 average_iteration_count = (
@@ -155,7 +183,14 @@ def calculate_workload(pet: PETGraphX, node: Node) -> int:
                     if cast(LoopNode, node).loop_data is None
                     else cast(LoopData, cast(LoopNode, node).loop_data).average_iteration_count
                 )
-                res += calculate_workload(pet, child) * average_iteration_count
+                res += (
+                    calculate_workload(
+                        pet,
+                        child,
+                        ignore_function_calls_and_cached_values=ignore_function_calls_and_cached_values,
+                    )
+                    * average_iteration_count
+                )
     # store workload
     node.workload = res
     return res
