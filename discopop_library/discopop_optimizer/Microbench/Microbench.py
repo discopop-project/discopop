@@ -15,7 +15,7 @@ from typing import Dict, List, NamedTuple, Optional, Tuple, Union, cast, Any
 import numpy as np
 import matplotlib  # type: ignore
 
-matplotlib.use("Agg")
+matplotlib.use("TkAgg")
 from matplotlib import cm  # type: ignore
 from matplotlib import pyplot as plt  # type: ignore
 from matplotlib.ticker import LinearLocator  # type: ignore
