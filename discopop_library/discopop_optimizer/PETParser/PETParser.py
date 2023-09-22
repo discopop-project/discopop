@@ -252,7 +252,7 @@ class PETParser(object):
 
             # get iteration count for loop
             if loop_node.loop_data is not None:
-                iteration_count = loop_node.loop_data.average_iteration_count
+                iteration_count = max(1, loop_node.loop_data.average_iteration_count)
             else:
                 # loop has not been executed, thus, no information was gathered during the profiling
                 # set iteration_count to prevent divisions by zero

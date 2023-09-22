@@ -50,6 +50,7 @@ class ExplorerArguments(object):
     enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
     # experimental features:
     enable_task_pattern: bool
+    detect_scheduling_clauses: bool
     generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt & exit
     cu_inst_result_file: Optional[str]
     llvm_cxxfilt_path: Optional[str]
@@ -99,6 +100,7 @@ def __run(
     llvm_cxxfilt_path: Optional[str] = None,
     discopop_build_path: Optional[str] = None,
     enable_task_pattern: bool = False,
+    enable_detection_of_scheduling_clauses: bool = False,
 ) -> DetectionResult:
     pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
@@ -127,6 +129,7 @@ def __run(
         llvm_cxxfilt_path,
         discopop_build_path,
         enable_task_pattern,
+        enable_detection_of_scheduling_clauses,
     )
 
     for plugin_name in plugins:
@@ -170,6 +173,7 @@ def run(arguments: ExplorerArguments):
         llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
         discopop_build_path=arguments.discopop_build_path,
         enable_task_pattern=arguments.enable_task_pattern,
+        enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
     )
 
     end = time.time()

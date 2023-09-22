@@ -67,6 +67,7 @@ class PatternDetectorX(object):
         llvm_cxxfilt_path,
         discopop_build_path,
         enable_task_pattern,
+        enable_detection_of_scheduling_clauses,
     ):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -111,6 +112,11 @@ class PatternDetectorX(object):
         # disabled currently due to high additional overhead.
         # will be moved and calculated based on the optimization graph
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
+
+        if enable_detection_of_scheduling_clauses:
+            # identify scheduling clauses
+            return self.__identify_scheduling_clauses(res, project_path, file_mapping)
+        return res
 
 
 #        # identify scheduling clauses
