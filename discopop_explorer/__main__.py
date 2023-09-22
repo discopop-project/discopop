@@ -9,9 +9,8 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from .discopop_explorer import ExplorerArguments, run
-from discopop_library.global_data.version.utils import get_version
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
+from .discopop_explorer import ExplorerArguments, run
 
 
 def parse_args() -> ExplorerArguments:
@@ -82,6 +81,10 @@ def parse_args() -> ExplorerArguments:
         help="Enables the task parallelism pattern identification. Requires --cu-inst-res and --llvm-cxxfilt-path to be set.",
     )
     experimental_parser.add_argument(
+        "--detect-scheduling-clauses", action="store_true",
+        help="Enables the detection of scheduling clauses for parallel loops.")
+
+    experimental_parser.add_argument(
         "--generate-data-cu-inst", type=str, default=None,
         help="Generates Data_CUInst.txt file and stores it in the given directory. Stops the regular execution of the discopop_explorer. Requires --cu-xml, --dep-file, --loop-counter, --reduction.",
     )
@@ -138,6 +141,7 @@ def parse_args() -> ExplorerArguments:
         file_mapping_file=arguments.fmap,
         plugins=arguments.plugins,
         enable_task_pattern=arguments.task_pattern,
+        detect_scheduling_clauses=arguments.detect_scheduling_clauses,
         enable_profiling_dump_file=arguments.profiling,
         enable_pet_dump_file=arguments.dump_pet,
         enable_detection_result_dump_file=arguments.dump_detection_result,
