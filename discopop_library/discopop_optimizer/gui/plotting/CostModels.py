@@ -209,6 +209,76 @@ def print_current_substitutions(experiment: Experiment):
     print("###")
 
 
+def print_simplified_function(
+    experiment: Experiment,
+    models: List[CostModel],
+    sorted_free_symbols: List[Symbol],
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+    super_title: Optional[str] = None,
+):
+    """Prints an simplified mathematical function based on the current set of selections"""
+
+    # todo: NOTE: copied from plot_CostModels_using_function_path_selections
+
+    # apply selected substitutions
+    # collect substitutions
+    local_substitutions = copy.deepcopy(experiment.substitutions)
+    for function in experiment.selected_paths_per_function:
+        # register substitution
+        local_substitutions[
+            cast(Symbol, function.sequential_costs)
+        ] = experiment.selected_paths_per_function[function][0].sequential_costs
+        local_substitutions[
+            cast(Symbol, function.parallelizable_costs)
+        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+
+    local_models = copy.deepcopy(models)
+
+    # perform iterative substitutions
+    modification_found = True
+    while modification_found:
+        modification_found = False
+        for model in local_models:
+            # apply substitution to parallelizable costs
+            tmp_model = model.parallelizable_costs.subs(local_substitutions)
+            if tmp_model != model.parallelizable_costs:
+                modification_found = True
+            model.parallelizable_costs = tmp_model
+
+            # apply substitutions to sequential costs
+            tmp_model = model.sequential_costs.subs(local_substitutions)
+            if tmp_model != model.sequential_costs:
+                modification_found = True
+            model.sequential_costs = model.sequential_costs.subs(local_substitutions)
+
+    # replace Expr(0) with 0
+    for model in local_models:
+        model.sequential_costs = model.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+        model.parallelizable_costs = model.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
+
+    local_sorted_free_symbols = copy.deepcopy(sorted_free_symbols)
+    local_free_symbol_ranges = copy.deepcopy(free_symbol_ranges)
+    for symbol in experiment.substitutions:
+        if symbol in experiment.free_symbols:
+            experiment.free_symbols.remove(symbol)
+        if symbol in local_free_symbol_ranges:
+            del local_free_symbol_ranges[symbol]
+        if symbol in local_sorted_free_symbols:
+            local_sorted_free_symbols.remove(symbol)
+
+    print("###")
+    print("FUNCTION:")
+    for model in local_models:
+        model_costs = sympy.simplify(
+            sympy.re(model.parallelizable_costs + model.sequential_costs)
+            + sympy.im(model.parallelizable_costs + model.sequential_costs)
+        )
+        print("-> ", model_costs)
+    print("###")
+
+
 __unique_plot_id = 0
 
 

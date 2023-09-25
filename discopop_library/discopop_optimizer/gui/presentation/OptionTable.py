@@ -24,6 +24,7 @@ from discopop_library.discopop_optimizer.gui.plotting.CostModels import (
     plot_CostModels_using_function_path_selections,
     print_current_function_path_selections,
     print_current_substitutions,
+    print_simplified_function,
 )
 from discopop_library.discopop_optimizer.gui.presentation.ChoiceDetails import (
     display_choices_for_model,
@@ -110,6 +111,21 @@ def show_options(
         ),
     )
     print_substitutions_button.grid(row=1, column=4, sticky=NSEW)
+
+    print_simplified_function_button = Button(
+        root,
+        text="Print simplified",
+        command=lambda: print_simplified_function(  # type: ignore
+            experiment,
+            [experiment.selected_paths_per_function[function_root][0]],  # type: ignore
+            sorted_free_symbols,
+            free_symbol_ranges,
+            [function_root.name],
+            title=function_root.name,
+            super_title=function_root.name,
+        ),
+    )
+    print_simplified_function_button.grid(row=1, column=5, sticky=NSEW)
 
     Button(
         root,
