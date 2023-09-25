@@ -135,8 +135,13 @@ def get_locally_optimized_models(
             for decision, tpl in decision_models_with_substitutions:
                 model, context, substituted_model = tpl
                 unpacked_models.append((decision, model, substituted_model))
+            if len(unpacked_models) == 0:
+                continue
             minimum = sorted(unpacked_models, key=lambda x: x[2])[0]
             locally_optimal_choices.append(minimum[0])
+
+        if len(locally_optimal_choices) == 0:
+            continue
 
         # construct locally optimal model
         performance_models = get_node_performance_models(

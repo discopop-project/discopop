@@ -12,12 +12,8 @@ from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
 class GPU(Device):
-    def __init__(
-        self, compute_capability, thread_count, openmp_device_id, device_specific_compiler_flags
-    ):
-        super().__init__(
-            compute_capability, thread_count, openmp_device_id, device_specific_compiler_flags
-        )
+    def __init__(self, frequency, thread_count, openmp_device_id, device_specific_compiler_flags):
+        super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags)
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str

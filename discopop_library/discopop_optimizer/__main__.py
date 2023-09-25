@@ -242,20 +242,20 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
         system = System()
         device_0_threads = Symbol("device_0_threads")  # Integer(48)
         device_0 = CPU(
-            Integer(48),
+            Integer(3000000000),
             device_0_threads,
             openmp_device_id=-1,
             device_specific_compiler_flags="COMPILE FOR CPU",
         )  # Device 0 always acts as the host system
         gpu_compiler_flags = "COMPILE FOR CPU"
         device_1 = GPU(
-            Integer(512),
+            Integer(512000000),
             Integer(512),
             openmp_device_id=0,
             device_specific_compiler_flags="COMPILE FOR GPU",
         )
         device_2 = GPU(
-            Integer(512),
+            Integer(512000000),
             Integer(512),
             openmp_device_id=1,
             device_specific_compiler_flags="COMPILE FOR GPU",
@@ -287,8 +287,8 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
             if not os.path.isfile(microbench_file):
                 raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
             # construct and set overhead model for doall suggestions
-            system.set_doall_overhead_model(
-                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy()
+            system.set_device_doall_overhead_model(
+                device_0, ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy()
             )
         if arguments["--reduction-microbench-file"] != "None":
             microbench_file = arguments["--reduction-microbench-file"]
@@ -296,9 +296,10 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
                 raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
             # construct and set overhead model for reduction suggestions
             system.set_reduction_overhead_model(
+                device_0,
                 ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(
                     benchType=MicrobenchType.FOR
-                )
+                ),
             )
 
         # define Environment

@@ -22,6 +22,8 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.gui.plotting.CostModels import (
     plot_CostModels,
     plot_CostModels_using_function_path_selections,
+    print_current_function_path_selections,
+    print_current_substitutions,
 )
 from discopop_library.discopop_optimizer.gui.presentation.ChoiceDetails import (
     display_choices_for_model,
@@ -36,7 +38,6 @@ def show_options(
     graph: nx.DiGraph,
     experiment: Experiment,
     options: List[Tuple[CostModel, ContextObject, str]],
-    substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
@@ -92,6 +93,24 @@ def show_options(
     )
     plot_button.grid(row=1, column=2, sticky=NSEW)
 
+    print_selections_button = Button(
+        root,
+        text="Print selections",
+        command=lambda: print_current_function_path_selections(  # type: ignore
+            experiment,
+        ),
+    )
+    print_selections_button.grid(row=1, column=3, sticky=NSEW)
+
+    print_substitutions_button = Button(
+        root,
+        text="Print substitutions",
+        command=lambda: print_current_substitutions(  # type: ignore
+            experiment,
+        ),
+    )
+    print_substitutions_button.grid(row=1, column=4, sticky=NSEW)
+
     Button(
         root,
         text="Plot All",
@@ -114,7 +133,6 @@ def show_options(
             graph,
             experiment,
             [opt for opt in options if not opt[2].startswith("Rand ")],
-            substitutions,
             sorted_free_symbols,
             free_symbol_ranges,
             free_symbol_distributions,
@@ -229,7 +247,6 @@ def add_random_models(
     graph: nx.DiGraph,
     experiment: Experiment,
     conserve_options: List[Tuple[CostModel, ContextObject, str]],
-    substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
@@ -259,11 +276,10 @@ def add_random_models(
         graph,
         function_root,
         random_paths,
-        substitutions,
         sorted_free_symbols,
         free_symbol_ranges,
         free_symbol_distributions,
-        verbose=False,
+        verbose=True,
     )
     conserve_options.append((minimum[0], minimum[1], "Rand Minimum"))
     conserve_options.append((maximum[0], maximum[1], "Rand Maximum"))
@@ -278,7 +294,6 @@ def add_random_models(
             graph,
             experiment,
             conserve_options,
-            substitutions,
             sorted_free_symbols,
             free_symbol_ranges,
             free_symbol_distributions,

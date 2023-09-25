@@ -17,6 +17,8 @@ import sympy
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at, show
+from sympy import Integer
 
 
 def plot_CostModels(
@@ -68,6 +70,11 @@ def plot_CostModels(
             if tmp_model != model.sequential_costs:
                 modification_found = True
             model.sequential_costs = model.sequential_costs.subs(local_substitutions)
+
+    # replace Expr(0) with 0
+    for model in local_models:
+        model.sequential_costs = model.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+        model.parallelizable_costs = model.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
 
     if len(local_sorted_free_symbols) == 2:
         __3d_plot(
@@ -138,6 +145,11 @@ def plot_CostModels_using_function_path_selections(
                 modification_found = True
             model.sequential_costs = model.sequential_costs.subs(local_substitutions)
 
+    # replace Expr(0) with 0
+    for model in local_models:
+        model.sequential_costs = model.sequential_costs.subs({Expr(Integer(0)): Integer(0)})
+        model.parallelizable_costs = model.parallelizable_costs.subs({Expr(Integer(0)): Integer(0)})
+
     local_sorted_free_symbols = copy.deepcopy(sorted_free_symbols)
     local_free_symbol_ranges = copy.deepcopy(free_symbol_ranges)
     for symbol in experiment.substitutions:
@@ -175,6 +187,26 @@ def plot_CostModels_using_function_path_selections(
         )
     else:
         print("Plotiting not supported for", len(local_sorted_free_symbols), "free symbols!")
+
+
+def print_current_function_path_selections(experiment: Experiment):
+    """Prints an overview of the currently selected paths for each function to the console"""
+    print("###")
+    print("SELECTIONS:")
+    for function in experiment.selected_paths_per_function:
+        print("\t", function.name)
+        print("\t\t", experiment.selected_paths_per_function[function][0].path_decisions)
+    print("###")
+
+
+def print_current_substitutions(experiment: Experiment):
+    """Prints an overview of the currently selected paths for each function to the console"""
+    print("###")
+    print("SUBSTITUTIONS:")
+    for var in experiment.substitutions:
+        print("->", var)
+        print("\t", experiment.substitutions[var])
+    print("###")
 
 
 __unique_plot_id = 0
@@ -247,7 +279,7 @@ def __2d_plot(
                 show=False,
                 backend=MB,
                 label=model_label,
-                zlabel="Execution time",
+                ylabel="Execution time [us]",
                 title=title,
             )
         else:
@@ -262,7 +294,7 @@ def __2d_plot(
                     show=False,
                     backend=MB,
                     label=model_label,
-                    zlabel="Execution time",
+                    ylabel="Execution time [us]",
                 )
             )
     combined_plot.show()  # type: ignore
@@ -298,7 +330,7 @@ def __3d_plot(
                 show=False,
                 backend=MB,
                 label=model_label,
-                zlabel="Execution time",
+                zlabel="Execution time [us]",
                 title=title,
             )
         else:
@@ -318,7 +350,7 @@ def __3d_plot(
                     show=False,
                     backend=MB,
                     label=model_label,
-                    zlabel="Execution time",
+                    zlabel="Execution time [us]",
                 )
             )
     combined_plot.show()  # type: ignore

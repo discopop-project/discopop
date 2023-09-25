@@ -109,9 +109,6 @@ class OptimizationGraph(object):
         else:
             exhaustive_performance_models = dict()
 
-        # define variable substitutions
-        substitutions: Dict[Symbol, Expr] = dict()
-
         # collect free symbols
         #        free_symbols: Set[Symbol] = set()
         free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
@@ -131,7 +128,7 @@ class OptimizationGraph(object):
         )
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
-                substitutions[symbol] = Float(value)
+                experiment.substitutions[symbol] = Float(value)
             else:
                 free_symbol_ranges[symbol] = (cast(float, start_value), cast(float, end_value))
                 free_symbol_distributions[symbol] = cast(
@@ -148,10 +145,10 @@ class OptimizationGraph(object):
         # collect substitutions
         for function in experiment.selected_paths_per_function:
             # register substitution
-            substitutions[
+            experiment.substitutions[
                 cast(Symbol, function.sequential_costs)
             ] = experiment.selected_paths_per_function[function][0].sequential_costs
-            substitutions[
+            experiment.substitutions[
                 cast(Symbol, function.parallelizable_costs)
             ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
 
@@ -165,7 +162,6 @@ class OptimizationGraph(object):
         #                model.free_symbol_distributions = free_symbol_distributions
 
         # save substitutions, sorted_free_symbols, free_symbol_ranges and free_symbol_distributions in experiment
-        experiment.substitutions = substitutions
         experiment.sorted_free_symbols = sorted_free_symbols
         experiment.free_symbol_ranges = free_symbol_ranges
         experiment.free_symbol_distributions = free_symbol_distributions
@@ -174,7 +170,7 @@ class OptimizationGraph(object):
         locally_optimized_models = get_locally_optimized_models(
             experiment,
             experiment.optimization_graph,
-            substitutions,
+            experiment.substitutions,
             experiment,
             free_symbol_ranges,
             free_symbol_distributions,
@@ -204,7 +200,7 @@ class OptimizationGraph(object):
             exhaustive_minima[function] = [sorted_exhaustive_performance_models[0]]
         print("\tDone.")
 
-        for function in locally_optimized_models:
+        for function in sequential_complete_performance_models:
             # show table of options
             options: List[Tuple[CostModel, ContextObject, str]] = []
             # add exhaustive minima
@@ -219,13 +215,14 @@ class OptimizationGraph(object):
                     "Sequential",
                 )
             )
-            options.append(
-                (
-                    locally_optimized_models[function][0][0],
-                    locally_optimized_models[function][0][1],
-                    "Locally Optimized",
+            if function in locally_optimized_models:
+                options.append(
+                    (
+                        locally_optimized_models[function][0][0],
+                        locally_optimized_models[function][0][1],
+                        "Locally Optimized",
+                    )
                 )
-            )
             # save options to experiment
             experiment.function_models[function] = options
 

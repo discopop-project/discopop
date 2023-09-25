@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import warnings
 from typing import Dict, List, Tuple, Optional
 
 from sympy import Symbol, Expr, Integer, simplify
@@ -17,31 +18,37 @@ class System(object):
     __devices: Dict[int, Device]
     __network: Network
     __next_free_device_id: int
-    __do_all_overhead_model: Expr
-    __reduction_overhead_model: Expr
+    __device_do_all_overhead_models: Dict[Device, Expr]
+    __device_reduction_overhead_models: Dict[Device, Expr]
 
     def __init__(self):
         self.__devices = dict()
         self.__network = Network()
         self.__next_free_device_id = 0
-        self.__do_all_overhead_model = Expr(Integer(0))
-        self.__reduction_overhead_model = Expr(Integer(0))
+        self.__device_do_all_overhead_models = dict()
+        self.__device_reduction_overhead_models = dict()
 
     # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
 
-    def set_doall_overhead_model(self, model: Expr):
+    def set_device_doall_overhead_model(self, device: Device, model: Expr):
         print("System: Set DOALL overhead model: ", model)
-        self.__do_all_overhead_model = model
+        self.__device_do_all_overhead_models[device] = model
 
-    def set_reduction_overhead_model(self, model: Expr):
+    def set_reduction_overhead_model(self, device: Device, model: Expr):
         print("System: Set REDUCTION overhead model: ", model)
-        self.__reduction_overhead_model = model
+        self.__device_reduction_overhead_models[device] = model
 
-    def get_doall_overhead_model(self) -> Expr:
-        return self.__do_all_overhead_model
+    def get_device_doall_overhead_model(self, device: Device) -> Expr:
+        if device not in self.__device_do_all_overhead_models:
+            warnings.warn("No DOALL overhead model for device: " + str(device))
+            return Expr(Integer(0))
+        return self.__device_do_all_overhead_models[device]
 
-    def get_reduction_overhead_model(self) -> Expr:
-        return self.__reduction_overhead_model
+    def get_device_reduction_overhead_model(self, device: Device) -> Expr:
+        if device not in self.__device_reduction_overhead_models:
+            warnings.warn("No REDUCTION overhead model for device: " + str(device))
+            return Expr(Integer(0))
+        return self.__device_reduction_overhead_models[device]
 
     def add_device(self, device: Device):
         device_id = self.__next_free_device_id

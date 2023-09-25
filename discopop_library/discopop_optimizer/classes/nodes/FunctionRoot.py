@@ -22,7 +22,11 @@ class FunctionRoot(Workload):
 
     def __init__(self, node_id: int, experiment, cu_id: Optional[NodeID], name: str):
         super().__init__(
-            node_id, experiment, cu_id, sequential_workload=0, parallelizable_workload=0
+            node_id,
+            experiment,
+            cu_id,
+            sequential_workload=Integer(0),
+            parallelizable_workload=Integer(0),
         )
         self.name = name
         self.device_id = 0
@@ -38,7 +42,7 @@ class FunctionRoot(Workload):
     def get_plot_label(self) -> str:
         return self.name
 
-    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
+    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
         """Model:
         Spawn overhead + children"""
         # todo this is only a dummy, not a finished model!

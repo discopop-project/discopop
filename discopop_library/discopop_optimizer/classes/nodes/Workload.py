@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional, Set, List, cast
+from typing import Optional, Set, List, cast, Union
 
 from sympy import Integer, Expr  # type: ignore
 
@@ -21,8 +21,8 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 class Workload(GenericNode):
     """This class represents a generic node in the Optimization Graph"""
 
-    sequential_workload: Optional[int]
-    parallelizable_workload: Optional[int]
+    sequential_workload: Optional[Expr]
+    parallelizable_workload: Optional[Expr]
     cost_multiplier: CostModel
 
     def __init__(
@@ -30,8 +30,8 @@ class Workload(GenericNode):
         node_id: int,
         experiment,
         cu_id: Optional[NodeID],
-        sequential_workload: Optional[int],
-        parallelizable_workload: Optional[int],
+        sequential_workload: Optional[Expr],
+        parallelizable_workload: Optional[Expr],
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
     ):
@@ -45,8 +45,8 @@ class Workload(GenericNode):
         self.sequential_workload = sequential_workload
         self.parallelizable_workload = parallelizable_workload
         self.performance_model = CostModel(
-            Integer(0 if self.parallelizable_workload is None else self.parallelizable_workload),
-            Integer(0 if self.sequential_workload is None else self.sequential_workload),
+            Integer(0) if self.parallelizable_workload is None else self.parallelizable_workload,
+            Integer(0) if self.sequential_workload is None else self.sequential_workload,
         )
         self.cost_multiplier = CostModel(Integer(1), Integer(1))
         self.overhead = CostModel(Integer(0), Integer(0))
@@ -66,7 +66,7 @@ class Workload(GenericNode):
             "Branch: " + str(self.branch_affiliation)
         )
 
-    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
+    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
         """Performance model of a workload consists of the workload itself + the workload of called functions.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of called functions are added as encountered.
@@ -80,16 +80,27 @@ class Workload(GenericNode):
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
                 .parallelizable_plus_combine(
-                    self.__get_costs_of_function_call(experiment, all_function_nodes)
+                    self.__get_costs_of_function_call(
+                        experiment, all_function_nodes, current_device
+                    )
                 )
             )
         else:
             cm = (
-                CostModel(Integer(self.parallelizable_workload), Integer(self.sequential_workload))
+                CostModel(
+                    current_device.get_estimated_execution_time_in_micro_seconds(
+                        self.parallelizable_workload, True
+                    ),
+                    current_device.get_estimated_execution_time_in_micro_seconds(
+                        self.sequential_workload, True
+                    ),
+                )
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
                 .parallelizable_plus_combine(
-                    self.__get_costs_of_function_call(experiment, all_function_nodes)
+                    self.__get_costs_of_function_call(
+                        experiment, all_function_nodes, current_device
+                    )
                 )
             )
 
@@ -99,7 +110,9 @@ class Workload(GenericNode):
 
         return cm
 
-    def __get_costs_of_function_call(self, experiment, all_function_nodes) -> CostModel:
+    def __get_costs_of_function_call(
+        self, experiment, all_function_nodes, current_device
+    ) -> CostModel:
         """Check if the node performs a function call and returns the total costs for these."""
         total_costs = CostModel(Integer(0), Integer(0))
         # get CUIDs of called functions
@@ -119,12 +132,14 @@ class Workload(GenericNode):
             # add costs of called function nodes to total costs
             for called_function_root in called_function_nodes:
                 total_costs = total_costs.parallelizable_plus_combine(
-                    called_function_root.get_cost_model(experiment, all_function_nodes)
+                    called_function_root.get_cost_model(
+                        experiment, all_function_nodes, current_device
+                    )
                 )
 
         return total_costs
 
-    def register_child(self, other, experiment, all_function_nodes):
+    def register_child(self, other, experiment, all_function_nodes, current_device):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         # since workloads do not modify their children, the performance model of other is simply added to self.

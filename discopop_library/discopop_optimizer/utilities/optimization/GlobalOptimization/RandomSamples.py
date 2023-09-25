@@ -22,6 +22,7 @@ from discopop_library.discopop_optimizer.classes.context.ContextObject import Co
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 
 
 def find_quasi_optimal_using_random_samples(
@@ -29,7 +30,6 @@ def find_quasi_optimal_using_random_samples(
     graph: nx.DiGraph,
     function_root: FunctionRoot,
     random_path_count: int,
-    substitutions: Dict[Symbol, Expr],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
@@ -42,22 +42,31 @@ def find_quasi_optimal_using_random_samples(
     if verbose:
         print("Generating ", random_path_count, "random paths")
     i = 0
+    # create a temporary copy of the substitutions list to roll back unwanted modifications
+    substitutions_buffer = copy.deepcopy(experiment.substitutions)
     while i < random_path_count:
+        # reset substitutions
+        experiment.substitutions = copy.deepcopy(substitutions_buffer)
+
         tmp_dict = dict()
         tmp_dict[function_root] = [
             get_random_path(experiment, graph, function_root.node_id, must_contain=None)
         ]
+        print("RANDOM PATH: ", tmp_dict[function_root][0].path_decisions)
         try:
             random_paths.append(calculate_data_transfers(graph, tmp_dict)[function_root][0])
             i += 1
-        except ValueError:
+        except ValueError as ve:
+            if verbose:
+                print(ve)
             # might occur as a result of invalid paths due to restrictions
             pass
+    # reset substitutions
+    experiment.substitutions = copy.deepcopy(substitutions_buffer)
 
     # apply substitutions and set free symbol ranges and distributions
     if verbose:
         print("\tApplying substitutions...")
-        print("\t" + str(substitutions))
 
     random_paths_with_substitutions: List[Tuple[CostModel, ContextObject, CostModel]] = []
     for model, context in random_paths:
@@ -68,13 +77,13 @@ def find_quasi_optimal_using_random_samples(
         while modification_found:
             modification_found = False
             # apply substitutions to parallelizable costs
-            tmp_model = substituted_model.parallelizable_costs.subs(substitutions)
+            tmp_model = substituted_model.parallelizable_costs.subs(experiment.substitutions)
             if tmp_model != substituted_model.parallelizable_costs:
                 modification_found = True
             substituted_model.parallelizable_costs = tmp_model
 
             # apply substitutions to sequential costs
-            tmp_model = substituted_model.sequential_costs.subs(substitutions)
+            tmp_model = substituted_model.sequential_costs.subs(experiment.substitutions)
             if tmp_model != substituted_model.sequential_costs:
                 modification_found = True
             substituted_model.sequential_costs = tmp_model

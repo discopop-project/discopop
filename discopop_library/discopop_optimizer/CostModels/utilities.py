@@ -73,6 +73,7 @@ def get_node_performance_models(
     do_not_allow_decisions: Optional[Set[int]] = None,
     get_single_random_model: bool = False,
     ignore_node_costs: Optional[List[int]] = None,
+    current_device_id=None,
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
@@ -82,6 +83,8 @@ def get_node_performance_models(
     successors = get_successors(graph, node_id)
     successor_count = len(successors)
     node_data = data_at(graph, node_id)
+    if node_data.execute_in_parallel:
+        current_device_id = node_data.device_id
     visited_nodes.add(node_id)
 
     # consider performance models of children
@@ -101,24 +104,42 @@ def get_node_performance_models(
             if node_data.node_id in ignore_node_costs:
                 children_models = [CostModel(Integer(0), Integer(0))]
         else:
-            children_models = [node_data.get_cost_model(experiment, all_function_nodes)]
+            children_models = [
+                node_data.get_cost_model(
+                    experiment,
+                    all_function_nodes,
+                    experiment.get_system().get_device(current_device_id),
+                )
+            ]
 
     else:
         if ignore_node_costs is not None:
             if node_data.node_id in ignore_node_costs:
                 tmp_node_cost_model = CostModel(Integer(0), Integer(0))
         else:
-            tmp_node_cost_model = node_data.get_cost_model(experiment, all_function_nodes)
+            tmp_node_cost_model = node_data.get_cost_model(
+                experiment,
+                all_function_nodes,
+                experiment.get_system().get_device(current_device_id),
+            )
 
         for idx, child_model in enumerate(children_models):
             if ignore_node_costs is not None:
                 if node_data.node_id not in ignore_node_costs:
                     children_models[idx] = tmp_node_cost_model.register_child(
-                        child_model, node_data, experiment, all_function_nodes
+                        child_model,
+                        node_data,
+                        experiment,
+                        all_function_nodes,
+                        experiment.get_system().get_device(current_device_id),
                     )
             else:
                 children_models[idx] = tmp_node_cost_model.register_child(
-                    child_model, node_data, experiment, all_function_nodes
+                    child_model,
+                    node_data,
+                    experiment,
+                    all_function_nodes,
+                    experiment.get_system().get_device(current_device_id),
                 )
 
     # construct the performance models
@@ -261,6 +282,9 @@ def get_node_performance_models(
                     ignore_node_costs=ignore_node_costs,
                 ):
                     tmp = combined_model.parallelizable_plus_combine(model)
+                    tmp.path_decisions += [
+                        d for d in model.path_decisions if d not in tmp.path_decisions
+                    ]
                     result_list.append(tmp)
         if len(result_list) >= 1:
             return result_list

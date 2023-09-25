@@ -10,12 +10,17 @@ import networkx as nx  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from sympy import Integer
 
 
 class ContextNode(Workload):
     def __init__(self, node_id: int, experiment):
         super().__init__(
-            node_id, experiment, cu_id=None, sequential_workload=0, parallelizable_workload=0
+            node_id,
+            experiment,
+            cu_id=None,
+            sequential_workload=Integer(0),
+            parallelizable_workload=Integer(0),
         )
 
     def get_plot_label(self) -> str:

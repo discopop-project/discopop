@@ -81,6 +81,10 @@ def get_path_context(
                 len(suitable_successors),
                 ") for path split at node:",
                 node_id,
+                "using decisions: ",
+                model.path_decisions,
+                "successors:",
+                successors,
             )
         # suitable successor identified.
         # pass the current context to the successor

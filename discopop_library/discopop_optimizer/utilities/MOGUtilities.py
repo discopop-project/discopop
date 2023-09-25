@@ -9,6 +9,7 @@ import random
 from typing import List, cast, Set, Optional, Tuple
 
 import matplotlib.pyplot as plt  # type:ignore
+import matplotlib
 import networkx as nx  # type: ignore
 import sympy
 
@@ -119,6 +120,7 @@ def show(graph):
 
     :return:
     """
+    matplotlib.use("TkAgg")
     fig, ax = plt.subplots()
     try:
         pos = nx.planar_layout(graph)  # good
@@ -348,6 +350,14 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
     for node_id in graph.nodes:
         if type(graph.nodes[node_id]["data"]) == FunctionRoot:
+            result_set.add(node_id)
+    return list(result_set)
+
+
+def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
+    result_set: Set[int] = set()
+    for node_id in graph.nodes:
+        if type(graph.nodes[node_id]["data"]) == Loop:
             result_set.add(node_id)
     return list(result_set)
 

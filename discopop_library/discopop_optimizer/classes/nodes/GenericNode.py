@@ -27,6 +27,7 @@ class GenericNode(object):
     written_memory_regions: Set[WriteDataAccess]
     read_memory_regions: Set[ReadDataAccess]
     device_id: DeviceID
+    execute_in_parallel: bool
 
     branch_affiliation: List[int]
 
@@ -47,6 +48,7 @@ class GenericNode(object):
         self.suggestion = None
         self.suggestion_type: Optional[str] = None
         self.branch_affiliation = []
+        self.execute_in_parallel = False
 
         if written_memory_regions is None:
             self.written_memory_regions = set()
@@ -72,12 +74,12 @@ class GenericNode(object):
     def get_hover_text(self) -> str:
         return ""
 
-    def get_cost_model(self, experiment, all_function_nodes) -> CostModel:
+    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
         raise NotImplementedError(
             "Implementation needs to be provided by derived class: !", type(self)
         )
 
-    def register_child(self, other, experiment, all_function_nodes):
+    def register_child(self, other, experiment, all_function_nodes, current_device):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         raise NotImplementedError(

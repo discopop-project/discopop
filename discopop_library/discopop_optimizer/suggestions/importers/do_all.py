@@ -46,6 +46,9 @@ def import_suggestion(
                 node_data_copy.device_id = device_id
                 # remove cu_id to prevent using parallelization options as basis for new versions
                 node_data_copy.cu_id = None
+                # mark node for parallel execution
+                node_data_copy.execute_in_parallel = True
+
                 # copy loop iteration variable
                 cast(Loop, node_data_copy).iterations_symbol = cast(
                     Loop, node_data_copy
@@ -125,18 +128,20 @@ def get_overhead_term(
 ) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the Expression which represents the Overhead incurred by the given suggestion.
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
-    The function has been created using Extra-P."""
+    The function has been created using Extra-P.
+    unit of the overhead term are micro seconds."""
     # retrieve DoAll overhead model
-    overhead_model = environment.get_system().get_doall_overhead_model()
+    overhead_model = environment.get_system().get_device_doall_overhead_model(
+        environment.get_system().get_device(device_id)
+    )
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
-    iterations = node_data.iterations
-    per_iteration_workload = cast(int, node_data.parallelizable_workload)
+    iterations = node_data.iterations_symbol
+    # since node_data is of type Loop, parallelizable_workload must be set
+    per_iteration_workload = cast(Expr, node_data.parallelizable_workload)
     # convert DiscoPoP workload to Microbench workload
-    converted_per_iteration_workload = Float(
-        convert_discopop_to_microbench_workload(
-            Integer(per_iteration_workload), Integer(iterations)
-        )
+    converted_per_iteration_workload = convert_discopop_to_microbench_workload(
+        per_iteration_workload, iterations
     )
 
     substitutions: Dict[Symbol, Expr] = {}
@@ -145,7 +150,7 @@ def get_overhead_term(
         if symbol.name == "workload":
             substitutions[symbol] = converted_per_iteration_workload
         elif symbol.name == "iterations":
-            substitutions[symbol] = Integer(iterations)
+            substitutions[symbol] = iterations
         elif symbol.name == "threads":
             substitutions[symbol] = thread_count
         else:
@@ -155,6 +160,16 @@ def get_overhead_term(
 
     # todo: convert result (in s) to workload
 
-    cm = CostModel(Integer(0), substituted_overhead_model)
+    print("OVERHEAD: ", substituted_overhead_model)
+
+    # register symbol for overhead
+    doall_overhead_symbol = Symbol(
+        "doall_" + str(node_data.node_id) + "_pos_" + str(node_data.position) + "_overhead"
+    )
+
+    environment.substitutions[doall_overhead_symbol] = substituted_overhead_model
+
+    # cm = CostModel(Integer(0), substituted_overhead_model)
+    cm = CostModel(Integer(0), doall_overhead_symbol)
     # add weight to overhead
     return cm, []

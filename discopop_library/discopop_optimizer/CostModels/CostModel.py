@@ -7,6 +7,7 @@
 # directory for details.
 import random
 import sys
+import warnings
 from functools import cmp_to_key
 from typing import List, Dict, Tuple, Optional
 
@@ -121,10 +122,10 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
-    def register_child(self, other, root_node, experiment, all_function_nodes):
+    def register_child(self, other, root_node, experiment, all_function_nodes, current_device):
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
-        return root_node.register_child(other, experiment, all_function_nodes)
+        return root_node.register_child(other, experiment, all_function_nodes, current_device)
 
     def register_successor(self, other, root_node):
         """Registers a successor node for the given model.
@@ -198,11 +199,20 @@ class CostModel(object):
                 numerical_result_2_1 + numerical_result_2_2
             )
 
+            # replace Expr(0) with 0
+            total_1 = total_1.subs({Expr(Integer(0)): Integer(0)})
+            total_2 = total_2.subs({Expr(Integer(0)): Integer(0)})
+
             # determine relation between the numerical results
-            if total_1 < total_2:
-                decision_tendency += 1
-            else:
-                decision_tendency -= 1
+            try:
+                if total_1 < total_2:
+                    decision_tendency += 1
+                else:
+                    decision_tendency -= 1
+            except TypeError as te:
+                print("Total 1: ", total_1)
+                print("Total 2: ", total_2)
+                raise te
 
             if counter > min_count:
                 # check if a decision in either direction can be made
