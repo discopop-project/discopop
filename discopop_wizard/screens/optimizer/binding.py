@@ -120,9 +120,7 @@ def __start_optimizer(
             execution_configuration.value_dict["project_path"], ".discopop_optimizer/code_exports"
         ),
         "--dp-output-path": execution_configuration.value_dict["working_copy_path"],
-        "--file-mapping": get_path(
-            execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"
-        ),
+        "--file-mapping": get_path(execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"),
         "--executable-arguments": execution_configuration.value_dict["executable_arguments"],
         "--executable-name": execution_configuration.value_dict["executable_name"],
         "--linker-flags": execution_configuration.value_dict["linker_flags"],
@@ -136,9 +134,7 @@ def __start_optimizer(
         "--headless-mode": False,
         "--doall-microbench-file": doall_microbench_file.get(),
         "--reduction-microbench-file": reduction_microbench_file.get(),
-        "--dp-optimizer-path": get_path(
-            execution_configuration.value_dict["project_path"], ".discopop_optimizer"
-        ),
+        "--dp-optimizer-path": get_path(execution_configuration.value_dict["project_path"], ".discopop_optimizer"),
     }
 
     # close elements on optimizer_frame

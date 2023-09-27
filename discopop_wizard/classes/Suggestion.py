@@ -63,9 +63,7 @@ class Suggestion(UnpackedSuggestion):
         # load file mapping from project path
         file_mapping: Dict[int, Path] = dict()
         with open(
-            os.path.join(
-                execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"
-            ),
+            os.path.join(execution_configuration.value_dict["working_copy_path"], "FileMapping.txt"),
             "r",
         ) as f:
             for line in f.readlines():
@@ -76,9 +74,7 @@ class Suggestion(UnpackedSuggestion):
                 file_mapping[id] = Path(path)
 
         # create CodePreview object
-        code_preview = CodePreviewContentBuffer(
-            self.wizard, self.file_id, file_mapping[self.file_id]
-        )
+        code_preview = CodePreviewContentBuffer(self.wizard, self.file_id, file_mapping[self.file_id])
 
         # get and insert pragmas
         pragmas = self.get_pragmas()
@@ -95,9 +91,7 @@ class Suggestion(UnpackedSuggestion):
                 file_mapping,
                 pragma,
                 [],
-                skip_compilation_check=True
-                if self.wizard.settings.code_preview_disable_compile_check == 1
-                else False,
+                skip_compilation_check=True if self.wizard.settings.code_preview_disable_compile_check == 1 else False,
                 compile_check_command=compile_check_command,
             )
             # if the addition resulted in a non-compilable file, add the pragma as a comment
@@ -122,9 +116,7 @@ class Suggestion(UnpackedSuggestion):
         # disable source code text widget to disallow editing
         source_code.config(state=tk.DISABLED)
 
-    def get_as_button(
-        self, frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration
-    ) -> tk.Button:
+    def get_as_button(self, frame: tk.Frame, code_preview_frame: tk.Frame, execution_configuration) -> tk.Button:
         return tk.Button(
             frame,
             text=self.type + " @ " + self.values["start_line"],
@@ -158,9 +150,7 @@ class Suggestion(UnpackedSuggestion):
         start_pos = str(start_line) + ".0"
         end_pos = str(end_line) + "." + str(end_line_length)
         source_code.tag_add("start" + str(index), start_pos, end_pos)
-        source_code.tag_config(
-            "start" + str(index), background=background_color, foreground="black"
-        )
+        source_code.tag_config("start" + str(index), background=background_color, foreground="black")
         return start_pos
 
     def __get_pragmas(self) -> List[Tuple[int, int, str]]:
@@ -185,9 +175,7 @@ class Suggestion(UnpackedSuggestion):
                         reductions_dict[red_type] = []
                     reductions_dict[red_type].append(var)
                 for red_type in reductions_dict:
-                    pragma += (
-                        "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
-                    )
+                    pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
             pragma_tuple = (self.start_line, self.end_line, pragma)
             pragmas.append(pragma_tuple)
             return pragmas
@@ -209,13 +197,7 @@ class Suggestion(UnpackedSuggestion):
                             reductions_dict[red_type] = []
                         reductions_dict[red_type].append(var)
                     for red_type in reductions_dict:
-                        pragma += (
-                            "reduction("
-                            + red_type
-                            + ":"
-                            + ",".join(reductions_dict[red_type])
-                            + ") "
-                        )
+                        pragma += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
                 if len(stage["in_deps"]) > 0:
                     pragma += "depends(in:" + ",".join(stage["in_deps"]) + ") "
                 if len(stage["out_deps"]) > 0:

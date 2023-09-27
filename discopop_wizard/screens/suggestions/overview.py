@@ -62,20 +62,15 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     result_notebook.add(dynamic_dep_display_widget.frame, text="Dynamic DEP's")
     # add static dependency preview
     static_dep_display_widget = ScrollableTextWidget(result_notebook)
-    if os.path.exists(
-        execution_configuration_obj.value_dict["working_copy_path"] + "/static_dependencies.txt"
-    ):
+    if os.path.exists(execution_configuration_obj.value_dict["working_copy_path"] + "/static_dependencies.txt"):
         with open(
-            execution_configuration_obj.value_dict["working_copy_path"]
-            + "/static_dependencies.txt",
+            execution_configuration_obj.value_dict["working_copy_path"] + "/static_dependencies.txt",
             "r",
         ) as f:
             static_dep_display_widget.set_text(f.read())
     else:
         static_dep_display_widget.set_text(
-            execution_configuration_obj.value_dict["working_copy_path"]
-            + "/static_dependencies.txt"
-            + " NOT FOUND."
+            execution_configuration_obj.value_dict["working_copy_path"] + "/static_dependencies.txt" + " NOT FOUND."
         )
     result_notebook.add(static_dep_display_widget.frame, text="Static DEP's")
     # add instrumented LLVM IR preview
@@ -105,9 +100,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     result_notebook.add(instrumented_llvm_ir_display_widget.frame, text="LLVM IR")
     # add patterns.json preview
     patterns_json_display_widget = ScrollableTextWidget(result_notebook)
-    with open(
-        execution_configuration_obj.value_dict["working_copy_path"] + "/" + "patterns.json", "r"
-    ) as f:
+    with open(execution_configuration_obj.value_dict["working_copy_path"] + "/" + "patterns.json", "r") as f:
         patterns_json_display_widget.set_text(f.read())
     result_notebook.add(patterns_json_display_widget.frame, text="patterns.json")
 
@@ -115,16 +108,12 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     canvas = tk.Canvas(tmp_frame)
     scrollbar = tk.Scrollbar(tmp_frame, orient="vertical", command=canvas.yview)
     scrollable_frame = tk.Frame(canvas)
-    scrollable_frame.bind(
-        "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-    )
+    scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(yscrollcommand=scrollbar.set)
     for row, suggestion in enumerate(suggestions):
         # create button to load code preview
-        button = suggestion.get_as_button(
-            scrollable_frame, code_preview_frame, execution_configuration_obj
-        )
+        button = suggestion.get_as_button(scrollable_frame, code_preview_frame, execution_configuration_obj)
         button.pack(fill=tk.BOTH, expand=True)
 
         # register hover message (suggestion details)
@@ -141,9 +130,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
 
 
 def get_suggestion_objects(wizard, execution_configuration_obj) -> List[Suggestion]:
-    suggestions_path = os.path.join(
-        execution_configuration_obj.value_dict["working_copy_path"], "patterns.json"
-    )
+    suggestions_path = os.path.join(execution_configuration_obj.value_dict["working_copy_path"], "patterns.json")
 
     suggestions_list: List[Suggestion] = []
     with open(suggestions_path, "r") as f:

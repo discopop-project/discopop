@@ -35,10 +35,7 @@ class DiscopopCpp:
             # Do not regenerate if FileMapping.txt is still up-to-date.
             filemapping_mtime = os.stat("FileMapping.txt").st_mtime
             if os.stat(cwd).st_mtime < filemapping_mtime and all(
-                [
-                    not entry.is_dir() or entry.stat().st_mtime < filemapping_mtime
-                    for entry in recursive_scandir(cwd)
-                ]
+                [not entry.is_dir() or entry.stat().st_mtime < filemapping_mtime for entry in recursive_scandir(cwd)]
             ):
                 return
         logging.info("Generating FileMapping.txt.")

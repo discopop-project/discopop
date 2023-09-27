@@ -43,13 +43,9 @@ def support_scrolling(canvas):
             canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
             canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))
         elif pf == Platform.WINDOWS:
-            canvas.bind_all(
-                "<MouseWheel>", functools.partial(_on_mousewheel, scroll=(-1 * (event.delta / 120)))
-            )
+            canvas.bind_all("<MouseWheel>", functools.partial(_on_mousewheel, scroll=(-1 * (event.delta / 120))))
         elif pf == Platform.OSX:
-            canvas.bind_all(
-                "<MouseWheel>", functools.partial(_on_mousewheel, scroll=-1 * event.delta)
-            )
+            canvas.bind_all("<MouseWheel>", functools.partial(_on_mousewheel, scroll=-1 * event.delta))
         else:
             canvas.bind_all("<Button-4>", functools.partial(_on_mousewheel, scroll=-1))
             canvas.bind_all("<Button-5>", functools.partial(_on_mousewheel, scroll=1))

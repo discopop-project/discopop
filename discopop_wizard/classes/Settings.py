@@ -33,9 +33,7 @@ class Settings(object):
     code_preview_show_line_numbers: int = 1  # 1 = True, 0 = False
     code_preview_disable_compile_check: int = 0  # 1 = True, 0 = False
 
-    def __init__(
-        self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True
-    ) -> None:
+    def __init__(self, discopop_build_dir="", go_bin_dir="", use_docker_container: bool = True) -> None:
         self.discopop_build_dir = discopop_build_dir
         self.go_bin = go_bin_dir
         self.use_docker_container_for_profiling = use_docker_container
@@ -45,11 +43,7 @@ class Settings(object):
         # get llvm_bin_dir from stored build configuration
         llvm_bin_dir = ""
         if settings_valid:
-            command = (
-                "cat "
-                + self.discopop_build_dir
-                + '/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*"'
-            )
+            command = "cat " + self.discopop_build_dir + '/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*"'
             llvm_bin_dir = os.popen(command).read().replace("\n", "")
             if not os.path.exists(llvm_bin_dir):
                 llvm_bin_dir = ""
@@ -143,9 +137,7 @@ def load_from_config_file(config_dir: str) -> Settings:
     settings.code_preview_show_metadata_regions = __load_or_get_default(
         value_dict, "code_preview_show_metadata_regions"
     )
-    settings.code_preview_show_line_numbers = __load_or_get_default(
-        value_dict, "code_preview_show_line_numbers"
-    )
+    settings.code_preview_show_line_numbers = __load_or_get_default(value_dict, "code_preview_show_line_numbers")
     settings.code_preview_show_metadata_live_device_variables = __load_or_get_default(
         value_dict, "code_preview_show_metadata_live_device_variables"
     )

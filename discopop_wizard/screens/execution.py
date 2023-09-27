@@ -63,37 +63,22 @@ class ExecutionView(object):
         command += '--gllvm "' + self.wizard.settings.go_bin + '" '
         # execution configuration
         command += '--project "' + self.execution_configuration.value_dict["project_path"] + '" '
-        command += (
-            '--linker-flags "' + self.execution_configuration.value_dict["linker_flags"] + '" '
-        )
-        command += (
-            '--executable-name "'
-            + self.execution_configuration.value_dict["executable_name"]
-            + '" '
-        )
-        command += (
-            '--executable-arguments "'
-            + self.execution_configuration.value_dict["executable_arguments"]
-            + '" '
-        )
+        command += '--linker-flags "' + self.execution_configuration.value_dict["linker_flags"] + '" '
+        command += '--executable-name "' + self.execution_configuration.value_dict["executable_name"] + '" '
+        command += '--executable-arguments "' + self.execution_configuration.value_dict["executable_arguments"] + '" '
         command += '--make-flags "' + self.execution_configuration.value_dict["make_flags"] + '" '
         command += '--make-target "' + self.execution_configuration.value_dict["make_target"] + '" '
         command += (
             "--memory-profiling-skip-function-arguments "
-            if self.execution_configuration.value_dict["memory_profiling_skip_function_parameters"]
-            == 1
+            if self.execution_configuration.value_dict["memory_profiling_skip_function_parameters"] == 1
             else ""
         )
-        command += (
-            '--explorer-flags "' + self.execution_configuration.value_dict["explorer_flags"] + '" '
-        )
+        command += '--explorer-flags "' + self.execution_configuration.value_dict["explorer_flags"] + '" '
 
         return command
 
     def __execute_command(self, command: str) -> int:
-        with subprocess.Popen(
-            command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
-        ) as p:
+        with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
             if p.stdout is None:
                 print("command execution was not successfull")
             else:
@@ -117,6 +102,4 @@ class ExecutionView(object):
         print(msg)
 
     def __show_suggestions(self):
-        show_suggestions_overview_screen(
-            self.wizard, cast(tk.Frame, self.details_frame), self.execution_configuration
-        )
+        show_suggestions_overview_screen(self.wizard, cast(tk.Frame, self.details_frame), self.execution_configuration)
