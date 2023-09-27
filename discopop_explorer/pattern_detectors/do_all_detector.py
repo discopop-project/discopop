@@ -77,9 +77,7 @@ def run_detection(pet: PETGraphX) -> List[DoAllInfo]:
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
-        )
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
     print("GLOBAL RES: ", result)
@@ -121,10 +119,7 @@ def __detect_do_all(pet: PETGraphX, root_loop: LoopNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [
-        pet.node_at(t)
-        for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
-    ]
+    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # get required metadata
     loop_start_lines: List[LineID] = []
@@ -193,18 +188,10 @@ def __check_loop_dependencies(
     deps = set()
     for n in node_1_children_ids + node_2_children_ids:
         deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.in_edges(n, EdgeType.DATA)
-                if s in node_1_children_ids + node_2_children_ids
-            ]
+            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in node_1_children_ids + node_2_children_ids]
         )
         deps.update(
-            [
-                (s, t, d)
-                for s, t, d in pet.out_edges(n, EdgeType.DATA)
-                if t in node_1_children_ids + node_2_children_ids
-            ]
+            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in node_1_children_ids + node_2_children_ids]
         )
 
     # get memory regions which are defined inside the loop
@@ -273,10 +260,7 @@ def __old_detect_do_all(pet: PETGraphX, root_loop: CUNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [
-        pet.node_at(t)
-        for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
-    ]
+    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # check if all subnodes are parallelizable
     for node in pet.subtree_of_type(root_loop, CUNode):

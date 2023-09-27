@@ -20,9 +20,7 @@ class Network(object):
         self.__transfer_speeds = dict()
         self.__transfer_initialization_costs = dict()
 
-    def add_connection(
-        self, source: Device, target: Device, transfer_speed: Expr, initialization_delay: Expr
-    ):
+    def add_connection(self, source: Device, target: Device, transfer_speed: Expr, initialization_delay: Expr):
         self.__transfer_speeds[(source, target)] = transfer_speed
         self.__transfer_initialization_costs[(source, target)] = initialization_delay
 

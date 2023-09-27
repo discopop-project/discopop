@@ -89,11 +89,7 @@ class Microbench(ABC):
         # y axis: workloads
         # z axis: measurement values
         # (iterations are fixed based on input parameter)
-        z = [
-            self.evaluateInterpolation(type, dim, (i, j, iterations))
-            for i in threads
-            for j in workloads
-        ]  # results
+        z = [self.evaluateInterpolation(type, dim, (i, j, iterations)) for i in threads for j in workloads]  # results
         X, Y = np.meshgrid(threads, workloads)
         Z = np.array(z).reshape(len(threads), len(workloads)).transpose()
 

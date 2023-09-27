@@ -136,9 +136,7 @@ class CostModel(object):
         """Compare both models.
         The comparison is based on random sampling and may not be correct in all cases!
         """
-        decision_tendency = (
-            0  # positive -> self was evaluated to be smaller more often than the other way around
-        )
+        decision_tendency = 0  # positive -> self was evaluated to be smaller more often than the other way around
         decided = False
         counter = 0
         # Sampling parameters
@@ -168,15 +166,11 @@ class CostModel(object):
                         normalized_pick = random.weibullvariate(alpha, beta)
                     if self.free_symbol_distributions[symbol] == FreeSymbolDistribution.LEFT_HEAVY:
                         # calculate sampling point using the range starting from minimum
-                        sampling_point[symbol] = (
-                            range_min + (range_max - range_min) * normalized_pick
-                        )
+                        sampling_point[symbol] = range_min + (range_max - range_min) * normalized_pick
                     else:
                         # simulate a right heavy distribution
                         # calculate sampling point using the range starting from maximum
-                        sampling_point[symbol] = (
-                            range_max - (range_max - range_min) * normalized_pick
-                        )
+                        sampling_point[symbol] = range_max - (range_max - range_min) * normalized_pick
 
             # evaluate both functions at the sampling point
             substituted_model_1_1 = self.parallelizable_costs.xreplace(sampling_point)

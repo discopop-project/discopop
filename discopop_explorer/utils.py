@@ -98,9 +98,7 @@ def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
 
 # NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-def calculate_workload(
-    pet: PETGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False
-) -> int:
+def calculate_workload(pet: PETGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False) -> int:
     """Calculates and stores the workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
 
@@ -236,11 +234,7 @@ def __get_dep_of_type(
     """
     return [
         e
-        for e in (
-            pet.in_edges(node.id, EdgeType.DATA)
-            if reversed
-            else pet.out_edges(node.id, EdgeType.DATA)
-        )
+        for e in (pet.in_edges(node.id, EdgeType.DATA) if reversed else pet.out_edges(node.id, EdgeType.DATA))
         if e[2].dtype == dep_type
     ]
 
@@ -273,9 +267,7 @@ def is_reduction_var(line: LineID, name: str, reduction_vars: List[Dict[str, str
     return any(rv for rv in reduction_vars if rv["loop_line"] == line and rv["name"] == name)
 
 
-def is_reduction_any(
-    possible_lines: List[LineID], var_name: str, reduction_vars: List[Dict[str, str]]
-) -> bool:
+def is_reduction_any(possible_lines: List[LineID], var_name: str, reduction_vars: List[Dict[str, str]]) -> bool:
     """Determines, whether or not the given variable is reduction variable
 
     :param possible_lines: possible loop line number
@@ -502,10 +494,7 @@ def is_depend_in_out(
     """
     for in_dep in in_deps:
         for out_dep in out_deps:
-            if (
-                in_dep[2].memory_region in mem_regs
-                and in_dep[2].memory_region == out_dep[2].memory_region
-            ):
+            if in_dep[2].memory_region in mem_regs and in_dep[2].memory_region == out_dep[2].memory_region:
                 return True
     return False
 
@@ -610,9 +599,7 @@ def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]
     return do_all, reduction
 
 
-def get_initialized_memory_regions_in(
-    pet: PETGraphX, cu_nodes: List[CUNode]
-) -> Dict[Variable, Set[MemoryRegion]]:
+def get_initialized_memory_regions_in(pet: PETGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
         for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
@@ -661,9 +648,7 @@ def classify_loop_variables(
 
     # only consider memory regions which are know at the current code location.
     # ignore memory regions which stem from called functions.
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(
-        loop, False, ignore_called_nodes=True
-    )
+    left_subtree_without_called_nodes = pet.get_left_right_subtree(loop, False, ignore_called_nodes=True)
     prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
     prior_known_mem_regs = set()
     for pkv in prior_known_vars:
@@ -692,11 +677,7 @@ def classify_loop_variables(
         elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
             var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
             reduction.append(var)
-        elif (
-            is_written_in_subtree(vars[var], raw, waw, lst)
-            or is_func_arg(pet, var.name, loop)
-            and is_scalar_val(var)
-        ):
+        elif is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop) and is_scalar_val(var):
             if is_readonly(vars[var], war, waw, rev_raw):
                 if is_global(var.name, sub):
                     shared.append(var)
@@ -742,15 +723,7 @@ def classify_task_vars(
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
     used_in_task_parallelism_detection=False,
-) -> Tuple[
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[str],
-]:
+) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[str],]:
     """Classify task variables
 
     :param pet: CU graph
@@ -868,8 +841,7 @@ def classify_task_vars(
             subtree,
         ):
             if is_scalar_val(var) and (
-                not used_in_task_parallelism_detection
-                or not __is_written_prior_to_task(pet, var, task)
+                not used_in_task_parallelism_detection or not __is_written_prior_to_task(pet, var, task)
             ):
                 if is_read_in(
                     vars[var],
@@ -886,9 +858,7 @@ def classify_task_vars(
                 shared.append((var, vars[var]))
 
     # use known variables to reconstruct the correct variable names from the classified memory regions
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(
-        task, False, ignore_called_nodes=True
-    )
+    left_subtree_without_called_nodes = pet.get_left_right_subtree(task, False, ignore_called_nodes=True)
     prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
 
     return (
@@ -909,11 +879,7 @@ def __apply_dealiasing(
     tmp_memory_regions = set()
     for _, mem_regs in input_list:
         tmp_memory_regions.update(mem_regs)
-    cleaned = [
-        pkv
-        for pkv in previously_known
-        if len(previously_known[pkv].intersection(tmp_memory_regions))
-    ]
+    cleaned = [pkv for pkv in previously_known if len(previously_known[pkv].intersection(tmp_memory_regions))]
     return cleaned
 
 

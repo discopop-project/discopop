@@ -33,31 +33,19 @@ class Loop(Workload):
         iterations_symbol: Optional[Symbol] = None,
     ):
         self.position = position
-        self.iterations = max(
-            iterations, 1
-        )  # to prevent dividing by 0 in case the loop has not been executed
+        self.iterations = max(iterations, 1)  # to prevent dividing by 0 in case the loop has not been executed
 
         if iterations_symbol is None:
-            self.iterations_symbol = Symbol(
-                "loop_" + str(node_id) + "_pos_" + str(self.position) + "_iterations"
-            )
+            self.iterations_symbol = Symbol("loop_" + str(node_id) + "_pos_" + str(self.position) + "_iterations")
         else:
             self.iterations_symbol = iterations_symbol
 
         # create parallelizable_workload_symbol
         self.per_iteration_parallelizable_workload = Symbol(
-            "loop_"
-            + str(node_id)
-            + "_pos_"
-            + str(self.position)
-            + "_per_iteration_parallelizable_workload"
+            "loop_" + str(node_id) + "_pos_" + str(self.position) + "_per_iteration_parallelizable_workload"
         )
         self.per_iteration_sequential_workload = Symbol(
-            "loop_"
-            + str(node_id)
-            + "_pos_"
-            + str(self.position)
-            + "_per_iteration_sequential_workload"
+            "loop_" + str(node_id) + "_pos_" + str(self.position) + "_per_iteration_sequential_workload"
         )
 
         # calculate workload per iteration
@@ -75,9 +63,7 @@ class Loop(Workload):
         )
 
         # register iteration symbol in environment
-        experiment.register_free_symbol(
-            self.iterations_symbol, value_suggestion=Integer(self.iterations)
-        )
+        experiment.register_free_symbol(self.iterations_symbol, value_suggestion=Integer(self.iterations))
         # register per iteration parallelizable workload symbol in environment
         experiment.register_free_symbol(
             self.per_iteration_parallelizable_workload,
@@ -126,9 +112,7 @@ class Loop(Workload):
 
         # at every time, only a single child is possible for each loop node
         self.registered_child = other
-        experiment.substitutions[
-            self.per_iteration_parallelizable_workload
-        ] = other.parallelizable_costs
+        experiment.substitutions[self.per_iteration_parallelizable_workload] = other.parallelizable_costs
         experiment.substitutions[self.per_iteration_sequential_workload] = other.sequential_costs
 
         cm = self.get_cost_model(experiment, all_function_nodes, current_device)

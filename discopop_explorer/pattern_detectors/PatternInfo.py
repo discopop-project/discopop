@@ -25,9 +25,7 @@ class PatternInfo(object):
     instructions_count: Optional[int]
     workload: Optional[int]
     per_iteration_workload: Optional[int]
-    dp_optimizer_device_id: Optional[
-        int
-    ] = None  # used by discopop_optimizer. unused by discopop_explorer.
+    dp_optimizer_device_id: Optional[int] = None  # used by discopop_optimizer. unused by discopop_explorer.
 
     def __init__(self, node: Node):
         """
@@ -43,15 +41,9 @@ class PatternInfo(object):
             else -1
         )
         self.iterations_count = (
-            node.loop_data.total_iteration_count
-            if (isinstance(node, LoopNode) and node.loop_data is not None)
-            else -1
+            node.loop_data.total_iteration_count if (isinstance(node, LoopNode) and node.loop_data is not None) else -1
         )
-        self.entries = (
-            node.loop_data.entry_count
-            if (isinstance(node, LoopNode) and node.loop_data is not None)
-            else -1
-        )
+        self.entries = node.loop_data.entry_count if (isinstance(node, LoopNode) and node.loop_data is not None) else -1
 
         # TODO self.instructions_count = total_instructions_count(pet, node)
         self.workload = None
@@ -65,9 +57,7 @@ class PatternInfo(object):
             if key.startswith("_"):
                 del dic[key]
 
-        return json.dumps(
-            dic, indent=2, default=lambda o: o.toJSON()
-        )  # , default=lambda o: "<not serializable>")
+        return json.dumps(dic, indent=2, default=lambda o: o.toJSON())  # , default=lambda o: "<not serializable>")
 
     def get_workload(self, pet: PETGraphX) -> int:
         """returns the workload of self._node"""

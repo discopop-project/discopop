@@ -22,11 +22,7 @@ def query_user_for_symbol_values(
     suggested_values: Dict[Symbol, Expr],
     arguments: Dict,
     parent_frame: Optional[tk.Frame],
-) -> List[
-    Tuple[
-        Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]
-    ]
-]:
+) -> List[Tuple[Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]]]:
     """Opens a GUI-Table to query values for each given Symbol from the user.
     The queried values are: Specific value, Range start, Range end.
     In every case, either a specific value, or a range must be given.

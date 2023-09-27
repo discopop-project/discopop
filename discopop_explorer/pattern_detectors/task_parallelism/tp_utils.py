@@ -56,10 +56,7 @@ def demangle(mangled_name: str) -> str:
             return out
     except FileNotFoundError:
         raise ValueError(
-            "Executable '"
-            + llvm_cxxfilt_path
-            + "' not found."
-            + " Check or supply --llvm-cxxfilt-path parameter."
+            "Executable '" + llvm_cxxfilt_path + "' not found." + " Check or supply --llvm-cxxfilt-path parameter."
         )
     raise ValueError("Demangling of " + mangled_name + " not possible!")
 
@@ -108,9 +105,7 @@ def get_parent_of_type(
         last_node = cur_node
         visited.append(cur_node)
         tmp_list = [
-            (s, t, e)
-            for s, t, e in pet.in_edges(cur_node.id)
-            if pet.node_at(s) not in visited and e.etype == edge_type
+            (s, t, e) for s, t, e in pet.in_edges(cur_node.id) if pet.node_at(s) not in visited and e.etype == edge_type
         ]
         for e in tmp_list:
             if pet.node_at(e[0]).type == parent_type:
@@ -142,9 +137,7 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: Node) -> List[Node]:
     return result_list
 
 
-def check_reachability(
-    pet: PETGraphX, target: Node, source: Node, edge_types: List[EdgeType]
-) -> bool:
+def check_reachability(pet: PETGraphX, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
     """check if target is reachable from source via edges of types edge_type.
     :param pet: PET graph
     :param source: CUNode
@@ -158,11 +151,7 @@ def check_reachability(
     while len(queue) > 0:
         cur_node = queue.pop(0)
         visited.append(cur_node.id)
-        tmp_list = [
-            (s, t, e)
-            for s, t, e in pet.in_edges(cur_node.id)
-            if s not in visited and e.etype in edge_types
-        ]
+        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id) if s not in visited and e.etype in edge_types]
         for e in tmp_list:
             if pet.node_at(e[0]) == source:
                 return True
@@ -172,9 +161,7 @@ def check_reachability(
     return False
 
 
-def get_predecessor_nodes(
-    pet: PETGraphX, root: Node, visited_nodes: List[Node]
-) -> Tuple[List[Node], List[Node]]:
+def get_predecessor_nodes(pet: PETGraphX, root: Node, visited_nodes: List[Node]) -> Tuple[List[Node], List[Node]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -192,9 +179,7 @@ def get_predecessor_nodes(
     in_succ_edges = [
         (s, t, e)
         for s, t, e in pet.in_edges(root.id)
-        if e.etype == EdgeType.SUCCESSOR
-        and pet.node_at(s) != root
-        and pet.node_at(s) not in visited_nodes
+        if e.etype == EdgeType.SUCCESSOR and pet.node_at(s) != root and pet.node_at(s) not in visited_nodes
     ]
     for e in in_succ_edges:
         tmp, visited_nodes = get_predecessor_nodes(pet, pet.node_at(e[0]), visited_nodes)
@@ -295,9 +280,7 @@ def create_task_tree_helper(pet: PETGraphX, current: Node, root: Task, visited_f
             create_task_tree_helper(pet, child, root, visited_func)
 
 
-def recursive_function_call_contained_in_worker_cu(
-    function_call_string: str, worker_cus: List[Node]
-) -> Node:
+def recursive_function_call_contained_in_worker_cu(function_call_string: str, worker_cus: List[Node]) -> Node:
     """check if submitted function call is contained in at least one WORKER cu.
     Returns the vertex identifier of the containing cu.
     If no cu contains the function call, None is returned.
@@ -318,9 +301,7 @@ def recursive_function_call_contained_in_worker_cu(
     # function_call_string looks now like like: 'fib 7:52'
 
     # split String into function_name. file_id and line_number
-    file_id = function_call_string[
-        function_call_string.index(" ") + 1 : function_call_string.index(":")
-    ]
+    file_id = function_call_string[function_call_string.index(" ") + 1 : function_call_string.index(":")]
     line_number = function_call_string[function_call_string.index(":") + 1 :]
 
     # get tightest surrounding cu
@@ -333,9 +314,7 @@ def recursive_function_call_contained_in_worker_cu(
         # check if file_id is equal
         if file_id == cur_w_file_id:
             # trim to line numbers only
-            cur_w_starts_at_line = LineID(
-                cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1 :]
-            )
+            cur_w_starts_at_line = LineID(cur_w_starts_at_line[cur_w_starts_at_line.index(":") + 1 :])
             cur_w_ends_at_line = LineID(cur_w_ends_at_line[cur_w_ends_at_line.index(":") + 1 :])
             # check if line_number is contained
             if int(cur_w_starts_at_line) <= int(line_number) <= int(cur_w_ends_at_line):
@@ -446,11 +425,7 @@ def get_function_call_from_source_code(
         # if word prior to ( is "while", "for" or "if", cut away until (
         word_prior_to_bracket = __get_word_prior_to_bracket(function_call_string)
         if word_prior_to_bracket is not None:
-            if (
-                word_prior_to_bracket == "while"
-                or word_prior_to_bracket == "for"
-                or word_prior_to_bracket == "if"
-            ):
+            if word_prior_to_bracket == "while" or word_prior_to_bracket == "for" or word_prior_to_bracket == "if":
                 function_call_string = function_call_string[function_call_string.index("(") + 1 :]
         # check if called_function_name is contained in function_call_string
         if not called_function_name_contained:
@@ -463,9 +438,7 @@ def get_function_call_from_source_code(
     # if called_function_name is set and contained more than once in function_call_string, split function_call_string
     if called_function_name is not None:
         while function_call_string.count(called_function_name) > 1:
-            function_call_string = function_call_string[
-                : function_call_string.rfind(called_function_name)
-            ]
+            function_call_string = function_call_string[: function_call_string.rfind(called_function_name)]
 
     return function_call_string
 
@@ -516,29 +489,16 @@ def get_called_function_and_parameter_names_from_function_call(
     result_parameters: List[Optional[str]] = []
     for param in parameters:
         param = param.replace("\t", "")
-        if (
-            "+" in param
-            or "-" in param
-            or "*" in param
-            or "/" in param
-            or "(" in param
-            or ")" in param
-        ):
+        if "+" in param or "-" in param or "*" in param or "/" in param or "(" in param or ")" in param:
             param_expression = param.replace("+", "$$").replace("-", "$$").replace("/", "$$")
-            param_expression = (
-                param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
-            )
+            param_expression = param_expression.replace("*", "$$").replace("(", "$$").replace(")", "$$")
             split_param_expression = param_expression.split("$$")
             split_param_expression = [ex.replace(" ", "") for ex in split_param_expression]
             # check if any of the parameters is in list of known variables
             split_param_expression = [
                 ex
                 for ex in split_param_expression
-                if ex
-                in [
-                    var.replace(".addr", "")
-                    for var in [v.name for v in node.local_vars + node.global_vars]
-                ]
+                if ex in [var.replace(".addr", "") for var in [v.name for v in node.local_vars + node.global_vars]]
             ]
             # check if type of any of them contains * (i.e. is a pointer)
             found_entry = False
@@ -600,9 +560,7 @@ def contains_reduction(pet: PETGraphX, node: Node) -> bool:
     :param node: CUNode
     :return: bool"""
     for red_var in pet.reduction_vars:
-        if line_contained_in_region(
-            red_var["reduction_line"], node.start_position(), node.end_position()
-        ):
+        if line_contained_in_region(red_var["reduction_line"], node.start_position(), node.end_position()):
             return True
     return False
 

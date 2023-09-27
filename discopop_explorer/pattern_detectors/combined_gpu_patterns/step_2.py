@@ -30,9 +30,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import 
 )
 
 
-def populate_live_data(
-    comb_gpu_reg, pet: PETGraphX, ignore_update_instructions=False
-) -> Dict[VarName, List[NodeID]]:
+def populate_live_data(comb_gpu_reg, pet: PETGraphX, ignore_update_instructions=False) -> Dict[VarName, List[NodeID]]:
     """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
     The gathered information is used for the optimization / creation of data mapping instructions afterwards.
     """
@@ -168,10 +166,7 @@ def extend_data_lifespan(
             print("\tparent functions: ", len(cu_ids_by_parent_functions), file=sys.stderr)
             print(
                 "\t",
-                [
-                    (key.name, len(cu_ids_by_parent_functions[key]))
-                    for key in cu_ids_by_parent_functions
-                ],
+                [(key.name, len(cu_ids_by_parent_functions[key])) for key in cu_ids_by_parent_functions],
                 file=sys.stderr,
             )
 
@@ -191,10 +186,7 @@ def extend_data_lifespan(
                             continue
 
                         if cu_id in parent_function.reachability_pairs:
-                            reachable = (
-                                potential_successor_cu_id
-                                in parent_function.reachability_pairs[cu_id]
-                            )
+                            reachable = potential_successor_cu_id in parent_function.reachability_pairs[cu_id]
                         else:
                             reachable = False
 
@@ -231,9 +223,7 @@ def extend_data_lifespan(
             # if path_node is located within a loop, add the other loop cus to the path as well
             to_be_added: List[CUNode] = []
             for path_node in path_nodes:
-                parent_node = [
-                    pet.node_at(s) for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)
-                ][0]
+                parent_node = [pet.node_at(s) for s, t, d in pet.in_edges(path_node.id, EdgeType.CHILD)][0]
                 if parent_node.type == NodeType.LOOP:
                     for _, loop_cu_id, _ in pet.out_edges(parent_node.id, EdgeType.CHILD):
                         loop_cu = cast(CUNode, pet.node_at(loop_cu_id))
@@ -249,11 +239,7 @@ def extend_data_lifespan(
                 subtree_without_called_functions = [
                     cu
                     for cu in pet.direct_children(path_node)
-                    if cu
-                    not in [
-                        pet.node_at(t)
-                        for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)
-                    ]
+                    if cu not in [pet.node_at(t) for s, t, d in pet.out_edges(path_node.id, EdgeType.CALLSNODE)]
                 ]
                 # add path_node itself to the subtree
                 subtree_without_called_functions.append(path_node)
@@ -294,13 +280,9 @@ def calculate_host_liveness(
     all_function_cu_ids: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
         parent_function = pet.get_parent_function(pet.node_at(region.node_id))
-        all_function_cu_ids.update(
-            get_function_body_cus_without_called_functions(pet, parent_function)
-        )
+        all_function_cu_ids.update(get_function_body_cus_without_called_functions(pet, parent_function))
 
-    all_function_host_cu_ids = [
-        cu_id for cu_id in all_function_cu_ids if cu_id not in comb_gpu_reg.device_cu_ids
-    ]
+    all_function_host_cu_ids = [cu_id for cu_id in all_function_cu_ids if cu_id not in comb_gpu_reg.device_cu_ids]
 
     for cu_id in all_function_host_cu_ids:
         shared_variables: Set[VarName] = set()

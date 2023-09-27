@@ -221,11 +221,7 @@ class Node:
         return self.id
 
     def __eq__(self, other):
-        return (
-            isinstance(other, Node)
-            and other.file_id == self.file_id
-            and other.node_id == self.node_id
-        )
+        return isinstance(other, Node) and other.file_id == self.file_id and other.node_id == self.node_id
 
     def __hash__(self):
         return hash(self.id)
@@ -409,9 +405,7 @@ class FunctionNode(Node):
             # reverse edges
             immediate_post_dominators: Set[Tuple[NodeID, NodeID]] = set()
             for exit_cu_id in exit_cu_ids:
-                immediate_post_dominators.update(
-                    nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items()
-                )
+                immediate_post_dominators.update(nx.immediate_dominators(copied_graph.reverse(), exit_cu_id).items())
 
             immediate_post_dominators_dict = dict(immediate_post_dominators)
             # add trivial cases for missing modes
@@ -434,10 +428,8 @@ class FunctionNode(Node):
                 visited = set()
                 use_original = False
                 while (
-                    pet.node_at(node_id).get_parent_id(pet)
-                    == pet.node_at(post_dom_id).get_parent_id(pet)
-                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet))))
-                    != FunctionNode
+                    pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
+                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet)))) != FunctionNode
                 ):
                     if post_dom_id in visited:
                         # cycle detected!
@@ -475,9 +467,7 @@ class FunctionNode(Node):
                     for mem_reg in writes_by_device[device_id][child_id]:
                         if mem_reg not in self.memory_accesses[device_id]:
                             self.memory_accesses[device_id][mem_reg] = set()
-                        self.memory_accesses[device_id][mem_reg].update(
-                            writes_by_device[device_id][child_id][mem_reg]
-                        )
+                        self.memory_accesses[device_id][mem_reg].update(writes_by_device[device_id][child_id][mem_reg])
         return self.memory_accesses
 
 
@@ -682,10 +672,7 @@ class PETGraphX(object):
                         for var in itertools.chain(source_node.local_vars, source_node.global_vars):
                             vars_in_source_node.add(var.name)
 
-                    if (
-                        dep.var_name not in vars_in_sink_node
-                        and dep.var_name not in vars_in_source_node
-                    ):
+                    if dep.var_name not in vars_in_sink_node and dep.var_name not in vars_in_source_node:
                         continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
@@ -698,9 +685,7 @@ class PETGraphX(object):
         mem_reg_mappings: Dict[MemoryRegion, Set[MemoryRegion]] = dict()
         # initialize mappings
         for node_id in [n.id for n in self.all_nodes(CUNode)]:
-            out_deps = [
-                (s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA
-            ]
+            out_deps = [(s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA]
 
             # for outgoing dependencies, the scope must be equal
             # as a result, comparing variable names to match memory regions is valid
@@ -723,9 +708,7 @@ class PETGraphX(object):
         print("\t\tInstantiating static dependencies...", end=" ")
         # create copies of static dependency edges for all dynamic mappings
         for node_id in [n.id for n in self.all_nodes(CUNode)]:
-            out_deps = [
-                (s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA
-            ]
+            out_deps = [(s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA]
             for s, t, d in out_deps:
                 if d.memory_region.startswith("S"):
                     # Static dependency found
@@ -733,9 +716,7 @@ class PETGraphX(object):
                     if d.memory_region in mem_reg_mappings:
                         # create instances for all dynamic mappings
                         for dynamic_mapping in [
-                            mapping
-                            for mapping in mem_reg_mappings[d.memory_region]
-                            if not mapping.startswith("S")
+                            mapping for mapping in mem_reg_mappings[d.memory_region] if not mapping.startswith("S")
                         ]:
                             edge_data = copy.deepcopy(d)
                             edge_data.memory_region = dynamic_mapping
@@ -917,9 +898,7 @@ class PETGraphX(object):
             self.g,
             pos,
             edge_color="orange",
-            edgelist=[
-                e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME
-            ],
+            edgelist=[e for e in self.g.edges(data="data") if e[2].etype == EdgeType.PRODUCE_CONSUME],
         )
 
         plt.show()
@@ -989,9 +968,7 @@ class PETGraphX(object):
         ...
 
     @overload
-    def subtree_of_type(
-        self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
-    ) -> List[NodeT]:
+    def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
         ...
 
     def subtree_of_type(self, root, type=Node):
@@ -1055,10 +1032,7 @@ class PETGraphX(object):
         :param root: root node
         :return: list of direct children
         """
-        return [
-            self.node_at(t)
-            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
-        ]
+        return [self.node_at(t) for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     def direct_children(self, root: Node) -> List[Node]:
         """Gets direct children of any type. This includes called nodes!
@@ -1075,10 +1049,7 @@ class PETGraphX(object):
         :param type: type of children
         :return: list of direct children
         """
-        nodes = [
-            self.node_at(t)
-            for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
-        ]
+        nodes = [self.node_at(t) for s, t, d in self.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
         return [t for t in nodes if isinstance(t, type)]
 
@@ -1089,9 +1060,7 @@ class PETGraphX(object):
         :param name: variable name
         :return: true if is reduction variable
         """
-        return any(
-            rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name
-        )
+        return any(rv for rv in self.reduction_vars if rv["loop_line"] == line and rv["name"] == name)
 
     def depends_ignore_readonly(self, source: Node, target: Node, root_loop: Node) -> bool:
         """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
@@ -1155,8 +1124,7 @@ class PETGraphX(object):
         d_var_name_str = cast(str, d.var_name)
 
         if self.unused_is_global(d_var_name_str, sub) and not (
-            self.is_passed_by_reference(d, parent_func_sink)
-            and self.is_passed_by_reference(d, parent_func_source)
+            self.is_passed_by_reference(d, parent_func_sink) and self.is_passed_by_reference(d, parent_func_source)
         ):
             return res
         return not res
@@ -1206,19 +1174,13 @@ class PETGraphX(object):
                 for i in raw:
                     if i[2].var_name == var and i[0] in loop_node_ids and i[1] in loop_node_ids:
                         for e in itertools.chain(war, waw):
-                            if (
-                                e[2].var_name == var
-                                and e[0] in loop_node_ids
-                                and e[1] in loop_node_ids
-                            ):
+                            if e[2].var_name == var and e[0] in loop_node_ids and e[1] in loop_node_ids:
                                 if e[2].sink_line == i[2].source_line:
                                     fwVars.add(var)
 
         return fwVars
 
-    def get_dep(
-        self, node: Node, dep_type: DepType, reversed: bool
-    ) -> List[Tuple[NodeID, NodeID, Dependency]]:
+    def get_dep(self, node: Node, dep_type: DepType, reversed: bool) -> List[Tuple[NodeID, NodeID, Dependency]]:
         """Searches all dependencies of specified type
 
         :param node: node
@@ -1228,11 +1190,7 @@ class PETGraphX(object):
         """
         return [
             e
-            for e in (
-                self.in_edges(node.id, EdgeType.DATA)
-                if reversed
-                else self.out_edges(node.id, EdgeType.DATA)
-            )
+            for e in (self.in_edges(node.id, EdgeType.DATA) if reversed else self.out_edges(node.id, EdgeType.DATA))
             if e[2].dtype == dep_type
         ]
 
@@ -1244,9 +1202,7 @@ class PETGraphX(object):
         """
         for x in allVars:
             if x.name == var:
-                return not (
-                    x.type.endswith("**") or x.type.startswith("ARRAY" or x.type.startswith("["))
-                )
+                return not (x.type.endswith("**") or x.type.startswith("ARRAY" or x.type.startswith("[")))
             else:
                 return False
         raise ValueError("allVars must not be empty.")
@@ -1271,9 +1227,7 @@ class PETGraphX(object):
                     # since the variable name is checked for equality afterwards,
                     # it is safe to consider incoming dependencies at this point as well.
                     # Note that INIT type edges are considered as well!
-                    for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(
-                        node.id, EdgeType.DATA
-                    ):
+                    for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(node.id, EdgeType.DATA):
                         if dep.var_name == var_name.name:
                             if dep.memory_region is not None:
                                 res[var_name].add(dep.memory_region)
@@ -1293,9 +1247,7 @@ class PETGraphX(object):
             if var.defLine == "LineNotFound" or "0:" in var.defLine:
                 dummyVariables.append(var)
             elif not include_global_vars:
-                if var.defLine == "GlobalVar" and not self.is_reduction_var(
-                    root_loop.start_position(), var.name
-                ):
+                if var.defLine == "GlobalVar" and not self.is_reduction_var(root_loop.start_position(), var.name):
                     dummyVariables.append(var)
 
         # vars = list(set(vars) ^ set(dummyVariables))
@@ -1305,10 +1257,7 @@ class PETGraphX(object):
 
         # Exclude variables which are defined inside the loop
         for var in vars:
-            if (
-                var.defLine >= root_loop.start_position()
-                and var.defLine <= root_loop.end_position()
-            ):
+            if var.defLine >= root_loop.start_position() and var.defLine <= root_loop.end_position():
                 definedVarsInLoop.append(var)
 
         # vars = list(set(vars) ^ set(definedVarsInLoop))
@@ -1361,9 +1310,7 @@ class PETGraphX(object):
                 # None may occur because __get_variables doesn't check for actual elements
         return result
 
-    def is_loop_index(
-        self, var_name: Optional[str], loops_start_lines: List[LineID], children: Sequence[Node]
-    ) -> bool:
+    def is_loop_index(self, var_name: Optional[str], loops_start_lines: List[LineID], children: Sequence[Node]) -> bool:
         """Checks, whether the variable is a loop index.
 
         :param var_name: name of the variable
@@ -1381,11 +1328,7 @@ class PETGraphX(object):
                 for s, t, d in self.out_edges(c.id, EdgeType.DATA)
                 if d.dtype == DepType.RAW and d.var_name == var_name
             ]:
-                if (
-                    d.sink_line == d.source_line
-                    and d.source_line in loops_start_lines
-                    and self.node_at(t) in children
-                ):
+                if d.sink_line == d.source_line and d.source_line in loops_start_lines and self.node_at(t) in children:
                     return True
 
         return False
@@ -1417,14 +1360,10 @@ class PETGraphX(object):
                 # (sink is always inside loop for waw/war)
                 if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
                     return False
-            for t, d in [
-                (t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW
-            ]:
+            for t, d in [(t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
-                if dep.memory_region == d.memory_region and not (
-                    d.source_line in loops_start_lines
-                ):
+                if dep.memory_region == d.memory_region and not (d.source_line in loops_start_lines):
                     return False
         return True
 
@@ -1476,9 +1415,7 @@ class PETGraphX(object):
                 )
             else:
                 stack.extend(
-                    self.direct_children(current)
-                    if right_subtree
-                    else reversed(self.direct_children(current))
+                    self.direct_children(current) if right_subtree else reversed(self.direct_children(current))
                 )
         return res
 
@@ -1545,9 +1482,7 @@ class PETGraphX(object):
             cur_node = queue.pop(0)
             visited.append(cur_node.id)
             tmp_list = [
-                (s, t, e)
-                for s, t, e in self.in_edges(cur_node.id)
-                if s not in visited and e.etype in edge_types
+                (s, t, e) for s, t, e in self.in_edges(cur_node.id) if s not in visited and e.etype in edge_types
             ]
             for e in tmp_list:
                 if self.node_at(e[0]) == source:
@@ -1564,9 +1499,7 @@ class PETGraphX(object):
         source_parent_function = self.get_parent_function(self.node_at(source_id))
         target_parent_function = self.get_parent_function(self.node_at(target_id))
         if source_parent_function != target_parent_function:
-            for callee_id in [
-                s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)
-            ]:
+            for callee_id in [s for s, _, _ in self.in_edges(source_parent_function.id, EdgeType.CALLSNODE)]:
                 if self.is_predecessor(callee_id, target_id):
                     return True
 
@@ -1585,21 +1518,15 @@ class PETGraphX(object):
             visited.append(current)
             # add direct successors to queue
             queue += [
-                n.id
-                for n in self.direct_successors(self.node_at(current))
-                if n.id not in visited and n.id not in queue
+                n.id for n in self.direct_successors(self.node_at(current)) if n.id not in visited and n.id not in queue
             ]
             # add children to queue
             queue += [
-                n.id
-                for n in self.direct_children(self.node_at(current))
-                if n.id not in visited and n.id not in queue
+                n.id for n in self.direct_children(self.node_at(current)) if n.id not in visited and n.id not in queue
             ]
             # add called functions to queue
             queue += [
-                t
-                for _, t, _ in self.out_edges(current, EdgeType.CALLSNODE)
-                if t not in visited and t not in queue
+                t for _, t, _ in self.out_edges(current, EdgeType.CALLSNODE) if t not in visited and t not in queue
             ]
         return False
 
@@ -1629,9 +1556,7 @@ class PETGraphX(object):
             cur_node, cur_path = queue.pop(0)
             visited.append(cur_node.id)
             tmp_list = [
-                (s, t, e)
-                for s, t, e in self.in_edges(cur_node.id)
-                if s not in visited and e.etype in edge_types
+                (s, t, e) for s, t, e in self.in_edges(cur_node.id) if s not in visited and e.etype in edge_types
             ]
             for e in tmp_list:
                 if self.node_at(e[0]) == source:
@@ -1691,9 +1616,7 @@ class PETGraphX(object):
                         mem_regs.add(d.memory_region)
         return mem_regs
 
-    def get_path_nodes_between(
-        self, target: CUNode, source: CUNode, edge_types: List[EdgeType]
-    ) -> List[CUNode]:
+    def get_path_nodes_between(self, target: CUNode, source: CUNode, edge_types: List[EdgeType]) -> List[CUNode]:
         """get all nodes of all patch which allow reaching target from source via edges of types edge_type.
         :param pet: PET graph
         :param source: CUNode
@@ -1712,9 +1635,7 @@ class PETGraphX(object):
             cur_node, cur_path = queue.pop(0)
             visited.append(cur_node.id)
             tmp_list = [
-                (s, t, e)
-                for s, t, e in self.out_edges(cur_node.id)
-                if t not in visited and e.etype in edge_types
+                (s, t, e) for s, t, e in self.out_edges(cur_node.id) if t not in visited and e.etype in edge_types
             ]
             for e in tmp_list:
                 if self.node_at(e[1]) == target or self.node_at(e[1]) == source:

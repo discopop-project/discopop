@@ -93,9 +93,7 @@ class CombinedGPURegion(PatternInfo):
     meta_host_liveness: Dict[MemoryRegion, List[str]]
     project_folder_path: str
 
-    def __init__(
-        self, pet: PETGraphX, contained_regions: List[GPURegionInfo], project_folder_path: str
-    ):
+    def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo], project_folder_path: str):
         self.project_folder_path = project_folder_path
         node_id = sorted([region.node_id for region in contained_regions])[0]
         device_cu_ids: List[NodeID] = []
@@ -137,9 +135,7 @@ class CombinedGPURegion(PatternInfo):
         # get memory region and variable associations for each CU
         cu_and_variable_to_memory_regions: Dict[
             NodeID, Dict[VarName, Set[MemoryRegion]]
-        ] = get_cu_and_varname_to_memory_regions(
-            self.contained_regions, pet, written_memory_regions_by_cu
-        )
+        ] = get_cu_and_varname_to_memory_regions(self.contained_regions, pet, written_memory_regions_by_cu)
 
         print("WRITTEN MEMORY REGIONS BY CU: ", file=sys.stderr)
         print(written_memory_regions_by_cu, file=sys.stderr)
@@ -166,16 +162,12 @@ class CombinedGPURegion(PatternInfo):
         # extend device liveness with memory regions
         device_liveness_plus_memory_regions: Dict[
             VarName, List[Tuple[NodeID, Set[MemoryRegion]]]
-        ] = add_memory_regions_to_device_liveness(
-            live_device_variables, cu_and_variable_to_memory_regions
-        )
+        ] = add_memory_regions_to_device_liveness(live_device_variables, cu_and_variable_to_memory_regions)
 
         # ### STEP 2.2: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
 
         # propagate memory regions
-        device_liveness_plus_memory_regions = propagate_memory_regions(
-            device_liveness_plus_memory_regions
-        )
+        device_liveness_plus_memory_regions = propagate_memory_regions(device_liveness_plus_memory_regions)
 
         print("PROPAGATED DEVICE VARIABLES + MEMORY:", file=sys.stderr)
         print(device_liveness_plus_memory_regions, file=sys.stderr)
@@ -188,9 +180,7 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # extend data liveness
-        extended_memory_region_liveness = (
-            memory_region_liveness  # extend_data_lifespan(pet, memory_region_liveness)
-        )
+        extended_memory_region_liveness = memory_region_liveness  # extend_data_lifespan(pet, memory_region_liveness)
 
         print("EXTENDED DEVICE MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_memory_region_liveness, file=sys.stderr)
@@ -202,19 +192,17 @@ class CombinedGPURegion(PatternInfo):
         print(host_liveness, file=sys.stderr)
         print(file=sys.stderr)
         host_memory_region_liveness = convert_liveness(host_liveness)
-        extended_host_memory_region_liveness = host_memory_region_liveness  # extend_data_lifespan(           pet, host_memory_region_liveness        )
+        extended_host_memory_region_liveness = (
+            host_memory_region_liveness  # extend_data_lifespan(           pet, host_memory_region_liveness        )
+        )
         print("EXTENDED HOST MEMORY REGION LIVENESS:", file=sys.stderr)
         print(extended_host_memory_region_liveness, file=sys.stderr)
         print(file=sys.stderr)
 
         # ### STEP 3: MARK WRITTEN VARIABLES
         # initialize writes
-        device_writes = initialize_writes(
-            extended_memory_region_liveness, written_memory_regions_by_cu
-        )
-        host_writes = initialize_writes(
-            extended_host_memory_region_liveness, written_memory_regions_by_cu
-        )
+        device_writes = initialize_writes(extended_memory_region_liveness, written_memory_regions_by_cu)
+        host_writes = initialize_writes(extended_host_memory_region_liveness, written_memory_regions_by_cu)
 
         # propagate writes to parents, successors and the children of successors
         propagated_device_writes = device_writes  # propagate_writes(self, pet, device_writes)
@@ -283,9 +271,7 @@ class CombinedGPURegion(PatternInfo):
 
         # determine variable name for memory regions in update instructions
         for update in issued_updates:
-            update.convert_memory_regions_to_variable_names(
-                pet, memory_regions_to_functions_and_variables
-            )
+            update.convert_memory_regions_to_variable_names(pet, memory_regions_to_functions_and_variables)
 
         # ### POTENTIAL STEP 6: CONVERT MEMORY REGIONS TO STRUCTURE INDICES
 
@@ -352,13 +338,11 @@ class CombinedGPURegion(PatternInfo):
         #        )
         # prepare update instructions
         self.update_instructions = [
-            update.get_as_metadata_using_variable_names(pet, self.project_folder_path)
-            for update in updates
+            update.get_as_metadata_using_variable_names(pet, self.project_folder_path) for update in updates
         ]
         # prepare entry points
         self.data_region_entry_points = [
-            entry_point.get_as_metadata(pet, self.project_folder_path)
-            for entry_point in entry_points
+            entry_point.get_as_metadata(pet, self.project_folder_path) for entry_point in entry_points
         ]
 
         # prepare exit points
@@ -375,9 +359,7 @@ class CombinedGPURegion(PatternInfo):
         for exit_point in exit_points:
             all_dependencies.update(exit_point.dependencies)
 
-        self.data_region_depend_in, self.data_region_depend_out = get_dependencies_as_metadata(
-            pet, all_dependencies
-        )
+        self.data_region_depend_in, self.data_region_depend_out = get_dependencies_as_metadata(pet, all_dependencies)
 
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
@@ -410,9 +392,9 @@ def find_combined_gpu_regions(
         combined_gpu_regions.append(CombinedGPURegion(pet, [gpu_region], project_folder_path))
 
     # determine relations between single-element regions
-    combinable_pairs: List[
-        Tuple[CombinedGPURegion, CombinedGPURegion]
-    ] = find_all_pairwise_gpu_region_combinations(combined_gpu_regions, pet)
+    combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]] = find_all_pairwise_gpu_region_combinations(
+        combined_gpu_regions, pet
+    )
 
     intra_function_combinations = find_combinations_within_function_body(pet, combinable_pairs)
 
@@ -424,9 +406,7 @@ def find_combined_gpu_regions(
             combined_gpu_regions.remove(combinable_1)
         if combinable_2 in combined_gpu_regions:
             combined_gpu_regions.remove(combinable_2)
-        combined_gpu_regions.append(
-            combine_regions(pet, combinable_1, combinable_2, project_folder_path)
-        )
+        combined_gpu_regions.append(combine_regions(pet, combinable_1, combinable_2, project_folder_path))
 
     #    # combine all known regions
     #    combined_region: Optional[CombinedGPURegion] = None
@@ -469,12 +449,8 @@ def find_combinations_within_function_body(
             continue
         # check reachability in both directions via successor edges
         # consider children, as loop nodes do not have successors on their own
-        for region_1_child in pet.direct_children(
-            pet.node_at(region_1.contained_regions[0].node_id)
-        ):
-            for region_2_child in pet.direct_children(
-                pet.node_at(region_2.contained_regions[0].node_id)
-            ):
+        for region_1_child in pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id)):
+            for region_2_child in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
                 if region_1_child == region_2_child:
                     continue
                 if pet.check_reachability(region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
@@ -496,16 +472,12 @@ def find_true_successor_combinations(
     # a true successor relation exists, if every successor path outgoing from any child of region_1 arrives at region_2
     for region_1, region_2 in intra_function_combinations:
         true_successors = True
-        queue: List[CUNode] = pet.direct_children(
-            pet.node_at(region_1.contained_regions[0].node_id)
-        )
+        queue: List[CUNode] = pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id))
         visited: List[CUNode] = []
         while queue:
             current_node: CUNode = queue.pop()
             visited.append(current_node)
-            if current_node in pet.direct_children(
-                pet.node_at(region_2.contained_regions[0].node_id)
-            ):
+            if current_node in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
                 # reached region_2
                 continue
             # region_2 not reached

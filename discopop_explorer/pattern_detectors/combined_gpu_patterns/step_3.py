@@ -99,9 +99,7 @@ def propagate_writes(
                                     modification_found = True
                                     # propagated to children of successor
                             # propagate to called functions of successors
-                            for _, called_node_id, _ in pet.out_edges(
-                                successor_id, EdgeType.CALLSNODE
-                            ):
+                            for _, called_node_id, _ in pet.out_edges(successor_id, EdgeType.CALLSNODE):
                                 if (called_node_id, write_identifier_1) not in writes[mem_reg]:
                                     writes[mem_reg].add((called_node_id, write_identifier_1))
                                     modification_found = True
@@ -124,9 +122,7 @@ def propagate_writes(
                     if pet_node.return_instructions_count > 0:
                         # propagate write to calling cus
                         parent_function = pet.get_parent_function(pet_node)
-                        callees = [
-                            s for s, t, d in pet.in_edges(parent_function.id, EdgeType.CALLSNODE)
-                        ]
+                        callees = [s for s, t, d in pet.in_edges(parent_function.id, EdgeType.CALLSNODE)]
                         for callee_id in callees:
                             if (callee_id, write_identifier) not in writes[mem_reg]:
                                 writes[mem_reg].add((callee_id, write_identifier))

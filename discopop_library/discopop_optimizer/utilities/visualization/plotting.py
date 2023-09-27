@@ -87,18 +87,10 @@ def show(graph):
         node_size=200,
         node_color="#2B85FD",
         node_shape="o",
-        nodelist=[
-            n
-            for n in graph.nodes
-            if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes
-        ],
+        nodelist=[n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes],
     )
-    node_ids[Workload] = [
-        n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes
-    ]
-    drawn_nodes.update(
-        [n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes]
-    )
+    node_ids[Workload] = [n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes]
+    drawn_nodes.update([n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes])
 
     # id as label
     labels = {}

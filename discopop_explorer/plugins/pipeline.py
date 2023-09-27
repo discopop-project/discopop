@@ -133,9 +133,7 @@ def get_matrix(pet: PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[Li
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
-            res[i].append(
-                int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root))
-            )
+            res[i].append(int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root)))
     return res
 
 

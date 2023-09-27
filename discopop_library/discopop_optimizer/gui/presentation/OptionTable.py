@@ -158,9 +158,7 @@ def show_options(
             window_title,
         ),
     ).grid()
-    Button(
-        root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)
-    ).grid()
+    Button(root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)).grid()
     Button(
         root,
         text="Export all codes",
@@ -235,9 +233,7 @@ def show_options(
         update_selection_button = Button(
             options_field,
             text="Update selection",
-            command=lambda opt=option, opt_name=option_name, ctx=context: __update_selection(  # type: ignore
-                opt, ctx
-            ),
+            command=lambda opt=option, opt_name=option_name, ctx=context: __update_selection(opt, ctx),  # type: ignore
         )
         update_selection_button.grid(row=0, column=3)
 

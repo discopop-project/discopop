@@ -168,9 +168,7 @@ class Update(object):
         for var_name in self.variable_names:
             var_obj = pet.get_variable(self.sink_cu_id, var_name)
             source_cu_id = (
-                self.asynchronous_source_cu_id
-                if self.asynchronous_possible
-                else self.synchronous_source_cu_id
+                self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
                 var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
@@ -195,9 +193,7 @@ class Update(object):
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
-            modified_var_names = [
-                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
-            ]
+            modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
         # determine update position in code
         # todo consider asynchronous updates
@@ -224,17 +220,13 @@ class Update(object):
             update_position,
         ]
 
-    def get_as_metadata_using_variable_names_and_memory_regions(
-        self, pet: PETGraphX, project_folder_path: str
-    ):
+    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX, project_folder_path: str):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
             var_obj = pet.get_variable(self.sink_cu_id, var_name)
             source_cu_id = (
-                self.asynchronous_source_cu_id
-                if self.asynchronous_possible
-                else self.synchronous_source_cu_id
+                self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
                 var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
@@ -259,9 +251,7 @@ class Update(object):
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
-            modified_var_names = [
-                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
-            ]
+            modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
         return [
             self.synchronous_source_cu_id,
@@ -281,21 +271,13 @@ class Update(object):
 
         for mem_reg in self.memory_regions:
             if parent_function_id in memory_regions_to_functions_and_variables[mem_reg]:
+                self.variable_names.update(memory_regions_to_functions_and_variables[mem_reg][parent_function_id])
+            elif self.synchronous_source_cu_id in memory_regions_to_functions_and_variables[mem_reg]:
                 self.variable_names.update(
-                    memory_regions_to_functions_and_variables[mem_reg][parent_function_id]
-                )
-            elif (
-                self.synchronous_source_cu_id in memory_regions_to_functions_and_variables[mem_reg]
-            ):
-                self.variable_names.update(
-                    memory_regions_to_functions_and_variables[mem_reg][
-                        self.synchronous_source_cu_id
-                    ]
+                    memory_regions_to_functions_and_variables[mem_reg][self.synchronous_source_cu_id]
                 )
             elif self.sink_cu_id in memory_regions_to_functions_and_variables[mem_reg]:
-                self.variable_names.update(
-                    memory_regions_to_functions_and_variables[mem_reg][self.sink_cu_id]
-                )
+                self.variable_names.update(memory_regions_to_functions_and_variables[mem_reg][self.sink_cu_id])
             else:
                 self.variable_names.add(VarName("UNDETERMINED(" + mem_reg + ")"))
 

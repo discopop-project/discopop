@@ -135,33 +135,19 @@ def main():
 
     # prepare arguments
     arguments["--project"] = get_path(os.getcwd(), arguments["--project"])
-    arguments["--execute-created-models"] = (
-        False if arguments["--execute-created-models"] == "False" else True
-    )
+    arguments["--execute-created-models"] = False if arguments["--execute-created-models"] == "False" else True
     arguments["--execution-append-measurements"] = (
         False if arguments["--execution-append-measurements"] == "False" else True
     )
-    arguments["--clean-created-code"] = (
-        False if arguments["--clean-created-code"] == "False" else True
-    )
-    arguments["--code-export-path"] = get_path(
-        arguments["--project"], arguments["--code-export-path"]
-    )
-    arguments["--exhaustive-search"] = (
-        False if arguments["--exhaustive-search"] == "False" else True
-    )
+    arguments["--clean-created-code"] = False if arguments["--clean-created-code"] == "False" else True
+    arguments["--code-export-path"] = get_path(arguments["--project"], arguments["--code-export-path"])
+    arguments["--exhaustive-search"] = False if arguments["--exhaustive-search"] == "False" else True
     arguments["--headless-mode"] = False if arguments["--headless-mode"] == "False" else True
     arguments["--dp-output-path"] = get_path(arguments["--project"], arguments["--dp-output-path"])
-    arguments["--file-mapping"] = get_path(
-        arguments["--dp-output-path"], arguments["--file-mapping"]
-    )
-    arguments["--detection-result-dump"] = get_path(
-        arguments["--dp-output-path"], arguments["--detection-result-dump"]
-    )
+    arguments["--file-mapping"] = get_path(arguments["--dp-output-path"], arguments["--file-mapping"])
+    arguments["--detection-result-dump"] = get_path(arguments["--dp-output-path"], arguments["--detection-result-dump"])
     arguments["--dp-optimizer-path"] = os.path.join(arguments["--project"], ".discopop_optimizer")
-    arguments["--make-target"] = (
-        None if arguments["--make-target"] == "None" else arguments["--make-target"]
-    )
+    arguments["--make-target"] = None if arguments["--make-target"] == "None" else arguments["--make-target"]
     arguments["--execute-single-model"] = (
         None
         if len(arguments["--execute-single-model"]) == 0
@@ -221,9 +207,7 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
         )
     if load_result:
         # load results from previous session
-        experiment = restore_session(
-            os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle")
-        )
+        experiment = restore_session(os.path.join(arguments["--dp-optimizer-path"], "last_experiment.pickle"))
         show_function_models(experiment, parent_frame, destroy_window_after_execution)
         # save experiment to disk
         export_to_json(experiment)
@@ -263,9 +247,7 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
             # construct and set overhead model for reduction suggestions
             system.set_reduction_overhead_model(
                 system.get_device(0),
-                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(
-                    benchType=MicrobenchType.FOR
-                ),
+                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(benchType=MicrobenchType.FOR),
             )
 
         # define Environment

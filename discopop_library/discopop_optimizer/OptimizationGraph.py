@@ -122,23 +122,19 @@ class OptimizationGraph(object):
                 experiment.substitutions[symbol] = Float(value)
             else:
                 free_symbol_ranges[symbol] = (cast(float, start_value), cast(float, end_value))
-                free_symbol_distributions[symbol] = cast(
-                    FreeSymbolDistribution, symbol_distribution
-                )
+                free_symbol_distributions[symbol] = cast(FreeSymbolDistribution, symbol_distribution)
 
         # by default, select the sequential version of each function for substitution
         for function in sequential_complete_performance_models:
-            experiment.selected_paths_per_function[
-                function
-            ] = sequential_complete_performance_models[function][0]
+            experiment.selected_paths_per_function[function] = sequential_complete_performance_models[function][0]
 
         # add function symbols to list of substitutions
         # collect substitutions
         for function in experiment.selected_paths_per_function:
             # register substitution
-            experiment.substitutions[
-                cast(Symbol, function.sequential_costs)
-            ] = experiment.selected_paths_per_function[function][0].sequential_costs
+            experiment.substitutions[cast(Symbol, function.sequential_costs)] = experiment.selected_paths_per_function[
+                function
+            ][0].sequential_costs
             experiment.substitutions[
                 cast(Symbol, function.parallelizable_costs)
             ] = experiment.selected_paths_per_function[function][0].parallelizable_costs

@@ -48,16 +48,12 @@ def get_written_and_read_memory_regions_by_cu(
         read_memory_regions = [
             MemoryRegion(cast(str, d.memory_region))
             for s, t, d in in_dep_edges
-            if (d.dtype == DepType.WAR)
-            and d.memory_region is not None
-            and len(d.memory_region) != 0
+            if (d.dtype == DepType.WAR) and d.memory_region is not None and len(d.memory_region) != 0
         ]
         read_memory_regions += [
             MemoryRegion(cast(str, d.memory_region))
             for s, t, d in out_dep_edges
-            if (d.dtype == DepType.RAW)
-            and d.memory_region is not None
-            and len(d.memory_region) != 0
+            if (d.dtype == DepType.RAW) and d.memory_region is not None and len(d.memory_region) != 0
         ]
 
         if cu_id not in written_memory_regions_by_cu_id:

@@ -10,9 +10,7 @@ from typing import cast
 from sympy import Expr, Integer, Max
 
 
-def convert_discopop_to_microbench_workload(
-    discopop_per_iteration_workload: Expr, iteration_count: Expr
-) -> Expr:
+def convert_discopop_to_microbench_workload(discopop_per_iteration_workload: Expr, iteration_count: Expr) -> Expr:
     """Converts the estimated workload into the workload measurement used by Microbench.
     According to Formula:
 
@@ -39,9 +37,7 @@ def convert_discopop_to_microbench_workload(
     return Max(Wm, Integer(1))
 
 
-def convert_microbench_to_discopop_workload(
-    microbench_workload: Expr, iteration_count: Expr
-) -> Expr:
+def convert_microbench_to_discopop_workload(microbench_workload: Expr, iteration_count: Expr) -> Expr:
     """Converts the estimated workload into the workload measurement used by DiscoPoP.
     According to Formula:
 

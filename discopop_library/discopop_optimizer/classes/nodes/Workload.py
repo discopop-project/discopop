@@ -80,27 +80,19 @@ class Workload(GenericNode):
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
                 .parallelizable_plus_combine(
-                    self.__get_costs_of_function_call(
-                        experiment, all_function_nodes, current_device
-                    )
+                    self.__get_costs_of_function_call(experiment, all_function_nodes, current_device)
                 )
             )
         else:
             cm = (
                 CostModel(
-                    current_device.get_estimated_execution_time_in_micro_seconds(
-                        self.parallelizable_workload, True
-                    ),
-                    current_device.get_estimated_execution_time_in_micro_seconds(
-                        self.sequential_workload, True
-                    ),
+                    current_device.get_estimated_execution_time_in_micro_seconds(self.parallelizable_workload, True),
+                    current_device.get_estimated_execution_time_in_micro_seconds(self.sequential_workload, True),
                 )
                 .parallelizable_multiply_combine(self.cost_multiplier)
                 .parallelizable_plus_combine(self.overhead)
                 .parallelizable_plus_combine(
-                    self.__get_costs_of_function_call(
-                        experiment, all_function_nodes, current_device
-                    )
+                    self.__get_costs_of_function_call(experiment, all_function_nodes, current_device)
                 )
             )
 
@@ -110,9 +102,7 @@ class Workload(GenericNode):
 
         return cm
 
-    def __get_costs_of_function_call(
-        self, experiment, all_function_nodes, current_device
-    ) -> CostModel:
+    def __get_costs_of_function_call(self, experiment, all_function_nodes, current_device) -> CostModel:
         """Check if the node performs a function call and returns the total costs for these."""
         total_costs = CostModel(Integer(0), Integer(0))
         # get CUIDs of called functions
@@ -124,17 +114,13 @@ class Workload(GenericNode):
                 )
             ]
             # filter for called FunctionRoots
-            called_function_nodes = [
-                fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids
-            ]
+            called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
             # remove duplicates
             called_function_nodes = list(set(called_function_nodes))
             # add costs of called function nodes to total costs
             for called_function_root in called_function_nodes:
                 total_costs = total_costs.parallelizable_plus_combine(
-                    called_function_root.get_cost_model(
-                        experiment, all_function_nodes, current_device
-                    )
+                    called_function_root.get_cost_model(experiment, all_function_nodes, current_device)
                 )
 
         return total_costs

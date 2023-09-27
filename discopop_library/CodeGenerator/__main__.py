@@ -63,18 +63,12 @@ def main():
     relevant_patterns: List[str] = (
         []
         if arguments["--patterns"] == "None"
-        else (
-            arguments["--patterns"].split(",")
-            if "," in arguments["--patterns"]
-            else [arguments["--patterns"]]
-        )
+        else (arguments["--patterns"].split(",") if "," in arguments["--patterns"] else [arguments["--patterns"]])
     )
     # validate patterns
     for pattern in relevant_patterns:
         if pattern not in ["reduction", "do_all", "simple_gpu", "combined_gpu"]:
-            raise ValueError(
-                "Unsupported pattern name: ", pattern, " given in '--patterns' argument!"
-            )
+            raise ValueError("Unsupported pattern name: ", pattern, " given in '--patterns' argument!")
 
     for file in [file_mapping_file, json_file]:
         if not os.path.isfile(file):

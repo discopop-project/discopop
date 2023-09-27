@@ -165,9 +165,7 @@ def get_dict_from_cu_inst_result_file(
     return res_dict
 
 
-def get_alias_information(
-    pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]
-):
+def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
     """Generate and return alias information dictionary.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -175,11 +173,7 @@ def get_alias_information(
     :return: alias information dictionary
     """
     # iterate over task suggestions
-    task_suggestions = [
-        s
-        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
-        if s.type is TPIType.TASK
-    ]
+    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.type is TPIType.TASK]
     # collect alias information
     aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]] = dict()
     called_function_cache: Dict = dict()
@@ -382,10 +376,7 @@ def identify_dependencies_for_different_functions(
                     )
 
                     # check if task suggestion_1 occurs prior to task_suggestion_2
-                    if (
-                        ts_1._node.start_position().split(":")[0]
-                        == ts_2._node.start_position().split(":")[0]
-                    ):
+                    if ts_1._node.start_position().split(":")[0] == ts_2._node.start_position().split(":")[0]:
                         # same file id
                         ts_1_pragma_line = (
                             int(ts_1.pragma_line)
@@ -474,18 +465,12 @@ def __get_potential_children_of_function(pet: PETGraphX, parent_function: Node) 
         ):
             potential_children.append(cur_potential_child)
         for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
-            if (
-                tmp_child not in queue
-                and tmp_child not in potential_children
-                and tmp_child not in visited
-            ):
+            if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
                 queue.append(tmp_child)
     return potential_children
 
 
-def __get_recursive_calls_from_function(
-    potential_children: List[Node], parent_function: Node
-) -> List[str]:
+def __get_recursive_calls_from_function(potential_children: List[Node], parent_function: Node) -> List[str]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of recursive function calls located inside the body of the given function.
     :param potential_children: List of CUs contained in function's body
@@ -499,9 +484,7 @@ def __get_recursive_calls_from_function(
         if line_contained_in_region(
             c.start_position(), parent_function.start_position(), parent_function.end_position()
         )
-        and line_contained_in_region(
-            c.end_position(), parent_function.start_position(), parent_function.end_position()
-        )
+        and line_contained_in_region(c.end_position(), parent_function.start_position(), parent_function.end_position())
     ]:
         for e in child.recursive_function_calls:
             if e is not None:
@@ -559,29 +542,21 @@ def identify_dependencies_for_same_functions(
             cur_potential_parent_function = potential_parent_functions_1.pop()
             # get recursive function call from original source code
             try:
-                get_function_call_from_source_code(
-                    source_code_files, int(ts_1.pragma_line), ts_1.node_id.split(":")[0]
-                )
+                get_function_call_from_source_code(source_code_files, int(ts_1.pragma_line), ts_1.node_id.split(":")[0])
             except IndexError:
                 continue
             # get potential children by dfs enumerating children nodes inside cur_potential_parent_functions scope
-            potential_children = __get_potential_children_of_function(
-                pet, cur_potential_parent_function
-            )
+            potential_children = __get_potential_children_of_function(pet, cur_potential_parent_function)
 
             cppf_recursive_function_calls = __get_recursive_calls_from_function(
                 potential_children, cur_potential_parent_function
             )
             outer_breaker = False
-            for rfce_idx_1, recursive_function_call_entry_1 in enumerate(
-                cppf_recursive_function_calls
-            ):
+            for rfce_idx_1, recursive_function_call_entry_1 in enumerate(cppf_recursive_function_calls):
                 if outer_breaker:
                     break
                 # 3. get R/W information for cf's parameters based on CUInstResult.txt
-                called_function_name_1, call_line_1 = recursive_function_call_entry_1.split(",")[
-                    0
-                ].split(" ")
+                called_function_name_1, call_line_1 = recursive_function_call_entry_1.split(",")[0].split(" ")
                 lower_line_num_1 = ts_1.pragma_line
                 if ":" in lower_line_num_1:
                     lower_line_num_1 = lower_line_num_1.split(":")[1]
@@ -609,17 +584,13 @@ def identify_dependencies_for_same_functions(
                     function_raw_information_cache,
                 ) = ret_val_1
                 # 4. iterate over successive calls to cf, named scf
-                for rfce_idx_2, recursive_function_call_entry_2 in enumerate(
-                    cppf_recursive_function_calls
-                ):
+                for rfce_idx_2, recursive_function_call_entry_2 in enumerate(cppf_recursive_function_calls):
                     if rfce_idx_2 == rfce_idx_1:
                         continue
                     if recursive_function_call_entry_2 is None:
                         continue
                     # 5. get R/W Information for scf
-                    called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(
-                        ","
-                    )[0].split(" ")
+                    called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(",")[0].split(" ")
                     lower_line_num_2 = ts_1.pragma_line
                     if ":" in lower_line_num_2:
                         lower_line_num_2 = lower_line_num_2.split(":")[1]
@@ -669,9 +640,7 @@ def identify_dependencies_for_same_functions(
                             continue
 
                         # 6.3 If intersecting parameter of cf is RAW, add dependency (scf:in, cf:out)
-                        for intersection_var, is_pessimistic in [
-                            (e[0], e[2]) for e in intersection if e[1]
-                        ]:
+                        for intersection_var, is_pessimistic in [(e[0], e[2]) for e in intersection if e[1]]:
                             if ts_1 not in out_dep_updates:
                                 out_dep_updates[ts_1] = []
                             out_dep_updates[ts_1].append((intersection_var, is_pessimistic))
@@ -680,9 +649,7 @@ def identify_dependencies_for_same_functions(
                             in_dep_updates[ts_2].append((intersection_var, is_pessimistic))
                     outer_breaker = True
     # perform updates of in and out dependencies
-    return __perform_dependency_updates(
-        task_suggestions, in_dep_updates, out_dep_updates, result_suggestions
-    )
+    return __perform_dependency_updates(task_suggestions, in_dep_updates, out_dep_updates, result_suggestions)
 
 
 def __perform_dependency_updates(
@@ -760,9 +727,7 @@ def get_alias_for_parameter_at_position(
             # read line from source code (iterate over lines of CU to search for function call)
             for line in range(cu.start_line, cu.end_line + 1):
                 try:
-                    source_code_line = get_function_call_from_source_code(
-                        source_code_files, line, cu.id.split(":")[0]
-                    )
+                    source_code_line = get_function_call_from_source_code(source_code_files, line, cu.id.split(":")[0])
                 except IndexError:
                     continue
                 # get parameter names from call
@@ -849,10 +814,7 @@ def check_dependence_of_task_pair(
                                 dependencies.append(parameter)
     dependencies = list(set(dependencies))
     # check if task suggestion_1 occurs prior to task_suggestion_2
-    if (
-        task_suggestion_1._node.start_position().split(":")[0]
-        == task_suggestion_2._node.start_position().split(":")[0]
-    ):
+    if task_suggestion_1._node.start_position().split(":")[0] == task_suggestion_2._node.start_position().split(":")[0]:
         # same file id
         ts_1_pragma_line = (
             int(task_suggestion_1.pragma_line)
@@ -884,9 +846,7 @@ def get_function_call_parameter_rw_information(
     function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
     called_cu_id: Optional[str] = None,
     called_function_name: Optional[str] = None,
-) -> Optional[
-    Tuple[str, List[Tuple[str, bool, bool]], List[Node], Dict[str, List[Tuple[bool, bool]]]]
-]:
+) -> Optional[Tuple[str, List[Tuple[str, bool, bool]], List[Node], Dict[str, List[Tuple[bool, bool]]]]]:
     """Retrieves the call_position and information whether the parameters of the target function are modified
     within the respective function, based on the contents of cu_inst_result_dict.
     Either called_cu_id, called_function_name or both need to be set.
@@ -1025,15 +985,11 @@ def get_function_call_parameter_rw_information(
             function_parameter_alias_dict,
             source_code_files,
         )
-        function_raw_information_cache[
-            called_function_cu.name
-        ] = res_called_function_raw_information
+        function_raw_information_cache[called_function_cu.name] = res_called_function_raw_information
     else:
         # read cache
         if called_function_cu.name in function_raw_information_cache:
-            res_called_function_raw_information = function_raw_information_cache[
-                called_function_cu.name
-            ]
+            res_called_function_raw_information = function_raw_information_cache[called_function_cu.name]
 
     # 5.5 match parameter_names with gathered R/W information of argument positions
     if len(raw_reported_for_param_positions) != len(parameter_names):
@@ -1043,10 +999,7 @@ def get_function_call_parameter_rw_information(
         for idx in range(0, len(parameter_names)):
             tmp = (
                 parameter_names[idx],
-                (
-                    raw_reported_for_param_positions[idx][0]
-                    or res_called_function_raw_information[idx][0]
-                ),
+                (raw_reported_for_param_positions[idx][0] or res_called_function_raw_information[idx][0]),
                 res_called_function_raw_information[idx][1],
             )
             if tmp[0] is None:
@@ -1125,11 +1078,7 @@ def get_function_call_parameter_rw_information_recursion_step(
             if cur_potential_child not in potential_children:
                 potential_children.append(cur_potential_child)
         for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
-            if (
-                tmp_child not in queue_1
-                and tmp_child not in potential_children
-                and tmp_child not in visited
-            ):
+            if tmp_child not in queue_1 and tmp_child not in potential_children and tmp_child not in visited:
                 queue_1.append(tmp_child)
 
     called_function_args_raw_information = []
@@ -1180,9 +1129,7 @@ def get_function_call_parameter_rw_information_recursion_step(
                     child_raw_info,
                     child_is_pessimistic,
                 ) in parameter_names_raw_information:
-                    for idx, (var_name, raw_info, is_pessimistic) in enumerate(
-                        called_function_args_raw_information
-                    ):
+                    for idx, (var_name, raw_info, is_pessimistic) in enumerate(called_function_args_raw_information):
                         if var_name == child_var_name:
                             called_function_args_raw_information[idx] = (
                                 var_name,
@@ -1227,17 +1174,13 @@ def get_function_call_parameter_rw_information_recursion_step(
                     break
             if var_name_is_modified:
                 # update RAW information
-                for idx, (old_var_name, raw_info, _) in enumerate(
-                    called_function_args_raw_information
-                ):
+                for idx, (old_var_name, raw_info, _) in enumerate(called_function_args_raw_information):
                     if old_var_name == var_name:
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True, True)
                             # second True denotes the pessimistic nature of a potential created dependency
     # remove names from called_function_args_raw_information
-    called_function_args_raw_information_bools = [
-        (e[1], e[2]) for e in called_function_args_raw_information
-    ]
+    called_function_args_raw_information_bools = [(e[1], e[2]) for e in called_function_args_raw_information]
     return (
         recursively_visited,
         called_function_cu.name,

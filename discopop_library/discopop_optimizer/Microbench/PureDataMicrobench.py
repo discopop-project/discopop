@@ -51,21 +51,15 @@ class PureDataMicrobench(Microbench):
     ]
 
     @overload
-    def __getitem__(
-        self, key: MicrobenchType
-    ) -> Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]:
+    def __getitem__(self, key: MicrobenchType) -> Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]:
         ...
 
     @overload
-    def __getitem__(
-        self, key: Tuple[MicrobenchType, MicrobenchDimension]
-    ) -> Dict[MicrobenchCoordinate, List[float]]:
+    def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension]) -> Dict[MicrobenchCoordinate, List[float]]:
         ...
 
     @overload
-    def __getitem__(
-        self, key: Tuple[MicrobenchType, MicrobenchDimension, MicrobenchCoordinate]
-    ) -> List[float]:
+    def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension, MicrobenchCoordinate]) -> List[float]:
         ...
 
     # allow to use this class like a dictionary
@@ -108,9 +102,7 @@ class PureDataMicrobench(Microbench):
         ):
             if not isinstance(value, Dict):
                 raise ValueError(
-                    "Invalid value type: "
-                    + str(type(value))
-                    + " expected: Dict[MicrobenchCoordinate, List[float]]"
+                    "Invalid value type: " + str(type(value)) + " expected: Dict[MicrobenchCoordinate, List[float]]"
                 )
             self.measurements[key[0]][key[1]] = value
         elif (
@@ -165,8 +157,7 @@ class PureDataMicrobench(Microbench):
                 if d in dimMap:
                     for coord, values in dimMap[d].items():
                         self.measurements[type][d][coord] = [
-                            v if v >= min and v <= max else (min if v < min else max)
-                            for v in values
+                            v if v >= min and v <= max else (min if v < min else max) for v in values
                         ]
 
     def merge(self, other: PureDataMicrobench):

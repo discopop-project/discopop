@@ -144,9 +144,7 @@ class ExitPoint(object):
                 for vn, t, s in var_names_types_and_sizes
             ]
         else:
-            modified_var_names = [
-                (vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes
-            ]
+            modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
         return [
             ",".join(modified_var_names),

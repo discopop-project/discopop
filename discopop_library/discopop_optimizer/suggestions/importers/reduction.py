@@ -43,9 +43,7 @@ def import_suggestion(
                 # mark node for parallel execution
                 node_data_copy.execute_in_parallel = True
                 # copy loop iteration variable
-                cast(Loop, node_data_copy).iterations_symbol = cast(
-                    Loop, node_data_copy
-                ).iterations_symbol
+                cast(Loop, node_data_copy).iterations_symbol = cast(Loop, node_data_copy).iterations_symbol
                 # add suggestion to node data
                 node_data_copy.suggestion = suggestion
                 node_data_copy.suggestion_type = "reduction"
@@ -82,9 +80,7 @@ def import_suggestion(
     return graph
 
 
-def get_cost_multiplier(
-    node_id: int, environment: Experiment, device_id: int
-) -> Tuple[CostModel, List[Symbol]]:
+def get_cost_multiplier(node_id: int, environment: Experiment, device_id: int) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the multiplier to represent the effects of the given suggestion on the cost model.
     A CostModel object is used to store the information on the path selection.
     Returns the multiplier and the list of introduces symbols
@@ -100,9 +96,7 @@ def get_cost_multiplier(
     return cm, []
 
 
-def get_overhead_term(
-    node_data: Loop, environment: Experiment, device_id: int
-) -> Tuple[CostModel, List[Symbol]]:
+def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) -> Tuple[CostModel, List[Symbol]]:
     """Creates and returns the Expression which represents the Overhead incurred by the given suggestion.
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
     The function has been created using Extra-P.
@@ -118,9 +112,7 @@ def get_overhead_term(
     # since node_data is of type Loop, parallelizable_workload has to exist
     per_iteration_workload = cast(Expr, node_data.parallelizable_workload)
     # convert DiscoPoP workload to Microbench workload
-    converted_per_iteration_workload = convert_discopop_to_microbench_workload(
-        per_iteration_workload, iterations
-    )
+    converted_per_iteration_workload = convert_discopop_to_microbench_workload(per_iteration_workload, iterations)
 
     substitutions: Dict[Symbol, Expr] = {}
 

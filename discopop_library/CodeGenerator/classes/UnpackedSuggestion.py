@@ -153,9 +153,7 @@ class UnpackedSuggestion(object):
                     reductions_dict[red_type] = []
                 reductions_dict[red_type].append(var)
             for red_type in reductions_dict:
-                pragma.pragma_str += (
-                    "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
-                )
+                pragma.pragma_str += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
 
         pragma.file_id = self.file_id
         pragma.start_line = self.start_line
@@ -188,9 +186,7 @@ class UnpackedSuggestion(object):
                         reductions_dict[red_type] = []
                     reductions_dict[red_type].append(var)
                 for red_type in reductions_dict:
-                    pragma.pragma_str += (
-                        "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
-                    )
+                    pragma.pragma_str += "reduction(" + red_type + ":" + ",".join(reductions_dict[red_type]) + ") "
             if len(stage["in_deps"]) > 0:
                 pragma.pragma_str += "depends(in:" + ",".join(stage["in_deps"]) + ") "
             if len(stage["out_deps"]) > 0:
@@ -238,9 +234,7 @@ class UnpackedSuggestion(object):
                 construct_start_line = int(construct_start.split(":")[1])
                 child_pragma = Pragma()
                 if mark_invalid:
-                    child_pragma.pragma_str = (
-                        "// INVALID - MISSING POSITION:: " + construct["name"] + " "
-                    )
+                    child_pragma.pragma_str = "// INVALID - MISSING POSITION:: " + construct["name"] + " "
                 else:
                     child_pragma.pragma_str = construct["name"] + " "
                 if loop["collapse"] > 1:
@@ -270,9 +264,7 @@ class UnpackedSuggestion(object):
                 elif construct["positioning"] == OmpConstructPositioning.AFTER_LINE:
                     child_pragma.pragma_position = PragmaPosition.AFTER_START
                 else:
-                    raise ValueError(
-                        "Unsupported positioning information: ", construct["positioning"]
-                    )
+                    raise ValueError("Unsupported positioning information: ", construct["positioning"])
                 # create pragma for visualization
                 child_pragma.start_line = start_line
                 child_pragma.end_line = end_line

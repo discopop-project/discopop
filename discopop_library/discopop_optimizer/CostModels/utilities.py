@@ -55,9 +55,7 @@ def get_performance_models_for_functions(
 
             # filter out NaN - Models
             performance_models[node_data] = [
-                model
-                for model in performance_models[node_data]
-                if model.parallelizable_costs != sympy.nan
+                model for model in performance_models[node_data] if model.parallelizable_costs != sympy.nan
             ]
 
     return performance_models
@@ -195,11 +193,7 @@ def get_node_performance_models(
                     for seq in sequential_version_ids:
                         for option in get_out_options(graph, seq):
                             # 2.3
-                            for visited_req in [
-                                req
-                                for req in get_requirements(graph, option)
-                                if req in visited_nodes
-                            ]:
+                            for visited_req in [req for req in get_requirements(graph, option) if req in visited_nodes]:
                                 # 2.4
                                 if visited_req != successor:
                                     path_invalid = True
@@ -235,19 +229,14 @@ def get_node_performance_models(
 
                 # check if the current decision invalidates decision requirements, if some are specified
                 if restrict_to_decisions is not None:
-                    if not (
-                        successor in restrict_to_decisions
-                        or data_at(graph, successor).suggestion is None
-                    ):
+                    if not (successor in restrict_to_decisions or data_at(graph, successor).suggestion is None):
                         path_invalid = True
                     if not path_invalid:
                         if data_at(graph, successor).suggestion is None:
                             # if the sequential "fallback" has been used, check if a different option is specifically
                             # mentioned in restrict_to_decisions. If so, the sequential fallback shall be ignored.
                             options = get_out_options(graph, successor)
-                            restricted_options = [
-                                opt for opt in options if opt in restrict_to_decisions
-                            ]
+                            restricted_options = [opt for opt in options if opt in restrict_to_decisions]
                             if len(restricted_options) != 0:
                                 # do not use he sequential fallback since a required option exists
                                 path_invalid = True
@@ -282,9 +271,7 @@ def get_node_performance_models(
                     ignore_node_costs=ignore_node_costs,
                 ):
                     tmp = combined_model.parallelizable_plus_combine(model)
-                    tmp.path_decisions += [
-                        d for d in model.path_decisions if d not in tmp.path_decisions
-                    ]
+                    tmp.path_decisions += [d for d in model.path_decisions if d not in tmp.path_decisions]
                     result_list.append(tmp)
         if len(result_list) >= 1:
             return result_list

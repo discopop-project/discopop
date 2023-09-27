@@ -33,9 +33,7 @@ class PipelineStage(object):
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
 
-        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(
-            pet, node, "Pipeline", in_dep, out_dep
-        )
+        fp, p, s, in_deps, out_deps, in_out_deps, r = classify_task_vars(pet, node, "Pipeline", in_dep, out_dep)
 
         self.first_private = fp
         self.private = p
@@ -88,11 +86,7 @@ class PipelineInfo(PatternInfo):
     def __in_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, CUNode):
-            raw.extend(
-                (s, t, d)
-                for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA)
-                if d.dtype == DepType.RAW
-            )
+            raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = [node]
         for i in range(self._stages.index(node)):
@@ -103,11 +97,7 @@ class PipelineInfo(PatternInfo):
     def __out_dep(self, node: Node):
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, CUNode):
-            raw.extend(
-                (s, t, d)
-                for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA)
-                if d.dtype == DepType.RAW
-            )
+            raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
@@ -177,9 +167,7 @@ def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
-        )
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
     print("GLOBAL RES: ", result)
@@ -232,11 +220,7 @@ def __detect_pipeline(pet: PETGraphX, root: Node, children_cache=None, dep_cache
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(
-            1.0
-            if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root)
-            else 0.0
-        )
+        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):

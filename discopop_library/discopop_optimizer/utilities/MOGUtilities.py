@@ -46,73 +46,42 @@ def get_edge_data(graph: nx.DiGraph, source: int, target: int) -> GenericEdge:
 
 def get_successors(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the successors of the given node"""
-    return [
-        edge[1]
-        for edge in graph.out_edges(node_id, data="data")
-        if isinstance(edge[2], SuccessorEdge)
-    ]
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], SuccessorEdge)]
 
 
 def get_temporary_successors(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the temporary successors of the given node"""
-    return [
-        edge[1]
-        for edge in graph.out_edges(node_id, data="data")
-        if isinstance(edge[2], TemporaryEdge)
-    ]
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]
 
 
 def get_predecessors(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the predecessors of the given node"""
-    return [
-        edge[0]
-        for edge in graph.in_edges(node_id, data="data")
-        if isinstance(edge[2], SuccessorEdge)
-    ]
+    return [edge[0] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], SuccessorEdge)]
 
 
 def get_children(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the children of the given node"""
-    return [
-        edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], ChildEdge)
-    ]
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], ChildEdge)]
 
 
 def get_out_options(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the parallelization options of the given node"""
-    return [
-        edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)
-    ]
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
 
 
 def get_in_options(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the parallelization options of the given node"""
-    return [
-        edge[1] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)
-    ]
+    return [edge[1] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
 
 
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the requirements of the parallelization option in the given node"""
-    return [
-        edge[1]
-        for edge in graph.out_edges(node_id, data="data")
-        if isinstance(edge[2], RequirementEdge)
-    ]
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], RequirementEdge)]
 
 
 def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     """Checks whether the given node has outgoing temporary successor edges"""
-    return (
-        len(
-            [
-                edge
-                for edge in graph.out_edges(node_id, data="data")
-                if isinstance(edge[2], TemporaryEdge)
-            ]
-        )
-        > 0
-    )
+    return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
 
 
 def show(graph):
@@ -183,18 +152,10 @@ def show(graph):
         node_size=200,
         node_color="#2B85FD",
         node_shape="o",
-        nodelist=[
-            n
-            for n in graph.nodes
-            if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes
-        ],
+        nodelist=[n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes],
     )
-    node_ids[Workload] = [
-        n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes
-    ]
-    drawn_nodes.update(
-        [n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes]
-    )
+    node_ids[Workload] = [n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes]
+    drawn_nodes.update([n for n in graph.nodes if isinstance(data_at(graph, n), Workload) and n not in drawn_nodes])
 
     # id as label
     labels = {}
@@ -378,12 +339,8 @@ def get_read_and_written_data_from_subgraph(
         written_memory_regions.update(writes)
     # add reads and writes of the node itself
     node_data = data_at(graph, node_id)
-    read_memory_regions.update(
-        [read_access.memory_region for read_access in node_data.read_memory_regions]
-    )
-    written_memory_regions.update(
-        [write_access.memory_region for write_access in node_data.written_memory_regions]
-    )
+    read_memory_regions.update([read_access.memory_region for read_access in node_data.read_memory_regions])
+    written_memory_regions.update([write_access.memory_region for write_access in node_data.written_memory_regions])
 
     return read_memory_regions, written_memory_regions
 
@@ -398,9 +355,7 @@ def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         preds = get_predecessors(graph, current_node)
 
     parents = [
-        cast(int, edge[0])
-        for edge in graph.in_edges(current_node, data="data")
-        if isinstance(edge[2], ChildEdge)
+        cast(int, edge[0]) for edge in graph.in_edges(current_node, data="data") if isinstance(edge[2], ChildEdge)
     ]
 
     return parents
@@ -416,9 +371,7 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         current = queue.pop()
         all_parents.add(current)
         new_parents = [
-            parent
-            for parent in get_parents(graph, current)
-            if parent not in queue and parent not in all_parents
+            parent for parent in get_parents(graph, current) if parent not in queue and parent not in all_parents
         ]
         queue.update(new_parents)
     return list(all_parents)

@@ -40,9 +40,7 @@ def get_locally_optimized_models(
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
     all_function_ids = get_all_function_nodes(graph)
-    all_function_nodes: List[FunctionRoot] = [
-        cast(FunctionRoot, data_at(graph, fn_id)) for fn_id in all_function_ids
-    ]
+    all_function_nodes: List[FunctionRoot] = [cast(FunctionRoot, data_at(graph, fn_id)) for fn_id in all_function_ids]
     for function_node in all_function_ids:
         # get a list of all decisions that have to be made
         decisions_to_be_made = __find_decisions(graph, function_node)
@@ -86,15 +84,11 @@ def get_locally_optimized_models(
                     continue
 
             # iteratively apply variable substitutions
-            decision_models_with_substitutions: List[
-                Tuple[int, Tuple[CostModel, ContextObject, CostModel]]
-            ] = []
+            decision_models_with_substitutions: List[Tuple[int, Tuple[CostModel, ContextObject, CostModel]]] = []
             # initialize substitution
             for decision, pair in decision_models:
                 model, context = pair
-                decision_models_with_substitutions.append(
-                    (decision, (model, context, copy.deepcopy(model)))
-                )
+                decision_models_with_substitutions.append((decision, (model, context, copy.deepcopy(model))))
 
             modification_found = True
             while modification_found:
@@ -106,17 +100,13 @@ def get_locally_optimized_models(
                     tmp_model = substituted_model.parallelizable_costs.subs(substitutions)
                     if tmp_model != substituted_model.parallelizable_costs:
                         modification_found = True
-                    substituted_model.parallelizable_costs = (
-                        substituted_model.parallelizable_costs.subs(substitutions)
-                    )
+                    substituted_model.parallelizable_costs = substituted_model.parallelizable_costs.subs(substitutions)
 
                     # apply substitutions to sequential costs
                     tmp_model = substituted_model.sequential_costs.subs(substitutions)
                     if tmp_model != substituted_model.sequential_costs:
                         modification_found = True
-                    substituted_model.sequential_costs = substituted_model.sequential_costs.subs(
-                        substitutions
-                    )
+                    substituted_model.sequential_costs = substituted_model.sequential_costs.subs(substitutions)
 
             #                    decision_models_with_substitutions.append(
             ##                        (decision, (model, context, substituted_model))
@@ -161,9 +151,7 @@ def get_locally_optimized_models(
         )
 
         # calculate and append costs of data transfers to the performance models
-        complete_performance_models = add_data_transfer_costs(
-            graph, performance_models_with_transfers, environment
-        )
+        complete_performance_models = add_data_transfer_costs(graph, performance_models_with_transfers, environment)
         # merge dictionaries
         result_dict = {**result_dict, **complete_performance_models}
 
