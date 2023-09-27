@@ -497,7 +497,7 @@ def identify_dependencies_for_same_functions(
     pet: PETGraphX,
     suggestions: List[PatternInfo],
     source_code_files: Dict[str, str],
-    cu_inst_result_dict: dict[str, List[Dict[str, Optional[str]]]],
+    cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
     function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
 ) -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
