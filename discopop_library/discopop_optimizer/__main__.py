@@ -241,42 +241,6 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
         # define System
         # todo make system user-configurable, or detect it using a set of benchmarks
         system = System()
-        device_0_threads = Symbol("device_0_threads")  # Integer(48)
-        device_0 = CPU(
-            Integer(3000000000),
-            device_0_threads,
-            openmp_device_id=-1,
-            device_specific_compiler_flags="COMPILE FOR CPU",
-        )  # Device 0 always acts as the host system
-        gpu_compiler_flags = "COMPILE FOR CPU"
-        device_1 = GPU(
-            Integer(512000000),
-            Integer(512),
-            openmp_device_id=0,
-            device_specific_compiler_flags="COMPILE FOR GPU",
-        )
-        device_2 = GPU(
-            Integer(512000000),
-            Integer(512),
-            openmp_device_id=1,
-            device_specific_compiler_flags="COMPILE FOR GPU",
-        )
-        system.add_device(device_0)
-        system.add_device(device_1)
-        system.add_device(device_2)
-        # define Network
-        network = system.get_network()
-        network.add_connection(device_0, device_0, Integer(100000), Integer(0))
-        network.add_connection(device_0, device_1, Integer(100), Integer(1000000))
-        network.add_connection(device_1, device_0, Integer(100), Integer(1000000))
-        network.add_connection(device_1, device_1, Integer(100000), Integer(0))
-
-        network.add_connection(device_0, device_2, Integer(100), Integer(10000000))
-        network.add_connection(device_2, device_0, Integer(100), Integer(10000000))
-        network.add_connection(device_2, device_2, Integer(1000), Integer(0))
-
-        network.add_connection(device_1, device_2, Integer(100), Integer(500000))
-        network.add_connection(device_2, device_1, Integer(100), Integer(500000))
 
         # todo connections between devices might happen as update to host + update to second device.
         #  As of right now, connections between two devices are implemented in this manner.
@@ -289,7 +253,8 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
                 raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
             # construct and set overhead model for doall suggestions
             system.set_device_doall_overhead_model(
-                device_0, ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy()
+                system.get_device(0),
+                ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(),
             )
         if arguments["--reduction-microbench-file"] != "None":
             microbench_file = arguments["--reduction-microbench-file"]
@@ -297,7 +262,7 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
                 raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
             # construct and set overhead model for reduction suggestions
             system.set_reduction_overhead_model(
-                device_0,
+                system.get_device(0),
                 ExtrapInterpolatedMicrobench(microbench_file).getFunctionSympy(
                     benchType=MicrobenchType.FOR
                 ),

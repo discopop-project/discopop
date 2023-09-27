@@ -158,10 +158,6 @@ def get_overhead_term(
 
     substituted_overhead_model = overhead_model.xreplace(substitutions)
 
-    # todo: convert result (in s) to workload
-
-    print("OVERHEAD: ", substituted_overhead_model)
-
     # register symbol for overhead
     doall_overhead_symbol = Symbol(
         "doall_" + str(node_data.node_id) + "_pos_" + str(node_data.position) + "_overhead"

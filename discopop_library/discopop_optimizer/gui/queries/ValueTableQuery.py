@@ -21,7 +21,7 @@ def query_user_for_symbol_values(
     symbols: List[Symbol],
     suggested_values: Dict[Symbol, Expr],
     arguments: Dict,
-    parent_frame: tk.Frame,
+    parent_frame: Optional[tk.Frame],
 ) -> List[
     Tuple[
         Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]
@@ -50,6 +50,9 @@ def query_user_for_symbol_values(
         return query_result
 
     column_headers = ["Symbol Name", "Symbol Value", "Range Start", "Range End", "Range Relevance"]
+
+    if parent_frame is None:
+        raise ValueError("No frame provided!")
 
     # configure weights
     parent_frame.rowconfigure(0, weight=1)

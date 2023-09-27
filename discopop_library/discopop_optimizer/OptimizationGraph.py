@@ -49,7 +49,7 @@ class OptimizationGraph(object):
         project_folder_path,
         experiment: Experiment,
         arguments: Dict,
-        parent_frame: tk.Frame,
+        parent_frame: Optional[tk.Frame],
         destroy_window_after_execution: bool,
     ):
         # construct optimization graph from PET Graph
@@ -70,15 +70,6 @@ class OptimizationGraph(object):
             sequential_function_performance_models_with_transfers,
             experiment,
         )
-
-        for function_root in sequential_complete_performance_models:
-            print("SEQ: Function: ", function_root.name)
-            print("\tfunction_model: ")
-            function_root.performance_model.print()
-
-            for model, ctx in sequential_complete_performance_models[function_root]:
-                print("\n\tmodel: ")
-                model.print()
 
         # import parallelization suggestions
         experiment.optimization_graph = import_suggestions(
@@ -192,13 +183,14 @@ class OptimizationGraph(object):
 
         # find the minimum of the exhaustive list of models
         exhaustive_minima: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
-        print("Sorting exhaustive models...")
-        for function in exhaustive_performance_models:
-            sorted_exhaustive_performance_models = sorted(
-                exhaustive_performance_models[function], key=lambda x: x[0]
-            )
-            exhaustive_minima[function] = [sorted_exhaustive_performance_models[0]]
-        print("\tDone.")
+        if len(exhaustive_performance_models) > 0:
+            print("Sorting exhaustive models...")
+            for function in exhaustive_performance_models:
+                sorted_exhaustive_performance_models = sorted(
+                    exhaustive_performance_models[function], key=lambda x: x[0]
+                )
+                exhaustive_minima[function] = [sorted_exhaustive_performance_models[0]]
+            print("\tDone.")
 
         for function in sequential_complete_performance_models:
             # show table of options
@@ -228,6 +220,8 @@ class OptimizationGraph(object):
 
         # show function models
         if not arguments["--headless-mode"]:
+            if parent_frame is None:
+                raise ValueError("No frame provided!")
             show_function_models(experiment, parent_frame, destroy_window_after_execution)
         else:
             # perform actions for headless mode

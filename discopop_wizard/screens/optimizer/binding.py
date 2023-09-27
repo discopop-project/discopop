@@ -100,8 +100,6 @@ def create_optimizer_screen(wizard, parent_frame, execution_configuration):
     )
     start_button.grid(row=5, column=0)
 
-    print("CREATING OPTIMIZER SCREEN")
-
 
 def __start_optimizer(
     execution_configuration,

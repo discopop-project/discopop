@@ -62,11 +62,7 @@ class Loop(Workload):
 
         # calculate workload per iteration
         per_iteration_parallelizable_workload = discopop_workload / iterations
-        print("ADDING LOOP @ ", position)
-        # print("\tpar_workload: ", parallelizable_workload)
-        # print("\tpar_wor_expr: ", parallelizable_workload_expr)
-        print("\tper it: ", self.per_iteration_parallelizable_workload)
-        # print("\t#iterations: ", iterations)
+
         super().__init__(
             node_id,
             experiment,
