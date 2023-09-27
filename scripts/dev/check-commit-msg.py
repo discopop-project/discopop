@@ -19,7 +19,7 @@ with open(path_to_commit_msg, "r") as f:
     commit_msg = f.read()
     commit_msg = commit_msg.replace("\n", "")
 
-pattern = re.compile("^(feat|fix|test|chore|wip)(\(\S+\))?(\[\S+\])?:.+$")
+pattern = re.compile("^(feat|fix|test|chore|wip)(\(.+\))?(\[.+\])?:.+$")
 matches = bool(pattern.match(commit_msg))
 
 if matches:
