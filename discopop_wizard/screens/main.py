@@ -45,7 +45,7 @@ class MainScreen(object):
         self.optimizer_frame = tk.Frame(self.notebook)
         self.notebook.add(self.details_frame, text="Details")
         self.notebook.add(self.results_frame, text="Results")
-        self.notebook.add(self.optimizer_frame, text="Optimizer")
+        self.notebook.add(self.optimizer_frame, text="Optimizer (experimental)")
 
         self.build_configurations_frame(wizard)
 

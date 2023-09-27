@@ -239,6 +239,7 @@ def start_optimizer(arguments, parent_frame: Optional[tk.Frame] = None):
         print("Done")
 
         # define System
+        # todo make system user-configurable, or detect it using a set of benchmarks
         system = System()
         device_0_threads = Symbol("device_0_threads")  # Integer(48)
         device_0 = CPU(
