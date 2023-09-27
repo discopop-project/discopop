@@ -8,8 +8,8 @@
 
 
 import functools
-from sys import platform
 from enum import Enum
+from sys import platform
 
 
 class Platform(Enum):

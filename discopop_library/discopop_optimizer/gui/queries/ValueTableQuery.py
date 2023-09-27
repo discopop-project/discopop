@@ -5,13 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import sys
+import tkinter as tk
+from tkinter import *
 from typing import List, Tuple, Optional, Dict, cast, Union
 
 from sympy import Symbol, Expr
-from tkinter import *
-from tkinter import ttk
-import tkinter as tk
 
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget

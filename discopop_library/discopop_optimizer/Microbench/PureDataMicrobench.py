@@ -6,9 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from __future__ import annotations
+
+import json
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, TypeVar, Union, overload
-import json
 
 import numpy as np
 

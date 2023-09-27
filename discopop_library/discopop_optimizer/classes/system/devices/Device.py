@@ -8,9 +8,9 @@
 from typing import Tuple, List, Optional, cast
 
 from sympy import Expr, Symbol
+from sympy import Integer
 
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from sympy import Integer
 
 
 class Device(object):

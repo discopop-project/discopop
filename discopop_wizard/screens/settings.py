@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import os
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk

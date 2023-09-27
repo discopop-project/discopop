@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import Dict, List, Tuple, Union
+
 from .Microbench import Microbench
 from .Microbench import MicrobenchCoordinate, MicrobenchDimension, MicrobenchType
 

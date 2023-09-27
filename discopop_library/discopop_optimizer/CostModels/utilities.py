@@ -16,8 +16,6 @@ from sympy import Integer, Expr, Symbol  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
-from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,

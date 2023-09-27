@@ -5,8 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from multiprocessing import Pool
 from typing import List, Dict, Set, Tuple, cast
+
 from alive_progress import alive_bar  # type: ignore
+
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
     CUNode,
@@ -19,9 +22,8 @@ from ..PETGraphX import (
     MemoryRegion,
     DepType,
 )
-from ..variable import Variable
 from ..utils import classify_loop_variables
-from multiprocessing import Pool
+from ..variable import Variable
 
 
 class DoAllInfo(PatternInfo):

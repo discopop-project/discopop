@@ -8,7 +8,7 @@
 import warnings
 from typing import Dict, List, Tuple, Optional
 
-from sympy import Symbol, Expr, Integer, simplify
+from sympy import Symbol, Expr, Integer
 
 from discopop_library.discopop_optimizer.classes.system.Network import Network
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU

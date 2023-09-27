@@ -6,13 +6,13 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from dataclasses import dataclass
-import re
 import os
-from typing import Any, List, Tuple
+import re
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from os.path import abspath, dirname
+from typing import Any, List, Tuple
 
 from lxml import objectify  # type:ignore
 

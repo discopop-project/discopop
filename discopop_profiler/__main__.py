@@ -12,8 +12,8 @@ import argparse
 import logging
 import shutil
 
-from . import DiscopopCpp
 from discopop_library.global_data.version.utils import get_version
+from . import DiscopopCpp
 
 PROG = "discopop_profiler"
 

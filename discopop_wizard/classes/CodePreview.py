@@ -6,15 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import copy
-import sys
-from pathlib import Path
-from typing import Tuple, Optional, List, Dict, Sequence, cast
 import tkinter as tk
+from pathlib import Path
+from typing import Optional, List, cast
 
 from discopop_library.CodeGenerator.classes.ContentBuffer import ContentBuffer
 from discopop_library.CodeGenerator.classes.Line import Line
-from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
 
 class CodePreviewLine(Line):

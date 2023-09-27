@@ -31,8 +31,8 @@ from schema import Schema, Use, SchemaError  # type:ignore
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_json_strings as generate_code_from_json_strings,
 )
-from discopop_library.PathManagement.PathManagement import load_file_mapping, get_path
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
+from discopop_library.PathManagement.PathManagement import load_file_mapping, get_path
 
 docopt_schema = Schema(
     {

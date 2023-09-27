@@ -7,10 +7,10 @@
 # directory for details.
 import tkinter
 from tkinter import *
-from typing import List, Tuple, Dict, Union, Optional, cast
+from typing import List, Tuple, Dict, Optional, cast
 
 import networkx as nx  # type: ignore
-from sympy import Symbol, Expr
+from sympy import Symbol
 
 from discopop_explorer.PETGraphX import PETGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

@@ -6,8 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import sys
-from typing import Dict, List, Tuple, Set, Optional, cast
+from typing import Dict, List, Tuple, Set, Optional
 
 from discopop_explorer.PETGraphX import PETGraphX, EdgeType, NodeID, CUNode, MemoryRegion
 

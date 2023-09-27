@@ -5,12 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import tkinter as tk
 from typing import Dict, cast, List, Tuple, Optional, Any
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
 import sympy  # type: ignore
-import tkinter as tk
 from spb import plot3d, MB  # type: ignore
 from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff  # type: ignore
 

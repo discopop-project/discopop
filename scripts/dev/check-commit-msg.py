@@ -6,10 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import re
+
 # checks the commit message for correct formatting.
 # invoked by the git commit-msg hook, if configured.
 import sys
-import re
 
 # todo translate to python
 

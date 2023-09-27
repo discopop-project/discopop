@@ -41,7 +41,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_temporary_edge,
     redirect_edge,
     convert_temporary_edges,
-    show,
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
 )

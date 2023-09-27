@@ -6,9 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List, cast
+from typing import List
 
-from discopop_explorer.PETGraphX import EdgeType, FunctionNode, NodeType, PETGraphX
+from discopop_explorer.PETGraphX import EdgeType, FunctionNode, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,

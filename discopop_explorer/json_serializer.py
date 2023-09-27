@@ -9,12 +9,12 @@
 from json import JSONEncoder
 from typing import Dict, Any
 
-from .PETGraphX import Node
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from .PETGraphX import Node
 from .pattern_detectors.PatternInfo import PatternInfo
 from .pattern_detectors.pipeline_detector import PipelineStage
-from .variable import Variable
 from .pattern_detectors.task_parallelism.classes import TPIType
+from .variable import Variable
 
 
 def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:

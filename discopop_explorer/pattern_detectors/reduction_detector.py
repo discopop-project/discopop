@@ -7,7 +7,9 @@
 # directory for details.
 
 
+from multiprocessing import Pool
 from typing import List, cast
+
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
@@ -21,9 +23,8 @@ from ..PETGraphX import (
     DepType,
     EdgeType,
 )
+from ..utils import is_reduction_var, classify_loop_variables
 from ..variable import Variable
-from ..utils import is_reduction_var, classify_loop_variables, contains
-from multiprocessing import Pool
 
 
 class ReductionInfo(PatternInfo):

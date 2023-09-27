@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Tuple, List, Set, cast, Dict, Optional
+from typing import Tuple, Set, cast
 
 from discopop_explorer.PETGraphX import NodeID, PETGraphX, MemoryRegion, CUNode, EdgeType, DepType
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (

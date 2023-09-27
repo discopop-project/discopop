@@ -7,27 +7,26 @@
 # directory for details.
 
 import cProfile
-from dataclasses import dataclass
-from pathlib import Path
-from pluginbase import PluginBase  # type:ignore
-from typing import List, Optional
-
 import json
 import os
-import pstats2  # type:ignore
 import sys
 import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
 
-from .json_serializer import PatternInfoSerializer
-from .parser import parse_inputs
-from .pattern_detection import PatternDetectorX
-from .PETGraphX import PETGraphX
+import pstats2  # type:ignore
+from pluginbase import PluginBase  # type:ignore
 
+from discopop_library.PathManagement.PathManagement import get_path
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
     ExtrapInterpolatedMicrobench,
 )
-from discopop_library.PathManagement.PathManagement import get_path
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from .PETGraphX import PETGraphX
+from .json_serializer import PatternInfoSerializer
+from .parser import parse_inputs
+from .pattern_detection import PatternDetectorX
 
 
 @dataclass

@@ -8,17 +8,16 @@
 import copy
 from typing import List, Dict, Tuple, Optional, cast
 
+import matplotlib  # type: ignore
 import numpy as np
-from matplotlib import pyplot as plt  # type: ignore
-import matplotlib
-from spb import plot3d, MB, plot  # type: ignore
-from sympy import Symbol, Expr
 import sympy
+from matplotlib import pyplot as plt  # type: ignore
+from spb import plot3d, MB, plot  # type: ignore
+from sympy import Integer
+from sympy import Symbol, Expr
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at, show
-from sympy import Integer
 
 
 def plot_CostModels(

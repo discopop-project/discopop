@@ -8,7 +8,9 @@
 
 
 from typing import List, Tuple, Dict, Set
+
 from alive_progress import alive_bar  # type: ignore
+
 from .PatternInfo import PatternInfo
 from ..PETGraphX import (
     CUNode,
@@ -16,13 +18,12 @@ from ..PETGraphX import (
     LoopNode,
     NodeID,
     PETGraphX,
-    NodeType,
     Node,
     EdgeType,
     DepType,
     Dependency,
 )
-from ..utils import correlation_coefficient, classify_task_vars, contains
+from ..utils import correlation_coefficient, classify_task_vars
 
 __pipeline_threshold = 0.9
 

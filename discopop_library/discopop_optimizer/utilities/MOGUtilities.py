@@ -5,13 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import random
-from typing import List, cast, Set, Optional, Tuple
+from typing import List, cast, Set, Tuple
 
+import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
-import matplotlib
 import networkx as nx  # type: ignore
-import sympy
 
 from discopop_explorer.PETGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge

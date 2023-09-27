@@ -10,11 +10,12 @@
 import math
 from typing import Dict, List, Tuple, Optional
 
-from .PatternInfo import PatternInfo
-from ..PETGraphX import FunctionNode, LoopNode, NodeID, PETGraphX, NodeType, Node, EdgeType
-from ..utils import classify_task_vars, get_child_loops, contains
-from ..variable import Variable
 from alive_progress import alive_bar  # type: ignore
+
+from .PatternInfo import PatternInfo
+from ..PETGraphX import FunctionNode, LoopNode, NodeID, PETGraphX, Node, EdgeType
+from ..utils import classify_task_vars, get_child_loops
+from ..variable import Variable
 
 __loop_iterations: Dict[NodeID, int] = {}
 

@@ -13,14 +13,14 @@ import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion
-from discopop_library.result_classes.DetectionResult import DetectionResult
-from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
+from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.System import System
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 class Experiment(object):

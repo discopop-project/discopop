@@ -9,7 +9,7 @@
 
 from typing import List, Optional, cast
 
-from discopop_explorer.PETGraphX import DummyNode, PETGraphX, NodeType, MWType
+from discopop_explorer.PETGraphX import DummyNode, PETGraphX, MWType
 from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -33,6 +33,12 @@ from discopop_explorer.pattern_detectors.task_parallelism.preprocessor import (
     cu_xml_preprocessing,
     check_loop_scopes,
 )
+from discopop_explorer.pattern_detectors.task_parallelism.suggesters.auxiliary import (
+    suggest_parallel_regions,
+    set_task_contained_lines,
+    detect_taskloop_reduction,
+    combine_omittable_cus,
+)
 from discopop_explorer.pattern_detectors.task_parallelism.suggesters.barriers import (
     detect_barrier_suggestions,
     suggest_barriers_for_uncovered_tasks_before_return,
@@ -48,12 +54,6 @@ from discopop_explorer.pattern_detectors.task_parallelism.suggesters.dependency_
 from discopop_explorer.pattern_detectors.task_parallelism.suggesters.tasks import (
     detect_task_suggestions,
     correct_task_suggestions_in_loop_body,
-)
-from discopop_explorer.pattern_detectors.task_parallelism.suggesters.auxiliary import (
-    suggest_parallel_regions,
-    set_task_contained_lines,
-    detect_taskloop_reduction,
-    combine_omittable_cus,
 )
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
     create_task_tree,

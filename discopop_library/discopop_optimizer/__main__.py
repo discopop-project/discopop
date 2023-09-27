@@ -64,7 +64,6 @@ import jsonpickle  # type: ignore
 import pstats2  # type:ignore
 from docopt import docopt  # type:ignore
 from schema import Schema, Use, SchemaError  # type:ignore
-from sympy import Symbol, Integer
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (

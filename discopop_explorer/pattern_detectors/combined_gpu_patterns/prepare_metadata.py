@@ -6,16 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import sys
 from typing import Set, List, Tuple
 
 from discopop_explorer.PETGraphX import PETGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
-    EntryPointPositioning,
-    ExitPointPositioning,
-)
 
 
 def get_dependencies_as_metadata(

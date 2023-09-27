@@ -7,6 +7,9 @@
 # directory for details.
 
 from typing import List, Set, Optional, cast, Dict, Tuple
+
+from alive_progress import alive_bar  # type: ignore
+
 from discopop_explorer.PETGraphX import (
     PETGraphX,
     CUNode,
@@ -17,12 +20,10 @@ from discopop_explorer.PETGraphX import (
     LoopNode,
     Node,
 )
+from discopop_explorer.variable import Variable
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
-from discopop_explorer.utils import is_loop_index2
-from discopop_explorer.variable import Variable
 from ..PatternInfo import PatternInfo
-from alive_progress import alive_bar  # type: ignore
 
 
 class GPURegionInfo(PatternInfo):

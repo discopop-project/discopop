@@ -8,11 +8,10 @@
 
 from enum import Enum
 from typing import List, Set, cast, Tuple
-from discopop_explorer.variable import Variable
+
 from discopop_explorer.PETGraphX import (
     PETGraphX,
     CUNode,
-    NodeType,
     DepType,
     NodeID,
     Node,
@@ -22,6 +21,7 @@ from discopop_explorer.PETGraphX import (
     Dependency,
 )
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
+from discopop_explorer.variable import Variable
 
 
 def map_node(pet: PETGraphX, nodeID: NodeID) -> Node:

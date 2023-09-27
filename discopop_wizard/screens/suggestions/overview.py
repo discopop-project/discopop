@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import functools
 import json
 import os
 import tkinter as tk
@@ -15,7 +14,6 @@ from typing import List
 from discopop_wizard.classes.Suggestion import Suggestion
 from discopop_wizard.screens.utils import create_tool_tip
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
-
 from discopop_wizard.utils import support_scrolling
 
 

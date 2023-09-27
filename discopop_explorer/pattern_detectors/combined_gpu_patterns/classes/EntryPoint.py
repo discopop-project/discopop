@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os.path
-import sys
 from typing import Set, Tuple, List
 
 from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion

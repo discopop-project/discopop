@@ -6,13 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-import random
-from random import shuffle
 from typing import List, Dict, Tuple
 
 import networkx as nx  # type: ignore
 from spb import plot3d, MB, plot  # type: ignore
-from sympy import Symbol, Expr
+from sympy import Symbol
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.utilities import get_random_path
@@ -21,8 +19,6 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.gui.plotting.CostModels import plot_CostModels
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 
 
 def find_quasi_optimal_using_random_samples(

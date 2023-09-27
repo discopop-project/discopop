@@ -11,9 +11,8 @@ import os
 import re
 import shlex
 import subprocess
-import sys
 from pathlib import Path
-from typing import List, Dict, Sequence, Any, Optional
+from typing import List, Dict, Any, Optional
 
 from discopop_library.CodeGenerator.classes.Enums import PragmaPosition
 from discopop_library.CodeGenerator.classes.Line import Line
