@@ -30,6 +30,18 @@ In general it is sufficient to follow the general installation instructions. How
    - The `-e` switch ensures that changes in the python source code are immediately active.
    - `[dev]` also installs some development requirements (e.g. mypy, black, pre-commit).
  - Install some git hooks by running `pre-commit install` from the main directory of this project. These hooks help to ensure a good quality of the commited code by automatically running the black **formatter** and checking for **type safety** with mypy on every commit.
+ - Activate the git `commit-msg` hook to validate commit message formatting by creating a file named `.git/hooks/commit-msg` with the following contents:
+    ```
+    #!/bin/sh
+    python scripts/dev/check-commit-msg.py $1
+    ```
+
+## Commit messages
+Commit messages should follow the following format:
+```
+<type>(scope)[optional info]: commit message
+```
+where `<type>` can be any of `feat,fix,test,chore,wip`.
 
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
