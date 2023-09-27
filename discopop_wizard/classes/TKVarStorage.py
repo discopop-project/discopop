@@ -39,9 +39,7 @@ class TKVarStorage(object):
         self.wizard.settings.code_preview_show_metadata_live_device_variables = (
             self.toggle_var_code_preview_show_metadata_live_device_variables.get()
         )
-        self.wizard.settings.code_preview_show_line_numbers = (
-            self.toggle_var_code_preview_show_line_numbers.get()
-        )
+        self.wizard.settings.code_preview_show_line_numbers = self.toggle_var_code_preview_show_line_numbers.get()
         self.wizard.settings.code_preview_disable_compile_check = (
             self.toggle_var_code_preview_disable_compile_check.get()
         )

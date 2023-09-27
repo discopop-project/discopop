@@ -93,14 +93,10 @@ class ExecutionConfiguration(object):
                 self.value_dict[target_name + "_" + value_name] = ""
                 # self.type_dict[target_name + "_" + value_name] = value_type
 
-    def get_as_button(
-        self, wizard, main_screen_obj, parent_frame: tk.Frame, all_buttons: List[tk.Button]
-    ) -> tk.Button:
+    def get_as_button(self, wizard, main_screen_obj, parent_frame: tk.Frame, all_buttons: List[tk.Button]) -> tk.Button:
         button = tk.Button(parent_frame, text=self.value_dict["label"])
         button.config(
-            command=lambda: self.highlight_and_update_notebook_screens(
-                wizard, main_screen_obj, button, all_buttons
-            )
+            command=lambda: self.highlight_and_update_notebook_screens(wizard, main_screen_obj, button, all_buttons)
         )
         self.button = button
         return button
@@ -129,12 +125,8 @@ class ExecutionConfiguration(object):
         self.show_details_screen(wizard, main_screen_obj)
 
         # update results screen of pressed configuration button and set results tab state based on result existence
-        main_screen_obj.notebook.tab(
-            main_screen_obj.results_frame, state=self.__button_state_from_result_existence()
-        )
-        main_screen_obj.notebook.tab(
-            main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence()
-        )
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        main_screen_obj.notebook.tab(main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence())
 
         if self.__button_state_from_result_existence() == "normal":
             show_suggestions_overview_screen(wizard, main_screen_obj.results_frame, self)
@@ -153,12 +145,10 @@ class ExecutionConfiguration(object):
         canvas.grid(row=1)
 
         # show labels
-        tk.Label(
-            canvas, text="Label:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small
-        ).grid(row=1, column=1, sticky="ew")
-        tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(
-            row=2, column=1, sticky="ew"
+        tk.Label(canvas, text="Label:", justify=tk.RIGHT, anchor="e", font=wizard.style_font_bold_small).grid(
+            row=1, column=1, sticky="ew"
         )
+        tk.Label(canvas, text="Description", justify=tk.RIGHT, anchor="e").grid(row=2, column=1, sticky="ew")
         tk.Label(
             canvas,
             text="Executable name:",
@@ -166,12 +156,8 @@ class ExecutionConfiguration(object):
             anchor="e",
             font=wizard.style_font_bold_small,
         ).grid(row=3, column=1, sticky="ew")
-        tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(
-            row=4, column=1, sticky="ew"
-        )
-        tk.Label(canvas, text="Make flags:", justify=tk.RIGHT, anchor="e").grid(
-            row=5, column=1, sticky="ew"
-        )
+        tk.Label(canvas, text="Executable arguments:", justify=tk.RIGHT, anchor="e").grid(row=4, column=1, sticky="ew")
+        tk.Label(canvas, text="Make flags:", justify=tk.RIGHT, anchor="e").grid(row=5, column=1, sticky="ew")
         tk.Label(
             canvas,
             text="Project path:",
@@ -179,12 +165,8 @@ class ExecutionConfiguration(object):
             anchor="e",
             font=wizard.style_font_bold_small,
         ).grid(row=6, column=1, sticky="ew")
-        tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(
-            row=7, column=1, sticky="ew"
-        )
-        tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(
-            row=8, column=1, sticky="ew"
-        )
+        tk.Label(canvas, text="Project linker flags:", justify=tk.RIGHT, anchor="e").grid(row=7, column=1, sticky="ew")
+        tk.Label(canvas, text="Make target:", justify=tk.RIGHT, anchor="e").grid(row=8, column=1, sticky="ew")
         tk.Label(
             canvas,
             text="Memory Profiling:",
@@ -192,9 +174,7 @@ class ExecutionConfiguration(object):
             anchor="e",
             font=wizard.style_font_bold_small,
         ).grid(row=9, column=1, sticky="ew")
-        tk.Label(canvas, text="Skip function params:", justify=tk.RIGHT, anchor="e").grid(
-            row=10, column=1, sticky="ew"
-        )
+        tk.Label(canvas, text="Skip function params:", justify=tk.RIGHT, anchor="e").grid(row=10, column=1, sticky="ew")
         tk.Label(
             canvas,
             text="Additional:",
@@ -202,20 +182,14 @@ class ExecutionConfiguration(object):
             anchor="e",
             font=wizard.style_font_bold_small,
         ).grid(row=11, column=1, sticky="ew")
-        tk.Label(canvas, text="Tags:", justify=tk.RIGHT, anchor="e").grid(
-            row=12, column=1, sticky="ew"
-        )
-        tk.Label(canvas, text="Notes:", justify=tk.RIGHT, anchor="e").grid(
-            row=13, column=1, sticky="ew"
-        )
+        tk.Label(canvas, text="Tags:", justify=tk.RIGHT, anchor="e").grid(row=12, column=1, sticky="ew")
+        tk.Label(canvas, text="Notes:", justify=tk.RIGHT, anchor="e").grid(row=13, column=1, sticky="ew")
 
         # show input fields
         label = tk.Entry(canvas)
         label.grid(row=1, column=2, sticky="ew")
         label.insert(tk.END, self.value_dict["label"])
-        create_tool_tip(
-            label, "Name of the configuration. Used to distinguish configurations in the main menu."
-        )
+        create_tool_tip(label, "Name of the configuration. Used to distinguish configurations in the main menu.")
 
         description = tk.Entry(canvas)
         description.grid(row=2, column=2, sticky="ew")
@@ -235,8 +209,7 @@ class ExecutionConfiguration(object):
         executable_args.insert(tk.END, self.value_dict["executable_arguments"])
         create_tool_tip(
             executable_args,
-            "Specify arguments which shall be forwarded to the call of the created executable for the "
-            "profiling.",
+            "Specify arguments which shall be forwarded to the call of the created executable for the " "profiling.",
         )
 
         make_flags = tk.Entry(canvas)
@@ -250,9 +223,7 @@ class ExecutionConfiguration(object):
         project_path = tk.Entry(canvas)
         project_path.grid(row=6, column=2, sticky="ew")
         project_path.insert(tk.END, self.value_dict["project_path"])
-        create_tool_tip(
-            project_path, "Path to the project which shall be analyzed for potential parallelism."
-        )
+        create_tool_tip(project_path, "Path to the project which shall be analyzed for potential parallelism.")
 
         def overwrite_with_selection(target: tk.Entry):
             prompt_result = tk.filedialog.askdirectory()
@@ -260,9 +231,7 @@ class ExecutionConfiguration(object):
                 target.delete(0, tk.END)
                 target.insert(0, prompt_result)
 
-        project_path_selector = tk.Button(
-            canvas, text="Select", command=lambda: overwrite_with_selection(project_path)
-        )
+        project_path_selector = tk.Button(canvas, text="Select", command=lambda: overwrite_with_selection(project_path))
         project_path_selector.grid(row=6, column=3)
 
         project_linker_flags = tk.Entry(canvas)
@@ -270,8 +239,7 @@ class ExecutionConfiguration(object):
         project_linker_flags.insert(tk.END, self.value_dict["linker_flags"])
         create_tool_tip(
             project_linker_flags,
-            "Linker flags which need to be passed to the build system in order to create a valid "
-            "executable.",
+            "Linker flags which need to be passed to the build system in order to create a valid " "executable.",
         )
 
         make_target = tk.Entry(canvas)
@@ -281,9 +249,7 @@ class ExecutionConfiguration(object):
 
         mpsfp_var = tk.IntVar()
         mpsfp_var.set(self.value_dict["memory_profiling_skip_function_parameters"])
-        memory_profiling_skip_function_parameters = tk.Checkbutton(
-            canvas, onvalue=1, offvalue=0, variable=mpsfp_var
-        )
+        memory_profiling_skip_function_parameters = tk.Checkbutton(canvas, onvalue=1, offvalue=0, variable=mpsfp_var)
         memory_profiling_skip_function_parameters.grid(row=10, column=2, sticky="w")
         create_tool_tip(
             memory_profiling_skip_function_parameters,
@@ -415,9 +381,7 @@ class ExecutionConfiguration(object):
         self.value_dict["working_copy_path"] = self.value_dict["project_path"] + "/.discopop"
         self.value_dict["linker_flags"] = project_linker_flags.get()
         self.value_dict["make_target"] = make_target.get()
-        self.value_dict[
-            "memory_profiling_skip_function_parameters"
-        ] = memory_profiling_skip_function_parameters.get()
+        self.value_dict["memory_profiling_skip_function_parameters"] = memory_profiling_skip_function_parameters.get()
         self.value_dict["tags"] = tags.get()
         self.value_dict["notes"] = additional_notes.get("1.0", tk.END)
 
@@ -491,12 +455,8 @@ class ExecutionConfiguration(object):
         # create execution view and update results frame
         ExecutionView(self, wizard, main_screen_obj.results_frame)
         # set results tab state based on result existence
-        main_screen_obj.notebook.tab(
-            main_screen_obj.results_frame, state=self.__button_state_from_result_existence()
-        )
-        main_screen_obj.notebook.tab(
-            main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence()
-        )
+        main_screen_obj.notebook.tab(main_screen_obj.results_frame, state=self.__button_state_from_result_existence())
+        main_screen_obj.notebook.tab(main_screen_obj.optimizer_frame, state=self.__button_state_from_result_existence())
 
         # show results tab
         main_screen_obj.notebook.select(main_screen_obj.results_frame)

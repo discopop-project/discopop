@@ -37,9 +37,7 @@ def get_library(name: str) -> str:
 
 
 def is_compile(clang_args: List[str]) -> bool:
-    return "-c" in clang_args or any(
-        [re.match(r"^[^-].+\.(?:c|cc|cpp)$", arg) for arg in clang_args]
-    )
+    return "-c" in clang_args or any([re.match(r"^[^-].+\.(?:c|cc|cpp)$", arg) for arg in clang_args])
 
 
 def is_link(clang_args: List[str]) -> bool:

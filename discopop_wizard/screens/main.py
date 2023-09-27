@@ -102,16 +102,12 @@ class MainScreen(object):
     def __display_execution_configurations(self, wizard):
         # based on https://blog.teclado.com/tkinter-scrollable-frames/
         # load configuration options
-        configs: List[ExecutionConfiguration] = self.load_execution_configurations(
-            wizard.config_dir
-        )
+        configs: List[ExecutionConfiguration] = self.load_execution_configurations(wizard.config_dir)
         frame = tk.Frame(self.configuration_frame)
         frame.pack(fill=tk.BOTH, expand=True)
         tk.Label(frame, text="Configurations", font=wizard.style_font_bold, pady=10).pack()
         # add New.. Button
-        tk.Button(
-            frame, text="New..", command=lambda: self.__create_new_execution_configuration(wizard)
-        ).pack()
+        tk.Button(frame, text="New..", command=lambda: self.__create_new_execution_configuration(wizard)).pack()
 
         tmp_frame = tk.Frame(frame)
         tmp_frame.pack(fill=tk.BOTH, expand=True)
@@ -120,15 +116,11 @@ class MainScreen(object):
         canvas = tk.Canvas(tmp_frame)
         scrollbar = tk.Scrollbar(tmp_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas)
-        scrollable_frame.bind(
-            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        all_buttons: List[
-            tk.Button
-        ] = []  # used to manage highlights when a different configuration is selected
+        all_buttons: List[tk.Button] = []  # used to manage highlights when a different configuration is selected
         for row, config in enumerate(configs):
             button = config.get_as_button(wizard, self, scrollable_frame, all_buttons)
             button.pack(fill=tk.BOTH, expand=True)
@@ -145,9 +137,7 @@ class MainScreen(object):
         for filename in os.listdir(os.path.join(config_dir, "execution_configurations")):
             if not filename.endswith(".json"):
                 continue
-            with open(
-                os.path.join(os.path.join(config_dir, "execution_configurations"), filename), "r"
-            ) as json_file:
+            with open(os.path.join(os.path.join(config_dir, "execution_configurations"), filename), "r") as json_file:
                 config = ExecutionConfiguration(self.wizard)
                 config.init_from_json(json_file)
                 execution_configs.append(config)

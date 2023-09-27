@@ -98,9 +98,7 @@ class CodePreviewContentBuffer(ContentBuffer):
         for line_idx, line in enumerate(self.lines):
             # offset line_id to account for start with 1
             offset_line_id = line_idx + 1
-            cast(CodePreviewLine, line).display(
-                self.wizard, parent_element, offset_line_id, self.max_line_num
-            )
+            cast(CodePreviewLine, line).display(self.wizard, parent_element, offset_line_id, self.max_line_num)
 
     def jump_to_first_modification(self, parent_element: tk.Text):
         """Jumps to the location of the first modified source code location."""

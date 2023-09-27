@@ -56,9 +56,7 @@ class Console(object):
         y_scrollbar = ttk.Scrollbar(self.parent_frame, command=self.log_screen.yview)
         y_scrollbar.grid(row=0, column=1, sticky="nsew")
         self.log_screen["yscrollcommand"] = y_scrollbar.set
-        x_scrollbar = ttk.Scrollbar(
-            self.parent_frame, orient="horizontal", command=self.log_screen.xview
-        )
+        x_scrollbar = ttk.Scrollbar(self.parent_frame, orient="horizontal", command=self.log_screen.xview)
         x_scrollbar.grid(row=1, column=0, columnspan=2, sticky="nsew")
         self.log_screen["xscrollcommand"] = x_scrollbar.set
 

@@ -25,13 +25,9 @@ class ProfilingContainer(object):
         )
         self.__execute_command("docker kill discopop_container")
         self.__execute_command("docker rm discopop_container")
-        exit_code = self.__execute_command(
-            "docker build -t discopop_container " + docker_context_path
-        )
+        exit_code = self.__execute_command("docker build -t discopop_container " + docker_context_path)
         assert exit_code == 0
-        exit_code = self.__execute_command(
-            "docker run --name discopop_container -d -t discopop_container"
-        )
+        exit_code = self.__execute_command("docker run --name discopop_container -d -t discopop_container")
         assert exit_code == 0
 
     def stop(self):
@@ -75,9 +71,7 @@ class ProfilingContainer(object):
     def analyze_project(self, execution_view):
         # copy project folder to container. Note: mounting would be nicer but requires restarting the container.
         # might be a nicer solution in the long run, especially for larger projects
-        self.copy_project_folder_to_container(
-            execution_view.execution_configuration.value_dict["project_path"]
-        )
+        self.copy_project_folder_to_container(execution_view.execution_configuration.value_dict["project_path"])
 
         # settings
         command = "/discopop/build/scripts/runDiscoPoP "
@@ -91,49 +85,25 @@ class ProfilingContainer(object):
         command += "--gllvm /software/go/bin "
         # execution configuration
         command += "--project /project "
-        command += (
-            '--linker-flags "'
-            + execution_view.execution_configuration.value_dict["linker_flags"]
-            + '" '
-        )
-        command += (
-            '--executable-name "'
-            + execution_view.execution_configuration.value_dict["executable_name"]
-            + '" '
-        )
+        command += '--linker-flags "' + execution_view.execution_configuration.value_dict["linker_flags"] + '" '
+        command += '--executable-name "' + execution_view.execution_configuration.value_dict["executable_name"] + '" '
         command += (
             '--executable-arguments "'
             + execution_view.execution_configuration.value_dict["executable_arguments"]
             + '" '
         )
-        command += (
-            '--make-flags "'
-            + execution_view.execution_configuration.value_dict["make_flags"]
-            + '" '
-        )
-        command += (
-            '--make-target "'
-            + execution_view.execution_configuration.value_dict["make_target"]
-            + '" '
-        )
-        command += (
-            '--explorer-flags "'
-            + execution_view.execution_configuration.value_dict["explorer_flags"]
-            + '" '
-        )
+        command += '--make-flags "' + execution_view.execution_configuration.value_dict["make_flags"] + '" '
+        command += '--make-target "' + execution_view.execution_configuration.value_dict["make_target"] + '" '
+        command += '--explorer-flags "' + execution_view.execution_configuration.value_dict["explorer_flags"] + '" '
 
         self.__execute_command("docker exec -it discopop_container " + command)
 
         # copy results from container into working copy path
-        if not os.path.exists(
-            execution_view.execution_configuration.value_dict["working_copy_path"]
-        ):
+        if not os.path.exists(execution_view.execution_configuration.value_dict["working_copy_path"]):
             os.mkdir(execution_view.execution_configuration.value_dict["working_copy_path"])
 
         # remove previous results
-        self.remove_previous_results(
-            execution_view.execution_configuration.value_dict["working_copy_path"]
-        )
+        self.remove_previous_results(execution_view.execution_configuration.value_dict["working_copy_path"])
 
         # copy results from container
         self.copy_results_from_container(
@@ -157,9 +127,7 @@ class ProfilingContainer(object):
             file.write(contents)
 
     def __execute_command(self, command: str) -> int:
-        with subprocess.Popen(
-            command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True
-        ) as p:
+        with subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True) as p:
             if p.stdout is None:
                 print("executing command was not successfull")
             else:
