@@ -7,7 +7,8 @@
 # directory for details.
 
 import copy
-from typing import Dict, Set, Tuple, Optional, List, cast, Any
+import sys
+from typing import Dict, Set, Tuple, Optional, List, cast
 
 import networkx as nx  # type: ignore
 from networkx import NetworkXNoCycle, MultiDiGraph
@@ -22,8 +23,6 @@ from discopop_explorer.PETGraphX import (
     Dependency,
     FunctionNode,
 )
-import sys
-
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
 

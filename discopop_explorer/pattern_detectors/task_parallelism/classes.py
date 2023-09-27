@@ -12,6 +12,7 @@ from typing import List, Optional
 from discopop_explorer.PETGraphX import Node, MWType, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
+
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
 # from discopop_explorer.utils import total_instructions_count, calculate_workload
 

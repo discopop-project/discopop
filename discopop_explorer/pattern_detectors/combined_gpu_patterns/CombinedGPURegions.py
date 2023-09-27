@@ -5,11 +5,14 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os.path
-from typing import List, Tuple, Dict, Set, Type, Optional
+import sys
+from typing import List, Tuple, Dict, Set
 
 from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
+    VarName,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     ExitPointPositioning,
@@ -18,10 +21,6 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
     EntryPointType,
     UpdateType,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
-    VarName,
-)
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.prepare_metadata import (
     get_dependencies_as_metadata,
 )
@@ -35,20 +34,20 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_2 import (
     add_memory_regions_to_device_liveness,
     propagate_memory_regions,
     convert_liveness,
-    extend_data_lifespan,
     calculate_host_liveness,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_3 import (
     initialize_writes,
-    propagate_writes,
     cleanup_writes,
     group_writes_by_cu,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_4 import (
-    identify_updates,
     create_circle_free_function_graphs,
     add_accesses_from_called_functions,
     identify_updates_in_unrolled_function_graphs,
+)
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_5 import (
+    propagate_variable_name_associations,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     convert_updates_to_entry_and_exit_points,
@@ -58,16 +57,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     remove_duplicates,
     join_elements,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import (
-    prepare_liveness_metadata,
-)
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_5 import (
-    propagate_variable_name_associations,
-)
-
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
-
-import sys
 
 
 class CombinedGPURegion(PatternInfo):

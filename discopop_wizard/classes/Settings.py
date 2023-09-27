@@ -10,7 +10,6 @@ import os
 import shutil
 
 import jsons  # type:ignore
-import tkinter as tk
 
 
 class Settings(object):

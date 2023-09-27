@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, Set, cast, List, Optional
+from typing import Dict, Set, List, Optional
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 

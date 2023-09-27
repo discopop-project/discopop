@@ -7,9 +7,10 @@
 # directory for details.
 
 import subprocess
-from typing import Union, cast, IO, Dict, List, Tuple, Optional, Any
+from typing import Union, cast, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
+
 from discopop_explorer.PETGraphX import (
     DummyNode,
     FunctionNode,

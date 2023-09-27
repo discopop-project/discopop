@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, Set, cast
+from typing import Dict, Set
 
 from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (

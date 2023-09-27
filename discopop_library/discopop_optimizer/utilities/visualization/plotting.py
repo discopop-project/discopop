@@ -5,6 +5,9 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import matplotlib.pyplot as plt  # type: ignore
+import networkx as nx  # type: ignore
+
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
@@ -15,9 +18,6 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
-
-import matplotlib.pyplot as plt  # type: ignore
-import networkx as nx  # type: ignore
 
 
 def show(graph):

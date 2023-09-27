@@ -6,14 +6,15 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from __future__ import annotations
+
+import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-import logging
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union, cast, Any
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
-import numpy as np
 import matplotlib  # type: ignore
+import numpy as np
 
 matplotlib.use("Agg")
 from matplotlib import cm  # type: ignore

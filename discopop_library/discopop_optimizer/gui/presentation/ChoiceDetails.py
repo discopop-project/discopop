@@ -5,14 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from tkinter import *
 from typing import Optional
 
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-
-from tkinter import *
-
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget

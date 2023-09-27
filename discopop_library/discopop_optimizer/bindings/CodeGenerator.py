@@ -19,7 +19,6 @@ import networkx as nx  # type: ignore
 from discopop_explorer.PETGraphX import NodeID, PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.device_updates import DeviceUpdateInfo
-from discopop_explorer.variable import Variable
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_pattern_info as code_gen_from_pattern_info,
 )

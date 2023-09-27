@@ -13,7 +13,6 @@ from discopop_explorer.PETGraphX import (
     FunctionNode,
     LoopNode,
     MWType,
-    NodeType,
     EdgeType,
     Node,
     PETGraphX,

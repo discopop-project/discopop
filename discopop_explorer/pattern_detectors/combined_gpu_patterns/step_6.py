@@ -7,7 +7,6 @@
 # directory for details.
 import copy
 import sys
-import typing
 from typing import Set, Tuple, Dict, List, cast, Optional, Union
 
 from networkx import MultiDiGraph  # type: ignore
@@ -24,14 +23,11 @@ from discopop_explorer.PETGraphX import (
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.EntryPoint import EntryPoint
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     UpdateType,
     EntryPointType,
     ExitPointType,
-    EntryPointPositioning,
-    ExitPointPositioning,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.ExitPoint import ExitPoint
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update

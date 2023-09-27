@@ -20,7 +20,6 @@ from .PETGraphX import (
     EdgeType,
 )
 from .parser import parse_inputs
-from discopop_library.PathManagement.PathManagement import get_path
 
 
 def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List[NodeID]):

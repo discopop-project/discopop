@@ -11,10 +11,10 @@ import pathlib
 import signal
 import tkinter as tk
 import warnings
-from tkinter import messagebox, filedialog
-from tkinter import ttk
 from enum import IntEnum
 from os.path import dirname
+from tkinter import messagebox, filedialog
+from tkinter import ttk
 from typing import Optional
 
 from discopop_wizard.classes.Arguments import Arguments
@@ -26,8 +26,7 @@ from discopop_wizard.screens.main import MainScreen
 
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
-from discopop_wizard.screens.settings import show_settings_screen, save_settings
-
+from discopop_wizard.screens.settings import show_settings_screen
 from discopop_wizard.utils import get_platform, Platform
 
 

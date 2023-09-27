@@ -7,8 +7,8 @@
 # directory for details.
 from typing import Tuple
 
-from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class GPU(Device):

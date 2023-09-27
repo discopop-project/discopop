@@ -7,23 +7,23 @@
 # directory for details.
 
 import os
-from typing import List, Dict, Tuple, Optional, Union, cast, Any
+from typing import List, Dict, Tuple, Optional, cast, Any
 
 from discopop_explorer.PETGraphX import (
     CUNode,
-    DummyNode,
     EdgeType,
     FunctionNode,
-    NodeType,
     Node,
     PETGraphX,
     NodeID,
     LineID,
 )
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
+    get_alias_information as get_alias_detection_result,
+)
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
-    OmittableCuInfo,
     TPIType,
 )
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
@@ -32,9 +32,6 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
     get_called_function_and_parameter_names_from_function_call,
     demangle,
     get_called_functions_recursively,
-)
-from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
-    get_alias_information as get_alias_detection_result,
 )
 
 

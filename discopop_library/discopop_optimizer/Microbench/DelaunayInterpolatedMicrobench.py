@@ -5,18 +5,18 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from .PureDataMicrobench import PureDataMicrobench
+from typing import Dict, List, Tuple, Union
+
+import numpy as np
+from scipy.interpolate import LinearNDInterpolator  # type: ignore
+
 from .Microbench import (
     Microbench,
     MicrobenchType,
     MicrobenchDimension,
     MicrobenchCoordinate,
 )
-
-from typing import Dict, List, Tuple, Union
-
-import numpy as np
-from scipy.interpolate import LinearNDInterpolator  # type: ignore
+from .PureDataMicrobench import PureDataMicrobench
 
 
 # This class uses Delaunay Interpolation to create a microbench model from measurements. No extrapolation is possible

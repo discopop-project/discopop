@@ -5,15 +5,9 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from .Microbench import (
-    Microbench,
-    MicrobenchType,
-    MicrobenchDimension,
-    MicrobenchCoordinate,
-)
-
 from typing import Dict, Tuple, Union
 
+import sympy
 from extrap.entities.callpath import Callpath  # type: ignore
 from extrap.entities.metric import Metric  # type: ignore
 from extrap.entities.model import Model  # type: ignore
@@ -22,7 +16,13 @@ from extrap.fileio.json_file_reader import read_json_file  # type: ignore
 from extrap.modelers.model_generator import ModelGenerator  # type: ignore
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
 from sympy.parsing.sympy_parser import parse_expr  # type: ignore
-import sympy
+
+from .Microbench import (
+    Microbench,
+    MicrobenchType,
+    MicrobenchDimension,
+    MicrobenchCoordinate,
+)
 
 
 # This class uses extrap to extrapolate microbench measurements.

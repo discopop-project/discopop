@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from ..PETGraphX import LineID, LoopNode, PETGraphX, NodeType, Node, EdgeType
+from ..PETGraphX import LineID, LoopNode, PETGraphX, Node, EdgeType
 from ..utils import correlation_coefficient
 
 total = 0

@@ -13,7 +13,6 @@ from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: igno
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Microbench.utils import (
-    convert_microbench_to_discopop_workload,
     convert_discopop_to_microbench_workload,
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

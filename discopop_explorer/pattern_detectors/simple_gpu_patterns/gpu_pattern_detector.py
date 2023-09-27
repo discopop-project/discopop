@@ -8,18 +8,16 @@
 
 from typing import List, cast
 
-from discopop_explorer.PETGraphX import NodeType, PETGraphX, LoopNode
+from alive_progress import alive_bar  # type: ignore
+
+from discopop_explorer.PETGraphX import PETGraphX, LoopNode
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
-    find_combined_gpu_regions,
-)
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegions,
     GPURegionInfo,
 )
 from discopop_explorer.variable import Variable
-from alive_progress import alive_bar  # type: ignore
 
 
 def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:

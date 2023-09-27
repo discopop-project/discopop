@@ -9,7 +9,6 @@
 from typing import List, Set, Dict, Tuple, Optional
 
 from discopop_explorer.PETGraphX import (
-    CUNode,
     PETGraphX,
     EdgeType,
     NodeID,

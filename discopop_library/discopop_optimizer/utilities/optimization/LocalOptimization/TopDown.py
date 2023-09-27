@@ -26,7 +26,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     get_children,
     data_at,
-    show,
 )
 
 

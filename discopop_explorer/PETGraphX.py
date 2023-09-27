@@ -9,20 +9,18 @@
 from __future__ import annotations
 
 import copy
-import sys
-from time import sleep
-from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
-from enum import IntEnum, Enum
 import itertools
+from enum import IntEnum, Enum
+from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
+from alive_progress import alive_bar  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type:ignore
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
-from alive_progress import alive_bar  # type: ignore
 
 
 # unused

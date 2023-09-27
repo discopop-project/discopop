@@ -8,8 +8,8 @@
 import json
 from typing import Optional
 
-from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 from ..PETGraphX import LoopNode, Node, NodeID, LineID, PETGraphX
+from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 
 
 class PatternInfo(object):

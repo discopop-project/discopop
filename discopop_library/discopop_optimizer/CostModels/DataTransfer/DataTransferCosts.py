@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple
 
 import networkx as nx  # type: ignore
 from sympy import Integer  # type: ignore
@@ -16,7 +16,6 @@ from discopop_library.discopop_optimizer.classes.context.ContextObject import Co
 from discopop_library.discopop_optimizer.classes.context.ContextObjectUtils import (
     get_transfer_costs,
 )
-from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 
 

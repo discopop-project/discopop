@@ -6,17 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import os
-import sys
 from enum import IntEnum
-
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
-from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
-from .GPUMemory import getCalledFunctions, map_node, map_type_t, assignMapType
 from discopop_explorer.PETGraphX import (
     PETGraphX,
     CUNode,
-    NodeType,
     parse_id,
     DepType,
     NodeID,
@@ -26,6 +21,10 @@ from discopop_explorer.PETGraphX import (
     Node,
     LoopNode,
 )
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.utils import (
+    __get_dep_of_type as get_dep_of_type,
+)
 from discopop_explorer.utils import (
     is_scalar_val,
     is_loop_index2,
@@ -33,23 +32,17 @@ from discopop_explorer.utils import (
     get_initialized_memory_regions_in,
 )
 from discopop_explorer.utils import (
-    __get_variables as get_vars,
-    __get_dep_of_type as get_dep_of_type,
-)
-from discopop_explorer.utils import (
     is_written_in_subtree,
     is_func_arg,
     is_readonly,
     is_global,
-    is_read_in_subtree,
     is_read_in_right_subtree,
     is_first_written,
     is_read_in_subtree,
 )
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.variable import Variable
-from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
-
+from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
+from .GPUMemory import getCalledFunctions, map_node
 
 """
 def remove_duplicates(my_list: List) -> List:

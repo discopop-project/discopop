@@ -8,6 +8,7 @@
 from typing import List
 
 import jsonpickle  # type: ignore
+
 from discopop_explorer.PETGraphX import PETGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo

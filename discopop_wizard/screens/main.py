@@ -12,7 +12,6 @@ from typing import List
 
 from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
 from discopop_wizard.screens.settings import show_settings_screen
-
 from discopop_wizard.utils import support_scrolling
 
 

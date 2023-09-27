@@ -7,25 +7,14 @@
 # directory for details.
 
 import os
-import sys
-
 import tkinter as tk
 from enum import IntEnum
 from pathlib import Path
 from tkinter import ttk
 from typing import Any, Dict, List, Tuple
 
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
-    ExitPointPositioning,
-    EntryPointPositioning,
-    ExitPointType,
-    EntryPointType,
-    UpdateType,
-)
-from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import OmpConstructPositioning
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
 from discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
-from discopop_wizard.classes.Pragma import Pragma, PragmaPosition
 
 
 class PragmaType(IntEnum):

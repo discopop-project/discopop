@@ -7,8 +7,9 @@
 # directory for details.
 import os
 import pickle
-from tkinter import Tk, Button
-from typing import List, Optional, cast, Set
+import tkinter as tk
+from tkinter import Button
+from typing import List, Optional, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
@@ -22,7 +23,6 @@ from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
 )
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
-import tkinter as tk
 
 
 def show_function_models(

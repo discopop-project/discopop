@@ -5,10 +5,13 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os
 import sys
-from typing import Dict, Union
 
+from alive_progress import alive_bar  # type: ignore
+
+from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
+    build_preprocessed_graph_and_run_detection as detect_tp,
+)
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.system.System import System
@@ -20,13 +23,9 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 from .PETGraphX import DummyNode, LoopNode, PETGraphX, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
-from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
 from .pattern_detectors.reduction_detector import run_detection as detect_reduction
-from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
-    build_preprocessed_graph_and_run_detection as detect_tp,
-)
-from alive_progress import alive_bar  # type: ignore
+from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
 
 
 class PatternDetectorX(object):
