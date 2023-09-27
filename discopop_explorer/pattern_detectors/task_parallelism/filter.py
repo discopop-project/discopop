@@ -38,9 +38,7 @@ def filter_data_sharing_clauses(
     return suggestions
 
 
-def __filter_data_sharing_clauses_suppress_shared_loop_index(
-    pet: PETGraphX, suggestions: List[PatternInfo]
-):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -52,17 +50,13 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(
         if suggestion.type is not TPIType.TASK:
             continue
         # get parent loops of suggestion
-        parent_loops_plus_last_node = get_parent_of_type(
-            pet, suggestion._node, NodeType.LOOP, EdgeType.CHILD, True
-        )
+        parent_loops_plus_last_node = get_parent_of_type(pet, suggestion._node, NodeType.LOOP, EdgeType.CHILD, True)
         parent_loops = [e[0] for e in parent_loops_plus_last_node]
         # consider only loops which enclose the suggestion
         parent_loops = [
             loop
             for loop in parent_loops
-            if line_contained_in_region(
-                suggestion._node.start_position(), loop.start_position(), loop.end_position()
-            )
+            if line_contained_in_region(suggestion._node.start_position(), loop.start_position(), loop.end_position())
         ]
         to_be_removed = []
         for var in suggestion.shared:
@@ -94,9 +88,7 @@ def __filter_data_sharing_clauses_by_function(
         if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
             continue
         # get function containing the task cu
-        parent_function, last_node = get_parent_of_type(
-            pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
-        )[0]
+        parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[0]
         # filter firstprivate
         __filter_firstprivate_clauses(suggestion, parent_function, var_def_line_dict)
         # filter private
@@ -107,9 +99,7 @@ def __filter_data_sharing_clauses_by_function(
         # remove duplicates and .addr suffix from variable names
         suggestion.shared = list(set([v.replace(".addr", "") for v in suggestion.shared]))
         suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
-        suggestion.first_private = list(
-            set([v.replace(".addr", "") for v in suggestion.first_private])
-        )
+        suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
 
         # remove duplicates (variable occurring in different classes)
         remove_from_first_private = []
@@ -124,19 +114,13 @@ def __filter_data_sharing_clauses_by_function(
                 remove_from_first_private.append(var)
         remove_from_first_private = list(set(remove_from_first_private))
         remove_from_private = list(set(remove_from_private))
-        remove_from_private = [
-            var for var in remove_from_private if var not in remove_from_first_private
-        ]
+        remove_from_private = [var for var in remove_from_private if var not in remove_from_first_private]
         suggestion.private = [var for var in suggestion.private if var not in remove_from_private]
-        suggestion.first_private = [
-            var for var in suggestion.first_private if var not in remove_from_first_private
-        ]
+        suggestion.first_private = [var for var in suggestion.first_private if var not in remove_from_first_private]
     return suggestions
 
 
-def __filter_shared_clauses(
-    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
-):
+def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters shared clauses.
     :param suggestion: Suggestion to be checked
@@ -156,9 +140,7 @@ def __filter_shared_clauses(
                 if def_line is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(
-                    def_line, parent_function.start_position(), parent_function.end_position()
-                ):
+                if line_contained_in_region(def_line, parent_function.start_position(), parent_function.end_position()):
                     is_valid = True
                 else:
                     pass
@@ -168,14 +150,10 @@ def __filter_shared_clauses(
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.shared = [
-        v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
 
 
-def __filter_private_clauses(
-    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
-):
+def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]):
     """helper function for filter_data_sharing_clauses_by_function.
     Filters private clauses.
     :param suggestion: Suggestion to be checked
@@ -209,9 +187,7 @@ def __filter_private_clauses(
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.private = [
-        v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
 
 
 def __filter_firstprivate_clauses(
@@ -233,9 +209,7 @@ def __filter_firstprivate_clauses(
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(
-                    defLine, parent_function.start_position(), parent_function.end_position()
-                ):
+                if line_contained_in_region(defLine, parent_function.start_position(), parent_function.end_position()):
                     is_valid = True
                 else:
                     pass
@@ -244,14 +218,10 @@ def __filter_firstprivate_clauses(
         if not is_valid:
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.first_private = [
-        v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
 
 
-def __reverse_reachable_w_o_breaker(
-    pet: PETGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]
-):
+def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]):
     """Helper function for filter_data_sharing_clauses_by_scope.
     Checks if target is reachable by traversing the successor graph in reverse, starting from root,
     without visiting breaker_cu.
@@ -303,9 +273,9 @@ def __filter_data_sharing_clauses_by_scope(
         if suggestion.type is not TPIType.TASK:
             continue
         # get function containing the task cu
-        parent_function_cu, last_node = get_parent_of_type(
-            pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
-        )[0]
+        parent_function_cu, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[
+            0
+        ]
         # filter firstprivate
         __filter_sharing_clause(pet, suggestion, var_def_line_dict, parent_function_cu, "FP")
         # filter private
@@ -347,9 +317,7 @@ def __filter_sharing_clause(
             # get CU which contains var_def_line
             var_def_cu: Optional[Node] = None
             for child_cu in get_cus_inside_function(pet, parent_function_cu):
-                if line_contained_in_region(
-                    var_def_line, child_cu.start_position(), child_cu.end_position()
-                ):
+                if line_contained_in_region(var_def_line, child_cu.start_position(), child_cu.end_position()):
                     var_def_cu = child_cu
             if var_def_cu is None:
                 continue
@@ -368,9 +336,7 @@ def __filter_sharing_clause(
                     to_be_removed.append(var)
         to_be_removed = list(set(to_be_removed))
         if target_clause_list == "FP":
-            suggestion.first_private = [
-                v for v in suggestion.first_private if v not in to_be_removed
-            ]
+            suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
         elif target_clause_list == "PR":
             suggestion.private = [v for v in suggestion.private if v not in to_be_removed]
         else:
@@ -468,9 +434,7 @@ def __filter_in_dependencies(
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(
-                    defLine, parent_function.start_position(), parent_function.end_position()
-                ):
+                if line_contained_in_region(defLine, parent_function.start_position(), parent_function.end_position()):
                     # check if var is contained in out_dep_vars and a previous out_dep exists
                     if var in out_dep_vars:
                         for line_num in out_dep_vars[var]:
@@ -505,9 +469,7 @@ def __filter_in_dependencies(
             modification_found = True
             to_be_removed.append(var)
     to_be_removed = list(set(to_be_removed))
-    suggestion.in_dep = [
-        v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
 
@@ -537,9 +499,7 @@ def __filter_out_dependencies(
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(
-                    defLine, parent_function.start_position(), parent_function.end_position()
-                ):
+                if line_contained_in_region(defLine, parent_function.start_position(), parent_function.end_position()):
                     # check if var is contained in in_dep_vars and a successive in_dep exists
                     if var in in_dep_vars:
                         for line_num in in_dep_vars[var]:
@@ -574,9 +534,7 @@ def __filter_out_dependencies(
             to_be_removed.append(var)
             modification_found = True
     to_be_removed = list(set(to_be_removed))
-    suggestion.out_dep = [
-        v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
 
@@ -608,9 +566,7 @@ def __filter_in_out_dependencies(
                 if defLine is None:
                     is_valid = True
                 # check if var is defined in parent function
-                if line_contained_in_region(
-                    defLine, parent_function.start_position(), parent_function.end_position()
-                ):
+                if line_contained_in_region(defLine, parent_function.start_position(), parent_function.end_position()):
                     # check if var occurs more than once as in or out, i.e. at least an actual in or out
                     # dependency exists
                     if len(in_dep_vars[var]) > 1 or len(out_dep_vars[var]) > 1:
@@ -685,9 +641,7 @@ def __filter_in_out_dependencies(
             to_be_removed.append(var)
             modification_found = True
     to_be_removed = list(set(to_be_removed))
-    suggestion.in_out_dep = [
-        v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed
-    ]
+    suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
 
@@ -737,9 +691,9 @@ def filter_data_depend_clauses(
             if suggestion.type not in [TPIType.TASK, TPIType.TASKLOOP]:
                 continue
             # get function containing the task cu
-            parent_function, last_node = get_parent_of_type(
-                pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True
-            )[0]
+            parent_function, last_node = get_parent_of_type(pet, suggestion._node, NodeType.FUNC, EdgeType.CHILD, True)[
+                0
+            ]
             # filter in_dep
             modification_found = modification_found or __filter_in_dependencies(
                 pet, suggestion, var_def_line_dict, parent_function, out_dep_vars

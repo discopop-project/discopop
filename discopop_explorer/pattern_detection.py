@@ -142,17 +142,11 @@ class PatternDetectorX(object):
             arguments_1,
         )
         arguments_2 = {"--exhaustive-search": False, "--headless-mode": True}
-        optimization_graph = OptimizationGraph(
-            project_folder_path, experiment, arguments_2, None, False
-        )
+        optimization_graph = OptimizationGraph(project_folder_path, experiment, arguments_2, None, False)
 
         for do_all_suggestion in res.do_all:
-            for node_id in get_nodes_from_cu_id(
-                experiment.optimization_graph, do_all_suggestion.node_id
-            ):
-                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(
-                    experiment, node_id
-                )
+            for node_id in get_nodes_from_cu_id(experiment.optimization_graph, do_all_suggestion.node_id):
+                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(experiment, node_id)
                 print(
                     "DOALL @ ",
                     do_all_suggestion.node_id,

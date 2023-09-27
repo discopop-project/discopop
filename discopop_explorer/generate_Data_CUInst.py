@@ -51,9 +51,7 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     return False
 
 
-def __recursive_function_called_multiple_times_inside_function(
-    pet: PETGraphX, recursive_function_call: str
-) -> bool:
+def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, recursive_function_call: str) -> bool:
     """checks if the given recursive function is called multiple times from within a functions body
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
@@ -143,9 +141,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
         # check if recursive function call occurs inside loop (check if line contained in lines of any loop cu)
         contained_in_loop = __recursive_call_inside_loop(pet, recursive_function_call)
         # check if recursive function call is called multiple times
-        called_multiple_times = __recursive_function_called_multiple_times_inside_function(
-            pet, recursive_function_call
-        )
+        called_multiple_times = __recursive_function_called_multiple_times_inside_function(pet, recursive_function_call)
 
         # check if recursive function is called inside loop or multiple times
         if not (contained_in_loop or called_multiple_times):
@@ -163,15 +159,9 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
             # node type is not cu so goto next node
             if not isinstance(pet.node_at(child_id), CUNode):
                 continue
-            __output_dependencies_of_type(
-                pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|"
-            )
-            __output_dependencies_of_type(
-                pet, child_id, children_ids, output_file, DepType.WAR, "|WAR|"
-            )
-            __output_dependencies_of_type(
-                pet, child_id, children_ids, output_file, DepType.WAW, "|WAW|"
-            )
+            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.RAW, "|RAW|")
+            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.WAR, "|WAR|")
+            __output_dependencies_of_type(pet, child_id, children_ids, output_file, DepType.WAW, "|WAW|")
 
         output_file.write("\n")
 
@@ -189,9 +179,7 @@ def cu_instantiation_input_cpp(pet: PETGraphX, output_file: str):
 def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_file):
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
-    pet = PETGraphX.from_parsed_input(
-        *parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file)
-    )
+    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_file)
 

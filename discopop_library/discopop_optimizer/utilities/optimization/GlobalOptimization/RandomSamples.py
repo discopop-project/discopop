@@ -49,9 +49,7 @@ def find_quasi_optimal_using_random_samples(
         experiment.substitutions = copy.deepcopy(substitutions_buffer)
 
         tmp_dict = dict()
-        tmp_dict[function_root] = [
-            get_random_path(experiment, graph, function_root.node_id, must_contain=None)
-        ]
+        tmp_dict[function_root] = [get_random_path(experiment, graph, function_root.node_id, must_contain=None)]
         try:
             random_paths.append(calculate_data_transfers(graph, tmp_dict)[function_root][0])
             i += 1

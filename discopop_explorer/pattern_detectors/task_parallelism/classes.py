@@ -55,9 +55,7 @@ class Task(object):
         self.end_line = other.end_line
         self.workload += other.workload
         self.instruction_count += other.instruction_count
-        self.mw_type = (
-            MWType.BARRIER_WORKER if other.mw_type == MWType.BARRIER_WORKER else MWType.WORKER
-        )
+        self.mw_type = MWType.BARRIER_WORKER if other.mw_type == MWType.BARRIER_WORKER else MWType.WORKER
 
 
 class TPIType(Enum):
@@ -71,9 +69,7 @@ class TPIType(Enum):
 class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result"""
 
-    def __init__(
-        self, node: Node, type: TPIType, pragma, pragma_line, first_private, private, shared
-    ):
+    def __init__(self, node: Node, type: TPIType, pragma, pragma_line, first_private, private, shared):
         """
         :param node: node, where task parallelism was detected
         :param type: type of the suggestion (task, taskwait, taskloop)

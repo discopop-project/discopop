@@ -31,9 +31,7 @@ def show_function_models(
     destroy_window_after_execution: bool,
     show_functions: Optional[List[FunctionRoot]] = None,
 ):
-    considered_functions = (
-        show_functions if show_functions is not None else experiment.function_models
-    )
+    considered_functions = show_functions if show_functions is not None else experiment.function_models
     # show function selection dialogue
     parent_frame.rowconfigure(0, weight=1)
     parent_frame.rowconfigure(1, weight=1)
@@ -141,9 +139,7 @@ def export_to_json(experiment: Experiment):
     for k2, v in to_be_added:
         experiment.function_models[k2] = v  # type: ignore
 
-    experiment_dump_path: str = os.path.join(
-        experiment.discopop_optimizer_path, "last_experiment.pickle"
-    )
+    experiment_dump_path: str = os.path.join(experiment.discopop_optimizer_path, "last_experiment.pickle")
     if not os.path.exists(experiment.discopop_optimizer_path):
         os.makedirs(experiment.discopop_optimizer_path)
     pickle.dump(experiment, open(experiment_dump_path, "wb"))

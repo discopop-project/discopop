@@ -23,16 +23,12 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
     file_id = start_line.split(":")[0]
     if file_id != end_line.split(":")[0]:
         raise ValueError("File-ids not equal! ", start_line, end_line)
-    line_numbers: List[int] = list(
-        range(int(start_line.split(":")[1]), int(end_line.split(":")[1]) + 1)
-    )
+    line_numbers: List[int] = list(range(int(start_line.split(":")[1]), int(end_line.split(":")[1]) + 1))
     result = [file_id + ":" + str(num) for num in line_numbers]
     return result
 
 
-def get_function_body_cus_without_called_functions(
-    pet: PETGraphX, function_node: FunctionNode
-) -> List[NodeID]:
+def get_function_body_cus_without_called_functions(pet: PETGraphX, function_node: FunctionNode) -> List[NodeID]:
     queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
     visited: Set[NodeID] = set()
     while queue:
@@ -43,9 +39,7 @@ def get_function_body_cus_without_called_functions(
         # add children if they do not result from a call
         children = [t for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
         called = [t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
-        queue += [
-            c for c in children if c not in visited and c not in called
-        ]  # todo add check for call
+        queue += [c for c in children if c not in visited and c not in called]  # todo add check for call
     return list(visited)
 
 
@@ -69,13 +63,7 @@ def prepare_liveness_metadata(
             for line in get_contained_lines(cu_node.start_position(), cu_node.end_position()):
                 if len(write_identifiers) > 0:
                     # is written
-                    line = (
-                        line
-                        + ":"
-                        + "("
-                        + ",".join([str(ident) for ident in write_identifiers])
-                        + ")"
-                    )
+                    line = line + ":" + "(" + ",".join([str(ident) for ident in write_identifiers]) + ")"
                 else:
                     # is read
                     line = line + ":"

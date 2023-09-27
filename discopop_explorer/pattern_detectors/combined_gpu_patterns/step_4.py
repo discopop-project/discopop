@@ -31,9 +31,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update im
 class Context(object):
     cu_id: NodeID
     device_id: int
-    seen_writes_by_device: Dict[
-        int, Dict[MemoryRegion, Set[Tuple[Optional[int], Optional[NodeID]]]]
-    ]
+    seen_writes_by_device: Dict[int, Dict[MemoryRegion, Set[Tuple[Optional[int], Optional[NodeID]]]]]
 
     def __init__(self, cu_id: NodeID, device_id: int):
         self.cu_id = cu_id
@@ -82,9 +80,7 @@ class Context(object):
                 self.seen_writes_by_device[device_id_to_update][mem_reg] = set()
                 print("==> added ", mem_reg, " to device: ", device_id_to_update, file=sys.stderr)
             for ident in writes[mem_reg]:
-                if ident not in [
-                    t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]
-                ]:
+                if ident not in [t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]]:
                     # list of seen writes will be updated
                     updated_memory_regions.add((mem_reg, is_initialization))
                     print(
@@ -99,17 +95,11 @@ class Context(object):
                 print("ADD : ", (ident, origin_cu_id), file=sys.stderr)
                 # todo: do not simply add, but replace current entry with origin_cu_id if it is a successor of the current entry
                 #  necessary, since relying on set behavior is not sufficient anymore
-                if ident not in [
-                    t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]
-                ]:
-                    self.seen_writes_by_device[device_id_to_update][mem_reg].add(
-                        (ident, origin_cu_id)
-                    )
+                if ident not in [t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]]:
+                    self.seen_writes_by_device[device_id_to_update][mem_reg].add((ident, origin_cu_id))
         return updated_memory_regions
 
-    def find_required_updates(
-        self, pet: PETGraphX, new_device_id: int
-    ) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
+    def find_required_updates(self, pet: PETGraphX, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
         # update required, if seen writes of new device is not a superset of old device id
         required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
 
@@ -127,8 +117,7 @@ class Context(object):
             missing_write_identifiers = [
                 (ident, origin)
                 for (ident, origin) in self.seen_writes_by_device[device_id_1][mem_reg]
-                if ident not in [t[0] for t in self.seen_writes_by_device[device_id_2][mem_reg]]
-                and ident is not None
+                if ident not in [t[0] for t in self.seen_writes_by_device[device_id_2][mem_reg]] and ident is not None
             ]
             if len(missing_write_identifiers) > 0:
                 # get position of the last write
@@ -139,9 +128,7 @@ class Context(object):
                     if pet.is_predecessor(cast(NodeID, last_write_location), cast(NodeID, origin)):
                         last_write_location = origin
 
-                required_updates.add(
-                    (mem_reg, device_id_1, device_id_2, cast(NodeID, last_write_location))
-                )
+                required_updates.add((mem_reg, device_id_1, device_id_2, cast(NodeID, last_write_location)))
 
         return required_updates
 
@@ -159,9 +146,7 @@ class Context(object):
                     print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
                 self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
 
-    def request_updates_from_other_devices(
-        self, pet, new_device_id: int
-    ) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
+    def request_updates_from_other_devices(self, pet, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
         required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
         to_be_removed = set()
         for mem_reg in self.seen_writes_by_device[new_device_id]:
@@ -175,8 +160,7 @@ class Context(object):
                 missing_identifiers = [
                     (ident, origin)
                     for (ident, origin) in self.seen_writes_by_device[other_device_id][mem_reg]
-                    if ident
-                    not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]
+                    if ident not in [t[0] for t in self.seen_writes_by_device[new_device_id][mem_reg]]
                 ]
                 if len(missing_identifiers) > 0:
                     # get position of the last write
@@ -184,14 +168,10 @@ class Context(object):
                     for ident, origin in missing_identifiers:
                         if last_write_location is None:
                             last_write_location = origin
-                        if pet.is_predecessor(
-                            cast(NodeID, last_write_location), cast(NodeID, origin)
-                        ):
+                        if pet.is_predecessor(cast(NodeID, last_write_location), cast(NodeID, origin)):
                             last_write_location = origin
 
-                    required_updates.add(
-                        (mem_reg, other_device_id, new_device_id, cast(NodeID, last_write_location))
-                    )
+                    required_updates.add((mem_reg, other_device_id, new_device_id, cast(NodeID, last_write_location)))
 
                 # remove none identifier
                 for ident, origin in self.seen_writes_by_device[new_device_id][mem_reg]:
@@ -237,9 +217,7 @@ class Context(object):
         writes_for_update = dict()
         if next_cu_id in writes_by_device[new_device_id]:
             writes_for_update = writes_by_device[new_device_id][next_cu_id]
-        self_updated_memory_regions = self.update_writes(
-            new_device_id, writes_for_update, next_cu_id
-        )
+        self_updated_memory_regions = self.update_writes(new_device_id, writes_for_update, next_cu_id)
         print("UPDATED MEMORY REGIONS: ", self_updated_memory_regions, file=sys.stderr)
 
         # identify required updates
@@ -326,8 +304,7 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
             return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
-            and potential_merge_node.end_position()
-            == pet.get_parent_function(potential_merge_node).end_position()
+            and potential_merge_node.end_position() == pet.get_parent_function(potential_merge_node).end_position()
         ):
             # do not consider return BB as merge node
             return False
@@ -405,9 +382,7 @@ def identify_updates(
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []
-        for function_child_id in [
-            t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)
-        ]:
+        for function_child_id in [t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)]:
             in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
                 entry_points.append(function_child_id)
@@ -455,10 +430,7 @@ def get_update_type(from_device_id: int, to_device_id: int) -> UpdateType:
     elif from_device_id != 0 and to_device_id == 0:
         return UpdateType.FROM_DEVICE
     raise ValueError(
-        "Unsupported update type requested for device IDS: "
-        + str(from_device_id)
-        + " -> "
-        + str(to_device_id)
+        "Unsupported update type requested for device IDS: " + str(from_device_id) + " -> " + str(to_device_id)
     )
 
 
@@ -607,15 +579,11 @@ def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
                     entry_nodes.add(node_id)
 
             # ==> Identify cycle exits
-            for potential_exit_node in set(
-                [s for s, t, d in cycle_edges] + [t for s, t, d in cycle_edges]
-            ):
+            for potential_exit_node in set([s for s, t, d in cycle_edges] + [t for s, t, d in cycle_edges]):
                 print("cyc: ", cycle_nodes)
                 print("exit: ", potential_exit_node)
                 potential_cycle_successor_nodes = [
-                    t
-                    for s, t, d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR)
-                    if t not in cycle_nodes
+                    t for s, t, d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR) if t not in cycle_nodes
                 ]
                 print("POT: ", potential_cycle_successor_nodes)
 
@@ -628,9 +596,7 @@ def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
                 filtered_pcsn = []
                 for pcsn in potential_cycle_successor_nodes:
                     pcsn_parents = [
-                        s
-                        for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD)
-                        if type(pet.node_at(s)) != FunctionNode
+                        s for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode
                     ]
                     if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
                         # no shared parents
@@ -677,9 +643,7 @@ def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
                 for cycle_edge in cycle_edges:
                     if cycle_edge[1] == potential_exit_node:
                         print("Redirecting: ", cycle_edge, " TO (", cycle_edge[0], ", ", end="")
-                        unrolled_function_graphs[function].remove_edge(
-                            cycle_edge[0], cycle_edge[1], cycle_edge[2]
-                        )
+                        unrolled_function_graphs[function].remove_edge(cycle_edge[0], cycle_edge[1], cycle_edge[2])
                         if add_dummy_node:
                             unrolled_function_graphs[function].add_edge(
                                 cycle_edge[0],
@@ -697,9 +661,7 @@ def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
                         ")",
                     )
                     if add_dummy_node:
-                        unrolled_function_graphs[function].add_edge(
-                            "dummy:" + potential_exit_node, cycle_successor
-                        )
+                        unrolled_function_graphs[function].add_edge("dummy:" + potential_exit_node, cycle_successor)
                     else:
                         for buffered_node_id in buffer:
                             unrolled_function_graphs[function].add_edge(
@@ -757,14 +719,10 @@ def add_accesses_from_called_functions(
                         if mem_reg not in writes_by_device[device_id][calling_cu_id]:
                             writes_by_device[device_id][calling_cu_id][mem_reg] = set()
                         len_pre = len(writes_by_device[device_id][calling_cu_id][mem_reg])
-                        writes_by_device[device_id][calling_cu_id][mem_reg].update(
-                            memory_accesses[device_id][mem_reg]
-                        )
+                        writes_by_device[device_id][calling_cu_id][mem_reg].update(memory_accesses[device_id][mem_reg])
                         len_post = len(writes_by_device[device_id][calling_cu_id][mem_reg])
                         values_propagated = (
-                            (values_propagated or True)
-                            if len_pre < len_post
-                            else (values_propagated or False)
+                            (values_propagated or True) if len_pre < len_post else (values_propagated or False)
                         )
     print("cycles: ", cycles)
     return writes_by_device
@@ -786,9 +744,7 @@ def identify_updates_in_unrolled_function_graphs(
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []
-        for function_child_id in [
-            t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)
-        ]:
+        for function_child_id in [t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)]:
             in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
                 entry_points.append(function_child_id)

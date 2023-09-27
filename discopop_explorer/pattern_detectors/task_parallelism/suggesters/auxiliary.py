@@ -24,9 +24,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
 )
 
 
-def suggest_parallel_regions(
-    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
-) -> List[ParallelRegionInfo]:
+def suggest_parallel_regions(pet: PETGraphX, suggestions: List[TaskParallelismInfo]) -> List[ParallelRegionInfo]:
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
     possibly leading to the creation of tasks.
@@ -66,9 +64,7 @@ def suggest_parallel_regions(
             continue
         last_node = last_node
         region_suggestions.append(
-            ParallelRegionInfo(
-                parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position()
-            )
+            ParallelRegionInfo(parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position())
         )
     return region_suggestions
 
@@ -116,9 +112,7 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
     return output
 
 
-def detect_taskloop_reduction(
-    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
-) -> List[TaskParallelismInfo]:
+def detect_taskloop_reduction(pet: PETGraphX, suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """detect suggested tasks which can and should be replaced by
     taskloop reduction.
     return the modified list of suggestions.
@@ -193,12 +187,8 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
     # successor graph of a node containing a task suggestion
     useful_omittable_suggestions = []
     for oms in omittable_suggestions:
-        in_succ_edges = [
-            (s, t, e) for s, t, e in pet.in_edges(oms._node.id) if e.etype == EdgeType.SUCCESSOR
-        ]
-        parent_task_nodes = [
-            pet.node_at(e[0]) for e in in_succ_edges if pet.node_at(e[0]).tp_contains_task is True
-        ]
+        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(oms._node.id) if e.etype == EdgeType.SUCCESSOR]
+        parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if pet.node_at(e[0]).tp_contains_task is True]
         if len(parent_task_nodes) != 0:
             useful_omittable_suggestions.append(oms)
         else:
@@ -246,37 +236,26 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
                 for omit_out_var in omit_s.out_dep:
                     if omit_out_var is None:
                         continue
-                    task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx
-                    ].out_dep.append(omit_out_var)
+                    task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].out_dep.append(omit_out_var)
                     # omit_s.combine_with_node.out_dep.append(omit_out_var)
                 # process in dependencies of omit_s
                 for omit_in_var in omit_s.in_dep:
                     # note: only dependencies to target node allowed
-                    if (
-                        omit_in_var
-                        in task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx
-                        ].out_dep
-                    ):
-                        task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx
-                        ].out_dep.remove(omit_in_var)
+                    if omit_in_var in task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].out_dep:
+                        task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].out_dep.remove(
+                            omit_in_var
+                        )
                     # omit_s.combine_with_node.out_dep.remove(omit_in_var)
 
                 # increase size of pragma region if needed
                 if ":" not in cast(
                     str,
-                    task_suggestions_dict[omit_s.combine_with_node][
-                        omit_target_task_idx
-                    ].region_end_line,
+                    task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].region_end_line,
                 ):
                     if int(omit_s.end_line[omit_s.end_line.index(":") + 1 :]) > int(
                         cast(
                             str,
-                            task_suggestions_dict[omit_s.combine_with_node][
-                                omit_target_task_idx
-                            ].region_end_line,
+                            task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].region_end_line,
                         )
                     ):
                         task_suggestions_dict[omit_s.combine_with_node][
@@ -285,14 +264,10 @@ def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> Lis
                 else:
                     cut_region_end_line = cast(
                         str,
-                        task_suggestions_dict[omit_s.combine_with_node][
-                            omit_target_task_idx
-                        ].region_end_line,
+                        task_suggestions_dict[omit_s.combine_with_node][omit_target_task_idx].region_end_line,
                     )
                     cut_region_end_line = cut_region_end_line[cut_region_end_line.index(":") + 1 :]
-                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1 :]) > int(
-                        cut_region_end_line
-                    ):
+                    if int(omit_s.end_line[omit_s.end_line.index(":") + 1 :]) > int(cut_region_end_line):
                         task_suggestions_dict[omit_s.combine_with_node][
                             omit_target_task_idx
                         ].region_end_line = omit_s.end_line

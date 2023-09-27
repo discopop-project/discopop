@@ -73,9 +73,7 @@ class Device(object):
         instructions_per_second = instructions_per_core_per_second * (
             Integer(1) if is_sequential else self.__thread_count
         )
-        workload_in_instructions = (
-            workload * 2.120152292
-        )  # todo (get from benchmarking / extra-p model)
+        workload_in_instructions = workload * 2.120152292  # todo (get from benchmarking / extra-p model)
         # current factor determined by manual "measurement" based on a single example!
 
         execution_time_in_seconds = workload_in_instructions / instructions_per_second

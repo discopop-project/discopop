@@ -47,9 +47,7 @@ class GDInfo(PatternInfo):
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List = []
-        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(
-            pet, node, "GeometricDecomposition", [], []
-        )
+        fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
         fp.append(Variable("int", "i", "", sizeInByte=4))
 
         self.first_private = fp
@@ -98,9 +96,7 @@ def run_detection(pet: PETGraphX) -> List[GDInfo]:
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
-        )
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
     print("GLOBAL RES: ", result)

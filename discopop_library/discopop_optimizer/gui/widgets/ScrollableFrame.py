@@ -29,24 +29,18 @@ class ScrollableFrameWidget(object):
         self.scrollable_frame.rowconfigure(0, weight=1)
         self.scrollable_frame.columnconfigure(0, weight=1)
 
-        self.scrollable_frame.bind(
-            "<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-    def finalize(
-        self, row_count: int, row: int = 0, col: int = 0, rowspan: int = 1, columnspan: int = 1
-    ):
+    def finalize(self, row_count: int, row: int = 0, col: int = 0, rowspan: int = 1, columnspan: int = 1):
         if rowspan < 1:
             rowspan = 1
         if columnspan < 1:
             columnspan = 1
-        self.container.grid(
-            row=row, column=col, columnspan=columnspan, rowspan=rowspan, sticky=tk.NSEW
-        )
+        self.container.grid(row=row, column=col, columnspan=columnspan, rowspan=rowspan, sticky=tk.NSEW)
         self.canvas.grid(row=0, column=0, sticky=tk.NSEW)
         self.scrollbar.grid(row=0, rowspan=max(row_count, 1), column=1, sticky=tk.NS)
 

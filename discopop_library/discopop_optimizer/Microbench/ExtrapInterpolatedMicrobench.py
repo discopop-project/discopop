@@ -86,6 +86,4 @@ class ExtrapInterpolatedMicrobench(Microbench):
         benchDim: MicrobenchDimension,
         benchCoord: Union[MicrobenchCoordinate, Tuple[int, float, float]],
     ):
-        return self.models[(Callpath(benchType), Metric(benchDim))].hypothesis.function.evaluate(
-            [*benchCoord]
-        )
+        return self.models[(Callpath(benchType), Metric(benchDim))].hypothesis.function.evaluate([*benchCoord])

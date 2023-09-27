@@ -14,9 +14,7 @@ from typing import Dict, List, Optional, Match, cast
 from lxml import objectify  # type: ignore
 
 
-def __prune_statement(
-    stmt_copy: str, statement: str, var_name: str, var_type: str
-) -> Optional[List[str]]:
+def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: str) -> Optional[List[str]]:
     """splits a statement and performs multiple alias analyses if necessary (more than one '=' contained
     in the given statement).
     :param stmt_copy: cleaned copy of the target statement
@@ -51,10 +49,7 @@ def __check_obvious_pointer_type(var_name: str, rhs: str) -> bool:
     :return: True, of None should be returned by __get_alias_statement. False, otherwise.
     """
     # var_name has index access?
-    if (
-        rhs.index(var_name) + len(var_name) < len(rhs)
-        and rhs[rhs.index(var_name) + len(var_name)] == "["
-    ):
+    if rhs.index(var_name) + len(var_name) < len(rhs) and rhs[rhs.index(var_name) + len(var_name)] == "[":
         return True
     # '*' prior to var_name?
     if rhs.index(var_name) - 1 >= 0 and rhs[rhs.index(var_name) - 1] == "*":
@@ -70,8 +65,7 @@ def __check_obvious_pointer_type(var_name: str, rhs: str) -> bool:
     # '->' after var_name?
     if (
         rhs.index(var_name) + len(var_name) + 2 > len(rhs)
-        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1]
-        == "->"
+        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1] == "->"
     ):
         return True
     return False
@@ -87,17 +81,10 @@ def __check_possible_pointer_type(var_name: str, rhs: str) -> bool:
     if rhs.index(var_name) - 1 >= 0 and not rhs[rhs.index(var_name) - 1] == "&":
         return True
     # var_name has index access?
-    if (
-        rhs.index(var_name) + len(var_name) < len(rhs)
-        and rhs[rhs.index(var_name) + len(var_name)] == "["
-    ):
+    if rhs.index(var_name) + len(var_name) < len(rhs) and rhs[rhs.index(var_name) + len(var_name)] == "[":
         return True
     # '*' prior to '&'?
-    if (
-        rhs.index(var_name) - 2 >= 0
-        and rhs[rhs.index(var_name) - 1] == "&"
-        and rhs[rhs.index(var_name) - 2] == "*"
-    ):
+    if rhs.index(var_name) - 2 >= 0 and rhs[rhs.index(var_name) - 1] == "&" and rhs[rhs.index(var_name) - 2] == "*":
         return True
     # '*' and '(' prior, no ')' prior to '&'?
     if (
@@ -110,8 +97,7 @@ def __check_possible_pointer_type(var_name: str, rhs: str) -> bool:
     # '->' after var_name?
     if (
         rhs.index(var_name) + len(var_name) + 2 > len(rhs)
-        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1]
-        == "->"
+        and rhs[rhs.index(var_name) + len(var_name) : rhs.index(var_name) + len(var_name) + 1] == "->"
     ):
         return True
     return False
@@ -154,18 +140,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
         return None
     # operation is '=' ?
     stmt_copy = statement
-    stmt_copy = (
-        stmt_copy.replace("<=>", "  ")
-        .replace("<<=", "   ")
-        .replace(">>=", "   ")
-        .replace("==", "  ")
-    )
-    stmt_copy = (
-        stmt_copy.replace("!=", "  ").replace("+=", "  ").replace("-=", "  ").replace("*=", "  ")
-    )
-    stmt_copy = (
-        stmt_copy.replace("/=", "  ").replace("%=", "  ").replace("<=", "  ").replace(">=", "  ")
-    )
+    stmt_copy = stmt_copy.replace("<=>", "  ").replace("<<=", "   ").replace(">>=", "   ").replace("==", "  ")
+    stmt_copy = stmt_copy.replace("!=", "  ").replace("+=", "  ").replace("-=", "  ").replace("*=", "  ")
+    stmt_copy = stmt_copy.replace("/=", "  ").replace("%=", "  ").replace("<=", "  ").replace(">=", "  ")
     stmt_copy = stmt_copy.replace("&=", "  ").replace("^=", "  ").replace("|=", "  ")
     if "=" not in stmt_copy:
         return None
@@ -201,9 +178,7 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     return None
 
 
-def __add_alias_information(
-    function_information_list: List[Dict], statements_file: str
-) -> List[Dict]:
+def __add_alias_information(function_information_list: List[Dict], statements_file: str) -> List[Dict]:
     """Wrapper to gather and append alias information to the entries in function_information as a new field.
     Aliases can be found up to a depth of 2.
     Alias detection ignores scopes.
@@ -252,14 +227,10 @@ def __add_alias_information(
                             statement_line = statement[statement.index(":") + 1 :]
                             statement_line = statement_line[: statement_line.index(":")]
                             inner_statement_line = inner_statement[inner_statement.index(":") + 1 :]
-                            inner_statement_line = inner_statement_line[
-                                : inner_statement_line.index(":")
-                            ]
+                            inner_statement_line = inner_statement_line[: inner_statement_line.index(":")]
                             if int(inner_statement_line) < int(statement_line):
                                 continue
-                            inner_statement_result = __get_alias_from_statement(
-                                state_res_entry, "*", inner_statement
-                            )
+                            inner_statement_result = __get_alias_from_statement(state_res_entry, "*", inner_statement)
                             if inner_statement_result is not None:
                                 # second level alias found
                                 aliases += inner_statement_result
@@ -384,14 +355,7 @@ def get_alias_information(file_mapping: str, cu_xml: str, temp_file: str, build_
             if len(alias_entry) > 0:
                 for alias_name in alias_entry:
                     alias_str += (
-                        fn_info["id"]
-                        + ";"
-                        + fn_info["name"]
-                        + ";"
-                        + fn_info["args"][idx]
-                        + ";"
-                        + alias_name
-                        + "\n"
+                        fn_info["id"] + ";" + fn_info["name"] + ";" + fn_info["args"][idx] + ";" + alias_name + "\n"
                     )
     # cleanup
     if os.path.exists(temp_file + "_statements"):

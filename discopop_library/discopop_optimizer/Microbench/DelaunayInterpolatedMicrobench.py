@@ -99,6 +99,4 @@ class DelaunayInterpolatedMicrobench(Microbench):
         if not self.__isInterpolated:
             self.__interpolate()
             self.__isInterpolated = True
-        return (
-            self.interpolator[benchType][benchDim](benchCoord) / 1000000.0
-        )  # convert microseconds to seconds
+        return self.interpolator[benchType][benchDim](benchCoord) / 1000000.0  # convert microseconds to seconds

@@ -24,9 +24,7 @@ class ContextObject(object):
     seen_writes_by_device: Dict[DeviceID, Dict[MemoryRegion, Set[WriteDataAccess]]]
     necessary_updates: Set[Update]
 
-    def __init__(
-        self, initializing_node_id: int, last_seen_device_ids: Optional[List[DeviceID]] = None
-    ):
+    def __init__(self, initializing_node_id: int, last_seen_device_ids: Optional[List[DeviceID]] = None):
         self.seen_writes_by_device = dict()
         self.necessary_updates = set()
         self.last_visited_node_id = initializing_node_id
@@ -56,9 +54,7 @@ class ContextObject(object):
                 if read.memory_region not in self.seen_writes_by_device[device_id]:
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
-                other_devices_known_writes = self.seen_writes_by_device[device_id][
-                    read.memory_region
-                ]
+                other_devices_known_writes = self.seen_writes_by_device[device_id][read.memory_region]
 
                 is_first_data_occurrence = False
                 if read.memory_region not in self.seen_writes_by_device[reading_device_id]:
@@ -90,10 +86,7 @@ class ContextObject(object):
                         # check if data is known to the host
                         if data_write.memory_region not in self.seen_writes_by_device[0]:
                             self.seen_writes_by_device[0][data_write.memory_region] = set()
-                        if (
-                            data_write
-                            not in self.seen_writes_by_device[0][data_write.memory_region]
-                        ):
+                        if data_write not in self.seen_writes_by_device[0][data_write.memory_region]:
                             # register source device -> host update
                             required_updates.add(
                                 Update(
@@ -154,9 +147,9 @@ class ContextObject(object):
                         self.seen_writes_by_device[update.target_device_id][
                             update.write_data_access.memory_region
                         ] = set()
-                    self.seen_writes_by_device[update.target_device_id][
-                        update.write_data_access.memory_region
-                    ].add(update.write_data_access)
+                    self.seen_writes_by_device[update.target_device_id][update.write_data_access.memory_region].add(
+                        update.write_data_access
+                    )
 
                 self.necessary_updates.update(required_updates)
 

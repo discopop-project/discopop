@@ -36,9 +36,7 @@ class BranchCosts(RegularCosts):
 
 
 class WorkloadStack(object):
-    stack: List[
-        Union[List, RegularCosts]
-    ]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
+    stack: List[Union[List, RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
 
     def __init__(self):
         self.stack = []
@@ -237,9 +235,7 @@ def __parse_node(
     else:
         iteration_factor = 1
     for child_id in get_children(experiment.optimization_graph, node_id):
-        workload_stack = __parse_node(
-            experiment, child_id, workload_stack, iteration_factor=iteration_factor
-        )
+        workload_stack = __parse_node(experiment, child_id, workload_stack, iteration_factor=iteration_factor)
 
     # set next node
     successors = get_successors(experiment.optimization_graph, node_id)

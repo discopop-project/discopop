@@ -74,9 +74,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
                 if dep_line_number < first_dependency_line_number:
                     first_dependency_line = dep_line
-        tmp_suggestion = TaskParallelismInfo(
-            v, TPIType.TASKWAIT, ["taskwait"], first_dependency_line, [], [], []
-        )
+        tmp_suggestion = TaskParallelismInfo(v, TPIType.TASKWAIT, ["taskwait"], first_dependency_line, [], [], [])
         if v.start_position() not in suggestions:
             # no entry for source code line contained in suggestions
             suggestions[v.start_position()] = []
@@ -93,9 +91,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
             function_call_string = vx.recursive_function_calls[i]
             if not type(function_call_string) == str:
                 continue
-            contained_in = recursive_function_call_contained_in_worker_cu(
-                function_call_string, worker_cus
-            )
+            contained_in = recursive_function_call_contained_in_worker_cu(function_call_string, worker_cus)
             if contained_in is not None:
                 current_suggestions = None
                 # recursive Function call contained in worker cu
@@ -146,9 +142,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     return result
 
 
-def correct_task_suggestions_in_loop_body(
-    pet: PETGraphX, suggestions: List[PatternInfo]
-) -> List[PatternInfo]:
+def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Separate treatment of task suggestions at loop increment CUs.
     If regular loop: move taskwait suggested at loop increment line to end of loop body.
     If do-all loop: move taskwait suggested at loop increment line outside of loop body.
@@ -159,19 +153,13 @@ def correct_task_suggestions_in_loop_body(
     :param pet: PET graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
-    task_suggestions = [
-        s
-        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
-        if s.type is TPIType.TASK
-    ]
+    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.type is TPIType.TASK]
     for ts in task_suggestions:
         found_critical_cus: List[Node] = []
         found_atomic_cus: List[Node] = []
         for loop_cu in pet.all_nodes(LoopNode):
             # check if task suggestion inside do-all loop exists
-            if line_contained_in_region(
-                ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()
-            ):
+            if line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
 
                 def find_taskwaits(cu_node: Node, visited: List[Node]):
                     if cu_node.tp_contains_taskwait:
@@ -243,36 +231,22 @@ def correct_task_suggestions_in_loop_body(
                             # containing such cases
                             for loop_cu_child in pet.direct_children_or_called_nodes(loop_cu):
                                 for in_dep_var_name in list(
-                                    set(
-                                        [
-                                            e[2].var_name
-                                            for e in pet.in_edges(loop_cu_child.id, EdgeType.DATA)
-                                        ]
-                                    )
+                                    set([e[2].var_name for e in pet.in_edges(loop_cu_child.id, EdgeType.DATA)])
                                 ):
                                     if in_dep_var_name in ts.shared:
                                         # check if the found dependency occurs in the scope of the suggested task
                                         if (
                                             loop_cu_child.file_id == ts._node.file_id
-                                            and loop_cu_child.start_line
-                                            >= int(ts.region_start_line)
+                                            and loop_cu_child.start_line >= int(ts.region_start_line)
                                             and loop_cu_child.end_line <= int(ts.region_end_line)
                                         ):
                                             # seperate between critical and atomic CUs
                                             if contains_reduction(pet, loop_cu_child):
                                                 # split cu lines on reduction, mark surrounding lines as critical
-                                                file_idx = loop_cu_child.start_position().split(
-                                                    ":"
-                                                )[0]
-                                                start_line = int(
-                                                    loop_cu_child.start_position().split(":")[1]
-                                                )
-                                                end_line = int(
-                                                    loop_cu_child.end_position().split(":")[1]
-                                                )
-                                                critical_lines_range = range(
-                                                    start_line, end_line + 1
-                                                )
+                                                file_idx = loop_cu_child.start_position().split(":")[0]
+                                                start_line = int(loop_cu_child.start_position().split(":")[1])
+                                                end_line = int(loop_cu_child.end_position().split(":")[1])
+                                                critical_lines_range = range(start_line, end_line + 1)
                                                 atomic_lines = []
                                                 # seperate between critical and atomic lines
                                                 for red_var in pet.reduction_vars:
@@ -282,46 +256,29 @@ def correct_task_suggestions_in_loop_body(
                                                         loop_cu_child.end_position(),
                                                     ):
                                                         atomic_lines.append(
-                                                            int(
-                                                                red_var["reduction_line"].split(
-                                                                    ":"
-                                                                )[1]
-                                                            )
+                                                            int(red_var["reduction_line"].split(":")[1])
                                                         )
                                                 critical_lines = [
-                                                    e
-                                                    for e in critical_lines_range
-                                                    if e not in atomic_lines
+                                                    e for e in critical_lines_range if e not in atomic_lines
                                                 ]
                                                 # combine successive critical lines if possible
                                                 combined_critical_lines = [
                                                     (e, e) for e in critical_lines
                                                 ]  # (start, end)
                                                 found_combination = True
-                                                while (
-                                                    found_combination
-                                                    and len(combined_critical_lines) > 1
-                                                ):
+                                                while found_combination and len(combined_critical_lines) > 1:
                                                     found_combination = False
-                                                    for outer_idx, outer in enumerate(
-                                                        combined_critical_lines
-                                                    ):
-                                                        for inner_idx, inner in enumerate(
-                                                            combined_critical_lines
-                                                        ):
+                                                    for outer_idx, outer in enumerate(combined_critical_lines):
+                                                        for inner_idx, inner in enumerate(combined_critical_lines):
                                                             if inner_idx == outer_idx:
                                                                 continue
                                                             if outer[1] + 1 == inner[0]:
                                                                 # inner is direct successor of outer
-                                                                combined_critical_lines[
-                                                                    outer_idx
-                                                                ] = (
+                                                                combined_critical_lines[outer_idx] = (
                                                                     outer[0],
                                                                     inner[1],
                                                                 )
-                                                                combined_critical_lines.pop(
-                                                                    inner_idx
-                                                                )
+                                                                combined_critical_lines.pop(inner_idx)
                                                                 found_combination = True
                                                                 break
                                                         if found_combination:
@@ -359,9 +316,7 @@ def correct_task_suggestions_in_loop_body(
     return suggestions
 
 
-def __identify_atomic_or_critical_sections(
-    pet: PETGraphX, ts: TaskParallelismInfo, found_cus: List, selector: bool
-):
+def __identify_atomic_or_critical_sections(pet: PETGraphX, ts: TaskParallelismInfo, found_cus: List, selector: bool):
     """Identifies and marks atomic or critical sections.
     :param pet: PET Graph
     :param ts: task suggestion
@@ -385,9 +340,7 @@ def __identify_atomic_or_critical_sections(
                     break
                 if parent_idx == child_idx:
                     continue
-                if combinations[child_idx][0] in pet.direct_successors(
-                    combinations[parent_idx][-1]
-                ):
+                if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
                     combinations[parent_idx] += combinations[child_idx]
                     combinations.pop(child_idx)
                     found_combination = True

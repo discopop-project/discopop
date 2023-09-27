@@ -45,12 +45,12 @@ def plot_CostModels(
     local_substitutions = copy.deepcopy(experiment.substitutions)
     for function in experiment.selected_paths_per_function:
         # register substitution
-        local_substitutions[
-            cast(Symbol, function.sequential_costs)
-        ] = experiment.selected_paths_per_function[function][0].sequential_costs
-        local_substitutions[
-            cast(Symbol, function.parallelizable_costs)
-        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+        local_substitutions[cast(Symbol, function.sequential_costs)] = experiment.selected_paths_per_function[function][
+            0
+        ].sequential_costs
+        local_substitutions[cast(Symbol, function.parallelizable_costs)] = experiment.selected_paths_per_function[
+            function
+        ][0].parallelizable_costs
 
     local_models = copy.deepcopy(models)
 
@@ -119,12 +119,12 @@ def plot_CostModels_using_function_path_selections(
     local_substitutions = copy.deepcopy(experiment.substitutions)
     for function in experiment.selected_paths_per_function:
         # register substitution
-        local_substitutions[
-            cast(Symbol, function.sequential_costs)
-        ] = experiment.selected_paths_per_function[function][0].sequential_costs
-        local_substitutions[
-            cast(Symbol, function.parallelizable_costs)
-        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+        local_substitutions[cast(Symbol, function.sequential_costs)] = experiment.selected_paths_per_function[function][
+            0
+        ].sequential_costs
+        local_substitutions[cast(Symbol, function.parallelizable_costs)] = experiment.selected_paths_per_function[
+            function
+        ][0].parallelizable_costs
 
     local_models = copy.deepcopy(models)
 
@@ -227,12 +227,12 @@ def print_simplified_function(
     local_substitutions = copy.deepcopy(experiment.substitutions)
     for function in experiment.selected_paths_per_function:
         # register substitution
-        local_substitutions[
-            cast(Symbol, function.sequential_costs)
-        ] = experiment.selected_paths_per_function[function][0].sequential_costs
-        local_substitutions[
-            cast(Symbol, function.parallelizable_costs)
-        ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+        local_substitutions[cast(Symbol, function.sequential_costs)] = experiment.selected_paths_per_function[function][
+            0
+        ].sequential_costs
+        local_substitutions[cast(Symbol, function.parallelizable_costs)] = experiment.selected_paths_per_function[
+            function
+        ][0].parallelizable_costs
 
     local_models = copy.deepcopy(models)
 

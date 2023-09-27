@@ -76,9 +76,7 @@ def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list))
-        )
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
     print("GLOBAL RES: ", result)
@@ -122,12 +120,8 @@ def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
     # get required metadata
     loop_start_lines: List[LineID] = []
     root_children = pet.subtree_of_type(root, (CUNode, LoopNode))
-    root_children_cus: List[CUNode] = [
-        cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU
-    ]
-    root_children_loops: List[LoopNode] = [
-        cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP
-    ]
+    root_children_cus: List[CUNode] = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
+    root_children_loops: List[LoopNode] = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     reduction_vars = [
@@ -179,12 +173,8 @@ def __check_loop_dependencies(
     # get dependency edges between children nodes
     deps = set()
     for n in loop_children_ids:
-        deps.update(
-            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids]
-        )
-        deps.update(
-            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids]
-        )
+        deps.update([(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids])
+        deps.update([(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids])
 
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop

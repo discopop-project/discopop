@@ -27,9 +27,7 @@ def get_transfer_costs(context: ContextObject, environment: Experiment) -> CostM
         system = environment.get_system()
         source_device = system.get_device(cast(int, update.source_device_id))
         target_device = system.get_device(cast(int, update.target_device_id))
-        initialization_costs = system.get_network().get_transfer_initialization_costs(
-            source_device, target_device
-        )
+        initialization_costs = system.get_network().get_transfer_initialization_costs(source_device, target_device)
 
         total_transfer_costs += initialization_costs
 
@@ -49,8 +47,6 @@ def get_transfer_costs(context: ContextObject, environment: Experiment) -> CostM
 
         total_transfer_costs += transfer_costs
     if symbolic_memory_region_sizes:
-        return CostModel(
-            Integer(0), total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions
-        )
+        return CostModel(Integer(0), total_transfer_costs, symbol_value_suggestions=symbol_value_suggestions)
     else:
         return CostModel(Integer(0), total_transfer_costs)

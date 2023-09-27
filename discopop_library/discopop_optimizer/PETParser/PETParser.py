@@ -89,9 +89,7 @@ class PETParser(object):
         'between' the different branches"""
         visited_nodes: Set[int] = set()
         for function_node in self.pet.all_nodes(FunctionNode):
-            _, _ = self.__parse_raw_node(
-                self.cu_id_to_graph_node_id[function_node.id], visited_nodes
-            )
+            _, _ = self.__parse_raw_node(self.cu_id_to_graph_node_id[function_node.id], visited_nodes)
 
         # remove visited nodes, since duplicates exist now
         for node_id in visited_nodes:
@@ -164,9 +162,7 @@ class PETParser(object):
 
         # Step 2: create and connect context snapshot
         context_snapshot_id = self.get_new_node_id()
-        self.graph.add_node(
-            context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment)
-        )
+        self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
         add_temporary_edge(self.graph, duplicate_node_id, context_snapshot_id)
 
         # Step 3: parse branches
@@ -185,9 +181,7 @@ class PETParser(object):
 
             # Step 3.3: create context save node
             branch_context_save_id = self.get_new_node_id()
-            self.graph.add_node(
-                branch_context_save_id, data=ContextSave(branch_context_save_id, self.experiment)
-            )
+            self.graph.add_node(branch_context_save_id, data=ContextSave(branch_context_save_id, self.experiment))
 
             # Step 3.3: connect restore and save node to branch entry and exit
             add_temporary_edge(self.graph, branch_context_restore_id, branch_entry)
@@ -198,9 +192,7 @@ class PETParser(object):
 
         # step 4: create and connect context merge node
         context_merge_node_id = self.get_new_node_id()
-        self.graph.add_node(
-            context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment)
-        )
+        self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment))
         add_temporary_edge(self.graph, last_added_node_id, context_merge_node_id)
 
         # Step 5: create and connect context snapshot pop
@@ -225,9 +217,7 @@ class PETParser(object):
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[cu_node.id] = new_node_id
             # calculate accessed data
-            written_memory_regions, read_memory_regions = get_data_accesses_for_cu(
-                self.pet, cu_node.id
-            )
+            written_memory_regions, read_memory_regions = get_data_accesses_for_cu(self.pet, cu_node.id)
             self.graph.add_node(
                 new_node_id,
                 data=Workload(
@@ -346,9 +336,7 @@ class PETParser(object):
 
     def __add_pet_successor_edges(self):
         for cu_node in self.pet.all_nodes(CUNode):
-            for successor_cu_id in [
-                t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)
-            ]:
+            for successor_cu_id in [t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)]:
                 add_successor_edge(
                     self.graph,
                     self.cu_id_to_graph_node_id[cu_node.id],
@@ -415,9 +403,7 @@ class PETParser(object):
                 # continue to successor
                 successors = get_successors(self.graph, current_node)
                 if len(successors) > 1:
-                    raise ValueError(
-                        "only a single successor should exist at this stage in the process!"
-                    )
+                    raise ValueError("only a single successor should exist at this stage in the process!")
                 elif len(successors) == 1:
                     current_node = successors[0]
                 else:

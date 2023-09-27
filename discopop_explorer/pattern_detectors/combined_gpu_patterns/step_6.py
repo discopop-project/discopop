@@ -47,19 +47,13 @@ def convert_updates_to_entry_and_exit_points(
     updates: Set[Update] = set()
 
     for issued_update in issued_updates:
-        if (
-            issued_update.update_type == UpdateType.TO_DEVICE
-            or issued_update.update_type == UpdateType.ALLOCATE
-        ):
+        if issued_update.update_type == UpdateType.TO_DEVICE or issued_update.update_type == UpdateType.ALLOCATE:
             # check if the memory region was live on the device before the update
             qualifies_as_entry = True
             for mem_reg in issued_update.memory_regions:
                 if mem_reg not in memory_region_liveness_by_device[1]:
                     continue
-                if (
-                    issued_update.synchronous_source_cu_id
-                    in memory_region_liveness_by_device[1][mem_reg]
-                ):
+                if issued_update.synchronous_source_cu_id in memory_region_liveness_by_device[1][mem_reg]:
                     qualifies_as_entry = False
                     break
             if qualifies_as_entry:
@@ -156,9 +150,7 @@ def add_aliases(
     memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[Update]:
     for update in issued_updates:
-        source_parent_function_node = pet.get_parent_function(
-            pet.node_at(update.synchronous_source_cu_id)
-        )
+        source_parent_function_node = pet.get_parent_function(pet.node_at(update.synchronous_source_cu_id))
         sink_parent_function_node = pet.get_parent_function(pet.node_at(update.sink_cu_id))
         if source_parent_function_node == sink_parent_function_node:
             # add alias information from function level
@@ -167,9 +159,7 @@ def add_aliases(
                 modification_found = False
                 # add missing variable names
                 for mem_reg in update.memory_regions:
-                    alias_var_names = memory_regions_to_functions_and_variables[mem_reg][
-                        source_parent_function_node.id
-                    ]
+                    alias_var_names = memory_regions_to_functions_and_variables[mem_reg][source_parent_function_node.id]
                     len_pre = len(update.variable_names)
                     update.variable_names.update(alias_var_names)
                     # add variable name to dependency if required
@@ -183,10 +173,7 @@ def add_aliases(
                 # add missing memory regions
                 for var_name in update.variable_names:
                     for mem_reg in memory_regions_to_functions_and_variables:
-                        if (
-                            source_parent_function_node.id
-                            not in memory_regions_to_functions_and_variables[mem_reg]
-                        ):
+                        if source_parent_function_node.id not in memory_regions_to_functions_and_variables[mem_reg]:
                             continue
                         potential_aliases = memory_regions_to_functions_and_variables[mem_reg][
                             source_parent_function_node.id
@@ -236,10 +223,7 @@ def identify_end_of_life_points(
             # check if mem_reg is live in all successors of all contained cu's
             for cu_id in memory_region_liveness_by_device[device_id][mem_reg]:
                 for successor_node in pet.direct_successors(pet.node_at(cu_id)):
-                    if (
-                        successor_node.id
-                        not in memory_region_liveness_by_device[device_id][mem_reg]
-                    ):
+                    if successor_node.id not in memory_region_liveness_by_device[device_id][mem_reg]:
                         # mem_reg is not live anymore. create an EOL point
                         if mem_reg in mem_reg_aliases:
                             eol_points.add(
@@ -281,9 +265,7 @@ def identify_end_of_life_points(
         var_names: Set[VarName] = set()
         for mem_reg in eol[2]:
             if parent_function_node_id in memory_regions_to_functions_and_variables[mem_reg]:
-                var_names.update(
-                    memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id]
-                )
+                var_names.update(memory_regions_to_functions_and_variables[mem_reg][parent_function_node_id])
         memory_regions = set(eol[2])
         # check if the exited data is required by another function
         # if so, mark the exit point as ExitPointType.FROM
@@ -300,19 +282,14 @@ def identify_end_of_life_points(
                 for s, t, d in pet.in_edges(path_node.id, EdgeType.DATA)
                 if d.dtype == DepType.RAW
                 and d.memory_region in memory_regions
-                and pet.get_parent_function(pet.node_at(s))
-                != pet.get_parent_function(pet.node_at(t))
+                and pet.get_parent_function(pet.node_at(s)) != pet.get_parent_function(pet.node_at(t))
             ]
         if len(in_raw_edges_from_outside) > 0:
             # value is read -> Copy back to the host so the value does not get discarded
-            eol_exit_points.add(
-                ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.FROM_DEVICE)
-            )
+            eol_exit_points.add(ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.FROM_DEVICE))
         else:
             # otherwise, mark it as ExitPointType.DELETE
-            eol_exit_points.add(
-                ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.DELETE)
-            )
+            eol_exit_points.add(ExitPoint(pet, var_names, memory_regions, eol[0], eol[1], ExitPointType.DELETE))
 
     print("\tDone.", file=sys.stderr)
     print(file=sys.stderr)
@@ -344,9 +321,7 @@ def extend_region_liveness_using_unrolled_functions(
             current_node_id, current_mem_reg, visited_nodes = queue.pop()
             visited_nodes.append(current_node_id)
 
-            successors = [
-                t for s, t, d in unrolled_function_graph.out_edges(current_node_id, data="data")
-            ]
+            successors = [t for s, t, d in unrolled_function_graph.out_edges(current_node_id, data="data")]
 
             for successor in successors:
                 # if mem_reg is live in successor, create a new, clean queue entry and set all visited nodes to live

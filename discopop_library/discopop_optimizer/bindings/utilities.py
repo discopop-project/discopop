@@ -12,9 +12,7 @@ import networkx as nx  # type: ignore
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_parents
 
 
-def is_child_of_any(
-    graph: nx.DiGraph, start_node: int, potential_parents: List[Optional[int]]
-) -> bool:
+def is_child_of_any(graph: nx.DiGraph, start_node: int, potential_parents: List[Optional[int]]) -> bool:
     """returns True, if start_node is a child of any of the potential_parents"""
     # get all parents of start_node
     all_parents: Set[int] = set()

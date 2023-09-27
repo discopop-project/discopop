@@ -116,8 +116,7 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
         warnings.warn(
-            "Static dependencies could not be found under: "
-            + os.path.join(output_path, "static_dependencies.txt")
+            "Static dependencies could not be found under: " + os.path.join(output_path, "static_dependencies.txt")
         )
         # todo
         warnings.warn(
@@ -165,9 +164,7 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
                 else:
                     # compatibility with results created without alias analysis
                     var_name = var_str
-            dependencies_list.append(
-                DependenceItem(sink, source_fields[0], type, var_name, aa_var_name)
-            )
+            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name))
 
     return dependencies_list, loop_data_list
 
@@ -210,9 +207,7 @@ def parse_inputs(cu_file, dependencies, reduction_file, file_mapping):
 
 
 def is_reduction(reduction_line, fmap_lines, file_mapping):
-    rex = re.compile(
-        "FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line Number : ([0-9]*) "
-    )
+    rex = re.compile("FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line Number : ([0-9]*) ")
     if not rex:
         return False
     res = rex.search(reduction_line)

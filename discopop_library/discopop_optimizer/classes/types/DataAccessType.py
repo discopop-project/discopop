@@ -33,9 +33,7 @@ class WriteDataAccess(object):
         self.var_name = var_name
 
     def __str__(self):
-        return (
-            "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + self.var_name + ")"
-        )
+        return "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + self.var_name + ")"
 
     def __hash__(self):
         return self.unique_id

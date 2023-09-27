@@ -160,20 +160,14 @@ def run_detection(
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(
-                TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], [])
-            )
+            result.append(TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], []))
     # Preprocessing
     check_loop_scopes(pet)
     # Suggestion generation
     result += detect_task_suggestions(pet)
     result += suggest_parallel_regions(pet, cast(List[TaskParallelismInfo], result))
-    result = cast(
-        List[PatternInfo], set_task_contained_lines(cast(List[TaskParallelismInfo], result))
-    )
-    result = cast(
-        List[PatternInfo], detect_taskloop_reduction(pet, cast(List[TaskParallelismInfo], result))
-    )
+    result = cast(List[PatternInfo], set_task_contained_lines(cast(List[TaskParallelismInfo], result)))
+    result = cast(List[PatternInfo], detect_taskloop_reduction(pet, cast(List[TaskParallelismInfo], result)))
     result = cast(
         List[PatternInfo],
         remove_useless_barrier_suggestions(pet, cast(List[TaskParallelismInfo], result)),

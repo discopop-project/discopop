@@ -93,9 +93,7 @@ class ContentBuffer(object):
         Returns False if compilation of the modified code was not possible.
         In this case, no changes will be applied to the ContentBuffer Object."""
         if pragma.start_line is None or pragma.end_line is None:
-            raise ValueError(
-                "Unsupported start or end line: ", pragma.start_line, "-", pragma.end_line
-            )
+            raise ValueError("Unsupported start or end line: ", pragma.start_line, "-", pragma.end_line)
         if pragma.file_id is None:
             raise ValueError("Unsupported file_id: ", pragma.file_id)
         if pragma.file_id != self.file_id:
@@ -135,18 +133,14 @@ class ContentBuffer(object):
 
         # update belonging information of contained lines
         tmp_start_line = (
-            pragma.start_line
-            if pragma.pragma_position == PragmaPosition.BEFORE_START
-            else pragma.start_line + 1
+            pragma.start_line if pragma.pragma_position == PragmaPosition.BEFORE_START else pragma.start_line + 1
         )
         tmp_end_line = pragma.end_line + 1
         for line_num in range(tmp_start_line, tmp_end_line):
             for line in self.lines:
                 if line.line_num == line_num:
                     line.belongs_to_regions += [
-                        n
-                        for n in pragma_line.belongs_to_regions
-                        if n not in line.belongs_to_regions
+                        n for n in pragma_line.belongs_to_regions if n not in line.belongs_to_regions
                     ]
 
         # append children to lines (mark as contained in region)
@@ -247,9 +241,7 @@ class ContentBuffer(object):
             self.max_line_num = backup_max_line_num
             self.compile_result_buffer += result.stdout.decode("utf-8") + "\n"
             self.compile_result_buffer += result.stderr.decode("utf-8") + "\n"
-            self.compile_result_buffer += (
-                "==> Skipped pragma insertion due to potential compilation errors!\n"
-            )
+            self.compile_result_buffer += "==> Skipped pragma insertion due to potential compilation errors!\n"
             print(self.compile_result_buffer)
             return False
         return True

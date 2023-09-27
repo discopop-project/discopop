@@ -30,24 +30,16 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
     :param pet: PET Graph
     :param suggestions: Found suggestions
     :return: Updated suggestions"""
-    task_suggestions = [
-        s
-        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
-        if s.type is TPIType.TASK
-    ]
+    task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.type is TPIType.TASK]
     taskwait_suggestions = [
-        s
-        for s in [e for e in suggestions if type(e) == TaskParallelismInfo]
-        if s.type is TPIType.TASKWAIT
+        s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.type is TPIType.TASKWAIT
     ]
     # mark preceeding suggestions for each taskwait suggestion
     for task_group_id, tws in enumerate(taskwait_suggestions):
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
         relatives: List[Node] = [tws._node]
-        queue: List[Node] = [
-            pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)
-        ]
+        queue: List[Node] = [pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]
         while len(queue) > 0:
             cur = queue.pop(0)
             if cur.tp_contains_taskwait:
@@ -91,10 +83,7 @@ def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> Li
                     break
     # execute replacement
     for sug in task_suggestions + taskwait_suggestions:
-        sug.task_group = [
-            replacements[tg_elem] if tg_elem in replacements else tg_elem
-            for tg_elem in sug.task_group
-        ]
+        sug.task_group = [replacements[tg_elem] if tg_elem in replacements else tg_elem for tg_elem in sug.task_group]
         # validate and combine results
         # valid, if all entries in sug.task_group are equal. Replace by single entry if valid.
         value: Optional[int] = None

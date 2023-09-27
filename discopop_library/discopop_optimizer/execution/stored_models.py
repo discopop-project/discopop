@@ -33,9 +33,7 @@ def execute_stored_models(arguments: Dict):
     for file_name in os.listdir(str(arguments["--code-export-path"])):
         print("\t", file_name)
         __create_project_copy(arguments["--project"], working_copy_dir)
-        code_modifications = __load_code_storage_object(
-            os.path.join(str(arguments["--code-export-path"]), file_name)
-        )
+        code_modifications = __load_code_storage_object(os.path.join(str(arguments["--code-export-path"]), file_name))
         __apply_modifications(
             arguments["--project"],
             working_copy_dir,
@@ -59,9 +57,7 @@ def execute_single_model(arguments: Dict):
     file_name = arguments["--execute-single-model"]
     print("\t", file_name)
     __create_project_copy(arguments["--project"], working_copy_dir)
-    code_modifications = __load_code_storage_object(
-        os.path.join(str(arguments["--code-export-path"]), file_name)
-    )
+    code_modifications = __load_code_storage_object(os.path.join(str(arguments["--code-export-path"]), file_name))
     __apply_modifications(
         arguments["--project"],
         working_copy_dir,
@@ -92,9 +88,7 @@ def __initialize_measurement_file(measurement_file: str):
             f.write(header_line)
 
 
-def __measure_and_execute(
-    arguments: Dict, working_copy_dir: str, code_mod_object: CodeStorageObject
-):
+def __measure_and_execute(arguments: Dict, working_copy_dir: str, code_mod_object: CodeStorageObject):
     """Setup measurements, execute the compiled program and output the measurement results to a file"""
     measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
     # create output file for specific model measurement
@@ -135,9 +129,7 @@ def __measure_and_execute(
             print("\t\t\tVariance: ", statistics.variance(execution_times))
 
 
-def __execute(
-    arguments: Dict, working_copy_dir: str, measurements_file: TextIO
-) -> Tuple[int, float, float]:
+def __execute(arguments: Dict, working_copy_dir: str, measurements_file: TextIO) -> Tuple[int, float, float]:
     """Executes the current model and returns the exit code as well as the start and end time of the execution"""
     print("\t\texecuting...")
     command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]

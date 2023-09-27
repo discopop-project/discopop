@@ -56,9 +56,7 @@ def export_code(
     suggestions: List[Tuple[Device, PatternInfo, str, Optional[int]]] = []
     for decision in cost_model.path_decisions:
         graph_node = data_at(graph, decision)
-        device: Device = experiment.get_system().get_device(
-            0 if graph_node.device_id is None else graph_node.device_id
-        )
+        device: Device = experiment.get_system().get_device(0 if graph_node.device_id is None else graph_node.device_id)
         if graph_node.suggestion is None:
             continue
         suggestion, suggestion_type = device.get_device_specific_pattern_info(
@@ -79,18 +77,12 @@ def export_code(
                 if is_child_of_any(
                     graph,
                     cur_node,
-                    [
-                        s_node_id
-                        for _, sugg, s_type, s_node_id in suggestions
-                        if s_type.startswith("gpu_")
-                    ],
+                    [s_node_id for _, sugg, s_type, s_node_id in suggestions if s_type.startswith("gpu_")],
                 ):
                     tmp_parents = get_parents(graph, cur_node)
                     if len(tmp_parents) != 0:
                         unchecked_target_nodes += [
-                            p
-                            for p in tmp_parents
-                            if p not in checked_target_nodes and p not in unchecked_target_nodes
+                            p for p in tmp_parents if p not in checked_target_nodes and p not in unchecked_target_nodes
                         ]
 
                 else:
@@ -98,9 +90,7 @@ def export_code(
                         checked_target_nodes.append(cur_node)
 
             for checked_node_id in checked_target_nodes:
-                start_line = pet.node_at(
-                    cast(NodeID, data_at(graph, checked_node_id).original_cu_id)
-                ).start_position()
+                start_line = pet.node_at(cast(NodeID, data_at(graph, checked_node_id).original_cu_id)).start_position()
                 end_line = start_line
 
                 # register update
@@ -108,14 +98,10 @@ def export_code(
                 target_cu_id = cast(NodeID, data_at(graph, update.target_node_id).original_cu_id)
 
                 if source_cu_id is None or target_cu_id is None:
-                    warnings.warn(
-                        "Could not register update: " + str(update) + " @ Line: " + start_line
-                    )
+                    warnings.warn("Could not register update: " + str(update) + " @ Line: " + start_line)
                 else:
                     # get updated variable
-                    var_obj = pet.get_variable(
-                        target_cu_id, cast(str, update.write_data_access.var_name)
-                    )
+                    var_obj = pet.get_variable(target_cu_id, cast(str, update.write_data_access.var_name))
                     if var_obj is None:
                         raise ValueError(
                             "Could not find variable object for: "
@@ -126,11 +112,7 @@ def export_code(
 
                     # get amount of elements targeted by the update
                     update_elements = int(
-                        int(
-                            experiment.get_memory_region_size(
-                                update.write_data_access.memory_region
-                            )[0].evalf()
-                        )
+                        int(experiment.get_memory_region_size(update.write_data_access.memory_region)[0].evalf())
                         / var_obj.sizeInByte
                     )
 
@@ -146,11 +128,7 @@ def export_code(
                     )
 
                     # add range to updated var name if necessary
-                    if (
-                        update_elements > 1
-                        and update.write_data_access.var_name is not None
-                        and "**" in var_obj.type
-                    ):
+                    if update_elements > 1 and update.write_data_access.var_name is not None and "**" in var_obj.type:
                         updated_var_name: Optional[str] = (
                             str(update.write_data_access.var_name)
                             + "[:"
@@ -171,18 +149,12 @@ def export_code(
                                 update.write_data_access.memory_region,
                                 updated_var_name,
                                 0 if update.source_device_id is None else update.source_device_id,
-                                0
-                                if update.source_device_id is None
-                                else cast(int, update.target_device_id),
+                                0 if update.source_device_id is None else cast(int, update.target_device_id),
                                 start_line,
                                 end_line,
                                 update.is_first_data_occurrence,
-                                cast(
-                                    GPU, experiment.get_system().get_device(update.source_device_id)
-                                ).openmp_device_id,
-                                cast(
-                                    GPU, experiment.get_system().get_device(update.target_device_id)
-                                ).openmp_device_id,
+                                cast(GPU, experiment.get_system().get_device(update.source_device_id)).openmp_device_id,
+                                cast(GPU, experiment.get_system().get_device(update.target_device_id)).openmp_device_id,
                             ),
                             "device_update",
                             None,
@@ -315,9 +287,7 @@ def export_code(
         print("\n")
 
 
-def __convert_modified_code_to_patch(
-    experiment: Experiment, modified_code: Dict[int, str]
-) -> Dict[int, str]:
+def __convert_modified_code_to_patch(experiment: Experiment, modified_code: Dict[int, str]) -> Dict[int, str]:
     patches: Dict[int, str] = dict()
     hash_name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
     tmp_file_name = os.path.join(os.getcwd(), hash_name + ".tmp")

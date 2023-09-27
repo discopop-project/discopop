@@ -101,9 +101,7 @@ def parse_args() -> ExplorerArguments:
     arguments = parser.parse_args()
 
     # ensure that --cu-inst-res and --llvm-cxxfilt-path are set if --task-pattern is set
-    if arguments.task_pattern and (
-        arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None
-    ):
+    if arguments.task_pattern and (arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None):
         parser.error("--task-pattern requires --cu-inst-res and --llvm-cxxfilt-path to be set")
 
     # ensure that --cu-xml, --dep-file, --loop-counter, --reduction are set if --generate-data-cu-inst is set
@@ -120,14 +118,10 @@ def parse_args() -> ExplorerArguments:
     arguments.fmap = get_path(arguments.path, arguments.fmap)
     arguments.json = get_path_or_none(arguments.path, arguments.json)
     arguments.cu_inst_res = get_path_or_none(arguments.path, arguments.cu_inst_res)
-    arguments.generate_data_cu_inst = get_path_or_none(
-        arguments.path, arguments.generate_data_cu_inst
-    )
+    arguments.generate_data_cu_inst = get_path_or_none(arguments.path, arguments.generate_data_cu_inst)
     arguments.profiling = get_path_or_none(arguments.path, arguments.profiling)
     arguments.dump_pet = get_path_or_none(arguments.path, arguments.dump_pet)
-    arguments.dump_detection_result = get_path_or_none(
-        arguments.path, arguments.dump_detection_result
-    )
+    arguments.dump_detection_result = get_path_or_none(arguments.path, arguments.dump_detection_result)
     arguments.microbench_file = get_path_or_none(arguments.path, arguments.microbench_file)
 
     return ExplorerArguments(

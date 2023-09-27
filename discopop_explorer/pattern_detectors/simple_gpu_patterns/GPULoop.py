@@ -214,9 +214,7 @@ class GPULoopPattern(PatternInfo):
             self.reduction_vars_str: List[str] = []
             self.reduction_vars_ids: List[Variable] = []
         else:
-            self.reduction_vars_str: List[str] = [
-                cast(str, v.operation) + ":" + v.name for v in reduction_vars
-            ]
+            self.reduction_vars_str: List[str] = [cast(str, v.operation) + ":" + v.name for v in reduction_vars]
             self.reduction_vars_ids: List[Variable] = reduction_vars
         self.iteration_count = 0
         self.nextLoop = None
@@ -400,9 +398,7 @@ class GPULoopPattern(PatternInfo):
 
         tmp_start_line = LineID(str(self._node.file_id) + ":" + str(self.startLine))
         constructs.append(
-            omp_construct_dict(
-                "#pragma omp target teams distribute parallel for", tmp_start_line, clauses
-            )
+            omp_construct_dict("#pragma omp target teams distribute parallel for", tmp_start_line, clauses)
         )
 
         # == additional constructs ==
@@ -411,9 +407,7 @@ class GPULoopPattern(PatternInfo):
             fn_node: FunctionNode = cast(FunctionNode, map_node(pet, node_id))
             fn_node_start_line = LineID(str(fn_node.file_id) + ":" + str(fn_node.start_line))
             fn_node_end_line = LineID(str(fn_node.file_id) + ":" + str(fn_node.end_line + 1))
-            constructs.append(
-                omp_construct_dict("#pragma omp declare target", fn_node_start_line, [])
-            )
+            constructs.append(omp_construct_dict("#pragma omp declare target", fn_node_start_line, []))
             constructs.append(
                 omp_construct_dict(
                     "#pragma omp end declare target",
@@ -440,9 +434,7 @@ class GPULoopPattern(PatternInfo):
         self.declared_global_variables.update(used_global_vars)
         for global_var in used_global_vars:
             constructs.append(
-                omp_construct_dict(
-                    "#pragma omp declare target  // " + global_var.name, global_var.defLine, []
-                )
+                omp_construct_dict("#pragma omp declare target  // " + global_var.name, global_var.defLine, [])
             )
             constructs.append(
                 omp_construct_dict(
@@ -512,9 +504,7 @@ class GPULoopPattern(PatternInfo):
         rev_raw = set()
 
         dummyFunctions: Set[NodeID] = set()
-        self.called_functions.update(
-            getCalledFunctions(pet, loop, self.called_functions, dummyFunctions)
-        )
+        self.called_functions.update(getCalledFunctions(pet, loop, self.called_functions, dummyFunctions))
 
         for sub_node in sub:
             raw.update(get_dep_of_type(pet, sub_node, DepType.RAW, False))
@@ -575,9 +565,7 @@ class GPULoopPattern(PatternInfo):
                 pass
 
         # use known variables to reconstruct the correct variable names from the classified memory regions
-        left_subtree_without_called_nodes = pet.get_left_right_subtree(
-            loop, False, ignore_called_nodes=True
-        )
+        left_subtree_without_called_nodes = pet.get_left_right_subtree(loop, False, ignore_called_nodes=True)
         prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
         # get memory regions which are initialized in the loop and treat them like prior known vars wrt. de-aliasing
         initilized_in_loop = get_initialized_memory_regions_in(pet, sub)
@@ -611,11 +599,7 @@ class GPULoopPattern(PatternInfo):
         tmp_memory_regions = set()
         for _, mem_regs in input_list:
             tmp_memory_regions.update(mem_regs)
-        cleaned = [
-            pkv
-            for pkv in previously_known
-            if len(previously_known[pkv].intersection(tmp_memory_regions))
-        ]
+        cleaned = [pkv for pkv in previously_known if len(previously_known[pkv].intersection(tmp_memory_regions))]
         return cleaned
 
     def setParentLoop(self, pl: str) -> None:
@@ -671,9 +655,7 @@ class GPULoopPattern(PatternInfo):
 
         for cn_id in pet.direct_children(n):
             if cn_id.type == 2:  # check for loop node contained in the loop body
-                if (
-                    cn_id.end_line <= n.end_line
-                ):  # todo not true if loop bodies are terminated by braces
+                if cn_id.end_line <= n.end_line:  # todo not true if loop bodies are terminated by braces
                     # only consider child as collapsible, if it is a do-all loop
                     if cn_id.id in do_all_loops:
                         # check for perfect nesting of both loops (i.e. no statements inbetween)

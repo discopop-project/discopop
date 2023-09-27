@@ -23,9 +23,7 @@ def get_next_free_unique_write_id() -> int:
     return buffer
 
 
-def get_data_accesses_for_cu(
-    pet: PETGraphX, cu_id: NodeID
-) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
+def get_data_accesses_for_cu(pet: PETGraphX, cu_id: NodeID) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
     """Calculates and returns the sets of accessed memory regions for the given cu node.
     The first element contains write accesses, the second element contains read accesses."""
     parent_function = pet.get_parent_function(pet.node_at(cu_id))
@@ -35,18 +33,14 @@ def get_data_accesses_for_cu(
     out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
 
     written_memory_regions = [
-        WriteDataAccess(
-            MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name
-        )
+        WriteDataAccess(MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name)
         for s, t, d in in_dep_edges
         if (d.dtype == DepType.RAW or d.dtype == DepType.WAW)
         and d.memory_region is not None
         and len(d.memory_region) != 0
     ]
     written_memory_regions += [
-        WriteDataAccess(
-            MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name
-        )
+        WriteDataAccess(MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name)
         for s, t, d in out_dep_edges
         if (d.dtype == DepType.WAR or d.dtype == DepType.WAW)
         and d.memory_region is not None

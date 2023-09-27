@@ -207,10 +207,7 @@ class GPURegions:
         with alive_bar(len(self.gpu_loop_patterns)) as progress_bar:
             for i in range(0, len(self.gpu_loop_patterns)):
                 if self.gpu_loop_patterns[i].nextLoop is not None:
-                    if (
-                        map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type
-                        == 2
-                    ):
+                    if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
                         if self.reachableCUs(
                             self.gpu_loop_patterns[i].nodeID,
                             cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
@@ -239,18 +236,12 @@ class GPURegions:
                 region_loop_patterns: List[GPULoopPattern] = []
                 for loop_id in region:
                     loop_node: LoopNode = cast(LoopNode, self.pet.node_at(loop_id))
-                    gpu_lp: GPULoopPattern = [
-                        p for p in self.gpu_loop_patterns if p.parentLoop == loop_id
-                    ][0]
+                    gpu_lp: GPULoopPattern = [p for p in self.gpu_loop_patterns if p.parentLoop == loop_id][0]
                     region_loop_patterns.append(gpu_lp)
-                    region_cus += [
-                        cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus
-                    ]
+                    region_cus += [cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus]
                     # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
                     loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
-                    predecessors = [
-                        s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)
-                    ]
+                    predecessors = [s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)]
                     for predecessor_id in predecessors:
                         predecessor_node = self.pet.node_at(predecessor_id)
                         if (
@@ -302,16 +293,12 @@ class GPURegions:
                 # gather consumed, produced, allocated and deleted variables from mapping information
                 map_to_vars: List[str] = []
                 for loop_pattern in region_loop_patterns:
-                    map_to_vars += [
-                        v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom
-                    ]
+                    map_to_vars += [v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom]
                 map_to_vars = list(set(map_to_vars))
 
                 map_from_vars: List[str] = []
                 for loop_pattern in region_loop_patterns:
-                    map_from_vars += [
-                        v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom
-                    ]
+                    map_from_vars += [v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom]
                 map_from_vars = list(set(map_from_vars))
 
                 map_alloc_vars: List[str] = []
@@ -323,9 +310,7 @@ class GPURegions:
 
                 # allocate unknown variables
                 map_alloc_vars += [
-                    var
-                    for var in map_from_vars
-                    if var not in consumed_vars + map_to_vars + map_alloc_vars
+                    var for var in map_from_vars if var not in consumed_vars + map_to_vars + map_alloc_vars
                 ]
                 map_alloc_vars = list(set(map_alloc_vars))
 
@@ -333,9 +318,7 @@ class GPURegions:
                 self.map_type_from_by_region[tuple(region)] = [
                     var for var in map_from_vars if var not in map_to_from_vars
                 ]
-                self.map_type_to_by_region[tuple(region)] = [
-                    var for var in map_to_vars if var not in map_to_from_vars
-                ]
+                self.map_type_to_by_region[tuple(region)] = [var for var in map_to_vars if var not in map_to_from_vars]
                 self.map_type_tofrom_by_region[tuple(region)] = map_to_from_vars
                 self.map_type_alloc_by_region[tuple(region)] = map_alloc_vars
                 self.map_type_delete_by_region[tuple(region)] = []
@@ -364,9 +347,7 @@ class GPURegions:
             ln = map_node(self.pet, lastNodeID)
             start = fn.start_line
             end = ln.end_line
-            gpuRegionLoop = GPULoopPattern(
-                self.pet, firstNodeID, start, end, 1000, self.project_folder_path
-            )
+            gpuRegionLoop = GPULoopPattern(self.pet, firstNodeID, start, end, 1000, self.project_folder_path)
             visitedVars: Set[Variable] = set()
             while t >= 0:
                 loopIter = self.findGPULoop(
@@ -491,9 +472,7 @@ class GPURegions:
         print("\tget gpu region info...")
         with alive_bar(len(self.cascadingLoopsInRegions)) as progress_bar:
             for region in self.cascadingLoopsInRegions:
-                contained_loop_patterns = [
-                    pattern for pattern in self.gpu_loop_patterns if pattern.nodeID in region
-                ]
+                contained_loop_patterns = [pattern for pattern in self.gpu_loop_patterns if pattern.nodeID in region]
                 # save OpenMP constructs in GPULoops for the exporting to JSON
                 for loop in contained_loop_patterns:
                     loop.save_omp_constructs(pet, project_folder_path)
