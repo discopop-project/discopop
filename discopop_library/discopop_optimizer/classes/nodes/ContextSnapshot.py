@@ -9,6 +9,7 @@ import copy
 
 import networkx as nx  # type: ignore
 
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 
@@ -21,7 +22,7 @@ class ContextSnapshot(ContextNode):
         return str(self.node_id) + "\nCTX\nsnapshot"
 
     def get_modified_context(
-        self, node_id: int, graph: nx.DiGraph, context: ContextObject
+        self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
         context.snapshot_stack.append(copy.deepcopy(context))
         context.save_stack.append([])

@@ -41,10 +41,10 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_temporary_edge,
     redirect_edge,
     convert_temporary_edges,
+    show,
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
 )
-from discopop_library.discopop_optimizer.utilities.visualization.plotting import show
 
 
 class PETParser(object):
@@ -120,7 +120,6 @@ class PETParser(object):
         # create a duplicate of the root node
         duplicate_node_id = self.get_new_node_id()
         tmp_node_data = data_at(self.graph, root_node_id)
-        tmp_node_data.node_id = duplicate_node_id
         self.graph.add_node(duplicate_node_id, data=tmp_node_data)
 
         # connect duplicated entry node to children
@@ -161,7 +160,6 @@ class PETParser(object):
         # Step 1: create duplicate of root node
         duplicate_node_id = self.get_new_node_id()
         tmp_node_data = data_at(self.graph, root_node_id)
-        tmp_node_data.node_id = duplicate_node_id
         self.graph.add_node(duplicate_node_id, data=tmp_node_data)
 
         # Step 2: create and connect context snapshot
@@ -236,8 +234,10 @@ class PETParser(object):
                     node_id=new_node_id,
                     experiment=self.experiment,
                     cu_id=cu_node.id,
-                    sequential_workload=calculate_workload(self.pet, cu_node),
-                    parallelizable_workload=0,
+                    sequential_workload=0,
+                    parallelizable_workload=calculate_workload(
+                        self.pet, cu_node, ignore_function_calls_and_cached_values=True
+                    ),
                     written_memory_regions=written_memory_regions,
                     read_memory_regions=read_memory_regions,
                 ),
@@ -266,7 +266,9 @@ class PETParser(object):
                 data=Loop(
                     node_id=new_node_id,
                     cu_id=loop_node.id,
-                    parallelizable_workload=calculate_workload(self.pet, loop_node),
+                    discopop_workload=calculate_workload(
+                        self.pet, loop_node, ignore_function_calls_and_cached_values=True
+                    ),
                     iterations=iteration_count,
                     position=loop_node.start_position(),
                     experiment=self.experiment,
@@ -302,7 +304,6 @@ class PETParser(object):
             entry_node_id = self.cu_id_to_graph_node_id[entry_node_cu_id]
             entry_node_data = data_at(self.graph, entry_node_id)
             copied_entry_node_id = self.get_new_node_id()
-            entry_node_data.node_id = copied_entry_node_id
             self.graph.add_node(copied_entry_node_id, data=entry_node_data)
 
             # redirect edges from inside the loop to the copy of the entry node

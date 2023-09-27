@@ -7,6 +7,7 @@
 # directory for details.
 from sympy import Symbol  # type: ignore
 
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
 
 

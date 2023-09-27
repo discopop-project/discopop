@@ -7,9 +7,11 @@
 # directory for details.
 import os
 import sys
+from typing import Dict, Union
 
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.scheduling.workload_delta import (
     get_workload_delta_for_cu_node,
 )
@@ -124,39 +126,52 @@ class PatternDetectorX(object):
     ) -> DetectionResult:
         """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
         # construct optimization graph (basically an acyclic representation of the PET)
-        experiment = Experiment(project_folder_path, res, file_mapping_path)
-        print("\tcreating optimization graph...")
-        # saves optimization graph in experiment
-        optimization_graph = OptimizationGraph(project_folder_path, experiment)
-        print("\tDetermining scheduling clauses...")
-        with alive_bar(len(res.do_all)) as progress_bar:
-            for do_all_suggestion in res.do_all:
-                for node_id in get_nodes_from_cu_id(
-                    experiment.optimization_graph, do_all_suggestion.node_id
-                ):
-                    workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(
-                        experiment, node_id
-                    )
-                    print(
-                        "DOALL @ ",
-                        do_all_suggestion.node_id,
-                        " -> ",
-                        "node_id: ",
-                        node_id,
-                        " --> Delta WL: ",
-                        workload_delta,
-                        " (",
-                        min_workload,
-                        "/",
-                        max_workload,
-                        ")",
-                        file=sys.stderr,
-                    )
-                    # todo
-                    #  very naive and non-robust approach, needs improvement in the future
-                    #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
-                    if workload_delta != 0:
-                        do_all_suggestion.scheduling_clause = "dynamic"
-                progress_bar()
+        system = System(headless=True)
+        discopop_output_path = project_folder_path
+        discopop_optimizer_path = "INVALID_DUMMY"
+        code_export_path = "INVALID_DUMMY"
+        arguments_1 = {"--compile-command": "make"}
+        experiment = Experiment(
+            project_folder_path,
+            discopop_output_path,
+            discopop_optimizer_path,
+            code_export_path,
+            file_mapping_path,
+            system,
+            res,
+            arguments_1,
+        )
+        arguments_2 = {"--exhaustive-search": False, "--headless-mode": True}
+        optimization_graph = OptimizationGraph(
+            project_folder_path, experiment, arguments_2, None, False
+        )
+
+        for do_all_suggestion in res.do_all:
+            for node_id in get_nodes_from_cu_id(
+                experiment.optimization_graph, do_all_suggestion.node_id
+            ):
+                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(
+                    experiment, node_id
+                )
+                print(
+                    "DOALL @ ",
+                    do_all_suggestion.node_id,
+                    " -> ",
+                    "node_id: ",
+                    node_id,
+                    " --> Delta WL: ",
+                    workload_delta,
+                    " (",
+                    min_workload,
+                    "/",
+                    max_workload,
+                    ")",
+                    file=sys.stderr,
+                )
+                # todo
+                #  very naive and non-robust approach, needs improvement in the future
+                #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
+                if workload_delta != 0:
+                    do_all_suggestion.scheduling_clause = "dynamic"
 
         return res
