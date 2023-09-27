@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, cast, List, Tuple, Optional
+from typing import Dict, cast, List, Tuple, Optional, Any
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
@@ -48,7 +48,7 @@ class OptimizationGraph(object):
         self,
         project_folder_path,
         experiment: Experiment,
-        arguments: Dict,
+        arguments: Dict[str, Any],
         parent_frame: Optional[tk.Frame],
         destroy_window_after_execution: bool,
     ):

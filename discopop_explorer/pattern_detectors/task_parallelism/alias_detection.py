@@ -10,7 +10,7 @@ import os
 import pathlib
 import re
 import subprocess
-from typing import Dict, List, Optional, Match, cast
+from typing import Dict, List, Optional, Match, cast, Any
 from lxml import objectify  # type: ignore
 
 
@@ -178,7 +178,9 @@ def __get_alias_from_statement(var_name: str, var_type: str, statement: str) -> 
     return None
 
 
-def __add_alias_information(function_information_list: List[Dict], statements_file: str) -> List[Dict]:
+def __add_alias_information(
+    function_information_list: List[Dict[str, Any]], statements_file: str
+) -> List[Dict[str, Any]]:
     """Wrapper to gather and append alias information to the entries in function_information as a new field.
     Aliases can be found up to a depth of 2.
     Alias detection ignores scopes.
@@ -241,7 +243,7 @@ def __add_alias_information(function_information_list: List[Dict], statements_fi
     return result_list
 
 
-def __get_function_information(cu_xml: str) -> List[Dict]:
+def __get_function_information(cu_xml: str) -> List[Dict[str, Any]]:
     """Extracts information on functions from given cu_xml file and stores it in a dictionary representation.
     :param cu_xml: path to cu_xml file
     :return: List of dictionaries representing functions from cu_xml"""

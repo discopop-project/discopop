@@ -36,7 +36,7 @@ class BranchCosts(RegularCosts):
 
 
 class WorkloadStack(object):
-    stack: List[Union[List, RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
+    stack: List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
 
     def __init__(self):
         self.stack = []
@@ -139,7 +139,7 @@ class WorkloadStack(object):
             max_wl_sum += entry[1]
         return max_wl_sum
 
-    def __get_innermost_workload_stack(self) -> Tuple[List, List[int]]:
+    def __get_innermost_workload_stack(self) -> Tuple[List[Any], List[int]]:
         """identifies and returns a reference to the currently active (innermost) workload stack stored in self.stack,
         as well as the list of indices to access this element"""
         indices: List[int] = []
@@ -158,9 +158,9 @@ class WorkloadStack(object):
                 break
         return innermost_stack, indices
 
-    def __get_parent_of_innermost_stack(self) -> Optional[List]:
+    def __get_parent_of_innermost_stack(self) -> Optional[List[Any]]:
         """identifies and returns a reference to the parent List of the innermost workload stack"""
-        parents: List[Optional[List]] = [None]
+        parents: List[Optional[List[Any]]] = [None]
         innermost_stack = self.stack
         while True:
             if len(innermost_stack) == 0:

@@ -34,7 +34,7 @@ class PragmaType(IntEnum):
 
 
 class Suggestion(UnpackedSuggestion):
-    def __init__(self, wizard, type_str: str, values: dict):
+    def __init__(self, wizard, type_str: str, values: Dict[str, Any]):
         super().__init__(type_str, values)
         self.wizard = wizard
 

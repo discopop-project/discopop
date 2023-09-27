@@ -7,7 +7,7 @@
 # directory for details.
 import os
 from pathlib import Path
-from typing import Dict, Tuple, Set, Optional, List
+from typing import Dict, Tuple, Set, Optional, List, Any
 
 import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
@@ -78,7 +78,7 @@ class Experiment(object):
         file_mapping_path: str,
         system: System,
         detection_result: DetectionResult,
-        arguments: Dict,
+        arguments: Dict[str, Any],
     ):
         self.__system = system
         self.detection_result = detection_result

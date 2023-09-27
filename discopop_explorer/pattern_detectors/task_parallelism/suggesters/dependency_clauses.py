@@ -7,7 +7,7 @@
 # directory for details.
 
 import os
-from typing import List, Dict, Tuple, Optional, Union, cast
+from typing import List, Dict, Tuple, Optional, Union, cast, Any
 
 from discopop_explorer.PETGraphX import (
     CUNode,
@@ -176,7 +176,7 @@ def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source
     task_suggestions = [s for s in [e for e in suggestions if type(e) == TaskParallelismInfo] if s.type is TPIType.TASK]
     # collect alias information
     aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]] = dict()
-    called_function_cache: Dict = dict()
+    called_function_cache: Dict[Any, Any] = dict()
     for ts in task_suggestions:
         current_alias_entry = []
         potential_parent_functions = __get_potential_parent_functions(pet, ts)
@@ -298,9 +298,9 @@ def get_function_internal_parameter_aliases(
 def identify_dependencies_for_different_functions(
     pet: PETGraphX,
     suggestions: List[PatternInfo],
-    aliases: Dict,
-    source_code_files: Dict,
-    raw_dependency_information: Dict,
+    aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]],
+    source_code_files: Dict[str, str],
+    raw_dependency_information: Dict[str, List[Tuple[str, str]]],
 ) -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning different called functions
      and supplement the suggestions.
@@ -496,8 +496,8 @@ def __get_recursive_calls_from_function(potential_children: List[Node], parent_f
 def identify_dependencies_for_same_functions(
     pet: PETGraphX,
     suggestions: List[PatternInfo],
-    source_code_files: Dict,
-    cu_inst_result_dict: Dict,
+    source_code_files: Dict[str, str],
+    cu_inst_result_dict: dict[str, List[Dict[str, Optional[str]]]],
     function_parameter_alias_dict: Dict[str, List[Tuple[str, str]]],
 ) -> List[PatternInfo]:
     """Identify dependency clauses for all combinations of suggested tasks concerning equal called functions
@@ -700,7 +700,7 @@ def get_alias_for_parameter_at_position(
     parameter_position: int,
     source_code_files: Dict[str, str],
     visited: List[Tuple[Node, int]],
-    called_function_cache: Dict,
+    called_function_cache: Dict[Any, Any],
 ) -> List[Tuple[str, str, LineID, LineID]]:
     """Returns alias information for a parameter at a specific position.
     :param pet: PET Graph
@@ -756,8 +756,8 @@ def get_alias_for_parameter_at_position(
 
 
 def check_dependence_of_task_pair(
-    aliases: Dict,
-    raw_dependency_information: Dict,
+    aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]],
+    raw_dependency_information: Dict[str, List[Tuple[str, str]]],
     task_suggestion_1: TaskParallelismInfo,
     param_names_1: List[Optional[str]],
     task_suggestion_2: TaskParallelismInfo,

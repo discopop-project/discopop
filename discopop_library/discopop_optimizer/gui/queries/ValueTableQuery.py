@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import List, Tuple, Optional, Dict, cast
+from typing import List, Tuple, Optional, Dict, cast, Union
 
 from sympy import Symbol, Expr
 from tkinter import *
@@ -20,7 +20,7 @@ from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import Scro
 def query_user_for_symbol_values(
     symbols: List[Symbol],
     suggested_values: Dict[Symbol, Expr],
-    arguments: Dict,
+    arguments: Dict[str, Union[str, bool]],
     parent_frame: Optional[tk.Frame],
 ) -> List[Tuple[Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]]]:
     """Opens a GUI-Table to query values for each given Symbol from the user.
