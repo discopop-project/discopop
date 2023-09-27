@@ -40,7 +40,7 @@ repos:
   rev: 23.7.0
   hooks:
   - id: black                  # run black fromatter on all files
-    args: [--line-length=100]
+    args: [--line-length=120]
 
 
 - repo: local
