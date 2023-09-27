@@ -7,7 +7,7 @@
 # directory for details.
 
 from enum import Enum
-from typing import List, Set, cast
+from typing import List, Set, cast, Tuple
 from discopop_explorer.variable import Variable
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -19,6 +19,7 @@ from discopop_explorer.PETGraphX import (
     DummyNode,
     FunctionNode,
     LoopNode,
+    Dependency,
 )
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 
@@ -91,12 +92,12 @@ def getCalledFunctions(
 def getDeps(
     cuIDs: List[CUNode],
     pet: PETGraphX,
-    RAWDepsOn: Set,
-    WARDepsOn: Set,
-    WAWDepsOn: Set,
-    reverseRAWDepsOn: Set,
-    reverseWARDepsOn: Set,
-    reverseWAWDepsOn: Set,
+    RAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    WARDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    WAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    reverseRAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    reverseWARDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    reverseWAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
 ) -> None:
     """gather all dependencies of the nodes specified in 'cuIDs'
         ---doesnt work here because addresses---
@@ -127,8 +128,8 @@ def assignMapType(
     var: Variable,
     isScalar: bool,
     pet: PETGraphX,
-    RAWDepsOn: Set,
-    reverseRAWDepsOn: Set,
+    RAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
+    reverseRAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
 ) -> map_type_t:
     """assigns a map-type to the variable 'var'
 

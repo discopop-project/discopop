@@ -13,7 +13,7 @@ import subprocess
 import tkinter as tk
 from json import JSONDecodeError
 from tkinter import filedialog
-from typing import TextIO, List, Dict, Tuple
+from typing import TextIO, List, Dict, Tuple, Any
 
 import jsons  # type:ignore
 
@@ -28,7 +28,7 @@ from discopop_wizard.screens.utils import create_tool_tip
 
 class ExecutionConfiguration(object):
     button: tk.Button
-    value_dict: Dict
+    value_dict: Dict[str, Any]
 
     def __init__(self, wizard):
         self.value_dict = {

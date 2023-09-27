@@ -7,7 +7,7 @@
 # directory for details.
 
 import subprocess
-from typing import Union, cast, IO, Dict, List, Tuple, Optional
+from typing import Union, cast, IO, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 from discopop_explorer.PETGraphX import (
@@ -528,7 +528,7 @@ def set_global_llvm_cxxfilt_path(value: str):
 
 
 def get_called_functions_recursively(
-    pet: PETGraphX, root: Node, visited: List[Node], cache: Dict
+    pet: PETGraphX, root: Node, visited: List[Node], cache: Dict[Any, Any]
 ) -> List[Union[FunctionNode, DummyNode]]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)

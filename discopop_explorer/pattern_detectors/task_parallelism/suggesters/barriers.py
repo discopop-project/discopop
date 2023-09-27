@@ -175,9 +175,9 @@ def __count_adjacent_nodes(
     pet: PETGraphX,
     suggestions: List[PatternInfo],
     out_dep_edges: List[Tuple[Any, Any, Any]],
-    task_nodes: List,
-    barrier_nodes: List,
-    omittable_nodes: List,
+    task_nodes: List[Node],
+    barrier_nodes: List[Node],
+    omittable_nodes: List[Tuple[Node, List[Node]]],
 ) -> Tuple[int, int, int, int]:
     """Checks the types of nodes pointed to by out_dep_edges and increments the respective counters.
     :param pet: PET Graph

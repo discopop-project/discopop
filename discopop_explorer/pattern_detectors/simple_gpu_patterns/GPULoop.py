@@ -145,7 +145,7 @@ def omp_construct_dict(
     line: LineID,
     clauses: List[str],
     positioning: OmpConstructPositioning = OmpConstructPositioning.BEFORE_LINE,
-) -> dict:
+) -> Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]]:
     """
 
     :param name:
@@ -153,7 +153,7 @@ def omp_construct_dict(
     :param clauses:
     :return:
     """
-    result: Dict[str, Union[str, int, List[str]]] = dict()
+    result: Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]] = dict()
     result["name"] = name
     result["line"] = line
     result["clauses"] = clauses
@@ -180,7 +180,7 @@ class GPULoopPattern(PatternInfo):
     parentLoop: str
     collapse: int
     scheduling: str
-    constructs: List[dict]
+    constructs: List[Dict[Any, Any]]
     project_folder_path: str
 
     def __init__(
@@ -281,8 +281,10 @@ class GPULoopPattern(PatternInfo):
         json_output += "]}"
         return json_output
 
-    def __get_constructs(self, pet: PETGraphX, project_folder_path: str) -> List[dict]:
-        constructs: List[dict] = []
+    def __get_constructs(
+        self, pet: PETGraphX, project_folder_path: str
+    ) -> List[Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]]]:
+        constructs: List[Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]]] = []
 
         # == default construct ==
         clauses: List[str] = []

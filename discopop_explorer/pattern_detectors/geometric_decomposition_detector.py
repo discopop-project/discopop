@@ -46,7 +46,7 @@ class GDInfo(PatternInfo):
             self.num_tasks = math.floor(nt)
 
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
-        lp: List = []
+        lp: List[Variable] = []
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
         fp.append(Variable("int", "i", "", sizeInByte=4))
 
