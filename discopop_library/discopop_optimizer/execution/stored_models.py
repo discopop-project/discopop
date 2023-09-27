@@ -14,7 +14,7 @@ import subprocess
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, cast, List, TextIO, Tuple
+from typing import Dict, cast, List, TextIO, Tuple, Any
 
 import jsonpickle  # type: ignore
 
@@ -22,7 +22,7 @@ from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.bindings.CodeStorageObject import CodeStorageObject
 
 
-def execute_stored_models(arguments: Dict):
+def execute_stored_models(arguments: Dict[str, Any]):
     """Collects and executes all models stored in the current project path"""
     print("Cleaning environment...")
     __initialize_measurement_directory(arguments)
@@ -45,7 +45,7 @@ def execute_stored_models(arguments: Dict):
         # __cleanup(working_copy_dir)
 
 
-def execute_single_model(arguments: Dict):
+def execute_single_model(arguments: Dict[str, Any]):
     """Executes the single models specified by the given arguments"""
     print("Cleaning environment...")
     __initialize_measurement_directory(arguments)
@@ -69,7 +69,7 @@ def execute_single_model(arguments: Dict):
     # __cleanup(working_copy_dir)
 
 
-def __initialize_measurement_directory(arguments: Dict):
+def __initialize_measurement_directory(arguments: Dict[str, Any]):
     measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
     if not arguments["--execution-append-measurements"]:
         # delete measurement directory
@@ -88,7 +88,7 @@ def __initialize_measurement_file(measurement_file: str):
             f.write(header_line)
 
 
-def __measure_and_execute(arguments: Dict, working_copy_dir: str, code_mod_object: CodeStorageObject):
+def __measure_and_execute(arguments: Dict[str, Any], working_copy_dir: str, code_mod_object: CodeStorageObject):
     """Setup measurements, execute the compiled program and output the measurement results to a file"""
     measurement_dir = os.path.join(arguments["--project"], ".discopop_optimizer_measurements")
     # create output file for specific model measurement
@@ -129,7 +129,7 @@ def __measure_and_execute(arguments: Dict, working_copy_dir: str, code_mod_objec
             print("\t\t\tVariance: ", statistics.variance(execution_times))
 
 
-def __execute(arguments: Dict, working_copy_dir: str, measurements_file: TextIO) -> Tuple[int, float, float]:
+def __execute(arguments: Dict[str, Any], working_copy_dir: str, measurements_file: TextIO) -> Tuple[int, float, float]:
     """Executes the current model and returns the exit code as well as the start and end time of the execution"""
     print("\t\texecuting...")
     command = ["./" + arguments["--executable-name"], arguments["--executable-arguments"]]
@@ -157,7 +157,7 @@ def __execute(arguments: Dict, working_copy_dir: str, measurements_file: TextIO)
         return 1, start_time, end_time
 
 
-def __compile(arguments: Dict, working_copy_dir, compile_command):
+def __compile(arguments: Dict[str, Any], working_copy_dir, compile_command):
     print("\t\tbuilding...")
     # command = compile_command
     # command = shlex.split(compile_command)

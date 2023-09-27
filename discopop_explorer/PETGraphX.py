@@ -11,7 +11,7 @@ from __future__ import annotations
 import copy
 import sys
 from time import sleep
-from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload
+from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 from enum import IntEnum, Enum
 import itertools
 
@@ -570,7 +570,7 @@ class PETGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: Node
-    pos: Dict
+    pos: Dict[Any, Any]
 
     def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
         self.g = g

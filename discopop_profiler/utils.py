@@ -44,7 +44,7 @@ def is_link(clang_args: List[str]) -> bool:
     return "-c" not in clang_args
 
 
-def recursive_scandir(path: str) -> Iterator[os.DirEntry]:
+def recursive_scandir(path: str) -> Iterator[os.DirEntry]:  # type: ignore
     with os.scandir(path) as dir_iter:
         for entry in dir_iter:
             yield entry

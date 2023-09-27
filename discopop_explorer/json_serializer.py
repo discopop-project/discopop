@@ -7,6 +7,7 @@
 # directory for details.
 
 from json import JSONEncoder
+from typing import Dict, Any
 
 from .PETGraphX import Node
 from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -16,7 +17,7 @@ from .variable import Variable
 from .pattern_detectors.task_parallelism.classes import TPIType
 
 
-def filter_members(d: dict) -> dict:
+def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:
     """Removes private and protected members (which starts with '_')
 
     :param d: member dictionary

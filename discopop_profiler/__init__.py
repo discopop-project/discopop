@@ -79,7 +79,7 @@ class DiscopopCpp:
                 ]
         return args
 
-    def invoke(self, clang_args: List[str]) -> subprocess.CompletedProcess:
+    def invoke(self, clang_args: List[str]) -> subprocess.CompletedProcess:  # type: ignore
         args = self.wrap_clang_args(clang_args)
         logging.info(" ".join(args))
         return subprocess.run(args)

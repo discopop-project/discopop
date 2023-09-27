@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
@@ -24,12 +24,12 @@ from discopop_library.CodeGenerator.classes.Pragma import Pragma
 
 class UnpackedSuggestion(object):
     type: str
-    values: dict
+    values: Dict[str, Any]
     file_id: int
     start_line: int
     end_line: int
 
-    def __init__(self, type_str: str, values: dict):
+    def __init__(self, type_str: str, values: Dict[str, Any]):
         self.type = type_str
         self.values = values
 
