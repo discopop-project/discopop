@@ -37,11 +37,7 @@ In general it is sufficient to follow the general installation instructions. How
 
 
 ## Commit messages
-Commit messages should follow the following format:
-```
-<type>(scope)[optional info]: commit message
-```
-where `<type>` can be any of `feat,fix,test,chore,wip`.
+Commit messages should follow the conventional commits format: [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
 
 ## Creating a new release
 Execute the following steps in order to create a new DiscoPoP release:
