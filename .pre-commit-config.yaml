@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+default_install_hook_types: [pre-commit, commit-msg]
+
 default_language_version:
     python: python3
     # python >= 3.8 should be used.
@@ -37,9 +39,9 @@ repos:
 # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
 # more info: https://github.com/psf/black/blob/main/docs/integrations/source_version_control.md
 - repo: https://github.com/psf/black-pre-commit-mirror
-  rev: 23.7.0
+  rev: 23.9.1
   hooks:
-  - id: black                  # run black fromatter on all files
+  - id: black                  # run black formatter on all files
     args: [--line-length=120]
 
 
@@ -50,3 +52,11 @@ repos:
     entry: scripts/dev/check-license.sh
     language: script
     # exclude: we could exclude files here, but we do it in the script instead
+
+- repo: local
+  hooks:
+  - id: check-commit-msg
+    name: Check commit message
+    entry: python scripts/dev/check-commit-msg.py
+    language: python
+    stages: [commit-msg]
