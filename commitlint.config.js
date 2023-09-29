@@ -7,4 +7,5 @@
  * directory for details.
  */
 
+// currently we use a custom script for lintining because commitlint did not work consistently on all devices
 module.exports = { extends: ['@commitlint/config-conventional'] };
