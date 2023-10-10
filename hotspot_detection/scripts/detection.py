@@ -1,6 +1,8 @@
 import os.path
 import numpy as np
+import json
 from typing import List
+from enum import Enum
 
 inf = float("inf")
 
@@ -15,6 +17,7 @@ class cs:
         self.runtimes = []  # runtimes
         self.level = 0
         self.hot = True
+        self.hotness = "MAYBE"  # possible: YES, NO, MAYBE
 
     delta = -1.0
     avr = 0.0
@@ -24,6 +27,9 @@ class cs:
     ratio = 0.0
     topAvr = False
     topRatio = False
+
+    def toJSON(self):
+        return json.dumps(self.__dict__, indent=4)
 
     def addData(self, runtime):
         self.runtimes.append(runtime)
@@ -233,7 +239,7 @@ def main():
         for x in NZcslist:
             f.write(f"{x.csid} {x.ratio} {x.avr} {x.minVal} {x.maxVal} {x.getHotness()}\n")
 
-    # Hotspots based on my definition
+    # categorize Hotspots based on my definition
     f = open("Hotspots.txt", "w")
     f.write("Is this code region a hotspot? \n")
     counterY = 0
@@ -243,12 +249,15 @@ def main():
         if x.topAvr == True and x.topRatio == True:
             counterY += 1
             yesNoMaybe = " is YES"
+            x.hotness = "YES"
         if x.topAvr != x.topRatio:
             counterM += 1
             yesNoMaybe = " is MAYBE"
+            x.hotness = "MAYBE"
         if x.topAvr == False and x.topRatio == False:
             counterN += 1
             yesNoMaybe = " is NO"
+            x.hotness = "NO"
         f.write(str(x.csid) + " " + str(x.name) + " at " + str(x.fid) + ":" + str(x.lineNum) + yesNoMaybe + "\n")
         # f.write(" "+ str(x.topAvr)+" "+ str(x.topRatio)+"\n")
     f.write("Number of YES code regions: " + str(counterY) + " \n")
@@ -256,8 +265,20 @@ def main():
     f.write("Number of NO code regions: " + str(counterN) + " \n")
     f.write("Number of Non-zero code regions: " + str(counterN + counterM + counterY) + " \n")
     f.close()
-
     print("End")
+
+    # export results to Hotspots.json
+    with open("Hotspots.json", "w+") as outfile:
+        outfile.write("{\"code_regions\": [")
+        for id, x in enumerate(NZcslist):
+            outfile.write(x.toJSON())
+            if id != len(NZcslist) - 1:
+                outfile.write(",\n")
+            else:
+                # last element of the list
+                outfile.write("\n")
+        outfile.write("]\n")
+        outfile.write("}\n")
 
 if __name__ == "__main__":
     main()
