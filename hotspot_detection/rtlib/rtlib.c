@@ -3,6 +3,7 @@
 #include "time.h"
 #include <stdbool.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 // temporary data structures
 bool time_flag[100] = {false};
@@ -53,7 +54,35 @@ void printOut()
     fclose(filePointer);
     printf("rtl.c printOut \n");
     FILE *fptr;
-    fptr = fopen("result.txt", "w");
+
+    // determine filename for result storage
+    const char* result_base_name = "hotspot_result_";
+    const char* result_file_ending = ".txt";
+    char unused_file_name[80];
+    int counter = 0;
+    char* s_counter;
+
+    while(true){
+        // create file name
+        if (asprintf(&s_counter, "%d", counter) == -1) {
+            perror("asprintf");
+        } else {
+            // assemble the next filename to be checked
+            strcat(strcat(strcpy(unused_file_name, result_base_name), s_counter), result_file_ending);
+        }
+        // check if file name already exists
+        if(access(unused_file_name, F_OK) == 0){
+            // file exists. increment counter.
+            counter++;
+        }
+        else{
+            // file does not exist yet. Use the identified filename to output the results.
+            break;
+        }
+    }
+    free(s_counter);
+
+    fptr = fopen(unused_file_name, "w");
     // fprintf(fptr,"RUNTIME:\n");
     for (int i = 1; i <= num; i++)
     {
