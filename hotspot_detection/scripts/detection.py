@@ -1,6 +1,8 @@
 import os.path
 import numpy as np
+import json
 from typing import List
+from enum import Enum
 
 inf = float("inf")
 
@@ -15,6 +17,8 @@ class cs:
         self.runtimes = []  # runtimes
         self.level = 0
         self.hot = True
+        self.hotness = "MAYBE"  # possible: YES, NO, MAYBE
+        self.discopop_file_id = -1  # -1 as a marker for "no id"
 
     delta = -1.0
     avr = 0.0
@@ -24,6 +28,9 @@ class cs:
     ratio = 0.0
     topAvr = False
     topRatio = False
+
+    def toJSON(self):
+        return json.dumps(self.__dict__, indent=4)
 
     def addData(self, runtime):
         self.runtimes.append(runtime)
@@ -233,7 +240,7 @@ def main():
         for x in NZcslist:
             f.write(f"{x.csid} {x.ratio} {x.avr} {x.minVal} {x.maxVal} {x.getHotness()}\n")
 
-    # Hotspots based on my definition
+    # categorize Hotspots based on my definition
     f = open("Hotspots.txt", "w")
     f.write("Is this code region a hotspot? \n")
     counterY = 0
@@ -243,12 +250,15 @@ def main():
         if x.topAvr == True and x.topRatio == True:
             counterY += 1
             yesNoMaybe = " is YES"
+            x.hotness = "YES"
         if x.topAvr != x.topRatio:
             counterM += 1
             yesNoMaybe = " is MAYBE"
+            x.hotness = "MAYBE"
         if x.topAvr == False and x.topRatio == False:
             counterN += 1
             yesNoMaybe = " is NO"
+            x.hotness = "NO"
         f.write(str(x.csid) + " " + str(x.name) + " at " + str(x.fid) + ":" + str(x.lineNum) + yesNoMaybe + "\n")
         # f.write(" "+ str(x.topAvr)+" "+ str(x.topRatio)+"\n")
     f.write("Number of YES code regions: " + str(counterY) + " \n")
@@ -256,8 +266,59 @@ def main():
     f.write("Number of NO code regions: " + str(counterN) + " \n")
     f.write("Number of Non-zero code regions: " + str(counterN + counterM + counterY) + " \n")
     f.close()
-
     print("End")
+
+    
+    # map hotspot detection file id to discopop file if (TODO: this solution is not nice and should be replaced in the future)
+    file_id_mapping = dict()
+    # TODO: make this more robust
+    if not os.path.exists("FileMapping.txt"):
+        raise FileNotFoundError("FileMapping.txt not found in the current working directory!")
+    # get discopop filemapping
+    discopop_file_mapping = dict()
+    with open("FileMapping.txt", "r") as dp_fmap:
+        for line in dp_fmap:
+            line = line.replace("\n", "")
+            split_line = line.split("\t")
+            file_id = int(split_line[0])
+            file_path = split_line[1]
+            discopop_file_mapping[file_id] = file_path
+    
+    # get hotspot detection file mapping
+    if not os.path.exists("file_mapping.txt"):
+        raise FileNotFoundError("file_mapping.txt not found in the current working directory!")
+    hotspot_file_mapping = dict()
+    with open("file_mapping.txt", "r") as hotspot_fmap:
+        line_id = 1
+        for line in hotspot_fmap:
+            line = line.replace("\n", "")
+            file_name = line
+            hotspot_file_mapping[line_id] = file_name
+            line_id += 1
+
+    # match discopop and hotspot detection file mappings
+    for file_id in hotspot_file_mapping:
+        for dp_file_id in discopop_file_mapping:
+            if os.path.join(os.getcwd(), hotspot_file_mapping[file_id]) == discopop_file_mapping[dp_file_id]:
+                file_id_mapping[file_id] = dp_file_id
+
+    # add discopop_file_id to cs
+    for x in NZcslist:
+        if x.fid in file_id_mapping:
+            x.discopop_file_id = file_id_mapping[x.fid]
+
+    # export results to Hotspots.json
+    with open("Hotspots.json", "w+") as outfile:
+        outfile.write("{\"code_regions\": [")
+        for id, x in enumerate(NZcslist):
+            outfile.write(x.toJSON())
+            if id != len(NZcslist) - 1:
+                outfile.write(",\n")
+            else:
+                # last element of the list
+                outfile.write("\n")
+        outfile.write("]\n")
+        outfile.write("}\n")
 
 if __name__ == "__main__":
     main()
