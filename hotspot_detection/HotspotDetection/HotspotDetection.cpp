@@ -46,6 +46,10 @@
 #include <map>
 #include <cstdlib>
 
+
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #define DP_DEBUG false
 
 using namespace llvm;
@@ -187,7 +191,7 @@ int FileID = 1;
 
 void addFileName(string name)
 {
-  fileMappingFile.open("file_mapping.txt", std::ios_base::app);
+  fileMappingFile.open(".hotspot_detection/file_mapping.txt", std::ios_base::app);
   fileMappingFile << name << "\n";
   fileMappingFile.close();
   return;
@@ -198,7 +202,7 @@ int getFileID(string name)
   
   int tempfid = 1;
 
-  fileMappingFile.open("file_mapping.txt", ios::in);
+  fileMappingFile.open(".hotspot_detection/file_mapping.txt", ios::in);
   if (fileMappingFile)
   {
     string tp;
@@ -213,15 +217,15 @@ int getFileID(string name)
     }
     fileMappingFile.close();
 
-    fileMappingFile.open("file_mapping.txt", std::ios_base::app);
-    fileMappingFile << tempfid << "\t" << name << "\n";
+    fileMappingFile.open(".hotspot_detection/file_mapping.txt", std::ios_base::app);
+    fileMappingFile << name << "\n";
     fileMappingFile.close();
     return 0;
   }
   else
   {
-    fileMappingFile.open("file_mapping.txt", std::ios_base::app);
-    fileMappingFile << tempfid << "\t" << name << "\n";
+    fileMappingFile.open(".hotspot_detection/file_mapping.txt", std::ios_base::app);
+    fileMappingFile << name << "\n";
     fileMappingFile.close();
     return 0;
   }
@@ -245,8 +249,13 @@ namespace
 
     virtual bool doInitialization(Module &M)
     {
+      // prepare .hotspot_detection directory if not present
+      struct stat st = {0};
+      if (stat(".hotspot_detection", &st) == -1){
+          mkdir(".hotspot_detection", 0777);
+      }
 
-      tempfile.open("temp.txt", ios::in);
+      tempfile.open(".hotspot_detection/temp.txt", ios::in);
       if (tempfile.is_open())
       {
         errs() << "Temp file openned!\n";
@@ -331,7 +340,8 @@ namespace
             int level = LI.getLoopDepth(&*BB);
             BB++;
             UID++;
-            ofile.open("cs_id.txt", std::ios_base::app);
+
+            ofile.open(".hotspot_detection/cs_id.txt", std::ios_base::app);
             ofile << UID << " "
                   << "loop"
                   << " " << lnid << " " << file_ID << "\n";
@@ -490,7 +500,7 @@ namespace
       {
         fid++;
         UID++;
-        ofile.open("cs_id.txt", std::ios_base::app);
+        ofile.open(".hotspot_detection/cs_id.txt", std::ios_base::app);
         string funn = string(F.getName());
         ofile << UID << " "
               << "func"
@@ -540,7 +550,7 @@ namespace
     {
       errs() << "number of instrumented loops: " << instrumentedLoops << "\n";
 
-      tempfile.open("temp.txt", std::ios_base::app);
+      tempfile.open(".hotspot_detection/temp.txt", std::ios_base::app);
       tempfile << UID << "\n";
       tempfile.close();
       return false;
