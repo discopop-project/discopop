@@ -18,7 +18,6 @@ class cs:
         self.level = 0
         self.hot = True
         self.hotness = "MAYBE"  # possible: YES, NO, MAYBE
-        self.discopop_file_id = -1  # -1 as a marker for "no id"
 
     delta = -1.0
     avr = 0.0
@@ -268,44 +267,6 @@ def main():
     f.close()
     print("End")
 
-    
-    # map hotspot detection file id to discopop file if (TODO: this solution is not nice and should be replaced in the future)
-    file_id_mapping = dict()
-    # TODO: make this more robust
-    if not os.path.exists("FileMapping.txt"):
-        raise FileNotFoundError("FileMapping.txt not found in the current working directory!")
-    # get discopop filemapping
-    discopop_file_mapping = dict()
-    with open("FileMapping.txt", "r") as dp_fmap:
-        for line in dp_fmap:
-            line = line.replace("\n", "")
-            split_line = line.split("\t")
-            file_id = int(split_line[0])
-            file_path = split_line[1]
-            discopop_file_mapping[file_id] = file_path
-    
-    # get hotspot detection file mapping
-    if not os.path.exists("file_mapping.txt"):
-        raise FileNotFoundError("file_mapping.txt not found in the current working directory!")
-    hotspot_file_mapping = dict()
-    with open("file_mapping.txt", "r") as hotspot_fmap:
-        for line in hotspot_fmap:
-            line = line.replace("\n", "")
-            split_line = line.split("\t")
-            file_id = int(split_line[0])
-            file_name = split_line[1]
-            hotspot_file_mapping[file_id] = file_name
-
-    # match discopop and hotspot detection file mappings
-    for file_id in hotspot_file_mapping:
-        for dp_file_id in discopop_file_mapping:
-            if os.path.join(os.getcwd(), hotspot_file_mapping[file_id]) == discopop_file_mapping[dp_file_id]:
-                file_id_mapping[file_id] = dp_file_id
-
-    # add discopop_file_id to cs
-    for x in NZcslist:
-        if x.fid in file_id_mapping:
-            x.discopop_file_id = file_id_mapping[x.fid]
 
     # export results to Hotspots.json
     with open("Hotspots.json", "w+") as outfile:
