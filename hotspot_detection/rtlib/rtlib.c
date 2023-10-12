@@ -12,6 +12,22 @@ long double time_b[500] = {0};
 
 struct timeval start1, end1;
 
+extern inline void __hotspot_detection_init(){
+    FILE *filePointer;
+    int bufferLength = 255;
+    char buffer[bufferLength]; /* not ISO 90 compatible */
+    char cntChar[bufferLength];
+    filePointer = fopen(".hotspot_detection/cs_id.txt", "r");
+    int cs_num = 0;
+    while (fgets(buffer, bufferLength, filePointer))
+    {
+        cs_num++;
+    }
+    fclose(filePointer);
+    printf("cs_num: %d\n", cs_num);
+
+}
+
 extern inline void start(const long int id)
 {
     if (time_flag[id] == false)
