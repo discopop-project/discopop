@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 // temporary data structures
-bool time_flag[100] = {false};
-long double time_a[100] = {0};
-long double time_b[100] = {0};
+bool time_flag[500] = {false};
+long double time_a[500] = {0};
+long double time_b[500] = {0};
 
 struct timeval start1, end1;
 
