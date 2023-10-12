@@ -191,7 +191,7 @@ int FileID = 1;
 
 void addFileName(string name)
 {
-  fileMappingFile.open(".discopop/hotspot_detection/file_mapping.txt", std::ios_base::app);
+  fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
   fileMappingFile << name << "\n";
   fileMappingFile.close();
   return;
@@ -202,7 +202,7 @@ int getFileID(string name)
   
   int tempfid = 1;
 
-  fileMappingFile.open(".discopop/hotspot_detection/file_mapping.txt", ios::in);
+  fileMappingFile.open(".discopop/FileMapping.txt", ios::in);
   if (fileMappingFile)
   {
     string tp;
@@ -217,14 +217,14 @@ int getFileID(string name)
     }
     fileMappingFile.close();
 
-    fileMappingFile.open(".discopop/hotspot_detection/file_mapping.txt", std::ios_base::app);
+    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
   }
   else
   {
-    fileMappingFile.open(".discopop/hotspot_detection/file_mapping.txt", std::ios_base::app);
+    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
