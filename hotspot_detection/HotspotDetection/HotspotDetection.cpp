@@ -308,10 +308,31 @@ namespace
       //  recLoop(LI, &F, *li, 1, se);
       //}
 
-      if (string(F.getName()) == "__clang_call_terminate")
+      // Avoid functions we don't want to instrument
+      if (F.getName().find("llvm.") != string::npos)    // llvm debug calls
       {
-        return false;
+          return false;
       }
+      if (F.getName().find("__dp_") != string::npos)       // instrumentation calls
+      {
+          return false;
+      }
+      if (F.getName().find("__cx") != string::npos)        // c++ init calls
+      {
+          return false;
+      }
+      if (F.getName().find("__clang") != string::npos)     // clang helper calls
+      {
+          return false;
+      }
+      if (F.getName().find("_GLOBAL_") != string::npos)    // global init calls (c++)
+      {
+          return false;
+      }
+      if (F.getName().find("pthread_") != string::npos) {
+          return false;
+      }
+
 
       SmallVector<BasicBlock *, 8> ExitBlocks;
       for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB)

@@ -4,11 +4,13 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <stdlib.h>
+
 
 // temporary data structures
-bool time_flag[500] = {false};
-long double time_a[500] = {0};
-long double time_b[500] = {0};
+bool* time_flag = NULL;
+long double* time_a = NULL;
+long double* time_b = NULL;
 
 struct timeval start1, end1;
 
@@ -25,6 +27,19 @@ extern inline void __hotspot_detection_init(){
     }
     fclose(filePointer);
     printf("cs_num: %d\n", cs_num);
+
+    // dynamically allocate global arrays
+    time_flag = (bool *) malloc(sizeof(bool) * cs_num);
+    time_a = (long double *) malloc(sizeof(long double)*cs_num);
+    time_b = (long double *) malloc(sizeof(long double)*cs_num);
+
+
+    for(int i = 0; i < cs_num; i++){
+        time_flag[i] = false;
+        time_a[i] = 0;
+        time_b[i] = 0;
+    }
+
 
 }
 
