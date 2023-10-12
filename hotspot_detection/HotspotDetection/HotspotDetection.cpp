@@ -293,6 +293,8 @@ namespace
       Int32 = Type::getInt32Ty(Ctx);
       Int64 = Type::getInt64Ty(Ctx);
 
+      auto hd_init = F.getParent()->getOrInsertFunction(
+          "__hotspot_detection_init", Void);
       auto fstart = F.getParent()->getOrInsertFunction(
           "start", Void, Int64);
       auto fend = F.getParent()->getOrInsertFunction(
@@ -306,10 +308,31 @@ namespace
       //  recLoop(LI, &F, *li, 1, se);
       //}
 
-      if (string(F.getName()) == "__clang_call_terminate")
+      // Avoid functions we don't want to instrument
+      if (F.getName().find("llvm.") != string::npos)    // llvm debug calls
       {
-        return false;
+          return false;
       }
+      if (F.getName().find("__dp_") != string::npos)       // instrumentation calls
+      {
+          return false;
+      }
+      if (F.getName().find("__cx") != string::npos)        // c++ init calls
+      {
+          return false;
+      }
+      if (F.getName().find("__clang") != string::npos)     // clang helper calls
+      {
+          return false;
+      }
+      if (F.getName().find("_GLOBAL_") != string::npos)    // global init calls (c++)
+      {
+          return false;
+      }
+      if (F.getName().find("pthread_") != string::npos) {
+          return false;
+      }
+
 
       SmallVector<BasicBlock *, 8> ExitBlocks;
       for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB)
@@ -510,6 +533,17 @@ namespace
         IRB.CreateCall(fstart, ConstantInt::get(Int64, UID));
         Function::iterator BB1 = F.begin();
 
+        StringRef fn = F.getName();
+
+        // create call to __hd__init to main function
+        if (fn == "main"){ // inside main function
+          Function::iterator BB = F.begin();
+          IRBuilder<> init_builder(&*BB->begin());
+          init_builder.CreateCall(hd_init);
+        }
+          
+
+
         for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB)
         {
           for (auto &I : *BB)
@@ -525,11 +559,10 @@ namespace
           {
             BasicBlock *tmpBB = &*BB;
 
-            StringRef fn = F.getName();
-            if (fn.equals("main")) // returning from main
+            
+            if (fn.equals("main")) // inside main function
             {
-
-              if (isa<ReturnInst>(I))
+              if (isa<ReturnInst>(I)) // returning from main
               {
                 // try{
                 IRBuilder<> builder(&*BB->rbegin());
