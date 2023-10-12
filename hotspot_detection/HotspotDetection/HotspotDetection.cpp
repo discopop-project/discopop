@@ -41,6 +41,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Support/FileSystem.h"
 #include <set>
 #include <map>
 #include <cstdlib>
@@ -172,9 +173,12 @@ fstream tempfile;
 string getFName(Instruction *BI)
 {
   Instruction *tmpI = &*BI;
-  if (DILocation *Loc = tmpI->getDebugLoc())
+  
+  if (tmpI->getModule())
   {
-    return Loc->getFilename().str();
+      llvm::SmallString<128> FileNameVec = StringRef(tmpI->getModule()->getSourceFileName());
+      llvm::sys::fs::make_absolute(FileNameVec);
+      return FileNameVec.str().str();
   }
   else
   {
@@ -195,9 +199,8 @@ void addFileName(string name)
 
 int getFileID(string name)
 {
-
-  int tempfid = 0;
-  int realfid = 0;
+  
+  int tempfid = 1;
 
   fileMappingFile.open(".hotspot_detection/file_mapping.txt", ios::in);
   if (fileMappingFile)
@@ -205,12 +208,12 @@ int getFileID(string name)
     string tp;
     while (getline(fileMappingFile, tp))
     {
-      tempfid++;
-      if (tp == name)
-      {
-        realfid = tempfid;
-        return realfid;
+      std::string id = tp.substr(0, tp.find("\t"));
+      std::string file_name = tp.substr(tp.find("\t") + 1);
+      if (file_name == name){
+        return stoi(id);
       }
+      tempfid++;
     }
     fileMappingFile.close();
 

@@ -289,12 +289,12 @@ def main():
         raise FileNotFoundError("file_mapping.txt not found in the current working directory!")
     hotspot_file_mapping = dict()
     with open("file_mapping.txt", "r") as hotspot_fmap:
-        line_id = 1
         for line in hotspot_fmap:
             line = line.replace("\n", "")
-            file_name = line
-            hotspot_file_mapping[line_id] = file_name
-            line_id += 1
+            split_line = line.split("\t")
+            file_id = int(split_line[0])
+            file_name = split_line[1]
+            hotspot_file_mapping[file_id] = file_name
 
     # match discopop and hotspot detection file mappings
     for file_id in hotspot_file_mapping:
