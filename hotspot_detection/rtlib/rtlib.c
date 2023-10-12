@@ -8,7 +8,7 @@
 
 
 // temporary data structures
-bool* time_flag = NULL;
+long* time_flag = NULL;
 long double* time_a = NULL;
 long double* time_b = NULL;
 
@@ -29,13 +29,13 @@ extern inline void __hotspot_detection_init(){
     printf("cs_num: %d\n", cs_num);
 
     // dynamically allocate global arrays
-    time_flag = (bool *) malloc(sizeof(bool) * cs_num);
+    time_flag = (long *) malloc(sizeof(long) * cs_num);
     time_a = (long double *) malloc(sizeof(long double)*cs_num);
     time_b = (long double *) malloc(sizeof(long double)*cs_num);
 
 
     for(int i = 0; i < cs_num; i++){
-        time_flag[i] = false;
+        time_flag[i] = 0;
         time_a[i] = 0;
         time_b[i] = 0;
     }
@@ -45,22 +45,21 @@ extern inline void __hotspot_detection_init(){
 
 extern inline void start(const long int id)
 {
-    if (time_flag[id] == false)
+    if (time_flag[id] == 0)
     {
-        time_flag[id] = true;
         gettimeofday(&start1, NULL);
         time_a[id] = start1.tv_sec + 1e-6 * start1.tv_usec;
         // time_a[id] = clock();
     }
+    time_flag[id]++;
     return;
 }
 
 extern inline void end(const long int id)
 {
-
-    if (time_flag[id] == true)
+    time_flag[id]--;
+    if (time_flag[id] == 0)
     {
-        time_flag[id] = false;
         gettimeofday(&end1, NULL);
         time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
         // time_b[id] = time_b[id] + clock() - time_a[id];
