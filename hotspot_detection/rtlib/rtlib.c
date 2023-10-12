@@ -8,7 +8,7 @@
 
 
 // temporary data structures
-long* time_flag = NULL;
+unsigned long* time_flag = NULL;
 long double* time_a = NULL;
 long double* time_b = NULL;
 
@@ -29,7 +29,7 @@ extern inline void __hotspot_detection_init(){
     printf("cs_num: %d\n", cs_num);
 
     // dynamically allocate global arrays
-    time_flag = (long *) malloc(sizeof(long) * cs_num);
+    time_flag = (unsigned long *) malloc(sizeof(long) * cs_num);
     time_a = (long double *) malloc(sizeof(long double)*cs_num);
     time_b = (long double *) malloc(sizeof(long double)*cs_num);
 
