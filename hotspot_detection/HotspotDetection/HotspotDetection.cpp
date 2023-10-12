@@ -218,14 +218,14 @@ int getFileID(string name)
     fileMappingFile.close();
 
     fileMappingFile.open(".hotspot_detection/file_mapping.txt", std::ios_base::app);
-    fileMappingFile << name << "\n";
+    fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
   }
   else
   {
     fileMappingFile.open(".hotspot_detection/file_mapping.txt", std::ios_base::app);
-    fileMappingFile << name << "\n";
+    fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
   }
