@@ -41,6 +41,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Support/FileSystem.h"
 #include <set>
 #include <map>
 #include <cstdlib>
@@ -168,9 +169,12 @@ fstream tempfile;
 string getFName(Instruction *BI)
 {
   Instruction *tmpI = &*BI;
-  if (DILocation *Loc = tmpI->getDebugLoc())
+  
+  if (tmpI->getModule())
   {
-    return Loc->getFilename().str();
+      llvm::SmallString<128> FileNameVec = StringRef(tmpI->getModule()->getSourceFileName());
+      llvm::sys::fs::make_absolute(FileNameVec);
+      return FileNameVec.str().str();
   }
   else
   {
@@ -191,7 +195,7 @@ void addFileName(string name)
 
 int getFileID(string name)
 {
-
+  
   int tempfid = 1;
 
   fileMappingFile.open("file_mapping.txt", ios::in);
