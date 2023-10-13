@@ -49,6 +49,19 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
+# install Hotspot Analyzer python modules
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+message(STATUS "Installing Hotspot Analyzer python modules")
+execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m pip install ${HotspotDetection_SOURCE_DIR}
+        RESULT_VARIABLE HD_INSTALLATION_EXIT_CODE
+        OUTPUT_VARIABLE HD_INSTALLATION_OUTPUT
+)
+# check if installation of DiscoPoP Modules was successful
+if(${HD_INSTALLATION_EXIT_CODE})
+    message(FATAL_ERROR "${HD_INSTALLATION_OUTPUT}")
+endif()
+
 
 # save build configuration to build/build_config.txt
 file(REMOVE "${HotspotDetection_BINARY_DIR}/build_config.txt")

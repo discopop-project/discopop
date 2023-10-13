@@ -1,10 +1,28 @@
 import os.path
 import numpy as np
 import json
+import sys
 from typing import List
 from enum import Enum
+from dataclasses import dataclass
 
 inf = float("inf")
+
+
+@dataclass
+class HotspotAnalyzerArguments(object):
+    """Container Class for the arguments passed to the hotspot analyzer"""
+
+    def __post_init__(self):
+        self.__validate()
+
+    def __validate(self):
+        """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
+        validation_failure = False
+
+        if validation_failure:
+            print("Exiting...")
+            sys.exit()
 
 
 class cs:
@@ -100,7 +118,7 @@ def __print_cs_list(list: List[cs]):
     print(len(list))
 
 
-def main():
+def run(arguments: HotspotAnalyzerArguments):
     ## TO BE USED FROM WITHIN THE .discopop directory!
     discopop_dir = os.getcwd()
     print("DiscoPoP Dir: ", discopop_dir)
@@ -294,6 +312,3 @@ def main():
                 outfile.write("\n")
         outfile.write("]\n")
         outfile.write("}\n")
-
-if __name__ == "__main__":
-    main()
