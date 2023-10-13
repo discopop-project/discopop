@@ -889,7 +889,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
 }
 
 void DiscoPoP::initializeCUIDCounter() {
-    std::string CUCounterFile = "DP_CUIDCounter.txt";
+    std::string CUCounterFile = ".discopop/profiler/DP_CUIDCounter.txt";
     if (dputil::fexists(CUCounterFile)) {
         std::fstream inCUIDCounter(CUCounterFile, std::ios_base::in);;
         inCUIDCounter >> CUIDCounter;
@@ -1830,7 +1830,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
 
     // insert function calls to monitor loop iterations
     std::ofstream loop_metadata_file;
-    loop_metadata_file.open("loop_meta.txt");
+    loop_metadata_file.open(".discopop/profiler/loop_meta.txt");
     int loop_id = 1;
     llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
     llvm::ArrayRef<llvm::Type*> loop_incr_fn_args(loop_incr_fn_arg_type);
@@ -2018,10 +2018,10 @@ bool DiscoPoP::runOnModule(Module &M) {
     ctx_ = &module_->getContext();
 
     reduction_file = new std::ofstream();
-    reduction_file->open("reduction.txt", std::ios_base::app);
+    reduction_file->open(".discopop/profiler/reduction.txt", std::ios_base::app);
 
     loop_counter_file = new std::ofstream();
-    loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
+    loop_counter_file->open(".discopop/profiler/loop_counter_output.txt", std::ios_base::app);
 
     /*
     bool success = dp_reduction_init_util(FileMappingPath);
@@ -2456,7 +2456,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // Report statically identified dependencies
 
         staticDependencyFile = new std::ofstream();
-        staticDependencyFile->open("static_dependencies.txt", std::ios_base::app);
+        staticDependencyFile->open(".discopop/profiler/static_dependencies.txt", std::ios_base::app);
 
         for (auto pair: conditionalBBDepMap) {
                 for (auto s: pair.second) {
@@ -2866,13 +2866,13 @@ string DiscoPoP::xmlEscape(string data) {
 
 void DiscoPoP::secureStream() {
     outOriginalVariables = new std::ofstream();
-    outOriginalVariables->open("OriginalVariables.txt", std::ios_base::app);
+    outOriginalVariables->open(".discopop/profiler/OriginalVariables.txt", std::ios_base::app);
 
     outCUs = new std::ofstream();
-    outCUs->open("Data.xml", std::ios_base::app);
+    outCUs->open(".discopop/profiler/Data.xml", std::ios_base::app);
 
     outCUIDCounter = new std::ofstream();
-    outCUIDCounter->open("DP_CUIDCounter.txt", std::ios_base::out);
+    outCUIDCounter->open(".discopop/profiler/DP_CUIDCounter.txt", std::ios_base::out);
 }
 
 string DiscoPoP::getLineNumbersString(set<int> LineNumbers) {

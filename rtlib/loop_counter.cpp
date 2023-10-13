@@ -57,7 +57,7 @@ void loop_counter_output() {
     // get meta information about the loops
     std::vector <loop_info_t> loop_infos;
     loop_infos.push_back(loop_info_t()); // dummy
-    ifile.open("loop_meta.txt");
+    ifile.open(".discopop/profiler/loop_meta.txt");
     while (std::getline(ifile, line)) {
         loop_info_t loop_info;
         int cnt = sscanf(line.c_str(), "%d %d %d", &loop_info.file_id_,
@@ -69,7 +69,7 @@ void loop_counter_output() {
     ifile.close();
 
     // output information about the loops
-    ofile.open("loop_counter_output.txt");
+    ofile.open(".discopop/profiler/loop_counter_output.txt");
     for (auto i = 1; i < lc.loop_counters_.size(); ++i) {
         loop_info_t &loop_info = loop_infos[i];
         ofile << loop_info.file_id_ << " ";
