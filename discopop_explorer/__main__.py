@@ -25,24 +25,24 @@ def parse_args() -> ExplorerArguments:
     # fmt: off
     parser.add_argument(
         "--path", type=str, default="./",
-        help="Directory with input data")
+        help="Path to the .discopop directory to be analyzed")
     parser.add_argument(
-        "--cu-xml", type=str, default="Data.xml",
+        "--cu-xml", type=str, default="profiler/Data.xml",
         help="CU node xml file")
     parser.add_argument(
-        "--dep-file", type=str, default="dp_run_dep.txt",
+        "--dep-file", type=str, default="profiler/dynamic_dependencies.txt",
         help="Dependencies text file"
     )
     parser.add_argument(
-        "--loop-counter", type=str, default="loop_counter_output.txt",
+        "--loop-counter", type=str, default="profiler/loop_counter_output.txt",
         help="Loop counter data"
     )
     parser.add_argument(
-        "--reduction", type=str, default="reduction.txt",
+        "--reduction", type=str, default="profiler/reduction.txt",
         help="Reduction variables file"
     )
     parser.add_argument(
-        "--fmap", type=str, default="FileMapping.txt",
+        "--fmap", type=str, default="common_data/FileMapping.txt",
         help="File mapping")
     parser.add_argument(
         "--plugins", type=str, nargs="*", default=[],
@@ -53,18 +53,18 @@ def parse_args() -> ExplorerArguments:
     )
     # flags related to output and formatting:
     parser.add_argument(
-        "--json", type=str, nargs="?", default=None, const="patterns.json",
+        "--json", type=str, nargs="?", default=None, const="explorer/patterns.json",
         help="Json output")
     parser.add_argument(
-        "--profiling", type=str, nargs="?", default=None, const="profiling_stats.txt",
+        "--profiling", type=str, nargs="?", default=None, const="explorer/profiling_stats.txt",
         help="Enable profiling. If a path is given, the profiling stats are written to the given file, otherwise to profiling_stats.txt",
     )
     parser.add_argument(
-        "--dump-pet", type=str, nargs="?", default=None, const="pet_dump.json",
+        "--dump-pet", type=str, nargs="?", default=None, const="explorer/pet_dump.json",
         help="Dump PET Graph to JSON file. If a path is given, the PET Graph is written to the given file, otherwise to pet_dump.json",
     )
     parser.add_argument(
-        "--dump-detection-result", type=str, nargs="?", default=None, const="detection_result_dump.json",
+        "--dump-detection-result", type=str, nargs="?", default=None, const="explorer/detection_result_dump.json",
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
 

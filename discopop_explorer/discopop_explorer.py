@@ -141,6 +141,10 @@ def __run(
 
 def run(arguments: ExplorerArguments):
     """Run the discopop_explorer with the given arguments"""
+    # create explorer directory if not already present
+    if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
+        os.mkdir(os.path.join(arguments.project_path, "explorer"))
+
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
         profile.enable()
