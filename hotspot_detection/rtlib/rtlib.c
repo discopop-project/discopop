@@ -19,7 +19,7 @@ extern inline void __hotspot_detection_init(){
     int bufferLength = 255;
     char buffer[bufferLength]; /* not ISO 90 compatible */
     char cntChar[bufferLength];
-    filePointer = fopen(".discopop/hotspot_detection/cs_id.txt", "r");
+    filePointer = fopen(".discopop/hotspot_detection/private/cs_id.txt", "r");
     int cs_num = 0;
     while (fgets(buffer, bufferLength, filePointer))
     {
@@ -73,7 +73,7 @@ void printOut()
     int bufferLength = 255;
     char buffer[bufferLength]; /* not ISO 90 compatible */
     char cntChar[bufferLength];
-    filePointer = fopen(".discopop/hotspot_detection/cs_id.txt", "r");
+    filePointer = fopen(".discopop/hotspot_detection/private/cs_id.txt", "r");
     int num = 0;
     while (fgets(buffer, bufferLength, filePointer))
     {
@@ -86,7 +86,7 @@ void printOut()
     FILE *fptr;
 
     // determine filename for result storage
-    const char* result_base_name = ".discopop/hotspot_detection/hotspot_result_";
+    const char* result_base_name = ".discopop/hotspot_detection/private/hotspot_result_";
     const char* result_file_ending = ".txt";
     char unused_file_name[80];
     int counter = 0;

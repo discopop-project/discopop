@@ -101,6 +101,20 @@ def __print_cs_list(list: List[cs]):
 
 
 def main():
+    ## TO BE USED FROM WITHIN THE .discopop directory!
+    discopop_dir = os.getcwd()
+    print("DiscoPoP Dir: ", discopop_dir)
+    # enter hotspot_detection/private folder
+    hotspot_detection_dir = os.path.join(discopop_dir, "hotspot_detection")
+    hotspot_detection_private_dir = os.path.join(hotspot_detection_dir, "private")
+    if not os.path.exists(hotspot_detection_dir):
+        raise FileNotFoundError("Static analysis and profiling results not found: Please execute the static analysis and profiling!" )
+    if not os.path.exists(hotspot_detection_private_dir):
+        raise FileNotFoundError("Static analysis and profiling results not found: Please execute the static analysis and profiling!" )
+    os.chdir(hotspot_detection_private_dir)
+
+
+
     ## CS LIST
     # TODO turn this into a Dict
     cslist: List[cs] = []
@@ -268,8 +282,8 @@ def main():
     print("End")
 
 
-    # export results to Hotspots.json
-    with open("Hotspots.json", "w+") as outfile:
+    # export results to Hotspots.json and store in "public" folder
+    with open(os.path.join(hotspot_detection_dir, "Hotspots.json"), "w+") as outfile:
         outfile.write("{\"code_regions\": [")
         for id, x in enumerate(NZcslist):
             outfile.write(x.toJSON())
