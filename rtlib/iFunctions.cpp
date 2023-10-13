@@ -308,7 +308,7 @@ namespace __dp {
 
     void outputAllocations() {
         auto allocationsFileStream = new ofstream();
-        allocationsFileStream->open("memory_regions.txt", ios::out);
+        allocationsFileStream->open(".discopop/profiler/memory_regions.txt", ios::out);
         for(auto memoryRegion : *allocatedMemoryRegions){
             string position = decodeLID(get<0>(memoryRegion));
             string id = get<1>(memoryRegion);
@@ -1088,7 +1088,8 @@ namespace __dp {
                       selfPath = nullptr;
                       out->open("Output.txt", ios::out);
                  }
-                 out->open(string(selfPath) + "_dep.txt", ios::out);
+                 //out->open(string(selfPath) + "_dep.txt", ios::out);  # results in the old <prog>_dep.txt
+                 out->open(".discopop/profiler/dynamic_dependencies.txt", ios::out);
             }
 #else
             out->open("Output.txt", ios::out);
