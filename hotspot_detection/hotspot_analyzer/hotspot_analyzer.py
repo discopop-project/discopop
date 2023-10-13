@@ -183,7 +183,8 @@ def run(arguments: HotspotAnalyzerArguments):
             for word in line.split():
                 temp.append(word)
             tempCs = findCs(int(temp[0]))
-            tempCs.addData(float(temp[1]))
+            if tempCs:
+                tempCs.addData(float(temp[1]))
         dataFile.close()
 
     csfile = open("cs_id.txt", "r")
