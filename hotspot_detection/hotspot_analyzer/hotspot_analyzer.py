@@ -157,6 +157,7 @@ def run(arguments: HotspotAnalyzerArguments):
         return hotSum
 
     ## READ FILES
+    print("Reading hotspot results... ", end="")
     idfile = open("hotspot_result_0.txt", "r")
     for line in idfile:
         c = cs(int(line.split()[0]))
@@ -187,6 +188,9 @@ def run(arguments: HotspotAnalyzerArguments):
                 tempCs.addData(float(temp[1]))
         dataFile.close()
 
+    print("Done.")
+
+    print("Reading cs_id.txt ... ", end="")
     csfile = open("cs_id.txt", "r")
     for line in csfile:
         temp = []
@@ -194,11 +198,13 @@ def run(arguments: HotspotAnalyzerArguments):
             temp.append(word)
 
         tempCs = findCs(int(temp[0]))
-        if temp[1] == "func":
-            tempCs.addInfo(False, int(temp[2]), int(temp[3]), "func")
-        if temp[1] == "loop":
-            tempCs.addInfo(True, int(temp[2]), int(temp[3]), "loop")
+        if tempCs:
+            if temp[1] == "func":
+                tempCs.addInfo(False, int(temp[2]), int(temp[3]), "func")
+            if temp[1] == "loop":
+                tempCs.addInfo(True, int(temp[2]), int(temp[3]), "loop")
     csfile.close()
+    print("Done.")
 
     ## CALCULATE
     vMAX = 0
@@ -212,22 +218,28 @@ def run(arguments: HotspotAnalyzerArguments):
 
     NZcslist: List[cs] = []
 
+    print("Calculate Averages ... ", end="")
     for j in cslist:
         j.calAvr()
+    print("Done.")
 
     for m in cslist:
         if m.sum > 0:
             NZcslist.append(m)
 
+    print("Calculate Min,Max,Avg ... ", end="")
     for j in NZcslist:
         j.calMin()
         j.calMax()
         j.calAvr()
+    print("Done.")
 
+    print("Calculate Delta and Ratio ... ", end="")
     for j in NZcslist:
         j.roundMin()
         j.calDelta()
         j.calRatio()
+    print("Done.")
 
     tempmax = 0
 
@@ -239,13 +251,16 @@ def run(arguments: HotspotAnalyzerArguments):
     print("max cs: ", maxCS.csid, " ", maxCS.maxVal)
 
     # sorting cs list based on avr and ratio
+    print("Sort CS lists ... ", end="")
     sortedCsAvr = NZcslist.copy()
     sortedCsAvr.sort(key=lambda x: x.avr, reverse=True)
 
     sortedCsRatio = NZcslist.copy()
     sortedCsRatio.sort(key=lambda x: x.ratio, reverse=True)
+    print("Done.")
 
     # detecting hotspots of each list by mean or median
+    print("Detect hotspots ... ", end="")
     mean = True
     if mean:
         avrMiddle = np.mean([x.avr for x in NZcslist])
@@ -261,12 +276,14 @@ def run(arguments: HotspotAnalyzerArguments):
     for x in NZcslist:
         if x.ratio >= ratioMiddle:
             x.isTopRatio(True)
+    print("Done")
 
     # print
     __print_cs_list(NZcslist)
     print(ratioMiddle)
 
     ## WRITE OUT RESULTS
+    print("Output results ... ", end="")
 
     with open("hotspot_result.txt", "w") as f:
         for x in NZcslist:
@@ -298,7 +315,6 @@ def run(arguments: HotspotAnalyzerArguments):
     f.write("Number of NO code regions: " + str(counterN) + " \n")
     f.write("Number of Non-zero code regions: " + str(counterN + counterM + counterY) + " \n")
     f.close()
-    print("End")
 
 
     # export results to Hotspots.json and store in "public" folder
@@ -313,3 +329,5 @@ def run(arguments: HotspotAnalyzerArguments):
                 outfile.write("\n")
         outfile.write("]\n")
         outfile.write("}\n")
+
+    print("Done")
