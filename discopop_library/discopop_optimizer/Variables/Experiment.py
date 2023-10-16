@@ -85,7 +85,7 @@ class Experiment(object):
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
-            os.path.join(discopop_output_path, "memory_regions.txt"),
+            os.path.join(discopop_output_path, "profiler/memory_regions.txt"),
             return_all_memory_regions=True,
         )
 
