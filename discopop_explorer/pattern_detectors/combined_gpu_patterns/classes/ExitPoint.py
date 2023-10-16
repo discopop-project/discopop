@@ -131,7 +131,7 @@ class ExitPoint(object):
 
         # get size of memory region
         memory_region_sizes = get_sizes_of_memory_regions(
-            self.memory_regions, os.path.join(project_folder_path, "memory_regions.txt")
+            self.memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
         )
         if len(memory_region_sizes) > 0:
             max_mem_reg_size = max(memory_region_sizes.values())
