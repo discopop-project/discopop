@@ -57,6 +57,10 @@
 #include <string.h>
 #include <utility>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+
 #define DP_DEBUG false
 
 using namespace llvm;
