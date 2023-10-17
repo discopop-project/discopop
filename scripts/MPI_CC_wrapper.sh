@@ -49,6 +49,6 @@ fi
 
 echo "${LLVM_CLANG} ${MPI_INCLUDES} -g -c  -S -emit-llvm -fno-discard-value-names ${@} -O0 -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}"
 #clang-11 -g -c -O0 -S -emit-llvm -fno-discard-value-names "$@" -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}
-${LLVM_CLANG} "${@}" -g -c -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH} -fPIC ${MPI_INCLUDES}
+${LLVM_CLANG} "${@}" -g -c -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -fPIC ${MPI_INCLUDES} -Xlinker -lstdc++
 
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o
