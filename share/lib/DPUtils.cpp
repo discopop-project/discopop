@@ -25,6 +25,39 @@ cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-ski
 namespace dputil {
 
     int32_t getFileID(string fileMapping, string fullPathName) {
+        int tempfid = 1;
+        fstream fileMappingFile;
+
+        fileMappingFile.open(".discopop/common_data/FileMapping.txt", ios::in);
+        if (fileMappingFile)
+        {
+            string tp;
+            while (getline(fileMappingFile, tp))
+            {
+            std::string id = tp.substr(0, tp.find("\t"));
+            std::string file_name = tp.substr(tp.find("\t") + 1);
+            if (file_name == fullPathName){
+                return stoi(id);
+            }
+            tempfid++;
+            }
+            fileMappingFile.close();
+
+            fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+            fileMappingFile << tempfid << "\t" << fullPathName << "\n";
+            fileMappingFile.close();
+            errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
+            return tempfid;
+        }
+        else
+        {
+            fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+            fileMappingFile << tempfid << "\t" << fullPathName << "\n";
+            fileMappingFile.close();
+            errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
+            return tempfid;
+        }
+        /*
         int32_t index = 0; // if the associated file id is not found, then we return 0
         string line;
         ifstream fileMap(fileMapping.c_str());
@@ -46,6 +79,7 @@ namespace dputil {
             fileMap.close();
         }
         return index;
+        */
     }
 
 // Encode the fileID and line number of BI as LID.
@@ -108,47 +142,43 @@ namespace dputil {
     void determineFileID(Function &F, int32_t &fileID) {
         fileID = 0;
 
-        // if FileMapping.txt is not given, we use 1 as file index
-        if (!dputil::fexists(FileMappingPath)) {
-            fileID = 1;
-        } else {
-            for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-                BasicBlock &BB = *FI;
-                for (BasicBlock::iterator BI = BB.begin(), EI = BB.end(); BI != EI; ++BI) {
-                    int32_t lno;
-                    const DebugLoc &location = BI->getDebugLoc();
-                    if (location) {
-                        lno = BI->getDebugLoc().getLine();
-                    } else {
-                        lno = 0;
-                    }
+        for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+            BasicBlock &BB = *FI;
+            for (BasicBlock::iterator BI = BB.begin(), EI = BB.end(); BI != EI; ++BI) {
+                int32_t lno;
+                const DebugLoc &location = BI->getDebugLoc();
+                if (location) {
+                    lno = BI->getDebugLoc().getLine();
+                } else {
+                    lno = 0;
+                }
 
-                    if (lno) {
-                        MDNode *N = BI->getMetadata("dbg");
-                        // N == NULL means BI is only a helper instruction.
-                        // No metadata is attached to BI.
-                        if (N) {
-                            StringRef File = "", Dir = "";
-                            const DILocation *Loc = location.get();
-                            File = Loc->getFilename();
-                            Dir = Loc->getDirectory();
+                if (lno) {
+                    MDNode *N = BI->getMetadata("dbg");
+                    // N == NULL means BI is only a helper instruction.
+                    // No metadata is attached to BI.
+                    if (N) {
+                        StringRef File = "", Dir = "";
+                        const DILocation *Loc = location.get();
+                        File = Loc->getFilename();
+                        Dir = Loc->getDirectory();
 
-                            char *absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
+                        char *absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
 
-                            if (absolutePathFileName == NULL) {
-                                absolutePathFileName = realpath(File.data(), NULL);
-                            }
-
-                            if (absolutePathFileName) {
-                                fileID = dputil::getFileID(FileMappingPath, string(absolutePathFileName));
-                                delete[] absolutePathFileName;
-                            }
-                            break;
+                        if (absolutePathFileName == NULL) {
+                            absolutePathFileName = realpath(File.data(), NULL);
                         }
+
+                        if (absolutePathFileName) {
+                            fileID = dputil::getFileID(FileMappingPath, string(absolutePathFileName));
+                            delete[] absolutePathFileName;
+                        }
+                        break;
                     }
                 }
             }
         }
+
     }
 
     string get_exe_dir() {
