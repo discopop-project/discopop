@@ -112,6 +112,24 @@ bool DiscoPoP::doInitialization(Module &M) {
         errs() << "DiscoPoP | 190: init pass DiscoPoP \n";
     }
 
+    // prepare .discopop directory if not present
+      struct stat st1 = {0};
+      if (stat(".discopop", &st1) == -1){
+          mkdir(".discopop", 0777);
+      }
+      // prepare profiler directory if not present
+      struct stat st2 = {0};
+      if (stat(".discopop/profiler", &st2) == -1){
+          mkdir(".discopop/profiler", 0777);
+      }
+
+      // prepare common_data directory if not present
+      struct stat st3 = {0};
+      if (stat(".discopop/common_data", &st3) == -1){
+          mkdir(".discopop/common_data", 0777);
+      }
+
+
 // CUGeneration
     {
         CUIDCounter = 0;
@@ -925,8 +943,9 @@ bool DiscoPoP::inlinedFunction(Function *F) {
 void DiscoPoP::instrument_function(llvm::Function *function, map <string, string> *trueVarNamesFromMetadataMap) {
 
     // get the corresponding file id
-    unsigned file_id = dp_reduction_get_file_id(function);
-    if (file_id == 0) {
+    int32_t tmp_file_id;
+    determineFileID(*function, tmp_file_id);
+    if (tmp_file_id == 0) {
         return;
     }
 
@@ -934,7 +953,7 @@ void DiscoPoP::instrument_function(llvm::Function *function, map <string, string
 
     for (auto loop_it = loop_info.begin(); loop_it != loop_info.end();
          ++loop_it) {
-        instrument_loop(*function, file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);
+        instrument_loop(*function, tmp_file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);
     }
 }
 
@@ -2004,11 +2023,13 @@ bool DiscoPoP::runOnModule(Module &M) {
     loop_counter_file = new std::ofstream();
     loop_counter_file->open("loop_counter_output.txt", std::ios_base::app);
 
+    /*
     bool success = dp_reduction_init_util(FileMappingPath);
     if (!success) {
         llvm::errs() << "could not find the FileMapping file: " << FileMappingPath << "\n";
         return false;
     }
+    */
     instrument_module(&M, &trueVarNamesFromMetadataMap);
 
     dp_reduction_insert_functions();
