@@ -72,7 +72,8 @@ typedef int64_t ADDR;
 using namespace std;
 using namespace llvm;
 
-extern cl::opt <string> FileMappingPath;
+//extern cl::opt <string> FileMappingPath;
+extern string FileMappingPath;
 extern cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS;
 namespace dputil {
 
