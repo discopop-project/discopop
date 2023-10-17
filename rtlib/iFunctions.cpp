@@ -875,7 +875,9 @@ namespace __dp {
         nextFreeMemoryRegionId++;
         // create entry to list of allocatedMemoryRegions
         string var_name = allocId;
-        cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
+        if(DP_DEBUG){
+            cout << "alloca: " << var << " (" <<  var_name <<  ") @ " << decodeLID(lid) <<  " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << to_string(allocatedMemoryRegions->size()) << "\n";
+        }
         allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, var_name, startAddr, endAddr, numBytes, numElements});
         allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
@@ -899,8 +901,10 @@ namespace __dp {
 
         allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer, tempAddrCount, NUM_WORKERS);
 
-        cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
-        printf(" NumBytes: %lld\n", numBytes);
+        if(DP_DEBUG){
+            cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", " << std::hex << startAddr << " - " << std::hex << endAddr;
+            printf(" NumBytes: %lld\n", numBytes);
+        }
 
         allocatedMemoryRegions->push_back(tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{lid, allocId, startAddr, endAddr, numBytes, -1});
         lastHitIterator = allocatedMemoryRegions->end();
