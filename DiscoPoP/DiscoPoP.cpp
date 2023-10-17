@@ -18,7 +18,8 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
+#define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
+#define DP_INSTRUMENT_ALL_ALLOCAS false
 
 
 using namespace llvm;
@@ -3371,26 +3372,22 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     args.push_back(startAddr);
 
     // skip uninteresting allocas
-    bool is_interesting = false;
-    if(!toInstrument->isStaticAlloca()){
-        is_interesting = true;
-    }
-    if(toInstrument->isArrayAllocation()){
-        is_interesting = true;
-    }
-    if(toInstrument->getAllocatedType()->isArrayTy()){
-        is_interesting = true;
-    }
-    if(!is_interesting){
-        return;
+    if(!DP_INSTRUMENT_ALL_ALLOCAS){
+        bool is_interesting = false;
+        if(!toInstrument->isStaticAlloca()){
+            is_interesting = true;
+        }
+        if(toInstrument->isArrayAllocation()){
+            is_interesting = true;
+        }
+        if(toInstrument->getAllocatedType()->isArrayTy()){
+            is_interesting = true;
+        }
+        if(!is_interesting){
+            return;
+        }
     }
 
-    errs() << "TOINSTRUMENT: ";
-    toInstrument->print(errs());
-    errs() << "\n";
-    if(toInstrument->isStaticAlloca()){
-        errs() << "\tIs Static!\n";
-    }
 
     Value *endAddr = startAddr;
     uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
