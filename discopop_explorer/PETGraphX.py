@@ -701,8 +701,6 @@ class PETGraphX(object):
                             mem_reg_mappings[d2.memory_region].add(d1.memory_region)
         print("Done.")
 
-        print("\t\t\tMappings: ", mem_reg_mappings)
-
         print("\t\tInstantiating static dependencies...", end=" ")
         # create copies of static dependency edges for all dynamic mappings
         for node_id in [n.id for n in self.all_nodes(CUNode)]:
@@ -719,7 +717,6 @@ class PETGraphX(object):
                             edge_data = copy.deepcopy(d)
                             edge_data.memory_region = dynamic_mapping
                             self.g.add_edge(s, t, data=edge_data)
-                            print("Added Instance: ", s, t, edge_data)
 
         print("Done.")
 
