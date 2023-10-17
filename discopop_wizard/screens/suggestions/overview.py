@@ -44,7 +44,7 @@ def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_
     result_notebook.pack(fill=tk.BOTH, expand=True)
     # add CU preview
     cu_display_widget = ScrollableTextWidget(result_notebook)
-    with open(execution_configuration_obj.value_dict["working_copy_path"] + "/Data.xml", "r") as f:
+    with open(execution_configuration_obj.value_dict["working_copy_path"] + "/cus.xml", "r") as f:
         cu_display_widget.set_text(f.read())
     result_notebook.add(cu_display_widget.frame, text="CU's")
     # add dynamic dependency preview

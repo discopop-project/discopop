@@ -9,7 +9,7 @@ nav_order: 2
 
 ## Computational Units (CUs)
 
-When you apply the `DiscoPoP` optimizer pass, a file named `Data.xml` will be created.
+When you apply the `DiscoPoP` optimizer pass, a file named `cus.xml` will be created.
 It contains the identified computational units of the specified target project.
 
 The xml file contains much information about the program. There are four types of nodes in the xml file including: functions, loops, CUs, and dummies. Each node has an ID (consisting of `file_id:cu_id`), a type, a name (some nodes have empty names) and the start and end line of the node in the source code.
@@ -35,7 +35,7 @@ Loop nodes have type 2. They contain children nodes which can be CUs, other loop
 
 Dummy nodes are usually library functions whose source code is not available. We cannot profile them and thus do not provide parallelization suggestions for them.
 
-Please note that DiscoPoP appends CUs to an existing `Data.xml` file and thus if you need to extract computational units of the program again, you need to remove the existing `Data.xml` file.
+Please note that DiscoPoP appends CUs to an existing `cus.xml` file and thus if you need to extract computational units of the program again, you need to remove the existing `cus.xml` file.
 
 ## Data Dependencies
 

@@ -27,7 +27,7 @@ Reduction loops: []
 
 ## Interpretation
 The reported values shall be interpreted as follows:
-* `Geometric decomposition at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `Data.xml`
+* `Geometric decomposition at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `cus.xml`
 * `Start line: <file_id>:<line_num>`, where `line_num` refers to the first source code line of the potential geometrically decomposable code.
 * `End line: <file_id>:<line_num>`, where `line_num` refers to the last line of the suggested pattern.
 * `Do-All loops: [<file_id>:<cu_id>]` specifies which [Do-all loops](Do-All.md) can be part of the geometric decomposition.

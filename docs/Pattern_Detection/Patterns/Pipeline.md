@@ -23,7 +23,7 @@ Stages:
     ...
 ```
 The reported values shall be interpreted as follows:
-* `Pipeline at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `Data.xml`
+* `Pipeline at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `cus.xml`
 * `Start line: <file_id>:<line_num>`, where `line_num` refers to the first source code line of the identified pipeline.
 * `End line: <file_id>:<line_num>`, where `line_num` refers to the last line of the pipeline loop.
 * `Stages` defines a list of stages contained in the identified pipeline. The specific format of the stages is described in the following.
@@ -45,7 +45,7 @@ InOutDeps: []
 ```
 
 The reported values shall be interpreted as follows:
-* `Node: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `Data.xml`
+* `Node: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `cus.xml`
 * `Start line: <file_id>:<line_num>`, where `line_num` refers to the first source code line of the identified pipeline stage.
 * `End line: <file_id>:<line_num>`, where `line_num` refers to the last line of the stage.
 * `pragma:`shows which type of OpenMP pragma shall be inserted before the `start line`.

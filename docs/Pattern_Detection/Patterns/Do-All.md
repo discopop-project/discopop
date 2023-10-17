@@ -23,7 +23,7 @@ last private: []
 
 ## Interpretation
 The reported values shall be interpreted as follows:
-* `Do-all at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `Data.xml`
+* `Do-all at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `cus.xml`
 * `Start line: <file_id>:<line_num>`, where `line_num` refers to the source code line of the parallelizable loop.
 * `End line: <file_id>:<line_num>`, where `line_num` refers to the last line of the parallelizable loop.
 <!--

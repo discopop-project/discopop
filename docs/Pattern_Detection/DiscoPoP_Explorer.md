@@ -16,7 +16,7 @@ Currently, the following five patterns can be detected:
 
 ## Getting started
 We assume that you have already executed the DiscoPoP profiler on the sequential target application, and the following files have been created in the current working directory:
-* `Data.xml` (CU information in XML format)
+* `cus.xml` (CU information in XML format)
 * `<app_name>_dep.txt` (Data dependences)
 * `reduction.txt` and `loop_counter_output.txt` (identified reduction operations and counted loop iterations)
 

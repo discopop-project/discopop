@@ -54,7 +54,7 @@ class ProfilingContainer(object):
     def copy_results_from_container(self, target_path: str, execution_view):
         result_files = [
             "FileMapping.txt",
-            "Data.xml",
+            "cus.xml",
             "loop_counter_output.txt",
             "reduction.txt",
             execution_view.execution_configuration.value_dict["executable_name"] + "_dp_dep.txt",
