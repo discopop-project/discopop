@@ -18,7 +18,7 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
+#define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
 
 
 using namespace llvm;
@@ -771,9 +771,19 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
     // Changed TerminatorInst to Instuction
     const Instruction *TInst;
     string successorBB;
+    if (DP_DEBUG) {
+            errs() << "\tfillCUVariables: start\n";
+    }
 
+    int counter = 0;
     for (Region::block_iterator bb = TopRegion->block_begin();
          bb != TopRegion->block_end(); ++bb) {
+
+            if (DP_DEBUG) {
+                counter++;
+            errs() << "\tfillCUVariables: iter: " << counter << "\n";
+    }
+
         CU *lastCU = BBIDToCUIDsMap[bb->getName().str()]
                 .back(); // get the last CU in the basic block
         // get all successor basic blocks for bb
@@ -824,6 +834,9 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
                 }
             }
         }
+    }
+    if (DP_DEBUG) {
+            errs() << "\tfillCUVariables: end\n";
     }
 }
 
@@ -2070,6 +2083,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     // CUGeneration
     {
+        if (DP_DEBUG) {
+            errs() << "pass DiscoPoP CU Generation: started function\n";
+        }
         /********************* Initialize root values ***************************/
         Node *root = new Node;
         root->name = F.getName().str();
@@ -2097,6 +2113,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
             Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true, to_string(variableType->getScalarSizeInBits()/8));
             root->argumentsList.push_back(v);
         }
+        if (DP_DEBUG) {
+            errs() << "\tinitialized.\n";
+        }
         /********************* End of initialize root values
          * ***************************/
         LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
@@ -2111,13 +2130,24 @@ bool DiscoPoP::runOnFunction(Function &F) {
         getFunctionReturnLines(TopRegion, root);
 
         populateGlobalVariablesSet(TopRegion, globalVariablesSet);
+        if (DP_DEBUG) {
+            errs() << "\tprepared data structures.\n";
+        }
 
         createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
+        if (DP_DEBUG) {
+            errs() << "\tcreated CUs.\n";
+        }
 
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
-
+        if (DP_DEBUG) {
+            errs() << "\tfilled CU variables.\n";
+        }
 
         fillStartEndLineNumbers(root, LI);
+        if (DP_DEBUG) {
+            errs() << "\tfilled CU start and end line numbers.\n";
+        }
 
         secureStream();
 
@@ -2129,11 +2159,17 @@ bool DiscoPoP::runOnFunction(Function &F) {
         for (auto i: CUVector) {
             delete (i);
         }
+        if (DP_DEBUG) {
+            errs() << "pass DiscoPoP CU Generation: finished function\n";
+        }
     }
     // CUGeneration end
 
     // DPInstrumentation
     {
+        if (DP_DEBUG) {
+            errs() << "pass DiscoPoP instrumentation: started function\n";
+        }
         // Check loop parallelism?
         if (ClCheckLoopPar) {
             LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
@@ -2153,7 +2189,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         }
 
         if (DP_DEBUG) {
-            errs() << "pass DiscoPoP: finished function\n";
+            errs() << "pass DiscoPoP instrumentation: finished function\n";
         }
     }
     // DPInstrumentation end
@@ -2173,6 +2209,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         set < Value * > staticallyPredictableValues;
         // Get local values (variables)
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get local values...\n";
         for (Instruction &I: F.getEntryBlock()) {
             if (AllocaInst * AI = dyn_cast<AllocaInst>(&I)) {
                 staticallyPredictableValues.insert(AI);
@@ -2208,8 +2245,10 @@ bool DiscoPoP::runOnFunction(Function &F) {
                 }
             }
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get local values done\n";
 
         // assign static memory region IDs to statically predictable values and thus dependencies
+        if (DP_DEBUG) errs() << "\tOmission Analysis: assign mem reg ids...\n";
         unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap;  // <SSA variable name>: (original variable name, statically assigned MemReg ID)
         bool tmpIsGlobal;
         long next_id;
@@ -2229,6 +2268,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             staticMemoryRegionID = "S" + to_string(next_id);
             staticValueNameToMemRegIDMap[llvmIRVarName] = pair<string, string>(originalVarName, staticMemoryRegionID);
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: assign mem reg ids done\n";
 
         if (DP_hybrid_DEBUG) {
             errs() << "--- Local Values ---\n";
@@ -2243,10 +2283,18 @@ bool DiscoPoP::runOnFunction(Function &F) {
         map < BasicBlock * , set < string >> conditionalBBDepMap;
         map < BasicBlock * , map < BasicBlock *, set < string>>> conditionalBBPairDepMap;
 
+        if (DP_DEBUG) errs() << "\tOmission Analysis: getDomTree...\n";
         auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+        if (DP_DEBUG) errs() << "\tOmission Analysis: getDomTree done.\n";
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get InstructionCFG...\n";
         InstructionCFG CFG(VNF, F);
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get InstructionCFG done.\n";
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get InstructionDG...\n";
         InstructionDG DG(VNF, &CFG, fid);
+        if (DP_DEBUG) errs() << "\tOmission Analysis: get InstructionDG done.\n";
 
+
+        if (DP_DEBUG) errs() << "\tOmission Analysis: perform SPA dependence analysis...\n";
         for (auto edge: DG.getEdges()) {
             Instruction *Src = edge->getSrc()->getItem();
             Instruction *Dst = edge->getDst()->getItem();
@@ -2277,8 +2325,10 @@ bool DiscoPoP::runOnFunction(Function &F) {
             omittableInstructions.insert(Src);
             omittableInstructions.insert(Dst);
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: perform SPA dependence analysis done.\n";
 
         // Omit SPA instructions with no dependences
+        if (DP_DEBUG) errs() << "\tOmission Analysis: omit SPA instructions...\n";
         for (auto node: DG.getInstructionNodes()) {
             if (!isa<StoreInst>(node->getItem()) && !!isa<LoadInst>(node->getItem())) continue;
             V = node->getItem()->getOperand(isa<StoreInst>(node->getItem()) ? 1 : 0);
@@ -2286,8 +2336,10 @@ bool DiscoPoP::runOnFunction(Function &F) {
                 staticallyPredictableValues.find(V) != staticallyPredictableValues.end())
                 omittableInstructions.insert(node->getItem());
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: omit SPA instructions done.\n";
 
         // Add observation of execution of single basic blocks
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 1...\n";
         for (auto pair: conditionalBBDepMap) {
             // Insert call to reportbb
             Instruction *insertionPoint = pair.first->getTerminator();
@@ -2315,8 +2367,10 @@ bool DiscoPoP::runOnFunction(Function &F) {
             // ---------------------------------
             ++bbDepCount;
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 1 done.\n";
 
         // Add observation of in-order execution of pairs of basic blocks
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 2...\n";
         for (auto pair1: conditionalBBPairDepMap) {
             // Alloca and init semaphore var for BB
             auto AI = new AllocaInst(Int32, 0, "__dp_bb",
@@ -2356,6 +2410,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             // Insert semaphore update to true
             new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator());
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 2 done\n";
 
         if (DumpToDot) {
             CFG.dumpToDot(fileName + "_" + string(F.getName()) + ".CFG.dot");
@@ -2411,6 +2466,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         }
 
         // Remove omittable instructions from profiling
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 3...\n";
         Instruction *DP_Instrumentation;
         for (Instruction *I: omittableInstructions) {
             if (isa<AllocaInst>(I)) {
@@ -2431,6 +2487,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
                 }
             }
         }
+        if (DP_DEBUG) errs() << "\tOmission Analysis: 3 done.\n";
 
         // Report statically identified dependencies
 
@@ -3312,6 +3369,28 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     //Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", toInstrument->getNextNonDebugInstruction());
     Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64, "");
     args.push_back(startAddr);
+
+    // skip uninteresting allocas
+    bool is_interesting = false;
+    if(!toInstrument->isStaticAlloca()){
+        is_interesting = true;
+    }
+    if(toInstrument->isArrayAllocation()){
+        is_interesting = true;
+    }
+    if(toInstrument->getAllocatedType()->isArrayTy()){
+        is_interesting = true;
+    }
+    if(!is_interesting){
+        return;
+    }
+
+    errs() << "TOINSTRUMENT: ";
+    toInstrument->print(errs());
+    errs() << "\n";
+    if(toInstrument->isStaticAlloca()){
+        errs() << "\tIs Static!\n";
+    }
 
     Value *endAddr = startAddr;
     uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
