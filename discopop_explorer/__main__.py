@@ -64,7 +64,7 @@ def parse_args() -> ExplorerArguments:
         help="Dump PET Graph to JSON file. If a path is given, the PET Graph is written to the given file, otherwise to pet_dump.json",
     )
     parser.add_argument(
-        "--dump-detection-result", type=str, nargs="?", default=None, const="explorer/detection_result_dump.json",
+        "--dump-detection-result", type=str, nargs="?", default="explorer/detection_result_dump.json",
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
 
