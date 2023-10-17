@@ -17,8 +17,8 @@ Usage:
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
-    --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
-    --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: detection_result_dump.json]
+    --file-mapping=<path>       Path to the FileMapping.txt. [default: common_data/FileMapping.txt]
+    --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: explorer/detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.
                                 Required: --executable-name
@@ -29,8 +29,8 @@ OPTIONAL ARGUMENTS:
     --execution-append-measurements     If set, measurement files from previous executions will be kept and new results
                                         will be appended.
     --clean-created-code        Removes all stored code modifications.
-    --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: .discopop_optimizer/code_exports]
-    --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .discopop]
+    --code-export-path=<path>   Directory where generated CodeStorageObjects are located. [default: optimizer/code_exports]
+    --dp-output-path=<path>     Directory where output files of DiscoPoP are located. [default: .]
     --executable-name=<string>  Name of the executable generate by your makefile.
                                 Must be specified if --execute-created-models is used! [default: ]
     --executable-arguments=<string>
