@@ -964,6 +964,7 @@ namespace __dp {
             if (DP_DEBUG) {
                 cout << "__dp_finalize() has been called before. Doing nothing this time to avoid double free." << endl;
             }
+            pthread_compatibility_mutex.unlock();
             return;
         }
 
