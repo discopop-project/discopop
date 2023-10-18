@@ -372,7 +372,7 @@ fi
 
 # Run DiscoPoP Pass
 log -i "Running DiscoPoP Pass to analyze and instrument your application..."
-$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll -fm-path FileMapping.txt ${DP_PASS_FLAGS}
+$LLVM_OPT -S -load ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP ${EXECUTABLE_NAME}.ll -o ${EXECUTABLE_NAME}_dp.ll ${DP_PASS_FLAGS}
 
 log -i "Creating Executable..."
 $LLVM_LLC -filetype=obj  ${EXECUTABLE_NAME}_dp.ll -o  ${EXECUTABLE_NAME}_dp.o
