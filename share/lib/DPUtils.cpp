@@ -16,7 +16,7 @@ using namespace std;
 
 //cl::opt <string> FileMappingPath("fm-path", cl::init(""),
 //                                 cl::desc("Specify file mapping location"), cl::Hidden);
-string FileMappingPath = ".discopop/common_data/FileMapping.txt";
+string FileMappingPath = ".discopop/FileMapping.txt";
 
 
 cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", cl::init(false),
@@ -28,7 +28,7 @@ namespace dputil {
         int tempfid = 1;
         fstream fileMappingFile;
 
-        fileMappingFile.open(".discopop/common_data/FileMapping.txt", ios::in);
+        fileMappingFile.open(".discopop/FileMapping.txt", ios::in);
         if (fileMappingFile)
         {
             string tp;
@@ -43,7 +43,7 @@ namespace dputil {
             }
             fileMappingFile.close();
 
-            fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+            fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
             fileMappingFile << tempfid << "\t" << fullPathName << "\n";
             fileMappingFile.close();
             errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
@@ -51,7 +51,7 @@ namespace dputil {
         }
         else
         {
-            fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+            fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
             fileMappingFile << tempfid << "\t" << fullPathName << "\n";
             fileMappingFile.close();
             errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";

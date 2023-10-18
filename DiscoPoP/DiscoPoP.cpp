@@ -123,12 +123,6 @@ bool DiscoPoP::doInitialization(Module &M) {
           mkdir(".discopop/profiler", 0777);
       }
 
-      // prepare common_data directory if not present
-      struct stat st3 = {0};
-      if (stat(".discopop/common_data", &st3) == -1){
-          mkdir(".discopop/common_data", 0777);
-      }
-
 
 // CUGeneration
     {

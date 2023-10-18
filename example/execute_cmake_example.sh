@@ -16,18 +16,14 @@ DISCOPOP_BUILD_DIR=$(pwd)/../build
 rm -rf build
 mkdir build
 
-# generate FileMapping.txt
-${DISCOPOP_BUILD_DIR}/scripts/dp-fmap
-
 # Use DiscoPoP's compiler wrappers to build the cmake example
 # CMAKE_wrapper.sh acts as a substitute for the `cmake` command
 cd build
 ${DISCOPOP_BUILD_DIR}/scripts/CMAKE_wrapper.sh ..
-# Set the DP_FM_PATH environment variable
-DP_FM_PATH=${EXAMPLE_DIR}/../FileMapping.txt make
+make
 
 # execute the example
 ./cmake_example
-# Now, profiling results (e.g. cmake_example_dep.txt (dynamically identified data dependencies)) are available
+# Now, profiling results (e.g. dynamically identified data dependencies) are available
 # The created output can be used for pattern detection using the discopop_explorer.
 # Please refer to the Wiki for detailed information and instructions.
