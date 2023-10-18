@@ -42,9 +42,9 @@ int32_t SIG_NUM_HASH = 2;
 
 uint64_t *numAccesses;
 
-std::mutex pthread_compatibility_mutex;
-
 namespace __dp {
+
+    std::mutex pthread_compatibility_mutex;
 
     bool dpInited = false;         // library initialization flag
     bool targetTerminated = false; // whether the target program has returned from main()
