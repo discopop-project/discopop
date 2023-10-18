@@ -21,16 +21,19 @@ class TestMethods(unittest.TestCase):
         os.system("" + os.path.join(build_dir, "scripts", "dp-fmap"))
 
         # build
-        make_command = "DP_FM_PATH=" + os.path.join(src_dir, "FileMapping.txt") + " "
+        # make_command = "DP_FM_PATH=" + os.path.join(src_dir, "FileMapping.txt") + " "
+        make_command = ""
         make_command += "CC=" + os.path.join(build_dir, "scripts", "CC_wrapper.sh") + " "
         make_command += "CXX=" + os.path.join(build_dir, "scripts", "CXX_wrapper.sh") + " "
-        make_command += "LINKER=" + os.path.join(build_dir, "scripts", "LINKER_wrapper.sh") + " "
+        # make_command += "LINKER=" + os.path.join(build_dir, "scripts", "LINKER_wrapper.sh") + " "
         make_command += "make "
         os.system(make_command)
         # execute instrumented program
         os.system("./prog")
         # execute DiscoPoP analysis
-        os.system("discopop_explorer --dep-file=prog_dep.txt --dump-detection-result")
+        os.chdir(".discopop")
+        os.system("discopop_explorer")
+        os.chdir("..")
         # validate results
         self.validate_results(current_dir, src_dir)
         # clean environment
@@ -39,7 +42,7 @@ class TestMethods(unittest.TestCase):
     def validate_results(self, test_dir, src_dir):
         """compare results to gold standard"""
         gold_standard_file = os.path.join(test_dir, "detection_result_dump.json")
-        test_output_file = os.path.join(src_dir, "detection_result_dump.json")
+        test_output_file = os.path.join(src_dir, ".discopop", "explorer", "detection_result_dump.json")
         # load both detection results
         with open(gold_standard_file, "r") as f:
             tmp_str = f.read()
