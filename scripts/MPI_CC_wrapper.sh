@@ -39,15 +39,15 @@ echo "WRAPPED MPI CC COMPILE..."
 echo "ARGS: ${@}"
 echo "DP_FM_PATH: ${DP_FM_PATH}"
 
-# check if environment is prepared
-if [ -z ${DP_FM_PATH} ]; then
-  echo "ERROR: DP_FM_PATH unspecified!"
-  echo "  Generate a FileMapping.txt file and create an environment Variable which points to this file."
-  echo "  Please refer to https://discopop-project.github.io/discopop/Profiling/File_Mapping/ for further information."
-  exit 1
-fi
+## check if environment is prepared
+#if [ -z ${DP_FM_PATH} ]; then
+#  echo "ERROR: DP_FM_PATH unspecified!"
+#  echo "  Generate a FileMapping.txt file and create an environment Variable which points to this file."
+#  echo "  Please refer to https://discopop-project.github.io/discopop/Profiling/File_Mapping/ for further information."
+#  exit 1
+#fi
 
-echo "${LLVM_CLANG} ${MPI_INCLUDES} -g -c  -S -emit-llvm -fno-discard-value-names ${@} -O0 -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}"
+echo "${LLVM_CLANG} ${MPI_INCLUDES} -g -c  -S -emit-llvm -fno-discard-value-names ${@} -O0 -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP"
 #clang-11 -g -c -O0 -S -emit-llvm -fno-discard-value-names "$@" -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}
 ${LLVM_CLANG} "${@}" -g -c -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -fPIC ${MPI_INCLUDES} -Xlinker -lstdc++
 

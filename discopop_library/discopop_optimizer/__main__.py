@@ -17,7 +17,7 @@ Usage:
 
 OPTIONAL ARGUMENTS:
     --project=<path>            Path to the directory that contains your makefile [default: .]
-    --file-mapping=<path>       Path to the FileMapping.txt. [default: common_data/FileMapping.txt]
+    --file-mapping=<path>       Path to the FileMapping.txt. [default: FileMapping.txt]
     --detection-result-dump=<path>  Path to the dumped detection result JSON. [default: explorer/detection_result_dump.json]
     --execute-created-models    Compiles, executes and measures models already stored in the project folder.
                                 Does not start the optimization pipeline.

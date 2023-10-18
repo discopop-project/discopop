@@ -42,7 +42,7 @@ def parse_args() -> ExplorerArguments:
         help="Reduction variables file"
     )
     parser.add_argument(
-        "--fmap", type=str, default="common_data/FileMapping.txt",
+        "--fmap", type=str, default="FileMapping.txt",
         help="File mapping")
     parser.add_argument(
         "--plugins", type=str, nargs="*", default=[],

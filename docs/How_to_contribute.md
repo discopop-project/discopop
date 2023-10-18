@@ -71,8 +71,7 @@ All tools developed as part of the DiscoPop Project make use of the following fo
 ```
 - project root/
  - .discopop/
-  - common_data/
-   - FileMapping.txt
+  - FileMapping.txt
   - <tool_1>/
     - tool_1 output files
     - private/
@@ -82,7 +81,7 @@ All tools developed as part of the DiscoPop Project make use of the following fo
   - ...
 ```
 , where no data should be stored / created outside the `.discopop` folder in order to keep the users build directory as clean as possible.
-Files which are read by different tools, e.g. the `FileMapping.txt`, shall be stored in the `.discopop/common_data` folder.
+Files which are read by different tools, e.g. the `FileMapping.txt`, shall be stored in the `.discopop` folder.
 Each tool may create a folder. In case data from these files is required by another tool, think about how to encode the information in a easy-to-use and structured format, preferrably JSON. If possible, please do not rely on exporting to simple `.txt` files as parsing adds a potential point of failure.
 Output data for use by other tools should be stored in the folder of the creating tool. Intermediate files may be stored in a folder named `private` and shall not be used by other tools.
 Analysis tools, like pattern detection scripts etc. shall be structured in such a way, that a execution from within the `.discopop` folder is intended.
