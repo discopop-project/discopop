@@ -343,7 +343,7 @@ rm -f FileMapping.txt
 $DP_BUILD/scripts/dp-fmap
 
 # cleanup
-rm -f $PROJECT/Data.xml
+rm -f $PROJECT/cus.xml
 rm -f $PROJECT/loop_counter_output.xml
 rm -f $PROJECT/reduction.txt
 rm -f $PROJECT/DP_CUIDCounter.txt
