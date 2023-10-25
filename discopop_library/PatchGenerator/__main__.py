@@ -8,7 +8,8 @@
 
 from argparse import ArgumentParser
 
-from discopop_library.PatchGenerator.patch_generator import PatchGeneratorArguments, run
+from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
+from discopop_library.PatchGenerator.patch_generator import run
 
 
 def parse_args() -> PatchGeneratorArguments:

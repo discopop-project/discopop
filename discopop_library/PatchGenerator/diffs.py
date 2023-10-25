@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict
 
-from discopop_library.PatchGenerator.patch_generator import PatchGeneratorArguments
+from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 
 
 def get_diffs_from_modified_code(
