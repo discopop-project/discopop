@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import json
+import os
 from typing import Optional
 
 from ..PETGraphX import LoopNode, Node, NodeID, LineID, PETGraphX
@@ -15,6 +16,7 @@ from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 class PatternInfo(object):
     """Base class for pattern detection info"""
 
+    pattern_id: int
     _node: Node
     node_id: NodeID
     start_line: LineID
@@ -31,6 +33,19 @@ class PatternInfo(object):
         """
         :param node: node, where pipeline was detected
         """
+        # use blocking file i/o to synchronize threads
+        with open(os.path.join(os.getcwd(), "next_free_pattern_id.txt"), "r+") as f:
+            lines = f.readlines()
+            f.truncate(0)
+            f.seek(0)
+            if len(lines) == 0:
+                self.pattern_id = 0
+                f.write(str(0))
+            else:
+                for line in lines:
+                    line = line.replace("\n", "").replace("\x00", "")
+                    self.pattern_id = int(line)
+                    f.write(str(self.pattern_id + 1))
         self._node = node
         self.node_id = node.id
         self.start_line = node.start_position()
