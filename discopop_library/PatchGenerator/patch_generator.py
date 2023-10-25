@@ -5,33 +5,27 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import json
 import os.path
-from dataclasses import dataclass
+import shutil
 from typing import Dict
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
+from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
-
-
-@dataclass
-class PatchGeneratorArguments(object):
-    """Container Class for the arguments passed to the discopop_patch_generator"""
-
-    verbose: bool
-
-    def __post_init__(self):
-        self.__validate()
-
-    def __validate(self):
-        """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
-        pass
 
 
 def run(arguments: PatchGeneratorArguments):
     if arguments.verbose:
         print("Started DiscoPoP Patch Generator...")
+    if arguments.verbose:
+        print("Creating patch_generator directory...")
+    patch_generator_dir = os.path.join(os.getcwd(), "patch_generator")
+    if not os.path.exists(patch_generator_dir):
+        os.mkdir(patch_generator_dir)
+
     pattern_file_path = os.path.join(os.getcwd(), "explorer", "patterns.json")
     if not os.path.exists(pattern_file_path):
         raise FileNotFoundError(
@@ -72,3 +66,18 @@ def run(arguments: PatchGeneratorArguments):
             )
             if arguments.verbose:
                 print("Patches: ", file_id_to_patches)
+            # clear old results and save patches
+            suggestion_dict = json.loads(suggestion)
+            suggestion_id = suggestion_dict["pattern_id"]
+            suggestion_folder_path = os.path.join(patch_generator_dir, str(suggestion_id))
+            if arguments.verbose:
+                print("Saving patches for suggestion: ", suggestion_id)
+            if os.path.exists(suggestion_folder_path):
+                shutil.rmtree(suggestion_folder_path)
+            os.mkdir(suggestion_folder_path)
+            for file_id in file_id_to_patches:
+                patch_path = os.path.join(suggestion_folder_path, str(file_id) + ".patch")
+                with open(patch_path, "w") as f:
+                    f.write(file_id_to_patches[file_id])
+    if arguments.verbose:
+        print("Done.")
