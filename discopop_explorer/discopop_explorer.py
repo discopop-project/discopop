@@ -144,6 +144,10 @@ def run(arguments: ExplorerArguments):
     # create explorer directory if not already present
     if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
         os.mkdir(os.path.join(arguments.project_path, "explorer"))
+    # create file to store next free pattern ids if not already present
+    if not os.path.exists("next_free_pattern_id.txt"):
+        with open("next_free_pattern_id.txt", "w") as f:
+            f.write(str(0))
 
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
