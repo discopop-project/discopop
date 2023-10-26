@@ -9,12 +9,13 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 
 
 def rollback_patches(
+    rollback: List[str],
     file_mapping: Dict[int, Path],
     arguments: PatchApplicatorArguments,
     applied_suggestions_file: str,
@@ -29,7 +30,7 @@ def rollback_patches(
         if arguments.verbose:
             print("Previously applied suggestions: ", applied_suggestions["applied"])
 
-    for suggestion_id in arguments.rollback:
+    for suggestion_id in rollback:
         if suggestion_id not in applied_suggestions["applied"]:
             if arguments.verbose:
                 print("Skipping rollback of non-applied suggestion: ", suggestion_id)
