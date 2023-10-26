@@ -11,6 +11,7 @@ import os
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.apply import apply_patches
 from discopop_library.PatchApplicator.clear import clear_patches
+from discopop_library.PatchApplicator.list import list_applied_suggestions
 from discopop_library.PatchApplicator.load import load_patches
 from discopop_library.PatchApplicator.rollback import rollback_patches
 from discopop_library.PathManagement.PathManagement import load_file_mapping
@@ -63,11 +64,13 @@ def run(arguments: PatchApplicatorArguments):
     if len(arguments.apply) > 0:
         apply_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif len(arguments.rollback) > 0:
-        rollback_patches()
+        rollback_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.clear:
         clear_patches()
     elif arguments.load:
         load_patches()
+    elif arguments.list:
+        print("Applied suggestions: ", list_applied_suggestions(arguments, applied_suggestions_file))
 
     if arguments.verbose:
         print("Done.")
