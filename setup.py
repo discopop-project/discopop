@@ -61,6 +61,7 @@ setup(
             "discopop_code_generator=discopop_library.CodeGenerator.__main__:main",
             "discopop_optimizer=discopop_library.discopop_optimizer.__main__:main",
             "discopop_patch_generator=discopop_library.PatchGenerator.__main__:main",
+            "discopop_patch_applicator=discopop_library.PatchApplicator.__main__:main",
         ]
     },
     zip_safe=True,
