@@ -68,7 +68,7 @@ def run(arguments: PatchApplicatorArguments):
     elif arguments.clear:
         clear_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.load:
-        load_patches()
+        load_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.list:
         print("Applied suggestions: ", list_applied_suggestions(arguments, applied_suggestions_file))
 
