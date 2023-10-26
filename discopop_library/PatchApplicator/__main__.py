@@ -28,12 +28,12 @@ def parse_args() -> PatchApplicatorArguments:
                                                                      "given ids.")
     parser.add_argument('-r', '--rollback', nargs='+', default=[], help="Roll back the application of the "
                                                                         "parallelization suggestions with the given "
-                                                                        "ids. If this process fails, all applied "
-                                                                        "suggestions until the given ones will be "
-                                                                        "rolled back as well.")
-    parser.add_argument('-c', '--clear', action="store_true", help="Reset the code to it's original state. Preserves "
+                                                                        "ids.")
+    parser.add_argument('-C', '--clear', action="store_true", help="Reset the code to it's original state. Preserves "
                                                                    "the list of applied suggestion for loading.")
-    parser.add_argument('-l', '--load', action="store_true", help="Load a previous state after clearing.")
+    parser.add_argument('-L', '--load', action="store_true", help="Load a previous state after clearing.")
+    parser.add_argument('-l', '--list', action="store_true", help="Show the list of applied suggestions."
+                                                                  "If set, nothing else will be done.")
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -45,6 +45,7 @@ def parse_args() -> PatchApplicatorArguments:
         rollback=arguments.rollback,
         clear=arguments.clear,
         load=arguments.load,
+        list=arguments.list,
     )
 
 
