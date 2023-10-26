@@ -19,6 +19,7 @@ class PatchApplicatorArguments(object):
     rollback: List[str]
     clear: bool
     load: bool
+    list: bool
 
     def __post_init__(self):
         self.__validate()
@@ -39,6 +40,11 @@ class PatchApplicatorArguments(object):
         if self.load and (len(self.apply) > 0 or len(self.rollback)):
             print("Please use either '--load' or any of '--apply' or '--rollback'.")
             exit_required = True
+        if self.list:
+            self.apply = []
+            self.rollback = []
+            self.clear = False
+            self.load = False
         if exit_required:
             print("Exiting.")
             sys.exit(0)
