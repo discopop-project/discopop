@@ -49,9 +49,19 @@ def run(arguments: PatchApplicatorArguments):
         print("Loading file mapping...")
     file_mapping = load_file_mapping(file_mapping_path)
 
+    # check if patches have been generated
+    patch_generator_dir = os.path.join(os.getcwd(), "patch_generator")
+    if not os.path.exists(patch_generator_dir):
+        raise FileNotFoundError(
+            "No patches have been generated.\n"
+            + "Please execute the discopop_patch_generator in advance.\n"
+            + "Expected folder: "
+            + patch_generator_dir
+        )
+
     # handle arguments
     if len(arguments.apply) > 0:
-        apply_patches(file_mapping, arguments)
+        apply_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif len(arguments.rollback) > 0:
         rollback_patches()
     elif arguments.clear:
