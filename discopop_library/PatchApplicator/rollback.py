@@ -62,7 +62,7 @@ def __rollback_file_patches(
 
         command = [
             "patch",
-            "-r",
+            "-R",
             patch_target.as_posix(),
             patch_file_path,
         ]
