@@ -62,11 +62,11 @@ def run(arguments: PatchApplicatorArguments):
 
     # handle arguments
     if len(arguments.apply) > 0:
-        apply_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        apply_patches(arguments.apply, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif len(arguments.rollback) > 0:
-        rollback_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        rollback_patches(arguments.rollback, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.clear:
-        clear_patches()
+        clear_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.load:
         load_patches()
     elif arguments.list:
