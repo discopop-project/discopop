@@ -30,7 +30,10 @@ def parse_args() -> PatchApplicatorArguments:
                                                                         "parallelization suggestions with the given "
                                                                         "ids.")
     parser.add_argument('-C', '--clear', action="store_true", help="Reset the code to it's original state. Preserves "
-                                                                   "the list of applied suggestion for loading.")
+                                                                   "the list of applied suggestion for loading."
+                                                                   "Old saves will be overwritten!")
+    # todo: in the long run, saving configurations to different locations could be easily implemented.
+
     parser.add_argument('-L', '--load', action="store_true", help="Load a previous state after clearing.")
     parser.add_argument('-l', '--list', action="store_true", help="Show the list of applied suggestions."
                                                                   "If set, nothing else will be done.")
