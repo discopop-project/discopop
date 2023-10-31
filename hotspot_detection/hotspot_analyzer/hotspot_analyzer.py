@@ -242,6 +242,7 @@ def run(arguments: HotspotAnalyzerArguments):
     print("Done.")
 
     tempmax = 0
+    maxCS = 0
 
     for x in NZcslist:
         if x.maxVal >= tempmax:
