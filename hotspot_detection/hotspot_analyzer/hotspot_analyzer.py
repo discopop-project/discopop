@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import json
 import sys
-from typing import List
+from typing import List, Optional
 from enum import Enum
 from dataclasses import dataclass
 
@@ -241,15 +241,16 @@ def run(arguments: HotspotAnalyzerArguments):
         j.calRatio()
     print("Done.")
 
-    tempmax = 0
-    maxCS = 0
+    tempmax = 0.0
+    maxCS: Optional[cs] = None
 
     for x in NZcslist:
         if x.maxVal >= tempmax:
             tempmax = x.maxVal
             maxCS = x
 
-    print("max cs: ", maxCS.csid, " ", maxCS.maxVal)
+    if maxCS is not None:
+        print("max cs: ", maxCS.csid, " ", maxCS.maxVal)
 
     # sorting cs list based on avr and ratio
     print("Sort CS lists ... ", end="")
