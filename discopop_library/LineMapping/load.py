@@ -10,9 +10,9 @@ import os.path
 from typing import Dict
 
 
-def load_line_mapping(discopop_path: str = ".discopop") -> Dict[int, Dict[int, int]]:
+def load_line_mapping(discopop_path: str = "") -> Dict[str, Dict[str, int]]:
     """Loads and returns the line_mapping dictionary"""
-    line_mapping_dict: Dict[int, Dict[int, int]] = dict()
+    line_mapping_dict: Dict[str, Dict[str, int]] = dict()
     with open(os.path.join(discopop_path, "line_mapping.json")) as f:
         line_mapping_dict = json.load(f)
     return line_mapping_dict
