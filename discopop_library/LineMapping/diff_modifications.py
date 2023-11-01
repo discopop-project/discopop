@@ -32,13 +32,13 @@ def apply_line_mapping_modifications_from_files(file_id: int, original_file: str
         universal_newlines=True,
     )
     if result.returncode == 1:
-        print("RESULT: ", result.returncode)
-        print("STDERR:")
-        print(result.stderr)
-        print("STDOUT: ")
-        print(result.stdout)
+        # print("RESULT: ", result.returncode)
+        # print("STDERR:")
+        # print(result.stderr)
+        # print("STDOUT: ")
+        # print(result.stdout)
         diff = result.stdout
-        print("DIFF: ", diff)
+        # print("DIFF: ", diff)
     else:
         diff = ""
 
