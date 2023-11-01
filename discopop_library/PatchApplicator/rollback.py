@@ -7,10 +7,12 @@
 # directory for details.
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List
 
+from discopop_library.LineMapping.diff_modifications import apply_line_mapping_modifications_from_files
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 
 
@@ -65,7 +67,8 @@ def __rollback_file_patches(
         patch_file_id = int(patch_file_name.rstrip(".patch"))
         patch_target = file_mapping[patch_file_id]
         patch_file_path = os.path.join(patch_generator_dir, suggestion_id, patch_file_name)
-
+        # save original version to calculate diff to calculate line mapping
+        shutil.copyfile(patch_target.as_posix(), patch_target.as_posix() + ".line_mapping_tmp")
         command = [
             "patch",
             "-R",
@@ -89,9 +92,17 @@ def __rollback_file_patches(
             print("STDOUT: ")
             print(result.stdout)
             encountered_error = True
+            # delete temporary file
+            os.remove(patch_target.as_posix() + ".line_mapping_tmp")
             break
         else:
             already_patched.append(patch_file_name)
+            # apply modifications to line mapping
+            apply_line_mapping_modifications_from_files(
+                patch_file_id, patch_target.as_posix() + ".line_mapping_tmp", patch_target.as_posix()
+            )
+            # delete temporary file
+            os.remove(patch_target.as_posix() + ".line_mapping_tmp")
 
     # cleanup in case of an error
     if encountered_error:
@@ -99,6 +110,8 @@ def __rollback_file_patches(
             patch_file_id = int(patch_file_name.rstrip(".patch"))
             patch_target = file_mapping[patch_file_id]
             patch_file_path = os.path.join(patch_generator_dir, suggestion_id, patch_file_name)
+            # save original version to calculate diff to calculate line mapping
+            shutil.copyfile(patch_target.as_posix(), patch_target.as_posix() + ".line_mapping_tmp")
             command = [
                 "patch",
                 patch_target.as_posix(),
@@ -120,5 +133,12 @@ def __rollback_file_patches(
                     print(result.stderr)
                 print("STDOUT: ")
                 print(result.stdout)
+
+            # apply modifications to line mapping
+            apply_line_mapping_modifications_from_files(
+                patch_file_id, patch_target.as_posix() + ".line_mapping_tmp", patch_target.as_posix()
+            )
+            # delete temporary file
+            os.remove(patch_target.as_posix() + ".line_mapping_tmp")
 
     return not encountered_error
