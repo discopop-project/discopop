@@ -22,16 +22,16 @@ def initialize_line_mapping(
     """initializes the line mapping dictionary to track line shifts due to inserted pragmas.
     The Dictionary will be stored in .discopop/line_mapping.json.
     Line ids start with 1."""
-    line_mapping_dict: Dict[int, Dict[int, int]] = dict()
+    line_mapping_dict: Dict[str, Dict[str, int]] = dict()
 
     # initialize line mapping (1->1, 2->2, ...)
     for file_id in file_mapping:
-        if file_id not in line_mapping_dict:
-            line_mapping_dict[file_id] = dict()
+        if str(file_id) not in line_mapping_dict:
+            line_mapping_dict[str(file_id)] = dict()
         line_id = 1
         with open(file_mapping[file_id], "r") as f:
             for line in f.readlines():
-                line_mapping_dict[file_id][line_id] = line_id
+                line_mapping_dict[str(file_id)][str(line_id)] = line_id
                 line_id += 1
 
     save_line_mapping(line_mapping_dict, discopop_path)
