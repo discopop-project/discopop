@@ -18,7 +18,8 @@ from typing import List, Optional
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type:ignore
 
-from discopop_library.PathManagement.PathManagement import get_path
+from discopop_library.LineMapping.initialize import initialize_line_mapping
+from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
     ExtrapInterpolatedMicrobench,
 )
@@ -214,6 +215,9 @@ def run(arguments: ExplorerArguments):
         with open(arguments.enable_profiling_dump_file, "w+") as f:
             stats = pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
             stats.print_stats()
+
+    # initialize the line_mapping.json
+    initialize_line_mapping(load_file_mapping(arguments.file_mapping_file), arguments.project_path)
 
     print("Time taken for pattern detection: {0}".format(end - start))
 
