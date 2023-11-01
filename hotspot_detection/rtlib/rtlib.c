@@ -58,12 +58,9 @@ extern inline void start(const long int id)
 extern inline void end(const long int id)
 {
     time_flag[id]--;
-    if (time_flag[id] == 0)
-    {
-        gettimeofday(&end1, NULL);
-        time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
-        // time_b[id] = time_b[id] + clock() - time_a[id];
-    }
+    gettimeofday(&end1, NULL);
+    time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
+    // time_b[id] = time_b[id] + clock() - time_a[id];
     return;
 }
 
