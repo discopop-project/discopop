@@ -11,6 +11,9 @@ import os.path
 from pathlib import Path
 from typing import Dict
 
+from discopop_library.LineMapping.load import load_line_mapping
+from discopop_library.LineMapping.save import save_line_mapping
+
 
 def initialize_line_mapping(
     file_mapping: Dict[int, Path],
@@ -31,6 +34,7 @@ def initialize_line_mapping(
                 line_mapping_dict[file_id][line_id] = line_id
                 line_id += 1
 
-    # dump line mapping to json file
-    with open(os.path.join(discopop_path, "line_mapping.json"), "w+") as f:
-        json.dump(line_mapping_dict, f)
+    save_line_mapping(line_mapping_dict, discopop_path)
+
+    # debug
+    load_line_mapping(discopop_path)
