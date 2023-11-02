@@ -37,7 +37,7 @@ numpy==1.24.4
 packaging==23.1
 pathspec==0.11.2
 Pillow==10.0.1
-pip==23.2.1
+pip==23.3
 platformdirs==3.10.0
 pluginbase==1.0.1
 pstats2==0.1.0
