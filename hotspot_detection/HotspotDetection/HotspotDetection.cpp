@@ -42,6 +42,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/IR/CFG.h"
 #include <set>
 #include <map>
 #include <cstdlib>
@@ -311,11 +312,17 @@ namespace
       auto hd_init = F.getParent()->getOrInsertFunction(
           "__hotspot_detection_init", Void);
       auto fstart = F.getParent()->getOrInsertFunction(
-          "start", Void, Int64);
+          "__hotspot_detection_function_start", Void, Int64);
       auto fend = F.getParent()->getOrInsertFunction(
-          "end", Void, Int64);
+          "__hotspot_detection_function_end", Void, Int64);
+      auto lbstart = F.getParent()->getOrInsertFunction(
+          "__hotspot_detection_loop_body_start", Void, Int64);
+      auto lentry = F.getParent()->getOrInsertFunction(
+          "__hotspot_detection_loop_entry", Void, Int64);
+      auto lend = F.getParent()->getOrInsertFunction(
+          "__hotspot_detection_loop_end", Void, Int64);
       auto printFunc = F.getParent()->getOrInsertFunction(
-          "printOut", Void);
+          "__hotspot_detection_printOut", Void);
 
       //------------scev analysis
       // ScalarEvolution *se = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
@@ -384,8 +391,40 @@ namespace
                   << "loop"
                   << " " << lnid << " " << file_ID << "\n";
             ofile.close();
+            /*
+            // Create call at the beginning of the loops body
             IRBuilder<> IRB(&*BB->begin());
-            IRB.CreateCall(fstart, ConstantInt::get(Int64, UID));
+            IRB.CreateCall(lbstart, ConstantInt::get(Int64, UID));
+            */
+
+            BB--;
+            BB--;
+            IRBuilder<> IRB3(&*BB->rbegin());
+            IRB3.CreateCall(lentry, ConstantInt::get(Int64, UID));
+            BB++;
+            BB++;
+
+
+            // add call to loop_entry
+            for (auto it = pred_begin(&*BB); it != pred_end(&*BB); ++it)
+            {
+              BasicBlock* Pred1 = *it;
+              errs() << "CURRENT BB 1: " << Pred1->getName() << "\n";
+              // predecessor is for.cond
+              for (auto it2 = pred_begin(Pred1); it2 != pred_end(Pred1); ++it2)
+              {
+                BasicBlock *Pred2 = *it2;
+                // if name of predecessor_2 does not contain for.inc, we have found an entry point into the loop
+                errs() << "CURRENT BB 2: " << Pred2->getName() << "\n";
+                if (! (Pred2->getName().find("for.inc") != std::string::npos)) {
+                  if (! (Pred2->getName().find("while.body") != std::string::npos)) {
+                    errs() << "found loop entry point: " << Pred2->getName() << '\n';
+                    //IRBuilder<> IRB2(&*Pred2->rbegin());
+                    //IRB2.CreateCall(lentry, ConstantInt::get(Int64, UID));
+                  }
+                }
+              } 
+            }
 
             // if(!(std::find(SCEVLoopList.begin(), SCEVLoopList.end(), lnid)!=SCEVLoopList.end())){
             //  if it is not founded by the SCEV, instrument this loop
@@ -501,8 +540,23 @@ namespace
                    EI != END; ++EI)
               {
                 BasicBlock *endBB = *EI;
-                IRBuilder<> IRB(&*endBB->rbegin());
-                IRB.CreateCall(fend, ConstantInt::get(Int64, UID));
+                IRBuilder<> IRB(&*endBB->begin());
+                IRB.CreateCall(lend, ConstantInt::get(Int64, UID));
+                // todo: warning: 
+                // If the call to loop_end is inserted into the return BB, and
+                // returning from before the loop is possible,
+                // the calculated counters and thus reported runtimes of the loop might
+                // not be accurate in case of recursive functions!
+                //  Example:
+                /*  void func6(int n){
+                    if ( n < 1){
+                        return;
+                    }
+                    for (int j=0; j<10 ; j++){
+                        func6(n-1);
+                    }
+                    int i = 0;  // ADDING A DUMMY INSTRUCTION AVOIDS THE ISSUE
+                  }*/
               }
               ++loopID;
               //++UID;

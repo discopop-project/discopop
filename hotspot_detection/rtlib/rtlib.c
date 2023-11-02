@@ -43,7 +43,12 @@ extern inline void __hotspot_detection_init(){
 
 }
 
-extern inline void start(const long int id)
+/*
+We use different runtime function for loops and functions to support potential
+differences in the implemented function in the future.
+*/
+
+extern inline void __hotspot_detection_function_start(const long int id)
 {
     if (time_flag[id] == 0)
     {
@@ -55,16 +60,56 @@ extern inline void start(const long int id)
     return;
 }
 
-extern inline void end(const long int id)
+extern inline void __hotspot_detection_loop_entry(const long int id)
 {
-    time_flag[id]--;
-    gettimeofday(&end1, NULL);
-    time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
-    // time_b[id] = time_b[id] + clock() - time_a[id];
+    if (time_flag[id] == 0)
+    {
+        gettimeofday(&start1, NULL);
+        time_a[id] = start1.tv_sec + 1e-6 * start1.tv_usec;
+        // time_a[id] = clock();
+    }
+    time_flag[id]++;
     return;
 }
 
-void printOut()
+extern inline void __hotspot_detection_loop_body_start(const long int id)
+{
+ /*   if (time_flag[id] == 0)
+    {
+        gettimeofday(&start1, NULL);
+        time_a[id] = start1.tv_sec + 1e-6 * start1.tv_usec;
+        // time_a[id] = clock();
+    }
+    //time_flag[id]++;
+    return;
+*/
+}
+
+extern inline void __hotspot_detection_function_end(const long int id)
+{
+    time_flag[id]--;
+    if (time_flag[id] == 0)
+    {
+        gettimeofday(&end1, NULL);
+        time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
+        // time_b[id] = time_b[id] + clock() - time_a[id];
+    }
+    return;
+}
+
+extern inline void __hotspot_detection_loop_end(const long int id)
+{
+    time_flag[id]--;
+    if (time_flag[id] == 0)
+    {
+        gettimeofday(&end1, NULL);
+        time_b[id] = time_b[id] + (end1.tv_sec + 1e-6 * end1.tv_usec) - time_a[id];
+        // time_b[id] = time_b[id] + clock() - time_a[id];
+    }
+    return;
+}
+
+void __hotspot_detection_printOut()
 {
     FILE *filePointer;
     int bufferLength = 255;
