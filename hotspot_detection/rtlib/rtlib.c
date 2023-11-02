@@ -20,13 +20,13 @@ extern inline void __hotspot_detection_init(){
     char buffer[bufferLength]; /* not ISO 90 compatible */
     char cntChar[bufferLength];
     filePointer = fopen(".discopop/hotspot_detection/private/cs_id.txt", "r");
-    int cs_num = 0;
+    int cs_num = 1;  // offset by one to account for cs_ids starting with 1
     while (fgets(buffer, bufferLength, filePointer))
     {
         cs_num++;
     }
     fclose(filePointer);
-    printf("cs_num: %d\n", cs_num);
+    printf("cs_num: %d\n", cs_num-1);  // -1 to correct offset in display
 
     // dynamically allocate global arrays
     time_flag = (unsigned long *) malloc(sizeof(long) * cs_num);
