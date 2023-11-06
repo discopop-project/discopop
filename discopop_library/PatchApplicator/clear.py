@@ -20,7 +20,7 @@ def clear_patches(
     arguments: PatchApplicatorArguments,
     applied_suggestions_file: str,
     patch_generator_dir: str,
-):
+) -> int:
     # save the currently applied suggestions. Overwrites old saves
     shutil.copyfile(applied_suggestions_file, applied_suggestions_file + ".save")
 
@@ -30,4 +30,8 @@ def clear_patches(
 
     # rollback all suggestions in inverse order
     applied_suggestions.reverse()
-    rollback_patches(applied_suggestions, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+    retval = rollback_patches(
+        applied_suggestions, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
+    )
+
+    return retval

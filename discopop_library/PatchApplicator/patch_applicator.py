@@ -17,7 +17,12 @@ from discopop_library.PatchApplicator.rollback import rollback_patches
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
-def run(arguments: PatchApplicatorArguments):
+def run(arguments: PatchApplicatorArguments) -> int:
+    """Return values:"
+    "0: Applied successfully"
+    "1: Nothing applied"
+    "2: Some changes applied successfully"""
+
     if arguments.verbose:
         print("Started DiscoPoP Patch Applicator...")
         print("Working directory: ", os.getcwd())
@@ -61,16 +66,21 @@ def run(arguments: PatchApplicatorArguments):
         )
 
     # handle arguments
+    retval = 0
     if len(arguments.apply) > 0:
-        apply_patches(arguments.apply, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        retval = apply_patches(arguments.apply, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif len(arguments.rollback) > 0:
-        rollback_patches(arguments.rollback, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        retval = rollback_patches(
+            arguments.rollback, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
+        )
     elif arguments.clear:
-        clear_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        retval = clear_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.load:
-        load_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        retval = load_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.list:
         print("Applied suggestions: ", list_applied_suggestions(arguments, applied_suggestions_file))
 
     if arguments.verbose:
         print("Done.")
+
+    return retval
