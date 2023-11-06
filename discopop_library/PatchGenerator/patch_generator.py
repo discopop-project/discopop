@@ -60,7 +60,11 @@ def run(arguments: PatchGeneratorArguments):
             if arguments.verbose:
                 print("Suggestion: ", suggestion)
             file_id_to_modified_code: Dict[int, str] = from_json_strings(
-                file_mapping, {suggestion_type: [suggestion]}, CC=arguments.CC, CXX=arguments.CXX
+                file_mapping,
+                {suggestion_type: [suggestion]},
+                CC=arguments.CC,
+                CXX=arguments.CXX,
+                skip_compilation_check=True,
             )
             # create patches from the modified codes
             file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(
