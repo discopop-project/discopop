@@ -23,7 +23,7 @@ def parse_args() -> PatchApplicatorArguments:
 
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
-        help="Enable verbose output.")
+                        help="Enable verbose output.")
     parser.add_argument('-a', '--apply', nargs='+', default=[], help="Apply the parallelization suggestions with the "
                                                                      "given ids.")
     parser.add_argument('-r', '--rollback', nargs='+', default=[], help="Roll back the application of the "
@@ -52,9 +52,19 @@ def parse_args() -> PatchApplicatorArguments:
     )
 
 
-def main():
-    arguments = parse_args()
-    run(arguments)
+def main() -> int:
+    """Return values:"
+    "0: Applied successfully"
+    "1: Nothing applied"
+    "2: Some changes applied successfully
+    """
+    retval = 0
+    try:
+        arguments = parse_args()
+        retval = run(arguments)
+    except FileNotFoundError:
+        retval = 1
+    return retval
 
 
 if __name__ == "__main__":

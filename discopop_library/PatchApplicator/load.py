@@ -19,7 +19,7 @@ def load_patches(
     arguments: PatchApplicatorArguments,
     applied_suggestions_file: str,
     patch_generator_dir: str,
-):
+) -> int:
     # check if a saved configuration exists
     if not os.path.exists(applied_suggestions_file + ".save"):
         raise FileNotFoundError(
@@ -31,4 +31,8 @@ def load_patches(
         suggestions_to_be_applied = json.loads(f.read())["applied"]
 
     # apply all suggestions
-    apply_patches(suggestions_to_be_applied, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+    retval = apply_patches(
+        suggestions_to_be_applied, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
+    )
+
+    return retval

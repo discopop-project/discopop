@@ -22,7 +22,12 @@ def rollback_patches(
     arguments: PatchApplicatorArguments,
     applied_suggestions_file: str,
     patch_generator_dir: str,
-):
+) -> int:
+    """Return values:"
+    "0: Applied successfully"
+    "1: Nothing applied"
+    "2: Some changes applied successfully"""
+    retval = -1  # -1 -> nothing seen so far
     # get list of applicable suggestions
     applicable_suggestions = [name for name in os.listdir(patch_generator_dir)]
 
@@ -46,11 +51,25 @@ def rollback_patches(
                 # write updated applied suggestions to file
                 with open(applied_suggestions_file, "w") as f:
                     f.write(json.dumps(applied_suggestions))
+                # update return code
+                if retval == -1:
+                    retval = 0
+                if retval == 1:
+                    # no update for retval = 0 necessary
+                    retval = 2
             else:
                 print("Rollback of suggestion", suggestion_id, "not successful.")
+                # update return code
+                if retval == -1:
+                    retval = 1
+                if retval == 0:
+                    retval = 2
         else:
             if arguments.verbose:
                 print("Nothing to rollback for suggestion ", suggestion_id)
+    if retval == -1:
+        retval = 0
+    return retval
 
 
 def __rollback_file_patches(
