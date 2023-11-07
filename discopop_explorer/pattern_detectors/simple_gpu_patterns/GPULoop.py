@@ -429,11 +429,11 @@ class GPULoopPattern(PatternInfo):
         self.declared_global_variables.update(used_global_vars)
         for global_var in used_global_vars:
             constructs.append(
-                omp_construct_dict("#pragma omp declare target  // " + global_var.name, global_var.defLine, [])
+                omp_construct_dict("#pragma omp declare target  // " + str(global_var.name), global_var.defLine, [])
             )
             constructs.append(
                 omp_construct_dict(
-                    "#pragma omp end declare target  // " + global_var.name,
+                    "#pragma omp end declare target  // " + str(global_var.name),
                     global_var.defLine,
                     [],
                     positioning=OmpConstructPositioning.AFTER_LINE,
