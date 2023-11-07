@@ -201,6 +201,8 @@ bool DiscoPoP::doFinalization(Module &M) {
     //CUGeneration
 
     // write the current count of CUs to a file to avoid duplicate CUs.
+    outCUIDCounter = new std::ofstream();
+    outCUIDCounter->open(".discopop/profiler/DP_CUIDCounter.txt", std::ios_base::out);
     if (outCUIDCounter && outCUIDCounter->is_open()) {
         *outCUIDCounter << CUIDCounter;
         outCUIDCounter->flush();
@@ -2864,9 +2866,6 @@ void DiscoPoP::secureStream() {
 
     outCUs = new std::ofstream();
     outCUs->open(".discopop/profiler/Data.xml", std::ios_base::app);
-
-    outCUIDCounter = new std::ofstream();
-    outCUIDCounter->open(".discopop/profiler/DP_CUIDCounter.txt", std::ios_base::out);
 }
 
 string DiscoPoP::getLineNumbersString(set<int> LineNumbers) {
@@ -3045,10 +3044,6 @@ void DiscoPoP::closeOutputFiles() {
         outOriginalVariables->close();
     }
 
-    if(outCUIDCounter != NULL && outCUIDCounter->is_open()){
-        outCUIDCounter->flush();
-        outCUIDCounter->close();
-    }
     // delete outCUs;
 }
 /************** End of output functions *******************/
