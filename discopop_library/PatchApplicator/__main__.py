@@ -59,11 +59,8 @@ def main() -> int:
     "2: Some changes applied successfully
     """
     retval = 0
-    try:
-        arguments = parse_args()
-        retval = run(arguments)
-    except FileNotFoundError:
-        retval = 1
+    arguments = parse_args()
+    retval = run(arguments)
     return retval
 
 
