@@ -26,8 +26,11 @@ def get_diffs_from_modified_code(
             print("Original: ", original_file_path)
             print("Modified:  ", modified_file_path)
 
-        with open(modified_file_path, "w") as f:
-            f.write(file_id_to_modified_code[file_id])
+        try:
+            with open(modified_file_path, "w") as f:
+                f.write(file_id_to_modified_code[file_id])
+        except PermissionError:
+            continue
 
         # calculate diff
         diff_name = original_file_path.parent / (original_file_path.name + ".discopop_patch_generator.diff")
