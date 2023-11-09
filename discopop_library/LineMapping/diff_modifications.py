@@ -112,7 +112,7 @@ def apply_line_mapping_modifications_from_diff(file_id: int, diff: str):
                 deleted_lines_count = 1
             rhs = diff_entry[diff_entry.index("c") + 1 :]
             if "," in rhs:
-                added_lines_count = int(rhs.split(",")[1]) - int(rhs.split(",")[0])
+                added_lines_count = int(rhs.split(",")[1]) - int(rhs.split(",")[0]) + 1
             else:
                 added_lines_count = 1
 
