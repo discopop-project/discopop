@@ -75,7 +75,7 @@ def apply_line_mapping_modifications_from_diff(file_id: int, diff: str):
                 base_line = int(lhs)
             rhs = diff_entry[diff_entry.index("a") + 1 :]
             if "," in rhs:
-                added_lines_count = int(rhs.split(",")[1]) - int(rhs.split(",")[0])
+                added_lines_count = int(rhs.split(",")[1]) - int(rhs.split(",")[0]) + 1
             else:
                 added_lines_count = 1
             for key in line_mapping[str(file_id)]:
