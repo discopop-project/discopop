@@ -36,7 +36,7 @@ def get_diffs_from_modified_code(
         diff_name = original_file_path.parent / (original_file_path.name + ".discopop_patch_generator.diff")
         command = [
             "diff",
-            "-Naru50",
+            "-Naru",
             original_file_path.as_posix(),
             modified_file_path.as_posix(),
         ]
