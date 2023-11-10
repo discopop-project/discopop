@@ -59,14 +59,16 @@ class ContentBuffer(object):
             result += line.content
         return result
 
-    def append_line_before(self, parent_line_num: int, line: Line):
+    def append_line_before(self, parent_line_num: int, line: Line, match_indentation: bool = True):
         """Appends line before the specified parent_line_num"""
         for idx, potential_parent_line in enumerate(self.lines):
             if potential_parent_line.line_num == parent_line_num:
+                if match_indentation:
+                    line.content = potential_parent_line.get_indentation() + line.content
                 self.lines.insert(idx, line)
                 return
 
-    def append_line_after(self, parent_line_num: int, line: Line):
+    def append_line_after(self, parent_line_num: int, line: Line, match_indentation: bool = True):
         """Appends line after the specified parent_line_num"""
         for idx, potential_parent_line in enumerate(self.lines):
             if potential_parent_line.line_num == parent_line_num:
@@ -74,6 +76,8 @@ class ContentBuffer(object):
                     self.lines.insert(idx + 1, line)
                 else:
                     self.lines.append(line)
+                if match_indentation:
+                    line.content = potential_parent_line.get_indentation() + line.content
                 return
 
     def add_pragma(
@@ -86,6 +90,7 @@ class ContentBuffer(object):
         compile_check_command: Optional[str] = None,
         CC="clang",
         CXX="clang++",
+        match_indentation: bool = True,
     ) -> bool:
         """insert pragma into the maintained list of source code lines.
         Returns True if the pragma resulted in a valid (resp. compilable) code transformation.
@@ -106,6 +111,8 @@ class ContentBuffer(object):
 
         # construct line
         pragma_line = self.line_type(pragma.start_line)
+
+        # adding as comment
         if add_as_comment:
             pragma_line.content = "//<DiscoPoP-IGNORED> "
         else:
