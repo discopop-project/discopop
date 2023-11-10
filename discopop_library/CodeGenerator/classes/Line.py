@@ -22,3 +22,6 @@ class Line(object):
         self.owns_region = None
         self.belongs_to_regions = []
         self.belongs_to_original_line = parent_line_num
+
+    def get_indentation(self) -> str:
+        return self.content[: len(self.content) - len(self.content.lstrip())]
