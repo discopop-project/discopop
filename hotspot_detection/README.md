@@ -73,6 +73,10 @@ hotspot_analyzer
 
 You can now find the analysis results inside `.discopop/hotspot_detection`.
 
+### 4) Convenience
+
+For a more convenient management of the process and inspection of the results, please consider using our [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop).
+
 ### Publication
 
 1. Seyed Ali Mohammadi, Lukas Rothenberger, Gustavo de Morais, Bertin Nico Görlich, Erik Lille, Hendrik Rüthers, and Felix Wolf. 2023. Filtering and Ranking of Code Regions for Parallelization via Hotspot Detection and OpenMP Overhead Analysis. In Proceedings of the SC '23 Workshops of The International Conference on High Performance Computing, Network, Storage, and Analysis (SC-W '23). Association for Computing Machinery, New York, NY, USA, 1368–1379. https://doi.org/10.1145/3624062.3624206
