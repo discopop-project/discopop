@@ -30,6 +30,7 @@ Detailed information about each execution step, the setup as well as the functio
 ### Quick Links
 - [Quickstart guide - GUI](https://discopop-project.github.io/discopop/Quickstart)
 - [Quickstart guide - CMake projects](https://discopop-project.github.io/discopop/Quickstart_CMake)
+- [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop)
 
 ## Example
 DiscoPoP creates parallelization suggestions for sequential source code.
@@ -98,7 +99,8 @@ Please refer to the [parallel patterns](https://discopop-project.github.io/disco
         return 0;
     }
 
-
+### Convenience
+For a convenient set, configuration, management, application, and browsing of identified parallelization suggestions, please consider using our [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop).
 
 
 
