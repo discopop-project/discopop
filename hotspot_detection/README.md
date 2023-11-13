@@ -81,21 +81,20 @@ You can now find the analysis results inside `.discopop/hotspot_detection`.
 
 Please cite in your publications if it helps your research:
 
-@inproceedings{10.1145/3624062.3624206,
-	author = {Mohammadi, Seyed Ali and Rothenberger, Lukas and de Morais, Gustavo and G\"{o}rlich, Bertin Nico and Lille, Erik and R\"{u}thers, Hendrik and Wolf, Felix},
-	title = {Filtering and Ranking of Code Regions for Parallelization via Hotspot Detection and OpenMP Overhead Analysis},
-	year = {2023},
-	isbn = {9798400707858},
-	publisher = {Association for Computing Machinery},
-	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3624062.3624206},
-	doi = {10.1145/3624062.3624206},
-	abstract = {Many high-performance computing applications reach millions of code lines and hundreds of code regions. Analyzing all code regions for parallelization with OpenMP is neither efficient nor necessary. To facilitate this task and minimize the effort by the user, the code regions of the application need to be filtered and ranked. We provide a simple filtering method to detect the critical code regions by clearly defining a hotspot. Afterward, we identify parallelizable loops by analyzing their data dependencies using an automatic tool. As the number of parallel opportunities can be high and the users must verify these parallel suggestions, we suggest a ranking strategy based on parallelization overhead to help them prioritize their endeavors and present a set of OpenMP microbenchmarks for overhead analysis. We calculate optimistic expected benefits using overhead estimations as ranking metrics and show how our ranking provides an improvement on the ranking based on serial runtime.},
-	booktitle = {Proceedings of the SC '23 Workshops of The International Conference on High Performance Computing, Network, Storage, and Analysis},
-	pages = {1368–1379},
-	numpages = {12},
-	keywords = {parallelization overhead, expected benefits, OpenMP microbenchmarks, Hotspot detection, ranking, performance analysis},
-	location = {Denver, CO, USA},
-	series = {SC-W '23}
-}
+	@inproceedings{10.1145/3624062.3624206,
+		author = {Mohammadi, Seyed Ali and Rothenberger, Lukas and de Morais, Gustavo and G\"{o}rlich, Bertin Nico and Lille, Erik and R\"{u}thers, Hendrik and Wolf, Felix},
+		title = {Filtering and Ranking of Code Regions for Parallelization via Hotspot Detection and OpenMP Overhead Analysis},
+		year = {2023},
+		isbn = {9798400707858},
+		publisher = {Association for Computing Machinery},
+		address = {New York, NY, USA},
+		url = {https://doi.org/10.1145/3624062.3624206},
+		doi = {10.1145/3624062.3624206},
+		booktitle = {Proceedings of the SC '23 Workshops of The International Conference on High Performance Computing, Network, Storage, and Analysis},
+		pages = {1368–1379},
+		numpages = {12},
+		keywords = {parallelization overhead, expected benefits, OpenMP microbenchmarks, Hotspot detection, ranking, performance analysis},
+		location = {Denver, CO, USA},
+		series = {SC-W '23}
+	}
 
