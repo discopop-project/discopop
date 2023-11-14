@@ -26,6 +26,15 @@ set(CMAKE_CXX_FLAGS
 
 add_library(DiscoPoP_RT STATIC
         ${DiscoPoP_SOURCES})
+
+# forward compiler flags
+if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)
+        if(NOT ${DP_PTHREAD_COMPATIBILITY_MODE} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_PTHREAD_COMPATIBILITY_MODE=${DP_PTHREAD_COMPATIBILITY_MODE})
+        endif()
+
+endif()
+
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 
 # compile simple-alias-detection
