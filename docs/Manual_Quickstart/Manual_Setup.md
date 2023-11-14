@@ -44,6 +44,8 @@ If you have installed LLVM <b>using the package manager</b>, specifying this var
 
 Note: In case you want to use a specific Version of LLVM, it is possible to specify the `-DUSE_LLVM_VERSION=<version>` flag.
 
+Note: In case your application uses PThreads, please specify `-DDP_PTHREAD_COMPATIBILITY_MODE=1`. Note, however, that this can influence the runtime of the profiling.
+
 Once the configuration process is successfully finished, compile the DiscoPoP libraries using `make`. All created shared objects will be stored in the build directory and can be found inside a folder named `libi/`.
 
 	make

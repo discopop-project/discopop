@@ -32,8 +32,12 @@ using namespace dputil;
 #define unpackLIDMetadata_getLoopIteration_1(lid) ((lid >> 40) & 0xFF)
 #define unpackLIDMetadata_getLoopIteration_2(lid) ((lid >> 32) & 0xFF)
 
+// issue a warning if DP_PTHREAD_COMPATIBILITY_MODE is enabled
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+#    warning "DP_PTHREAD_COMPATIBILITY_MODE enabled! This may have negative implications on the profiling time."
+#endif
+
 bool DP_DEBUG = false; // debug flag
-bool DP_PTHREAD_COMPATIBILITY_MODE = false;
 
 bool USE_PERFECT = true;
 // Shadow memory parameters
@@ -665,8 +669,11 @@ namespace __dp {
 #else
     void __dp_read(LID lid, ADDR addr, char *var) {
 #endif
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_read() is not executed since target program has returned from main()." << endl;
@@ -738,8 +745,10 @@ namespace __dp {
 #else
     void __dp_write(LID lid, ADDR addr, char *var) {
 #endif
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_write() is not executed since target program has returned from main()." << endl;
@@ -811,8 +820,10 @@ namespace __dp {
 #else
     void __dp_decl(LID lid, ADDR addr, char *var) {
 #endif
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_write() is not executed since target program has returned from main()." << endl;
@@ -880,8 +891,9 @@ namespace __dp {
     }
 
     void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         int64_t buffer = nextFreeMemoryRegionId;
         string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
@@ -903,8 +915,9 @@ namespace __dp {
     }
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         // instrumentation function for new and malloc
         int64_t buffer = nextFreeMemoryRegionId;
         string allocId = to_string(buffer);
@@ -934,8 +947,9 @@ namespace __dp {
     }
 
     void __dp_delete(LID lid, ADDR startAddr){
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
 
         // TODO more efficient implementation
@@ -955,41 +969,47 @@ namespace __dp {
     }
 
     void __dp_report_bb(int32_t bbIndex) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         bbList->insert(bbIndex);
     }
 
     void __dp_report_bb_pair(int32_t semaphore, int32_t bbIndex) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (semaphore)
             bbList->insert(bbIndex);
     }
 
     void __dp_finalize(LID lid) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
             pthread_compatibility_mutex.lock();
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_finalize() has been called before. Doing nothing this time to avoid double free." << endl;
             }
-            if(DP_PTHREAD_COMPATIBILITY_MODE)
-                pthread_compatibility_mutex.unlock();
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+            pthread_compatibility_mutex.unlock();
+#endif
             return;
         }
 
         // release mutex so it can be re-aquired in the called __dp_func_exit
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            pthread_compatibility_mutex.unlock();
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        pthread_compatibility_mutex.unlock();
+#endif
 
         while (FuncStackLevel >= 0) {
             __dp_func_exit(lid, 1);
         }
 
         // use lock_guard here, since no other mutex-aquiring function is called
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
 
         // Returning from main or exit from somewhere, clear up everything.
         assert(FuncStackLevel == -1 && "Program terminates without clearing function stack!");
@@ -1040,8 +1060,9 @@ namespace __dp {
 
     // hybrid analysis
     void __dp_add_bb_deps(char *depStringPtr) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         string depString(depStringPtr);
         regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"), r4("(INIT|(R|W)A(R|W)).*");
         smatch res0, res1, res2, res3;
@@ -1078,14 +1099,16 @@ namespace __dp {
     // End HA
 
     void __dp_call(LID lid) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         lastCallOrInvoke = lid;
     }
 
     void __dp_func_entry(LID lid, int32_t isStart) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (!dpInited) {
             // This part should be executed only once.
             readRuntimeInfo();
@@ -1174,8 +1197,9 @@ namespace __dp {
     }
 
     void __dp_func_exit(LID lid, int32_t isExit) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "Exiting function LID " << std::dec << decodeLID(lid);
@@ -1232,8 +1256,9 @@ namespace __dp {
     }
 
     void __dp_loop_entry(LID lid, int32_t loopID) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_loop_entry() is not executed since target program has returned from main()." << endl;
@@ -1282,8 +1307,9 @@ namespace __dp {
     }
 
     void __dp_loop_exit(LID lid, int32_t loopID) {
-        if(DP_PTHREAD_COMPATIBILITY_MODE)
-            std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+        std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_loop_exit() is not executed since target program has returned from main()." << endl;
