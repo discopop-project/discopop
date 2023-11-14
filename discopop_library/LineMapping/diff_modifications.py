@@ -89,7 +89,7 @@ def apply_line_mapping_modifications_from_diff(file_id: int, diff: str):
             lhs = diff_entry[: diff_entry.index("d")]
             if "," in lhs:
                 base_line = int(lhs.split(",")[0])
-                deleted_lines_count = int(lhs.split(",")[1]) - int(lhs.split(",")[0])
+                deleted_lines_count = int(lhs.split(",")[1]) - int(lhs.split(",")[0]) + 1
             else:
                 base_line = int(lhs)
                 deleted_lines_count = 1
@@ -106,7 +106,7 @@ def apply_line_mapping_modifications_from_diff(file_id: int, diff: str):
             lhs = diff_entry[: diff_entry.index("c")]
             if "," in lhs:
                 base_line = int(lhs.split(",")[0])
-                deleted_lines_count = int(lhs.split(",")[1]) - int(lhs.split(",")[0])
+                deleted_lines_count = int(lhs.split(",")[1]) - int(lhs.split(",")[0]) + 1
             else:
                 base_line = int(lhs)
                 deleted_lines_count = 1
