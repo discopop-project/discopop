@@ -32,8 +32,14 @@ if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)
         if(NOT ${DP_PTHREAD_COMPATIBILITY_MODE} EQUAL 0)
                 target_compile_definitions(DiscoPoP_RT PUBLIC DP_PTHREAD_COMPATIBILITY_MODE=${DP_PTHREAD_COMPATIBILITY_MODE})
         endif()
-
 endif()
+
+if(DEFINED DP_RTLIB_VERBOSE)
+        if(NOT ${DP_RTLIB_VERBOSE} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_RTLIB_VERBOSE=${DP_RTLIB_VERBOSE})
+        endif()
+endif()
+# end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
 

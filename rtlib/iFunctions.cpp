@@ -107,6 +107,9 @@ namespace __dp {
     /******* Helper functions *******/
 
     void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter addDep\n";
+#endif
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -207,10 +210,16 @@ namespace __dp {
             }
             cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit addDep\n";
+#endif
     }
 
     // hybrid analysis
     void generateStringDepMap() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter generateStringDepMap\n";
+#endif
         for (auto &dline: *allDeps) {
             if (dline.first) {
                 string lid = decodeLID(dline.first);
@@ -275,9 +284,15 @@ namespace __dp {
                 delete dline.second;
             }
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter generateStringDepMap\n";
+#endif
     }
 
     void outputDeps() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter outputDeps\n";
+#endif
         for (auto pair: *outPutDeps) {
             *out << pair.first << " NOM ";
             for (auto dep: pair.second) {
@@ -285,10 +300,16 @@ namespace __dp {
             }
             *out << endl;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit outputDeps\n";
+#endif
     }
     // End HA
 
     void outputLoops() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter outputLoops\n";
+#endif
         assert((loops != nullptr) && "Loop map is not available!");
         for (auto &loop: *loops) {
             *out << decodeLID(loop.first) << " BGN loop ";
@@ -298,9 +319,15 @@ namespace __dp {
             *out << loop.second->maxIterationCount << endl;
             *out << decodeLID(loop.second->end) << " END loop" << endl;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit outputLoops\n";
+#endif
     }
 
     void outputFuncs() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter outputFunc\n";
+#endif
         assert(beginFuncs != nullptr && endFuncs != nullptr && "Function maps are not available!");
         for (auto &func_begin: *beginFuncs) {
             for (auto fb: *(func_begin.second)) {
@@ -312,9 +339,15 @@ namespace __dp {
         for (auto fe: *endFuncs) {
             *out << decodeLID(fe) << " END func" << endl;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit outputFunc\n";
+#endif
     }
 
     void outputAllocations() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter outputAllocations\n";
+#endif
         auto allocationsFileStream = new ofstream();
         allocationsFileStream->open(".discopop/profiler/memory_regions.txt", ios::out);
         for(auto memoryRegion : *allocatedMemoryRegions){
@@ -326,9 +359,15 @@ namespace __dp {
         }
         allocationsFileStream->flush();
         allocationsFileStream->close();
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit outputAllocations\n";
+#endif
     }
 
     void readRuntimeInfo() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter readRuntimeInfo\n";
+#endif
         ifstream conf(get_exe_dir() + "/dp.conf");
         string line;
         if (conf.is_open()) {
@@ -375,9 +414,15 @@ namespace __dp {
             cout << "chunk_size   = " << CHUNK_SIZE << "\n";
             sleep(2);
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit readRuntimeInfo\n";
+#endif
     }
 
     void initParallelization() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter initParallelization\n";
+#endif
         // initialize global variables
         addrChunkPresentConds = new pthread_cond_t[NUM_WORKERS];
         addrChunkMutexes = new pthread_mutex_t[NUM_WORKERS];
@@ -408,6 +453,9 @@ namespace __dp {
         }
 
         pthread_attr_destroy(&attr);
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit initParallelization\n";
+#endif
     }
 
 
@@ -449,6 +497,9 @@ namespace __dp {
     }
 
     void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter addAccessInfo\n";
+#endif
         int64_t workerID = addr % NUM_WORKERS;
         numAccesses[workerID]++;
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
@@ -491,6 +542,9 @@ namespace __dp {
             tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
             tempAddrCount[workerID] = 0;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit addAccessInfo\n";
+#endif
     }
 
     void mergeDeps() {
@@ -614,6 +668,9 @@ namespace __dp {
     }
 
     void finalizeParallelization() {
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter finalizeParallelization\n";
+#endif
         if (DP_DEBUG) {
             cout << "BEGIN: finalize parallelization... \n";
         }
@@ -655,6 +712,9 @@ namespace __dp {
         if (DP_DEBUG) {
             cout << "END: finalize parallelization... \n";
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit finalizeParallelization\n";
+#endif
     }
 
     /******* Instrumentation functions *******/
@@ -672,6 +732,9 @@ namespace __dp {
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_read\n";
 #endif
 
         if (targetTerminated) {
@@ -737,6 +800,9 @@ namespace __dp {
             tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
             tempAddrCount[workerID] = 0;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_read\n";
+#endif
     }
 
 #ifdef SKIP_DUP_INSTR
@@ -748,6 +814,9 @@ namespace __dp {
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_write\n";
 #endif
         if (targetTerminated) {
             if (DP_DEBUG) {
@@ -812,6 +881,9 @@ namespace __dp {
             tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
             tempAddrCount[workerID] = 0;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_write\n";
+#endif
     }
 
 #ifdef SKIP_DUP_INSTR
@@ -823,6 +895,9 @@ namespace __dp {
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_decl\n";
 #endif
         if (targetTerminated) {
             if (DP_DEBUG) {
@@ -894,6 +969,9 @@ namespace __dp {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_alloca\n";
+#endif
         int64_t buffer = nextFreeMemoryRegionId;
         string allocId = to_string(buffer);
         nextFreeMemoryRegionId++;
@@ -912,11 +990,17 @@ namespace __dp {
         if(endAddr > largestAllocatedADDR){
             largestAllocatedADDR = endAddr;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_alloca\n";
+#endif
     }
 
     void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes){
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_new\n";
 #endif
         // instrumentation function for new and malloc
         int64_t buffer = nextFreeMemoryRegionId;
@@ -944,11 +1028,17 @@ namespace __dp {
         if(endAddr > largestAllocatedADDR){
             largestAllocatedADDR = endAddr;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_new\n";
+#endif
     }
 
     void __dp_delete(LID lid, ADDR startAddr){
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_delete\n";
 #endif
         // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
 
@@ -965,6 +1055,9 @@ namespace __dp {
         }
         cout << "__dp_delete: Could not find base addr: " << std::hex << startAddr << "\n";
 */
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_delete\n";
+#endif
         return;
     }
 
@@ -972,12 +1065,26 @@ namespace __dp {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_report_bb\n";
+        cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
+        cout << "bbList: " << bbList << "\n";
+        for(auto elem: *bbList){
+            cout << "\t" << elem << "\n";
+        }
+#endif
         bbList->insert(bbIndex);
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_report_bb\n";
+#endif
     }
 
     void __dp_report_bb_pair(int32_t semaphore, int32_t bbIndex) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_report_bb_pair\n";
 #endif
         if (semaphore)
             bbList->insert(bbIndex);
@@ -986,6 +1093,9 @@ namespace __dp {
     void __dp_finalize(LID lid) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
             pthread_compatibility_mutex.lock();
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_finalize\n";
 #endif
         if (targetTerminated) {
             if (DP_DEBUG) {
@@ -1056,12 +1166,18 @@ namespace __dp {
         if (DP_DEBUG) {
             cout << "Program terminated." << endl;
         }
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_finalize\n";
+#endif
     }
 
     // hybrid analysis
     void __dp_add_bb_deps(char *depStringPtr) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_add_bb_deps\n";
 #endif
         string depString(depStringPtr);
         regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"), r4("(INIT|(R|W)A(R|W)).*");
@@ -1102,12 +1218,18 @@ namespace __dp {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "__dp_call\n";
+#endif
         lastCallOrInvoke = lid;
     }
 
     void __dp_func_entry(LID lid, int32_t isStart) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "enter __dp_func_entry\n";
 #endif
         if (!dpInited) {
             // This part should be executed only once.
@@ -1194,11 +1316,17 @@ namespace __dp {
 
         // Reset last call tracker
         lastCallOrInvoke = 0;
+#ifdef DP_RTLIB_VERBOSE
+        cout << "exit __dp_func_entry\n";
+#endif
     }
 
     void __dp_func_exit(LID lid, int32_t isExit) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "__dp_func_exit\n";
 #endif
         if (targetTerminated) {
             if (DP_DEBUG) {
@@ -1259,6 +1387,9 @@ namespace __dp {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "__dp_loop_entry\n";
+#endif
         if (targetTerminated) {
             if (DP_DEBUG) {
                 cout << "__dp_loop_entry() is not executed since target program has returned from main()." << endl;
@@ -1309,6 +1440,9 @@ namespace __dp {
     void __dp_loop_exit(LID lid, int32_t loopID) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+        cout << "__dp_loop_exit\n";
 #endif
         if (targetTerminated) {
             if (DP_DEBUG) {
