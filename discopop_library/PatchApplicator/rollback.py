@@ -26,7 +26,9 @@ def rollback_patches(
     """Return values:"
     "0: Applied successfully"
     "1: Nothing applied"
-    "2: Some changes applied successfully"""
+    "2: Some changes applied successfully"
+    "3: Nothing to roll back, trivially successful"
+    """
     retval = -1  # -1 -> nothing seen so far
     # get list of applicable suggestions
     applicable_suggestions = [name for name in os.listdir(patch_generator_dir)]
@@ -36,6 +38,9 @@ def rollback_patches(
         applied_suggestions = json.loads(f.read())
         if arguments.verbose:
             print("Previously applied suggestions: ", applied_suggestions["applied"])
+
+    if len(rollback) == 0:
+        return 3  # nothing to roll back, trivially successful
 
     for suggestion_id in rollback:
         if suggestion_id not in applied_suggestions["applied"]:
