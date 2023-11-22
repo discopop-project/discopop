@@ -180,8 +180,6 @@ bool DiscoPoP::doInitialization(Module &M) {
 
         initializeBBDepCounter();
 
-        errs() << "Initial dep count: " << to_string(bbDepCount) << "\n";
-
         ReportBB = M.getOrInsertFunction(
                 "__dp_report_bb",
                 Void,
@@ -2333,7 +2331,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
             if (isa<ReturnInst>(pair.first->getTerminator())) {
                 insertionPoint = insertionPoint->getPrevNonDebugInstruction();
             }
-            errs() << "bbDepCount: " << bbDepCount << "\n";
             auto CI = CallInst::Create(
                     ReportBB,
                     ConstantInt::get(Int32, bbDepCount),
