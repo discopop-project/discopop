@@ -107,9 +107,6 @@ namespace __dp {
     /******* Helper functions *******/
 
     void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
-#ifdef DP_RTLIB_VERBOSE
-        cout << "enter addDep\n";
-#endif
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -210,9 +207,6 @@ namespace __dp {
             }
             cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
         }
-#ifdef DP_RTLIB_VERBOSE
-        cout << "exit addDep\n";
-#endif
     }
 
     // hybrid analysis
@@ -1061,17 +1055,13 @@ namespace __dp {
         return;
     }
 
-    void __dp_report_bb(int32_t bbIndex) {
+    void __dp_report_bb(uint32_t bbIndex) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
         cout << "enter __dp_report_bb\n";
         cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
-        cout << "bbList: " << bbList << "\n";
-        for(auto elem: *bbList){
-            cout << "\t" << elem << "\n";
-        }
 #endif
         bbList->insert(bbIndex);
 #ifdef DP_RTLIB_VERBOSE
@@ -1079,7 +1069,7 @@ namespace __dp {
 #endif
     }
 
-    void __dp_report_bb_pair(int32_t semaphore, int32_t bbIndex) {
+    void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
         std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
