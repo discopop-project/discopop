@@ -176,7 +176,11 @@ bool DiscoPoP::doInitialization(Module &M) {
 
 // DPInstrumentationOmission
     {
-        int bbDepCount = 0;
+        bbDepCount = 0;
+
+        initializeBBDepCounter();
+
+        errs() << "Initial dep count: " << to_string(bbDepCount) << "\n";
 
         ReportBB = M.getOrInsertFunction(
                 "__dp_report_bb",
@@ -233,6 +237,15 @@ bool DiscoPoP::doFinalization(Module &M) {
             }
         }
     }
+    // write the current count of BBs to a file to avoid duplicate BBids
+    outBBDepCounter = new std::ofstream();
+    outBBDepCounter->open(".discopop/profiler/DP_BBDepCounter.txt", std::ios_base::out);
+    if (outBBDepCounter && outBBDepCounter->is_open()) {
+        *outBBDepCounter << bbDepCount;
+        outBBDepCounter->flush();
+        outBBDepCounter->close();
+    }
+
     // DPInstrumentationOmission end
 
     return true;
@@ -890,6 +903,15 @@ void DiscoPoP::initializeCUIDCounter() {
         std::fstream inCUIDCounter(CUCounterFile, std::ios_base::in);;
         inCUIDCounter >> CUIDCounter;
         inCUIDCounter.close();
+    }
+}
+
+void DiscoPoP::initializeBBDepCounter(){
+    std::string BBDepCounterFile = ".discopop/profiler/DP_BBDepCounter.txt";
+    if (dputil::fexists(BBDepCounterFile)) {
+        std::fstream inBBDepCounter(BBDepCounterFile, std::ios_base::in);;
+        inBBDepCounter >> bbDepCount;
+        inBBDepCounter.close();
     }
 }
 
@@ -2311,6 +2333,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
             if (isa<ReturnInst>(pair.first->getTerminator())) {
                 insertionPoint = insertionPoint->getPrevNonDebugInstruction();
             }
+            errs() << "bbDepCount: " << bbDepCount << "\n";
             auto CI = CallInst::Create(
                     ReportBB,
                     ConstantInt::get(Int32, bbDepCount),

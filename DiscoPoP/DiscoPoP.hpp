@@ -85,6 +85,7 @@ namespace {
 // CUGeneration
 
     static unsigned int CUIDCounter;
+    static unsigned int bbDepCount;
     static bool defaultIsGlobalVariableValue;
     int32_t fileID;
 
@@ -217,6 +218,7 @@ namespace {
         ofstream *outCUs;
         ofstream *outOriginalVariables;
         ofstream *outCUIDCounter;
+        ofstream *outBBDepCounter;
         // Mohammad 23.12.2020
         map <string, string> loopStartLines;
 
@@ -319,7 +321,6 @@ namespace {
 // DPInstrumentation end
 
 // DPInstrumentationOmission
-        int bbDepCount;
         string bbDepString;
         string fileName;
         int32_t fid;
@@ -385,6 +386,7 @@ namespace {
 
         // Output function
         void initializeCUIDCounter();
+        void initializeBBDepCounter();
 
         string xmlEscape(string data);
 
