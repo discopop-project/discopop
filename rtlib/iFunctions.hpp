@@ -163,7 +163,7 @@ namespace __dp {
     BGNFuncList;
 
     // Hybrid analysis
-    typedef std::set <int32_t> ReportedBBSet;
+    typedef std::set <uint32_t> ReportedBBSet;
     typedef std::set <std::string> ReportedBBPairSet;
     // End HA
     // 2) when two END func are identical
@@ -214,8 +214,8 @@ namespace __dp {
     // End HA
 #endif
     // hybrid analysis
-    void __dp_report_bb(int32_t bbIndex);
-    void __dp_report_bb_pair(int32_t counter, int32_t bbIndex);
+    void __dp_report_bb(uint32_t bbIndex);
+    void __dp_report_bb_pair(int32_t counter, uint32_t bbIndex);
     void __dp_add_bb_deps(char *depStringPtr);
     // End HA
     void __dp_finalize(LID lid);
