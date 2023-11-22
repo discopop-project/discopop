@@ -9,6 +9,7 @@ import copy
 from typing import Dict, List, Tuple, Set
 
 import networkx as nx  # type: ignore
+import warnings
 
 from discopop_explorer.PETGraphX import (
     PETGraphX,
@@ -217,6 +218,13 @@ class PETParser(object):
             self.cu_id_to_graph_node_id[cu_node.id] = new_node_id
             # calculate accessed data
             written_memory_regions, read_memory_regions = get_data_accesses_for_cu(self.pet, cu_node.id)
+            try:
+                parallelizable_workload = calculate_workload(
+                    self.pet, cu_node, ignore_function_calls_and_cached_values=True
+                )
+            except RecursionError as rerr:
+                warnings.warn("Cost calculation not possible for node: " + str(cu_node.id) + "!")
+                parallelizable_workload = 0
             self.graph.add_node(
                 new_node_id,
                 data=Workload(
@@ -224,9 +232,7 @@ class PETParser(object):
                     experiment=self.experiment,
                     cu_id=cu_node.id,
                     sequential_workload=0,
-                    parallelizable_workload=calculate_workload(
-                        self.pet, cu_node, ignore_function_calls_and_cached_values=True
-                    ),
+                    parallelizable_workload=parallelizable_workload,
                     written_memory_regions=written_memory_regions,
                     read_memory_regions=read_memory_regions,
                 ),
@@ -250,14 +256,19 @@ class PETParser(object):
             # create new node for Loop
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[loop_node.id] = new_node_id
+            try:
+                discopop_workload = calculate_workload(
+                    self.pet, loop_node, ignore_function_calls_and_cached_values=True
+                )
+            except RecursionError as rerr:
+                warnings.warn("Cost calculation not possible for node: " + str(loop_node.id) + "!")
+                discopop_workload = 0
             self.graph.add_node(
                 new_node_id,
                 data=Loop(
                     node_id=new_node_id,
                     cu_id=loop_node.id,
-                    discopop_workload=calculate_workload(
-                        self.pet, loop_node, ignore_function_calls_and_cached_values=True
-                    ),
+                    discopop_workload=discopop_workload,
                     iterations=iteration_count,
                     position=loop_node.start_position(),
                     experiment=self.experiment,

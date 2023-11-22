@@ -78,7 +78,14 @@ class PatternInfo(object):
         """returns the workload of self._node"""
         if self.workload is not None:
             return self.workload
-        self.workload = calculate_workload(pet, self._node)
+        try:
+            self.workload = calculate_workload(pet, self._node)
+        except RecursionError as rerr:
+            import warnings
+
+            warnings.warn("Cost calculation not possible for node: " + str(self._node.id) + "!")
+            self.workload = 0
+
         return self.workload
 
     def get_per_iteration_workload(self, pet: PETGraphX) -> int:
