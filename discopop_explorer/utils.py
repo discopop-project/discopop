@@ -9,6 +9,7 @@ import itertools
 from typing import List, Sequence, Set, Dict, Tuple, cast
 
 import numpy as np
+import warnings
 
 from .PETGraphX import (
     CUNode,
@@ -213,9 +214,15 @@ def calculate_per_iteration_workload_of_loop(pet: PETGraphX, node: Node) -> int:
             elif "for.cond" in cast(CUNode, child).basic_block_id:
                 continue
             else:
-                res += calculate_workload(pet, child)
+                try:
+                    res += calculate_workload(pet, child)
+                except RecursionError as rerr:
+                    warnings.warn("Cost calculation not possible for node: " + str(child.id) + "!")
         else:
-            res += calculate_workload(pet, child)
+            try:
+                res += calculate_workload(pet, child)
+            except RecursionError as rerr:
+                warnings.warn("Cost calculation not possible for node: " + str(child.id) + "!")
     return res
 
 
