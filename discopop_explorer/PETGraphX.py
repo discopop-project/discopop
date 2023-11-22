@@ -22,6 +22,7 @@ from lxml.objectify import ObjectifiedElement  # type:ignore
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
 
+global_pet = None
 
 # unused
 # node_props = [
@@ -362,6 +363,7 @@ class FunctionNode(Node):
         return exit_cu_ids
 
     def calculate_reachability_pairs(self, pet: PETGraphX):
+        reachability_pairs: Dict[NodeID, Set[NodeID]] = dict()
         # create graph copy and remove all but successor edges
         copied_graph = pet.g.copy()
 
@@ -376,10 +378,10 @@ class FunctionNode(Node):
 
         # calculate dfs successors for children CUs
         for node_id in cast(List[NodeID], self.children_cu_ids):
-            self.reachability_pairs[node_id] = {node_id}
+            reachability_pairs[node_id] = {node_id}
             successors = [t for s, t in nx.dfs_tree(copied_graph, node_id).edges()]
-            self.reachability_pairs[node_id].update(successors)
-        pass
+            reachability_pairs[node_id].update(successors)
+        return reachability_pairs
 
     def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
         if self.immediate_post_dominators_present:
@@ -724,24 +726,28 @@ class PETGraphX(object):
         # store id of parent function in each node
         # and store in each function node a list of all children ids
         func_nodes = self.all_nodes(FunctionNode)
-        print("Calculating metadata for functions: ")
-        with alive_bar(len(func_nodes)) as progress_bar:
-            for func_node in func_nodes:
-                stack: List[Node] = self.direct_children(func_node)
-                func_node.children_cu_ids = [node.id for node in stack]
+        print("Calculating local metadata results for functions...")
+        import tqdm  # type: ignore
+        from multiprocessing import Pool
+        from .parallel_utils import pet_function_metadata_initialize_worker, pet_function_metadata_parse_func
 
-                while stack:
-                    child = stack.pop()
-                    child.parent_function_id = func_node.id
-                    children = self.direct_children(child)
-                    func_node.children_cu_ids.extend([node.id for node in children])
-                    stack.extend(children)
+        param_list = func_nodes
+        with Pool(initializer=pet_function_metadata_initialize_worker, initargs=(self,)) as pool:
+            tmp_result = list(
+                tqdm.tqdm(pool.imap_unordered(pet_function_metadata_parse_func, param_list), total=len(param_list))
+            )
+        # calculate global result
+        print("Calculating global result...")
+        global_reachability_dict: Dict[NodeID, Set[NodeID]] = dict()
+        for local_result in tmp_result:
+            parsed_function_id, local_reachability_dict, local_children_ids = local_result
+            # set reachability values to function nodes
+            cast(FunctionNode, self.node_at(parsed_function_id)).reachability_pairs = local_reachability_dict
+            # set parent function for visited nodes
+            for child_id in local_children_ids:
+                self.node_at(child_id).parent_function_id = parsed_function_id
 
-                func_node.calculate_reachability_pairs(self)
-                progress_bar()
-        print("\tDone.")
-
-        print("Metadata calculation done.")
+        print("\tMetadata calculation done.")
 
         # cleanup dependencies (remove dependencies, if it is overwritten by a more specific Intra-iteration dependency
         print("Cleaning duplicated dependencies...")
