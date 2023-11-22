@@ -20,8 +20,10 @@ from discopop_library.PathManagement.PathManagement import load_file_mapping
 def run(arguments: PatchApplicatorArguments) -> int:
     """Return values:"
     "0: Applied successfully"
-    "1: Nothing applied"
-    "2: Some changes applied successfully"""
+    "1: Nothing applied, error"
+    "2: Some changes applied successfully"
+    "3: Nothing to roll back, trivially successful"
+    """
 
     if arguments.verbose:
         print("Started DiscoPoP Patch Applicator...")
