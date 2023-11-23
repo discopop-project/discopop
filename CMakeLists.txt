@@ -57,6 +57,24 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
+##### DEPRECATED #####
+# save build configuration to build/build_config.txt
+file(REMOVE "${DiscoPoP_BINARY_DIR}/build_config.txt")
+file(TOUCH "${DiscoPoP_BINARY_DIR}/build_config.txt")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_BUILD=${DiscoPoP_BINARY_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_SOURCE=${DiscoPoP_SOURCE_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "LLVM_BIN_DIR=${LLVM_TOOLS_BINARY_DIR}\n")
+file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "PYTHON_EXECUTABLE=${Python3_EXECUTABLE}\n")
+##### END OF DEPRECATED #####
+
+# save build_config.py to discopop_library/ConfigProvider/assets for easy accessibility and global use
+file(REMOVE "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py")
+file(TOUCH "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_BUILD=\"${DiscoPoP_BINARY_DIR}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_SOURCE=\"${DiscoPoP_SOURCE_DIR}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "LLVM_BIN_DIR=\"${LLVM_TOOLS_BINARY_DIR}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "PYTHON_EXECUTABLE=\"${Python3_EXECUTABLE}\"\n")
+
 # install DiscoPoP python modules
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -80,11 +98,3 @@ execute_process(
 if(${DP_INSTALLATION_EXIT_CODE})
     message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
 endif()
-
-# save build configuration to build/build_config.txt
-file(REMOVE "${DiscoPoP_BINARY_DIR}/build_config.txt")
-file(TOUCH "${DiscoPoP_BINARY_DIR}/build_config.txt")
-file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_BUILD=${DiscoPoP_BINARY_DIR}\n")
-file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "DP_SOURCE=${DiscoPoP_SOURCE_DIR}\n")
-file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "LLVM_BIN_DIR=${LLVM_TOOLS_BINARY_DIR}\n")
-file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "PYTHON_EXECUTABLE=${Python3_EXECUTABLE}\n")
