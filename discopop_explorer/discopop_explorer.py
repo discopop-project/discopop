@@ -48,6 +48,7 @@ class ExplorerArguments(object):
     enable_profiling_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_pet_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
+    enable_patterns: str
     # experimental features:
     enable_task_pattern: bool
     detect_scheduling_clauses: bool
@@ -99,6 +100,7 @@ def __run(
     cu_inst_result_file: Optional[str] = None,
     llvm_cxxfilt_path: Optional[str] = None,
     discopop_build_path: Optional[str] = None,
+    enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
 ) -> DetectionResult:
@@ -128,6 +130,7 @@ def __run(
         cu_inst_result_file,
         llvm_cxxfilt_path,
         discopop_build_path,
+        enable_patterns,
         enable_task_pattern,
         enable_detection_of_scheduling_clauses,
     )
@@ -180,6 +183,7 @@ def run(arguments: ExplorerArguments):
         cu_inst_result_file=arguments.cu_inst_result_file,
         llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
         discopop_build_path=arguments.discopop_build_path,
+        enable_patterns=arguments.enable_patterns,
         enable_task_pattern=arguments.enable_task_pattern,
         enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
     )
