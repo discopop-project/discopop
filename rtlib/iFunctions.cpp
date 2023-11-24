@@ -91,7 +91,14 @@ namespace __dp {
     pthread_mutex_t allDepsLock;
     pthread_t *workers = nullptr; // worker threads
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
+#ifdef DP_NUM_WORKERS
+#pragma message "Profiler: set NUM_WORKERS to " XSTR(DP_NUM_WORKERS)
+    int32_t NUM_WORKERS = DP_NUM_WORKERS;
+#else
     int32_t NUM_WORKERS = 3;               // default number of worker threads (multiple workers can potentially lead to non-deterministic results)
+#endif
     int32_t CHUNK_SIZE = 500;              // default number of addresses in each chunk
     queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
     bool *addrChunkPresent = nullptr;      // addrChunkPresent[thread_id] denotes whether or not a new chunk is available for the corresponding thread
