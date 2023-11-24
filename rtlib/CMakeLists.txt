@@ -39,6 +39,13 @@ if(DEFINED DP_RTLIB_VERBOSE)
                 target_compile_definitions(DiscoPoP_RT PUBLIC DP_RTLIB_VERBOSE=${DP_RTLIB_VERBOSE})
         endif()
 endif()
+
+if(DEFINED DP_NUM_WORKERS)
+        if(NOT ${DP_NUM_WORKERS} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
