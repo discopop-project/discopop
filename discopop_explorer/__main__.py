@@ -67,6 +67,10 @@ def parse_args() -> ExplorerArguments:
         "--dump-detection-result", type=str, nargs="?", default="explorer/detection_result_dump.json",
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
+    parser.add_argument(
+        "--enable-patterns", type=str, nargs="?", default="*",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: *",
+    )
 
     # EXPERIMENTAL FLAGS:
     # temporary flag for microbenchmark file
@@ -139,6 +143,7 @@ def parse_args() -> ExplorerArguments:
         enable_profiling_dump_file=arguments.profiling,
         enable_pet_dump_file=arguments.dump_pet,
         enable_detection_result_dump_file=arguments.dump_detection_result,
+        enable_patterns=arguments.enable_patterns,
         generate_data_cu_inst=arguments.generate_data_cu_inst,
         cu_inst_result_file=arguments.cu_inst_res,
         llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
