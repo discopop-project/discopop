@@ -21,7 +21,7 @@ def parse_args() -> OptimizerArguments:
     )
 
     # fmt: off
-    parser.add_argument("--verbose", action="store_true",
+    parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
