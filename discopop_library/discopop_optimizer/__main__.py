@@ -9,7 +9,7 @@
 """Discopop Suggestion Optimizer
 
 Usage:
-    discopop_optimizer --compile-command <str> [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
+    discopop_optimizer [--compile-command <str>] [--project <path>] [--file-mapping <path>] [--detection-result-dump <path>]
         [--execute-created-models] [--execute-single-model <path>] [--clean-created-code] [--code-export-path <path>] [--dp-output-path <path>]
         [--executable-arguments <string>] [--linker-flags <string>] [--make-target <string>] [--make-flags <string>]
         [--executable-name <string>] [--execution-repetitions <int>] [--execution-append-measurements]
