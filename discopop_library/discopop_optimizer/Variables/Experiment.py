@@ -55,7 +55,7 @@ class Experiment(object):
 
     project_path: Path
     discopop_output_path: Path
-    discopop_optimizer_path: Path
+    profiler_dir: Path
     code_export_path: Path
 
     file_mapping: Dict[int, Path]  # file-mapping
@@ -66,29 +66,27 @@ class Experiment(object):
     selected_paths_per_function: Dict[FunctionRoot, Tuple[CostModel, ContextObject]]
 
     optimization_graph: nx.DiGraph
-
-    compile_check_command: str  # passed to code generator for the validation of generated code
+    next_free_node_id: int
 
     def __init__(
-        self, file_mapping: Dict[int, Path], system: System, detection_result: DetectionResult, profiler_output_dir: str
+        self, file_mapping: Dict[int, Path], system: System, detection_result: DetectionResult, profiler_dir: str
     ):
         self.__system = system
         self.detection_result = detection_result
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
-            os.path.join(profiler_output_dir, "memory_regions.txt"),
+            os.path.join(profiler_dir, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
 
         self.file_mapping = file_mapping
+        self.function_models = dict()
+        self.selected_paths_per_function = dict()
 
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():
             self.register_free_symbol(free_symbol, value_suggestion)
-
-        self.function_models = dict()
-        self.selected_paths_per_function = dict()
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False

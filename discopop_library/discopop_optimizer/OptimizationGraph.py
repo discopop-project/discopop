@@ -46,7 +46,6 @@ class OptimizationGraph(object):
 
     def __init__(
         self,
-        project_folder_path,
         experiment: Experiment,
         arguments: Dict[str, Any],
         parent_frame: Optional[tk.Frame],
@@ -222,9 +221,6 @@ class OptimizationGraph(object):
         else:
             # perform actions for headless mode
             perform_headless_execution(experiment)
-
-        # save experiment to disk
-        export_to_json(experiment)
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id

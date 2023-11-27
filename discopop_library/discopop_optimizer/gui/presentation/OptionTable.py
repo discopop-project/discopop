@@ -15,7 +15,6 @@ from sympy import Symbol
 from discopop_explorer.PETGraphX import PETGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -159,11 +158,6 @@ def show_options(
         ),
     ).grid()
     Button(root, text="Save Models", command=lambda: __save_models(experiment, function_root, options)).grid()
-    Button(
-        root,
-        text="Export all codes",
-        command=lambda: __export_all_codes(pet, graph, experiment, options, function_root),
-    ).grid()
     Button(root, text="Close", command=lambda: root.destroy()).grid()
 
     # create option entries
@@ -316,14 +310,3 @@ def add_random_models(
         )
 
     return conserve_options
-
-
-def __export_all_codes(
-    pet: PETGraphX,
-    graph: nx.DiGraph,
-    experiment: Experiment,
-    options: List[Tuple[CostModel, ContextObject, str]],
-    function_root: FunctionRoot,
-):
-    for opt, ctx, label in options:
-        export_code(pet, graph, experiment, opt, ctx, label, function_root)

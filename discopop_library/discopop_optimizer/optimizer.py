@@ -18,6 +18,8 @@ from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGenerat
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
+from discopop_library.discopop_optimizer.Variables.ExperimentUtils import create_optimization_graph, export_to_json
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -25,6 +27,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 )
 from discopop_library.discopop_optimizer.Microbench.Microbench import MicrobenchType
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 
 
 def run(arguments: OptimizerArguments):
@@ -101,3 +104,7 @@ def run(arguments: OptimizerArguments):
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir)
 
     # build optimization graph
+    create_optimization_graph(experiment, detection_result, arguments)
+
+    # save experiment to disk
+    export_to_json(experiment, optimizer_dir)

@@ -13,9 +13,10 @@ from typing import List, Optional, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser  # type: ignore
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
     show_options,
@@ -23,6 +24,7 @@ from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
 )
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 def show_function_models(
@@ -112,20 +114,9 @@ def perform_headless_execution(
 
         # save models
         experiment.function_models[function] = updated_options
-        # export models to code
-        for opt, ctx, label in experiment.function_models[function]:
-            export_code(
-                experiment.detection_result.pet,
-                experiment.optimization_graph,
-                experiment,
-                opt,
-                ctx,
-                label,
-                function,
-            )
 
 
-def export_to_json(experiment: Experiment):
+def export_to_json(experiment: Experiment, export_path):
     # convert functionRoot in function_models to node ids
     to_be_added = []
     to_be_deleted = []
@@ -139,9 +130,9 @@ def export_to_json(experiment: Experiment):
     for k2, v in to_be_added:
         experiment.function_models[k2] = v  # type: ignore
 
-    experiment_dump_path: str = os.path.join(experiment.discopop_optimizer_path, "last_experiment.pickle")
-    if not os.path.exists(experiment.discopop_optimizer_path):
-        os.makedirs(experiment.discopop_optimizer_path)
+    experiment_dump_path: str = os.path.join(export_path, "last_experiment.pickle")
+    if not os.path.exists(export_path):
+        os.makedirs(export_path)
     pickle.dump(experiment, open(experiment_dump_path, "wb"))
 
 
@@ -162,3 +153,12 @@ def restore_session(json_file: str) -> Experiment:
         del experiment.function_models[k]
 
     return experiment
+
+
+def create_optimization_graph(experiment: Experiment, detection_result: DetectionResult, arguments: OptimizerArguments):
+    if arguments.verbose:
+        print("Creating optimization graph...", end="")
+    pet_parser = PETParser(detection_result.pet, experiment)
+    experiment.optimization_graph, experiment.next_free_node_id = pet_parser.parse()
+    if arguments.verbose:
+        print("Done.")
