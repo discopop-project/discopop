@@ -14,10 +14,18 @@ class OptimizerArguments(object):
     """Container Class for the arguments passed to the discopop_optimizer"""
 
     verbose: bool
+    doall_microbench_file: str
+    reduction_microbench_file: str
 
     def __post_init__(self):
         self.__validate()
 
     def __validate(self):
         """Validate the arguments passed to the discopop_optimizer, e.g check if given files exist"""
+        if self.doall_microbench_file is not "None":
+            if not os.path.isfile(self.doall_microbench_file):
+                raise FileNotFoundError(f"Microbenchmark file not found: {self.doall_microbench_file}")
+        if self.reduction_microbench_file is not "None":
+            if not os.path.isfile(self.reduction_microbench_file):
+                raise FileNotFoundError(f"Microbenchmark file not found: {self.reduction_microbench_file}")
         pass
