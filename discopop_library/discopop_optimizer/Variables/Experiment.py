@@ -110,5 +110,10 @@ class Experiment(object):
         if value_suggestion is not None:
             self.suggested_values[symbol] = value_suggestion
 
+    def get_next_free_node_id(self):
+        buffer = self.next_free_node_id
+        self.next_free_node_id += 1
+        return buffer
+
     def get_system(self) -> System:
         return self.__system

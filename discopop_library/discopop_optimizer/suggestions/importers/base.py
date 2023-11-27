@@ -16,16 +16,18 @@ from discopop_library.discopop_optimizer.suggestions.importers.reduction import 
 )
 
 
-def import_suggestions(
-    detection_result, graph: nx.DiGraph, get_next_free_node_id_function, environment: Experiment
-) -> nx.DiGraph:
-    """Imports the suggestions specified in res into the passed graph and returns the modified graph"""
+def import_suggestions(experiment: Experiment) -> nx.DiGraph:
+    """Imports the suggestions specified in res into the graph stored in the given experiment and returns the modified graph"""
 
     # import do-all
-    for suggestion in detection_result.do_all:
-        graph = import_doall(graph, suggestion, get_next_free_node_id_function, environment)
+    for do_all_suggestion in experiment.detection_result.do_all:
+        experiment.optimization_graph = import_doall(
+            experiment.optimization_graph, do_all_suggestion, experiment.get_next_free_node_id, experiment
+        )
 
     # import reduction
-    for suggestion in detection_result.reduction:
-        graph = import_reduction(graph, suggestion, get_next_free_node_id_function, environment)
-    return graph
+    for reduction_suggestion in experiment.detection_result.reduction:
+        experiment.optimization_graph = import_reduction(
+            experiment.optimization_graph, reduction_suggestion, experiment.get_next_free_node_id, experiment
+        )
+    return experiment.optimization_graph

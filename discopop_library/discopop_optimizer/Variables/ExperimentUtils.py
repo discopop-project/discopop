@@ -155,10 +155,10 @@ def restore_session(json_file: str) -> Experiment:
     return experiment
 
 
-def create_optimization_graph(experiment: Experiment, detection_result: DetectionResult, arguments: OptimizerArguments):
+def create_optimization_graph(experiment: Experiment, arguments: OptimizerArguments):
     if arguments.verbose:
         print("Creating optimization graph...", end="")
-    pet_parser = PETParser(detection_result.pet, experiment)
+    pet_parser = PETParser(experiment)
     experiment.optimization_graph, experiment.next_free_node_id = pet_parser.parse()
     if arguments.verbose:
         print("Done.")

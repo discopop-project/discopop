@@ -28,6 +28,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 from discopop_library.discopop_optimizer.Microbench.Microbench import MicrobenchType
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
+from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
 
 
 def run(arguments: OptimizerArguments):
@@ -104,7 +105,13 @@ def run(arguments: OptimizerArguments):
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir)
 
     # build optimization graph
-    create_optimization_graph(experiment, detection_result, arguments)
+    create_optimization_graph(experiment, arguments)
+
+    # import parallelization suggestions
+
+    experiment.optimization_graph = import_suggestions(experiment)
+
+    show(experiment.optimization_graph)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
