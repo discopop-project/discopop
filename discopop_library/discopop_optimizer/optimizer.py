@@ -19,7 +19,11 @@ from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
-from discopop_library.discopop_optimizer.Variables.ExperimentUtils import create_optimization_graph, export_to_json
+from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
+    create_optimization_graph,
+    export_to_json,
+    get_sequential_cost_model,
+)
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -107,11 +111,11 @@ def run(arguments: OptimizerArguments):
     # build optimization graph
     create_optimization_graph(experiment, arguments)
 
+    # get sequential cost model
+    sequential_cost_models = get_sequential_cost_model(experiment)
+
     # import parallelization suggestions
-
     experiment.optimization_graph = import_suggestions(experiment)
-
-    show(experiment.optimization_graph)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)

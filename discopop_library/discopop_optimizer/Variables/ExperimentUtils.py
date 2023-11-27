@@ -9,14 +9,19 @@ import os
 import pickle
 import tkinter as tk
 from tkinter import Button
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
+from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers  # type: ignore
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser  # type: ignore
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
     show_options,
@@ -162,3 +167,19 @@ def create_optimization_graph(experiment: Experiment, arguments: OptimizerArgume
     experiment.optimization_graph, experiment.next_free_node_id = pet_parser.parse()
     if arguments.verbose:
         print("Done.")
+
+
+def get_sequential_cost_model(experiment) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+    # get performance models for sequential execution
+    sequential_function_performance_models = get_performance_models_for_functions(
+        experiment, experiment.optimization_graph
+    )
+    sequential_function_performance_models_with_transfers = calculate_data_transfers(
+        experiment.optimization_graph, sequential_function_performance_models
+    )
+    sequential_complete_performance_models = add_data_transfer_costs(
+        experiment.optimization_graph,
+        sequential_function_performance_models_with_transfers,
+        experiment,
+    )
+    return sequential_complete_performance_models
