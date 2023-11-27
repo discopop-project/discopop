@@ -53,9 +53,7 @@ class OptimizationGraph(object):
     ):
         # construct optimization graph from PET Graph
         # save graph in experiment
-        experiment.optimization_graph, self.next_free_node_id = PETParser(
-            experiment.detection_result.pet, experiment
-        ).parse()
+        experiment.optimization_graph, self.next_free_node_id = PETParser(experiment).parse()
 
         # get performance models for sequential execution
         sequential_function_performance_models = get_performance_models_for_functions(
@@ -71,12 +69,7 @@ class OptimizationGraph(object):
         )
 
         # import parallelization suggestions
-        experiment.optimization_graph = import_suggestions(
-            experiment.detection_result,
-            experiment.optimization_graph,
-            self.get_next_free_node_id,
-            experiment,
-        )
+        experiment.optimization_graph = import_suggestions(experiment)
 
         # perform an exhaustive search if requested
         if arguments["--exhaustive-search"]:

@@ -56,8 +56,8 @@ class PETParser(object):
     in_data_flow: Dict[int, Set[int]]
     out_data_flow: Dict[int, Set[int]]
 
-    def __init__(self, pet: PETGraphX, experiment: Experiment):
-        self.pet = pet
+    def __init__(self, experiment: Experiment):
+        self.pet = experiment.detection_result.pet
         self.graph = nx.DiGraph()
         self.next_free_node_id = 0
         self.cu_id_to_graph_node_id = dict()
