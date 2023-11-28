@@ -1,6 +1,8 @@
+from multiprocessing import Pool
 from typing import Dict, List, Tuple, cast
 
 from sympy import Expr
+import tqdm  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -10,12 +12,23 @@ from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_c
 from itertools import product
 
 
+global_experiment = None
+global_function_performance_models = None
+global_arguments = None
+
+
 def evaluate_all_decision_combinations(
     experiment: Experiment,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
 ) -> Dict[Tuple[int, ...], Expr]:
     """Create and evaluate every possible combination of decisions"""
+    global global_experiment
+    global global_function_performance_models
+    global global_arguments
+    global_experiment = experiment
+    global_function_performance_models = function_performance_models
+    global_arguments = arguments
 
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
 
@@ -41,18 +54,22 @@ def evaluate_all_decision_combinations(
                 tmp.append(decision)
         combinations.append(tmp)
 
-    # evaluate each combination
-    print("# Calculating costs of all decision combinations...")
-    for combination_list in combinations:
-        costs = evaluate_configuration(experiment, function_performance_models, combination_list, arguments)
-        costs_dict[tuple(combination_list)] = costs
-        print(
-            "#",
-            combination_list,
-            " = ",
-            str(costs),
-        )
-    print()
+    # evaluate each combination in parallel
+    print("# Parallel calculatiion of costs of all decision combinations...")
+    param_list = [(combination_list) for combination_list in combinations]
+    with Pool(
+        initializer=__initialize_worker,
+        initargs=(
+            experiment,
+            function_performance_models,
+            arguments,
+        ),
+    ) as pool:
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
+    for local_result in tmp_result:
+        # result += local_result
+        print("#", local_result[0], "=", str(local_result[1]))
+        costs_dict[local_result[0]] = local_result[1]
 
     # print the sorted result for improved readability
     print("# Sorted and simplified costs of all combinations")
@@ -68,3 +85,24 @@ def evaluate_all_decision_combinations(
     print()
 
     return costs_dict
+
+
+def __initialize_worker(
+    experiment: Experiment,
+    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    arguments: OptimizerArguments,
+):
+    global global_experiment
+    global global_function_performance_models
+    global global_arguments
+    global_experiment = experiment
+    global_function_performance_models = function_performance_models
+    global_arguments = arguments
+
+
+def __evaluate_configuration(param_tuple):
+    global global_experiment
+    global global_function_performance_models
+    global global_arguments
+    decisions = param_tuple
+    return evaluate_configuration(global_experiment, global_function_performance_models, decisions, global_arguments)
