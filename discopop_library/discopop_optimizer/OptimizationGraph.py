@@ -106,9 +106,7 @@ class OptimizationGraph(object):
         sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
 
         # query user for values for free symbols
-        query_results = query_user_for_symbol_values(
-            sorted_free_symbols, experiment.suggested_values, arguments, parent_frame
-        )
+        query_results = query_user_for_symbol_values(sorted_free_symbols, experiment.suggested_values)
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
                 experiment.substitutions[symbol] = Float(value)

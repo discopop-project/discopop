@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
+from sympy import Float, Symbol  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
@@ -22,11 +23,14 @@ from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser  #
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
     show_options,
     add_random_models,
 )
+from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -169,7 +173,7 @@ def create_optimization_graph(experiment: Experiment, arguments: OptimizerArgume
         print("Done.")
 
 
-def get_sequential_cost_model(experiment) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+def get_sequential_cost_model(experiment: Experiment) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     # get performance models for sequential execution
     sequential_function_performance_models = get_performance_models_for_functions(
         experiment, experiment.optimization_graph
@@ -183,3 +187,43 @@ def get_sequential_cost_model(experiment) -> Dict[FunctionRoot, List[Tuple[CostM
         experiment,
     )
     return sequential_complete_performance_models
+
+
+def initialize_free_symbol_ranges_and_distributions(
+    experiment: Experiment, arguments: OptimizerArguments, system: System
+):
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
+    sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
+    symbol_values: List[
+        Tuple[
+            Symbol,
+            Optional[float],
+            Optional[float],
+            Optional[float],
+            Optional[FreeSymbolDistribution],
+        ]
+    ] = []
+
+    if arguments.interactive:
+        symbol_values = query_user_for_symbol_values(sorted_free_symbols, experiment.suggested_values)
+    else:
+        # use the suggested values
+        for symbol in sorted_free_symbols:
+            # check if symbol is already defined by the system
+            found_symbol = False
+            for entry in system.get_symbol_values_and_distributions():
+                if entry[0] == symbol:
+                    symbol_values.append(entry)
+                    found_symbol = True
+                    break
+            if not found_symbol:
+                # else, use a default value for non-system symbols
+                symbol_values.append((symbol, experiment.suggested_values[symbol].evalf(), None, None, None))
+
+    for symbol, value, start_value, end_value, symbol_distribution in symbol_values:
+        if value is not None:
+            experiment.substitutions[symbol] = Float(value)
+        else:
+            experiment.free_symbol_ranges[symbol] = (cast(float, start_value), cast(float, end_value))
+            experiment.free_symbol_distributions[symbol] = cast(FreeSymbolDistribution, symbol_distribution)

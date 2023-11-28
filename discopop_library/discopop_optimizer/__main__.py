@@ -23,6 +23,8 @@ def parse_args() -> OptimizerArguments:
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
+    parser.add_argument("-i", "--interactive", action="store_true",
+        help="Enable interactive execution.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
@@ -38,6 +40,7 @@ def parse_args() -> OptimizerArguments:
 
     return OptimizerArguments(
         verbose=arguments.verbose,
+        interactive=arguments.interactive,
         doall_microbench_file=arguments.doall_microbench_file,
         reduction_microbench_file=arguments.reduction_microbench_file,
     )

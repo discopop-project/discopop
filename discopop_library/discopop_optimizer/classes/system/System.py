@@ -8,12 +8,14 @@
 import warnings
 from typing import Dict, List, Tuple, Optional
 
-from sympy import Symbol, Expr, Integer
+from sympy import Float, Symbol, Expr, Integer
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 
 from discopop_library.discopop_optimizer.classes.system.Network import Network
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
 
 class System(object):
@@ -22,20 +24,32 @@ class System(object):
     __next_free_device_id: int
     __device_do_all_overhead_models: Dict[Device, Expr]
     __device_reduction_overhead_models: Dict[Device, Expr]
+    __symbol_substitutions: List[
+        Tuple[
+            Symbol,
+            Optional[float],
+            Optional[float],
+            Optional[float],
+            Optional[FreeSymbolDistribution],
+        ]
+    ]
 
-    def __init__(self, headless: bool = False):
+    def __init__(self, arguments: OptimizerArguments):
         self.__devices = dict()
         self.__network = Network()
         self.__next_free_device_id = 0
         self.__device_do_all_overhead_models = dict()
         self.__device_reduction_overhead_models = dict()
+        self.__symbol_substitutions = []
 
         # define a default system
         # todo replace with benchmark results and / or make user definable
-        if headless:
-            device_0_threads = Integer(4)
-        else:
-            device_0_threads = Symbol("device_0_threads")  # Integer(48)
+        device_0_threads = Symbol("device_0_threads")  # Integer(48)
+        # register substitution
+        self.__symbol_substitutions.append(
+            (device_0_threads, None, float(1), float(16), FreeSymbolDistribution.RIGHT_HEAVY)
+        )
+
         device_0 = CPU(
             Integer(3000000000),
             device_0_threads,
@@ -119,3 +133,8 @@ class System(object):
             if device == self.__devices[key]:
                 return key
         raise ValueError("Unknown device: ", device)
+
+    def get_symbol_values_and_distributions(
+        self,
+    ) -> List[Tuple[Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]]]:
+        return self.__symbol_substitutions

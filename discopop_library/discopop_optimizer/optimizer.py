@@ -8,22 +8,30 @@
 import json
 import os.path
 import shutil
-from typing import Dict
+from typing import Dict, Tuple, cast
 
 import jsonpickle  # type: ignore
+from sympy import Float, Symbol  # type: ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
+from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
+from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     create_optimization_graph,
     export_to_json,
     get_sequential_cost_model,
+    initialize_free_symbol_ranges_and_distributions,
 )
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
+from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -83,7 +91,7 @@ def run(arguments: OptimizerArguments):
 
     # define System
     # todo make system user-configurable, or detect it using a set of benchmarks
-    system = System()
+    system = System(arguments)
 
     # todo connections between devices might happen as update to host + update to second device.
     #  As of right now, connections between two devices are implemented in this manner.
@@ -111,11 +119,46 @@ def run(arguments: OptimizerArguments):
     # build optimization graph
     create_optimization_graph(experiment, arguments)
 
-    # get sequential cost model
-    sequential_cost_models = get_sequential_cost_model(experiment)
-
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
+
+    # get values for free symbols
+    initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
+
+    if arguments.verbose:
+        print("# SUBSTITUTIONS:")
+        for key in experiment.substitutions:
+            print("#", key, " ->", experiment.substitutions[key])
+        print()
+
+    # calculate function performance models
+    function_performance_models_without_context = get_performance_models_for_functions(
+        experiment, experiment.optimization_graph
+    )
+    function_performance_models = calculate_data_transfers(
+        experiment.optimization_graph, function_performance_models_without_context
+    )
+    function_performance_models = add_data_transfer_costs(
+        experiment.optimization_graph,
+        function_performance_models,
+        experiment,
+    )
+
+    if arguments.verbose:
+        print("# Identified paths per function:")
+        for function in function_performance_models:
+            print("#", function.name)
+            for tuple in function_performance_models[function]:
+                cost, ctx = tuple
+                print("#..", cost.path_decisions)
+        print()
+
+    # test: evaluate sequential configuration
+    print("# Cost of sequential execution:")
+    sequential_decisions = [42, 50, 60, 67]
+    print(
+        "#", str(evaluate_configuration(experiment, function_performance_models, sequential_decisions, arguments)), "\n"
+    )
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
