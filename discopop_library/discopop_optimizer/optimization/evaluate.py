@@ -18,8 +18,9 @@ def evaluate_configuration(
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     decisions: List[int],
     arguments: OptimizerArguments,
-) -> Expr:
+) -> Tuple[Tuple[int, ...], Expr]:
     """Evaluate the configuration specified by the decisions for the current set of substitutions.
+    Returns the used decisions and the calculated costs as a tuple.
     Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions
     to update the substitutions and execute evaluate_configuration for each set of values."""
     result = Expr(-42)
@@ -38,11 +39,11 @@ def evaluate_configuration(
     for function in function_performance_models:
         # get the correct model according to the selected decisions
         selected_function_model: Optional[Tuple[CostModel, ContextObject]] = None
-        for tuple in function_performance_models[function]:
-            cost, ctx = tuple
+        for tpl in function_performance_models[function]:
+            cost, ctx = tpl
             # check if all decisions are specified
             if set(cost.path_decisions).issubset(set(decisions)):
-                selected_function_model = tuple
+                selected_function_model = tpl
                 selected_function_models[function] = selected_function_model
         if selected_function_model is None:
             raise ValueError(
@@ -101,4 +102,4 @@ def evaluate_configuration(
     result = sympy.re(result_model.parallelizable_costs + result_model.sequential_costs) + sympy.im(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
-    return result
+    return (tuple(decisions), result)
