@@ -125,6 +125,12 @@ def run(arguments: OptimizerArguments):
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
 
+    if arguments.verbose:
+        print("# SUGGESTION ID -> NODE ID MAPPING")
+        for suggestion_id in experiment.suggestion_to_node_id_dict:
+            print("#", suggestion_id, "->", experiment.suggestion_to_node_id_dict[suggestion_id])
+        print()
+
     # get values for free symbols
     initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
 
