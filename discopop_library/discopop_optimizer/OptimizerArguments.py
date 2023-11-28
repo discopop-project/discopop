@@ -14,6 +14,7 @@ class OptimizerArguments(object):
     """Container Class for the arguments passed to the discopop_optimizer"""
 
     verbose: bool
+    interactive: bool
     doall_microbench_file: str
     reduction_microbench_file: str
 
