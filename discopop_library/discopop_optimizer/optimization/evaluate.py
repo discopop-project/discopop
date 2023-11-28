@@ -19,7 +19,9 @@ def evaluate_configuration(
     decisions: List[int],
     arguments: OptimizerArguments,
 ) -> Expr:
-    """Empty decision list -> sequential execution"""
+    """Evaluate the configuration specified by the decisions for the current set of substitutions.
+    Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions 
+    to update the substitutions and execute evaluate_configuration for each set of values."""
     result = Expr(-42)
     # get main function
     main_function: Optional[FunctionRoot] = None
@@ -99,9 +101,4 @@ def evaluate_configuration(
     result = sympy.re(result_model.parallelizable_costs + result_model.sequential_costs) + sympy.im(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
-
-    if arguments.verbose:
-        print("#", decisions)
-        print("# =", str(result))
-
     return result
