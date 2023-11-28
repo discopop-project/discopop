@@ -20,7 +20,7 @@ def evaluate_configuration(
     arguments: OptimizerArguments,
 ) -> Expr:
     """Evaluate the configuration specified by the decisions for the current set of substitutions.
-    Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions 
+    Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions
     to update the substitutions and execute evaluate_configuration for each set of values."""
     result = Expr(-42)
     # get main function
