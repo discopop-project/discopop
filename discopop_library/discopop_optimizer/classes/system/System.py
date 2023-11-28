@@ -47,7 +47,7 @@ class System(object):
         device_0_threads = Symbol("device_0_threads")  # Integer(48)
         # register substitution
         self.__symbol_substitutions.append(
-            (device_0_threads, None, float(1), float(16), FreeSymbolDistribution.RIGHT_HEAVY)
+            (device_0_threads, float(16), float(1), float(16), FreeSymbolDistribution.RIGHT_HEAVY)
         )
 
         device_0 = CPU(
