@@ -157,7 +157,7 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate costs for all combinations of decisions
-    evaluate_all_decision_combinations(experiment, function_performance_models, arguments)
+    evaluate_all_decision_combinations(experiment, function_performance_models, arguments, optimizer_dir)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
