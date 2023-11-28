@@ -32,6 +32,9 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
+from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
+    evaluate_all_decision_combinations,
+)
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -153,45 +156,8 @@ def run(arguments: OptimizerArguments):
                 print("#..", cost.path_decisions)
         print()
 
-    # test: evaluate sequential configuration
-    print("# Cost of sequential execution:")
-    sequential_decisions = [42, 50, 60, 67]
-    print("# decisions: ", sequential_decisions)
-    print(
-        "# =",
-        str(evaluate_configuration(experiment, function_performance_models, sequential_decisions, arguments)),
-        "\n",
-    )
-
-    # test: evaluate slightly parallel configuration
-    print("# Cost of slightly parallel execution:")
-    parallel_decisions_1 = [71, 50, 60, 67]
-    print("# decisions: ", parallel_decisions_1)
-    print(
-        "# =",
-        str(evaluate_configuration(experiment, function_performance_models, parallel_decisions_1, arguments)),
-        "\n",
-    )
-
-    # test: evaluate highly parallel configuration
-    print("# Cost of highly parallel execution:")
-    parallel_decisions_2 = [42, 50, 72, 73]
-    print("# decisions: ", parallel_decisions_2)
-    print(
-        "# =",
-        str(evaluate_configuration(experiment, function_performance_models, parallel_decisions_2, arguments)),
-        "\n",
-    )
-
-    # test: evaluate nested parallel configuration
-    print("# Cost of nested parallel execution:")
-    parallel_decisions_3 = [42, 70, 72, 73]
-    print("# decisions: ", parallel_decisions_3)
-    print(
-        "# =",
-        str(evaluate_configuration(experiment, function_performance_models, parallel_decisions_3, arguments)),
-        "\n",
-    )
+    # calculate costs for all combinations of decisions
+    evaluate_all_decision_combinations(experiment, function_performance_models, arguments)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
