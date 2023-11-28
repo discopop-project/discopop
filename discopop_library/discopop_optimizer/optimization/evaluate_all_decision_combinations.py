@@ -1,4 +1,6 @@
+import json
 from multiprocessing import Pool
+import os
 from typing import Dict, List, Tuple, cast
 
 from sympy import Expr
@@ -21,6 +23,7 @@ def evaluate_all_decision_combinations(
     experiment: Experiment,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
+    optimizer_dir: str,
 ) -> Dict[Tuple[int, ...], Expr]:
     """Create and evaluate every possible combination of decisions"""
     global global_experiment
@@ -84,6 +87,8 @@ def evaluate_all_decision_combinations(
     print("# Sorted and simplified costs of all combinations")
     print()
 
+    __dump_result_to_file(optimizer_dir, costs_dict)
+
     return costs_dict
 
 
@@ -106,3 +111,14 @@ def __evaluate_configuration(param_tuple):
     global global_arguments
     decisions = param_tuple
     return evaluate_configuration(global_experiment, global_function_performance_models, decisions, global_arguments)
+
+
+def __dump_result_to_file(optimizer_dir: str, costs_dict: Dict[Tuple[int, ...], Expr]):
+    # replace keys to allow dumping
+    dumpable_dict = dict()
+    for key in costs_dict:
+        dumpable_dict[str(key)] = str(costs_dict[key].evalf())
+
+    dump_path: str = os.path.join(optimizer_dir, "all_combination_costs.json")
+    with open(dump_path, "w") as fp:
+        json.dump(dumpable_dict, fp)
