@@ -15,6 +15,7 @@ class OptimizerArguments(object):
 
     verbose: bool
     interactive: bool
+    exhaustive: bool
     doall_microbench_file: str
     reduction_microbench_file: str
 

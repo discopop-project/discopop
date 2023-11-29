@@ -35,6 +35,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_c
 from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
     evaluate_all_decision_combinations,
 )
+from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -163,7 +164,16 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate costs for all combinations of decisions
-    evaluate_all_decision_combinations(experiment, function_performance_models, arguments, optimizer_dir)
+    if arguments.exhaustive:
+        evaluate_all_decision_combinations(experiment, function_performance_models, arguments, optimizer_dir)
+    else:
+        # perform evolutionary search
+        perform_evolutionary_search(
+            experiment,
+            function_performance_models,
+            arguments,
+            optimizer_dir,
+        )
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
