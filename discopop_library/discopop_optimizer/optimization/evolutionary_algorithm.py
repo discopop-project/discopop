@@ -266,7 +266,7 @@ def __mutate(
                 continue
 
             # update population
-            try: 
+            try:
                 population.remove(mutation_target)
             except ValueError:
                 pass

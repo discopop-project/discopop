@@ -152,7 +152,7 @@ def __dump_result_to_file_using_pattern_ids(
             for pattern_id in experiment.suggestion_to_node_id_dict:
                 if entry == experiment.suggestion_to_node_id_dict[pattern_id]:
                     new_key.append(pattern_id)
-        dumpable_dict[str(new_key)] = str(costs_dict[key].evalf())
+        dumpable_dict[str(new_key)] = str(int(float(str(costs_dict[key].evalf()))))
 
     dump_path: str = os.path.join(optimizer_dir, "all_suggestion_combination_costs.json")
     with open(dump_path, "w") as fp:
