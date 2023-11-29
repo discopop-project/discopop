@@ -17,8 +17,7 @@ def pet_function_metadata_initialize_worker(pet):
     global_pet = pet
 
 
-def pet_function_metadata_parse_func(param_tuple):
-    func_node = param_tuple
+def pet_function_metadata_parse_func(func_node):
     stack: List[Node] = global_pet.direct_children(func_node)
     func_node.children_cu_ids = [node.id for node in stack]
     local_children: Set[NodeID] = set()
