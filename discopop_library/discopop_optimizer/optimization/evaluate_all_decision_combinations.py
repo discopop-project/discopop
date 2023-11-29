@@ -154,6 +154,19 @@ def __dump_result_to_file_using_pattern_ids(
                     new_key.append(pattern_id)
         dumpable_dict[str(new_key)] = str(int(float(str(costs_dict[key].evalf()))))
 
-    dump_path: str = os.path.join(optimizer_dir, "all_suggestion_combination_costs.json")
+    dump_path: str = os.path.join(optimizer_dir, "exhaustive_results.json")
     with open(dump_path, "w") as fp:
         json.dump(dumpable_dict, fp)
+
+    # dump the best option
+    for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
+        new_key_2 = []
+        for node_id in combination_tuple:
+            # find pattern id
+            for pattern_id in experiment.suggestion_to_node_id_dict:
+                if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
+                    new_key_2.append(str(pattern_id))
+        best_option_path: str = os.path.join(optimizer_dir, "exhaustive_optimum.txt")
+        with open(best_option_path, "w") as fp:
+            fp.write(" ".join(new_key_2))
+        break
