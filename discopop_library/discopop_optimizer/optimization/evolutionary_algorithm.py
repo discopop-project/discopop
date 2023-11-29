@@ -306,6 +306,19 @@ def __dump_result(
     with open(dump_path, "w") as fp:
         json.dump(dumpable_dict, fp)
 
+    # dump the best option
+    for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
+        new_key_2 = []
+        for node_id in population[idx]:
+            # find pattern id
+            for pattern_id in experiment.suggestion_to_node_id_dict:
+                if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
+                    new_key_2.append(str(pattern_id))
+        best_option_path: str = os.path.join(optimizer_dir, "evolutionary_optimum.txt")
+        with open(best_option_path, "w") as fp:
+            fp.write(" ".join(new_key_2))
+        break
+
 
 def __check_configuration_validity(configuration: List[int]) -> bool:
     """Returns True if the given configuration is valid. Returns False otherwise."""
