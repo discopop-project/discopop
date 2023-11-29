@@ -197,7 +197,13 @@ def __select(
     weights = [probabilityMap[tuple(elem)] for elem in population]
 
     # select population to preserve
-    new_population = random.choices(population, weights=weights, k=new_population_size)
+    new_population = random.choices(population, weights=weights, k=new_population_size - 1)
+
+    # always preserve the current best element
+    for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
+        new_population.append(population[idx])
+        print("PRESERVED BEST OPTION: ", population[idx], "->", fitness_value)
+        break
     return new_population
 
 
