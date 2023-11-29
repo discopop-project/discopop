@@ -55,7 +55,7 @@ class Experiment(object):
 
     project_path: Path
     discopop_output_path: Path
-    discopop_optimizer_path: Path
+    profiler_dir: Path
     code_export_path: Path
 
     file_mapping: Dict[int, Path]  # file-mapping
@@ -66,44 +66,29 @@ class Experiment(object):
     selected_paths_per_function: Dict[FunctionRoot, Tuple[CostModel, ContextObject]]
 
     optimization_graph: nx.DiGraph
-
-    compile_check_command: str  # passed to code generator for the validation of generated code
+    next_free_node_id: int
+    suggestion_to_node_id_dict: Dict[int, int]
 
     def __init__(
-        self,
-        project_path,
-        discopop_output_path,
-        discopop_optimizer_path,
-        code_export_path,
-        file_mapping_path: str,
-        system: System,
-        detection_result: DetectionResult,
-        arguments: Dict[str, Any],
+        self, file_mapping: Dict[int, Path], system: System, detection_result: DetectionResult, profiler_dir: str
     ):
         self.__system = system
         self.detection_result = detection_result
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),
-            os.path.join(discopop_output_path, "profiler/memory_regions.txt"),
+            os.path.join(profiler_dir, "memory_regions.txt"),
             return_all_memory_regions=True,
         )
 
-        self.project_path = project_path
-        self.discopop_output_path = discopop_output_path
-        self.discopop_optimizer_path = discopop_optimizer_path
-        self.code_export_path = code_export_path
-
-        self.file_mapping = load_file_mapping(file_mapping_path)
+        self.file_mapping = file_mapping
+        self.function_models = dict()
+        self.selected_paths_per_function = dict()
+        self.suggestion_to_node_id_dict = dict()
 
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():
             self.register_free_symbol(free_symbol, value_suggestion)
-
-        self.function_models = dict()
-        self.selected_paths_per_function = dict()
-
-        self.compile_check_command = arguments["--compile-command"]
 
     def get_memory_region_size(
         self, memory_region: MemoryRegion, use_symbolic_value: bool = False
@@ -126,6 +111,11 @@ class Experiment(object):
         self.free_symbols.add(symbol)
         if value_suggestion is not None:
             self.suggested_values[symbol] = value_suggestion
+
+    def get_next_free_node_id(self):
+        buffer = self.next_free_node_id
+        self.next_free_node_id += 1
+        return buffer
 
     def get_system(self) -> System:
         return self.__system

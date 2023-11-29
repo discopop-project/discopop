@@ -84,9 +84,9 @@ def parse_args() -> ExplorerArguments:
         "--task-pattern", action="store_true",
         help="Enables the task parallelism pattern identification. Requires --cu-inst-res and --llvm-cxxfilt-path to be set.",
     )
-    experimental_parser.add_argument(
-        "--detect-scheduling-clauses", action="store_true",
-        help="Enables the detection of scheduling clauses for parallel loops.")
+#    experimental_parser.add_argument(
+#        "--detect-scheduling-clauses", action="store_true",
+#        help="Enables the detection of scheduling clauses for parallel loops.")
 
     experimental_parser.add_argument(
         "--generate-data-cu-inst", type=str, default=None,
@@ -139,7 +139,8 @@ def parse_args() -> ExplorerArguments:
         file_mapping_file=arguments.fmap,
         plugins=arguments.plugins,
         enable_task_pattern=arguments.task_pattern,
-        detect_scheduling_clauses=arguments.detect_scheduling_clauses,
+        #        detect_scheduling_clauses=arguments.detect_scheduling_clauses,
+        detect_scheduling_clauses=False,
         enable_profiling_dump_file=arguments.profiling,
         enable_pet_dump_file=arguments.dump_pet,
         enable_detection_result_dump_file=arguments.dump_detection_result,

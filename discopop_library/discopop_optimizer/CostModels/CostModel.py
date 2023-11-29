@@ -55,7 +55,7 @@ class CostModel(object):
         self.sequential_costs = sequential_costs
 
     def __str__(self):
-        return str(self.parallelizable_costs) + "\n" + str(self.sequential_costs)
+        return str(self.parallelizable_costs) + str(self.sequential_costs)
 
     def print(self, file=sys.stdout):
         init_printing()

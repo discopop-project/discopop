@@ -9,20 +9,31 @@ import os
 import pickle
 import tkinter as tk
 from tkinter import Button
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
+from sympy import Float, Symbol  # type: ignore
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
+from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers  # type: ignore
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser  # type: ignore
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.bindings.CodeGenerator import export_code
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
     show_options,
     add_random_models,
 )
+from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 def show_function_models(
@@ -112,20 +123,9 @@ def perform_headless_execution(
 
         # save models
         experiment.function_models[function] = updated_options
-        # export models to code
-        for opt, ctx, label in experiment.function_models[function]:
-            export_code(
-                experiment.detection_result.pet,
-                experiment.optimization_graph,
-                experiment,
-                opt,
-                ctx,
-                label,
-                function,
-            )
 
 
-def export_to_json(experiment: Experiment):
+def export_to_json(experiment: Experiment, export_path):
     # convert functionRoot in function_models to node ids
     to_be_added = []
     to_be_deleted = []
@@ -139,9 +139,9 @@ def export_to_json(experiment: Experiment):
     for k2, v in to_be_added:
         experiment.function_models[k2] = v  # type: ignore
 
-    experiment_dump_path: str = os.path.join(experiment.discopop_optimizer_path, "last_experiment.pickle")
-    if not os.path.exists(experiment.discopop_optimizer_path):
-        os.makedirs(experiment.discopop_optimizer_path)
+    experiment_dump_path: str = os.path.join(export_path, "last_experiment.pickle")
+    if not os.path.exists(export_path):
+        os.makedirs(export_path)
     pickle.dump(experiment, open(experiment_dump_path, "wb"))
 
 
@@ -162,3 +162,68 @@ def restore_session(json_file: str) -> Experiment:
         del experiment.function_models[k]
 
     return experiment
+
+
+def create_optimization_graph(experiment: Experiment, arguments: OptimizerArguments):
+    if arguments.verbose:
+        print("Creating optimization graph...", end="")
+    pet_parser = PETParser(experiment)
+    experiment.optimization_graph, experiment.next_free_node_id = pet_parser.parse()
+    if arguments.verbose:
+        print("Done.")
+
+
+def get_sequential_cost_model(experiment: Experiment) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+    # get performance models for sequential execution
+    sequential_function_performance_models = get_performance_models_for_functions(
+        experiment, experiment.optimization_graph
+    )
+    sequential_function_performance_models_with_transfers = calculate_data_transfers(
+        experiment.optimization_graph, sequential_function_performance_models
+    )
+    sequential_complete_performance_models = add_data_transfer_costs(
+        experiment.optimization_graph,
+        sequential_function_performance_models_with_transfers,
+        experiment,
+    )
+    return sequential_complete_performance_models
+
+
+def initialize_free_symbol_ranges_and_distributions(
+    experiment: Experiment, arguments: OptimizerArguments, system: System
+):
+    free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
+    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
+    sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
+    symbol_values: List[
+        Tuple[
+            Symbol,
+            Optional[float],
+            Optional[float],
+            Optional[float],
+            Optional[FreeSymbolDistribution],
+        ]
+    ] = []
+
+    if arguments.interactive:
+        symbol_values = query_user_for_symbol_values(sorted_free_symbols, experiment.suggested_values)
+    else:
+        # use the suggested values
+        for symbol in sorted_free_symbols:
+            # check if symbol is already defined by the system
+            found_symbol = False
+            for entry in system.get_symbol_values_and_distributions():
+                if entry[0] == symbol:
+                    symbol_values.append(entry)
+                    found_symbol = True
+                    break
+            if not found_symbol:
+                # else, use a default value for non-system symbols
+                symbol_values.append((symbol, experiment.suggested_values[symbol].evalf(), None, None, None))
+
+    for symbol, value, start_value, end_value, symbol_distribution in symbol_values:
+        if value is not None:
+            experiment.substitutions[symbol] = Float(value)
+        else:
+            experiment.free_symbol_ranges[symbol] = (cast(float, start_value), cast(float, end_value))
+            experiment.free_symbol_distributions[symbol] = cast(FreeSymbolDistribution, symbol_distribution)

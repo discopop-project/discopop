@@ -18,8 +18,6 @@ from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import Scro
 def query_user_for_symbol_values(
     symbols: List[Symbol],
     suggested_values: Dict[Symbol, Expr],
-    arguments: Dict[str, Union[str, bool]],
-    parent_frame: Optional[tk.Frame],
 ) -> List[Tuple[Symbol, Optional[float], Optional[float], Optional[float], Optional[FreeSymbolDistribution]]]:
     """Opens a GUI-Table to query values for each given Symbol from the user.
     The queried values are: Specific value, Range start, Range end.
@@ -35,18 +33,10 @@ def query_user_for_symbol_values(
             Optional[FreeSymbolDistribution],
         ]
     ] = []
-
-    # check for headless mode
-    if arguments["--headless-mode"]:
-        # return the suggested values
-        for symbol in symbols:
-            query_result.append((symbol, suggested_values[symbol].evalf(), None, None, None))
-        return query_result
-
     column_headers = ["Symbol Name", "Symbol Value", "Range Start", "Range End", "Range Relevance"]
 
-    if parent_frame is None:
-        raise ValueError("No frame provided!")
+    root = Tk()
+    parent_frame = Frame(root)
 
     # configure weights
     parent_frame.rowconfigure(0, weight=1)
@@ -95,6 +85,7 @@ def query_user_for_symbol_values(
                     e.insert(END, str(suggested_values[free_symbol]))
             cols.append(e)
         rows.append(cols)
+    root.mainloop()
 
     def validate() -> bool:
         ret_val = True

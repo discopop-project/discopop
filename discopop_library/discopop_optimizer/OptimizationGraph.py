@@ -46,7 +46,6 @@ class OptimizationGraph(object):
 
     def __init__(
         self,
-        project_folder_path,
         experiment: Experiment,
         arguments: Dict[str, Any],
         parent_frame: Optional[tk.Frame],
@@ -54,9 +53,7 @@ class OptimizationGraph(object):
     ):
         # construct optimization graph from PET Graph
         # save graph in experiment
-        experiment.optimization_graph, self.next_free_node_id = PETParser(
-            experiment.detection_result.pet, experiment
-        ).parse()
+        experiment.optimization_graph, self.next_free_node_id = PETParser(experiment).parse()
 
         # get performance models for sequential execution
         sequential_function_performance_models = get_performance_models_for_functions(
@@ -72,12 +69,7 @@ class OptimizationGraph(object):
         )
 
         # import parallelization suggestions
-        experiment.optimization_graph = import_suggestions(
-            experiment.detection_result,
-            experiment.optimization_graph,
-            self.get_next_free_node_id,
-            experiment,
-        )
+        experiment.optimization_graph = import_suggestions(experiment)
 
         # perform an exhaustive search if requested
         if arguments["--exhaustive-search"]:
@@ -114,9 +106,7 @@ class OptimizationGraph(object):
         sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
 
         # query user for values for free symbols
-        query_results = query_user_for_symbol_values(
-            sorted_free_symbols, experiment.suggested_values, arguments, parent_frame
-        )
+        query_results = query_user_for_symbol_values(sorted_free_symbols, experiment.suggested_values)
         for symbol, value, start_value, end_value, symbol_distribution in query_results:
             if value is not None:
                 experiment.substitutions[symbol] = Float(value)
@@ -222,9 +212,6 @@ class OptimizationGraph(object):
         else:
             # perform actions for headless mode
             perform_headless_execution(experiment)
-
-        # save experiment to disk
-        export_to_json(experiment)
 
     def get_next_free_node_id(self):
         buffer = self.next_free_node_id

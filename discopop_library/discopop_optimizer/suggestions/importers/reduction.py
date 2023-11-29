@@ -35,6 +35,9 @@ def import_suggestion(
                 new_node_id = get_next_free_node_id_function()
                 # copy data from existing node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
+                node_data_copy.node_id = new_node_id
+                environment.suggestion_to_node_id_dict[suggestion.pattern_id] = new_node_id
+
                 # set the device id for the suggestion
                 node_data_copy.device_id = device_id
                 # remove cu_id to prevent using parallelization options as basis for new versions
