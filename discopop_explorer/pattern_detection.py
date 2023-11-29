@@ -119,59 +119,61 @@ class PatternDetectorX(object):
         # will be moved and calculated based on the optimization graph
         # res.combined_gpu = detect_combined_gpu(self.pet, res, project_folder_path)
 
-        if enable_detection_of_scheduling_clauses:
-            # identify scheduling clauses
-            return self.__identify_scheduling_clauses(res, project_path, file_mapping)
+        #        if enable_detection_of_scheduling_clauses:
+        # identify scheduling clauses
+        #            return self.__identify_scheduling_clauses(res, project_path, file_mapping)
         return res
 
-    def __identify_scheduling_clauses(
-        self,
-        res: DetectionResult,
-        project_folder_path: str,
-        file_mapping_path: str,
-    ) -> DetectionResult:
-        """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
-        # construct optimization graph (basically an acyclic representation of the PET)
-        system = System(headless=True)
-        discopop_output_path = project_folder_path
-        discopop_optimizer_path = "INVALID_DUMMY"
-        code_export_path = "INVALID_DUMMY"
-        arguments_1 = {"--compile-command": "make"}
-        experiment = Experiment(
-            project_folder_path,
-            discopop_output_path,
-            discopop_optimizer_path,
-            code_export_path,
-            file_mapping_path,
-            system,
-            res,
-            arguments_1,
-        )
-        arguments_2 = {"--exhaustive-search": False, "--headless-mode": True}
-        optimization_graph = OptimizationGraph(project_folder_path, experiment, arguments_2, None, False)
 
-        for do_all_suggestion in res.do_all:
-            for node_id in get_nodes_from_cu_id(experiment.optimization_graph, do_all_suggestion.node_id):
-                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(experiment, node_id)
-                print(
-                    "DOALL @ ",
-                    do_all_suggestion.node_id,
-                    " -> ",
-                    "node_id: ",
-                    node_id,
-                    " --> Delta WL: ",
-                    workload_delta,
-                    " (",
-                    min_workload,
-                    "/",
-                    max_workload,
-                    ")",
-                    file=sys.stderr,
-                )
-                # todo
-                #  very naive and non-robust approach, needs improvement in the future
-                #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
-                if workload_delta != 0:
-                    do_all_suggestion.scheduling_clause = "dynamic"
-
-        return res
+# todo: re-enable identification of scheduling clauses
+#   def __identify_scheduling_clauses(
+#       self,
+#       res: DetectionResult,
+#       project_folder_path: str,
+#       file_mapping_path: str,
+#   ) -> DetectionResult:
+#       """Identifies scheduling clauses for suggestions and returns the updated DetectionResult"""
+#       # construct optimization graph (basically an acyclic representation of the PET)
+#       system = System()
+#       discopop_output_path = project_folder_path
+#       discopop_optimizer_path = "INVALID_DUMMY"
+#       code_export_path = "INVALID_DUMMY"
+#       arguments_1 = {"--compile-command": "make"}
+#       experiment = Experiment(
+#           project_folder_path,
+#           discopop_output_path,
+#           discopop_optimizer_path,
+#           code_export_path,
+#           file_mapping_path,
+#           system,
+#           res,
+#           arguments_1,
+#       )
+#       arguments_2 = {"--exhaustive-search": False, "--headless-mode": True}
+#       optimization_graph = OptimizationGraph(project_folder_path, experiment, arguments_2, None, False)
+#
+#        for do_all_suggestion in res.do_all:
+#            for node_id in get_nodes_from_cu_id(experiment.optimization_graph, do_all_suggestion.node_id):
+#                workload_delta, min_workload, max_workload = get_workload_delta_for_cu_node(experiment, node_id)
+#                print(
+#                    "DOALL @ ",
+#                    do_all_suggestion.node_id,
+#                    " -> ",
+#                    "node_id: ",
+#                    node_id,
+#                    " --> Delta WL: ",
+#                    workload_delta,
+#                    " (",
+#                    min_workload,
+#                    "/",
+#                    max_workload,
+#                    ")",
+#                    file=sys.stderr,
+#                )
+#                # todo
+#                #  very naive and non-robust approach, needs improvement in the future
+#                #  reflects the behavior as described in https://dl.acm.org/doi/pdf/10.1145/3330345.3330375
+#                if workload_delta != 0:
+#                    do_all_suggestion.scheduling_clause = "dynamic"
+#
+#        return res
