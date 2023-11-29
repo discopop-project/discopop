@@ -227,8 +227,11 @@ def __crossover(
             continue
 
         # update population
-        population.remove(element_1)
-        population.remove(element_2)
+        try:
+            population.remove(element_1)
+            population.remove(element_2)
+        except ValueError:
+            pass
         population.append(new_element_1)
         population.append(new_element_2)
 
@@ -263,7 +266,10 @@ def __mutate(
                 continue
 
             # update population
-            population.remove(mutation_target)
+            try: 
+                population.remove(mutation_target)
+            except ValueError:
+                pass
             population.append(mutant)
         counter += 1
     return population
