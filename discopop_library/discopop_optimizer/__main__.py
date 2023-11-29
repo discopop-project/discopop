@@ -23,8 +23,6 @@ def parse_args() -> OptimizerArguments:
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
-    parser.add_argument("-i", "--interactive", action="store_true",
-        help="Enable interactive execution.")
     parser.add_argument("-x", "--exhaustive", action="store_true",
         help="Enable exhaustive search. By default, an evolutionary search is performed.")
     parser.add_argument(
@@ -36,6 +34,8 @@ def parse_args() -> OptimizerArguments:
         help="Reduction microbenchmark results"
     )
     # EXPERIMENTAL FLAGS:
+    experimental_parser.add_argument("-i", "--interactive", action="store_true",
+        help="Enable interactive execution.")
     # fmt: on
 
     arguments = parser.parse_args()
