@@ -25,6 +25,8 @@ def parse_args() -> OptimizerArguments:
         help="Enable verbose output.")
     parser.add_argument("-i", "--interactive", action="store_true",
         help="Enable interactive execution.")
+    parser.add_argument("-x", "--exhaustive", action="store_true",
+        help="Enable exhaustive search. By default, an evolutionary search is performed.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
