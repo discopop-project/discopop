@@ -43,6 +43,7 @@ def parse_args() -> OptimizerArguments:
     return OptimizerArguments(
         verbose=arguments.verbose,
         interactive=arguments.interactive,
+        exhaustive=arguments.exhaustive,
         doall_microbench_file=arguments.doall_microbench_file,
         reduction_microbench_file=arguments.reduction_microbench_file,
     )

@@ -7,9 +7,9 @@
 # directory for details.
 import tkinter as tk
 from tkinter import filedialog
+import warnings
 
 from discopop_library.PathManagement.PathManagement import get_path
-from discopop_library.discopop_optimizer.__main__ import start_optimizer
 
 
 def create_optimizer_screen(wizard, parent_frame, execution_configuration):
@@ -141,4 +141,5 @@ def __start_optimizer(
     for c in parent_frame.winfo_children():
         c.destroy()
 
-    start_optimizer(arguments, parent_frame=parent_frame)
+    # start_optimizer(arguments, parent_frame=parent_frame)
+    warnings.warn("TODO: BINDING TO OPTIMIZER CURRENTLY NOT IMPLEMENTED!")
