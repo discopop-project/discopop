@@ -20,6 +20,8 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from itertools import product
 
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+
 
 global_experiment = None
 global_function_performance_models = None
@@ -151,7 +153,7 @@ def __dump_result_to_file_using_pattern_ids(
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_id_dict:
                 if entry == experiment.suggestion_to_node_id_dict[pattern_id]:
-                    new_key.append(pattern_id)
+                    new_key.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
         dumpable_dict[str(new_key)] = str(int(float(str(costs_dict[key].evalf()))))
 
     dump_path: str = os.path.join(optimizer_dir, "exhaustive_results.json")
@@ -165,7 +167,9 @@ def __dump_result_to_file_using_pattern_ids(
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_id_dict:
                 if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
-                    new_key_2.append(str(pattern_id))
+                    new_key_2.append(
+                        str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
+                    )
         best_option_path: str = os.path.join(optimizer_dir, "exhaustive_optimum.txt")
         with open(best_option_path, "w") as fp:
             fp.write(" ".join(new_key_2))
