@@ -16,6 +16,8 @@ from discopop_library.discopop_optimizer.Microbench.utils import (
     convert_discopop_to_microbench_workload,
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
+from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
@@ -28,8 +30,11 @@ def import_suggestion(
 ) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
+    introduced_options = []
     for node in buffer:
         if suggestion.node_id == data_at(graph, node).cu_id:
+            # save node in introduced_options to mark as mutually exclusive
+            introduced_options.append(node)
             for device_id in reduction_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
@@ -64,6 +69,11 @@ def import_suggestion(
 
                 # create a new node for the option
                 graph.add_node(new_node_id, data=node_data_copy)
+                # mark the newly created option
+                graph.add_edge(node, new_node_id, data=OptionEdge())
+
+                # save the id of the introduced parallelization option to connect them afterwards
+                introduced_options.append(new_node_id)
 
                 # connect the newly created node to the parent and successor of node
                 for edge in graph.in_edges(node):
@@ -79,6 +89,13 @@ def import_suggestion(
                     # todo re-enable?
                     # if data_at(graph, edge[1]).device_id is None:
                     #     data_at(graph, edge[1]).device_id = 0
+
+    # connect introduced parallelization options to support path restraining
+    for node_id_1 in introduced_options:
+        for node_id_2 in introduced_options:
+            if node_id_1 == node_id_2:
+                continue
+            graph.add_edge(node_id_1, node_id_2, data=MutuallyExclusiveEdge())
     return graph
 
 
