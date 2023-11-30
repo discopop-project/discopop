@@ -126,7 +126,7 @@ def run(arguments: OptimizerArguments):
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
 
-    show(experiment.optimization_graph)
+    # show(experiment.optimization_graph)
 
     if arguments.verbose:
         print("# SUGGESTION ID -> NODE ID MAPPING")

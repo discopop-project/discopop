@@ -304,7 +304,7 @@ def __dump_result(
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_id_dict:
                 if entry == experiment.suggestion_to_node_id_dict[pattern_id]:
-                    new_key.append(pattern_id)
+                    new_key.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
         dumpable_dict[str(new_key)] = str(fitness[idx])
 
     dump_path: str = os.path.join(
@@ -339,16 +339,13 @@ def __check_configuration_validity(experiment: Experiment, configuration: List[i
             if r not in configuration:
                 # requirement not satisfied
                 return False
-
     # todo check option edges (for mutual exclusivity)
     for node_id in configuration:
         mutex_options = get_out_mutex_edges(experiment.optimization_graph, node_id)
         if len([e for e in configuration if e in mutex_options]) != 0:
             # mutual exclusivity of suggestions violated
             return False
-
     return True
-
 
 def __get_random_configuration(
     experiment: Experiment,
