@@ -16,13 +16,14 @@ from discopop_library.discopop_optimizer.Microbench.utils import (
     convert_discopop_to_microbench_workload,
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
-do_all_device_ids = [0]
+do_all_device_ids = [0, 1]
 
 
 def import_suggestion(
@@ -33,6 +34,8 @@ def import_suggestion(
     introduced_options = []
     for node in buffer:
         if suggestion.node_id == data_at(graph, node).cu_id:
+            # save node in introduced_options to mark as mutually exclusive
+            introduced_options.append(node)
             # todo: This implementation for the device id is temporary and MUST be replaced
             for device_id in do_all_device_ids:
                 # reserve a node id for the new parallelization option
@@ -98,7 +101,7 @@ def import_suggestion(
         for node_id_2 in introduced_options:
             if node_id_1 == node_id_2:
                 continue
-            graph.add_edge(node_id_1, node_id_2, data=RequirementEdge())
+            graph.add_edge(node_id_1, node_id_2, data=MutuallyExclusiveEdge())
     return graph
 
 
