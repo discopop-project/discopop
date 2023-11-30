@@ -24,7 +24,13 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 import random
 
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_out_options
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    data_at,
+    get_in_options,
+    get_out_mutex_edges,
+    get_out_options,
+    get_requirements,
+)
 
 
 def perform_evolutionary_search(
@@ -41,7 +47,7 @@ def perform_evolutionary_search(
     mutations = int(population_size / 10)
     ### END SETTINGS
 
-    population: List[List[int]] = __initialize(population_size, function_performance_models, arguments)
+    population: List[List[int]] = __initialize(experiment, population_size, function_performance_models, arguments)
     population, fitness = __calculate_fitness(experiment, function_performance_models, population, arguments)
     generation_counter = 0
 
@@ -151,6 +157,7 @@ def __print_population(
 
 
 def __initialize(
+    experiment: Experiment,
     population_size: int,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
@@ -158,7 +165,7 @@ def __initialize(
     # select random candidates
     population: List[List[int]] = []
     while len(population) < population_size:
-        population.append(__get_random_configuration(function_performance_models, arguments))
+        population.append(__get_random_configuration(experiment, function_performance_models, arguments))
     return population
 
 
@@ -170,7 +177,7 @@ def __fill_population(
     population_size: int,
 ):
     while len(population) < population_size:
-        population.append(__get_random_configuration(function_performance_models, arguments))
+        population.append(__get_random_configuration(experiment, function_performance_models, arguments))
     return population
 
 
@@ -227,9 +234,9 @@ def __crossover(
         new_element_2 = element_2[:crossover_idx] + element_1[crossover_idx:]
 
         # validate elements
-        if not __check_configuration_validity(new_element_1):
+        if not __check_configuration_validity(experiment, new_element_1):
             continue
-        if not __check_configuration_validity(new_element_2):
+        if not __check_configuration_validity(experiment, new_element_2):
             continue
 
         # update population
@@ -268,7 +275,7 @@ def __mutate(
             mutant[mutation_index] = index_mutant
 
             # validate
-            if not __check_configuration_validity(mutant):
+            if not __check_configuration_validity(experiment, mutant):
                 continue
 
             # update population
@@ -313,22 +320,38 @@ def __dump_result(
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_id_dict:
                 if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
-                    new_key_2.append(str(pattern_id))
+                    new_key_2.append(
+                        str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
+                    )
         best_option_path: str = os.path.join(optimizer_dir, "evolutionary_optimum.txt")
         with open(best_option_path, "w") as fp:
             fp.write(" ".join(new_key_2))
         break
 
 
-def __check_configuration_validity(configuration: List[int]) -> bool:
+def __check_configuration_validity(experiment: Experiment, configuration: List[int]) -> bool:
     """Returns True if the given configuration is valid. Returns False otherwise."""
     warnings.warn("TODO: VALIDITY CHECK NOT IMPLEMENTED")
     # todo check requirements edges
+    for node_id in configuration:
+        requirements = get_requirements(experiment.optimization_graph, node_id)
+        for r in requirements:
+            if r not in configuration:
+                # requirement not satisfied
+                return False
+
     # todo check option edges (for mutual exclusivity)
+    for node_id in configuration:
+        mutex_options = get_out_mutex_edges(experiment.optimization_graph, node_id)
+        if len([e for e in configuration if e in mutex_options]) != 0:
+            # mutual exclusivity of suggestions violated
+            return False
+
     return True
 
 
 def __get_random_configuration(
+    experiment: Experiment,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
 ):
@@ -340,5 +363,5 @@ def __get_random_configuration(
             random_configuration += random.choice(options)
 
         # validate configuration
-        if __check_configuration_validity(random_configuration):
+        if __check_configuration_validity(experiment, random_configuration):
             return random_configuration

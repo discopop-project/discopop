@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion, NodeID
+from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
@@ -70,6 +71,11 @@ def get_out_options(graph: nx.DiGraph, node_id: int) -> List[int]:
 def get_in_options(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the parallelization options of the given node"""
     return [edge[1] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
+
+
+def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids which are mutually exclusive to the current node_id"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
 
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
@@ -199,6 +205,14 @@ def show(graph):
         ax=ax,
         edge_color="yellow",
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
+    )
+
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="orange",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], MutuallyExclusiveEdge)],
     )
 
     # define tool tip style when hovering
