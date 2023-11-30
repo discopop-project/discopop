@@ -75,8 +75,8 @@ class System(object):
         # define Network
         network = self.get_network()
         network.add_connection(device_0, device_0, Integer(100000), Integer(0))
-        network.add_connection(device_0, device_1, Integer(100), Integer(1000000))
-        network.add_connection(device_1, device_0, Integer(100), Integer(1000000))
+        network.add_connection(device_0, device_1, Integer(10000), Integer(1000000))
+        network.add_connection(device_1, device_0, Integer(10000), Integer(1000000))
         network.add_connection(device_1, device_1, Integer(100000), Integer(0))
 
         network.add_connection(device_0, device_2, Integer(100), Integer(10000000))

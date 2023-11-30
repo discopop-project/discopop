@@ -130,8 +130,8 @@ def run(arguments: OptimizerArguments):
 
     if arguments.verbose:
         print("# SUGGESTION ID -> NODE ID MAPPING")
-        for suggestion_id in experiment.suggestion_to_node_id_dict:
-            print("#", suggestion_id, "->", experiment.suggestion_to_node_id_dict[suggestion_id])
+        for suggestion_id in experiment.suggestion_to_node_ids_dict:
+            print("#", suggestion_id, "->", experiment.suggestion_to_node_ids_dict[suggestion_id])
         print()
 
     # get values for free symbols
