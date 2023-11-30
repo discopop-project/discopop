@@ -104,6 +104,10 @@ def __calculate_fitness(
     population = []
     fitness = []
     for local_result in tmp_result:
+        # remove invalid elements
+        if local_result[1] == -1:
+            continue
+        
         population.append(local_result[0])
         fitness.append(local_result[1])
     return population, fitness
@@ -127,18 +131,26 @@ def __get_score(param_tuple) -> Tuple[List[int], int]:
     global global_function_performance_models
     global global_arguments
     configuration = param_tuple
-    return configuration, int(
-        float(
-            str(
-                evaluate_configuration(
-                    cast(Experiment, global_experiment),
-                    cast(Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]], global_function_performance_models),
-                    configuration,
-                    cast(OptimizerArguments, global_arguments),
-                )[1].evalf()
+    try:
+        result = int(
+            float(
+                str(
+                    evaluate_configuration(
+                        cast(Experiment, global_experiment),
+                        cast(
+                            Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+                            global_function_performance_models,
+                        ),
+                        configuration,
+                        cast(OptimizerArguments, global_arguments),
+                    )[1].evalf()
+                )
             )
         )
-    )
+    except ValueError:
+        result = -1
+
+    return configuration, result
 
 
 def __print_population(
@@ -156,7 +168,9 @@ def __print_population(
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
                 if entry in experiment.suggestion_to_node_ids_dict[pattern_id]:
-                    element_with_mapping.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
+                    element_with_mapping.append(
+                        str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id)
+                    )
         print("#", element_with_mapping, "->", fitness_value)
     print("# AVG: ", int(sum(fitness) / len(fitness)))
     print()
