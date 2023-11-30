@@ -151,7 +151,13 @@ def __print_population(
     sorted_fitness = sorted(enumerate(fitness), key=lambda x: x[1], reverse=True)
     print("# POPULATION")
     for fitness_idx, fitness_value in sorted_fitness:
-        print("#", population[fitness_idx], "->", fitness_value)
+        element_with_mapping = []
+        for entry in population[fitness_idx]:
+            # find pattern id
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if entry in experiment.suggestion_to_node_ids_dict[pattern_id]:
+                    element_with_mapping.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
+        print("#", element_with_mapping, "->", fitness_value)
     print("# AVG: ", int(sum(fitness) / len(fitness)))
     print()
 
@@ -302,8 +308,8 @@ def __dump_result(
         new_key = []
         for entry in key:
             # find pattern id
-            for pattern_id in experiment.suggestion_to_node_id_dict:
-                if entry == experiment.suggestion_to_node_id_dict[pattern_id]:
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if entry in experiment.suggestion_to_node_ids_dict[pattern_id]:
                     new_key.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
         dumpable_dict[str(new_key)] = str(fitness[idx])
 
@@ -318,8 +324,8 @@ def __dump_result(
         new_key_2 = []
         for node_id in population[idx]:
             # find pattern id
-            for pattern_id in experiment.suggestion_to_node_id_dict:
-                if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
@@ -346,6 +352,7 @@ def __check_configuration_validity(experiment: Experiment, configuration: List[i
             # mutual exclusivity of suggestions violated
             return False
     return True
+
 
 def __get_random_configuration(
     experiment: Experiment,
