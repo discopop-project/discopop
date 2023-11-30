@@ -43,7 +43,10 @@ def import_suggestion(
                 # copy data from existing node
                 node_data_copy = copy.deepcopy(data_at(graph, node))
                 node_data_copy.node_id = new_node_id
-                environment.suggestion_to_node_id_dict[suggestion.pattern_id] = new_node_id
+                # register new node_id for pattern
+                if suggestion.pattern_id not in environment.suggestion_to_node_ids_dict:
+                    environment.suggestion_to_node_ids_dict[suggestion.pattern_id] = []
+                environment.suggestion_to_node_ids_dict[suggestion.pattern_id].append(new_node_id)
 
                 # set the device id for the suggestion
                 node_data_copy.device_id = device_id

@@ -35,7 +35,6 @@ def add_data_transfer_costs(
             # and no asynchronous transfers happen.
             # todo: This should be extended in the future.
             data_transfer_costs = get_transfer_costs(context, environment=environment)
-
             # extend the cost_model
             cost_model = cost_model.parallelizable_plus_combine(data_transfer_costs)
 

@@ -104,9 +104,15 @@ def evaluate_all_decision_combinations(
         new_key = []
         for node_id in combination_tuple:
             # find pattern id
-            for pattern_id in experiment.suggestion_to_node_id_dict:
-                if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
-                    new_key.append(pattern_id)
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
+                    new_key.append(
+                        str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
+                    )
+        if len(new_key) == 0:
+            print("EMPTY: ", combination_tuple)
+            print(experiment.suggestion_to_node_ids_dict)
+
         print(
             "#",
             new_key,
@@ -151,8 +157,8 @@ def __dump_result_to_file_using_pattern_ids(
         new_key = []
         for entry in key:
             # find pattern id
-            for pattern_id in experiment.suggestion_to_node_id_dict:
-                if entry == experiment.suggestion_to_node_id_dict[pattern_id]:
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if entry in experiment.suggestion_to_node_ids_dict[pattern_id]:
                     new_key.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
         dumpable_dict[str(new_key)] = str(int(float(str(costs_dict[key].evalf()))))
 
@@ -165,8 +171,8 @@ def __dump_result_to_file_using_pattern_ids(
         new_key_2 = []
         for node_id in combination_tuple:
             # find pattern id
-            for pattern_id in experiment.suggestion_to_node_id_dict:
-                if node_id == experiment.suggestion_to_node_id_dict[pattern_id]:
+            for pattern_id in experiment.suggestion_to_node_ids_dict:
+                if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
