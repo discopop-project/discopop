@@ -192,18 +192,19 @@ int FileID = 1;
 
 void addFileName(string name)
 {
-  fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+  fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
   fileMappingFile << name << "\n";
   fileMappingFile.close();
   return;
 }
+
 
 int getFileID(string name)
 {
   
   int tempfid = 1;
 
-  fileMappingFile.open(".discopop/common_data/FileMapping.txt", ios::in);
+  fileMappingFile.open(".discopop/FileMapping.txt", ios::in);
   if (fileMappingFile)
   {
     string tp;
@@ -218,14 +219,14 @@ int getFileID(string name)
     }
     fileMappingFile.close();
 
-    fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
   }
   else
   {
-    fileMappingFile.open(".discopop/common_data/FileMapping.txt", std::ios_base::app);
+    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
@@ -255,11 +256,11 @@ namespace
       if (stat(".discopop", &st1) == -1){
           mkdir(".discopop", 0777);
       }
-      // prepare common_data directory if not present
-      struct stat st2 = {0};
-      if (stat(".discopop/common_data", &st2) == -1){
-          mkdir(".discopop/common_data", 0777);
-      }
+      // // prepare common_data directory if not present
+      // struct stat st2 = {0};
+      // if (stat(".discopop/common_data", &st2) == -1){
+      //     mkdir(".discopop/common_data", 0777);
+      // }
       // prepare hotspot_detection directory if not present
       struct stat st3 = {0};
       if (stat(".discopop/hotspot_detection", &st3) == -1){
