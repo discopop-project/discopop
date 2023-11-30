@@ -256,11 +256,6 @@ namespace
       if (stat(".discopop", &st1) == -1){
           mkdir(".discopop", 0777);
       }
-      // // prepare common_data directory if not present
-      // struct stat st2 = {0};
-      // if (stat(".discopop/common_data", &st2) == -1){
-      //     mkdir(".discopop/common_data", 0777);
-      // }
       // prepare hotspot_detection directory if not present
       struct stat st3 = {0};
       if (stat(".discopop/hotspot_detection", &st3) == -1){
