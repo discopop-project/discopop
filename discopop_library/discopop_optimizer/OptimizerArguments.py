@@ -18,6 +18,8 @@ class OptimizerArguments(object):
     exhaustive: bool
     doall_microbench_file: str
     reduction_microbench_file: str
+    allow_nested_parallelism: bool
+    plot: bool
 
     def __post_init__(self):
         self.__validate()

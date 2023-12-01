@@ -86,3 +86,8 @@ class GenericNode(object):
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         raise NotImplementedError("Implementation needs to be provided by derived class: !", type(self))
+
+    def represents_sequential_version(self) -> bool:
+        """Returns True if the given node represents a sequential execution.
+        Returns False, if the node characterizes a parallel option instead."""
+        return self.suggestion is None
