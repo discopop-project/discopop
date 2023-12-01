@@ -53,7 +53,9 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
     for node_id in configuration:
         node = data_at(experiment.optimization_graph, node_id)
         if not node.represents_sequential_version():
-            children_queue += __filter_for_relevant_options(experiment, configuration, get_children(experiment.optimization_graph, node_id))
+            children_queue += __filter_for_relevant_options(
+                experiment, configuration, get_children(experiment.optimization_graph, node_id)
+            )
 
     while children_queue:
         current_node_id = children_queue.pop(0)
@@ -63,8 +65,24 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
             return True
         # add successors and children
         visited_nodes.append(current_node_id)
-        children_queue += __filter_for_relevant_options(experiment, configuration, [sid for sid in get_successors(experiment.optimization_graph, current_node_id) if sid not in visited_nodes and sid not in children_queue])
-        children_queue += __filter_for_relevant_options(experiment, configuration, [cid for cid in get_children(experiment.optimization_graph, current_node_id) if cid not in visited_nodes and cid not in children_queue])
+        children_queue += __filter_for_relevant_options(
+            experiment,
+            configuration,
+            [
+                sid
+                for sid in get_successors(experiment.optimization_graph, current_node_id)
+                if sid not in visited_nodes and sid not in children_queue
+            ],
+        )
+        children_queue += __filter_for_relevant_options(
+            experiment,
+            configuration,
+            [
+                cid
+                for cid in get_children(experiment.optimization_graph, current_node_id)
+                if cid not in visited_nodes and cid not in children_queue
+            ],
+        )
         # add called functions
         called_cu_ids: List[str] = [
             str(t)
@@ -77,18 +95,27 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
         # remove duplicates
         called_function_nodes = list(set(called_function_nodes))
         # add to children_queue
-        children_queue += [fid.node_id for fid in called_function_nodes if fid not in visited_nodes and fid not in children_queue]
+        children_queue += [
+            fid.node_id
+            for fid in called_function_nodes
+            if fid.node_id not in visited_nodes and fid.node_id not in children_queue
+        ]
 
     return False
 
-def __filter_for_relevant_options(experiment: Experiment, configuration: List[int], to_be_cleaned: List[int]) -> List[int]:
+
+def __filter_for_relevant_options(
+    experiment: Experiment, configuration: List[int], to_be_cleaned: List[int]
+) -> List[int]:
     """removes all node_ids from the list to_be_cleaned which are not relevant for the given configuration (i.e. parallelization opportunities which are not chosen.)"""
     cleaned_list: List[int] = []
     for node_id in to_be_cleaned:
         if node_id in configuration:
             cleaned_list.append(node_id)
             continue
-        options = get_out_options(experiment.optimization_graph, node_id) + get_in_options(experiment.optimization_graph, node_id)
+        options = get_out_options(experiment.optimization_graph, node_id) + get_in_options(
+            experiment.optimization_graph, node_id
+        )
         if len(options) == 0:
             cleaned_list.append(node_id)
             continue
