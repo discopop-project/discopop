@@ -20,9 +20,11 @@ from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge imp
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
+from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
-reduction_device_ids = [0]
+suggestion_device_types = [CPU, GPU]
 
 
 def import_suggestion(
@@ -31,11 +33,16 @@ def import_suggestion(
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
     introduced_options = []
+    # get all devices which can be used to execute the suggestion
+    suggestion_device_ids = []
+    for device_type in suggestion_device_types:
+        suggestion_device_ids += environment.get_system().get_device_ids_by_type(device_type)
+
     for node in buffer:
         if suggestion.node_id == data_at(graph, node).cu_id:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.append(node)
-            for device_id in reduction_device_ids:
+            for device_id in suggestion_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
                 # copy data from existing node
