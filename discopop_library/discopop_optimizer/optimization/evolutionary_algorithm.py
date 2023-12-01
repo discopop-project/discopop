@@ -24,6 +24,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 import random
 
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
+from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     data_at,
     get_in_options,
@@ -254,9 +255,9 @@ def __crossover(
         new_element_2 = element_2[:crossover_idx] + element_1[crossover_idx:]
 
         # validate elements
-        if not __check_configuration_validity(experiment, new_element_1):
+        if not check_configuration_validity(experiment, arguments, new_element_1):
             continue
-        if not __check_configuration_validity(experiment, new_element_2):
+        if not check_configuration_validity(experiment, arguments, new_element_2):
             continue
 
         # update population
@@ -295,7 +296,7 @@ def __mutate(
             mutant[mutation_index] = index_mutant
 
             # validate
-            if not __check_configuration_validity(experiment, mutant):
+            if not check_configuration_validity(experiment, arguments, mutant):
                 continue
 
             # update population
@@ -349,25 +350,6 @@ def __dump_result(
         break
 
 
-def __check_configuration_validity(experiment: Experiment, configuration: List[int]) -> bool:
-    """Returns True if the given configuration is valid. Returns False otherwise."""
-    warnings.warn("TODO: VALIDITY CHECK NOT IMPLEMENTED")
-    # todo check requirements edges
-    for node_id in configuration:
-        requirements = get_requirements(experiment.optimization_graph, node_id)
-        for r in requirements:
-            if r not in configuration:
-                # requirement not satisfied
-                return False
-    # todo check option edges (for mutual exclusivity)
-    for node_id in configuration:
-        mutex_options = get_out_mutex_edges(experiment.optimization_graph, node_id)
-        if len([e for e in configuration if e in mutex_options]) != 0:
-            # mutual exclusivity of suggestions violated
-            return False
-    return True
-
-
 def __get_random_configuration(
     experiment: Experiment,
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
@@ -381,5 +363,5 @@ def __get_random_configuration(
             random_configuration += random.choice(options)
 
         # validate configuration
-        if __check_configuration_validity(experiment, random_configuration):
+        if check_configuration_validity(experiment, arguments, random_configuration):
             return random_configuration
